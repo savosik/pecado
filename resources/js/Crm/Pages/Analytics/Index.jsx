@@ -221,8 +221,47 @@ export default function CrmAnalyticsIndex() {
         ),
     }] : [];
 
+    // Разрезы по нашим юрлицам и складам отгрузки (v15.8.0). Показываем только когда
+    // 1С начала присылать организацию — иначе вкладка с единственной строкой
+    // «Организация не указана» выглядит как поломка.
+    const organizationGroup = (data?.by_organization?.length ?? 0) > 0 ? [{
+        value: 'organizations',
+        title: 'По организациям',
+        count: data?.by_organization?.length ?? 0,
+        section: (
+            <BreakdownSection
+                title="Организация"
+                rows={data?.by_organization ?? []}
+                currency={currency}
+                extraColumns={[
+                    { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
+                    { key: 'contractors', label: 'Контрагентов', render: (r) => r.contractors_count },
+                ]}
+            />
+        ),
+    }] : [];
+
+    const warehouseGroup = (data?.by_warehouse?.length ?? 0) > 0 ? [{
+        value: 'warehouses',
+        title: 'По складам',
+        count: data?.by_warehouse?.length ?? 0,
+        section: (
+            <BreakdownSection
+                title="Склад отгрузки"
+                rows={data?.by_warehouse ?? []}
+                currency={currency}
+                extraColumns={[
+                    { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
+                    { key: 'contractors', label: 'Контрагентов', render: (r) => r.contractors_count },
+                ]}
+            />
+        ),
+    }] : [];
+
     const groups = [
         ...managerGroup,
+        ...organizationGroup,
+        ...warehouseGroup,
         {
             value: 'brands',
             title: 'По брендам',

@@ -296,6 +296,82 @@ class ShipmentAnalyticsService
     }
 
     /**
+     * Разрез по нашим организациям (v15.8.0).
+     *
+     * Группа «Организация не указана» **не прячется**: без неё итог разреза не сойдётся
+     * с общим итогом, а это классический источник недоверия к отчёту. Заглушки выводятся
+     * как «Организация {UUID}» — видно, что юрлицо не заведено в справочнике.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function byOrganization(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 100): Collection
+    {
+        $rows = $this->itemsBaseQuery($ctx, $filters)
+            ->leftJoin('organizations as org', 'org.id', '=', 'shipments.organization_id')
+            ->selectRaw("
+                COALESCE(org.id, 0) AS organization_id,
+                COALESCE(NULLIF(org.name, ''), 'Организация не указана') AS label,
+                COALESCE(org.is_stub, 0) AS is_stub,
+                COALESCE(SUM(shipment_items.total * COALESCE(currencies.exchange_rate, 1)), 0) AS total_in_rub,
+                COALESCE(SUM(shipment_items.quantity), 0) AS qty,
+                COUNT(DISTINCT shipments.id) AS shipments_count,
+                COUNT(DISTINCT COALESCE(CAST(shipments.company_id AS CHAR), shipments.tax_id)) AS contractors_count,
+                COUNT(DISTINCT shipments.user_id) AS clients_count
+            ")
+            ->groupBy('organization_id', 'label', 'is_stub')
+            ->orderByDesc('total_in_rub')
+            ->limit($limit)
+            ->get();
+
+        return collect($rows)->map(fn ($row) => [
+            'key' => (string) $row->organization_id,
+            'organization_id' => $row->organization_id ? (int) $row->organization_id : null,
+            'label' => (string) $row->label,
+            'is_stub' => (bool) $row->is_stub,
+            'is_unassigned' => ! $row->organization_id,
+            'amount' => round($this->convertFromRub((float) $row->total_in_rub, $ctx), 2),
+            'qty' => (int) $row->qty,
+            'shipments_count' => (int) $row->shipments_count,
+            'contractors_count' => (int) $row->contractors_count,
+            'clients_count' => (int) $row->clients_count,
+        ]);
+    }
+
+    /**
+     * Разрез по складам отгрузки (v15.8.0).
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function byWarehouse(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 100): Collection
+    {
+        $rows = $this->itemsBaseQuery($ctx, $filters)
+            ->leftJoin('warehouses as wh', 'wh.id', '=', 'shipments.warehouse_id')
+            ->selectRaw("
+                COALESCE(wh.id, 0) AS warehouse_id,
+                COALESCE(NULLIF(wh.name, ''), 'Склад не указан') AS label,
+                COALESCE(SUM(shipment_items.total * COALESCE(currencies.exchange_rate, 1)), 0) AS total_in_rub,
+                COALESCE(SUM(shipment_items.quantity), 0) AS qty,
+                COUNT(DISTINCT shipments.id) AS shipments_count,
+                COUNT(DISTINCT COALESCE(CAST(shipments.company_id AS CHAR), shipments.tax_id)) AS contractors_count
+            ")
+            ->groupBy('warehouse_id', 'label')
+            ->orderByDesc('total_in_rub')
+            ->limit($limit)
+            ->get();
+
+        return collect($rows)->map(fn ($row) => [
+            'key' => (string) $row->warehouse_id,
+            'warehouse_id' => $row->warehouse_id ? (int) $row->warehouse_id : null,
+            'label' => (string) $row->label,
+            'is_unassigned' => ! $row->warehouse_id,
+            'amount' => round($this->convertFromRub((float) $row->total_in_rub, $ctx), 2),
+            'qty' => (int) $row->qty,
+            'shipments_count' => (int) $row->shipments_count,
+            'contractors_count' => (int) $row->contractors_count,
+        ]);
+    }
+
+    /**
      * Динамика суммы и количества по периоду. Bucket выбирается автоматически.
      *
      * @return array{bucket: string, points: array<int, array<string, mixed>>}
@@ -446,7 +522,7 @@ class ShipmentAnalyticsService
     public function filterOptionsForScope(AnalyticsContext $ctx): array
     {
         if ($ctx->isEmpty()) {
-            return ['partners' => [], 'companies' => [], 'brands' => [], 'categories' => []];
+            return ['partners' => [], 'companies' => [], 'brands' => [], 'categories' => [], 'organizations' => [], 'warehouses' => []];
         }
 
         $partners = DB::table('shipments')
@@ -506,11 +582,43 @@ class ShipmentAnalyticsService
             ->filter()
             ->all();
 
+        // v15.8.0: наши юрлица и склады отгрузки, реально встречающиеся в скоупе.
+        // Пустые массивы, пока 1С не начала присылать организацию — фронт тогда
+        // просто не показывает фильтр.
+        $organizations = DB::table('shipments')
+            ->join('organizations', 'organizations.id', '=', 'shipments.organization_id')
+            ->whereNull('shipments.deleted_at')
+            ->whereNull('organizations.deleted_at')
+            ->whereIn('shipments.user_id', $ctx->userIds)
+            ->select('organizations.id', 'organizations.name', 'organizations.is_stub')
+            ->distinct()
+            ->orderBy('organizations.name')
+            ->get()
+            ->map(fn ($o) => [
+                'id' => (int) $o->id,
+                'name' => (string) $o->name,
+                'is_stub' => (bool) $o->is_stub,
+            ])
+            ->all();
+
+        $warehouses = DB::table('shipments')
+            ->join('warehouses', 'warehouses.id', '=', 'shipments.warehouse_id')
+            ->whereNull('shipments.deleted_at')
+            ->whereIn('shipments.user_id', $ctx->userIds)
+            ->select('warehouses.id', 'warehouses.name')
+            ->distinct()
+            ->orderBy('warehouses.name')
+            ->get()
+            ->map(fn ($w) => ['id' => (int) $w->id, 'name' => (string) $w->name])
+            ->all();
+
         return [
             'partners' => $partners,
             'companies' => $companies,
             'brands' => $brands,
             'categories' => $this->buildCategoryTree($categoryIds),
+            'organizations' => $organizations,
+            'warehouses' => $warehouses,
         ];
     }
 
@@ -600,6 +708,32 @@ class ShipmentAnalyticsService
 
         if ($filters->productIds !== []) {
             $query->whereIn('shipment_items.product_id', $filters->productIds);
+        }
+
+        // v15.8.0: наши организации. Маркер «не указана» — рабочий выбор, а не заглушка:
+        // документов без организации весь исторический массив.
+        if ($filters->organizationIds !== [] || $filters->includeUnassignedOrganization) {
+            $query->where(function ($q) use ($filters) {
+                if ($filters->organizationIds !== []) {
+                    $q->whereIn('shipments.organization_id', $filters->organizationIds);
+                }
+                if ($filters->includeUnassignedOrganization) {
+                    $q->orWhereNull('shipments.organization_id');
+                }
+            });
+        }
+
+        // Исключения: убрать юрлицо из расчёта (например, «Рекламу» с образцами).
+        // Документы без организации исключением не задеваются — у них нечего исключать.
+        if ($filters->excludeOrganizationIds !== []) {
+            $query->where(function ($q) use ($filters) {
+                $q->whereNull('shipments.organization_id')
+                    ->orWhereNotIn('shipments.organization_id', $filters->excludeOrganizationIds);
+            });
+        }
+
+        if ($filters->warehouseIds !== []) {
+            $query->whereIn('shipments.warehouse_id', $filters->warehouseIds);
         }
 
         if ($filters->brandIds !== [] || $filters->categoryIds !== [] || $filters->sku !== null) {

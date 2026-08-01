@@ -244,6 +244,8 @@ class AnalyticsController extends CrmController
         $rows = [];
 
         $sections = [
+            'Организация' => $this->analytics->byOrganization($ctx, $filters),
+            'Склад отгрузки' => $this->analytics->byWarehouse($ctx, $filters),
             'Бренд' => $this->analytics->byBrand($ctx, $filters),
             'Категория' => $this->analytics->byCategory($ctx, $filters),
             'Партнёр' => $this->analytics->byPartner($ctx, $filters),
@@ -339,6 +341,9 @@ class AnalyticsController extends CrmController
             'by_contractor' => $this->analytics->byContractor($ctx, $filters),
             'by_product' => $this->analytics->byProduct($ctx, $filters),
             'by_manager' => $seesAll ? $this->analytics->byManager($ctx, $filters) : [],
+            // v15.8.0: разрезы по нашим юрлицам и складам отгрузки
+            'by_organization' => $this->analytics->byOrganization($ctx, $filters),
+            'by_warehouse' => $this->analytics->byWarehouse($ctx, $filters),
             'comparison' => null,
         ];
 

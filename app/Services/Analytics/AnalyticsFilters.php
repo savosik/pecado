@@ -18,6 +18,11 @@ class AnalyticsFilters
      * @param  array<int, int>  $categoryIds
      * @param  array<int, int>  $productIds
      * @param  array<int, int>  $partnerIds  клиенты-партнёры (shipments.user_id)
+     * @param  array<int, int>  $organizationIds  наши юрлица (shipments.organization_id)
+     * @param  array<int, int>  $warehouseIds  склады отгрузки (shipments.warehouse_id)
+     * @param  array<int, int>  $excludeOrganizationIds  юрлица, убранные из расчёта
+     * @param  bool  $includeUnassignedOrganization  включать документы без организации
+     *                                               (весь исторический массив)
      */
     public function __construct(
         public readonly CarbonImmutable $dateFrom,
@@ -28,7 +33,19 @@ class AnalyticsFilters
         public readonly ?string $sku = null,
         public readonly array $productIds = [],
         public readonly array $partnerIds = [],
+        public readonly array $organizationIds = [],
+        public readonly array $warehouseIds = [],
+        public readonly array $excludeOrganizationIds = [],
+        public readonly bool $includeUnassignedOrganization = false,
     ) {}
+
+    /**
+     * Значение мультиселекта, означающее «организация не указана».
+     *
+     * Отдельный маркер, а не id=0: документов без организации весь исторический
+     * массив, и отобрать их — рабочий сценарий переходного периода.
+     */
+    public const UNASSIGNED = 'none';
 
     /**
      * Фильтры кабинета: company_ids валидируются по принадлежности пользователю.
@@ -68,6 +85,10 @@ class AnalyticsFilters
             sku: self::sanitizeSku($request->input('sku')),
             productIds: self::sanitizeIds($request->input('product_ids', [])),
             partnerIds: self::sanitizeIds($request->input('partner_ids', [])),
+            organizationIds: self::sanitizeIds($request->input('organization_ids', [])),
+            warehouseIds: self::sanitizeIds($request->input('warehouse_ids', [])),
+            excludeOrganizationIds: self::sanitizeIds($request->input('exclude_organization_ids', [])),
+            includeUnassignedOrganization: self::hasUnassigned($request->input('organization_ids', [])),
         );
     }
 
@@ -119,6 +140,10 @@ class AnalyticsFilters
             sku: $this->sku,
             productIds: $this->productIds,
             partnerIds: $this->partnerIds,
+            organizationIds: $this->organizationIds,
+            warehouseIds: $this->warehouseIds,
+            excludeOrganizationIds: $this->excludeOrganizationIds,
+            includeUnassignedOrganization: $this->includeUnassignedOrganization,
         );
     }
 
@@ -182,7 +207,23 @@ class AnalyticsFilters
             'sku' => $this->sku,
             'product_ids' => $this->productIds,
             'partner_ids' => $this->partnerIds,
+            'organization_ids' => $this->includeUnassignedOrganization
+                ? array_merge($this->organizationIds, [self::UNASSIGNED])
+                : $this->organizationIds,
+            'warehouse_ids' => $this->warehouseIds,
+            'exclude_organization_ids' => $this->excludeOrganizationIds,
         ];
+    }
+
+    /**
+     * Есть ли в мультиселекте маркер «не указана».
+     */
+    private static function hasUnassigned(mixed $input): bool
+    {
+        return is_array($input) && in_array(self::UNASSIGNED, array_map(
+            static fn ($v) => is_string($v) ? $v : null,
+            $input,
+        ), true);
     }
 
     private static function parseDate(mixed $value): ?CarbonImmutable
