@@ -60,6 +60,7 @@ class ProductReturn extends Model
         'uuid',
         'erp_number',
         'user_id',
+        'organization_id',
         'status',
         'comment',
         'admin_comment',
@@ -89,6 +90,18 @@ class ProductReturn extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Организация возврата — справочно (v15.8.0).
+     *
+     * Выводится с реализаций-оснований при создании; если 1С прислала своё значение
+     * в `return.updated`, оно приоритетнее. NULL, когда основания принадлежат разным
+     * организациям — возврат при этом не дробится.
+     */
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
     }
 
     /**

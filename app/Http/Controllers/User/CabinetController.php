@@ -29,6 +29,8 @@ class CabinetController extends Controller
         $totalOverdue = $balances->sum('overdue_debt');
         $hasBalance = $balances->count() > 0;
 
+        $balanceByOrganization = $this->balanceByOrganization($user);
+
         $recentOrders = Order::where('user_id', $user->id)
             ->withCount('items')
             ->latest()
@@ -52,6 +54,9 @@ class CabinetController extends Controller
                 'current_balance' => $totalBalance,
                 'overdue_debt' => $totalOverdue,
                 'contractors_count' => $balances->count(),
+                // v15.8.0: разрез по нашим юрлицам. Пустой массив — блок не показываем
+                // вовсе: «одна организация: не указана» выглядит как поломка.
+                'organizations' => $balanceByOrganization,
             ] : null,
             'recentOrders' => $recentOrders,
             'questionnaireCompleted' => $questionnaire && $questionnaire->isCompleted(),
@@ -67,6 +72,50 @@ class CabinetController extends Controller
                 'photo_url' => $user->personalManager->getFirstMediaUrl('photo'),
             ] : null,
         ]);
+    }
+
+    /**
+     * Задолженность клиента в разрезе наших организаций (v15.8.0, org-06).
+     *
+     * Главная польза для клиента — не сама цифра, а реквизиты: он платит разным
+     * юрлицам на разные счета, и должен видеть, куда именно.
+     *
+     * Возвращает пустой массив, когда флаг выключен, разрез ни разу не приходил
+     * или все строки обнулены (долг погашен). Плюсы и минусы разных организаций
+     * НЕ схлопываются в одно число: взаимозачёт между нашими юрлицами — компетенция
+     * 1С, и «ноль» на экране убедил бы клиента, что платить нечего.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function balanceByOrganization(\App\Models\User $user): array
+    {
+        if (! config('erp.organizations.enabled')) {
+            return [];
+        }
+
+        return \App\Models\ContractorOrganizationBalance::query()
+            ->where('user_id', $user->id)
+            ->where(fn ($q) => $q->where('current_balance', '!=', 0)->orWhere('overdue_debt', '!=', 0))
+            ->with(['organization', 'company:id,name'])
+            ->get()
+            ->filter(fn ($row) => $row->organization && ! $row->organization->is_stub)
+            ->map(fn ($row) => [
+                'organization_name' => $row->organization->name,
+                'contractor_name' => $row->company?->name,
+                'current_balance' => $row->current_balance,
+                'overdue_debt' => $row->overdue_debt,
+                'requisites' => array_filter([
+                    'legal_name' => $row->organization->legal_name,
+                    'tax_id' => $row->organization->tax_id,
+                    'tax_code' => $row->organization->tax_code,
+                    'bank_name' => $row->organization->bank_name,
+                    'bank_bik' => $row->organization->bank_bik,
+                    'account_number' => $row->organization->account_number,
+                    'correspondent_account' => $row->organization->correspondent_account,
+                ]),
+            ])
+            ->values()
+            ->all();
     }
 
     public function profile()

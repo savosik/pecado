@@ -376,6 +376,96 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
 
             </Grid>
 
+            {/*
+                Разрез задолженности по нашим юрлицам. Показываем только когда 1С
+                прислала детализацию: без неё блока нет вовсе. Суммы разных организаций
+                намеренно НЕ складываем — переплата одному юрлицу не гасит долг другому.
+            */}
+            {balance?.organizations?.length > 0 && (
+                <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted" mb="6">
+                    <Card.Header p="5" pb="3">
+                        <Text fontWeight="700" fontSize="md">Задолженность по организациям</Text>
+                        <Text fontSize="xs" color="fg.muted" mt="1">
+                            Оплачивайте каждой организации по её реквизитам — переплата одной
+                            не погашает задолженность перед другой.
+                        </Text>
+                    </Card.Header>
+                    <Card.Body p="5" pt="0">
+                        <VStack align="stretch" gap="4">
+                            {balance.organizations.map((row, index) => (
+                                <Box
+                                    key={index}
+                                    p="4"
+                                    borderRadius="lg"
+                                    border="1px solid"
+                                    borderColor="border.muted"
+                                >
+                                    <Flex justify="space-between" align="start" gap="4" wrap="wrap">
+                                        <Box minW="0">
+                                            <Text fontSize="sm" fontWeight="600">{row.organization_name}</Text>
+                                            {row.contractor_name && (
+                                                <Text fontSize="xs" color="fg.muted">
+                                                    По контрагенту: {row.contractor_name}
+                                                </Text>
+                                            )}
+                                        </Box>
+                                        <Box textAlign="right">
+                                            <Text
+                                                fontSize="lg"
+                                                fontWeight="700"
+                                                whiteSpace="nowrap"
+                                                color={parseFloat(row.current_balance) < 0 ? 'red.600' : 'green.600'}
+                                                _dark={{ color: parseFloat(row.current_balance) < 0 ? 'red.400' : 'green.400' }}
+                                            >
+                                                {parseFloat(row.current_balance).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
+                                            </Text>
+                                            {parseFloat(row.overdue_debt) > 0 && (
+                                                <Text fontSize="xs" color="red.500" whiteSpace="nowrap">
+                                                    Просрочено: {parseFloat(row.overdue_debt).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
+                                                </Text>
+                                            )}
+                                        </Box>
+                                    </Flex>
+
+                                    {Object.keys(row.requisites || {}).length > 0 && (
+                                        <Box mt="3" pt="3" borderTopWidth="1px" borderColor="border.muted">
+                                            <Text fontSize="xs" color="fg.muted" mb="1">Реквизиты для оплаты</Text>
+                                            <VStack align="stretch" gap="0.5">
+                                                {row.requisites.legal_name && (
+                                                    <Text fontSize="xs">{row.requisites.legal_name}</Text>
+                                                )}
+                                                {row.requisites.tax_id && (
+                                                    <Text fontSize="xs" color="fg.muted">
+                                                        ИНН: {row.requisites.tax_id}
+                                                        {row.requisites.tax_code ? ` · КПП: ${row.requisites.tax_code}` : ''}
+                                                    </Text>
+                                                )}
+                                                {row.requisites.bank_name && (
+                                                    <Text fontSize="xs" color="fg.muted">
+                                                        {row.requisites.bank_name}
+                                                        {row.requisites.bank_bik ? ` · БИК ${row.requisites.bank_bik}` : ''}
+                                                    </Text>
+                                                )}
+                                                {row.requisites.account_number && (
+                                                    <Text fontSize="xs" color="fg.muted">
+                                                        Р/с: {row.requisites.account_number}
+                                                    </Text>
+                                                )}
+                                                {row.requisites.correspondent_account && (
+                                                    <Text fontSize="xs" color="fg.muted">
+                                                        К/с: {row.requisites.correspondent_account}
+                                                    </Text>
+                                                )}
+                                            </VStack>
+                                        </Box>
+                                    )}
+                                </Box>
+                            ))}
+                        </VStack>
+                    </Card.Body>
+                </Card.Root>
+            )}
+
             {/* Recent Orders */}
             <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
                 <Card.Header p="5" pb="3">

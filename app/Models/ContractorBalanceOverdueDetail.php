@@ -32,6 +32,7 @@ class ContractorBalanceOverdueDetail extends Model
 {
     protected $fillable = [
         'contractor_balance_id',
+        'organization_id',
         'shipment_uuid',
         'amount',
         'due_date',
@@ -48,5 +49,16 @@ class ContractorBalanceOverdueDetail extends Model
     public function contractorBalance(): BelongsTo
     {
         return $this->belongsTo(ContractorBalance::class);
+    }
+
+    /**
+     * Наша организация просроченной реализации (v15.8.0).
+     *
+     * Если 1С не прислала организацию в детали, выводится по `shipment_uuid`
+     * из самой реализации. Не вывелась — NULL, сумма всё равно учитывается.
+     */
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Services\Erp\Handlers;
 
 use App\Events\ReturnStatusChanged;
 use App\Models\ProductReturn;
+use App\Services\Erp\Support\OrganizationResolver;
 use App\Services\Erp\Support\ReturnStatusMapper;
 use Illuminate\Support\Facades\Log;
 
@@ -37,6 +38,19 @@ class HandleReturnUpdated
         if (isset($payload['number'])) {
             $return->erp_number = $payload['number'];
             $changed = true;
+        }
+
+        // v15.8.0: организация возврата. Сайт выводит её с реализаций-оснований сам,
+        // но значение 1С приоритетнее — она источник истины по документу.
+        // Отсутствие поля не сбрасывает выведенное значение.
+        $organization = $payload['organization'] ?? null;
+        if (is_array($organization) && ! empty($organization['uuid'])) {
+            $resolved = app(OrganizationResolver::class)->resolveByUuid($organization['uuid'], $organization);
+
+            if ($resolved) {
+                $return->organization_id = $resolved->id;
+                $changed = true;
+            }
         }
 
         if (isset($payload['status'])) {

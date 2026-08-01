@@ -119,11 +119,45 @@ class ContractorBalanceController extends Controller
 
     public function show(ContractorBalance $contractorBalance)
     {
-        $contractorBalance->load(['user', 'company', 'overdueDetails']);
+        $contractorBalance->load(['user', 'company', 'overdueDetails.organization']);
 
         return Inertia::render('Admin/Pages/ContractorBalances/Show', [
             'balance' => $contractorBalance,
+            // v15.8.0: разрез по нашим организациям. Пустой массив — 1С детализацию
+            // ещё не присылала, блок в интерфейсе не показывается.
+            'organizationBalances' => $this->organizationBalances($contractorBalance),
+            'organizationsEnabled' => config('erp.organizations.enabled'),
         ]);
+    }
+
+    /**
+     * Разрез задолженности контрагента по нашим организациям.
+     *
+     * Строки с нулями оставляем: обнулённая строка означает «долг погашен»,
+     * и менеджеру это полезно видеть — в отличие от клиента, которому нули
+     * в кабинете только мешают.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function organizationBalances(ContractorBalance $contractorBalance): array
+    {
+        if (! config('erp.organizations.enabled') || ! $contractorBalance->company_id) {
+            return [];
+        }
+
+        return \App\Models\ContractorOrganizationBalance::query()
+            ->where('company_id', $contractorBalance->company_id)
+            ->with('organization')
+            ->get()
+            ->map(fn ($row) => [
+                'id' => $row->id,
+                'organization_name' => $row->organization?->name,
+                'is_stub' => (bool) $row->organization?->is_stub,
+                'current_balance' => $row->current_balance,
+                'overdue_debt' => $row->overdue_debt,
+                'balance_erp_updated_at' => $row->balance_erp_updated_at?->format('d.m.Y H:i'),
+            ])
+            ->all();
     }
 
     public function edit(ContractorBalance $contractorBalance)

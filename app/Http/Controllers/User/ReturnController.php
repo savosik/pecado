@@ -359,7 +359,12 @@ class ReturnController extends Controller
         $user = $request->user();
         abort_unless($return->user_id === $user->id, 403);
 
-        $return->load(['items.product', 'items.shipmentItem.shipment']);
+        // is_stub обязателен: у заглушки вместо названия лежит UUID, клиенту его не показываем
+        $return->load([
+            'items.product',
+            'items.shipmentItem.shipment',
+            'organization:id,name,legal_name,tax_id,is_stub',
+        ]);
 
         return Inertia::render('User/Cabinet/Returns/Show', [
             'return' => [
@@ -372,6 +377,8 @@ class ReturnController extends Controller
                 'comment' => $return->comment,
                 'created_at' => $return->created_at?->format('d.m.Y H:i'),
                 'updated_at' => $return->updated_at?->format('d.m.Y H:i'),
+                // v15.8.0: продавец по основаниям возврата — справочно
+                'seller' => $this->sellerPayload($return),
                 'items' => $return->items->map(function ($item) {
                     $shipment = $item->shipmentItem?->shipment;
 
@@ -589,6 +596,33 @@ class ReturnController extends Controller
     protected function getStatusLabel(?ReturnStatus $status): string
     {
         return $status?->label() ?? 'Неизвестно';
+    }
+
+    /**
+     * Организация возврата для клиента — справочно, выведена с реализаций-оснований.
+     *
+     * `null`, когда выключен флаг, организация не определена (основания разных
+     * юрлиц) либо это заглушка с UUID вместо названия.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function sellerPayload(ProductReturn $return): ?array
+    {
+        if (! config('erp.organizations.enabled')) {
+            return null;
+        }
+
+        $organization = $return->organization;
+
+        if (! $organization || $organization->is_stub) {
+            return null;
+        }
+
+        return [
+            'name' => $organization->name,
+            'legal_name' => $organization->legal_name,
+            'tax_id' => $organization->tax_id,
+        ];
     }
 
     protected function getReasonLabel(?ReturnReason $reason): string

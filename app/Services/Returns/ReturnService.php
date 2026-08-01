@@ -6,6 +6,7 @@ use App\Enums\ReturnStatus;
 use App\Events\ReturnCreated;
 use App\Models\ProductReturn;
 use App\Models\ReturnItem;
+use App\Models\Shipment;
 use App\Models\ShipmentItem;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -44,6 +45,7 @@ class ReturnService
 
             $return = ProductReturn::create([
                 'user_id' => $user->id,
+                'organization_id' => $this->resolveOrganizationId($rows),
                 'status' => ReturnStatus::PENDING_APPROVAL->value,
                 'comment' => $data['comment'] ?? null,
                 'total_amount' => $total,
@@ -99,5 +101,41 @@ class ReturnService
             'reason' => $input['reason'],
             'reason_comment' => $input['reason_comment'] ?? null,
         ];
+    }
+
+    /**
+     * Организация возврата, выведенная с реализаций-оснований (v15.8.0).
+     *
+     * Возвращает `null`, если основания принадлежат разным организациям либо хотя бы
+     * у одного организация неизвестна. «Первую попавшуюся» брать нельзя: это была бы
+     * выдуманная цифра в отчётах. Дробить возврат тоже не нужно — раскладывать документ
+     * по основаниям это работа 1С.
+     *
+     * @param  array<int, array<string, mixed>>  $rows  Строки будущих ReturnItem
+     */
+    protected function resolveOrganizationId(array $rows): ?int
+    {
+        $shipmentIds = array_values(array_unique(array_filter(array_column($rows, 'shipment_id'))));
+
+        if ($shipmentIds === []) {
+            return null;
+        }
+
+        $organizationIds = Shipment::whereIn('id', $shipmentIds)
+            ->pluck('organization_id')
+            ->all();
+
+        // Ровно одна организация и ни одного пустого значения — иначе NULL.
+        // Смешение legacy-реализации без организации с обычной тоже даёт NULL:
+        // «протаскивать» организацию на позиции, к которым она не относится, нельзя.
+        $distinct = array_unique($organizationIds, SORT_REGULAR);
+
+        if (count($distinct) !== 1) {
+            return null;
+        }
+
+        $organizationId = reset($distinct);
+
+        return $organizationId !== null ? (int) $organizationId : null;
     }
 }

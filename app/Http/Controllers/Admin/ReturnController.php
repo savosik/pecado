@@ -32,8 +32,8 @@ class ReturnController extends AdminController
         $onlyTrashed = $request->boolean('trashed');
 
         $query = $onlyTrashed
-            ? ProductReturn::onlyTrashed()->with(['user', 'items'])
-            : ProductReturn::query()->with(['user', 'items']);
+            ? ProductReturn::onlyTrashed()->with(['user', 'organization', 'items'])
+            : ProductReturn::query()->with(['user', 'organization', 'items']);
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -55,6 +55,15 @@ class ReturnController extends AdminController
             $query->whereHas('items', function ($q) use ($reason) {
                 $q->where('reason', $reason);
             });
+        }
+
+        // Фильтр по организации (v15.8.0). 'none' — возвраты, у которых организация
+        // не определена: основания разных юрлиц либо legacy без организации.
+        $organizationId = $request->input('organization_id');
+        if ($organizationId === 'none') {
+            $query->whereNull('organization_id');
+        } elseif ($organizationId) {
+            $query->where('organization_id', $organizationId);
         }
 
         if ($dateFrom = $request->input('date_from')) {
@@ -98,6 +107,11 @@ class ReturnController extends AdminController
                     'name' => $return->user->name,
                     'email' => $return->user->email,
                 ] : null,
+                'organization' => $return->organization ? [
+                    'id' => $return->organization->id,
+                    'name' => $return->organization->name,
+                    'is_stub' => $return->organization->is_stub,
+                ] : null,
                 'items_count' => $return->items->count(),
                 'primary_reason' => $return->items->first()?->reason?->value,
                 'primary_reason_label' => $this->getReasonLabel($return->items->first()?->reason),
@@ -110,6 +124,7 @@ class ReturnController extends AdminController
                 'search' => $search,
                 'status' => $status,
                 'reason' => $reason,
+                'organization_id' => $organizationId,
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
                 'amount_from' => $amountFrom,
@@ -128,6 +143,8 @@ class ReturnController extends AdminController
                 'value' => $case->value,
                 'label' => $this->getReasonLabel($case),
             ]),
+            'organizations' => \App\Models\Organization::query()->ordered()->get(['id', 'name', 'is_stub']),
+            'organizationsEnabled' => config('erp.organizations.enabled'),
         ]);
     }
 
@@ -337,7 +354,7 @@ class ReturnController extends AdminController
      */
     public function show(ProductReturn $return): Response
     {
-        $return->load(['user', 'items.product', 'items.shipmentItem.shipment']);
+        $return->load(['user', 'organization', 'items.product', 'items.shipmentItem.shipment']);
 
         return Inertia::render('Admin/Pages/Returns/Show', [
             'return' => [
@@ -356,6 +373,12 @@ class ReturnController extends AdminController
                     'name' => $return->user->name,
                     'email' => $return->user->email,
                     'phone' => $return->user->phone,
+                ] : null,
+                // v15.8.0: организация выведена с реализаций-оснований, справочно
+                'organization' => $return->organization ? [
+                    'id' => $return->organization->id,
+                    'name' => $return->organization->name,
+                    'is_stub' => $return->organization->is_stub,
                 ] : null,
                 'items' => $return->items->map(function ($item) {
                     $shipment = $item->shipmentItem?->shipment;
@@ -386,6 +409,7 @@ class ReturnController extends AdminController
                 'value' => $case->value,
                 'label' => $this->getStatusLabel($case),
             ]),
+            'organizationsEnabled' => config('erp.organizations.enabled'),
         ]);
     }
 

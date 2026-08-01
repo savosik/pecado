@@ -8,7 +8,7 @@ import { LuPencil } from 'react-icons/lu';
 
 const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export default function Show({ balance }) {
+export default function Show({ balance, organizationBalances = [], organizationsEnabled = false }) {
     const hasOverdue = parseFloat(balance.overdue_debt) > 0;
 
     return (
@@ -98,6 +98,65 @@ export default function Show({ balance }) {
                         </SimpleGrid>
                     </Card.Body>
                 </Card.Root>
+
+                {/*
+                    Разрез по нашим организациям. Показываем, только когда 1С прислала
+                    детализацию: иначе блок с единственной строкой «не указана» выглядит
+                    как поломка. Суммы разных юрлиц не складываем — взаимозачёт делает 1С.
+                */}
+                {organizationsEnabled && organizationBalances.length > 0 && (
+                    <Card.Root>
+                        <Card.Header pb={2}>
+                            <HStack justify="space-between">
+                                <Text fontWeight="700" fontSize="md">Задолженность по нашим организациям</Text>
+                                <Badge colorPalette="gray" variant="subtle">{organizationBalances.length}</Badge>
+                            </HStack>
+                        </Card.Header>
+                        <Card.Body>
+                            <Table.Root size="sm">
+                                <Table.Header>
+                                    <Table.Row>
+                                        <Table.ColumnHeader>Организация</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="end">Баланс</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="end">Просрочено</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Актуально на</Table.ColumnHeader>
+                                    </Table.Row>
+                                </Table.Header>
+                                <Table.Body>
+                                    {organizationBalances.map((row) => (
+                                        <Table.Row key={row.id}>
+                                            <Table.Cell>
+                                                <HStack gap={2}>
+                                                    <Text fontSize="sm">{row.organization_name || '—'}</Text>
+                                                    {row.is_stub && (
+                                                        <Badge colorPalette="orange" variant="subtle" size="sm">не заведена</Badge>
+                                                    )}
+                                                </HStack>
+                                            </Table.Cell>
+                                            <Table.Cell textAlign="end">
+                                                <Text
+                                                    fontSize="sm"
+                                                    fontFamily="mono"
+                                                    color={parseFloat(row.current_balance) < 0 ? 'red.600' : undefined}
+                                                >
+                                                    {fmt(row.current_balance)} ₽
+                                                </Text>
+                                            </Table.Cell>
+                                            <Table.Cell textAlign="end">
+                                                <Text fontSize="sm" fontFamily="mono" color={parseFloat(row.overdue_debt) > 0 ? 'red.600' : 'gray.400'}>
+                                                    {fmt(row.overdue_debt)} ₽
+                                                </Text>
+                                            </Table.Cell>
+                                            <Table.Cell>
+                                                <Text fontSize="xs" color="gray.500">{row.balance_erp_updated_at || '—'}</Text>
+                                            </Table.Cell>
+                                        </Table.Row>
+                                    ))}
+                                </Table.Body>
+                            </Table.Root>
+                        </Card.Body>
+                    </Card.Root>
+                )}
 
                 {/* Детализация просрочки */}
                 <Card.Root>

@@ -5,7 +5,10 @@ namespace App\Services\Erp\Handlers;
 use App\Models\Company;
 use App\Models\ContractorBalance;
 use App\Models\ContractorBalanceOverdueDetail;
+use App\Models\ContractorOrganizationBalance;
+use App\Models\Shipment;
 use App\Models\User;
+use App\Services\Erp\Support\OrganizationResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -14,6 +17,10 @@ class HandleBalanceUpdated
     /**
      * Обработка события balance.updated из 1С.
      * Обновляет балансы по контрагентам (массив contractors[]).
+     *
+     * v15.8.0: если контрагент несёт `organizations[]`, дополнительно пишется разрез
+     * по нашим юрлицам (`contractor_organization_balances`). `ContractorBalance`
+     * при этом остаётся агрегатом-проекцией и работает как раньше.
      */
     public function handle(array $payload): void
     {
@@ -100,6 +107,15 @@ class HandleBalanceUpdated
                     $updateData
                 );
 
+                // v15.8.0: разрез по нашим организациям. Пишем до деталей просрочки,
+                // чтобы уметь проставить в них организацию.
+                $organizationsByUuid = $this->syncOrganizationBalances(
+                    $user,
+                    $company,
+                    $contractorData,
+                    $updatedAt,
+                );
+
                 // Обновить детализацию просрочки: полностью заменяем
                 $balance->overdueDetails()->delete();
 
@@ -110,6 +126,7 @@ class HandleBalanceUpdated
                     }
                     ContractorBalanceOverdueDetail::create([
                         'contractor_balance_id' => $balance->id,
+                        'organization_id' => $this->resolveOverdueOrganizationId($detail, $organizationsByUuid),
                         'shipment_uuid' => $detail['shipment_uuid'],
                         'amount' => $detail['amount'] ?? 0,
                         'due_date' => $detail['due_date'],
@@ -123,8 +140,186 @@ class HandleBalanceUpdated
                     'current_balance' => $updateData['current_balance'],
                     'overdue_debt' => $updateData['overdue_debt'],
                     'overdue_count' => count($overdueDetails),
+                    'organizations_count' => count($contractorData['organizations'] ?? []),
                 ]);
             }
         });
+    }
+
+    /**
+     * Разрез задолженности по нашим организациям (v15.8.0).
+     *
+     * Возвращает карту `uuid организации → id` для проставления организации
+     * в детали просрочки. Пустая, если 1С разрез не прислала.
+     *
+     * @param  array<string, mixed>  $contractorData
+     * @return array<string, int>
+     */
+    private function syncOrganizationBalances(
+        User $user,
+        ?Company $company,
+        array $contractorData,
+        ?string $updatedAt,
+    ): array {
+        $organizations = $contractorData['organizations'] ?? null;
+
+        // Legacy-ветка: разреза нет — ведём себя ровно как до v15.8.0.
+        // Пустой массив тоже пропускаем: он не должен молча обнулить историю,
+        // расчётов «ни с одной организацией» не бывает при непустом балансе.
+        if (! is_array($organizations) || $organizations === []) {
+            return [];
+        }
+
+        // Разрез привязан к контрагенту клиента. Без Company писать некуда:
+        // ключ таблицы — пара (company_id, organization_id).
+        if (! $company) {
+            Log::warning('HandleBalanceUpdated: разрез по организациям пришёл, но контрагент на сайте не найден', [
+                'user_id' => $user->id,
+                'tax_id' => $contractorData['tax_id'] ?? null,
+            ]);
+
+            return [];
+        }
+
+        $this->warnOnSumMismatch($contractorData, $organizations, $company);
+
+        $map = [];
+        $touchedOrganizationIds = [];
+
+        foreach ($organizations as $row) {
+            $uuid = $row['uuid'] ?? null;
+
+            if (! is_string($uuid) || trim($uuid) === '') {
+                Log::warning('HandleBalanceUpdated: строка разреза без uuid организации, пропущена', [
+                    'company_id' => $company->id,
+                ]);
+
+                continue;
+            }
+
+            $organization = app(OrganizationResolver::class)->resolveByUuid($uuid, $row);
+
+            if (! $organization) {
+                continue;
+            }
+
+            $existing = ContractorOrganizationBalance::where('company_id', $company->id)
+                ->where('organization_id', $organization->id)
+                ->first();
+
+            // Защита от гонки: balance.updated по одному партнёру приходит часто,
+            // и сообщение может прийти не по порядку. Более старое игнорируем.
+            if ($existing && $this->isStale($existing->balance_erp_updated_at, $updatedAt)) {
+                Log::info('HandleBalanceUpdated: устаревшее сообщение разреза, пропущено', [
+                    'company_id' => $company->id,
+                    'organization_id' => $organization->id,
+                ]);
+
+                $map[$uuid] = $organization->id;
+                $touchedOrganizationIds[] = $organization->id;
+
+                continue;
+            }
+
+            ContractorOrganizationBalance::updateOrCreate(
+                [
+                    'company_id' => $company->id,
+                    'organization_id' => $organization->id,
+                ],
+                [
+                    'user_id' => $user->id,
+                    'current_balance' => $row['current_balance'] ?? 0,
+                    'overdue_debt' => $row['overdue_debt'] ?? 0,
+                    'balance_erp_updated_at' => $updatedAt,
+                ],
+            );
+
+            $map[$uuid] = $organization->id;
+            $touchedOrganizationIds[] = $organization->id;
+        }
+
+        // Организация исчезла из массива — расчётов с ней больше нет. Строку
+        // обнуляем, но НЕ удаляем: иначе погашенный долг пропадёт из истории
+        // и отчёты задним числом изменятся.
+        ContractorOrganizationBalance::where('company_id', $company->id)
+            ->when($touchedOrganizationIds !== [], fn ($q) => $q->whereNotIn('organization_id', $touchedOrganizationIds))
+            ->update([
+                'current_balance' => 0,
+                'overdue_debt' => 0,
+                'balance_erp_updated_at' => $updatedAt,
+            ]);
+
+        return $map;
+    }
+
+    /**
+     * Расхождение суммы разреза с contractor-уровнем.
+     *
+     * Источник истины — **contractor-уровень**: именно его клиент видит как итог,
+     * и обнулять итог из-за неразнесённых расчётов нельзя. Расхождение почти наверняка
+     * значит, что часть расчётов в 1С не разложена по организациям, поэтому пишем
+     * предупреждение: количество таких сообщений — индикатор готовности 1С.
+     *
+     * @param  array<string, mixed>  $contractorData
+     * @param  array<int, array<string, mixed>>  $organizations
+     */
+    private function warnOnSumMismatch(array $contractorData, array $organizations, Company $company): void
+    {
+        $contractorTotal = round((float) ($contractorData['current_balance'] ?? 0), 2);
+        $organizationsTotal = round(array_sum(array_map(
+            static fn ($row) => (float) ($row['current_balance'] ?? 0),
+            $organizations,
+        )), 2);
+
+        if (abs($contractorTotal - $organizationsTotal) < 0.01) {
+            return;
+        }
+
+        Log::warning('HandleBalanceUpdated: сумма разреза по организациям не сходится с балансом контрагента', [
+            'company_id' => $company->id,
+            'tax_id' => $contractorData['tax_id'] ?? null,
+            'contractor_balance' => $contractorTotal,
+            'organizations_sum' => $organizationsTotal,
+            'difference' => round($contractorTotal - $organizationsTotal, 2),
+        ]);
+    }
+
+    /**
+     * Организация строки просрочки: из payload либо по реализации `shipment_uuid`.
+     *
+     * @param  array<string, mixed>  $detail
+     * @param  array<string, int>  $organizationsByUuid
+     */
+    private function resolveOverdueOrganizationId(array $detail, array $organizationsByUuid): ?int
+    {
+        $uuid = $detail['organization_uuid'] ?? null;
+
+        if (is_string($uuid) && isset($organizationsByUuid[$uuid])) {
+            return $organizationsByUuid[$uuid];
+        }
+
+        if (is_string($uuid) && trim($uuid) !== '') {
+            return app(OrganizationResolver::class)->resolveByUuid($uuid)?->id;
+        }
+
+        // Организацию не прислали — выводим по реализации (org-04).
+        // Не нашлась или у неё нет организации — NULL, сумма всё равно учитывается.
+        return Shipment::where('uuid', $detail['shipment_uuid'])->value('organization_id');
+    }
+
+    /**
+     * Сообщение старше уже сохранённой метки актуальности.
+     */
+    private function isStale(?\Illuminate\Support\Carbon $saved, ?string $incoming): bool
+    {
+        if (! $saved || ! $incoming) {
+            return false;
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::parse($incoming)->lt($saved);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 }
