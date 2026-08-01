@@ -335,7 +335,11 @@ class PromotionRuleSchemaValidatorTest extends TestCase
         $this->assertStringContainsString('склад некондиции', $this->flatten($result['errors']));
     }
 
-    public function test_sample_reward_can_be_saved_but_not_activated(): void
+    /**
+     * Правило-черновик без склада сохраняется — маркетолог заполняет форму
+     * по частям. Включить его без склада нельзя: пробник некуда пойти отбирать.
+     */
+    public function test_sample_reward_without_warehouse_can_be_saved_but_not_activated(): void
     {
         $saved = $this->validator->validate($this->rule([
             'rewards' => [$this->reward(['promo_kind' => 'sample'])],
@@ -350,6 +354,33 @@ class PromotionRuleSchemaValidatorTest extends TestCase
 
         $this->assertFalse($activated['valid']);
         $this->assertStringContainsString('Москва реклама', $this->flatten($activated['errors']));
+    }
+
+    public function test_sample_reward_with_promo_warehouse_is_valid(): void
+    {
+        $warehouse = Warehouse::factory()->create([
+            'name' => 'Москва реклама',
+            'is_promo_sample' => true,
+        ]);
+
+        $result = $this->validator->validate($this->rule([
+            'rewards' => [$this->reward(['promo_kind' => 'sample', 'warehouse_id' => $warehouse->id])],
+            'is_active' => true,
+        ]));
+
+        $this->assertTrue($result['valid'], $this->flatten($result['errors']));
+    }
+
+    public function test_sample_reward_rejects_ordinary_warehouse(): void
+    {
+        $warehouse = Warehouse::factory()->create(['name' => 'Основной']);
+
+        $result = $this->validator->validate($this->rule([
+            'rewards' => [$this->reward(['promo_kind' => 'sample', 'warehouse_id' => $warehouse->id])],
+        ]));
+
+        $this->assertFalse($result['valid']);
+        $this->assertStringContainsString('склада рекламных образцов', $this->flatten($result['errors']));
     }
 
     /**

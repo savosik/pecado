@@ -38,12 +38,14 @@ class Warehouse extends Model
         'name',
         'external_id',
         'is_defect',
+        'is_promo_sample',
     ];
 
     protected function casts(): array
     {
         return [
             'is_defect' => 'boolean',
+            'is_promo_sample' => 'boolean',
         ];
     }
 
@@ -56,6 +58,19 @@ class Warehouse extends Model
     public function scopeDefect(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
     {
         return $query->where('is_defect', true);
+    }
+
+    /**
+     * Склад рекламных образцов («Москва реклама») — с него отгружаются пробники.
+     *
+     * Такой склад не входит в регионы, поэтому его остатки не попадают в наличие
+     * и предзаказ на витрине (см. StockService). Для рекламного склада это
+     * не оптимизация, а требование: пробник не должен продаваться как обычный
+     * товар — он выдаётся только движком акций и в накладную клиенту не попадает.
+     */
+    public function scopePromoSample(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->where('is_promo_sample', true);
     }
 
     /**

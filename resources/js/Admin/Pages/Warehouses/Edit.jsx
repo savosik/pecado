@@ -14,6 +14,7 @@ const WarehousesEdit = ({ warehouse }) => {
         name: warehouse.name || "",
         external_id: warehouse.external_id || "",
         is_defect: !!warehouse.is_defect,
+        is_promo_sample: !!warehouse.is_promo_sample,
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -72,12 +73,26 @@ const WarehousesEdit = ({ warehouse }) => {
                             <FormField label="Склад некондиции" error={errors.is_defect}>
                                 <Checkbox
                                     checked={data.is_defect}
+                                    disabled={data.is_promo_sample}
                                     onCheckedChange={(e) => setData("is_defect", !!e.checked)}
                                 >
                                     С этого склада отгружаются заказы уценки
                                 </Checkbox>
                                 <Text fontSize="xs" color="fg.muted" mt={1}>
                                     Остатки такого склада не показываются на витрине; уценённые товары ведёт кабинет склада.
+                                </Text>
+                            </FormField>
+
+                            <FormField label="Склад рекламных образцов" error={errors.is_promo_sample}>
+                                <Checkbox
+                                    checked={data.is_promo_sample}
+                                    disabled={data.is_defect}
+                                    onCheckedChange={(e) => setData("is_promo_sample", !!e.checked)}
+                                >
+                                    С этого склада отгружаются пробники по акциям
+                                </Checkbox>
+                                <Text fontSize="xs" color="fg.muted" mt={1}>
+                                    Остатки такого склада не показываются на витрине: пробники выдаёт только движок акций, в накладную клиенту они не попадают.
                                 </Text>
                             </FormField>
 

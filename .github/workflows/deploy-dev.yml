@@ -338,6 +338,13 @@ jobs:
             echo "CABINET_SEARCH_EXPORT=true" >> /srv/pecado/.env
           fi
 
+          # Выдача промо-позиций. На dev включена: здесь обкатываются акции
+          # конструктора. На prod флаг не трогаем — там выдачу включают вручную.
+          echo "==> [0.6/7] Флаг выдачи промо-позиций..."
+          if ! grep -q "PROMO_ISSUE_ENABLED" /srv/pecado/.env; then
+            echo "PROMO_ISSUE_ENABLED=true" >> /srv/pecado/.env
+          fi
+
           echo "==> [1/7] Установка PHP зависимостей..."
           sg docker -c 'docker compose exec -T app composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader'
 

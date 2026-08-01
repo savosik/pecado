@@ -19,6 +19,7 @@ use App\Models\Scopes\HiddenScope;
 use App\Services\Defect\DefectPickListFormatter;
 use App\Services\Promotion\DTO\AppliedReward;
 use App\Services\Promotion\DTO\PromoContext;
+use App\Services\Promotion\PromoPickListFormatter;
 use App\Services\Promotion\PromotionEngine;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +34,7 @@ class CheckoutService implements CheckoutServiceInterface
         protected DefectPickListFormatter $defectPickListFormatter,
         protected OrderAssembler $assembler,
         protected PromotionEngine $promotionEngine,
+        protected PromoPickListFormatter $promoPickListFormatter,
     ) {}
 
     /**
@@ -127,7 +129,16 @@ class CheckoutService implements CheckoutServiceInterface
             // Промо пересчитываем здесь, внутри транзакции, и результат клиента
             // на веру не принимаем: между открытием чекаута и нажатием кнопки
             // корзина могла измениться, а остаток — уехать
-            $promoGroups = $this->promoLines($cart);
+            $promo = $this->promoLines($cart);
+            $promoGroups = $promo['groups'];
+
+            // Промо-позиция внешне не отличается от обычного товара, а пробники
+            // лежат на отдельном складе — кладовщику нужна пометка в документе
+            foreach ($promo['pickLists'] as $orderType => $pickList) {
+                $warehouseComments[$orderType] = trim(
+                    ($warehouseComment ? $warehouseComment."\n\n" : '').$pickList
+                );
+            }
 
             $draft = new OrderDraft(
                 user: $user,
@@ -158,14 +169,14 @@ class CheckoutService implements CheckoutServiceInterface
     }
 
     /**
-     * Промо-строки, разложенные по виду позиции.
+     * Промо-строки, разложенные по виду позиции, и листы отбора для склада.
      *
      * Авторитетный пересчёт: движок вызывается заново внутри транзакции чекаута,
      * а не берётся то, что видел клиент. Позиция, которая к этому моменту стала
      * недоступна, просто не попадёт в заказ — ронять оформление из-за исчезнувшего
      * подарка нельзя.
      *
-     * @return array<string, list<OrderLine>>
+     * @return array{groups: array<string, list<OrderLine>>, pickLists: array<string, string>}
      */
     private function promoLines(Cart $cart): array
     {
@@ -182,13 +193,19 @@ class CheckoutService implements CheckoutServiceInterface
         );
 
         if ($rewards === []) {
-            return $groups;
+            return ['groups' => $groups, 'pickLists' => []];
         }
 
         $products = Product::withoutGlobalScope(HiddenScope::class)
             ->whereIn('id', array_map(static fn (AppliedReward $r) => $r->productId, $rewards))
             ->get()
             ->keyBy('id');
+
+        /** @var array<string, list<AppliedReward>> $rewardsByKind */
+        $rewardsByKind = [
+            PromoKind::ACCOUNTABLE->value => [],
+            PromoKind::SAMPLE->value => [],
+        ];
 
         foreach ($rewards as $reward) {
             $product = $products->get($reward->productId);
@@ -204,9 +221,45 @@ class CheckoutService implements CheckoutServiceInterface
                 promotionRuleId: $reward->ruleId,
                 promoKind: $reward->promoKind->value,
             );
+
+            $rewardsByKind[$reward->promoKind->value][] = $reward;
         }
 
-        return $groups;
+        return [
+            'groups' => $groups,
+            'pickLists' => $this->promoPickLists($rewardsByKind, $products),
+        ];
+    }
+
+    /**
+     * Листы отбора промо-позиций, разложенные по типу заказа.
+     *
+     * @param  array<string, list<AppliedReward>>  $rewardsByKind
+     * @param  Collection<int, Product>  $products
+     * @return array<string, string>
+     */
+    private function promoPickLists(array $rewardsByKind, Collection $products): array
+    {
+        $orderTypeByKind = [
+            PromoKind::ACCOUNTABLE->value => OrderType::PROMO->value,
+            PromoKind::SAMPLE->value => OrderType::PROMO_SAMPLE->value,
+        ];
+
+        $pickLists = [];
+
+        foreach ($rewardsByKind as $kind => $kindRewards) {
+            $text = $this->promoPickListFormatter->format(
+                $kindRewards,
+                $products,
+                PromoKind::from($kind),
+            );
+
+            if ($text !== '') {
+                $pickLists[$orderTypeByKind[$kind]] = $text;
+            }
+        }
+
+        return $pickLists;
     }
 
     /**

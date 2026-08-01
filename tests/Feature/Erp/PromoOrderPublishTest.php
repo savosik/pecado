@@ -241,11 +241,18 @@ class PromoOrderPublishTest extends TestCase
         $this->assertEquals(0.0, $promoPayload['items'][0]['final_price']);
     }
 
+    /**
+     * Гейт публикации: пока склад не получил external_id от 1С, заказ образцов
+     * остаётся на сайте. Инвариант проверяем и после того, как UUID прописан
+     * миграцией, — он должен пережить откат склада в 1С.
+     */
     #[Test]
     public function рекламные_образцы_не_публикуются_без_склада(): void
     {
         Queue::fake([PublishOrderToErpJob::class]);
         Log::spy();
+
+        Warehouse::query()->promoSample()->update(['external_id' => null]);
 
         $trigger = $this->product(10);
         $sample = $this->product(10);
@@ -262,6 +269,81 @@ class PromoOrderPublishTest extends TestCase
         Log::shouldHaveReceived('warning')
             ->withArgs(fn (string $message) => str_contains($message, 'Москва реклама'))
             ->once();
+    }
+
+    /**
+     * Обратная сторона гейта: склад «Москва реклама» заведён миграцией с боевым
+     * UUID из 1С, и заказ образцов уходит в шину с ним — регион клиента здесь
+     * не участвует.
+     */
+    #[Test]
+    public function рекламные_образцы_публикуются_со_своим_складом(): void
+    {
+        Queue::fake([PublishOrderToErpJob::class]);
+
+        $trigger = $this->product(10);
+        $sample = $this->product(10, 300);
+        $this->issuingRule($trigger, $sample, ['promo_kind' => PromoKind::SAMPLE->value]);
+
+        $this->checkout($trigger);
+
+        Queue::assertPushed(PublishOrderToErpJob::class, 2);
+
+        $payloads = [];
+        Queue::assertPushed(PublishOrderToErpJob::class, function (PublishOrderToErpJob $job) use (&$payloads) {
+            $payload = $this->payloadOf($job);
+            $payloads[$payload['type']] = $payload;
+
+            return true;
+        });
+
+        $this->assertArrayHasKey('promo_sample', $payloads, 'Гейт снят — сообщение уходит');
+        $this->assertSame(
+            ['9da1768a-40d4-11e1-a692-001e6711ed1d'],
+            $payloads['promo_sample']['warehouse_uuids'],
+            'UUID склада «Москва реклама» из 1С',
+        );
+        $this->assertTrue($payloads['promo_sample']['items'][0]['is_promo']);
+        $this->assertSame('sample', $payloads['promo_sample']['items'][0]['promo_kind']);
+
+        // Обычный заказ по-прежнему уезжает со склада региона
+        $this->assertSame(['wh-primary-uuid'], $payloads['order']['warehouse_uuids']);
+
+        $result = app(ErpMessageValidator::class)->validateOutbound('order.created', $payloads['promo_sample']);
+        $this->assertTrue($result['valid'], 'Сообщение обязано проходить схему исходящих');
+    }
+
+    /**
+     * Лист отбора уходит в 1С — кладовщик собирает пробники по печатному документу,
+     * а не по интерфейсу сайта.
+     */
+    #[Test]
+    public function лист_отбора_образцов_уходит_в_шину(): void
+    {
+        Queue::fake([PublishOrderToErpJob::class]);
+
+        $trigger = $this->product(10);
+        $sample = $this->product(10, 300);
+        $this->issuingRule($trigger, $sample, ['promo_kind' => PromoKind::SAMPLE->value]);
+
+        $this->checkout($trigger);
+
+        $samplePayload = null;
+        Queue::assertPushed(PublishOrderToErpJob::class, function (PublishOrderToErpJob $job) use (&$samplePayload) {
+            $payload = $this->payloadOf($job);
+
+            if ($payload['type'] === 'promo_sample') {
+                $samplePayload = $payload;
+            }
+
+            return true;
+        });
+
+        $this->assertNotNull($samplePayload);
+        $this->assertStringContainsString(
+            'Рекламные образцы — отобрать со склада «Москва реклама»',
+            $samplePayload['warehouse_comment'],
+        );
     }
 
     #[Test]

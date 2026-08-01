@@ -99,6 +99,10 @@ class WmsAccessTest extends TestCase
     #[Test]
     public function dashboard_returns_stock_figures_per_warehouse(): void
     {
+        // Сводка считает все склады БД, включая справочные из миграций
+        // («Москва реклама»), — изолируем тест от них
+        Warehouse::query()->delete();
+
         $moscow = Warehouse::create(['name' => 'Москва Основной']);
         $tyumen = Warehouse::create(['name' => 'Тюмень Основной']);
 
@@ -129,6 +133,8 @@ class WmsAccessTest extends TestCase
     #[Test]
     public function warehouse_without_stock_is_still_listed(): void
     {
+        Warehouse::query()->delete();
+
         // LEFT JOIN: пустой склад обязан попасть в сводку с нулями,
         // иначе кладовщик решит, что склада не существует.
         Warehouse::create(['name' => 'Пустой склад']);

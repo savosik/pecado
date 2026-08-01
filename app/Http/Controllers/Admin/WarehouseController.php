@@ -52,11 +52,7 @@ class WarehouseController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'external_id' => 'nullable|string|max:255|unique:warehouses,external_id',
-            'is_defect' => 'boolean',
-        ]);
+        $validated = $request->validate($this->rules($request));
 
         $warehouse = Warehouse::create($validated);
 
@@ -74,6 +70,7 @@ class WarehouseController extends Controller
                 'name' => $warehouse->name,
                 'external_id' => $warehouse->external_id,
                 'is_defect' => $warehouse->is_defect,
+                'is_promo_sample' => $warehouse->is_promo_sample,
                 'created_at' => $warehouse->created_at?->format('d.m.Y H:i'),
                 'updated_at' => $warehouse->updated_at?->format('d.m.Y H:i'),
             ],
@@ -95,11 +92,7 @@ class WarehouseController extends Controller
      */
     public function update(Request $request, Warehouse $warehouse)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'external_id' => 'nullable|string|max:255|unique:warehouses,external_id,'.$warehouse->id,
-            'is_defect' => 'boolean',
-        ]);
+        $validated = $request->validate($this->rules($request, $warehouse));
 
         $warehouse->update($validated);
 
@@ -115,6 +108,37 @@ class WarehouseController extends Controller
 
         return redirect()->route('admin.warehouses.index')
             ->with('success', 'Склад успешно удален');
+    }
+
+    /**
+     * Правила валидации склада.
+     *
+     * Взаимоисключающесть типов: склад не может быть одновременно складом
+     * некондиции и складом рекламных образцов — у обоих свой тип заказа
+     * (`defect` / `promo_sample`), и `PublishOrderToErp` выбрал бы один и тот же
+     * склад для двух разных потоков отгрузки.
+     *
+     * @return array<string, mixed>
+     */
+    private function rules(Request $request, ?Warehouse $warehouse = null): array
+    {
+        $unique = 'unique:warehouses,external_id'.($warehouse ? ','.$warehouse->id : '');
+
+        return [
+            'name' => 'required|string|max:255',
+            'external_id' => 'nullable|string|max:255|'.$unique,
+            'is_defect' => 'boolean',
+            'is_promo_sample' => [
+                'boolean',
+                // Замыкание, а не declined_if: правило implicit и сработало бы
+                // на отсутствующем в запросе поле
+                function (string $attribute, mixed $value, \Closure $fail) use ($request) {
+                    if ($value && $request->boolean('is_defect')) {
+                        $fail('Склад не может быть одновременно складом некондиции и складом рекламных образцов.');
+                    }
+                },
+            ],
+        ];
     }
 
     /**

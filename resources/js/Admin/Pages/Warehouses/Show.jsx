@@ -5,6 +5,7 @@ import { Box, Card, SimpleGrid, Text, VStack } from '@chakra-ui/react';
 import { LuPencil } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { usePermission } from '@/Admin/hooks/usePermission';
+import { getWarehouseTypeLabel } from '@/constants/warehouseType';
 
 function InfoRow({ label, value }) {
     return (
@@ -44,7 +45,7 @@ export default function Show() {
                             <InfoRow label="ID" value={warehouse.id?.toString()} />
                             <InfoRow label="Название" value={warehouse.name} />
                             <InfoRow label="Внешний ID" value={warehouse.external_id} />
-                            <InfoRow label="Тип" value={warehouse.is_defect ? 'Склад некондиции' : 'Обычный'} />
+                            <InfoRow label="Тип" value={getWarehouseTypeLabel(warehouse)} />
                             <InfoRow label="Создан" value={warehouse.created_at} />
                             <InfoRow label="Обновлён" value={warehouse.updated_at} />
                         </SimpleGrid>

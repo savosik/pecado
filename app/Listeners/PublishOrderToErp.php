@@ -40,9 +40,9 @@ class PublishOrderToErp
             return;
         }
 
-        // Тот же гейт для рекламных образцов: склад «Москва реклама» появится
-        // только в волне 3 (карточка promo-11), и до тех пор промо-образцы
-        // публиковать нельзя — пустой warehouse_uuids хуже отсутствия сообщения
+        // Тот же гейт для рекламных образцов: пока склад «Москва реклама» не заведён
+        // и не получил external_id от 1С, публиковать образцы нельзя — пустой
+        // warehouse_uuids хуже отсутствия сообщения
         if ($orderType === 'promo_sample' && $this->promoSampleWarehouseUuids() === []) {
             \Illuminate\Support\Facades\Log::warning(
                 'Заказ рекламных образцов не опубликован в 1С: у склада «Москва реклама» нет external_id',
@@ -209,20 +209,16 @@ class PublishOrderToErp
     /**
      * UUID склада рекламных образцов («Москва реклама»).
      *
-     * Флаг `is_promo_sample` заводится в карточке promo-11 (волна 3). Пока колонки
-     * нет — метод возвращает пустой массив, и гейт выше не даёт опубликовать заказ.
-     * Это корректное поведение, а не ошибка.
+     * Пока склад не заведён или не получил external_id от 1С, метод возвращает
+     * пустой массив, и гейт выше не даёт опубликовать заказ. Это корректное
+     * поведение, а не ошибка.
      *
      * @return string[]
      */
     private function promoSampleWarehouseUuids(): array
     {
-        if (! \Illuminate\Support\Facades\Schema::hasColumn('warehouses', 'is_promo_sample')) {
-            return [];
-        }
-
         return \App\Models\Warehouse::query()
-            ->where('is_promo_sample', true)
+            ->promoSample()
             ->pluck('external_id')
             ->filter()
             ->values()

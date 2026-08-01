@@ -2,7 +2,7 @@
 
 **Приоритет:** высокий (дефект на проде)
 **Создано:** 2026-07-31
-**Отделено от:** [promo-10-order-type-ui](../backlog/2026-07-27_promo-10-order-type-ui.md)
+**Отделено от:** [promo-10-order-type-ui](2026-07-27_promo-10-order-type-ui.md)
 
 ## Проблема
 

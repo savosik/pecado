@@ -17,6 +17,7 @@ use App\Services\Order\OrderChangeAggregator;
 use App\Services\Order\OrderChangeLogger;
 use App\Services\Order\OrderDraft;
 use App\Services\Order\OrderLine;
+use App\Services\Promotion\ClientApiPromotions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,7 @@ class ClientApiController extends Controller
         protected OrderChangeAggregator $changeAggregator,
         protected OrderChangeLogger $changeLogger,
         protected OrderAssembler $assembler,
+        protected ClientApiPromotions $promotions,
     ) {}
 
     /**
@@ -219,6 +221,31 @@ class ClientApiController extends Controller
     /**
      * POST /api/client-api/{token}/orders
      * Создать заказ (с проверкой остатков и разделением на заказ/предзаказ).
+     *
+     * ## Расчёт акций (`apply_promotions`)
+     *
+     * Необязательный параметр `apply_promotions` (boolean, по умолчанию `false`).
+     * Без него ответ и созданные заказы не меняются ни на байт — поведение
+     * существующих интеграций остаётся прежним, ключ `promotions` в JSON
+     * не появляется даже пустым.
+     *
+     * При `apply_promotions: true` сайт считает акции по **фактически принятым**
+     * позициям (а не по запрошенным: часть количеств урезается по остатку)
+     * и создаёт для промо-позиций отдельные заказы типа `promo` (подотчётные,
+     * выписываются в накладной) и `promo_sample` (рекламные образцы). В ответ
+     * добавляется блок `promotions` с `applied` (что начислено, включая
+     * `order_id` документа) и `near_miss` (до чего клиенту не хватило).
+     *
+     * ⚠️ **Промо-позиции с ненулевой ценой создают отдельный заказ, который
+     * подлежит оплате.** Интерактивного отказа у API нет: передавая
+     * `apply_promotions: true`, клиент соглашается на все начисления акции,
+     * включая платные.
+     *
+     * Награды с выбором варианта (`choice`) в API не выдаются — выбор живёт
+     * в корзине сайта. Такие акции попадают в `near_miss` с пояснением.
+     *
+     * Повторная отправка запроса задваивает заказы, включая промо-заказы:
+     * идемпотентности у эндпоинта нет.
      */
     public function orders(Request $request, string $token): JsonResponse
     {
@@ -233,6 +260,7 @@ class ClientApiController extends Controller
             'products' => 'required|array|min:1',
             'products.*.identifier' => 'required|string|max:255',
             'products.*.quantity' => 'required|integer|min:1',
+            'apply_promotions' => 'nullable|boolean',
         ], [
             'inn.required' => 'ИНН обязателен',
             'delivery_method.in' => 'Недопустимый способ доставки. Допустимые значения: delivery, pickup',
@@ -351,6 +379,15 @@ class ClientApiController extends Controller
         // Способ доставки (v15.3): delivery по умолчанию; при самовывозе адрес не хранится
         $deliveryMethod = $validated['delivery_method'] ?? DeliveryMethod::DELIVERY->value;
 
+        // Акции считаются по принятым позициям, а не по запрошенным: иначе подарок
+        // уедет за товар, которого не отгрузили. По умолчанию расчёта нет —
+        // клиент, который не просил подарков, не должен получить лишний заказ
+        $applyPromotions = $request->boolean('apply_promotions');
+
+        $promoResult = $applyPromotions
+            ? $this->promotions->resolve(array_merge($instockItems, $preorderItems), $user)
+            : null;
+
         $draft = new OrderDraft(
             user: $user,
             company: $company,
@@ -358,10 +395,14 @@ class ClientApiController extends Controller
             groups: [
                 OrderType::ORDER->value => $this->linesFromApiItems($instockItems),
                 OrderType::PREORDER->value => $this->linesFromApiItems($preorderItems),
+                OrderType::PROMO->value => $promoResult?->groups[OrderType::PROMO->value] ?? [],
+                OrderType::PROMO_SAMPLE->value => $promoResult?->groups[OrderType::PROMO_SAMPLE->value] ?? [],
             ],
             deliveryAddress: $validated['address'] ?? null,
             comment: $comment,
             currency: $currency,
+            // Лист отбора промо-позиций — та же пометка складу, что и в чекауте
+            warehouseComments: $promoResult !== null ? $promoResult->warehouseComments : [],
         );
 
         // Заказы и запись о недостаче — одной транзакцией. OrderCreated сборщик
@@ -419,6 +460,12 @@ class ClientApiController extends Controller
                 'not_accepted' => $notAccepted,
                 'partial' => $partial,
             ];
+        }
+
+        // Блок появляется только при apply_promotions=true — даже пустым ключом
+        // ответ раздувать нельзя, некоторые клиентские парсеры строгие
+        if ($promoResult !== null) {
+            $response['promotions'] = $promoResult->toResponse($createdOrders);
         }
 
         return response()->json($response, 201);

@@ -5,7 +5,6 @@ namespace App\Services\Promotion;
 use App\Enums\PromoKind;
 use App\Models\PromotionRule;
 use App\Models\Warehouse;
-use Illuminate\Support\Facades\Schema as DbSchema;
 use Illuminate\Validation\ValidationException;
 use Opis\JsonSchema\Errors\ErrorFormatter;
 use Opis\JsonSchema\Validator;
@@ -409,28 +408,27 @@ class PromotionRuleSchemaValidator
     }
 
     /**
-     * Пробники живут на складе «Москва реклама» — он появляется в волне 3.
-     * До тех пор награду-пробник можно сохранить, но правило с ней не включается.
+     * Пробники живут на складе «Москва реклама» и только на нём.
+     *
+     * Склад указывается в награде явно: `PromoStockService` считает фонд пробников
+     * по этому складу, а не по региону клиента — иначе товар, лежащий только
+     * на рекламном складе, всегда показывал бы нулевую доступность.
+     *
+     * Сохранить правило без склада можно (маркетолог заполняет форму по частям),
+     * включить — нет.
      *
      * @return string[]
      */
     private function validateSampleWarehouse(?Warehouse $warehouse, int $number, bool $isActive): array
     {
-        $flagExists = DbSchema::hasColumn('warehouses', 'is_promo_sample');
-
-        if (! $flagExists) {
+        if ($warehouse === null) {
             return $isActive
-                ? ["Награда {$number}: пробники появятся вместе со складом «Москва реклама» — "
-                    .'правило с наградой-пробником пока нельзя включить.']
+                ? ["Награда {$number}: для пробника нужно указать склад «Москва реклама»."]
                 : [];
         }
 
-        if ($warehouse === null) {
-            return ["Награда {$number}: для пробника нужно указать склад «Москва реклама»."];
-        }
-
-        if (! $warehouse->getAttribute('is_promo_sample')) {
-            return ["Награда {$number}: пробник можно выдавать только со склада пробников."];
+        if (! $warehouse->is_promo_sample) {
+            return ["Награда {$number}: пробник можно выдавать только со склада рекламных образцов."];
         }
 
         return [];

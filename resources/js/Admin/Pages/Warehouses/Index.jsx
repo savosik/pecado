@@ -10,6 +10,7 @@ import { ConfirmDialog } from "@/Admin/Components/ConfirmDialog";
 import { toaster } from "@/components/ui/toaster";
 import { usePermission } from '@/Admin/hooks/usePermission';
 import { DeleteAllButton } from '@/Admin/Components';
+import { getWarehouseTypeColor, getWarehouseTypeShortLabel } from '@/constants/warehouseType';
 
 const WarehousesIndex = ({ filters }) => {
     const { warehouses } = usePage().props;
@@ -52,9 +53,11 @@ const WarehousesIndex = ({ filters }) => {
         {
             label: "Тип",
             key: "is_defect",
-            render: (value) => value
-                ? <Badge colorPalette="purple" variant="subtle">Некондиция</Badge>
-                : <Badge colorPalette="gray" variant="subtle">Обычный</Badge>,
+            render: (value, warehouse) => (
+                <Badge colorPalette={getWarehouseTypeColor(warehouse)} variant="subtle">
+                    {getWarehouseTypeShortLabel(warehouse)}
+                </Badge>
+            ),
         },
         createActionsColumn('admin.warehouses', (warehouse) => setDeleteId(warehouse.id), { permissionPrefix: 'warehouses', showView: true }),
     ];

@@ -534,13 +534,12 @@ class PromotionRuleController extends AdminController
             'regions' => Region::query()->orderBy('name')->get(['id', 'name']),
             'warehouses' => Warehouse::query()
                 ->orderBy('name')
-                ->get(['id', 'name', 'is_defect'])
+                ->get(['id', 'name', 'is_defect', 'is_promo_sample'])
                 ->map(fn (Warehouse $warehouse) => [
                     'id' => $warehouse->id,
                     'name' => $warehouse->name,
                     'is_defect' => (bool) $warehouse->is_defect,
-                    // Флаг склада пробников появится в волне 3 вместе с «Москва реклама»
-                    'is_promo_sample' => (bool) $warehouse->getAttribute('is_promo_sample'),
+                    'is_promo_sample' => (bool) $warehouse->is_promo_sample,
                 ]),
             'erp_promotion_types' => [
                 ['value' => ErpPromotion::TYPE_NEW, 'label' => 'Новинки'],
