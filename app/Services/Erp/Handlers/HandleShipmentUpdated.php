@@ -6,10 +6,13 @@ use App\Models\Company;
 use App\Models\Product;
 use App\Models\Shipment;
 use App\Models\User;
+use App\Services\Erp\Support\ResolvesDocumentOrganization;
 use Illuminate\Support\Facades\Log;
 
 class HandleShipmentUpdated
 {
+    use ResolvesDocumentOrganization;
+
     /**
      * Обработка события shipment.updated из 1С.
      * v3: отправляется при перепроведении или изменении реализации.
@@ -83,6 +86,12 @@ class HandleShipmentUpdated
             if (array_key_exists('tax_id', $payload)) {
                 $shipment->tax_id = $taxId;
             }
+        }
+
+        // v15.8.0: организация и склад проведения. Отсутствие поля не сбрасывает
+        // сохранённое значение.
+        foreach ($this->resolveOrganizationFields($payload, 'HandleShipmentUpdated') as $field => $value) {
+            $shipment->{$field} = $value;
         }
 
         $shipment->save();

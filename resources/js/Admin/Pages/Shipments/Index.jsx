@@ -20,7 +20,7 @@ const STATUS_COLORS = {
     in_progress: 'orange',
 };
 
-export default function Index({ shipments, filters, statuses, trashedCount }) {
+export default function Index({ shipments, filters, statuses, organizations, organizationsEnabled, trashedCount }) {
     const {
         searchQuery,
         handleSearch,
@@ -78,6 +78,7 @@ export default function Index({ shipments, filters, statuses, trashedCount }) {
     const [showFilters, setShowFilters] = useState(false);
     const [localFilters, setLocalFilters] = useState({
         status: filters?.status ?? '',
+        organization_id: filters?.organization_id ?? '',
         date_from: filters?.date_from ?? '',
         date_to: filters?.date_to ?? '',
         currency_code: filters?.currency_code ?? '',
@@ -95,7 +96,7 @@ export default function Index({ shipments, filters, statuses, trashedCount }) {
     };
 
     const handleResetFilters = () => {
-        const reset = { status: '', date_from: '', date_to: '', currency_code: '' };
+        const reset = { status: '', organization_id: '', date_from: '', date_to: '', currency_code: '' };
         setLocalFilters(reset);
         navigateWithParams({ ...reset, page: 1 });
     };
@@ -136,6 +137,20 @@ export default function Index({ shipments, filters, statuses, trashedCount }) {
                 </Link>
             ) : <Text color="gray.500" fontSize="sm">—</Text>,
         },
+        // Организация — наше юрлицо, от имени которого проведена реализация.
+        // Колонки нет, пока функциональность не включена флагом.
+        ...(organizationsEnabled ? [{
+            key: 'organization',
+            label: 'Организация',
+            render: (_, row) => row.organization ? (
+                <HStack gap={1}>
+                    <Text fontSize="sm">{row.organization.name}</Text>
+                    {row.organization.is_stub && (
+                        <Badge colorPalette="orange" variant="subtle" size="sm">не заведена</Badge>
+                    )}
+                </HStack>
+            ) : <Text color="gray.500" fontSize="sm">—</Text>,
+        }] : []),
         {
             key: 'date',
             label: 'Дата',
@@ -318,6 +333,28 @@ export default function Index({ shipments, filters, statuses, trashedCount }) {
                                         </Select.Content>
                                     </Select.Root>
                                 </Field>
+
+                                {organizationsEnabled && (
+                                    <Field label="Организация" flex="1">
+                                        <Select.Root
+                                            value={localFilters.organization_id ? [String(localFilters.organization_id)] : []}
+                                            onValueChange={(e) => setLocalFilters({ ...localFilters, organization_id: e.value[0] || '' })}
+                                        >
+                                            <Select.Trigger>
+                                                <Select.ValueText placeholder="Все организации" />
+                                            </Select.Trigger>
+                                            <Select.Content>
+                                                <Select.Item item="">Все организации</Select.Item>
+                                                <Select.Item item="none">Не указана</Select.Item>
+                                                {organizations?.map((organization) => (
+                                                    <Select.Item key={organization.id} item={String(organization.id)}>
+                                                        {organization.is_stub ? `${organization.name} (не заведена)` : organization.name}
+                                                    </Select.Item>
+                                                ))}
+                                            </Select.Content>
+                                        </Select.Root>
+                                    </Field>
+                                )}
                             </Flex>
 
                             <Flex gap={4} direction={{ base: 'column', md: 'row' }} align="end">

@@ -68,6 +68,8 @@ class Shipment extends Model
         'number',
         'user_id',
         'company_id',
+        'organization_id',
+        'warehouse_id',
         'tax_id',
         'date',
         'status',
@@ -104,6 +106,25 @@ class Shipment extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    /**
+     * Наша организация (юрлицо), от имени которой 1С провела реализацию.
+     *
+     * Может отличаться от организации заказа: 1С могла переоформить документ.
+     * Это легитимно, сайт расхождение не «чинит».
+     */
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * Склад отгрузки, определённый 1С.
+     */
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function items(): HasMany

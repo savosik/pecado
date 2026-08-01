@@ -9,6 +9,7 @@ use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
 use App\Services\Erp\Support\OrderStatusMapper;
 use App\Services\Erp\Support\PreservesDefectItemLinks;
 use App\Services\Erp\Support\PreservesPromoItemLinks;
+use App\Services\Erp\Support\ResolvesDocumentOrganization;
 use App\Services\Order\OrderChangeLogger;
 use Illuminate\Support\Facades\Log;
 
@@ -25,6 +26,7 @@ class HandleOrderUpdated
 {
     use PreservesDefectItemLinks;
     use PreservesPromoItemLinks;
+    use ResolvesDocumentOrganization;
 
     public function __construct(
         private readonly OrderChangeLogger $changeLogger,
@@ -53,7 +55,7 @@ class HandleOrderUpdated
             return;
         }
 
-        $order->load(['company', 'user']);
+        $order->load(['company', 'user', 'organization']);
         $oldAttrs = $this->changeLogger->snapshotAttributes($order);
 
         // Если 1С прислала статус «Удалён» — soft-delete + status='closed'.
@@ -109,6 +111,13 @@ class HandleOrderUpdated
             $order->erp_updated_at = $payload['erp_updated_at'];
         }
 
+        // v15.8.0: организация и склад проведения. Отсутствие поля не сбрасывает
+        // сохранённое значение; смена организации попадёт в OrderChangeLog ниже —
+        // менеджер должен видеть, что документ переехал между юрлицами.
+        foreach ($this->resolveOrganizationFields($payload, 'HandleOrderUpdated') as $field => $value) {
+            $order->{$field} = $value;
+        }
+
         $order->fromErp = true;
 
         if ($shouldRestore) {
@@ -128,7 +137,7 @@ class HandleOrderUpdated
         }
 
         // Логируем атрибутные изменения (кроме статуса — он идёт в OrderStatusHistory)
-        $order->refresh()->load(['company', 'user']);
+        $order->refresh()->load(['company', 'user', 'organization']);
         $newAttrs = $this->changeLogger->snapshotAttributes($order);
         $this->changeLogger->logAttributeChanges($order, $oldAttrs, $newAttrs, 'erp');
 

@@ -161,24 +161,35 @@ class ShipmentController extends Controller
         [$query] = $this->buildIndexQuery($request, $user);
         $currency = $this->getUserCurrency($request);
 
-        $headers = [
-            'Номер', 'Статус', 'Дата отгрузки', 'Контрагент',
-            'Позиций', 'Сумма', 'Валюта', 'Сумма в валюте кабинета',
-        ];
+        // v15.8.0: колонка «Продавец». Пустое значение выводим словами: пустая ячейка
+        // в Excel читается как потеря данных, а не как «организации нет».
+        $withSeller = (bool) config('erp.organizations.enabled');
 
-        $rows = (function () use ($query, $currency) {
+        $headers = array_merge(
+            ['Номер', 'Статус', 'Дата отгрузки', 'Контрагент'],
+            $withSeller ? ['Продавец'] : [],
+            ['Позиций', 'Сумма', 'Валюта', 'Сумма в валюте кабинета'],
+        );
+
+        // with('organization') в buildIndexQuery — иначе колонка даст N+1 на выгрузке
+        $rows = (function () use ($query, $currency, $withSeller) {
             foreach ($query->cursor() as $shipment) {
                 $totalConverted = $this->convertAmount((float) $shipment->total_amount, $shipment->currency_code, $currency);
-                yield [
-                    $shipment->erp_number ?? $shipment->number ?? ('#'.$shipment->id),
-                    self::STATUS_LABELS[$shipment->status] ?? $shipment->status,
-                    $shipment->date?->format('Y-m-d'),
-                    $shipment->company?->name ?? '',
-                    $shipment->items->count(),
-                    round((float) $shipment->total_amount, 2),
-                    $shipment->currency_code ?? 'RUB',
-                    round((float) $totalConverted, 2),
-                ];
+                yield array_merge(
+                    [
+                        $shipment->erp_number ?? $shipment->number ?? ('#'.$shipment->id),
+                        self::STATUS_LABELS[$shipment->status] ?? $shipment->status,
+                        $shipment->date?->format('Y-m-d'),
+                        $shipment->company?->name ?? '',
+                    ],
+                    $withSeller ? [$shipment->organization?->name ?? 'Не указана'] : [],
+                    [
+                        $shipment->items->count(),
+                        round((float) $shipment->total_amount, 2),
+                        $shipment->currency_code ?? 'RUB',
+                        round((float) $totalConverted, 2),
+                    ],
+                );
             }
         })();
 
@@ -195,7 +206,7 @@ class ShipmentController extends Controller
 
         $query = Shipment::query()
             ->where('user_id', $user->id)
-            ->with(['company', 'items.product']);
+            ->with(['company', 'organization', 'items.product']);
 
         if ($search !== '') {
             $normalized = preg_replace('/[\s\-]+/u', '', $search);
@@ -325,7 +336,14 @@ class ShipmentController extends Controller
 
         abort_unless($shipment->user_id === $user->id, 403);
 
-        $shipment->load(['company', 'items.product', 'items.product.brand']);
+        // is_stub обязателен в выборке: без него sellerPayload() покажет клиенту
+        // UUID вместо названия продавца
+        $shipment->load([
+            'company',
+            'organization:id,name,legal_name,tax_id,is_stub',
+            'items.product',
+            'items.product.brand',
+        ]);
 
         $currency = $this->getUserCurrency($request);
 
@@ -379,6 +397,9 @@ class ShipmentController extends Controller
                     'legal_name' => $shipment->company->legal_name,
                     'tax_id' => $shipment->company->tax_id,
                 ] : null,
+                // v15.8.0: продавец по накладной — наше юрлицо. Для клиента это самое
+                // заметное место: именно по реализации он сверяет документ.
+                'seller' => $this->sellerPayload($shipment),
                 'items' => $shipment->items->map(function ($item) use ($currency, $ordersByUuid) {
                     $priceConverted = $this->convertAmount((float) $item->price, null, $currency);
                     $totalConverted = $this->convertAmount((float) $item->total, null, $currency);
@@ -435,6 +456,33 @@ class ShipmentController extends Controller
                 'due_date' => $overdueDetail->due_date?->format('Y-m-d'),
             ] : null,
         ]);
+    }
+
+    /**
+     * Продавец по накладной — наше юрлицо, от имени которого проведена реализация.
+     *
+     * `null` в трёх случаях, и во всех фронт не показывает блок: выключен флаг,
+     * организация не пришла, либо это заглушка — у неё вместо названия лежит UUID.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function sellerPayload(Shipment $shipment): ?array
+    {
+        if (! config('erp.organizations.enabled')) {
+            return null;
+        }
+
+        $organization = $shipment->organization;
+
+        if (! $organization || $organization->is_stub) {
+            return null;
+        }
+
+        return [
+            'name' => $organization->name,
+            'legal_name' => $organization->legal_name,
+            'tax_id' => $organization->tax_id,
+        ];
     }
 
     /**

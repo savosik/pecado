@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\Erp\Support\OrderStatusMapper;
 use App\Services\Erp\Support\PreservesDefectItemLinks;
 use App\Services\Erp\Support\PreservesPromoItemLinks;
+use App\Services\Erp\Support\ResolvesDocumentOrganization;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -27,6 +28,7 @@ class HandleOrderCreated
 {
     use PreservesDefectItemLinks;
     use PreservesPromoItemLinks;
+    use ResolvesDocumentOrganization;
 
     public function handle(array $payload): void
     {
@@ -155,7 +157,12 @@ class HandleOrderCreated
             // withTrashed: если заказ был soft-deleted и 1С повторно шлёт его — восстанавливаем.
             $existingOrder = Order::withTrashed()->where('uuid', $uuid)->first();
 
-            $order = Order::withoutEvents(function () use ($existingOrder, $uuid, $payload, $userId, $companyId, $finalStatus, $type) {
+            // v15.8.0: организация и склад проведения. Значения 1С авторитетны и при
+            // upsert перезаписывают то, что предложил сайт при оформлении, — организацию
+            // выбирает 1С, а склад она могла подменить на другой из перечисленных.
+            $organizationFields = $this->resolveOrganizationFields($payload, 'HandleOrderCreated');
+
+            $order = Order::withoutEvents(function () use ($existingOrder, $uuid, $payload, $userId, $companyId, $finalStatus, $type, $organizationFields) {
                 $fields = [
                     'number' => $payload['number'] ?? null,
                     'erp_number' => $payload['number'] ?? null,
@@ -169,6 +176,8 @@ class HandleOrderCreated
                     'rate_coefficient' => $payload['rate_coefficient'] ?? 1.0,
                     'comment' => $payload['comment'] ?? null,
                 ];
+
+                $fields = array_merge($fields, $organizationFields);
 
                 // v15.3: способ доставки (delivery | pickup, опционально).
                 // Для нового заказа отсутствие/null = delivery (default колонки).
@@ -274,6 +283,8 @@ class HandleOrderCreated
                 'company_id' => $companyId,
                 'delivery_address' => $payload['delivery_address'] ?? null,
                 'delivery_method' => $payload['delivery_method'] ?? null,
+                'organization_id' => $organizationFields['organization_id'] ?? 'не прислана',
+                'warehouse_id' => $organizationFields['warehouse_id'] ?? 'не прислан',
                 'items_count' => count($items),
                 'total_amount' => $totalAmount,
             ]);

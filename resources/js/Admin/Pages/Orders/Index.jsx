@@ -18,7 +18,7 @@ import { getOrderTypeShortLabel as getTypeLabel, getOrderTypeColor as getTypeCol
 
 const getStatusColor = getOrderStatusColor;
 
-const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
+const OrdersIndex = ({ filters, statuses, types, companies, organizations, organizationsEnabled, trashedCount }) => {
     const { orders } = usePage().props;
     const { can } = usePermission();
     const [deleteId, setDeleteId] = useState(null);
@@ -75,6 +75,7 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
         status:      filters?.status || "",
         type:        filters?.type || "",
         company_id:  filters?.company_id || "",
+        organization_id: filters?.organization_id || "",
         date_from:   filters?.date_from || "",
         date_to:     filters?.date_to || "",
         amount_from: filters?.amount_from || "",
@@ -138,7 +139,7 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
 
     const handleResetFilters = useCallback(() => {
         setLocalFilters({
-            status: "", type: "", company_id: "",
+            status: "", type: "", company_id: "", organization_id: "",
             date_from: "", date_to: "", amount_from: "", amount_to: "",
         });
         router.get(route("admin.orders.index"), {
@@ -475,6 +476,33 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
                                     </Select.Content>
                                 </Select.Root>
                             </Field>
+
+                            {/*
+                                «Не указана» — не техническая заглушка, а рабочий фильтр:
+                                в переходный период таких заказов много, и менеджеру
+                                нужно уметь отобрать именно их.
+                            */}
+                            {organizationsEnabled && (
+                                <Field label="Организация">
+                                    <Select.Root
+                                        value={localFilters.organization_id ? [String(localFilters.organization_id)] : []}
+                                        onValueChange={(e) => setLocalFilters({ ...localFilters, organization_id: e.value[0] || "" })}
+                                    >
+                                        <Select.Trigger>
+                                            <Select.ValueText placeholder="Все организации" />
+                                        </Select.Trigger>
+                                        <Select.Content>
+                                            <Select.Item item="">Все организации</Select.Item>
+                                            <Select.Item item="none">Не указана</Select.Item>
+                                            {organizations?.map((organization) => (
+                                                <Select.Item key={organization.id} item={String(organization.id)}>
+                                                    {organization.is_stub ? `${organization.name} (не заведена)` : organization.name}
+                                                </Select.Item>
+                                            ))}
+                                        </Select.Content>
+                                    </Select.Root>
+                                </Field>
+                            )}
 
                             <Field label="Дата от">
                                 <Input

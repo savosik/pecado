@@ -18,6 +18,9 @@ class OrderChangeLogger
      */
     private const TRACKED_ATTRIBUTES = [
         'company_id' => 'Компания',
+        // v15.8.0: заказ может «переехать» между нашими юрлицами — 1С переоформила
+        // документ. Менеджер должен видеть это в журнале, а не узнавать по счёту.
+        'organization_id' => 'Организация',
         'delivery_address' => 'Адрес доставки',
         'comment' => 'Комментарий',
         'currency_code' => 'Валюта',
@@ -35,6 +38,8 @@ class OrderChangeLogger
         return [
             'company_id' => $order->company_id,
             'company_name' => $order->company?->name,
+            'organization_id' => $order->organization_id,
+            'organization_name' => $order->organization?->name,
             'delivery_address' => $order->delivery_address,
             'comment' => $order->comment,
             'total_amount' => (float) $order->total_amount,
@@ -207,6 +212,10 @@ class OrderChangeLogger
                 $entry['old_label'] = $old['company_name'] ?? null;
                 $entry['new_label'] = $new['company_name'] ?? null;
             }
+            if ($field === 'organization_id') {
+                $entry['old_label'] = $old['organization_name'] ?? null;
+                $entry['new_label'] = $new['organization_name'] ?? null;
+            }
             if ($field === 'user_id') {
                 $entry['old_label'] = $old['user_name'] ?? null;
                 $entry['new_label'] = $new['user_name'] ?? null;
@@ -293,7 +302,7 @@ class OrderChangeLogger
         foreach ($diff as $field => $entry) {
             $label = $entry['label'];
 
-            if ($field === 'company_id') {
+            if (in_array($field, ['company_id', 'organization_id'], true)) {
                 $old = $entry['old_label'] ?? '—';
                 $new = $entry['new_label'] ?? '—';
                 $lines[] = "{$label}: «{$old}» → «{$new}»";

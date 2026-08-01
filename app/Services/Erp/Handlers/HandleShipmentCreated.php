@@ -6,10 +6,13 @@ use App\Models\Company;
 use App\Models\Product;
 use App\Models\Shipment;
 use App\Models\User;
+use App\Services\Erp\Support\ResolvesDocumentOrganization;
 use Illuminate\Support\Facades\Log;
 
 class HandleShipmentCreated
 {
+    use ResolvesDocumentOrganization;
+
     /**
      * Обработка события shipment.created из 1С.
      * v3: отправляется при первом проведении реализации.
@@ -58,6 +61,10 @@ class HandleShipmentCreated
             $fields['erp_updated_at'] = $payload['erp_updated_at'];
         }
 
+        // v15.8.0: организация и склад проведения. Отсутствие поля не сбрасывает
+        // сохранённое значение — 1С может не уметь его присылать.
+        $fields = array_merge($fields, $this->resolveOrganizationFields($payload, 'HandleShipmentCreated'));
+
         $shipment = Shipment::withTrashed()->where('uuid', $uuid)->first();
 
         if ($shipment) {
@@ -80,6 +87,8 @@ class HandleShipmentCreated
         Log::info('HandleShipmentCreated: реализация создана/обновлена', [
             'uuid' => $uuid,
             'company_id' => $companyId,
+            'organization_id' => $fields['organization_id'] ?? 'не прислана',
+            'warehouse_id' => $fields['warehouse_id'] ?? 'не прислан',
         ]);
     }
 

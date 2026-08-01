@@ -37,8 +37,8 @@ class OrderController extends AdminController
         $onlyTrashed = $request->boolean('trashed');
 
         $query = $onlyTrashed
-            ? Order::onlyTrashed()->with(['user', 'company', 'items'])
-            : Order::query()->with(['user', 'company', 'items']);
+            ? Order::onlyTrashed()->with(['user', 'company', 'organization', 'items'])
+            : Order::query()->with(['user', 'company', 'organization', 'items']);
 
         // Поиск
         $search = trim((string) $request->input('search', ''));
@@ -81,6 +81,16 @@ class OrderController extends AdminController
         // Фильтрация по компании
         if ($companyId = $request->input('company_id')) {
             $query->where('company_id', $companyId);
+        }
+
+        // Фильтрация по нашей организации (v15.8.0).
+        // Значение 'none' — заказы без организации: их много в переходный период,
+        // и именно их менеджеру нужно уметь отобрать.
+        $organizationId = $request->input('organization_id');
+        if ($organizationId === 'none') {
+            $query->whereNull('organization_id');
+        } elseif ($organizationId) {
+            $query->where('organization_id', $organizationId);
         }
 
         // Фильтрация по дате создания
@@ -139,6 +149,11 @@ class OrderController extends AdminController
                     'id' => $order->company->id,
                     'name' => $order->company->name,
                 ] : null,
+                'organization' => $order->organization ? [
+                    'id' => $order->organization->id,
+                    'name' => $order->organization->name,
+                    'is_stub' => $order->organization->is_stub,
+                ] : null,
                 'items' => $order->items,
             ];
         });
@@ -150,6 +165,7 @@ class OrderController extends AdminController
                 'status' => $status,
                 'type' => $request->input('type', ''),
                 'company_id' => $companyId,
+                'organization_id' => $organizationId,
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
                 'amount_from' => $amountFrom,
@@ -166,6 +182,8 @@ class OrderController extends AdminController
             ]),
             'types' => OrderType::options(),
             'companies' => Company::select('id', 'name')->orderBy('name')->get(),
+            'organizations' => \App\Models\Organization::query()->ordered()->get(['id', 'name', 'is_stub']),
+            'organizationsEnabled' => config('erp.organizations.enabled'),
         ]);
     }
 
@@ -269,6 +287,8 @@ class OrderController extends AdminController
         $order->load([
             'user',
             'company',
+            'organization',
+            'warehouse',
             'items.product',
             'cart',
             'statusHistories.user',
@@ -311,6 +331,16 @@ class OrderController extends AdminController
                 'company' => $order->company ? [
                     'id' => $order->company->id,
                     'name' => $order->company->name,
+                ] : null,
+                // v15.8.0: организация и склад, на которые 1С провела заказ
+                'organization' => $order->organization ? [
+                    'id' => $order->organization->id,
+                    'name' => $order->organization->name,
+                    'is_stub' => $order->organization->is_stub,
+                ] : null,
+                'warehouse' => $order->warehouse ? [
+                    'id' => $order->warehouse->id,
+                    'name' => $order->warehouse->name,
                 ] : null,
                 'delivery_address' => $order->delivery_address,
                 'delivery_method' => $order->delivery_method?->value ?? 'delivery',
@@ -386,6 +416,7 @@ class OrderController extends AdminController
                 'value' => $case->value,
                 'label' => $this->getStatusLabel($case),
             ]),
+            'organizationsEnabled' => config('erp.organizations.enabled'),
         ]);
     }
 

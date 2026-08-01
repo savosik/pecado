@@ -8,7 +8,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import {
     LuArrowLeft, LuPackage, LuWarehouse, LuBadgePercent,
-    LuClock, LuUser, LuMessageSquare, LuBuilding2, LuMapPin, LuTruck, LuShoppingBag,
+    LuClock, LuUser, LuMessageSquare, LuBuilding2, LuLandmark, LuMapPin, LuTruck, LuShoppingBag,
     LuPencilLine, LuArrowRightLeft, LuChevronDown, LuChevronUp,
     LuPlus, LuMinus, LuTrendingDown, LuTrendingUp, LuCalendar, LuFileSpreadsheet,
     LuSearch, LuStore, LuRepeat, LuShoppingCart, LuTrash2, LuTriangleAlert, LuBan, LuGift, LuSprout,
@@ -217,6 +217,25 @@ export default function OrderShow({ order }) {
                                             )}
                                             {order.company.tax_id && (
                                                 <Text fontSize="xs" color="fg.muted">ИНН: {order.company.tax_id}</Text>
+                                            )}
+                                        </Box>
+                                    </HStack>
+                                )}
+                                {/*
+                                    Продавец — наше юрлицо, на которое проведён заказ.
+                                    Приходит из 1С; пока не пришло, блока просто нет.
+                                */}
+                                {order.seller && (
+                                    <HStack gap="2" align="start">
+                                        <LuLandmark size={16} style={{ marginTop: 2, flexShrink: 0, color: 'var(--chakra-colors-gray-400)' }} />
+                                        <Box>
+                                            <Text fontSize="xs" color="fg.muted">Продавец</Text>
+                                            <Text fontSize="sm" fontWeight="600">{order.seller.name}</Text>
+                                            {order.seller.legal_name && (
+                                                <Text fontSize="xs" color="fg.muted">{order.seller.legal_name}</Text>
+                                            )}
+                                            {order.seller.tax_id && (
+                                                <Text fontSize="xs" color="fg.muted">ИНН: {order.seller.tax_id}</Text>
                                             )}
                                         </Box>
                                     </HStack>

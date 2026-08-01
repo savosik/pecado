@@ -108,6 +108,8 @@ class Order extends Model
         'erp_number',
         'user_id',
         'company_id',
+        'organization_id',
+        'warehouse_id',
         'cart_id',
         'checkout_uuid',
         'status',
@@ -200,6 +202,28 @@ class Order extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    /**
+     * Наша организация (юрлицо), на которую 1С провела заказ.
+     *
+     * Заполняет только 1С — сайт организацию не определяет. NULL значит
+     * «не указана»: 1С ещё не умеет её присылать либо заказ создан до v15.8.0.
+     */
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * Склад отгрузки, определённый 1С.
+     *
+     * Не путать со складами оформления: сайт отправляет перечисление складов
+     * региона, а конкретный выбирает 1С и возвращает обратно.
+     */
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function cart(): BelongsTo

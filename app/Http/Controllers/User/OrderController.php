@@ -485,6 +485,9 @@ class OrderController extends Controller
         // Загрузить все связи
         $order->load([
             'company:id,name,legal_name,tax_id',
+            // is_stub обязателен в выборке: без него sellerPayload() не отличит
+            // заглушку и покажет клиенту UUID вместо названия продавца
+            'organization:id,name,legal_name,tax_id,is_stub',
             'items.product:id,name,sku,slug',
             'items.product.brand:id,name',
             'items.product.media',
@@ -514,6 +517,9 @@ class OrderController extends Controller
                     'legal_name' => $order->company->legal_name,
                     'tax_id' => $order->company->tax_id,
                 ] : null,
+                // v15.8.0: продавец — наше юрлицо, на которое 1С провела заказ.
+                // Заглушку клиенту не показываем: вместо названия там UUID.
+                'seller' => $this->sellerPayload($order),
                 'delivery_address' => $order->delivery_address,
                 'delivery_method' => $order->delivery_method?->value ?? 'delivery',
                 'delivery_method_label' => $order->delivery_method?->label() ?? 'Доставка',
@@ -609,6 +615,34 @@ class OrderController extends Controller
     protected function getStatusLabel(?OrderStatus $status): string
     {
         return $status?->label() ?? 'Неизвестно';
+    }
+
+    /**
+     * Продавец документа — наше юрлицо, на которое 1С провела заказ (v15.8.0).
+     *
+     * `null` в трёх случаях, и во всех фронт просто не показывает блок:
+     * выключен флаг, организация не пришла, либо это заглушка — у заглушки вместо
+     * названия лежит UUID, показывать его клиенту нельзя.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function sellerPayload(Order $order): ?array
+    {
+        if (! config('erp.organizations.enabled')) {
+            return null;
+        }
+
+        $organization = $order->organization;
+
+        if (! $organization || $organization->is_stub) {
+            return null;
+        }
+
+        return [
+            'name' => $organization->name,
+            'legal_name' => $organization->legal_name,
+            'tax_id' => $organization->tax_id,
+        ];
     }
 
     /**

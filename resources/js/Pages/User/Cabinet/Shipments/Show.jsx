@@ -69,6 +69,11 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                         />
                         <InfoBlock label="ИНН контрагента" value={shipment.tax_id} mono />
                         <InfoBlock label="Компания" value={shipment.company?.name} />
+                        {/* Продавец — наше юрлицо по накладной. Приходит из 1С;
+                            пока не пришёл, блок не показываем. */}
+                        {shipment.seller && (
+                            <InfoBlock label="Продавец" value={shipment.seller.name} />
+                        )}
                         <InfoBlock label="Валюта" value={shipment.currency_code} />
                     </SimpleGrid>
 

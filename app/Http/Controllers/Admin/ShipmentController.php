@@ -22,8 +22,8 @@ class ShipmentController extends Controller
         $onlyTrashed = $request->boolean('trashed');
 
         $query = $onlyTrashed
-            ? Shipment::onlyTrashed()->with(['user', 'company', 'items.product'])
-            : Shipment::query()->with(['user', 'company', 'items.product']);
+            ? Shipment::onlyTrashed()->with(['user', 'company', 'organization', 'items.product'])
+            : Shipment::query()->with(['user', 'company', 'organization', 'items.product']);
 
         // Поиск по UUID, ИНН, наименованию компании или товару
         if ($search = $request->input('search')) {
@@ -51,6 +51,15 @@ class ShipmentController extends Controller
         // Фильтр по пользователю
         if ($request->filled('user_id')) {
             $query->where('user_id', $request->input('user_id'));
+        }
+
+        // Фильтр по нашей организации (v15.8.0). 'none' — реализации без организации:
+        // в переходный период их много, и отобрать нужно именно их.
+        $organizationId = $request->input('organization_id');
+        if ($organizationId === 'none') {
+            $query->whereNull('organization_id');
+        } elseif ($organizationId) {
+            $query->where('organization_id', $organizationId);
         }
 
         // Фильтр по дате
@@ -105,23 +114,30 @@ class ShipmentController extends Controller
                     'id' => $shipment->company->id,
                     'name' => $shipment->company->name,
                 ] : null,
+                'organization' => $shipment->organization ? [
+                    'id' => $shipment->organization->id,
+                    'name' => $shipment->organization->name,
+                    'is_stub' => $shipment->organization->is_stub,
+                ] : null,
             ];
         });
 
         return Inertia::render('Admin/Pages/Shipments/Index', [
             'shipments' => $shipments,
             'filters' => array_merge(
-                $request->only(['search', 'status', 'user_id', 'date_from', 'date_to', 'currency_code', 'sort_by', 'sort_order', 'per_page']),
+                $request->only(['search', 'status', 'user_id', 'organization_id', 'date_from', 'date_to', 'currency_code', 'sort_by', 'sort_order', 'per_page']),
                 ['trashed' => $onlyTrashed]
             ),
             'trashedCount' => Shipment::onlyTrashed()->count(),
             'statuses' => array_map(fn ($k, $v) => ['value' => $k, 'label' => $v], array_keys(self::STATUS_LABELS), self::STATUS_LABELS),
+            'organizations' => \App\Models\Organization::query()->ordered()->get(['id', 'name', 'is_stub']),
+            'organizationsEnabled' => config('erp.organizations.enabled'),
         ]);
     }
 
     public function show(Shipment $shipment)
     {
-        $shipment->load(['user', 'company', 'items.product', 'items.order']);
+        $shipment->load(['user', 'company', 'organization', 'warehouse', 'items.product', 'items.order']);
 
         // Получить связанные заказы с расширенными данными для карточного отображения
         $orderUuids = $shipment->items()
@@ -162,6 +178,16 @@ class ShipmentController extends Controller
                 'company' => $shipment->company ? [
                     'id' => $shipment->company->id,
                     'name' => $shipment->company->name,
+                ] : null,
+                // v15.8.0: организация и склад, от имени которых проведена реализация
+                'organization' => $shipment->organization ? [
+                    'id' => $shipment->organization->id,
+                    'name' => $shipment->organization->name,
+                    'is_stub' => $shipment->organization->is_stub,
+                ] : null,
+                'warehouse' => $shipment->warehouse ? [
+                    'id' => $shipment->warehouse->id,
+                    'name' => $shipment->warehouse->name,
                 ] : null,
                 'items' => $shipment->items->map(function ($item) {
                     return [
@@ -212,6 +238,7 @@ class ShipmentController extends Controller
                     ] : null,
                 ];
             }),
+            'organizationsEnabled' => config('erp.organizations.enabled'),
         ]);
     }
 

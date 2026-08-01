@@ -26,7 +26,7 @@ const fmt = (v) =>
     parseFloat(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const OrderShow = () => {
-    const { order, statuses } = usePage().props;
+    const { order, statuses, organizationsEnabled } = usePage().props;
 
     const handleStatusChange = (newStatus) => {
         router.patch(route("admin.orders.status", order.id), {
@@ -182,6 +182,30 @@ const OrderShow = () => {
                                         <Text>{order.company.name}</Text>
                                     </Box>
                                 </>
+                            )}
+
+                            {/*
+                                Продавец — наша организация, на которую 1С провела заказ.
+                                Пока организации нет, строку не показываем вовсе: прочерк
+                                в каждой карточке только зашумил бы её.
+                            */}
+                            {organizationsEnabled && order.organization && (
+                                <Box borderTopWidth="1px" pt={3}>
+                                    <Text fontWeight="medium" mb={2}>Организация</Text>
+                                    <HStack gap={2}>
+                                        <Text>{order.organization.name}</Text>
+                                        {order.organization.is_stub && (
+                                            <Badge colorPalette="orange" variant="subtle">Не заведена</Badge>
+                                        )}
+                                    </HStack>
+                                </Box>
+                            )}
+
+                            {organizationsEnabled && order.warehouse && (
+                                <Box borderTopWidth="1px" pt={3}>
+                                    <Text fontWeight="medium" mb={2}>Склад отгрузки</Text>
+                                    <Text>{order.warehouse.name}</Text>
+                                </Box>
                             )}
 
                             <Box borderTopWidth="1px" pt={3}>
