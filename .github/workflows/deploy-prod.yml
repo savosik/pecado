@@ -328,6 +328,33 @@ jobs:
           echo "==> [4/9] Миграции (main DB + prices DB)..."
           sg docker -c "$DC exec -T app php artisan migrate --force"
 
+          echo "==> [4.1/9] Права read-only пользователя BI/ИИ-агента..."
+          # Сразу после миграций: новая таблица без GRANT SELECT невидима для
+          # аналитического MCP, и это обнаруживается не сразу, а когда менеджер
+          # не находит данные в отчёте. Раньше шаг делался руками и потому забывался.
+          #
+          # Команда только печатает SQL (у пользователя приложения нет GRANT OPTION),
+          # применяет его root изнутри контейнера mysql — так же, как шаг бэкапа выше.
+          # Идемпотентно: вывод начинается с REVOKE ALL и заново выдаёт весь набор.
+          #
+          # Пользователя SQL не создаёт, поэтому на базе без bi_agent REVOKE упал бы
+          # и уронил весь деплой. Аналитический агент — не критичная часть релиза,
+          # так что при отсутствии пользователя шаг пропускается с предупреждением.
+          # Запрос идёт через stdin, а не через -e: внутри двойных кавычек sg docker -c
+          # одинарную кавычку не заэкранировать, а SQL-литерал без неё не написать.
+          BI_USER_EXISTS=$(echo "SELECT COUNT(*) FROM mysql.user WHERE user='bi_agent';" \
+            | sg docker -c "$DC exec -T mysql sh -c 'exec mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" -N -B'" 2>/dev/null \
+            | tr -d '[:space:]')
+
+          if [ "$BI_USER_EXISTS" = "0" ] || [ -z "$BI_USER_EXISTS" ]; then
+            echo "::warning::bi_agent не заведён в MySQL — синхронизация прав пропущена"
+          else
+            sg docker -c "$DC exec -T app php artisan bi:sync-grants --connection=mysql" > /tmp/bi-grants.sql
+            sg docker -c "$DC exec -T mysql sh -c 'exec mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\"'" < /tmp/bi-grants.sql
+            rm -f /tmp/bi-grants.sql
+            echo "Права bi_agent синхронизированы со схемой"
+          fi
+
           echo "==> [5/9] Синхронизация ролей и прав..."
           sg docker -c "$DC exec -T app php artisan db:seed --class=RolesAndPermissionsSeeder --force"
 
