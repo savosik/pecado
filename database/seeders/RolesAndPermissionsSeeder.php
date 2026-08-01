@@ -54,6 +54,10 @@ class RolesAndPermissionsSeeder extends Seeder
         'delivery-addresses' => ['view', 'create', 'edit', 'delete'],
 
         // Финансы
+        // Организации — наши юрлица, от имени которых 1С проводит документы.
+        // Справочник ведёт админ вручную (1С его не присылает), поэтому права
+        // намеренно не выданы менеджерам: они видят организацию в самих документах.
+        'organizations' => ['view', 'create', 'edit', 'delete'],
         'currencies' => ['view', 'create', 'edit', 'delete'],
         'contractor-balances' => ['view', 'create', 'edit', 'delete'],
         'individual-prices' => ['view', 'create', 'edit', 'delete'],
@@ -130,6 +134,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'companies' => 'Компании',
         'company-bank-accounts' => 'Банковские счета',
         'delivery-addresses' => 'Адреса доставки',
+        'organizations' => 'Организации (наши юрлица)',
         'currencies' => 'Валюты',
         'contractor-balances' => 'Балансы контрагентов',
         'individual-prices' => 'Инд. цены',

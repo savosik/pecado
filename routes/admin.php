@@ -402,6 +402,25 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::delete('/warehouses/{warehouse}', [\App\Http\Controllers\Admin\WarehouseController::class, 'destroy'])->name('warehouses.destroy')->middleware('permission:warehouses.delete');
 
     // =====================================================================
+    // Организации (наши юрлица) — справочник ведётся вручную, как склады:
+    // 1С его не присылает, в сообщениях указывает только UUID (эпик org-00).
+    // =====================================================================
+    Route::middleware('permission:organizations.view')->group(function () {
+        Route::get('/organizations/search', [\App\Http\Controllers\Admin\OrganizationController::class, 'search'])->name('organizations.search');
+        Route::get('/organizations', [\App\Http\Controllers\Admin\OrganizationController::class, 'index'])->name('organizations.index');
+        Route::get('/organizations/{organization}', [\App\Http\Controllers\Admin\OrganizationController::class, 'show'])->name('organizations.show')->whereNumber('organization');
+    });
+    Route::middleware('permission:organizations.create')->group(function () {
+        Route::get('/organizations/create', [\App\Http\Controllers\Admin\OrganizationController::class, 'create'])->name('organizations.create');
+        Route::post('/organizations', [\App\Http\Controllers\Admin\OrganizationController::class, 'store'])->name('organizations.store');
+    });
+    Route::middleware('permission:organizations.edit')->group(function () {
+        Route::get('/organizations/{organization}/edit', [\App\Http\Controllers\Admin\OrganizationController::class, 'edit'])->name('organizations.edit');
+        Route::put('/organizations/{organization}', [\App\Http\Controllers\Admin\OrganizationController::class, 'update'])->name('organizations.update');
+    });
+    Route::delete('/organizations/{organization}', [\App\Http\Controllers\Admin\OrganizationController::class, 'destroy'])->name('organizations.destroy')->middleware('permission:organizations.delete');
+
+    // =====================================================================
     // Уценка (некондиция) — закупщик назначает цену и включает публикацию.
     // Партии заводит кладовщик в /wms; здесь только цена и видимость.
     // =====================================================================

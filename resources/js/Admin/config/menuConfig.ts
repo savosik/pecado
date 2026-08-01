@@ -43,6 +43,7 @@ import {
     LuAward,
     LuMenu,
     LuUserRound,
+    LuLandmark,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -130,6 +131,9 @@ export const menuConfig: MenuGroup[] = [
         title: "Финансы",
         icon: LuBanknote,
         items: [
+            // Наши юрлица, от имени которых 1С проводит документы. Не путать
+            // с «Компаниями» в разделе «Пользователи» — те контрагенты-клиенты.
+            { label: "Организации", icon: LuLandmark, path: "/admin/organizations", permission: "organizations.view" },
             { label: "Валюты", icon: LuBanknote, path: "/admin/currencies", permission: "currencies.view" },
             { label: "Балансы контрагентов", icon: LuWallet, path: "/admin/contractor-balances", permission: "contractor-balances.view" },
             { label: "Инд. цены", icon: LuPercent, path: "/admin/individual-prices", permission: "individual-prices.view" },
