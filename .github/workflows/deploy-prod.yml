@@ -290,6 +290,11 @@ jobs:
             echo "CABINET_SEARCH_EXPORT=true" >> /srv/pecado/.env
           fi
 
+          echo "==> [0.1/9] Флаг выдачи промо-позиций по акциям..."
+          if ! grep -q "PROMOTIONS_ISSUE_ENABLED" /srv/pecado/.env; then
+            echo "PROMOTIONS_ISSUE_ENABLED=true" >> /srv/pecado/.env
+          fi
+
           echo "==> [0/9] Maintenance mode ON..."
           sg docker -c "$DC exec -T app php artisan down --retry=30 --refresh=5" || true
 
