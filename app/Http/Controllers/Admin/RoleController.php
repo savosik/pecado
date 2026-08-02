@@ -19,7 +19,7 @@ class RoleController extends Controller
     protected array $permissionGroups = [
         'Каталог' => ['products', 'categories', 'brands', 'product-models', 'attributes', 'attribute-groups', 'size-charts', 'product-barcodes', 'certificates', 'product-exports'],
         'Склады' => ['warehouses', 'regions'],
-        'Продажи' => ['orders', 'carts', 'returns', 'shipments', 'favorites', 'wishlist', 'defects', 'defect-types'],
+        'Продажи' => ['orders', 'carts', 'returns', 'shipments', 'supplier-preorders', 'favorites', 'wishlist', 'defects', 'defect-types'],
         'CRM' => ['crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-analytics'],
         'Склад (WMS)' => ['wms-dashboard', 'wms-defects'],
         'Маркетинг' => ['promotions', 'promotion-rules', 'product-selections'],
