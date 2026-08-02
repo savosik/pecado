@@ -20,3 +20,4 @@ Schedule::command('erp:cleanup-messages')->dailyAt('05:00'); // очистка �
 Schedule::command('sitemap:generate')->dailyAt('03:30'); // после search:sync
 Schedule::command('feed:build-yandex')->hourly()->withoutOverlapping(); // публичный YML-фид Яндекс.Маркета
 Schedule::command('promo:rebuild-rule-products')->dailyAt('02:40')->withoutOverlapping(); // участники правил акций: состав категорий и теги меняются массово
+Schedule::command('crm:lifecycle-hints')->dailyAt('06:10')->withoutOverlapping(); // подсказки по жизненному статусу клиентов — статусы НЕ меняет

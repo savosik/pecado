@@ -174,8 +174,8 @@
 - [x] `crm-02-attachments` — в `review`, ждёт визуальной проверки на dev
 
 ### Волна 2 — Карточка клиента
-- [ ] `crm-03-client-profile`
-- [ ] `crm-04-lifecycle`
+- [x] `crm-03-client-profile` — в `review`, ждёт визуальной проверки на dev
+- [x] `crm-04-lifecycle` — в `review`, ждёт визуальной проверки на dev
 
 ### Волна 3 — Работа менеджера
 - [ ] `crm-09-tasks`

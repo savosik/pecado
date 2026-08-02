@@ -118,11 +118,47 @@ PUT /crm/clients/{client}/profile
 
 ## Критерии готовности
 
-- [ ] Миграции с комментариями к таблицам и всем столбцам, FK — через `->change()`
-- [ ] `bi:sync-grants` прогнан
-- [ ] Профиль заполняется и сохраняется; карточка открывается и у клиента без профиля
-- [ ] Правка заметок пишет ревизию; история видна в UI
-- [ ] Интересы сохраняются тегами с типом `crm-interest` и не смешиваются с товарными
-- [ ] Чужой клиент → 404 при попытке сохранить профиль
-- [ ] Все подписи, значения селектов и ошибки валидации — на русском
-- [ ] Feature-тест `tests/Feature/Crm/ClientProfileTest.php` (сохранение, ревизии, изоляция, гейт права)
+- [x] Миграции с комментариями к таблицам и всем столбцам
+- [x] `bi:sync-grants` прогнан
+- [x] Профиль заполняется и сохраняется; карточка открывается и у клиента без профиля
+- [x] Правка заметок пишет ревизию; история видна в UI
+- [x] Интересы сохраняются тегами с типом `crm-interest` и не смешиваются с товарными
+- [x] Чужой клиент → 404 при попытке сохранить профиль
+- [x] Все подписи, значения селектов и ошибки валидации — на русском
+- [x] Feature-тест `tests/Feature/Crm/ClientProfileTest.php` (сохранение, ревизии, изоляция, гейт права)
+- [ ] Проверено в браузере на dev (после деплоя)
+
+## Что сделано
+
+| Слой | Файлы |
+|---|---|
+| Миграции | `2026_08_02_160000_create_crm_client_profiles_table`, `2026_08_02_160100_create_crm_client_profile_revisions_table`, `2026_08_02_161200_grant_crm_profile_permissions` |
+| Енумы | `app/Enums/Crm/{PaymentBehavior,PreferredChannel,ClientSentiment}.php` + трейт `Concerns/HasLabeledOptions` |
+| Модели | `app/Models/CrmClientProfile.php` (+ фабрика), `app/Models/CrmClientProfileRevision.php`, связь `User::crmProfile()`, трейт `HasTags` на `User` |
+| Сервис | `app/Services/Crm/ClientProfileService.php` |
+| HTTP | `app/Http/Controllers/Crm/ClientProfileController.php`, `app/Http/Requests/Crm/UpdateClientProfileRequest.php`, payload профиля в `ClientController::show()` |
+| Права | ресурс `crm-profile` в сидере и в группе CRM `RoleController` |
+| Фронт | `Crm/Components/ClientProfileForm.jsx`, вкладка «Профиль» в `Crm/Pages/Clients/Show.jsx`, проп `suggestUrl` у `Admin/Components/TagSelector.jsx` |
+| Тесты | `tests/Feature/Crm/ClientProfileTest.php` — 10 тестов |
+
+### Решения, принятые по ходу
+
+**Русские подписи енумов живут в PHP и уезжают во фронт списком.** Дублировать их в JSX означало бы,
+что новый вариант появляется в базе, но не появляется в селекте. Отсюда трейт `HasLabeledOptions`
+и проп `options` у формы.
+
+**Первое заполнение заметок ревизией не считается.** Сохранять «до этого было пусто» нечего,
+а запись в истории у каждого впервые описанного клиента только мусорила бы её.
+
+**Пустая строка из формы нормализуется в `null`.** Очищенный менеджером селект приходит как `''`
+и падал бы на проверке енума; `prepareForValidation()` приводит такие поля к `null` до валидации.
+
+**Подсказки интересов ищутся через `Tag::containing()`, а не `LIKE` по колонке.** Spatie хранит
+переводы с `\uXXXX`-экранированием, поэтому кириллица в сыром JSON не совпадает с введённым текстом —
+обычный `LIKE` (как в `admin.tags.search`) по-русски просто ничего не находит.
+
+**Своя ручка подсказок для CRM.** `admin.tags.search` недоступна `sales-head` и `sales-manager-crm`
+(в `/admin` их не пускают by design), да и отдаёт все теги вперемешку — интересы клиента отделены типом.
+
+**Без права `crm-profile.edit` профиль показывается справкой, а не формой.** Форма, которую нельзя
+отправить, только раздражает.

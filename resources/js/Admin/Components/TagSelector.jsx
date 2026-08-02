@@ -21,6 +21,9 @@ import axios from 'axios';
  * @param {string} placeholder - Placeholder
  * @param {string} error - Текст ошибки
  * @param {boolean} disabled - Отключить поле
+ * @param {string} suggestUrl - Откуда брать подсказки. По умолчанию общий справочник
+ *        админки; CRM передаёт свой адрес, потому что в /admin её сотрудников не пускают,
+ *        да и интересы клиентов — отдельный тип тегов.
  */
 export const TagSelector = ({
     value = [],
@@ -28,6 +31,7 @@ export const TagSelector = ({
     placeholder = 'Введите тег и нажмите Enter...',
     error = null,
     disabled = false,
+    suggestUrl = null,
 }) => {
     const [inputValue, setInputValue] = useState('');
     const [suggestions, setSuggestions] = useState([]);
@@ -74,7 +78,7 @@ export const TagSelector = ({
 
         setLoading(true);
         try {
-            const response = await axios.get(route('admin.tags.search'), {
+            const response = await axios.get(suggestUrl || route('admin.tags.search'), {
                 params: { query },
             });
             setSuggestions(response.data);

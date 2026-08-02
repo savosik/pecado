@@ -9,7 +9,7 @@ import { LuEye } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 
-export default function Index({ clients, managers, filters, canSeeAll, managerProfileLinked }) {
+export default function Index({ clients, managers, filters, canSeeAll, managerProfileLinked, lifecycleOptions = [] }) {
     // Раздел read-only: из хука берём только поиск и сортировку,
     // массовое удаление (оно завязано на admin.bulk-delete-*) не задействуем.
     const { searchQuery, handleSearch, handleSort } = useResourceIndex('crm.clients', filters, {
@@ -22,6 +22,18 @@ export default function Index({ clients, managers, filters, canSeeAll, managerPr
             replace: true,
         });
     };
+
+    const handleLifecycleFilter = (lifecycle) => {
+        router.get(route('crm.clients.index'), { ...filters, lifecycle: lifecycle || undefined }, {
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    // Клиент без профиля считается активным — так же, как задаёт дефолт колонки в БД.
+    const lifecycleOf = (row) => lifecycleOptions.find(
+        (option) => option.value === (row.crm_profile?.lifecycle_status || 'active'),
+    );
 
     const columns = [
         {
@@ -47,6 +59,26 @@ export default function Index({ clients, managers, filters, canSeeAll, managerPr
             label: 'Телефон',
             render: (_, row) => <Text fontSize="sm">{row.phone || '—'}</Text>,
         },
+        ...(lifecycleOptions.length ? [{
+            key: 'lifecycle',
+            label: 'Стадия',
+            render: (_, row) => {
+                const status = lifecycleOf(row);
+
+                return (
+                    <HStack gap={1}>
+                        <Badge colorPalette={status?.color || 'gray'} variant="subtle">
+                            {status?.label || '—'}
+                        </Badge>
+                        {row.crm_profile?.lifecycle_hint && (
+                            <Badge colorPalette="orange" variant="outline" title="Система предлагает сменить стадию">
+                                есть предложение
+                            </Badge>
+                        )}
+                    </HStack>
+                );
+            },
+        }] : []),
         {
             key: 'client_status',
             label: 'Статус клиента',
@@ -102,6 +134,19 @@ export default function Index({ clients, managers, filters, canSeeAll, managerPr
                         placeholder="Поиск по имени, email или телефону..."
                     />
                 </Box>
+
+                {lifecycleOptions.length > 0 && (
+                    <select
+                        value={filters.lifecycle || ''}
+                        onChange={(e) => handleLifecycleFilter(e.target.value)}
+                        style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border)', minWidth: '180px' }}
+                    >
+                        <option value="">Все стадии</option>
+                        {lifecycleOptions.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
+                )}
 
                 {canSeeAll && (
                     <select

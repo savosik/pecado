@@ -3,6 +3,7 @@
 use App\Http\Controllers\Crm\AnalyticsController;
 use App\Http\Controllers\Crm\AttachmentController;
 use App\Http\Controllers\Crm\ClientController;
+use App\Http\Controllers\Crm\ClientProfileController;
 use App\Http\Controllers\Crm\CommentController;
 use App\Http\Controllers\Crm\DashboardController;
 use App\Http\Controllers\Crm\TeamController;
@@ -31,6 +32,22 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // вернул бы 403 вместо 404 и подтвердил факт существования.
         Route::get('/clients/{client}', [ClientController::class, 'show'])
             ->name('clients.show')
+            ->whereNumber('client');
+    });
+
+    // Профиль клиента — то, что знает менеджер, но не знает 1С.
+    Route::middleware('permission:crm-profile.view')->group(function () {
+        Route::get('/interests', [ClientProfileController::class, 'interests'])->name('interests.search');
+    });
+
+    Route::middleware('permission:crm-profile.edit')->group(function () {
+        Route::put('/clients/{client}/profile', [ClientProfileController::class, 'update'])
+            ->name('clients.profile.update')
+            ->whereNumber('client');
+        // Жизненный статус живёт в том же профиле, поэтому отдельного ресурса прав
+        // не заводим: их в матрице ролей и так много.
+        Route::put('/clients/{client}/lifecycle', [ClientProfileController::class, 'lifecycle'])
+            ->name('clients.lifecycle.update')
             ->whereNumber('client');
     });
 

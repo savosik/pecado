@@ -14,6 +14,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\Permission\Traits\HasRoles;
+use Spatie\Tags\HasTags;
 
 /**
  * @property int $id
@@ -43,6 +44,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Cart> $carts
  * @property-read int|null $carts_count
  * @property-read \App\Models\ClientStatus|null $clientStatus
+ * @property-read \App\Models\CrmClientProfile|null $crmProfile
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Company> $companies
  * @property-read int|null $companies_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ContractorBalance> $contractorBalances
@@ -123,7 +125,15 @@ class User extends Authenticatable implements HasMedia
     /** @use HasFactory<\Database\Factories\UserFactory> */
     // InteractsWithMedia приходит внутри HasCrmAttachments: подключать его ещё и напрямую
     // нельзя — registerMediaCollections() из двух трейтов даёт коллизию методов.
-    use HasApiTokens, HasCrmAttachments, HasFactory, HasRoles, Notifiable;
+    use HasApiTokens, HasCrmAttachments, HasFactory, HasRoles, HasTags, Notifiable;
+
+    /**
+     * Тип тегов «интересы клиента» в CRM.
+     *
+     * Отдельный тип, а не своя таблица: `spatie/laravel-tags` уже стоит, а тип
+     * не даёт интересам клиента смешаться с товарными тегами в общем справочнике.
+     */
+    public const INTEREST_TAG_TYPE = 'crm-interest';
 
     /**
      * Префикс прав домена /crm/.
@@ -442,6 +452,19 @@ class User extends Authenticatable implements HasMedia
     public function questionnaire(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(UserQuestionnaire::class);
+    }
+
+    /**
+     * Профиль клиента в CRM: наблюдения менеджера, которых нет в 1С.
+     *
+     * Может отсутствовать — карточка клиента открывается и без профиля,
+     * запись создаётся в ClientProfileService при первом сохранении.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<CrmClientProfile, $this>
+     */
+    public function crmProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(CrmClientProfile::class);
     }
 
     /**
