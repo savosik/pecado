@@ -1,6 +1,6 @@
 # CI/CD: Автодеплой ветки `dev` на Dev-сервер
 
-> ⚠️ **С 2026-05-09 dev-сервер делит внешний IP `93.94.150.16` с prod.** Dev доступен через временные порты `8022 (ssh) / 8080 (http) / 8443 (https) / 25672 (rabbitmq)` — см. [DEV_SERVER_CREDENTIALS.md](./DEV_SERVER_CREDENTIALS.md). Self-hosted runner на dev-VM работает по исходящему трафику и не зависит от пробросов — workflow `.github/workflows/deploy-dev.yml` функционирует как раньше.
+> ⚠️ **У dev свой внешний IP `93.94.150.74` (`dev.pecado.ru`) и стандартные порты `22/80/443/15672`** — см. [DEV_SERVER_CREDENTIALS.md](./DEV_SERVER_CREDENTIALS.md). `93.94.150.16` — это prod. Self-hosted runner на dev-VM работает по исходящему трафику и от схемы портов не зависит.
 
 > **Стек:** Laravel 12 · PHP 8.3-FPM · Vite/Node 20 · MySQL 8 (×2: main + prices) · Redis · RabbitMQ 3 · MeiliSearch · MinIO · Supervisor · Docker Compose
 > **Платформа CI:** GitHub Actions (self-hosted runner на dev-сервере, лейбл `dev-server`)

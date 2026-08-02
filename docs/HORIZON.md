@@ -31,7 +31,7 @@ MyJob::dispatch()->onConnection('redis')->onQueue('heavy');
 ## Как войти
 
 **URL:**
-- Dev: `https://93.94.150.16:8443/horizon` (через временный проброс) или `https://dev.pecado.ru:8443/horizon` если в `/etc/hosts` прописан этот IP.
+- Dev: `https://dev.pecado.ru/horizon`
 - Prod: `https://pecado.ru/horizon` (после развёртывания прод-стека).
 
 > С 2026-05-09 dev и prod на одном IP, dev на альтернативных портах — см. [DEV_SERVER_CREDENTIALS.md](./DEV_SERVER_CREDENTIALS.md).

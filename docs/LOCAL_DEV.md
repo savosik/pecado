@@ -7,14 +7,15 @@
 - товарные изображения подгружались из dev MinIO;
 - Vite с HMR запускался автоматически вместе со стеком.
 
-> ⚠️ **С 2026-05-09 dev-сервер живёт на одном IP с prod** (см. [DEV_SERVER_CREDENTIALS.md](./DEV_SERVER_CREDENTIALS.md)). Стандартные порты `22/80/443` на `93.94.150.16` идут на **prod-сервер**, dev — на временных проброшенных портах `8022/8080/8443/25672`.
+> ⚠️ **У dev свой IP `93.94.150.74` и стандартные порты** (см. [DEV_SERVER_CREDENTIALS.md](./DEV_SERVER_CREDENTIALS.md)).
+> `93.94.150.16` — это **prod**, туда локальные скрипты ходить не должны.
 >
 > Что это значит для локальной разработки:
-> - `make db-pull` использует SSH к dev на 22 порту — теперь нужен **порт 8022**. До обновления `db-pull.sh` запускать вручную с `-p 8022`, либо прописать в `~/.ssh/config` Host `pecado-dev` с `Port 8022`.
-> - `MEDIA_DISK=s3_dev_readonly` ссылается на `93.94.150.16:9000` — порт `9000` снаружи **не проброшен**. Для доступа использовать SSH-туннель: `ssh -L 9000:localhost:9000 -p 8022 ladmin@93.94.150.16`. Либо временно `MEDIA_DISK=public`.
-> - **Не использовать prod MinIO/БД** напрямую! Prod-стек ещё не развёрнут (uptime VM ~2 дня, нет контейнеров), но когда будет — там реальные пользовательские данные. Раскрытие/случайная запись в прод недопустимы.
->
-> Упоминания `93.94.150.16` ниже относятся к **dev-серверу** через временные порты — заменить указатель порта/туннеля по необходимости.
+> - `make db-pull` ходит на `ladmin@dev.pecado.ru` (переопределяется `DEV_DB_SSH_HOST` в `.env`).
+>   ⚠️ Если в старом локальном `.env` осталось `ladmin@93.94.150.16` — скрипт утянет **боевую** базу.
+> - `MEDIA_DISK=s3_dev_readonly` ссылается на MinIO dev, но порт `9000` наружу закрыт.
+>   Нужен SSH-туннель: `ssh -L 9000:localhost:9000 ladmin@dev.pecado.ru`. Либо `MEDIA_DISK=public`.
+> - **Не использовать prod MinIO/БД** напрямую — там реальные пользовательские данные.
 
 ## Один раз: первичная настройка
 
@@ -31,7 +32,7 @@ sudo sh -c 'echo "127.0.0.1 loc.pecado.ru" >> /etc/hosts'
 Скрипт `db-pull.sh` ходит по SSH. Проверить:
 
 ```bash
-ssh ladmin@93.94.150.16 echo ok
+ssh ladmin@dev.pecado.ru echo ok
 ```
 
 Если ключа нет — положить в `~/.ssh/`. Креды из [docs/DEV_SERVER_CREDENTIALS.md](DEV_SERVER_CREDENTIALS.md).
@@ -84,7 +85,7 @@ make db-pull     # стянуть обе БД с dev (займёт минуты)
 браузер → nginx(8085 → :80) → app(php-fpm 9000)
                             ↘ (HMR WS) → node(5174→5173)
 
-storage чтения (Spatie media) → s3_dev_readonly → 93.94.150.16:9000/pecado
+storage чтения (Spatie media) → s3_dev_readonly → dev MinIO :9000/pecado (через SSH-туннель)
 storage записи (контент upload) → s3 → локальный MinIO (createbuckets)
 
 БД: pecado-mysql (3308), pecado-mysql-prices (3309) — наполняются db-pull.sh
@@ -108,9 +109,9 @@ storage записи (контент upload) → s3 → локальный MinIO
 
 ### Картинки товаров не грузятся
 
-1. Открыть DevTools → Network, найти запрос на `93.94.150.16:9000/pecado/...`.
+1. Открыть DevTools → Network, найти запрос на `…:9000/pecado/...`.
 2. Если CORS/блокировка — проверить, что `MEDIA_DISK=s3_dev_readonly` в `.env` и `php artisan config:clear`.
-3. Если 403 — bucket `pecado` на dev должен быть public; проверить через консоль `93.94.150.16:9001`.
+3. Если 403 — bucket `pecado` на dev должен быть public; проверить через консоль MinIO (`ssh -L 9001:localhost:9001 ladmin@dev.pecado.ru` → `http://localhost:9001`).
 
 ### `db-pull` падает на SSH
 
@@ -118,7 +119,7 @@ storage записи (контент upload) → s3 → локальный MinIO
 Permission denied (publickey)
 ```
 
-— положить SSH-ключ в `~/.ssh/`, добавить `Host 93.94.150.16` в `~/.ssh/config` или прокинуть через `ssh-agent`.
+— положить SSH-ключ в `~/.ssh/`, добавить `Host 93.94.150.74` (он же `dev.pecado.ru`) в `~/.ssh/config` или прокинуть через `ssh-agent`.
 
 ### `db-pull` падает на mysqldump (большая БД)
 

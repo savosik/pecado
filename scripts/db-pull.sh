@@ -9,7 +9,7 @@
 #   scripts/db-pull.sh prices      # только pecado_prices
 #
 # Конфигурация через .env (с фолбэками):
-#   DEV_DB_SSH_HOST   — например ladmin@93.94.150.16
+#   DEV_DB_SSH_HOST   — SSH к dev, например ladmin@dev.pecado.ru (93.94.150.74)
 #   DEV_DB_NAME_MAIN  — имя основной БД (default: pecado)
 #   DEV_DB_NAME_PRICES — имя БД цен (default: pecado_prices)
 #   DEV_DB_REMOTE_USER, DEV_DB_REMOTE_PASS — креды БД на dev (default: pecado/secret)
@@ -31,7 +31,8 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
-DEV_DB_SSH_HOST="${DEV_DB_SSH_HOST:-ladmin@93.94.150.16}"
+# ⚠️ Только dev: 93.94.150.16 — это prod, оттуда базу не тянем.
+DEV_DB_SSH_HOST="${DEV_DB_SSH_HOST:-ladmin@dev.pecado.ru}"
 DEV_DB_NAME_MAIN="${DEV_DB_NAME_MAIN:-pecado}"
 DEV_DB_NAME_PRICES="${DEV_DB_NAME_PRICES:-pecado_prices}"
 DEV_DB_REMOTE_USER="${DEV_DB_REMOTE_USER:-pecado}"

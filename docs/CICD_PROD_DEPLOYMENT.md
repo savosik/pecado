@@ -1,7 +1,7 @@
 # CI/CD: Деплой ветки `main` на Production-сервер
 
 > **Статус:** ✅ **Production LIVE** с 2026-05-09. Сайт работает на https://pecado.ru, CI/CD активен (push в main → manual approve в Environment `production` → автодеплой). Self-hosted runner `prod-server` (systemd, uid=1000). Branch Protection для main включена.
-> Prod (`m-s-web`, локальный `10.2.2.101`) занимает стандартные порты `22/80/443/15672` на общем внешнем IP `93.94.150.16`. Dev (`m-s-site`, локальный `10.2.2.100`) живёт на том же IP через временный проброс альтернативных портов `8022/8080/8443/25672`.
+> Prod (`m-s-web`, локальный `10.2.2.101`) — внешний IP `93.94.150.16` (`pecado.ru`). Dev (`m-s-site`, локальный `10.2.2.100`) — свой внешний IP `93.94.150.74` (`dev.pecado.ru`). Оба на стандартных портах `22/80/443/15672`.
 > **Стек:** Laravel 12 · PHP 8.3-FPM · Vite/Node 20 · MySQL 8 (×2: main + prices) · Redis · RabbitMQ 3 · MeiliSearch · MinIO · Supervisor · Docker Compose
 > **Связанные документы:** [PROD_WORKFLOW.md](./PROD_WORKFLOW.md) · [PROD_SERVER_CREDENTIALS.md](./PROD_SERVER_CREDENTIALS.md) · [DEV_SERVER_CREDENTIALS.md](./DEV_SERVER_CREDENTIALS.md) (приостановлен) · [CICD_DEV_DEPLOYMENT.md](./CICD_DEV_DEPLOYMENT.md)
 > **Актуализирован:** 2026-05-09 — синхронизирован с реальным [.github/workflows/deploy-dev.yml](../.github/workflows/deploy-dev.yml)
@@ -13,7 +13,7 @@
 ```
                      ┌── feature/* (опционально, разработка)
                      │
-   dev ──────────────┤── GitHub Actions ──→ Dev Server m-s-site (10.2.2.100, порты 8022/8080/8443/25672)
+   dev ──────────────┤── GitHub Actions ──→ Dev Server m-s-site (10.2.2.100, 93.94.150.74)
                      │     Tests + Deploy (auto, fast-lane)
                      │
                      │  PR: dev → main
@@ -979,7 +979,7 @@ tail -5 /var/log/pecado-backup.log                          # последний
 ```
 1. Локально: разработчик кодит в feature/* (или сразу в dev)
 2. Push в dev → CI: тесты (или fast-lane по [fast]) + сборка → автодеплой на DEV
-3. Тестирование на dev (через временные порты 8080/8443, см. [DEV_SERVER_CREDENTIALS.md](./DEV_SERVER_CREDENTIALS.md))
+3. Тестирование на dev (`https://dev.pecado.ru`, см. [DEV_SERVER_CREDENTIALS.md](./DEV_SERVER_CREDENTIALS.md))
 4. Создать PR: dev → main
 5. Code review → approve PR → merge
 6. CI: тесты (без fast-lane!) + сборка → ожидание approval в Environment 'production'

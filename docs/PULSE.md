@@ -17,7 +17,7 @@ Laravel Pulse — дашборд для мониторинга производ�
 
 | | |
 |---|---|
-| URL (dev) | `https://93.94.150.16:8443/pulse` (через временный проброс портов) |
+| URL (dev) | `https://dev.pecado.ru/pulse` |
 | URL (prod) | `https://pecado.ru/pulse` (после развёртывания прод-стека) |
 | Доступ | только роль `super-admin` |
 
