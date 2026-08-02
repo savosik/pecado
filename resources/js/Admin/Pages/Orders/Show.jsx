@@ -18,6 +18,7 @@ import { PageHeader } from "@/Admin/Components/PageHeader";
 import { Field } from "@/components/ui/field";
 import { toaster } from "@/components/ui/toaster";
 import { OrderHistoryTimeline } from "./Components/OrderHistoryTimeline";
+import EntityCrmPanel from "@/Crm/Components/EntityCrmPanel";
 import { RelatedShipmentsSection } from "./Components/RelatedShipmentsSection";
 import { SupplierPreorderSection } from "./Components/SupplierPreorderSection";
 import { getOrderStatusColor as getStatusColor } from "@/constants/orderStatus";
@@ -342,6 +343,8 @@ const OrderShow = () => {
                     changeLogs={order.change_logs || []}
                 />
             </Box>
+
+            <EntityCrmPanel entityType="order" entityId={order.id} />
         </>
     );
 };

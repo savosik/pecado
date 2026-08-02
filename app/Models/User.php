@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\Country;
 use App\Enums\UserStatus;
+use App\Models\Concerns\HasCrmAttachments;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,7 +13,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -121,7 +121,9 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, InteractsWithMedia, Notifiable;
+    // InteractsWithMedia приходит внутри HasCrmAttachments: подключать его ещё и напрямую
+    // нельзя — registerMediaCollections() из двух трейтов даёт коллизию методов.
+    use HasApiTokens, HasCrmAttachments, HasFactory, HasRoles, Notifiable;
 
     /**
      * Префикс прав домена /crm/.

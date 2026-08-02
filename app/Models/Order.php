@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
+use App\Models\Concerns\HasCrmAttachments;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use Spatie\MediaLibrary\HasMedia;
 
 /**
  * @property int $id
@@ -84,9 +86,9 @@ use Illuminate\Support\Str;
  *
  * @mixin \Eloquent
  */
-class Order extends Model
+class Order extends Model implements HasMedia
 {
-    use HasFactory, SoftDeletes;
+    use HasCrmAttachments, HasFactory, SoftDeletes;
 
     /** Флаг: заказ обновляется из ERP — не публиковать обратно в шину */
     public bool $fromErp = false;

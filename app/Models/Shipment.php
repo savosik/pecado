@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasCrmAttachments;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use Spatie\MediaLibrary\HasMedia;
 
 /**
  * @property int $id
@@ -58,9 +60,9 @@ use Illuminate\Support\Str;
  *
  * @mixin \Eloquent
  */
-class Shipment extends Model
+class Shipment extends Model implements HasMedia
 {
-    use HasFactory, SoftDeletes;
+    use HasCrmAttachments, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'uuid',

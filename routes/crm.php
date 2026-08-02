@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Crm\AnalyticsController;
+use App\Http\Controllers\Crm\AttachmentController;
 use App\Http\Controllers\Crm\ClientController;
+use App\Http\Controllers\Crm\CommentController;
 use App\Http\Controllers\Crm\DashboardController;
 use App\Http\Controllers\Crm\TeamController;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +32,32 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/clients/{client}', [ClientController::class, 'show'])
             ->name('clients.show')
             ->whereNumber('client');
+    });
+
+    // Комментарии. Отдают JSON: тот же компонент ленты встраивается и в карточку
+    // клиента, и в админские карточки заказа и реализации.
+    Route::middleware('permission:crm-comments.view')->group(function () {
+        Route::get('/clients/{client}/timeline', [CommentController::class, 'timeline'])
+            ->name('clients.timeline')
+            ->whereNumber('client');
+        Route::get('/comments', [CommentController::class, 'index'])->name('comments.index');
+        Route::post('/comments', [CommentController::class, 'store'])->name('comments.store');
+        Route::patch('/comments/{comment}', [CommentController::class, 'update'])
+            ->name('comments.update')
+            ->whereNumber('comment');
+        Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])
+            ->name('comments.destroy')
+            ->whereNumber('comment');
+    });
+
+    // Вложения. Живут в существующей MediaLibrary (коллекция crm-attachments),
+    // своей таблицы у них нет.
+    Route::middleware('permission:crm-attachments.view')->group(function () {
+        Route::get('/attachments', [AttachmentController::class, 'index'])->name('attachments.index');
+        Route::post('/attachments', [AttachmentController::class, 'store'])->name('attachments.store');
+        Route::delete('/attachments/{media}', [AttachmentController::class, 'destroy'])
+            ->name('attachments.destroy')
+            ->whereNumber('media');
     });
 
     Route::middleware('permission:crm-team.view')->group(function () {

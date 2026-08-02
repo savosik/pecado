@@ -5,6 +5,7 @@ import {
     Box, Text, Badge, Card, HStack, VStack, Table, Separator, SimpleGrid,
 } from '@chakra-ui/react';
 import { RelatedOrdersSection } from './Components/RelatedOrdersSection';
+import EntityCrmPanel from '@/Crm/Components/EntityCrmPanel';
 
 const STATUS_COLORS = {
     new: 'blue',
@@ -236,6 +237,8 @@ export default function Show({ shipment, related_orders }) {
             {related_orders?.length > 0 && (
                 <RelatedOrdersSection orders={related_orders} />
             )}
+
+            <EntityCrmPanel entityType="shipment" entityId={shipment.id} />
         </>
     );
 }

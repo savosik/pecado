@@ -83,6 +83,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-clients-all' => ['view'],
         'crm-team' => ['view'],
         'crm-analytics' => ['view'],
+        'crm-comments' => ['view', 'create', 'edit', 'delete'],
+        // Вложения: edit нет — заменить файл это удалить и загрузить заново.
+        'crm-attachments' => ['view', 'create', 'delete'],
 
         // WMS — права домена /wms/ (кабинет склада). Префикс `wms-` значим:
         // он в User::PANEL_PERMISSION_PREFIXES, поэтому не даёт входа в /admin.
@@ -156,6 +159,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-clients-all' => 'CRM: Клиенты всего отдела',
         'crm-team' => 'CRM: Команда',
         'crm-analytics' => 'CRM: Отчёты продаж',
+        'crm-comments' => 'CRM: Комментарии',
+        'crm-attachments' => 'CRM: Вложения',
         'wms-dashboard' => 'Склад: Рабочий стол',
         'wms-defects' => 'Склад: Некондиция',
         'defects' => 'Уценка (цены и публикация)',
@@ -191,7 +196,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'orders', 'carts', 'returns', 'shipments',
                 'favorites', 'wishlist', 'supplier-preorders',
                 // CRM: свои клиенты (те, что закреплены за его карточкой менеджера)
-                'crm-dashboard', 'crm-clients', 'crm-analytics',
+                'crm-dashboard', 'crm-clients', 'crm-analytics', 'crm-comments', 'crm-attachments',
             ],
         ],
         'sales-manager-crm' => [
@@ -199,14 +204,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
                 // Для менеджеров, которым нужны свои клиенты, но не нужна админка.
-                'crm-dashboard', 'crm-clients', 'crm-analytics',
+                'crm-dashboard', 'crm-clients', 'crm-analytics', 'crm-comments', 'crm-attachments',
             ],
         ],
         'sales-head' => [
             'label' => 'Руководитель отдела продаж',
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
-                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-analytics',
+                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-analytics', 'crm-comments', 'crm-attachments',
             ],
         ],
         'catalogist' => [

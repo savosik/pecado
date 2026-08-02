@@ -1,7 +1,11 @@
 import { Head, usePage } from '@inertiajs/react';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
-import { Box, Card, SimpleGrid, Text, VStack, Badge } from '@chakra-ui/react';
+import { Box, Card, SimpleGrid, Tabs, Text, VStack, Badge } from '@chakra-ui/react';
+import { usePermission } from '@/shared/Panel/usePermission';
+import ClientTimeline from '@/Crm/Components/ClientTimeline';
+import CommentThread from '@/Crm/Components/CommentThread';
+import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
 
 function InfoRow({ label, value }) {
     return (
@@ -14,6 +18,10 @@ function InfoRow({ label, value }) {
 
 export default function Show() {
     const { client } = usePage().props;
+    const { can } = usePermission();
+
+    const canViewComments = can('crm-comments.view');
+    const canViewFiles = can('crm-attachments.view');
 
     return (
         <>
@@ -48,13 +56,49 @@ export default function Show() {
                     </Card.Body>
                 </Card.Root>
 
-                <Card.Root>
-                    <Card.Body>
-                        <Text fontSize="sm" color="fg.muted">
-                            Раздел в разработке: здесь появятся заказы клиента, история общения и задачи.
-                        </Text>
-                    </Card.Body>
-                </Card.Root>
+                {(canViewComments || canViewFiles) && (
+                    <Card.Root>
+                        <Card.Body>
+                            <Tabs.Root defaultValue={canViewComments ? 'timeline' : 'files'} lazyMount unmountOnExit>
+                                <Tabs.List>
+                                    {canViewComments && <Tabs.Trigger value="timeline">Лента</Tabs.Trigger>}
+                                    {canViewComments && <Tabs.Trigger value="comments">Комментарии по клиенту</Tabs.Trigger>}
+                                    {canViewFiles && <Tabs.Trigger value="files">Файлы</Tabs.Trigger>}
+                                </Tabs.List>
+
+                                {canViewComments && (
+                                    <Tabs.Content value="timeline">
+                                        <Text fontSize="xs" color="fg.muted" mb={3}>
+                                            Комментарии по клиенту, его заказам и реализациям — в одной хронологии.
+                                        </Text>
+                                        <ClientTimeline clientId={client.id} />
+                                    </Tabs.Content>
+                                )}
+
+                                {canViewComments && (
+                                    <Tabs.Content value="comments">
+                                        <CommentThread
+                                            entityType="client"
+                                            entityId={client.id}
+                                            canCreate={can('crm-comments.create')}
+                                        />
+                                    </Tabs.Content>
+                                )}
+
+                                {canViewFiles && (
+                                    <Tabs.Content value="files">
+                                        <AttachmentPanel
+                                            entityType="client"
+                                            entityId={client.id}
+                                            canUpload={can('crm-attachments.create')}
+                                            label="Файлы по клиенту"
+                                        />
+                                    </Tabs.Content>
+                                )}
+                            </Tabs.Root>
+                        </Card.Body>
+                    </Card.Root>
+                )}
             </VStack>
         </>
     );
