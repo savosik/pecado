@@ -711,6 +711,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#1-v159" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Предзаказы из 1С → резерв у поставщика (v15.9)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1834,6 +1845,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#1-v159" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Предзаказы из 1С → резерв у поставщика (v15.9)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2161,14 +2183,43 @@
 <h2 id="ordercreated-1_1">order.created (1С → Сайт)<a class="headerlink" href="#ordercreated-1_1" title="Permanent link">&para;</a></h2>
 <h3 id="-_1">Бизнес-правила<a class="headerlink" href="#-_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Формат идентичен <code>order.created</code> от сайта, <strong>кроме поля <code>type</code></strong> — 1С его не передаёт</li>
+<li>Формат идентичен <code>order.created</code> от сайта</li>
 <li>При отсутствии <code>type</code> в payload сайт использует значение по умолчанию <code>"order"</code></li>
+<li><strong>(v15.9)</strong> <strong>Предзаказ, заведённый в 1С, обязан приходить с <code>type: "preorder"</code>.</strong> Это единственный признак, по которому сайт отличает предзаказ: по нему он ставит позиции <strong>в резерв у поставщика</strong> (см. раздел ниже). Без этого поля документ сохранится как обычный заказ, резерв не уйдёт, и исправить это обновлением уже нельзя — <code>order.updated</code> тип не меняет. Для остальных типов поле по-прежнему необязательно</li>
 <li>Используется когда менеджер создал заказ вручную в 1С</li>
 <li><strong>(v12.1)</strong> Если передан <code>delivery_address</code> (строка) — сайт сохраняет значение напрямую в текстовое поле <code>orders.delivery_address</code></li>
 <li><code>discount_percent</code> может быть отрицательным: положительное значение означает скидку, отрицательное — наценку; сайт сохраняет значение как есть и рассчитывает сумму по <code>final_price</code></li>
 <li><strong>(v13.7)</strong> Опциональные аудит-метки <code>erp_created_at</code> / <code>erp_updated_at</code> (ISO-8601 datetime с TZ) — момент создания/изменения документа на стороне 1С. Сохраняются на сайте в одноимённые колонки <code>orders.erp_created_at</code> / <code>orders.erp_updated_at</code>, отображаются в админке. Поля <strong>не required</strong>: payload без них принимается, существующие значения колонок не перезаписываются. Подробнее: <a href="../../guides/erp-timestamps-for-1c/">«Аудит-метки 1С: erp_created_at / erp_updated_at»</a></li>
 <li><strong>(v13.8)</strong> При upsert уже существующего заказа (заказ создан пользователем на сайте, затем 1С прислал <code>order.created</code> с тем же <code>uuid</code>) поле <code>comment</code> из payload <strong>не перезаписывает</strong> комментарий, оставленный пользователем при оформлении. Для нового заказа <code>comment</code> сохраняется как обычно</li>
 <li><strong>(v15.3)</strong> Поле <code>delivery_method</code> (<code>delivery</code> | <code>pickup</code>) сохраняется в <code>orders.delivery_method</code>. Для нового заказа отсутствие поля или <code>null</code> = <code>delivery</code>. При upsert существующего заказа отсутствие поля <strong>не сбрасывает</strong> ранее сохранённый способ доставки</li>
+</ul>
+<h3 id="1-v159">Предзаказы из 1С → резерв у поставщика (v15.9)<a class="headerlink" href="#1-v159" title="Permanent link">&para;</a></h3>
+<p>У 1С нет канала к поставщику, поэтому резерв по предзаказам ставит <strong>сайт</strong> —
+и по своим предзаказам, и по тем, что менеджер завёл в 1С.</p>
+<p>Что делает сайт, получив <code>order.created</code> с <code>type: "preorder"</code>:</p>
+<ol>
+<li>Сохраняет заказ как обычно (<code>orders.type = 'preorder'</code>).</li>
+<li>Если документ пришёл <strong>впервые</strong> (заказа с таким <code>uuid</code> на сайте ещё не было),
+   ставит в очередь отправку поставщику: состав заказа уходит на склад из настроек
+   (по умолчанию Тюмень) с комментарием <code>предзаказ {номер} поставьте в резерв.</code></li>
+<li>Ответ поставщика целиком пишется в журнал админки
+   (<strong>Продажи → Предзаказы поставщику</strong>) и в карточку заказа.</li>
+</ol>
+<p>Границы правила:</p>
+<ul>
+<li><strong>Только первое получение документа.</strong> Предзаказ, оформленный на сайте, уже
+  отправлен поставщику в момент оформления — когда он вернётся из 1С обратным
+  <code>order.created</code> с тем же <code>uuid</code>, повторной отправки не будет.</li>
+<li><strong>Повторная отправка того же заказа исключена.</strong> Заказ, который поставщик уже
+  принял, автоматика второй раз не отправляет; повтор возможен только вручную
+  кнопкой в админке.</li>
+<li><strong>Изменение состава предзаказа в 1С поставщику не уходит.</strong> <code>order.updated</code>
+  обновит документ на сайте, но резерв у поставщика останется прежним — при
+  необходимости менеджер отправляет заказ повторно вручную.</li>
+<li><strong>Позиции без кода 1С</strong> (<code>products.code</code>) поставщику не отправляются и видны
+  в журнале отдельным списком.</li>
+<li>Отправка целиком управляется настройкой сайта (<code>SUPPLIER_PREORDER_ENABLED</code>) и
+  может идти в тестовом режиме — тогда поставщик проверяет заказ и откатывает его.</li>
 </ul>
 <hr />
 <h2 id="orderupdated-1">order.updated (1С → Сайт)<a class="headerlink" href="#orderupdated-1" title="Permanent link">&para;</a></h2>

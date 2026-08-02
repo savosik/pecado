@@ -484,6 +484,16 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::delete('/orders/{order}', [\App\Http\Controllers\Admin\OrderController::class, 'destroy'])->name('orders.destroy')->middleware('permission:orders.delete');
     Route::delete('/orders/{id}/force-delete', [\App\Http\Controllers\Admin\OrderController::class, 'forceDestroy'])->name('orders.force-delete')->middleware('permission:orders.delete');
 
+    // Предзаказы, отправленные поставщику (Customer API sex-opt.ru)
+    Route::middleware('permission:supplier-preorders.view')->group(function () {
+        Route::get('/supplier-preorders', [\App\Http\Controllers\Admin\SupplierPreorderController::class, 'index'])->name('supplier-preorders.index');
+        Route::get('/supplier-preorders/{supplierPreorder}', [\App\Http\Controllers\Admin\SupplierPreorderController::class, 'show'])->name('supplier-preorders.show')->whereNumber('supplierPreorder');
+    });
+    Route::post('/orders/{order}/send-to-supplier', [\App\Http\Controllers\Admin\SupplierPreorderController::class, 'send'])
+        ->name('supplier-preorders.send')
+        ->whereNumber('order')
+        ->middleware('permission:supplier-preorders.send');
+
     // Корзины
     Route::middleware('permission:carts.view')->group(function () {
         Route::get('/carts', [\App\Http\Controllers\Admin\CartController::class, 'index'])->name('carts.index');

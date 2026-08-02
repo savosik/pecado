@@ -19,6 +19,7 @@ import { Field } from "@/components/ui/field";
 import { toaster } from "@/components/ui/toaster";
 import { OrderHistoryTimeline } from "./Components/OrderHistoryTimeline";
 import { RelatedShipmentsSection } from "./Components/RelatedShipmentsSection";
+import { SupplierPreorderSection } from "./Components/SupplierPreorderSection";
 import { getOrderStatusColor as getStatusColor } from "@/constants/orderStatus";
 import { getOrderTypeLabel as getTypeLabel, getOrderTypeColor as getTypeColor } from "@/constants/orderType";
 
@@ -26,7 +27,7 @@ const fmt = (v) =>
     parseFloat(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const OrderShow = () => {
-    const { order, statuses, organizationsEnabled } = usePage().props;
+    const { order, statuses, organizationsEnabled, supplierPreorder } = usePage().props;
 
     const handleStatusChange = (newStatus) => {
         router.patch(route("admin.orders.status", order.id), {
@@ -319,6 +320,13 @@ const OrderShow = () => {
                     </HStack>
                 </Card.Footer>
             </Card.Root>
+
+            {/* Отправка предзаказа поставщику (только для предзаказов) */}
+            {supplierPreorder && (
+                <Box mt={6}>
+                    <SupplierPreorderSection orderId={order.id} panel={supplierPreorder} />
+                </Box>
+            )}
 
             {/* Реализации по заказу */}
             {order.shipments?.length > 0 && (

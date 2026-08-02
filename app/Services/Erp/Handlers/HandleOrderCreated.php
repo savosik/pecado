@@ -3,6 +3,8 @@
 namespace App\Services\Erp\Handlers;
 
 use App\Enums\OrderStatus;
+use App\Enums\OrderType;
+use App\Jobs\SendPreorderToSupplierJob;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\Product;
@@ -23,6 +25,10 @@ use Illuminate\Support\Facades\Log;
  *
  * Заказ создаётся через Model::withoutEvents() чтобы не публиковать
  * его обратно в 1С через PublishOrderToErp listener.
+ *
+ * v15.9: предзаказ, заведённый менеджером в 1С (`type: "preorder"`), сайт
+ * отправляет поставщику на резерв — у 1С своего канала к поставщику нет.
+ * Событий здесь нет по определению, поэтому job ставится точечно, см. handle().
  */
 class HandleOrderCreated
 {
@@ -273,6 +279,18 @@ class HandleOrderCreated
             // иначе сайт опубликует событие обратно в 1С.
             if ($shouldSoftDelete && ! $order->trashed()) {
                 $order->deleteQuietly();
+            }
+
+            // v15.9: предзаказ из 1С → резерв у поставщика. Отправляем только
+            // документ, пришедший впервые: предзаказ, оформленный на сайте, уже
+            // ушёл поставщику при оформлении и возвращается сюда roundtrip-ом
+            // с тем же uuid — второй раз его слать нельзя. Удалённый документ
+            // тоже пропускаем. Остальные проверки (тип, включённость интеграции,
+            // повторы) — внутри job-а.
+            if (! $existingOrder && $type === OrderType::PREORDER->value && ! $shouldSoftDelete) {
+                $orderId = $order->id;
+
+                DB::afterCommit(static fn () => SendPreorderToSupplierJob::dispatch($orderId));
             }
 
             $action = $existingOrder ? 'обновлён (upsert)' : 'создан от менеджера';

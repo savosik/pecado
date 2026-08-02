@@ -417,7 +417,55 @@ class OrderController extends AdminController
                 'label' => $this->getStatusLabel($case),
             ]),
             'organizationsEnabled' => config('erp.organizations.enabled'),
+            // Блок «Отправка поставщику» — только для предзаказов
+            'supplierPreorder' => $this->supplierPreorderPanel($order),
         ]);
+    }
+
+    /**
+     * Данные блока «Отправка поставщику» на карточке предзаказа.
+     *
+     * Для остальных типов заказов блок не показывается вовсе: поставщику
+     * уходят только предзаказы.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function supplierPreorderPanel(Order $order): ?array
+    {
+        if ($order->type->value !== \App\Enums\OrderType::PREORDER->value) {
+            return null;
+        }
+
+        $requests = \App\Models\SupplierPreorderRequest::query()
+            ->where('order_id', $order->id)
+            ->with('triggeredBy:id,name')
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
+
+        return [
+            'enabled' => (bool) config('services.sex_opt.preorder.enabled'),
+            'stock' => (string) config('services.sex_opt.preorder.stock'),
+            'testmode' => (bool) config('services.sex_opt.preorder.testmode'),
+            'can_send' => auth()->user()?->can('supplier-preorders.send') ?? false,
+            'requests' => $requests->map(fn (\App\Models\SupplierPreorderRequest $item) => [
+                'id' => $item->id,
+                'attempt' => $item->attempt,
+                'status' => $item->status,
+                'status_label' => $item->statusLabel(),
+                'stock' => $item->stock,
+                'testmode' => $item->testmode,
+                'comment' => $item->comment,
+                'supplier_order_id' => $item->supplier_order_id,
+                'items_count' => $item->items_count,
+                'skipped_count' => is_array($item->skipped_items) ? count($item->skipped_items) : 0,
+                'error_message' => $item->error_message,
+                'http_status' => $item->http_status,
+                'duration_ms' => $item->duration_ms,
+                'triggered_by' => $item->triggeredBy?->name,
+                'created_at' => $item->created_at->format('d.m.Y H:i:s'),
+            ]),
+        ];
     }
 
     /**

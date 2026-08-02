@@ -95,6 +95,9 @@ class RolesAndPermissionsSeeder extends Seeder
         // Справочник типовых дефектов (быстрый выбор для кладовщика).
         'defect-types' => ['view', 'create', 'edit', 'delete'],
 
+        // Предзаказы, отправленные поставщику (Customer API sex-opt.ru)
+        'supplier-preorders' => ['view', 'send'],
+
         // Система
         'erp-bus' => ['view'],
         'media' => ['view', 'delete'],
@@ -157,6 +160,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'wms-defects' => 'Склад: Некондиция',
         'defects' => 'Уценка (цены и публикация)',
         'defect-types' => 'Справочник дефектов',
+        'supplier-preorders' => 'Предзаказы поставщику',
         'erp-bus' => 'Шина ERP',
         'media' => 'Медиа',
         'settings' => 'Настройки',
@@ -185,7 +189,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'label' => 'Менеджер продаж',
             'resources' => [
                 'orders', 'carts', 'returns', 'shipments',
-                'favorites', 'wishlist',
+                'favorites', 'wishlist', 'supplier-preorders',
                 // CRM: свои клиенты (те, что закреплены за его карточкой менеджера)
                 'crm-dashboard', 'crm-clients', 'crm-analytics',
             ],

@@ -55,6 +55,7 @@ class RoleController extends Controller
         'articles' => 'Статьи', 'brand-stories' => 'О брендах', 'news' => 'Новости',
         'faqs' => 'FAQ', 'banners' => 'Баннеры', 'pages' => 'Страницы',
         'stories' => 'Истории', 'tags' => 'Теги', 'erp-bus' => 'Шина ERP',
+        'supplier-preorders' => 'Предзаказы поставщику',
         'media' => 'Медиа', 'settings' => 'Настройки', 'roles' => 'Роли',
     ];
 
@@ -62,6 +63,7 @@ class RoleController extends Controller
         'view' => 'Просмотр', 'create' => 'Создание',
         'edit' => 'Редактирование', 'delete' => 'Удаление',
         'price' => 'Установка цены', 'publish' => 'Публикация',
+        'send' => 'Отправка',
     ];
 
     public function index(Request $request)

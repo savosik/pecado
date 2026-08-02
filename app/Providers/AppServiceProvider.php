@@ -164,6 +164,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\PublishOrderToErp::class,
         );
 
+        // Предзаказ клиента → заказ поставщику «поставьте в резерв» (через очередь)
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\OrderCreated::class,
+            \App\Listeners\SendPreorderToSupplier::class,
+        );
+
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\OrderUpdated::class,
             \App\Listeners\PublishOrderToErp::class,
