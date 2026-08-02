@@ -34,6 +34,9 @@ class AiController extends Controller
                 ->withHttpHeader('HTTP-Referer', config('app.url'))
                 ->withHttpHeader('X-Title', config('app.name'))
                 ->withApiKey($apiKey)
+                ->withHttpClient(new \GuzzleHttp\Client(
+                    \App\Support\OpenRouter::guzzleOptions(120)
+                ))
                 ->make();
 
             $mode = $request->input('mode', 'generation');

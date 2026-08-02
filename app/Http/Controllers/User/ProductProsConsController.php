@@ -21,7 +21,8 @@ class ProductProsConsController extends Controller
         }
 
         try {
-            $apiKey = env('OPENROUTER_API_KEY', '');
+            // Именно config(): на проде конфиг закеширован и env() там пустой.
+            $apiKey = (string) config('normalizer.api_key', '');
             if (empty($apiKey)) {
                 return response()->json(['pros_cons' => null]);
             }
@@ -50,12 +51,13 @@ class ProductProsConsController extends Controller
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer '.$apiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(60)->post('https://openrouter.ai/api/v1/chat/completions', [
-                'model' => env('OPENROUTER_MODEL', 'google/gemini-2.0-flash-001'),
-                'messages' => [
-                    ['role' => 'user', 'content' => $prompt],
-                ],
-            ]);
+            ])->withOptions(\App\Support\OpenRouter::httpOptions())->timeout(60)
+                ->post('https://openrouter.ai/api/v1/chat/completions', [
+                    'model' => config('normalizer.chat_model'),
+                    'messages' => [
+                        ['role' => 'user', 'content' => $prompt],
+                    ],
+                ]);
 
             if (! $response->successful()) {
                 Log::error('OpenRouter API error', ['status' => $response->status(), 'body' => $response->body()]);

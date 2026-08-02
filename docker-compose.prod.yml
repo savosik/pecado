@@ -77,6 +77,12 @@ services:
       MEILI_MASTER_KEY: ${MEILISEARCH_KEY:?MEILISEARCH_KEY must be set in .env}
       MEILI_NO_ANALYTICS: "true"
       MEILI_ENV: production
+      # Эмбеддинги Meilisearch дёргает сам, из своего процесса, поэтому прокси
+      # для него задаётся переменными окружения (reqwest их понимает).
+      # Пусто, пока в /srv/pecado/.env не задан OPENROUTER_PROXY.
+      HTTP_PROXY: ${OPENROUTER_PROXY:-}
+      HTTPS_PROXY: ${OPENROUTER_PROXY:-}
+      NO_PROXY: localhost,127.0.0.1,app,nginx,mysql,mysql-prices,redis,rabbitmq,minio,meilisearch
 
   minio:
     # API (9000) — биндим только на внутренний интерфейс 10.2.2.101 (локальная сеть для 1С).
@@ -88,6 +94,25 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set in .env}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set in .env}
+
+  # ── Выход в OpenRouter через VPS ────────────────────────────────────
+  # OpenRouter (Cloudflare) отдаёт 403 на любой запрос с внешнего IP прода,
+  # поэтому запросы к нему уходят через HTTP-прокси поверх SSH-туннеля до VPS.
+  # Ключ лежит в /srv/outbound-proxy — вне /srv/pecado, чтобы его не сносил
+  # rsync --delete при деплое. Ключ на сервере заводится вручную.
+  outbound-proxy:
+    build:
+      context: ./docker/outbound-proxy
+    container_name: pecado-outbound-proxy
+    restart: unless-stopped
+    environment:
+      PROXY_SSH_HOST: ${PROXY_SSH_HOST:-}
+      PROXY_SSH_USER: ${PROXY_SSH_USER:-pecadoproxy}
+      PROXY_SSH_PORT: ${PROXY_SSH_PORT:-22}
+    volumes:
+      - /srv/outbound-proxy:/keys:ro
+    networks:
+      - pecado-network
 
   # ── Сервисы, которые на проде не запускаем ──────────────────────────
   # На dev они стартуют автоматически. На проде включаются только при

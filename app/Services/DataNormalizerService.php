@@ -142,9 +142,9 @@ PROMPT;
                 ->withHttpHeader('HTTP-Referer', config('app.url'))
                 ->withHttpHeader('X-Title', config('app.name'))
                 ->withApiKey($apiKey)
-                ->withHttpClient(new \GuzzleHttp\Client([
-                    'timeout' => config('normalizer.timeout', 30),
-                ]))
+                ->withHttpClient(new \GuzzleHttp\Client(
+                    \App\Support\OpenRouter::guzzleOptions((int) config('normalizer.timeout', 30))
+                ))
                 ->make();
 
             $response = $client->chat()->create([

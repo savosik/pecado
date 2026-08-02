@@ -276,9 +276,9 @@ PROMPT;
             ->withHttpHeader('HTTP-Referer', config('app.url'))
             ->withHttpHeader('X-Title', config('app.name'))
             ->withApiKey($apiKey)
-            ->withHttpClient(new \GuzzleHttp\Client([
-                'timeout' => (int) config('rich_content.request_timeout', 60),
-            ]))
+            ->withHttpClient(new \GuzzleHttp\Client(
+                \App\Support\OpenRouter::guzzleOptions((int) config('rich_content.request_timeout', 60))
+            ))
             ->make();
     }
 }
