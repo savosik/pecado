@@ -29,7 +29,13 @@ const ACCEPTED = [
  * @param {number} entityId
  * @param {boolean} canUpload
  */
-export default function AttachmentPanel({ entityType, entityId, canUpload = true, label = 'Вложения' }) {
+export default function AttachmentPanel({
+    entityType,
+    entityId,
+    canUpload = true,
+    label = 'Вложения',
+    onCountChange,
+}) {
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
@@ -52,6 +58,13 @@ export default function AttachmentPanel({ entityType, entityId, canUpload = true
     }, [entityType, entityId]);
 
     useEffect(() => { load(); }, [load]);
+
+    // Сообщаем владельцу актуальное число файлов — по нему рисуется бейдж скрепки.
+    useEffect(() => {
+        if (!loading) {
+            onCountChange?.(files.length);
+        }
+    }, [files.length, loading, onCountChange]);
 
     // Файлы уходят по одному: так частичная неудача видна пофайлово,
     // а не отменяет всю пачку целиком.

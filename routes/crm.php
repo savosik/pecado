@@ -54,6 +54,11 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     // своей таблицы у них нет.
     Route::middleware('permission:crm-attachments.view')->group(function () {
         Route::get('/attachments', [AttachmentController::class, 'index'])->name('attachments.index');
+        // Файл отдаём через приложение, а не прямой ссылкой на диск: публичный URL
+        // раздал бы документы клиента в обход скоупа.
+        Route::get('/attachments/{media}/download', [AttachmentController::class, 'download'])
+            ->name('attachments.download')
+            ->whereNumber('media');
         Route::post('/attachments', [AttachmentController::class, 'store'])->name('attachments.store');
         Route::delete('/attachments/{media}', [AttachmentController::class, 'destroy'])
             ->name('attachments.destroy')

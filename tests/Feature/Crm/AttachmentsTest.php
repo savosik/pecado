@@ -197,6 +197,44 @@ class AttachmentsTest extends TestCase
     }
 
     #[Test]
+    public function file_is_served_through_the_app_not_by_a_public_disk_url(): void
+    {
+        $response = $this->upload($this->managerA, 'client', $this->clientA->id)->assertCreated();
+
+        // Ссылка обязана вести в приложение: публичный URL диска раздавал бы
+        // документы клиента кому угодно в обход скоупа.
+        $this->assertSame(
+            route('crm.attachments.download', $response->json('id')),
+            $response->json('url'),
+        );
+
+        $this->actingAs($this->managerA)
+            ->get($response->json('url'))
+            ->assertOk();
+    }
+
+    #[Test]
+    public function foreign_manager_cannot_download_file(): void
+    {
+        $mediaId = $this->upload($this->managerA, 'client', $this->clientA->id)->json('id');
+
+        $this->actingAs($this->managerB)
+            ->get(route('crm.attachments.download', $mediaId))
+            ->assertNotFound();
+    }
+
+    #[Test]
+    public function media_outside_crm_collection_is_not_downloadable(): void
+    {
+        $media = $this->clientA->addMedia(UploadedFile::fake()->image('avatar.jpg'))
+            ->toMediaCollection('avatar');
+
+        $this->actingAs($this->managerA)
+            ->get(route('crm.attachments.download', $media->id))
+            ->assertNotFound();
+    }
+
+    #[Test]
     public function media_outside_crm_collection_is_not_deletable_here(): void
     {
         $media = $this->clientA->addMedia(UploadedFile::fake()->image('avatar.jpg'))

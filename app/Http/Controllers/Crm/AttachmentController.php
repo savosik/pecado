@@ -15,6 +15,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\MediaCollections\Exceptions\FileUnacceptableForCollection;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Вложения CRM: файлы к клиенту, заказу, реализации и комментарию.
@@ -82,17 +83,27 @@ class AttachmentController extends CrmController
         return response()->json($this->presentOne($media, $actor), 201);
     }
 
+    /**
+     * Отдать файл через приложение.
+     *
+     * Прямая ссылка на диск (`$media->getUrl()`) сюда не годится по двум причинам.
+     * Во-первых, это публичный URL без авторизации: документы клиента утекали бы
+     * любому, кто получил ссылку, в обход скоупа `visibleInCrm`. Во-вторых, на dev
+     * `AWS_URL` указывает на прод, поэтому URL файла, загруженного на dev, ведёт
+     * туда, где этого файла нет.
+     */
+    public function download(Request $request, Media $media): StreamedResponse
+    {
+        $this->assertAccessible($this->crmActor($request), $media);
+
+        return $media->toInlineResponse($request);
+    }
+
     public function destroy(Request $request, Media $media): JsonResponse
     {
         $actor = $this->crmActor($request);
 
-        abort_unless($media->collection_name === CrmAttachments::COLLECTION, 404);
-
-        // Владелец может отсутствовать: строка media переживает жёсткое удаление
-        // своей модели, и докблок пакета этого не отражает.
-        /** @var \Illuminate\Database\Eloquent\Model|null $owner */
-        $owner = $media->model;
-        abort_unless($owner !== null && $this->resolver->canAccess($actor, $owner), 404);
+        $this->assertAccessible($actor, $media);
 
         $uploadedBy = $media->getCustomProperty('uploaded_by');
         $canDelete = $actor->can('crm-attachments.delete')
@@ -103,6 +114,22 @@ class AttachmentController extends CrmController
         $this->media->delete($media);
 
         return response()->json(['deleted' => true]);
+    }
+
+    /**
+     * Доступно ли вложение актору. Отказ — 404: чужой файл не должен подтверждать
+     * даже своё существование.
+     */
+    private function assertAccessible(User $actor, Media $media): void
+    {
+        abort_unless($media->collection_name === CrmAttachments::COLLECTION, 404);
+
+        // Владелец может отсутствовать: строка media переживает жёсткое удаление
+        // своей модели, и докблок пакета этого не отражает.
+        /** @var \Illuminate\Database\Eloquent\Model|null $owner */
+        $owner = $media->model;
+
+        abort_unless($owner !== null && $this->resolver->canAccess($actor, $owner), 404);
     }
 
     /**
@@ -130,7 +157,7 @@ class AttachmentController extends CrmController
             'mime_type' => $media->mime_type,
             'size' => (int) $media->size,
             'size_label' => $media->human_readable_size,
-            'url' => $media->getUrl(),
+            'url' => route('crm.attachments.download', $media->getKey()),
             'uploaded_at' => $media->created_at?->format('d.m.Y H:i'),
             'uploaded_by' => $media->getCustomProperty('uploaded_by_name'),
             'can_delete' => $actor->can('crm-attachments.delete')

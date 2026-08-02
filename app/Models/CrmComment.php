@@ -28,6 +28,7 @@ use Spatie\MediaLibrary\HasMedia;
  * @property-read User $author
  * @property-read User|null $client
  * @property-read Model|null $commentable
+ * @property-read int|null $attachments_count
  */
 class CrmComment extends Model implements HasMedia
 {

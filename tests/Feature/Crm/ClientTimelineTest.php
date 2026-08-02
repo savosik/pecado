@@ -7,8 +7,11 @@ use App\Models\Order;
 use App\Models\PersonalManager;
 use App\Models\Shipment;
 use App\Models\User;
+use App\Support\Crm\CrmAttachments;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -82,6 +85,31 @@ class ClientTimelineTest extends TestCase
             ->getJson(route('crm.clients.timeline', $this->client))
             ->assertOk()
             ->assertJsonCount(1, 'data');
+    }
+
+    #[Test]
+    public function timeline_shows_how_many_files_are_attached_to_a_comment(): void
+    {
+        Storage::fake(config('media-library.disk_name'));
+
+        $withFiles = CrmComment::factory()->on($this->client)->by($this->manager)->create();
+        CrmComment::factory()->on($this->client)->by($this->manager)->create();
+
+        $withFiles->addMedia(UploadedFile::fake()->image('акт.jpg'))
+            ->toMediaCollection(CrmAttachments::COLLECTION);
+        $withFiles->addMedia(UploadedFile::fake()->image('накладная.jpg'))
+            ->toMediaCollection(CrmAttachments::COLLECTION);
+
+        $entries = collect(
+            $this->actingAs($this->manager)
+                ->getJson(route('crm.clients.timeline', $this->client))
+                ->assertOk()
+                ->json('data')
+        )->keyBy('id');
+
+        // Без счётчика в ленте не видно, что к записи приложены файлы.
+        $this->assertSame(2, $entries[$withFiles->id]['attachments_count']);
+        $this->assertSame(0, $entries->except($withFiles->id)->first()['attachments_count']);
     }
 
     #[Test]

@@ -19,6 +19,9 @@ export default function CommentEntry({ entry, showEntity = false, onUpdate, onDe
     // Файлы подгружаются по клику, а не при рендере ленты: иначе двадцать записей
     // на экране дали бы двадцать запросов ради обычно пустых списков.
     const [filesOpen, setFilesOpen] = useState(false);
+    // Счётчик из ленты — стартовое значение; после загрузки или удаления файла
+    // панель сообщает актуальное, иначе бейдж врал бы до перезагрузки страницы.
+    const [filesCount, setFilesCount] = useState(entry.attachments_count ?? 0);
     const { can } = usePermission();
     const canSeeFiles = can('crm-attachments.view');
 
@@ -67,10 +70,12 @@ export default function CommentEntry({ entry, showEntity = false, onUpdate, onDe
                             <Button
                                 size="xs"
                                 variant={filesOpen ? 'subtle' : 'ghost'}
+                                colorPalette={filesCount > 0 ? 'blue' : undefined}
                                 onClick={() => setFilesOpen((v) => !v)}
-                                title="Файлы комментария"
+                                title={filesCount > 0 ? `Файлов: ${filesCount}` : 'Прикрепить файл'}
                             >
                                 <LuPaperclip />
+                                {filesCount > 0 && <Text as="span" fontSize="xs" ml={1}>{filesCount}</Text>}
                             </Button>
                         )}
                         {entry.can?.update && !editing && (
@@ -134,6 +139,7 @@ export default function CommentEntry({ entry, showEntity = false, onUpdate, onDe
                             entityId={entry.id}
                             canUpload={!!entry.can?.update && can('crm-attachments.create')}
                             label="Файлы комментария"
+                            onCountChange={setFilesCount}
                         />
                     </Box>
                 )}

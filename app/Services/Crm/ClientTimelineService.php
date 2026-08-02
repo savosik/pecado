@@ -4,6 +4,7 @@ namespace App\Services\Crm;
 
 use App\Models\CrmComment;
 use App\Models\User;
+use App\Support\Crm\CrmAttachments;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
@@ -34,6 +35,7 @@ class ClientTimelineService
         $paginator = CrmComment::query()
             ->forClient((int) $client->getKey())
             ->with(['author:id,name', 'commentable'])
+            ->withCount($this->attachmentsCount())
             ->chronological()
             ->paginate($perPage);
 
@@ -51,10 +53,29 @@ class ClientTimelineService
             ->where('commentable_type', $entity::class)
             ->where('commentable_id', $entity->getKey())
             ->with(['author:id,name', 'commentable'])
+            ->withCount($this->attachmentsCount())
             ->chronological()
             ->paginate($perPage);
 
         return $paginator->through(fn (CrmComment $comment) => $this->commentEntry($comment, $viewer));
+    }
+
+    /**
+     * Подсчёт вложений одним запросом на страницу.
+     *
+     * Без него лента не показывала бы, что к записи приложены файлы, а узнать это
+     * можно было бы только открыв её — то есть двадцатью запросами на экран.
+     *
+     * @return array<string, \Closure>
+     */
+    private function attachmentsCount(): array
+    {
+        return [
+            'media as attachments_count' => fn ($query) => $query->where(
+                'collection_name',
+                CrmAttachments::COLLECTION,
+            ),
+        ];
     }
 
     /**
@@ -84,6 +105,11 @@ class ClientTimelineService
             'excerpt' => Str::limit($comment->body, 300),
             'body' => $comment->body,
             'is_pinned' => (bool) $comment->is_pinned,
+            // В списках счётчик приходит из withCount(); на одиночных путях
+            // (создание, правка) его нет — там дешевле досчитать, чем показать 0
+            // и потерять скрепку у записи с файлами.
+            'attachments_count' => (int) ($comment->attachments_count
+                ?? $comment->media()->where('collection_name', CrmAttachments::COLLECTION)->count()),
             // Сущность может быть удалена (мягко) — тогда запись остаётся в ленте
             // без ссылки, а не исчезает вместе с документом.
             'entity' => $entity instanceof Model
