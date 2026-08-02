@@ -30,8 +30,15 @@ else
     SSH_OPTS="$SSH_OPTS -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/tmp/known_hosts"
 fi
 
+# -D 1080  — SOCKS5 для tinyproxy (им пользуется PHP через OPENROUTER_PROXY).
+# -L 443   — прямой TCP-релей до openrouter.ai для тех, кто прокси не умеет:
+#            Meilisearch ходит за эмбеддингами своим HTTP-клиентом и переменные
+#            HTTP(S)_PROXY игнорирует. Контейнер держит сетевой алиас
+#            openrouter.ai, поэтому запрос попадает сюда и уезжает в туннель.
+#            TLS сквозной, сертификат настоящий — мы просто перекладываем байты.
 # shellcheck disable=SC2086
-ssh -N -D 127.0.0.1:1080 -i /tmp/id_key -p "$SSH_PORT" $SSH_OPTS "$SSH_USER@$SSH_HOST" &
+ssh -N -D 127.0.0.1:1080 -L 0.0.0.0:443:openrouter.ai:443 \
+    -i /tmp/id_key -p "$SSH_PORT" $SSH_OPTS "$SSH_USER@$SSH_HOST" &
 SSH_PID=$!
 
 i=0

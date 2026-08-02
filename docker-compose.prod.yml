@@ -112,7 +112,13 @@ services:
     volumes:
       - /srv/outbound-proxy:/keys:ro
     networks:
-      - pecado-network
+      pecado-network:
+        # Внутри docker-сети openrouter.ai резолвится в этот контейнер: на 443
+        # он держит TCP-релей в туннель. Нужно для Meilisearch — он ходит за
+        # эмбеддингами сам и HTTP(S)_PROXY не понимает. PHP это не задевает,
+        # он ходит через явный прокси на 8888.
+        aliases:
+          - openrouter.ai
 
   # ── Сервисы, которые на проде не запускаем ──────────────────────────
   # На dev они стартуют автоматически. На проде включаются только при
