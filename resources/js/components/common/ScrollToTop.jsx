@@ -21,11 +21,14 @@ export default function ScrollToTop() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    if (isCartPage) return null;
-
     const scrollToTop = useCallback(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, []);
+
+    // Ранний выход — строго после всех хуков: на /cart компонент уходил
+    // из рендера раньше useCallback, и React ловил «rendered fewer hooks
+    // than expected» при переходе в корзину и обратно.
+    if (isCartPage) return null;
 
     return (
         <Box

@@ -54,7 +54,7 @@ export default function useCatalogFacets({ filters }) {
         return () => {
             if (abortRef.current) abortRef.current.abort();
         };
-    }, [filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps — filtersKey стабилизирует deps, sort/per_page/page исключены
+    }, [filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps -- filtersKey стабилизирует deps, sort/per_page/page исключены
 
     return { facets, loading };
 }

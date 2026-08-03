@@ -67,7 +67,7 @@ export default function useCatalogProducts({ filters }) {
             if (abortRef.current) abortRef.current.abort();
             if (loadMoreAbortRef.current) loadMoreAbortRef.current.abort();
         };
-    }, [filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps — filtersRef.current используется вместо filters для стабильности
+    }, [filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps -- filtersRef.current используется вместо filters для стабильности
 
     // ─── Загрузить ещё (infinite scroll) ───
     const loadMore = useCallback(() => {
@@ -118,7 +118,7 @@ export default function useCatalogProducts({ filters }) {
                     setLoadingMore(false);
                 }
             });
-    }, [meta, filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps — filtersRef.current используется вместо filters для стабильности
+    }, [meta, filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps -- filtersRef.current используется вместо filters для стабильности
 
     return {
         products,

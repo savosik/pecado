@@ -90,7 +90,7 @@ export default function BarcodeCameraView({ onScan, paused = false, height = '10
 
     return (
         <Box position="relative" w="100%" h={height} bg="black" overflow="hidden">
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            {/* Субтитров у видео нет намеренно: это живой поток камеры для сканера штрихкодов, а не медиаконтент. */}
             <video
                 ref={videoRef}
                 autoPlay

@@ -159,6 +159,9 @@ jobs:
       - name: "📦 Install Node dependencies"
         run: npm ci
 
+      - name: "🔍 Lint frontend (undefined components / hooks)"
+        run: npm run lint:js
+
       - name: "🏗️ Build assets"
         run: npm run build
 

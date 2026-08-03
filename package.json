@@ -4,6 +4,7 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
+        "lint:js": "eslint resources/js",
         "dev": "vite",
         "asyncapi:validate": "npx -y @asyncapi/cli validate docs/asyncapi/pecado-erp-integration.yaml",
         "asyncapi:bundle": "npx -y @asyncapi/cli bundle docs/asyncapi/pecado-erp-integration.yaml -o docs/asyncapi/pecado-erp-bundled.yaml",
@@ -12,11 +13,17 @@
         "asyncapi:build": "npm run asyncapi:validate && npm run asyncapi:bundle && npm run asyncapi:html:safe"
     },
     "devDependencies": {
+        "@eslint/js": "^9.39.5",
         "@tailwindcss/typography": "^0.5.19",
         "@tailwindcss/vite": "^4.0.0",
+        "@typescript-eslint/parser": "^8.66.0",
         "@vitejs/plugin-react": "^4.5.0",
         "axios": "^1.11.0",
         "concurrently": "^9.0.1",
+        "eslint": "^9.39.5",
+        "eslint-plugin-react": "^7.37.5",
+        "eslint-plugin-react-hooks": "^5.2.0",
+        "globals": "^15.15.0",
         "js-yaml": "^4.1.1",
         "laravel-vite-plugin": "^2.0.0",
         "tailwindcss": "^4.0.0",
