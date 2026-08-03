@@ -8,7 +8,7 @@ import { Box, Card, SimpleGrid, Input, Textarea, Stack, Tabs } from '@chakra-ui/
 
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
-import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuWarehouse, LuListChecks, LuFolderTree, LuPackage } from 'react-icons/lu';
+import { LuCircleAlert, LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuWarehouse, LuListChecks, LuFolderTree, LuPackage } from 'react-icons/lu';
 import { WarehousesSection } from './Components/WarehousesSection';
 import { CategoryAttributesSection } from './Components/CategoryAttributesSection';
 
@@ -246,7 +246,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                     <LuImage /> Медиа
                                     {tabErrors.media && (
                                         <Box as="span" color="red.500" ml={2}>
-                                            <LuAlertCircle size={16} />
+                                            <LuCircleAlert size={16} />
                                         </Box>
                                     )}
                                 </Tabs.Trigger>

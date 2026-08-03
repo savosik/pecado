@@ -8,6 +8,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { LuUsers, LuUsersRound, LuBriefcase } from 'react-icons/lu';
 import TaskDialog from '@/Crm/Components/TaskDialog';
+import TaskCloseDialog from '@/Crm/Components/TaskCloseDialog';
 import TaskListItem from '@/Crm/Components/TaskListItem';
 import { toastError } from '@/utils/toast';
 
