@@ -18,21 +18,27 @@ class DashboardController extends AdminController
     public function index(): Response
     {
         // Basic statistics
-        $totalOrders = Order::count();
+        // ofClients() везде, где считаются продажи: заказы сотрудников и служебных
+        // учёток бывают тестовыми и в выручке со средним чеком им не место.
+        // Партнёрские заказы из 1С (без user_id) скоуп сохраняет.
+        $totalOrders = Order::query()->ofClients()->count();
         $totalProducts = Product::count();
+        // Пользователей считаем всех: это счётчик учёток, а не продаж.
         $totalUsers = User::count();
-        $totalRevenue = Order::where('status', 'closed')->sum('total_amount');
+        $totalRevenue = Order::query()->ofClients()->where('status', 'closed')->sum('total_amount');
 
         // Orders by status
-        $pendingOrders = Order::where('status', OrderStatus::PENDING_APPROVAL->value)->count();
-        $completedOrders = Order::where('status', OrderStatus::CLOSED->value)->count();
+        $pendingOrders = Order::query()->ofClients()->where('status', OrderStatus::PENDING_APPROVAL->value)->count();
+        $completedOrders = Order::query()->ofClients()->where('status', OrderStatus::CLOSED->value)->count();
         $cancelledOrders = 0; // Статус cancelled удалён в v12.3
 
         // Average order value
-        $avgOrderValue = Order::where('status', OrderStatus::CLOSED->value)->avg('total_amount') ?? 0;
+        $avgOrderValue = Order::query()->ofClients()->where('status', OrderStatus::CLOSED->value)->avg('total_amount') ?? 0;
 
         // Sales chart data (last 30 days)
-        $salesChartData = Order::selectRaw('DATE(created_at) as date, COUNT(*) as count, SUM(total_amount) as revenue')
+        $salesChartData = Order::query()
+            ->ofClients()
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as count, SUM(total_amount) as revenue')
             ->where('created_at', '>=', now()->subDays(30))
             ->groupBy('date')
             ->orderBy('date', 'asc')
@@ -46,7 +52,9 @@ class DashboardController extends AdminController
             });
 
         // Recent orders
-        $recentOrders = Order::with(['user', 'company'])
+        $recentOrders = Order::query()
+            ->ofClients()
+            ->with(['user', 'company'])
             ->latest()
             ->take(10)
             ->get()

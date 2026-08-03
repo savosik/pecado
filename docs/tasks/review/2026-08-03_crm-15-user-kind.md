@@ -55,17 +55,36 @@
 | CRM | `DashboardController`, `SalesPlanService::clientPlanSumsByManager()`, `CrmLifecycleHints` |
 | Админка | `UserController`: фильтр, счётчики, валидация, `syncKindWithRoles()`; `Users/{Index,Create,Edit,Show}.jsx` |
 | Данные | `UserFactory::staff()/service()`, `CrmDemoSeeder` |
-| Тесты | `Crm/CrmUserKindScopeTest` (8), `Admin/AdminUserKindTest` (5), `HandlePartnerUpdatedTest::it_keeps_user_kind_untouched` |
+| Аналитика | `app/Models/Concerns/FiltersClientDocuments.php`, `Order`, `Shipment`, `Admin/DashboardController`, `Mcp/Servers/AnalyticsServer` |
+| Тесты | `Crm/CrmUserKindScopeTest` (8), `Admin/AdminUserKindTest` (5), `Admin/AdminDashboardClientOrdersTest` (4), `HandlePartnerUpdatedTest::it_keeps_user_kind_untouched` |
 
 Попутно починен хрупкий по времени тест `TasksTest::dashboard_widget_shows_today_and_overdue`:
 `now()->addHours(2)` уезжал на следующие сутки при прогоне после 22:00 МСК.
 
+## Аналитика продаж (добавлено 2026-08-03 по уточнению заказчика)
+
+Заказы сотрудников могут быть тестовыми, поэтому в продажах им не место. Трейт
+`FiltersClientDocuments` даёт `Order`/`Shipment` скоуп `ofClients()`; он применён во всех
+метриках дашборда админки (выручка, счётчики, средний чек, график за 30 дней, лента
+последних заказов).
+
+**Документы без `user_id` скоуп сохраняет:** это партнёрские заказы из 1С — покупатель
+у них настоящий, и на проде это ~1,9 млн ₽, которые нельзя терять в отчётах.
+
+`ShipmentAnalyticsService` и `GapAnalysisService` править не потребовалось: они считают
+строго по `AnalyticsContext->userIds`, а этот список формируется либо из `visibleInCrm`
+(в CRM — уже только клиенты), либо из одного пользователя (кабинет партнёра).
+
+MCP `/mcp/analytics`: обновлены `instructions` — определение клиента теперь включает
+`user_kind`, с готовым куском SQL для отсечения не-клиентов. Вьюха `v_users` получит новую
+колонку автоматически: прод-деплой прогоняет `bi:sync-grants` и применяет SQL (шаг 4/9
+в `deploy-prod.yml`).
+
 ## Границы
 
-Аналитика продаж (`ShipmentAnalyticsService`, `GapAnalysisService`), MCP-сервер аналитики
-и витрина **не затронуты** — по решению заказчика фильтр применяется только в CRM. Заказы
-и отгрузки сотрудников остаются в выручке: это реальные деньги, и вычитать их из истории
-никто не просил.
+Витрина и личный кабинет не затронуты: сотрудник, зашедший в свой кабинет, видит свои
+документы как и раньше. Счётчик «Всего пользователей» в админке считает все учётки —
+это счётчик учётных записей, а не продаж.
 
 ## DoD
 
@@ -75,5 +94,6 @@
 - [x] UI на русском, Chakra из `@/components/ui/*`
 - [x] `bi:sync-grants` не требуется — новых таблиц нет
 - [ ] Проверено в браузере на dev: сотрудники исчезли из `/crm/clients`, фильтр по типу
-      в `/admin/users` работает, при выдаче роли тип меняется на «Сотрудник»
+      в `/admin/users` работает, при выдаче роли тип меняется на «Сотрудник»,
+      выручка на дашборде админки не учитывает заказы сотрудников
 - [ ] Доразметка служебных учёток без ролей — вручную в `/admin/users`

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\FiltersClientDocuments;
 use App\Models\Concerns\HasCrmAttachments;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -62,7 +63,7 @@ use Spatie\MediaLibrary\HasMedia;
  */
 class Shipment extends Model implements HasMedia
 {
-    use HasCrmAttachments, HasFactory, SoftDeletes;
+    use FiltersClientDocuments, HasCrmAttachments, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'uuid',

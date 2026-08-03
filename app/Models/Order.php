@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
+use App\Models\Concerns\FiltersClientDocuments;
 use App\Models\Concerns\HasCrmAttachments;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -88,7 +89,7 @@ use Spatie\MediaLibrary\HasMedia;
  */
 class Order extends Model implements HasMedia
 {
-    use HasCrmAttachments, HasFactory, SoftDeletes;
+    use FiltersClientDocuments, HasCrmAttachments, HasFactory, SoftDeletes;
 
     /** Флаг: заказ обновляется из ERP — не публиковать обратно в шину */
     public bool $fromErp = false;
