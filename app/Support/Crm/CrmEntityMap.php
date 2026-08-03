@@ -3,6 +3,7 @@
 namespace App\Support\Crm;
 
 use App\Models\CrmComment;
+use App\Models\CrmTask;
 use App\Models\Order;
 use App\Models\Shipment;
 use App\Models\User;
@@ -29,6 +30,8 @@ final class CrmEntityMap
 
     public const COMMENT = 'comment';
 
+    public const TASK = 'task';
+
     /**
      * Строковый тип для API → класс модели.
      *
@@ -39,6 +42,7 @@ final class CrmEntityMap
         self::ORDER => Order::class,
         self::SHIPMENT => Shipment::class,
         self::COMMENT => CrmComment::class,
+        self::TASK => CrmTask::class,
     ];
 
     /**
@@ -51,7 +55,21 @@ final class CrmEntityMap
         self::ORDER => 'Заказ',
         self::SHIPMENT => 'Реализация',
         self::COMMENT => 'Комментарий',
+        self::TASK => 'Задача',
     ];
+
+    /**
+     * Типы, к которым можно привязать задачу.
+     *
+     * Задача на задачу — это подзадача, а их мы сознательно не делаем (см. карточку
+     * crm-09). Комментарий как объект поручения тоже бессмыслен.
+     *
+     * @return list<string>
+     */
+    public static function taskableTypes(): array
+    {
+        return array_values(array_diff(self::types(), [self::COMMENT, self::TASK]));
+    }
 
     /**
      * Типы, к которым можно оставить комментарий.
@@ -127,8 +145,8 @@ final class CrmEntityMap
         $clientId = match (self::typeOf($entity)) {
             self::CLIENT => $entity->getKey(),
             self::ORDER, self::SHIPMENT => $entity->getAttribute('user_id'),
-            // Комментарий уже знает своего клиента — денормализация из crm-01.
-            self::COMMENT => $entity->getAttribute('client_user_id'),
+            // Комментарий и задача уже знают своего клиента — денормализация из crm-01.
+            self::COMMENT, self::TASK => $entity->getAttribute('client_user_id'),
             default => null,
         };
 
@@ -174,6 +192,7 @@ final class CrmEntityMap
             self::ORDER => 'Заказ №'.($entity->getAttribute('number') ?: $entity->getKey()),
             self::SHIPMENT => 'Реализация №'.($entity->getAttribute('number') ?: $entity->getKey()),
             self::COMMENT => 'Комментарий от '.($entity->getAttribute('created_at')?->format('d.m.Y H:i') ?? '—'),
+            self::TASK => (string) $entity->getAttribute('title'),
             default => (string) $entity->getKey(),
         };
     }
@@ -182,6 +201,12 @@ final class CrmEntityMap
     {
         if ($type === self::CLIENT) {
             return route('crm.clients.show', $entity->getKey());
+        }
+
+        // Раздел задач живёт в CRM, куда ходят все роли продаж — гейт по админке
+        // ниже к нему неприменим.
+        if ($type === self::TASK) {
+            return route('crm.tasks.index', ['task' => $entity->getKey()]);
         }
 
         if ($viewer !== null && ! $viewer->hasAdminAccess()) {

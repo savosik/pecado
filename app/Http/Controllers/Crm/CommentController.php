@@ -128,11 +128,10 @@ class CommentController extends CrmController
      */
     private function assertInScope(User $actor, CrmComment $comment): void
     {
-        $accessible = $comment->client_user_id === null
-            ? $actor->can('crm-clients-all.view')
-            : $this->resolver->clientVisible($actor, $comment->client_user_id);
-
-        abort_unless($accessible, 404);
+        abort_unless(
+            $this->resolver->canAccessAttached($actor, $comment->client_user_id, $comment->commentable),
+            404,
+        );
     }
 
     private function perPage(Request $request, int $default): int

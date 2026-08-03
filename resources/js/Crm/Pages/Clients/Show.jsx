@@ -8,6 +8,7 @@ import CommentThread from '@/Crm/Components/CommentThread';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
 import ClientProfileForm from '@/Crm/Components/ClientProfileForm';
 import ClientLifecyclePanel from '@/Crm/Components/ClientLifecyclePanel';
+import TaskPanel from '@/Crm/Components/TaskPanel';
 
 function InfoRow({ label, value }) {
     return (
@@ -25,6 +26,7 @@ export default function Show() {
     const canViewProfile = can('crm-profile.view') && !!profile;
     const canViewComments = can('crm-comments.view');
     const canViewFiles = can('crm-attachments.view');
+    const canViewTasks = can('crm-tasks.view');
 
     const defaultTab = canViewProfile ? 'profile' : (canViewComments ? 'timeline' : 'files');
     const showStatuses = canViewProfile && !!lifecycle;
@@ -83,7 +85,7 @@ export default function Show() {
                     </Card.Root>
                 )}
 
-                {(canViewProfile || canViewComments || canViewFiles) && (
+                {(canViewProfile || canViewComments || canViewFiles || canViewTasks) && (
                     <Card.Root>
                         <Card.Body>
                             <Tabs.Root defaultValue={defaultTab} lazyMount unmountOnExit>
@@ -91,6 +93,7 @@ export default function Show() {
                                     {canViewProfile && <Tabs.Trigger value="profile">Профиль</Tabs.Trigger>}
                                     {canViewComments && <Tabs.Trigger value="timeline">Лента</Tabs.Trigger>}
                                     {canViewComments && <Tabs.Trigger value="comments">Комментарии по клиенту</Tabs.Trigger>}
+                                    {canViewTasks && <Tabs.Trigger value="tasks">Задачи</Tabs.Trigger>}
                                     {canViewFiles && <Tabs.Trigger value="files">Файлы</Tabs.Trigger>}
                                 </Tabs.List>
 
@@ -121,6 +124,12 @@ export default function Show() {
                                             entityId={client.id}
                                             canCreate={can('crm-comments.create')}
                                         />
+                                    </Tabs.Content>
+                                )}
+
+                                {canViewTasks && (
+                                    <Tabs.Content value="tasks">
+                                        <TaskPanel entityType="client" entityId={client.id} />
                                     </Tabs.Content>
                                 )}
 

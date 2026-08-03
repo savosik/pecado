@@ -2,6 +2,8 @@
 
 namespace App\Services\Crm;
 
+use App\Models\CrmComment;
+use App\Models\CrmTask;
 use App\Models\User;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Model;
@@ -53,13 +55,37 @@ class CrmEntityResolver
      */
     public function canAccess(User $actor, Model $entity): bool
     {
-        $clientId = CrmEntityMap::clientIdFor($entity);
-
-        if ($clientId === null) {
-            return $actor->can('crm-clients-all.view');
+        // У задачи собственная модель доступа — участие в ней. Скоуп клиентов
+        // к задаче неприменим: задача без привязки принадлежит автору и исполнителю,
+        // и правило «клиента нет — значит, только РОП» отобрало бы у менеджера
+        // его же собственную задачу.
+        if ($entity instanceof CrmTask) {
+            return $actor->can('view', $entity);
         }
 
-        return $this->clientVisible($actor, $clientId);
+        // Комментарий наследует доступ от того, на чём висит.
+        if ($entity instanceof CrmComment) {
+            return $this->canAccessAttached($actor, $entity->client_user_id, $entity->commentable);
+        }
+
+        return $this->canAccessAttached($actor, CrmEntityMap::clientIdFor($entity), null);
+    }
+
+    /**
+     * Доступ к записи, привязанной к сущности (комментарий, задача, вложение).
+     *
+     * Клиент есть — решает скоуп клиентов. Клиента нет — решает сущность, на которой
+     * запись висит; если и её нет, остаётся право видеть весь отдел.
+     */
+    public function canAccessAttached(User $actor, ?int $clientId, ?Model $entity): bool
+    {
+        if ($clientId !== null) {
+            return $this->clientVisible($actor, $clientId);
+        }
+
+        return $entity instanceof Model
+            ? $this->canAccess($actor, $entity)
+            : $actor->can('crm-clients-all.view');
     }
 
     /**

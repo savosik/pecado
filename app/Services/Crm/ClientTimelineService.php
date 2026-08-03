@@ -3,19 +3,21 @@
 namespace App\Services\Crm;
 
 use App\Models\CrmComment;
+use App\Models\CrmTask;
 use App\Models\User;
 use App\Support\Crm\CrmAttachments;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
  * Сквозная лента клиента: всё, что менеджеры оставили по нему и его документам.
  *
- * Сейчас источник один — комментарии. Задачи (crm-09) и письма (crm-10) подмешиваются
- * в этот же сервис и в ту же форму записи, а не заводят вторую ленту: карточка клиента
- * должна показывать одну хронологию, а не три вкладки с разным поведением.
+ * Источников уже два — комментарии и задачи, письма (crm-10) добавятся третьим.
+ * Все они сводятся к одной форме записи, а не заводят по вкладке: карточка клиента
+ * должна показывать одну хронологию, а не три ленты с разным поведением.
  */
 class ClientTimelineService
 {
@@ -25,21 +27,150 @@ class ClientTimelineService
      */
     private const TYPE_COMMENT = 'comment';
 
+    private const TYPE_TASK = 'task';
+
+    public function __construct(private readonly CrmTaskService $tasks) {}
+
     /**
-     * Лента клиента: комментарии по нему самому, его заказам и отгрузкам.
+     * Лента клиента: комментарии и задачи по нему самому, его заказам и отгрузкам.
+     *
+     * Источники сливаются UNION-ом по ключам (тип, id, дата), и только страница
+     * результата догружается моделями. Альтернатива — вычитать оба источника целиком
+     * и слить в памяти — на клиенте с длинной историей означала бы тянуть сотни
+     * записей ради двадцати показанных.
      *
      * @return LengthAwarePaginator<int, array<string, mixed>>
      */
     public function forClient(User $client, User $viewer, int $perPage = 20): LengthAwarePaginator
     {
-        $paginator = CrmComment::query()
-            ->forClient((int) $client->getKey())
-            ->with(['author:id,name', 'commentable'])
-            ->withCount($this->attachmentsCount())
-            ->chronological()
+        $clientId = (int) $client->getKey();
+
+        $comments = DB::table('crm_comments')
+            ->selectRaw("'".self::TYPE_COMMENT."' as source, id, created_at as happened_at, is_pinned")
+            ->where('client_user_id', $clientId)
+            ->whereNull('deleted_at');
+
+        $tasks = DB::table('crm_tasks')
+            ->selectRaw("'".self::TYPE_TASK."' as source, id, created_at as happened_at, 0 as is_pinned")
+            ->where('client_user_id', $clientId)
+            ->whereNull('deleted_at');
+
+        // Задачи коллег по общему клиенту рядовому менеджеру не показываем — то же
+        // правило, что в CrmTaskPolicy: поручения между сотрудниками не публичная лента.
+        if (! $viewer->can('crm-clients-all.view')) {
+            $tasks->where(fn ($query) => $query
+                ->where('author_id', $viewer->getKey())
+                ->orWhere('assignee_id', $viewer->getKey()));
+        }
+
+        $paginator = DB::query()
+            ->fromSub($comments->unionAll($tasks), 'timeline')
+            ->orderByDesc('is_pinned')
+            ->orderByDesc('happened_at')
+            ->orderByDesc('id')
             ->paginate($perPage);
 
-        return $paginator->through(fn (CrmComment $comment) => $this->commentEntry($comment, $viewer));
+        return $this->hydrate($paginator, $viewer);
+    }
+
+    /**
+     * Догрузить страницу ключей настоящими моделями.
+     *
+     * @param  \Illuminate\Pagination\LengthAwarePaginator<int, \stdClass>  $paginator
+     * @return LengthAwarePaginator<int, array<string, mixed>>
+     */
+    private function hydrate(\Illuminate\Pagination\LengthAwarePaginator $paginator, User $viewer): LengthAwarePaginator
+    {
+        $rows = collect($paginator->items());
+
+        $comments = CrmComment::query()
+            ->whereIn('id', $rows->where('source', self::TYPE_COMMENT)->pluck('id')->all())
+            ->with(['author:id,name', 'commentable'])
+            ->withCount($this->attachmentsCount())
+            ->get()
+            ->keyBy('id');
+
+        $tasks = CrmTask::query()
+            ->whereIn('id', $rows->where('source', self::TYPE_TASK)->pluck('id')->all())
+            ->with(['author:id,name', 'assignee:id,name', 'related'])
+            ->withCount($this->attachmentsCount())
+            ->get()
+            ->keyBy('id');
+
+        /** @var LengthAwarePaginator<int, array<string, mixed>> $hydrated */
+        $hydrated = $paginator->through(function (object $row) use ($comments, $tasks, $viewer): array {
+            $id = (int) $row->id;
+
+            if ($row->source === self::TYPE_COMMENT) {
+                $comment = $comments->get($id);
+
+                return $comment instanceof CrmComment
+                    ? $this->commentEntry($comment, $viewer)
+                    : $this->missingEntry(self::TYPE_COMMENT, $id);
+            }
+
+            $task = $tasks->get($id);
+
+            return $task instanceof CrmTask
+                ? $this->taskEntry($task, $viewer)
+                : $this->missingEntry(self::TYPE_TASK, $id);
+        });
+
+        return $hydrated;
+    }
+
+    /**
+     * Запись, исчезнувшая между выборкой ключей и догрузкой моделей.
+     *
+     * Показываем заглушку, а не выбрасываем: пропуск сломал бы счётчик страницы
+     * и увёл бы одну запись из ленты без следа.
+     *
+     * @return array<string, mixed>
+     */
+    private function missingEntry(string $type, int $id): array
+    {
+        return [
+            'type' => $type,
+            'id' => $id,
+            'happened_at' => null,
+            'happened_at_label' => null,
+            'author' => null,
+            'title' => 'Запись удалена',
+            'excerpt' => null,
+            'body' => null,
+            'entity' => null,
+            'attachments_count' => 0,
+            'can' => ['update' => false, 'delete' => false],
+        ];
+    }
+
+    /**
+     * Задача в общей форме записи ленты.
+     *
+     * @return array<string, mixed>
+     */
+    public function taskEntry(CrmTask $task, User $viewer): array
+    {
+        return [
+            'type' => self::TYPE_TASK,
+            'id' => (int) $task->getKey(),
+            'happened_at' => $task->created_at?->toIso8601String(),
+            'happened_at_label' => $task->created_at?->format('d.m.Y H:i'),
+            'author' => [
+                'id' => (int) $task->author_id,
+                'name' => $task->author->name,
+            ],
+            'title' => $task->title,
+            'excerpt' => $task->description === null ? null : Str::limit($task->description, 300),
+            'entity' => $task->related instanceof Model
+                ? CrmEntityMap::describe($task->related, $viewer)
+                : null,
+            'task' => $this->tasks->payload($task, $viewer),
+            'can' => [
+                'update' => $viewer->can('update', $task),
+                'delete' => $viewer->can('delete', $task),
+            ],
+        ];
     }
 
     /**

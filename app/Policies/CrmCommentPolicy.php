@@ -58,15 +58,16 @@ class CrmCommentPolicy
     }
 
     /**
-     * Комментарий без клиента (заказ из 1С без user_id) доступен только тем,
-     * кто видит весь отдел — у остальных такой документ вне скоупа.
+     * Комментарий без клиента доступен по той сущности, на которой висит: заказ
+     * из 1С без user_id — только тем, кто видит весь отдел, а задача без привязки —
+     * своим автору и исполнителю.
      */
     private function clientAccessible(User $user, CrmComment $comment): bool
     {
-        if ($comment->client_user_id === null) {
-            return $user->can('crm-clients-all.view');
-        }
-
-        return $this->resolver->clientVisible($user, $comment->client_user_id);
+        return $this->resolver->canAccessAttached(
+            $user,
+            $comment->client_user_id,
+            $comment->commentable,
+        );
     }
 }

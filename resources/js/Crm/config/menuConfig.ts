@@ -3,6 +3,7 @@ import {
     LuUsers,
     LuUsersRound,
     LuChartLine,
+    LuListChecks,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -31,6 +32,7 @@ export const menuConfig: MenuGroup[] = [
         icon: LuUsers,
         items: [
             { label: "Мои клиенты", icon: LuUsers, path: "/crm/clients", permission: "crm-clients.view" },
+            { label: "Задачи", icon: LuListChecks, path: "/crm/tasks", permission: "crm-tasks.view" },
             { label: "Отчёты продаж", icon: LuChartLine, path: "/crm/analytics", permission: "crm-analytics.view" },
             { label: "Команда", icon: LuUsersRound, path: "/crm/team", permission: "crm-team.view" },
         ],

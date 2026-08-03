@@ -6,6 +6,7 @@ use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientProfileController;
 use App\Http\Controllers\Crm\CommentController;
 use App\Http\Controllers\Crm\DashboardController;
+use App\Http\Controllers\Crm\TaskController;
 use App\Http\Controllers\Crm\TeamController;
 use Illuminate\Support\Facades\Route;
 
@@ -65,6 +66,34 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])
             ->name('comments.destroy')
             ->whereNumber('comment');
+    });
+
+    // Задачи. Раздел — Inertia-страница, остальное JSON: диалог и врезка встраиваются
+    // в карточки клиента, заказа и реализации, где редирект увёл бы со страницы.
+    Route::middleware('permission:crm-tasks.view')->group(function () {
+        Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+        // До /tasks/{task}: иначе «list» и «options» ушли бы в биндинг модели.
+        Route::get('/tasks/list', [TaskController::class, 'list'])->name('tasks.list');
+        Route::get('/tasks/options', [TaskController::class, 'options'])->name('tasks.options');
+        Route::get('/tasks/{task}', [TaskController::class, 'show'])
+            ->name('tasks.show')
+            ->whereNumber('task');
+    });
+
+    Route::middleware('permission:crm-tasks.create')->group(function () {
+        Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+    });
+
+    Route::middleware('permission:crm-tasks.edit')->group(function () {
+        Route::patch('/tasks/{task}', [TaskController::class, 'update'])
+            ->name('tasks.update')
+            ->whereNumber('task');
+    });
+
+    Route::middleware('permission:crm-tasks.delete')->group(function () {
+        Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])
+            ->name('tasks.destroy')
+            ->whereNumber('task');
     });
 
     // Вложения. Живут в существующей MediaLibrary (коллекция crm-attachments),

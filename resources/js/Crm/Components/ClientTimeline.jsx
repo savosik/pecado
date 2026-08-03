@@ -1,9 +1,35 @@
 import { useState } from 'react';
-import { Box, HStack, Spinner, Text, VStack } from '@chakra-ui/react';
+import { router } from '@inertiajs/react';
+import { Badge, Box, HStack, Spinner, Text, VStack } from '@chakra-ui/react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import CommentEntry from '@/Crm/Components/CommentEntry';
+import TaskListItem from '@/Crm/Components/TaskListItem';
 import { useCommentFeed } from '@/Crm/Components/useCommentFeed';
+
+/**
+ * Задача в ленте.
+ *
+ * Правится не здесь, а в разделе «Задачи»: лента — это хронология того, что было,
+ * и превращать её во второй интерфейс редактирования незачем.
+ */
+function TimelineTaskEntry({ entry }) {
+    return (
+        <Box>
+            <HStack gap={2} mb={1} flexWrap="wrap">
+                <Badge colorPalette="purple" variant="subtle" size="sm">Задача</Badge>
+                <Text fontSize="xs" color="fg.muted">
+                    поставил {entry.author?.name}, {entry.happened_at_label}
+                </Text>
+            </HStack>
+            <TaskListItem
+                task={entry.task}
+                showEntity
+                onEdit={(task) => router.visit(route('crm.tasks.index', { task: task.id }))}
+            />
+        </Box>
+    );
+}
 
 /**
  * Сквозная лента клиента: всё, что оставлено по нему самому, его заказам и отгрузкам,
@@ -25,7 +51,7 @@ export default function ClientTimeline({ clientId }) {
                 <Text fontSize="sm" color="fg.muted">
                     {feed.failed
                         ? 'Лента недоступна.'
-                        : 'В ленте пока пусто. Комментарии по клиенту, его заказам и реализациям появятся здесь.'}
+                        : 'В ленте пока пусто. Комментарии и задачи по клиенту, его заказам и реализациям появятся здесь.'}
                 </Text>
             </Box>
         );
@@ -35,7 +61,9 @@ export default function ClientTimeline({ clientId }) {
         <VStack align="stretch" gap={2}>
             <Text fontSize="xs" color="fg.muted">Записей в ленте: {feed.total}</Text>
 
-            {feed.entries.map((entry) => (
+            {feed.entries.map((entry) => (entry.type === 'task' && entry.task ? (
+                <TimelineTaskEntry key={`task-${entry.id}`} entry={entry} />
+            ) : (
                 <CommentEntry
                     key={`${entry.type}-${entry.id}`}
                     entry={entry}
@@ -44,7 +72,7 @@ export default function ClientTimeline({ clientId }) {
                     onUpdate={feed.update}
                     onDelete={setPendingDelete}
                 />
-            ))}
+            )))}
 
             {feed.hasMore && (
                 <Button size="sm" variant="outline" onClick={feed.loadMore} loading={feed.loading}>

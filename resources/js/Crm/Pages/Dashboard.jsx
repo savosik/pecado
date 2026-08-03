@@ -1,9 +1,15 @@
-import { Head, usePage } from '@inertiajs/react';
+import { useState } from 'react';
+import { Head, router, usePage } from '@inertiajs/react';
+import axios from 'axios';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
-import { Box, Card, SimpleGrid, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, Card, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
 import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { LuUsers, LuUsersRound, LuBriefcase } from 'react-icons/lu';
+import TaskDialog from '@/Crm/Components/TaskDialog';
+import TaskListItem from '@/Crm/Components/TaskListItem';
+import { toastError } from '@/utils/toast';
 
 function StatCard({ label, value, icon: Icon }) {
     return (
@@ -21,8 +27,82 @@ function StatCard({ label, value, icon: Icon }) {
     );
 }
 
+/**
+ * «Мои задачи на сегодня»: просроченное и то, что горит сегодня, одним списком.
+ *
+ * Просрочку не выносим отдельно — менеджеру важно «что делать сейчас»,
+ * а не «в какой день это протухло».
+ */
+function TodayTasks({ tasks }) {
+    const [dialogTask, setDialogTask] = useState(null);
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [busy, setBusy] = useState(false);
+
+    const toggleDone = async (task) => {
+        setBusy(true);
+        try {
+            await axios.patch(`/crm/tasks/${task.id}`, {
+                status: task.status === 'done' ? 'open' : 'done',
+            });
+            router.reload({ only: ['tasks'] });
+        } catch (e) {
+            toastError('Статус не изменён', e?.response?.data?.message || 'Попробуйте ещё раз.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <Card.Root>
+            <Card.Header>
+                <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                    <HStack gap={2}>
+                        <Text fontWeight="semibold">Мои задачи на сегодня</Text>
+                        {tasks.overdue_count > 0 && (
+                            <Badge colorPalette="red" variant="solid">просрочено: {tasks.overdue_count}</Badge>
+                        )}
+                        {tasks.today_count > 0 && (
+                            <Badge colorPalette="blue" variant="subtle">на сегодня: {tasks.today_count}</Badge>
+                        )}
+                    </HStack>
+                    <Button size="xs" variant="outline" onClick={() => router.visit(route('crm.tasks.index'))}>
+                        Все задачи
+                    </Button>
+                </HStack>
+            </Card.Header>
+            <Card.Body>
+                {tasks.items.length === 0 ? (
+                    <Text fontSize="sm" color="fg.muted">
+                        На сегодня задач нет и просроченных тоже — можно заняться клиентами.
+                    </Text>
+                ) : (
+                    <VStack align="stretch" gap={2}>
+                        {tasks.items.map((task) => (
+                            <TaskListItem
+                                key={task.id}
+                                task={task}
+                                showEntity
+                                busy={busy}
+                                onEdit={(item) => { setDialogTask(item); setDialogOpen(true); }}
+                                onToggleDone={toggleDone}
+                            />
+                        ))}
+                    </VStack>
+                )}
+            </Card.Body>
+
+            <TaskDialog
+                open={dialogOpen}
+                task={dialogTask}
+                onClose={() => setDialogOpen(false)}
+                onSaved={() => router.reload({ only: ['tasks'] })}
+            />
+        </Card.Root>
+    );
+}
+
 export default function Dashboard() {
-    const { stats, seesAll, managerProfileLinked, auth } = usePage().props;
+    const { stats, seesAll, managerProfileLinked, auth, tasks } = usePage().props;
 
     return (
         <>
@@ -57,11 +137,13 @@ export default function Dashboard() {
                     )}
                 </SimpleGrid>
 
+                {tasks && <TodayTasks tasks={tasks} />}
+
                 <Card.Root>
                     <Card.Body>
                         <Text fontSize="sm" color="fg.muted">
-                            Раздел в разработке: здесь появятся сделки, задачи и воронка продаж.
-                            Сейчас доступны «Мои клиенты»{seesAll ? ' и «Команда»' : ''}.
+                            Раздел в разработке: здесь появятся сделки, планы продаж и воронка.
+                            Сейчас доступны «Мои клиенты», «Задачи»{seesAll ? ' и «Команда»' : ''}.
                         </Text>
                     </Card.Body>
                 </Card.Root>

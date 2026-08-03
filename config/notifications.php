@@ -52,6 +52,13 @@ return [
             'return_status_changes' => filter_var(env('MAIL_FEATURE_RETURN_STATUS', false), FILTER_VALIDATE_BOOLEAN),
 
             /*
+            | Задачи CRM: письмо исполнителю при назначении и напоминание
+            | о сроке (команда crm:tasks-remind). Себе задачу ставят чаще,
+            | чем коллеге, поэтому автору-исполнителю письмо не уходит.
+            */
+            'crm_tasks' => filter_var(env('MAIL_FEATURE_CRM_TASKS', false), FILTER_VALIDATE_BOOLEAN),
+
+            /*
             | Универсальные подписки на изменения сущностей разделов кабинета
             | (email). Общий гейт рассылки — см. config/subscriptions.php для
             | пофазного включения отдельных разделов.
