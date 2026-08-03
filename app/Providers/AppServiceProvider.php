@@ -128,6 +128,13 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\PublishUserToErp::class,
         );
 
+        // Message-ID письма менеджера известен только после отправки —
+        // без него письмо не найти в логах почтового сервера.
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Mail\Events\MessageSent::class,
+            \App\Listeners\RecordCrmEmailMessageId::class,
+        );
+
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\CompanyCreated::class,
             \App\Listeners\PublishContractorToErp::class,

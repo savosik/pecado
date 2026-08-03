@@ -59,6 +59,14 @@ return [
             'crm_tasks' => filter_var(env('MAIL_FEATURE_CRM_TASKS', false), FILTER_VALIDATE_BOOLEAN),
 
             /*
+            | Исходящие письма менеджеров из CRM. При выключенном флаге черновики
+            | создаются и сохраняются, но отправка заблокирована — это позволяет
+            | выкатить код на prod и проверить составление письма до включения
+            | реальной отправки клиентам.
+            */
+            'crm_outbound' => filter_var(env('MAIL_FEATURE_CRM_OUTBOUND', false), FILTER_VALIDATE_BOOLEAN),
+
+            /*
             | Универсальные подписки на изменения сущностей разделов кабинета
             | (email). Общий гейт рассылки — см. config/subscriptions.php для
             | пофазного включения отдельных разделов.

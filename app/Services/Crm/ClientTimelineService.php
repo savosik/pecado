@@ -3,6 +3,7 @@
 namespace App\Services\Crm;
 
 use App\Models\CrmComment;
+use App\Models\CrmEmail;
 use App\Models\CrmTask;
 use App\Models\User;
 use App\Support\Crm\CrmAttachments;
@@ -29,7 +30,12 @@ class ClientTimelineService
 
     private const TYPE_TASK = 'task';
 
-    public function __construct(private readonly CrmTaskService $tasks) {}
+    private const TYPE_EMAIL = 'email';
+
+    public function __construct(
+        private readonly CrmTaskService $tasks,
+        private readonly CrmEmailService $emails,
+    ) {}
 
     /**
      * Лента клиента: комментарии и задачи по нему самому, его заказам и отгрузкам.
@@ -55,6 +61,13 @@ class ClientTimelineService
             ->where('client_user_id', $clientId)
             ->whereNull('deleted_at');
 
+        // Черновики в ленту не идут: письмо становится событием в жизни клиента,
+        // только когда его отправили.
+        $emails = DB::table('crm_emails')
+            ->selectRaw("'".self::TYPE_EMAIL."' as source, id, created_at as happened_at, 0 as is_pinned")
+            ->where('client_user_id', $clientId)
+            ->whereIn('status', ['queued', 'sent', 'failed']);
+
         // Задачи коллег по общему клиенту рядовому менеджеру не показываем — то же
         // правило, что в CrmTaskPolicy: поручения между сотрудниками не публичная лента.
         if (! $viewer->can('crm-clients-all.view')) {
@@ -64,7 +77,7 @@ class ClientTimelineService
         }
 
         $paginator = DB::query()
-            ->fromSub($comments->unionAll($tasks), 'timeline')
+            ->fromSub($comments->unionAll($tasks)->unionAll($emails), 'timeline')
             ->orderByDesc('is_pinned')
             ->orderByDesc('happened_at')
             ->orderByDesc('id')
@@ -97,8 +110,15 @@ class ClientTimelineService
             ->get()
             ->keyBy('id');
 
+        $emails = CrmEmail::query()
+            ->whereIn('id', $rows->where('source', self::TYPE_EMAIL)->pluck('id')->all())
+            ->with(['author:id,name', 'related'])
+            ->withCount($this->attachmentsCount())
+            ->get()
+            ->keyBy('id');
+
         /** @var LengthAwarePaginator<int, array<string, mixed>> $hydrated */
-        $hydrated = $paginator->through(function (object $row) use ($comments, $tasks, $viewer): array {
+        $hydrated = $paginator->through(function (object $row) use ($comments, $tasks, $emails, $viewer): array {
             $id = (int) $row->id;
 
             if ($row->source === self::TYPE_COMMENT) {
@@ -109,11 +129,19 @@ class ClientTimelineService
                     : $this->missingEntry(self::TYPE_COMMENT, $id);
             }
 
-            $task = $tasks->get($id);
+            if ($row->source === self::TYPE_TASK) {
+                $task = $tasks->get($id);
 
-            return $task instanceof CrmTask
-                ? $this->taskEntry($task, $viewer)
-                : $this->missingEntry(self::TYPE_TASK, $id);
+                return $task instanceof CrmTask
+                    ? $this->taskEntry($task, $viewer)
+                    : $this->missingEntry(self::TYPE_TASK, $id);
+            }
+
+            $email = $emails->get($id);
+
+            return $email instanceof CrmEmail
+                ? $this->emailEntry($email, $viewer)
+                : $this->missingEntry(self::TYPE_EMAIL, $id);
         });
 
         return $hydrated;
@@ -141,6 +169,38 @@ class ClientTimelineService
             'entity' => null,
             'attachments_count' => 0,
             'can' => ['update' => false, 'delete' => false],
+        ];
+    }
+
+    /**
+     * Письмо в общей форме записи ленты.
+     *
+     * Тело письма в ленту не отдаём — только тему: HTML целиком раздувал бы страницу
+     * и требовал бы санитайзинга на каждой записи. Открыть письмо можно в журнале.
+     *
+     * @return array<string, mixed>
+     */
+    public function emailEntry(CrmEmail $email, User $viewer): array
+    {
+        return [
+            'type' => self::TYPE_EMAIL,
+            'id' => (int) $email->getKey(),
+            'happened_at' => $email->created_at?->toIso8601String(),
+            'happened_at_label' => $email->created_at?->format('d.m.Y H:i'),
+            'author' => [
+                'id' => (int) $email->user_id,
+                'name' => $email->author->name,
+            ],
+            'title' => $email->subject,
+            'excerpt' => 'Кому: '.implode(', ', $email->to),
+            'entity' => $email->related instanceof Model
+                ? CrmEntityMap::describe($email->related, $viewer)
+                : null,
+            'email' => $this->emails->payload($email, $viewer),
+            'can' => [
+                'update' => $viewer->can('update', $email),
+                'delete' => $viewer->can('delete', $email),
+            ],
         ];
     }
 

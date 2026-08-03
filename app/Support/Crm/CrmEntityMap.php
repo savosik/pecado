@@ -3,6 +3,7 @@
 namespace App\Support\Crm;
 
 use App\Models\CrmComment;
+use App\Models\CrmEmail;
 use App\Models\CrmTask;
 use App\Models\Order;
 use App\Models\Shipment;
@@ -32,6 +33,8 @@ final class CrmEntityMap
 
     public const TASK = 'task';
 
+    public const EMAIL = 'email';
+
     /**
      * Строковый тип для API → класс модели.
      *
@@ -43,6 +46,7 @@ final class CrmEntityMap
         self::SHIPMENT => Shipment::class,
         self::COMMENT => CrmComment::class,
         self::TASK => CrmTask::class,
+        self::EMAIL => CrmEmail::class,
     ];
 
     /**
@@ -56,6 +60,7 @@ final class CrmEntityMap
         self::SHIPMENT => 'Реализация',
         self::COMMENT => 'Комментарий',
         self::TASK => 'Задача',
+        self::EMAIL => 'Письмо',
     ];
 
     /**
@@ -68,7 +73,7 @@ final class CrmEntityMap
      */
     public static function taskableTypes(): array
     {
-        return array_values(array_diff(self::types(), [self::COMMENT, self::TASK]));
+        return array_values(array_diff(self::types(), [self::COMMENT, self::TASK, self::EMAIL]));
     }
 
     /**
@@ -146,7 +151,7 @@ final class CrmEntityMap
             self::CLIENT => $entity->getKey(),
             self::ORDER, self::SHIPMENT => $entity->getAttribute('user_id'),
             // Комментарий и задача уже знают своего клиента — денормализация из crm-01.
-            self::COMMENT, self::TASK => $entity->getAttribute('client_user_id'),
+            self::COMMENT, self::TASK, self::EMAIL => $entity->getAttribute('client_user_id'),
             default => null,
         };
 
@@ -193,6 +198,7 @@ final class CrmEntityMap
             self::SHIPMENT => 'Реализация №'.($entity->getAttribute('number') ?: $entity->getKey()),
             self::COMMENT => 'Комментарий от '.($entity->getAttribute('created_at')?->format('d.m.Y H:i') ?? '—'),
             self::TASK => (string) $entity->getAttribute('title'),
+            self::EMAIL => 'Письмо: '.$entity->getAttribute('subject'),
             default => (string) $entity->getKey(),
         };
     }
@@ -207,6 +213,10 @@ final class CrmEntityMap
         // ниже к нему неприменим.
         if ($type === self::TASK) {
             return route('crm.tasks.index', ['task' => $entity->getKey()]);
+        }
+
+        if ($type === self::EMAIL) {
+            return route('crm.emails.index', ['email' => $entity->getKey()]);
         }
 
         if ($viewer !== null && ! $viewer->hasAdminAccess()) {

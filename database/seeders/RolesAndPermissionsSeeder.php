@@ -90,6 +90,9 @@ class RolesAndPermissionsSeeder extends Seeder
         // Задачи: edit — правка и смена статуса (в т.ч. закрытие исполнителем),
         // delete — снятие задачи автором или РОПом.
         'crm-tasks' => ['view', 'create', 'edit', 'delete'],
+        // Письма: create — составить и отправить, edit — править черновик,
+        // delete — удалить неотправленное (отправленное остаётся в журнале навсегда).
+        'crm-emails' => ['view', 'create', 'edit', 'delete'],
         // Вложения: edit нет — заменить файл это удалить и загрузить заново.
         'crm-attachments' => ['view', 'create', 'delete'],
 
@@ -168,6 +171,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-profile' => 'CRM: Профиль клиента',
         'crm-comments' => 'CRM: Комментарии',
         'crm-tasks' => 'CRM: Задачи',
+        'crm-emails' => 'CRM: Письма',
         'crm-attachments' => 'CRM: Вложения',
         'wms-dashboard' => 'Склад: Рабочий стол',
         'wms-defects' => 'Склад: Некондиция',
@@ -204,7 +208,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'orders', 'carts', 'returns', 'shipments',
                 'favorites', 'wishlist', 'supplier-preorders',
                 // CRM: свои клиенты (те, что закреплены за его карточкой менеджера)
-                'crm-dashboard', 'crm-clients', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks',
+                'crm-dashboard', 'crm-clients', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-emails',
             ],
         ],
         'sales-manager-crm' => [
@@ -212,14 +216,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
                 // Для менеджеров, которым нужны свои клиенты, но не нужна админка.
-                'crm-dashboard', 'crm-clients', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks',
+                'crm-dashboard', 'crm-clients', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-emails',
             ],
         ],
         'sales-head' => [
             'label' => 'Руководитель отдела продаж',
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
-                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks',
+                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-emails',
             ],
         ],
         'catalogist' => [

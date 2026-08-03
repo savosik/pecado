@@ -6,6 +6,7 @@ use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientProfileController;
 use App\Http\Controllers\Crm\CommentController;
 use App\Http\Controllers\Crm\DashboardController;
+use App\Http\Controllers\Crm\EmailController;
 use App\Http\Controllers\Crm\TaskController;
 use App\Http\Controllers\Crm\TeamController;
 use Illuminate\Support\Facades\Route;
@@ -100,6 +101,40 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])
             ->name('tasks.destroy')
             ->whereNumber('task');
+    });
+
+    // Письма. Отправка гейтится фича-флагом MAIL_FEATURE_CRM_OUTBOUND,
+    // черновики создаются и при выключенном.
+    Route::middleware('permission:crm-emails.view')->group(function () {
+        Route::get('/emails', [EmailController::class, 'index'])->name('emails.index');
+        // До /emails/{email}: иначе «list» и «options» ушли бы в биндинг модели.
+        Route::get('/emails/list', [EmailController::class, 'list'])->name('emails.list');
+        Route::get('/emails/options', [EmailController::class, 'options'])->name('emails.options');
+        Route::get('/emails/{email}', [EmailController::class, 'show'])
+            ->name('emails.show')
+            ->whereNumber('email');
+    });
+
+    Route::middleware('permission:crm-emails.create')->group(function () {
+        Route::post('/emails', [EmailController::class, 'store'])->name('emails.store');
+        Route::post('/emails/{email}/send', [EmailController::class, 'send'])
+            ->name('emails.send')
+            ->whereNumber('email');
+        Route::get('/email-templates/{template}', [EmailController::class, 'template'])
+            ->name('emails.template')
+            ->whereNumber('template');
+    });
+
+    Route::middleware('permission:crm-emails.edit')->group(function () {
+        Route::patch('/emails/{email}', [EmailController::class, 'update'])
+            ->name('emails.update')
+            ->whereNumber('email');
+    });
+
+    Route::middleware('permission:crm-emails.delete')->group(function () {
+        Route::delete('/emails/{email}', [EmailController::class, 'destroy'])
+            ->name('emails.destroy')
+            ->whereNumber('email');
     });
 
     // Вложения. Живут в существующей MediaLibrary (коллекция crm-attachments),

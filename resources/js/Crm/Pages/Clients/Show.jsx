@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
+import { Button } from '@/components/ui/button';
+import { LuMail } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Box, Card, SimpleGrid, Tabs, Text, VStack, Badge } from '@chakra-ui/react';
@@ -9,6 +12,7 @@ import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
 import ClientProfileForm from '@/Crm/Components/ClientProfileForm';
 import ClientLifecyclePanel from '@/Crm/Components/ClientLifecyclePanel';
 import TaskPanel from '@/Crm/Components/TaskPanel';
+import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 
 function InfoRow({ label, value }) {
     return (
@@ -27,6 +31,7 @@ export default function Show() {
     const canViewComments = can('crm-comments.view');
     const canViewFiles = can('crm-attachments.view');
     const canViewTasks = can('crm-tasks.view');
+    const [composeOpen, setComposeOpen] = useState(false);
 
     const defaultTab = canViewProfile ? 'profile' : (canViewComments ? 'timeline' : 'files');
     const showStatuses = canViewProfile && !!lifecycle;
@@ -37,6 +42,13 @@ export default function Show() {
             <PageHeader
                 title={client.name}
                 description="Карточка клиента"
+                actions={can('crm-emails.create')
+                    ? (
+                        <Button size="sm" variant="outline" onClick={() => setComposeOpen(true)}>
+                            <LuMail /> Написать письмо
+                        </Button>
+                    )
+                    : null}
             />
 
             <VStack gap={4} align="stretch">
@@ -148,6 +160,13 @@ export default function Show() {
                     </Card.Root>
                 )}
             </VStack>
+
+            <EmailComposeDialog
+                open={composeOpen}
+                entity={{ type: 'client', id: client.id }}
+                defaultTo={client.email}
+                onClose={() => setComposeOpen(false)}
+            />
         </>
     );
 }
