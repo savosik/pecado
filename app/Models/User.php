@@ -503,6 +503,8 @@ class User extends Authenticatable implements HasMedia
      *
      * Обратная сторона personalManager(): там пользователь выступает клиентом,
      * здесь — самим менеджером.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<PersonalManager, $this>
      */
     public function managerProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
     {

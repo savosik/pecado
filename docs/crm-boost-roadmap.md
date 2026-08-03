@@ -185,7 +185,7 @@
 - [x] `crm-10-email` — в `review`, ждёт визуальной проверки на dev
 
 ### Волна 4 — Планы и аналитика
-- [ ] `crm-05-plans`
+- [x] `crm-05-plans` — в `review`, ждёт визуальной проверки на dev
 - [ ] `crm-06-plan-analytics`
 - [ ] `crm-07-opportunities`
 - [ ] `crm-08-beds`

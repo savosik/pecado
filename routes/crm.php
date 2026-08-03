@@ -7,6 +7,7 @@ use App\Http\Controllers\Crm\ClientProfileController;
 use App\Http\Controllers\Crm\CommentController;
 use App\Http\Controllers\Crm\DashboardController;
 use App\Http\Controllers\Crm\EmailController;
+use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\TaskController;
 use App\Http\Controllers\Crm\TeamController;
 use Illuminate\Support\Facades\Route;
@@ -150,6 +151,25 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::delete('/attachments/{media}', [AttachmentController::class, 'destroy'])
             ->name('attachments.destroy')
             ->whereNumber('media');
+    });
+
+    // Планы продаж. Ввод — массовый: сетка отправляется строками «цель → сумма»,
+    // поэтому отдельного PATCH на один план нет.
+    Route::middleware('permission:crm-plans.view')->group(function () {
+        Route::get('/plans', [PlanController::class, 'index'])->name('plans.index');
+        Route::get('/plans/data', [PlanController::class, 'data'])->name('plans.data');
+    });
+
+    Route::middleware('permission:crm-plans.edit')->group(function () {
+        Route::post('/plans', [PlanController::class, 'store'])->name('plans.store');
+        Route::post('/plans/copy-previous', [PlanController::class, 'copyPrevious'])
+            ->name('plans.copy-previous');
+    });
+
+    Route::middleware('permission:crm-plans.delete')->group(function () {
+        Route::delete('/plans/{plan}', [PlanController::class, 'destroy'])
+            ->name('plans.destroy')
+            ->whereNumber('plan');
     });
 
     Route::middleware('permission:crm-team.view')->group(function () {
