@@ -45,6 +45,26 @@
 если тип не выбран администратором явно. Иначе первый же новый закупщик снова оказался
 бы в CRM — колонка по умолчанию `client`.
 
+### Менеджеры отдела продаж (уточнение 2026-08-03)
+
+Отдельный случай, всплывший при проверке: менеджер видел в своих клиентах сам себя.
+Роли у менеджеров нет — в админку они не заходят, поэтому разметка по ролям их не поймала.
+При этом в 1С сотрудники заведены партнёрами наравне с покупателями (компания работает
+через несколько юрлиц), `partner.created` завёл им учётку, а поле `manager` в том же
+payload проставило `personal_manager_id`.
+
+Три места закрыты:
+
+1. Миграция `2026_08_03_190000_mark_manager_accounts_as_staff` — `staff` тем, у кого есть
+   привязанная карточка менеджера (`personal_managers.user_id`) **или** чей email совпадает
+   с email карточки. Второй признак нужен потому, что привязку заполняют вручную и у
+   большинства карточек её нет.
+2. `HandlePartnerCreated::kindForNewPartner()` — новый партнёр с email из справочника
+   менеджеров создаётся сразу как `staff`. Типа партнёра в payload нет, но совпадение
+   адреса с карточкой менеджера случайным не бывает.
+3. `PersonalManagerController::markLinkedAccountAsStaff()` — привязали учётку к карточке
+   менеджера в админке, значит это сотрудник. Тип `service` при этом не перетирается.
+
 ## Что сделано
 
 | Слой | Файлы |
@@ -56,7 +76,8 @@
 | Админка | `UserController`: фильтр, счётчики, валидация, `syncKindWithRoles()`; `Users/{Index,Create,Edit,Show}.jsx` |
 | Данные | `UserFactory::staff()/service()`, `CrmDemoSeeder` |
 | Аналитика | `app/Models/Concerns/FiltersClientDocuments.php`, `Order`, `Shipment`, `Admin/DashboardController`, `Mcp/Servers/AnalyticsServer` |
-| Тесты | `Crm/CrmUserKindScopeTest` (8), `Admin/AdminUserKindTest` (5), `Admin/AdminDashboardClientOrdersTest` (4), `HandlePartnerUpdatedTest::it_keeps_user_kind_untouched` |
+| Менеджеры | `2026_08_03_190000_mark_manager_accounts_as_staff`, `HandlePartnerCreated`, `PersonalManagerController` |
+| Тесты | `Crm/CrmUserKindScopeTest` (8), `Crm/ManagerAccountIsNotClientTest` (4), `Admin/AdminUserKindTest` (5), `Admin/AdminDashboardClientOrdersTest` (4), `HandlePartnerUpdatedTest::it_keeps_user_kind_untouched` |
 
 Попутно починен хрупкий по времени тест `TasksTest::dashboard_widget_shows_today_and_overdue`:
 `now()->addHours(2)` уезжал на следующие сутки при прогоне после 22:00 МСК.

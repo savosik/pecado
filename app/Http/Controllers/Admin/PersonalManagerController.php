@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\UserKind;
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\PersonalManager;
 use App\Models\User;
@@ -35,6 +36,26 @@ class PersonalManagerController extends AdminController
             })
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
+    }
+
+    /**
+     * Учётка, привязанная к карточке менеджера, — сотрудник, а не клиент.
+     *
+     * 1С заводит менеджеров партнёрами наравне с покупателями и проставляет им
+     * personal_manager_id, поэтому без этой пометки менеджер всплывает в CRM
+     * среди собственных клиентов. Служебный тип не трогаем: если аккаунт уже
+     * помечен как служебный, это осознанное решение администратора.
+     */
+    private function markLinkedAccountAsStaff(PersonalManager $manager): void
+    {
+        if ($manager->user_id === null) {
+            return;
+        }
+
+        User::query()
+            ->whereKey($manager->user_id)
+            ->where('user_kind', UserKind::CLIENT->value)
+            ->update(['user_kind' => UserKind::STAFF->value]);
     }
 
     /**
@@ -130,6 +151,7 @@ class PersonalManagerController extends AdminController
         unset($validated['photo']);
 
         $manager = PersonalManager::create($validated);
+        $this->markLinkedAccountAsStaff($manager);
 
         if ($request->hasFile('photo')) {
             $manager->addMediaFromRequest('photo')
@@ -198,6 +220,7 @@ class PersonalManagerController extends AdminController
         unset($validated['photo']);
 
         $personalManager->update($validated);
+        $this->markLinkedAccountAsStaff($personalManager);
 
         if ($request->hasFile('photo')) {
             $personalManager->clearMediaCollection('photo');

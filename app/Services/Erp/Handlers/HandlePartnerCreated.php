@@ -2,10 +2,12 @@
 
 namespace App\Services\Erp\Handlers;
 
+use App\Enums\UserKind;
 use App\Enums\UserStatus;
 use App\Jobs\NormalizeUserDataJob;
 use App\Listeners\PublishContractorToErp;
 use App\Models\ClientStatus;
+use App\Models\PersonalManager;
 use App\Models\Region;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -158,6 +160,7 @@ class HandlePartnerCreated
             'erp_id' => $uuid,
             'status' => $userStatus,
             'region_id' => $defaultRegionId,
+            'user_kind' => $this->kindForNewPartner($email),
         ];
 
         if ($clientStatusId !== false) {
@@ -180,6 +183,37 @@ class HandlePartnerCreated
         ]);
 
         NormalizeUserDataJob::dispatch($newUser->id);
+    }
+
+    /**
+     * Тип аккаунта для партнёра, впервые пришедшего из 1С.
+     *
+     * В 1С сотрудники заведены и партнёрами тоже (компания работает через несколько
+     * юрлиц), поэтому `partner.created` приходит и на менеджера отдела продаж. Без
+     * этой проверки он окажется в CRM среди собственных клиентов — ровно то, что
+     * пришлось разгребать миграцией `mark_manager_accounts_as_staff`.
+     *
+     * Сверяем по email карточки менеджера: типа партнёра в payload нет, а совпадение
+     * адреса с справочником менеджеров случайным не бывает.
+     */
+    private function kindForNewPartner(?string $email): UserKind
+    {
+        if (! $email) {
+            return UserKind::CLIENT;
+        }
+
+        $isManager = PersonalManager::query()
+            ->whereNotNull('email')
+            ->where('email', $email)
+            ->exists();
+
+        if ($isManager) {
+            Log::info('partner.created: партнёр опознан как менеджер отдела продаж', [
+                'login' => $email,
+            ]);
+        }
+
+        return $isManager ? UserKind::STAFF : UserKind::CLIENT;
     }
 
     /**
