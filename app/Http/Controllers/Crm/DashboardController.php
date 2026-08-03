@@ -21,6 +21,7 @@ class DashboardController extends CrmController
 
         return Inertia::render('Crm/Pages/Dashboard', [
             'tasks' => $actor->can('crm-tasks.view') ? $this->todayTasks($actor, $tasks) : null,
+            'coverage' => $actor->can('crm-tasks.view') ? $this->coverage($actor, $tasks) : null,
             'stats' => [
                 'visible_clients' => $visibleClients,
                 'department_clients' => $seesAll
@@ -33,6 +34,38 @@ class DashboardController extends CrmController
             'seesAll' => $seesAll,
             'managerProfileLinked' => $seesAll || $actor->managerProfile !== null,
         ]);
+    }
+
+    /**
+     * Покрытие клиентов задачами: по кому не поставлено ни одного следующего шага.
+     *
+     * Показываем не только цифру, но и первых из списка с кнопкой «поставить задачу»:
+     * отчёт, из которого нельзя ничего сделать, читают один раз.
+     *
+     * @return array<string, mixed>
+     */
+    private function coverage(User $actor, CrmTaskService $tasks): array
+    {
+        $uncovered = $tasks->uncoveredClients($actor);
+
+        $total = User::query()->visibleInCrm($actor)->count();
+        $uncoveredCount = (clone $uncovered)->count();
+
+        return [
+            'clients_total' => $total,
+            'uncovered_count' => $uncoveredCount,
+            'covered_percent' => $total === 0 ? null : (int) round(($total - $uncoveredCount) / $total * 100),
+            'examples' => $uncovered
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->take(5)
+                ->get()
+                ->map(fn (User $client): array => [
+                    'id' => (int) $client->getKey(),
+                    'name' => (string) $client->name,
+                ])
+                ->all(),
+        ];
     }
 
     /**

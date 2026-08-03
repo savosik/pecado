@@ -45,6 +45,8 @@ use Spatie\Tags\HasTags;
  * @property-read int|null $carts_count
  * @property-read \App\Models\ClientStatus|null $clientStatus
  * @property-read \App\Models\CrmClientProfile|null $crmProfile
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CrmTask> $crmTasks
+ * @property-read int|null $active_tasks_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Company> $companies
  * @property-read int|null $companies_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ContractorBalance> $contractorBalances
@@ -465,6 +467,19 @@ class User extends Authenticatable implements HasMedia
     public function crmProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(CrmClientProfile::class);
+    }
+
+    /**
+     * Задачи CRM, сводящиеся к этому клиенту.
+     *
+     * Связь по денормализованному client_user_id, а не по полиморфной привязке:
+     * задача по заказу клиента — это тоже задача по клиенту.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<CrmTask, $this>
+     */
+    public function crmTasks(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CrmTask::class, 'client_user_id');
     }
 
     /**

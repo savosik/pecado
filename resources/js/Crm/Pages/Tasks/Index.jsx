@@ -9,6 +9,7 @@ import { SearchInput } from '@/Admin/Components/SearchInput';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import TaskDialog from '@/Crm/Components/TaskDialog';
+import TaskCloseDialog from '@/Crm/Components/TaskCloseDialog';
 import { primeTaskOptions } from '@/Crm/Components/useTaskOptions';
 import { usePermission } from '@/shared/Panel/usePermission';
 import { LuCheck, LuPencil, LuPlus, LuTrash2, LuUndo2 } from 'react-icons/lu';
@@ -48,6 +49,7 @@ export default function Index({ tasks, filters, counters, options, openTaskId })
     const [dialogTask, setDialogTask] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [pendingDelete, setPendingDelete] = useState(null);
+    const [closingTask, setClosingTask] = useState(null);
     const [busy, setBusy] = useState(false);
 
     // Справочники уже приехали пропсами — диалог не должен запрашивать их повторно.
@@ -76,12 +78,18 @@ export default function Index({ tasks, filters, counters, options, openTaskId })
 
     const reload = () => router.reload({ only: ['tasks', 'counters'] });
 
+    // Закрытие идёт через диалог: там спрашивают, что сделано и что дальше.
+    // Возврат в работу — действие исправляющее, его переспрашивать незачем.
     const toggleDone = async (task) => {
+        if (task.status !== 'done') {
+            setClosingTask(task);
+
+            return;
+        }
+
         setBusy(true);
         try {
-            await axios.patch(`/crm/tasks/${task.id}`, {
-                status: task.status === 'done' ? 'open' : 'done',
-            });
+            await axios.patch(`/crm/tasks/${task.id}`, { status: 'open' });
             reload();
         } catch (e) {
             toastError('Статус не изменён', e?.response?.data?.message || 'Попробуйте ещё раз.');
@@ -320,6 +328,12 @@ export default function Index({ tasks, filters, counters, options, openTaskId })
                 task={dialogTask}
                 onClose={() => setDialogOpen(false)}
                 onSaved={reload}
+            />
+
+            <TaskCloseDialog
+                task={closingTask}
+                onClose={() => setClosingTask(null)}
+                onClosed={reload}
             />
 
             <ConfirmDialog

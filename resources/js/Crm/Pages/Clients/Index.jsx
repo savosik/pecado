@@ -9,7 +9,16 @@ import { LuEye } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 
-export default function Index({ clients, managers, filters, canSeeAll, managerProfileLinked, lifecycleOptions = [] }) {
+export default function Index({
+    clients,
+    managers,
+    filters,
+    canSeeAll,
+    canSeeTasks = false,
+    uncoveredCount = null,
+    managerProfileLinked,
+    lifecycleOptions = [],
+}) {
     // Раздел read-only: из хука берём только поиск и сортировку,
     // массовое удаление (оно завязано на admin.bulk-delete-*) не задействуем.
     const { searchQuery, handleSearch, handleSort } = useResourceIndex('crm.clients', filters, {
@@ -25,6 +34,13 @@ export default function Index({ clients, managers, filters, canSeeAll, managerPr
 
     const handleLifecycleFilter = (lifecycle) => {
         router.get(route('crm.clients.index'), { ...filters, lifecycle: lifecycle || undefined }, {
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const handleCoverageFilter = (coverage) => {
+        router.get(route('crm.clients.index'), { ...filters, coverage: coverage || undefined }, {
             preserveState: true,
             replace: true,
         });
@@ -78,6 +94,13 @@ export default function Index({ clients, managers, filters, canSeeAll, managerPr
                     </HStack>
                 );
             },
+        }] : []),
+        ...(canSeeTasks ? [{
+            key: 'tasks',
+            label: 'Задачи',
+            render: (_, row) => (row.active_tasks_count > 0
+                ? <Badge colorPalette="blue" variant="subtle">{row.active_tasks_count}</Badge>
+                : <Badge colorPalette="orange" variant="outline" title="По клиенту нет следующего шага">нет</Badge>),
         }] : []),
         {
             key: 'client_status',
@@ -145,6 +168,18 @@ export default function Index({ clients, managers, filters, canSeeAll, managerPr
                         {lifecycleOptions.map((option) => (
                             <option key={option.value} value={option.value}>{option.label}</option>
                         ))}
+                    </select>
+                )}
+
+                {canSeeTasks && (
+                    <select
+                        value={filters.coverage || ''}
+                        onChange={(e) => handleCoverageFilter(e.target.value)}
+                        style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border)', minWidth: '200px' }}
+                    >
+                        <option value="">Задачи: неважно</option>
+                        <option value="uncovered">Без задач{uncoveredCount !== null ? ` (${uncoveredCount})` : ''}</option>
+                        <option value="covered">С активными задачами</option>
                     </select>
                 )}
 

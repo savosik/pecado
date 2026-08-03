@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { LuPlus } from 'react-icons/lu';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import TaskDialog from '@/Crm/Components/TaskDialog';
+import TaskCloseDialog from '@/Crm/Components/TaskCloseDialog';
 import TaskListItem from '@/Crm/Components/TaskListItem';
 import { usePermission } from '@/shared/Panel/usePermission';
 import { toastError, toastSuccess } from '@/utils/toast';
@@ -28,6 +29,7 @@ export default function TaskPanel({ entityType, entityId }) {
     const [dialogTask, setDialogTask] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [pendingDelete, setPendingDelete] = useState(null);
+    const [closingTask, setClosingTask] = useState(null);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -49,18 +51,34 @@ export default function TaskPanel({ entityType, entityId }) {
 
     useEffect(() => { load(); }, [load]);
 
+    // Закрытие идёт через диалог: там спрашивают, что сделано и что дальше.
+    // Возврат в работу — действие исправляющее, его переспрашивать незачем.
     const toggleDone = async (task) => {
+        if (task.status !== 'done') {
+            setClosingTask(task);
+
+            return;
+        }
+
         setBusy(true);
         try {
-            const res = await axios.patch(`/crm/tasks/${task.id}`, {
-                status: task.status === 'done' ? 'open' : 'done',
-            });
+            const res = await axios.patch(`/crm/tasks/${task.id}`, { status: 'open' });
             setTasks((prev) => prev.map((item) => (item.id === task.id ? res.data : item)));
         } catch (e) {
             toastError('Статус не изменён', e?.response?.data?.message || 'Попробуйте ещё раз.');
         } finally {
             setBusy(false);
         }
+    };
+
+    const onClosed = (closed, followUp) => {
+        setTasks((prev) => {
+            const updated = prev.map((item) => (item.id === closed.id ? closed : item));
+
+            // Следующий шаг наследует привязку закрытой задачи, поэтому он
+            // относится к этой же врезке и должен появиться сразу.
+            return followUp ? [followUp, ...updated] : updated;
+        });
     };
 
     const remove = async (id) => {
@@ -127,6 +145,12 @@ export default function TaskPanel({ entityType, entityId }) {
                 entity={{ type: entityType, id: entityId }}
                 onClose={() => setDialogOpen(false)}
                 onSaved={onSaved}
+            />
+
+            <TaskCloseDialog
+                task={closingTask}
+                onClose={() => setClosingTask(null)}
+                onClosed={onClosed}
             />
 
             <ConfirmDialog

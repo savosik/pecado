@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Crm;
 
 use App\Enums\Crm\TaskPriority;
 use App\Enums\Crm\TaskStatus;
+use App\Http\Requests\Crm\CloseCrmTaskRequest;
 use App\Http\Requests\Crm\StoreCrmTaskRequest;
 use App\Http\Requests\Crm\UpdateCrmTaskRequest;
 use App\Models\CrmTask;
@@ -264,6 +265,36 @@ class TaskController extends CrmController
         $task->load(['author:id,name', 'assignee:id,name', 'related']);
 
         return response()->json($this->tasks->payload($task, $actor));
+    }
+
+    /**
+     * Закрыть задачу с отчётом и следующим шагом.
+     *
+     * Отдельным эндпоинтом, а не статусом через PATCH: закрытие — это три записи
+     * в одной транзакции (отметка, комментарий, follow-up), и разложить их
+     * по трём запросам с фронта значило бы допустить закрытие без комментария,
+     * который пользователь всё-таки написал.
+     */
+    public function close(CloseCrmTaskRequest $request, CrmTask $task): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('update', $task);
+
+        $result = $this->tasks->close(
+            $task,
+            $actor,
+            $request->input('comment'),
+            $request->input('follow_up'),
+        );
+
+        $task->load(['author:id,name', 'assignee:id,name', 'related']);
+        $followUp = $result['follow_up'];
+        $followUp?->load(['author:id,name', 'assignee:id,name', 'related']);
+
+        return response()->json([
+            'task' => $this->tasks->payload($task, $actor),
+            'follow_up' => $followUp === null ? null : $this->tasks->payload($followUp, $actor),
+        ]);
     }
 
     public function destroy(Request $request, CrmTask $task): JsonResponse

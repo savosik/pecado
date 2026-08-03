@@ -6,30 +6,34 @@ use App\Enums\Crm\ClientLifecycleStatus;
 use App\Enums\Crm\ClientSentiment;
 use App\Enums\Crm\PaymentBehavior;
 use App\Enums\Crm\PreferredChannel;
+use App\Enums\Crm\TaskStatus;
 use App\Models\CrmClientProfileRevision;
 use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Crm\ClientLifecycleService;
 use App\Services\Crm\ClientProfileService;
+use App\Services\Crm\CrmTaskService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ClientController extends CrmController
 {
-    public function index(Request $request): Response
+    public function index(Request $request, CrmTaskService $tasks): Response
     {
         $actor = $this->crmActor($request);
         $seesAll = $this->seesAllClients($request);
 
         $canSeeProfile = $actor->can('crm-profile.view');
+        $canSeeTasks = $actor->can('crm-tasks.view');
 
         $query = User::query()
             ->visibleInCrm($actor)
             ->with(['personalManager:id,name', 'clientStatus:id,name,color'])
             ->when($canSeeProfile, fn ($q) => $q->with(
                 'crmProfile:id,user_id,lifecycle_status,lifecycle_hint'
-            ));
+            ))
+            ->when($canSeeTasks, fn ($q) => $q->withCount($tasks->activeTasksCount()));
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -55,6 +59,21 @@ class ClientController extends CrmController
             $this->filterByLifecycle($query, $lifecycle);
         }
 
+        // Покрытие задачами: «по кому нет следующего шага» — рабочий список
+        // на неделю, а не отчётная цифра.
+        $coverage = $canSeeTasks && in_array($request->input('coverage'), ['uncovered', 'covered'], true)
+            ? (string) $request->input('coverage')
+            : null;
+
+        if ($coverage !== null) {
+            $active = TaskStatus::activeValues();
+            $hasActiveTask = fn ($q) => $q->whereIn('status', $active);
+
+            $coverage === 'uncovered'
+                ? $query->whereDoesntHave('crmTasks', $hasActiveTask)
+                : $query->whereHas('crmTasks', $hasActiveTask);
+        }
+
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
 
@@ -72,12 +91,15 @@ class ClientController extends CrmController
                 ? PersonalManager::query()->select('id', 'name')->orderBy('name')->get()
                 : [],
             'canSeeAll' => $seesAll,
+            'canSeeTasks' => $canSeeTasks,
+            'uncoveredCount' => $canSeeTasks ? $tasks->uncoveredClients($actor)->count() : null,
             'lifecycleOptions' => $canSeeProfile ? ClientLifecycleStatus::optionsWithColor() : [],
             'managerProfileLinked' => $seesAll || $actor->managerProfile !== null,
             'filters' => [
                 'search' => $search,
                 'manager_id' => $managerId,
                 'lifecycle' => $lifecycle?->value,
+                'coverage' => $coverage,
                 'sort_by' => $sortBy,
                 'sort_order' => $sortOrder,
                 'per_page' => $perPage,

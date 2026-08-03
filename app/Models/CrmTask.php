@@ -24,6 +24,7 @@ use Spatie\MediaLibrary\HasMedia;
  * @property int $author_id
  * @property int $assignee_id
  * @property int|null $client_user_id
+ * @property int|null $follow_up_of_id
  * @property string|null $related_type
  * @property int|null $related_id
  * @property TaskStatus $status
@@ -36,6 +37,7 @@ use Spatie\MediaLibrary\HasMedia;
  * @property-read User $author
  * @property-read User $assignee
  * @property-read User|null $client
+ * @property-read CrmTask|null $followUpOf
  * @property-read Model|null $related
  * @property-read \Illuminate\Database\Eloquent\Collection<int, CrmComment> $comments
  * @property-read int|null $attachments_count
@@ -51,6 +53,7 @@ class CrmTask extends Model implements HasMedia
         'author_id',
         'assignee_id',
         'client_user_id',
+        'follow_up_of_id',
         'related_type',
         'related_id',
         'status',
@@ -124,6 +127,14 @@ class CrmTask extends Model implements HasMedia
     public function client(): BelongsTo
     {
         return $this->belongsTo(User::class, 'client_user_id');
+    }
+
+    /**
+     * Задача, при закрытии которой поставлена эта.
+     */
+    public function followUpOf(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'follow_up_of_id');
     }
 
     /**

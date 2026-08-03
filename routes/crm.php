@@ -89,6 +89,11 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::patch('/tasks/{task}', [TaskController::class, 'update'])
             ->name('tasks.update')
             ->whereNumber('task');
+        // Закрытие — своим эндпоинтом: отметка, отчёт и следующий шаг
+        // должны лечь одной транзакцией.
+        Route::post('/tasks/{task}/close', [TaskController::class, 'close'])
+            ->name('tasks.close')
+            ->whereNumber('task');
     });
 
     Route::middleware('permission:crm-tasks.delete')->group(function () {

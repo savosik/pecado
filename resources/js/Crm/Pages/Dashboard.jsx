@@ -36,15 +36,24 @@ function StatCard({ label, value, icon: Icon }) {
 function TodayTasks({ tasks }) {
     const [dialogTask, setDialogTask] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [closingTask, setClosingTask] = useState(null);
     const [busy, setBusy] = useState(false);
 
+    // Закрытие задачи меняет и покрытие клиентов — перечитываем оба блока.
+    const refresh = () => router.reload({ only: ['tasks', 'coverage'] });
+
+    // Закрытие идёт через диалог: там спрашивают, что сделано и что дальше.
     const toggleDone = async (task) => {
+        if (task.status !== 'done') {
+            setClosingTask(task);
+
+            return;
+        }
+
         setBusy(true);
         try {
-            await axios.patch(`/crm/tasks/${task.id}`, {
-                status: task.status === 'done' ? 'open' : 'done',
-            });
-            router.reload({ only: ['tasks'] });
+            await axios.patch(`/crm/tasks/${task.id}`, { status: 'open' });
+            refresh();
         } catch (e) {
             toastError('Статус не изменён', e?.response?.data?.message || 'Попробуйте ещё раз.');
         } finally {
@@ -95,14 +104,95 @@ function TodayTasks({ tasks }) {
                 open={dialogOpen}
                 task={dialogTask}
                 onClose={() => setDialogOpen(false)}
-                onSaved={() => router.reload({ only: ['tasks'] })}
+                onSaved={refresh}
+            />
+
+            <TaskCloseDialog
+                task={closingTask}
+                onClose={() => setClosingTask(null)}
+                onClosed={refresh}
+            />
+        </Card.Root>
+    );
+}
+
+/**
+ * Покрытие клиентов задачами.
+ *
+ * Клиент без следующего шага — это клиент, о котором вспомнят, только когда он сам
+ * позвонит. Поэтому блок не ограничивается процентом: он сразу называет первых
+ * из непокрытых и даёт поставить задачу, не уходя со страницы.
+ */
+function ClientCoverage({ coverage }) {
+    const [taskFor, setTaskFor] = useState(null);
+
+    if (!coverage.clients_total) {
+        return null;
+    }
+
+    const allCovered = coverage.uncovered_count === 0;
+
+    return (
+        <Card.Root>
+            <Card.Header>
+                <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                    <HStack gap={2}>
+                        <Text fontWeight="semibold">Покрытие клиентов задачами</Text>
+                        <Badge colorPalette={allCovered ? 'green' : 'orange'} variant="subtle">
+                            {coverage.covered_percent}% из {coverage.clients_total}
+                        </Badge>
+                    </HStack>
+                    {!allCovered && (
+                        <Button
+                            size="xs"
+                            variant="outline"
+                            onClick={() => router.visit(route('crm.clients.index', { coverage: 'uncovered' }))}
+                        >
+                            Показать всех ({coverage.uncovered_count})
+                        </Button>
+                    )}
+                </HStack>
+            </Card.Header>
+            <Card.Body>
+                {allCovered ? (
+                    <Text fontSize="sm" color="fg.muted">
+                        По каждому клиенту есть следующий шаг. Так и держать.
+                    </Text>
+                ) : (
+                    <VStack align="stretch" gap={2}>
+                        <Text fontSize="sm" color="fg.muted">
+                            По этим клиентам не поставлено ни одной незакрытой задачи:
+                        </Text>
+                        {coverage.examples.map((client) => (
+                            <HStack key={client.id} justify="space-between" gap={2}>
+                                <a href={route('crm.clients.show', client.id)}>
+                                    <Text fontSize="sm">{client.name}</Text>
+                                </a>
+                                <Button
+                                    size="xs"
+                                    variant="ghost"
+                                    onClick={() => setTaskFor(client)}
+                                >
+                                    Поставить задачу
+                                </Button>
+                            </HStack>
+                        ))}
+                    </VStack>
+                )}
+            </Card.Body>
+
+            <TaskDialog
+                open={taskFor !== null}
+                entity={taskFor ? { type: 'client', id: taskFor.id } : null}
+                onClose={() => setTaskFor(null)}
+                onSaved={() => router.reload({ only: ['coverage', 'tasks'] })}
             />
         </Card.Root>
     );
 }
 
 export default function Dashboard() {
-    const { stats, seesAll, managerProfileLinked, auth, tasks } = usePage().props;
+    const { stats, seesAll, managerProfileLinked, auth, tasks, coverage } = usePage().props;
 
     return (
         <>
@@ -138,6 +228,8 @@ export default function Dashboard() {
                 </SimpleGrid>
 
                 {tasks && <TodayTasks tasks={tasks} />}
+
+                {coverage && <ClientCoverage coverage={coverage} />}
 
                 <Card.Root>
                     <Card.Body>

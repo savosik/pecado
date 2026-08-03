@@ -3,6 +3,7 @@
 namespace Tests\Feature\Crm;
 
 use App\Enums\Crm\TaskStatus;
+use App\Models\CrmComment;
 use App\Models\CrmTask;
 use App\Models\Order;
 use App\Models\PersonalManager;
@@ -360,6 +361,136 @@ class TasksTest extends TestCase
     }
 
     #[Test]
+    public function closing_task_records_comment_and_follow_up_in_one_go(): void
+    {
+        $order = Order::factory()->create(['user_id' => $this->client->id]);
+        $task = CrmTask::factory()->by($this->manager)->assignedTo($this->manager)->on($order)->create();
+
+        $response = $this->actingAs($this->manager)->postJson(route('crm.tasks.close', $task), [
+            'comment' => 'Счёт выставлен, ждём оплату',
+            'follow_up' => [
+                'title' => 'Проконтролировать оплату',
+                'due_at' => now()->addWeek()->format('Y-m-d\TH:i'),
+                'priority' => 'high',
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('task.status', 'done')
+            ->assertJsonPath('follow_up.title', 'Проконтролировать оплату')
+            ->assertJsonPath('follow_up.priority', 'high');
+
+        $task->refresh();
+        $this->assertNotNull($task->done_at);
+
+        $comment = CrmComment::query()->where('commentable_type', CrmTask::class)->firstOrFail();
+        $this->assertSame('Счёт выставлен, ждём оплату', $comment->body);
+        // Комментарий по задаче клиента попадает в ленту этого клиента.
+        $this->assertSame($this->client->id, $comment->client_user_id);
+
+        $followUp = CrmTask::query()->where('follow_up_of_id', $task->id)->firstOrFail();
+        // Следующий шаг наследует привязку и исполнителя закрытой задачи.
+        $this->assertSame($order->id, $followUp->related_id);
+        $this->assertSame($this->client->id, $followUp->client_user_id);
+        $this->assertSame($this->manager->id, $followUp->assignee_id);
+    }
+
+    #[Test]
+    public function task_closes_without_comment_and_follow_up(): void
+    {
+        $task = CrmTask::factory()->by($this->manager)->assignedTo($this->manager)->create();
+
+        $this->actingAs($this->manager)
+            ->postJson(route('crm.tasks.close', $task), [])
+            ->assertOk()
+            ->assertJsonPath('task.status', 'done')
+            ->assertJsonPath('follow_up', null);
+
+        $this->assertSame(0, CrmComment::query()->count());
+        $this->assertSame(1, CrmTask::query()->count());
+    }
+
+    #[Test]
+    public function follow_up_without_title_is_rejected_in_russian(): void
+    {
+        $task = CrmTask::factory()->by($this->manager)->assignedTo($this->manager)->create();
+
+        $this->actingAs($this->manager)
+            ->postJson(route('crm.tasks.close', $task), ['follow_up' => ['due_at' => null]])
+            ->assertStatus(422)
+            // Ключ ошибки плоский, с точкой внутри, — assertJsonPath принял бы её за вложенность.
+            ->assertJsonValidationErrors(['follow_up.title' => 'Сформулируйте следующий шаг или снимите галочку.']);
+
+        // Задача не закрыта: транзакция не должна оставить половину работы.
+        $this->assertTrue($task->refresh()->status->isOpen());
+    }
+
+    #[Test]
+    public function stranger_cannot_close_foreign_task(): void
+    {
+        $stranger = User::factory()->create();
+        $stranger->assignRole('sales-manager');
+        $task = CrmTask::factory()->by($stranger)->assignedTo($stranger)->create();
+
+        $this->actingAs($this->manager)
+            ->postJson(route('crm.tasks.close', $task), ['comment' => 'Закрою за вас'])
+            ->assertForbidden();
+
+        $this->assertTrue($task->refresh()->status->isOpen());
+    }
+
+    #[Test]
+    public function clients_list_shows_task_coverage_and_filters_by_it(): void
+    {
+        $covered = User::factory()->create(['personal_manager_id' => $this->client->personal_manager_id]);
+        CrmTask::factory()->by($this->manager)->assignedTo($this->manager)->on($covered)->create();
+
+        // Закрытая задача покрытием не считается: следующего шага по клиенту нет.
+        $closedOnly = User::factory()->create(['personal_manager_id' => $this->client->personal_manager_id]);
+        CrmTask::factory()->by($this->manager)->assignedTo($this->manager)->on($closedOnly)
+            ->create(['status' => TaskStatus::DONE]);
+
+        $uncovered = array_column(
+            $this->clientsFor(['coverage' => 'uncovered']),
+            'id',
+        );
+
+        $this->assertEqualsCanonicalizing([$this->client->id, $closedOnly->id], $uncovered);
+        $this->assertSame([$covered->id], array_column($this->clientsFor(['coverage' => 'covered']), 'id'));
+
+        $rows = collect($this->clientsFor([]))->keyBy('id');
+        $this->assertSame(1, $rows[$covered->id]['active_tasks_count']);
+        $this->assertSame(0, $rows[$this->client->id]['active_tasks_count']);
+    }
+
+    #[Test]
+    public function dashboard_shows_share_of_clients_without_next_step(): void
+    {
+        $covered = User::factory()->create(['personal_manager_id' => $this->client->personal_manager_id]);
+        CrmTask::factory()->by($this->manager)->assignedTo($this->manager)->on($covered)->create();
+
+        $props = $this->actingAs($this->manager)->get(route('crm.dashboard'))->viewData('page')['props'];
+
+        $this->assertSame(2, $props['coverage']['clients_total']);
+        $this->assertSame(1, $props['coverage']['uncovered_count']);
+        $this->assertSame(50, $props['coverage']['covered_percent']);
+        $this->assertSame([$this->client->id], array_column($props['coverage']['examples'], 'id'));
+    }
+
+    #[Test]
+    public function coverage_counts_tasks_on_client_documents_too(): void
+    {
+        // Задача по заказу клиента — это задача по клиенту: денормализованный
+        // client_user_id для того и заведён.
+        $order = Order::factory()->create(['user_id' => $this->client->id]);
+        CrmTask::factory()->by($this->manager)->assignedTo($this->manager)->on($order)->create();
+
+        $props = $this->actingAs($this->manager)->get(route('crm.dashboard'))->viewData('page')['props'];
+
+        $this->assertSame(0, $props['coverage']['uncovered_count']);
+    }
+
+    #[Test]
     public function entity_picker_offers_only_records_within_scope(): void
     {
         $foreignManager = PersonalManager::factory()->create();
@@ -488,6 +619,17 @@ class TasksTest extends TestCase
         $this->artisan('crm:tasks-remind')->assertSuccessful();
 
         Notification::assertNothingSent();
+    }
+
+    /**
+     * @param  array<string, mixed>  $query
+     * @return list<array<string, mixed>>
+     */
+    private function clientsFor(array $query): array
+    {
+        $response = $this->actingAs($this->manager)->get(route('crm.clients.index', $query));
+
+        return $response->viewData('page')['props']['clients']['data'];
     }
 
     /**

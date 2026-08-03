@@ -4,6 +4,7 @@ namespace App\Services\Crm;
 
 use App\Enums\Crm\TaskPriority;
 use App\Enums\Crm\TaskStatus;
+use App\Models\CrmComment;
 use App\Models\CrmTask;
 use App\Models\User;
 use App\Notifications\Crm\TaskAssignedNotification;
@@ -12,6 +13,7 @@ use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Работа с задачами менеджеров: скоуп видимости, создание, правка, форма ответа.
@@ -44,6 +46,36 @@ class CrmTaskService
         }
 
         return $query;
+    }
+
+    /**
+     * Клиенты актора, по которым не поставлено ни одной незакрытой задачи.
+     *
+     * Проактивность продаж измеряется не количеством закрытых задач, а тем, что
+     * по каждому клиенту известен следующий шаг. Клиент без активной задачи — это
+     * клиент, о котором вспомнят только когда он сам позвонит.
+     *
+     * @return Builder<User>
+     */
+    public function uncoveredClients(User $actor): Builder
+    {
+        return User::query()
+            ->visibleInCrm($actor)
+            ->whereDoesntHave('crmTasks', fn (Builder $tasks) => $tasks
+                ->whereIn('status', TaskStatus::activeValues()));
+    }
+
+    /**
+     * Подсчёт незакрытых задач клиента — для колонки «Задачи» в списке.
+     *
+     * @return array<string, \Closure>
+     */
+    public function activeTasksCount(): array
+    {
+        return [
+            'crmTasks as active_tasks_count' => fn (Builder $tasks) => $tasks
+                ->whereIn('status', TaskStatus::activeValues()),
+        ];
     }
 
     /**
@@ -138,6 +170,61 @@ class CrmTaskService
         }
 
         return $task;
+    }
+
+    /**
+     * Закрытие задачи: отметка о выполнении, комментарий и следующий шаг.
+     *
+     * Всё тремя записями в одной транзакции: закрытие с потерянным комментарием
+     * или с несозданной следующей задачей — это ровно тот разрыв, из-за которого
+     * работа с клиентом и рассыпается на разовые дёрганья.
+     *
+     * Комментарий и follow-up необязательны: заставлять писать отчёт по каждой
+     * мелочи — верный способ научить людей не закрывать задачи вовсе.
+     *
+     * @param  array<string, mixed>|null  $followUp
+     * @return array{task: CrmTask, follow_up: CrmTask|null}
+     */
+    public function close(CrmTask $task, User $actor, ?string $comment = null, ?array $followUp = null): array
+    {
+        return DB::transaction(function () use ($task, $actor, $comment, $followUp): array {
+            $task->status = TaskStatus::DONE;
+            $task->save();
+
+            $comment = $comment === null ? null : trim($comment);
+
+            if ($comment !== null && $comment !== '') {
+                $record = new CrmComment(['body' => $comment]);
+                $record->commentable()->associate($task);
+                $record->user_id = (int) $actor->getKey();
+                $record->save();
+            }
+
+            $next = null;
+
+            if ($followUp !== null && ($followUp['title'] ?? '') !== '') {
+                $next = $this->create(
+                    $actor,
+                    [
+                        'title' => $followUp['title'],
+                        'description' => $followUp['description'] ?? null,
+                        // По умолчанию следующий шаг остаётся за тем же человеком:
+                        // чаще всего это продолжение своей же работы с клиентом.
+                        'assignee_id' => $followUp['assignee_id'] ?? $task->assignee_id,
+                        'priority' => $followUp['priority'] ?? $task->priority->value,
+                        'due_at' => $followUp['due_at'] ?? null,
+                    ],
+                    // Привязка наследуется: следующий шаг по клиенту — это шаг
+                    // по тому же клиенту, и заново искать его незачем.
+                    $task->related,
+                );
+
+                $next->follow_up_of_id = (int) $task->getKey();
+                $next->save();
+            }
+
+            return ['task' => $task, 'follow_up' => $next];
+        });
     }
 
     /**
