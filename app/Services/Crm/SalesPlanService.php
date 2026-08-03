@@ -3,6 +3,7 @@
 namespace App\Services\Crm;
 
 use App\Enums\Crm\PlanTarget;
+use App\Enums\UserKind;
 use App\Models\CrmSalesPlan;
 use App\Models\PersonalManager;
 use App\Models\User;
@@ -394,6 +395,7 @@ class SalesPlanService
             ->forPeriod($month)
             ->where('target_type', PlanTarget::CLIENT->value)
             ->join('users', 'users.id', '=', 'crm_sales_plans.target_id')
+            ->where('users.user_kind', UserKind::CLIENT->value)
             ->whereNotNull('users.personal_manager_id')
             ->groupBy('users.personal_manager_id')
             ->selectRaw('users.personal_manager_id as manager_id, sum(crm_sales_plans.amount) as total')

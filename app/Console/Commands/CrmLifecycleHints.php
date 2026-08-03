@@ -42,6 +42,7 @@ class CrmLifecycleHints extends Command
         $cleared = 0;
 
         User::query()
+            ->clients()
             ->whereNotNull('personal_manager_id')
             ->with('crmProfile')
             ->chunkById(500, function ($clients) use (

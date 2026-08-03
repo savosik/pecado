@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services\Erp\Handlers;
 
+use App\Enums\UserKind;
 use App\Enums\UserStatus;
 use App\Events\UserCreated;
 use App\Events\UserUpdated;
@@ -484,5 +485,35 @@ class HandlePartnerUpdatedTest extends TestCase
 
         Event::assertNotDispatched(UserUpdated::class);
         Event::assertNotDispatched(UserCreated::class);
+    }
+
+    // ──────────────────────────────────────────────
+    // Граница владения данными: тип аккаунта — поле сайта
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function it_keeps_user_kind_untouched(): void
+    {
+        // Тип аккаунта размечает администратор сайта, в payload 1С его нет.
+        // Если обработчик когда-нибудь начнёт писать в users всё подряд,
+        // помеченный закупщик снова станет клиентом и всплывёт в CRM.
+        $user = User::factory()->staff()->create([
+            'email' => 'buyer@example.com',
+            'erp_id' => 'uuid-staff-kind',
+        ]);
+
+        $handler = new HandlePartnerUpdated;
+        $handler->handle([
+            'event' => 'partner.updated',
+            'message_id' => 'msg-upd-kind',
+            'uuid' => 'uuid-staff-kind',
+            'name' => 'Закупщик Иванов',
+            'city' => 'Тюмень',
+        ]);
+
+        $user->refresh();
+
+        $this->assertSame(UserKind::STAFF, $user->user_kind);
+        $this->assertEquals('Закупщик Иванов', $user->name);
     }
 }

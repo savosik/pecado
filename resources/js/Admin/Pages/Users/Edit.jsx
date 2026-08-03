@@ -9,7 +9,7 @@ import { LuShieldAlert } from 'react-icons/lu';
 
 import { toaster } from '@/components/ui/toaster';
 
-export default function Edit({ user, regions, countries, statuses, availableRoles, clientStatuses, personalManagers }) {
+export default function Edit({ user, regions, countries, statuses, userKinds, availableRoles, clientStatuses, personalManagers }) {
     const { data, setData, put, processing, errors, transform } = useForm({
         name: user.name || '',
         email: user.email || '',
@@ -24,6 +24,7 @@ export default function Edit({ user, regions, countries, statuses, availableRole
         is_subscribed: user.is_subscribed || false,
         terms_accepted: user.terms_accepted || false,
         status: user.status || '',
+        user_kind: user.user_kind || 'client',
         comment: user.comment || '',
         erp_id: user.erp_id || '',
     });
@@ -166,6 +167,24 @@ export default function Edit({ user, regions, countries, statuses, availableRole
                                     </select>
                                 </FormField>
                             </SimpleGrid>
+
+                            <FormField
+                                label="Тип аккаунта"
+                                error={errors.user_kind}
+                                helpText="Сотрудники и служебные учётки не попадают в CRM: их не видно в клиентах, планах продаж и покрытии задачами."
+                            >
+                                <select
+                                    value={data.user_kind}
+                                    onChange={(e) => setData('user_kind', e.target.value)}
+                                    style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border)' }}
+                                >
+                                    {userKinds?.map((kind) => (
+                                        <option key={kind.value} value={kind.value}>
+                                            {kind.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </FormField>
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                 <FormField label="Статус клиента" error={errors.client_status_id}>

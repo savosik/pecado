@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserKind;
 use App\Enums\UserStatus;
 use App\Models\PersonalManager;
 use App\Models\User;
@@ -72,6 +73,9 @@ class CrmDemoSeeder extends Seeder
                     'name' => $data['account_name'],
                     'password' => $data['password'],
                     'status' => UserStatus::ACTIVE,
+                    // Сотрудник, а не клиент: иначе демо-РОП увидел бы в CRM
+                    // самого себя и своих менеджеров среди клиентов.
+                    'user_kind' => UserKind::STAFF,
                 ]
             );
             $user->syncRoles([$data['role']]);
@@ -116,6 +120,7 @@ class CrmDemoSeeder extends Seeder
                     'name' => "Демо-клиент {$i}",
                     'password' => Str::random(32),
                     'status' => UserStatus::ACTIVE,
+                    'user_kind' => UserKind::CLIENT,
                     'personal_manager_id' => $managerIds[$i % count($managerIds)],
                 ]
             );

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\Country;
+use App\Enums\UserKind;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Http\Controllers\Controller;
@@ -46,6 +47,10 @@ class UserController extends Controller
             $query->where('status', $request->input('status'));
         }
 
+        if ($request->filled('user_kind')) {
+            $query->where('user_kind', $request->input('user_kind'));
+        }
+
         // Сортировка
         $sortBy = $request->input('sort_by', 'created_at');
         $sortOrder = $request->input('sort_order', 'desc');
@@ -68,7 +73,9 @@ class UserController extends Controller
 
         return Inertia::render('Admin/Pages/Users/Index', [
             'users' => $users,
-            'filters' => $request->only(['search', 'region_id', 'role', 'status', 'sort_by', 'sort_order', 'per_page']),
+            'filters' => $request->only(['search', 'region_id', 'role', 'status', 'user_kind', 'sort_by', 'sort_order', 'per_page']),
+            'userKinds' => UserKind::options(),
+            'userKindCounts' => $this->userKindCounts(),
             'statuses' => collect(UserStatus::cases())->map(fn ($status) => [
                 'value' => $status->value,
                 'label' => $status->label(),
@@ -90,6 +97,7 @@ class UserController extends Controller
                 'value' => $status->value,
                 'label' => $status->label(),
             ]),
+            'userKinds' => UserKind::options(),
             'availableRoles' => Role::orderBy('name')->get()->map(fn ($r) => ['id' => $r->id, 'name' => $r->name]),
             'clientStatuses' => ClientStatus::select('id', 'name')->orderBy('name')->get(),
             'personalManagers' => PersonalManager::select('id', 'name')->orderBy('name')->get(),
@@ -110,6 +118,7 @@ class UserController extends Controller
             'terms_accepted' => 'boolean',
             'status' => 'nullable|string|in:'.implode(',', array_column(UserStatus::cases(), 'value')),
             'comment' => 'nullable|string',
+            'user_kind' => 'nullable|string|in:'.implode(',', array_column(UserKind::cases(), 'value')),
             'erp_id' => 'nullable|string|max:255|unique:users,erp_id',
             'roles' => 'array',
             'roles.*' => 'string|exists:roles,name',
@@ -124,6 +133,7 @@ class UserController extends Controller
 
         $user = User::create($validated);
         $user->syncRoles($roles);
+        $this->syncKindWithRoles($user, $roles, $request->filled('user_kind'));
 
         if ($sendWelcomeEmail) {
             \App\Events\UserRegisteredOnSite::dispatch($user, 'admin');
@@ -145,6 +155,8 @@ class UserController extends Controller
                 'country' => $user->country,
                 'city' => $user->city,
                 'status' => $user->status,
+                'user_kind' => $user->user_kind->value,
+                'user_kind_label' => $user->user_kind->label(),
                 'comment' => $user->comment,
                 'erp_id' => $user->erp_id,
                 'is_subscribed' => $user->is_subscribed,
@@ -179,6 +191,7 @@ class UserController extends Controller
                 'value' => $status->value,
                 'label' => $status->label(),
             ]),
+            'userKinds' => UserKind::options(),
             'availableRoles' => Role::orderBy('name')->get()->map(fn ($r) => ['id' => $r->id, 'name' => $r->name]),
             'clientStatuses' => ClientStatus::select('id', 'name')->orderBy('name')->get(),
             'personalManagers' => PersonalManager::select('id', 'name')->orderBy('name')->get(),
@@ -199,6 +212,7 @@ class UserController extends Controller
             'terms_accepted' => 'boolean',
             'status' => 'nullable|string|in:'.implode(',', array_column(UserStatus::cases(), 'value')),
             'comment' => 'nullable|string',
+            'user_kind' => 'nullable|string|in:'.implode(',', array_column(UserKind::cases(), 'value')),
             'erp_id' => 'nullable|string|max:255|unique:users,erp_id,'.$user->id,
             'roles' => 'array',
             'roles.*' => 'string|exists:roles,name',
@@ -225,8 +239,43 @@ class UserController extends Controller
 
         $user->update($validated);
         $user->syncRoles($roles);
+        $this->syncKindWithRoles($user, $roles, $request->filled('user_kind'));
 
         return $this->redirectAfterSave($request, 'admin.users.index', 'admin.users.edit', $user, 'Пользователь успешно обновлен');
+    }
+
+    /**
+     * Назначили роль — значит сотрудник, если тип не выбран руками.
+     *
+     * Без этого история повторилась бы на первом же новом закупщике: колонка
+     * user_kind по умолчанию 'client', и он снова оказался бы в CRM среди
+     * клиентов. Явный выбор администратора в форме не трогаем — бывают
+     * клиентские учётки со служебной ролью для интеграции.
+     *
+     * @param  list<string>  $roles
+     */
+    private function syncKindWithRoles(User $user, array $roles, bool $kindChosenExplicitly): void
+    {
+        if ($kindChosenExplicitly || $roles === [] || $user->user_kind !== UserKind::CLIENT) {
+            return;
+        }
+
+        $user->update(['user_kind' => UserKind::STAFF->value]);
+    }
+
+    /**
+     * Сколько пользователей каждого типа — для счётчиков на кнопках фильтра.
+     *
+     * @return array<string, int>
+     */
+    private function userKindCounts(): array
+    {
+        return User::query()
+            ->selectRaw('user_kind, count(*) as total')
+            ->groupBy('user_kind')
+            ->pluck('total', 'user_kind')
+            ->map(fn ($total): int => (int) $total)
+            ->all();
     }
 
     public function destroy(User $user)

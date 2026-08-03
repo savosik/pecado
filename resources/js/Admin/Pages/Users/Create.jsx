@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 import { toaster } from '@/components/ui/toaster';
 
-export default function Create({ regions, countries, statuses, availableRoles, clientStatuses, personalManagers }) {
+export default function Create({ regions, countries, statuses, userKinds, availableRoles, clientStatuses, personalManagers }) {
     const { data, setData, post, processing, errors, transform } = useForm({
         name: '',
         email: '',
@@ -23,6 +23,7 @@ export default function Create({ regions, countries, statuses, availableRoles, c
         is_subscribed: false,
         terms_accepted: false,
         status: '',
+        user_kind: 'client',
         comment: '',
         erp_id: '',
         send_welcome_email: false,
@@ -138,6 +139,24 @@ export default function Create({ regions, countries, statuses, availableRoles, c
                                     </select>
                                 </FormField>
                             </SimpleGrid>
+
+                            <FormField
+                                label="Тип аккаунта"
+                                error={errors.user_kind}
+                                helpText="Сотрудники и служебные учётки не попадают в CRM: их не видно в клиентах, планах продаж и покрытии задачами."
+                            >
+                                <select
+                                    value={data.user_kind}
+                                    onChange={(e) => setData('user_kind', e.target.value)}
+                                    style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border)' }}
+                                >
+                                    {userKinds?.map((kind) => (
+                                        <option key={kind.value} value={kind.value}>
+                                            {kind.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </FormField>
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                 <FormField label="Статус клиента" error={errors.client_status_id}>

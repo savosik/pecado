@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\Country;
+use App\Enums\UserKind;
 use App\Enums\UserStatus;
 use App\Models\Concerns\HasCrmAttachments;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -33,6 +34,7 @@ use Spatie\Tags\HasTags;
  * @property bool $terms_accepted
  * @property string|null $comment
  * @property UserStatus $status
+ * @property UserKind $user_kind
  * @property string|null $erp_id
  * @property string|null $view_token
  * @property int|null $region_id
@@ -219,6 +221,7 @@ class User extends Authenticatable implements HasMedia
         'terms_accepted',
         'comment',
         'status',
+        'user_kind',
         'email',
         'password',
         'must_change_password',
@@ -227,6 +230,18 @@ class User extends Authenticatable implements HasMedia
         'region_id',
         'client_status_id',
         'personal_manager_id',
+    ];
+
+    /**
+     * Значения по умолчанию для новых моделей.
+     *
+     * Дефолт колонки задан и в БД, но модель после create() его не перечитывает,
+     * а user_kind проверяют сразу же (например при выдаче роли в админке).
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'user_kind' => UserKind::CLIENT->value,
     ];
 
     protected static function boot(): void
@@ -266,6 +281,7 @@ class User extends Authenticatable implements HasMedia
             'country' => Country::class,
             'default_delivery_method' => \App\Enums\DeliveryMethod::class,
             'status' => UserStatus::class,
+            'user_kind' => UserKind::class,
             'region_id' => 'integer',
             'client_status_id' => 'integer',
             'personal_manager_id' => 'integer',
@@ -584,6 +600,21 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
+     * Только клиентские учётки — без сотрудников и служебных аккаунтов.
+     *
+     * 1С шлёт партнёрами всех подряд и проставляет им personal_manager_id,
+     * поэтому «есть менеджер» клиентом больше не считается: тип аккаунта
+     * задаётся явно в user_kind.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<self>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<self>
+     */
+    public function scopeClients(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->where('users.user_kind', UserKind::CLIENT->value);
+    }
+
+    /**
      * Клиенты, видимые пользователю в CRM.
      *
      * РОП и суперадмин (crm-clients-all.view) видят всех клиентов отдела,
@@ -597,8 +628,12 @@ class User extends Authenticatable implements HasMedia
      */
     public function scopeVisibleInCrm(\Illuminate\Database\Eloquent\Builder $query, self $actor): \Illuminate\Database\Eloquent\Builder
     {
+        // Фильтр по типу — общий для обеих веток: сотрудник, закреплённый за
+        // менеджером в 1С, не должен попадать в CRM ни к РОПу, ни к менеджеру.
+        $query->clients();
+
         if ($actor->can('crm-clients-all.view')) {
-            // Клиент — пользователь с закреплённым менеджером; остальные это лиды.
+            // Клиент без менеджера — лид, он живёт в админке, а не в CRM отдела.
             return $query->whereNotNull('personal_manager_id');
         }
 

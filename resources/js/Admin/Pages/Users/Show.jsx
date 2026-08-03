@@ -61,6 +61,7 @@ export default function Show() {
                                     {user.status || '—'}
                                 </Badge>
                             </Box>
+                            <InfoRow label="Тип аккаунта" value={user.user_kind_label} />
                             <InfoRow label="ERP ID" value={user.erp_id} />
                             <InfoRow label="Статус клиента" value={user.client_status?.name} />
                             <InfoRow label="Персональный менеджер" value={user.personal_manager?.name} />

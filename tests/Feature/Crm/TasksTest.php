@@ -335,6 +335,10 @@ class TasksTest extends TestCase
     #[Test]
     public function dashboard_widget_shows_today_and_overdue(): void
     {
+        // Время фиксируем: с «сейчас + 2 часа» тест краснел каждый вечер после
+        // 22:00 МСК — задача уезжала на завтра и переставала быть сегодняшней.
+        $this->travelTo(now()->startOfDay()->addHours(9));
+
         CrmTask::factory()->by($this->manager)->assignedTo($this->manager)->overdue()->create();
         CrmTask::factory()->by($this->manager)->assignedTo($this->manager)
             ->create(['due_at' => now()->addHours(2)]);

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserKind;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -29,6 +30,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'user_kind' => UserKind::CLIENT,
         ];
     }
 
@@ -39,6 +41,26 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Сотрудник компании: в CRM среди клиентов такому места нет.
+     */
+    public function staff(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'user_kind' => UserKind::STAFF,
+        ]);
+    }
+
+    /**
+     * Служебная (техническая) учётка: боты, выгрузки, интеграции.
+     */
+    public function service(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'user_kind' => UserKind::SERVICE,
         ]);
     }
 }

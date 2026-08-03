@@ -17,7 +17,13 @@ const getStatusColor = (status) => {
     return colors[status] || 'gray';
 };
 
-export default function Index({ users, filters, statuses, statusCounts, availableRoles }) {
+const kindColors = {
+    client: 'green',
+    staff: 'purple',
+    service: 'gray',
+};
+
+export default function Index({ users, filters, statuses, statusCounts, userKinds, userKindCounts }) {
     const { can } = usePermission();
     const {
         searchQuery,
@@ -42,6 +48,16 @@ export default function Index({ users, filters, statuses, statusCounts, availabl
         router.get(route('admin.users.index'), {
             ...filters,
             status: statusValue || undefined,
+        }, {
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const handleKindFilter = (kindValue) => {
+        router.get(route('admin.users.index'), {
+            ...filters,
+            user_kind: kindValue || undefined,
         }, {
             preserveState: true,
             replace: true,
@@ -97,6 +113,15 @@ export default function Index({ users, filters, statuses, statusCounts, availabl
                     fontWeight="semibold"
                 >
                     {item.status_label}
+                </Badge>
+            ),
+        },
+        {
+            key: 'user_kind',
+            label: 'Тип',
+            render: (kind) => (
+                <Badge colorPalette={kindColors[kind] || 'gray'} variant="subtle" fontSize="xs">
+                    {userKinds?.find((item) => item.value === kind)?.label || '—'}
                 </Badge>
             ),
         },
@@ -183,6 +208,29 @@ export default function Index({ users, filters, statuses, statusCounts, availabl
                         onClick={() => handleStatusFilter(status.value)}
                     >
                         {status.label} ({statusCounts?.[status.value] || 0})
+                    </Button>
+                ))}
+            </HStack>
+
+            {/* Фильтр по типу аккаунта: сотрудников и служебные учётки в CRM не видно */}
+            <HStack gap={2} mb={4} flexWrap="wrap">
+                <Button
+                    size="sm"
+                    variant={!filters.user_kind ? 'solid' : 'outline'}
+                    colorPalette={!filters.user_kind ? 'blue' : 'gray'}
+                    onClick={() => handleKindFilter('')}
+                >
+                    Все типы
+                </Button>
+                {userKinds?.map((kind) => (
+                    <Button
+                        key={kind.value}
+                        size="sm"
+                        variant={filters.user_kind === kind.value ? 'solid' : 'outline'}
+                        colorPalette={filters.user_kind === kind.value ? (kindColors[kind.value] || 'gray') : 'gray'}
+                        onClick={() => handleKindFilter(kind.value)}
+                    >
+                        {kind.label} ({userKindCounts?.[kind.value] || 0})
                     </Button>
                 ))}
             </HStack>
