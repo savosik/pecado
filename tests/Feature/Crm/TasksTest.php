@@ -360,6 +360,34 @@ class TasksTest extends TestCase
     }
 
     #[Test]
+    public function entity_picker_offers_only_records_within_scope(): void
+    {
+        $foreignManager = PersonalManager::factory()->create();
+        $foreignClient = User::factory()->create([
+            'personal_manager_id' => $foreignManager->id,
+            'name' => 'Чужой клиент',
+        ]);
+        $order = Order::factory()->create(['user_id' => $this->client->id]);
+        Order::factory()->create(['user_id' => $foreignClient->id]);
+
+        $clients = $this->actingAs($this->manager)
+            ->getJson(route('crm.tasks.entities', ['type' => 'client']))
+            ->assertOk()
+            ->json();
+
+        $this->assertSame([$this->client->id], array_column($clients, 'id'));
+
+        $orders = $this->actingAs($this->manager)
+            ->getJson(route('crm.tasks.entities', ['type' => 'order']))
+            ->assertOk()
+            ->json();
+
+        // Заказ чужого клиента в подсказке не появляется: иначе диалог стал бы
+        // способом перечислить чужую базу.
+        $this->assertSame([$order->id], array_column($orders, 'id'));
+    }
+
+    #[Test]
     public function own_unlinked_task_can_be_discussed_and_have_files(): void
     {
         // Задача без привязки не сводится к клиенту. Правило «клиента нет — значит,

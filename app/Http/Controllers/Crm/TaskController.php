@@ -7,12 +7,15 @@ use App\Enums\Crm\TaskStatus;
 use App\Http\Requests\Crm\StoreCrmTaskRequest;
 use App\Http\Requests\Crm\UpdateCrmTaskRequest;
 use App\Models\CrmTask;
+use App\Models\Order;
+use App\Models\Shipment;
 use App\Models\User;
 use App\Services\Crm\CrmEntityResolver;
 use App\Services\Crm\CrmTaskService;
 use App\Support\Crm\CrmAttachments;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -116,6 +119,94 @@ class TaskController extends CrmController
     public function options(): JsonResponse
     {
         return response()->json($this->optionsPayload());
+    }
+
+    /**
+     * Поиск сущности для привязки задачи — клиенты, заказы, реализации.
+     *
+     * Выдача ограничена скоупом актора тем же способом, что и всё остальное в CRM:
+     * иначе подсказка в диалоге стала бы способом перечислить чужих клиентов.
+     */
+    public function entities(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('viewAny', CrmTask::class);
+
+        $validated = $request->validate([
+            'type' => ['required', 'string', Rule::in(CrmEntityMap::taskableTypes())],
+            'query' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $search = trim((string) ($validated['query'] ?? ''));
+
+        return response()->json(match ($validated['type']) {
+            CrmEntityMap::CLIENT => $this->searchClients($actor, $search),
+            CrmEntityMap::ORDER => $this->searchDocuments($actor, Order::class, $search, 'Заказ'),
+            CrmEntityMap::SHIPMENT => $this->searchDocuments($actor, Shipment::class, $search, 'Реализация'),
+            default => [],
+        });
+    }
+
+    /**
+     * @return list<array{id: int, label: string, sublabel: string|null}>
+     */
+    private function searchClients(User $actor, string $search): array
+    {
+        return User::query()
+            ->visibleInCrm($actor)
+            ->select('id', 'name', 'email')
+            ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $inner) => $inner
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")
+                ->orWhere('phone', 'like', "%{$search}%")))
+            ->orderBy('name')
+            ->take(20)
+            ->get()
+            ->map(fn (User $client): array => [
+                'id' => (int) $client->getKey(),
+                'label' => (string) $client->name,
+                'sublabel' => $client->email,
+            ])
+            ->all();
+    }
+
+    /**
+     * Заказы и реализации ищутся одинаково — по номеру, местному и из 1С.
+     *
+     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelClass
+     * @return list<array{id: int, label: string, sublabel: string|null}>
+     */
+    private function searchDocuments(User $actor, string $modelClass, string $search, string $label): array
+    {
+        return $modelClass::query()
+            // Документ без клиента (партнёрский из 1С) доступен только тем, кто видит
+            // весь отдел, — то же правило, что в CrmEntityResolver::canAccess().
+            ->when(
+                ! $actor->can('crm-clients-all.view'),
+                fn (Builder $query) => $query->whereIn(
+                    'user_id',
+                    User::query()->visibleInCrm($actor)->select('id'),
+                ),
+            )
+            ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $inner) => $inner
+                ->where('number', 'like', "%{$search}%")
+                ->orWhere('erp_number', 'like', "%{$search}%")))
+            ->with('user:id,name')
+            ->latest('id')
+            ->take(20)
+            ->get()
+            // Через getAttribute(), а не свойствами: класс здесь обобщённый
+            // (заказ или реализация), и статический анализ его полей не знает.
+            ->map(function (Model $document) use ($label): array {
+                $client = $document->getAttribute('user');
+
+                return [
+                    'id' => (int) $document->getKey(),
+                    'label' => $label.' №'.($document->getAttribute('number') ?: $document->getKey()),
+                    'sublabel' => $client instanceof User ? (string) $client->name : null,
+                ];
+            })
+            ->all();
     }
 
     /**

@@ -75,6 +75,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // До /tasks/{task}: иначе «list» и «options» ушли бы в биндинг модели.
         Route::get('/tasks/list', [TaskController::class, 'list'])->name('tasks.list');
         Route::get('/tasks/options', [TaskController::class, 'options'])->name('tasks.options');
+        Route::get('/tasks/entities', [TaskController::class, 'entities'])->name('tasks.entities');
         Route::get('/tasks/{task}', [TaskController::class, 'show'])
             ->name('tasks.show')
             ->whereNumber('task');

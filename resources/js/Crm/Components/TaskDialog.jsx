@@ -15,6 +15,7 @@ import {
 } from '@chakra-ui/react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { EntitySelector } from '@/Admin/Components/EntitySelector';
 import { useTaskOptions } from '@/Crm/Components/useTaskOptions';
 import CommentThread from '@/Crm/Components/CommentThread';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
@@ -49,6 +50,10 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
     const [form, setForm] = useState(EMPTY);
     const [errors, setErrors] = useState({});
     const [busy, setBusy] = useState(false);
+    // Привязка новой задачи: тип выбирается селектом, сама запись — поиском.
+    // Когда диалог открыт из карточки сущности, привязка приходит пропсом и не выбирается.
+    const [linkType, setLinkType] = useState('');
+    const [linkEntity, setLinkEntity] = useState(null);
 
     const isEdit = !!task;
     const canEditFields = !isEdit || task.can?.update;
@@ -60,6 +65,8 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
         }
 
         setErrors({});
+        setLinkType('');
+        setLinkEntity(null);
         setForm(task
             ? {
                 title: task.title || '',
@@ -96,9 +103,14 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
             if (isEdit) {
                 saved = await axios.patch(`/crm/tasks/${task.id}`, payload);
             } else {
+                // Привязка из карточки сущности имеет приоритет над выбранной вручную:
+                // диалог там открыт «по этой записи», и менять цель на лету незачем.
                 if (entity) {
                     payload.entity_type = entity.type;
                     payload.entity_id = entity.id;
+                } else if (linkType && linkEntity) {
+                    payload.entity_type = linkType;
+                    payload.entity_id = linkEntity.id;
                 }
                 saved = await axios.post('/crm/tasks', payload);
             }
@@ -120,7 +132,16 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
     const error = (field) => errors[field]?.[0];
 
     return (
-        <Dialog.Root open={open} onOpenChange={({ open: isOpen }) => !isOpen && onClose()} size="lg" scrollBehavior="inside">
+        // Клик мимо диалог не закрывает: выпадашка поиска записи рисуется порталом
+        // в body, то есть формально «снаружи», и выбор клиента закрывал бы всю форму
+        // вместе с набранным текстом. Escape и кнопка «Закрыть» работают как обычно.
+        <Dialog.Root
+            open={open}
+            onOpenChange={({ open: isOpen }) => !isOpen && onClose()}
+            size="lg"
+            scrollBehavior="inside"
+            closeOnInteractOutside={false}
+        >
             <Portal>
                 <Dialog.Backdrop />
                 <Dialog.Positioner>
@@ -131,12 +152,75 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
 
                         <Dialog.Body>
                             <VStack align="stretch" gap={4}>
-                                {isEdit && task.entity && (
+                                {isEdit && (
                                     <Text fontSize="xs" color="fg.muted">
-                                        Привязана: {task.entity.label} — {task.entity.url
-                                            ? <a href={task.entity.url}>{task.entity.title}</a>
-                                            : task.entity.title}
+                                        {task.entity
+                                            ? <>Привязана: {task.entity.label} — {task.entity.url
+                                                ? <a href={task.entity.url}>{task.entity.title}</a>
+                                                : task.entity.title}</>
+                                            : 'Без привязки к записи'}
                                     </Text>
+                                )}
+
+                                {!isEdit && entity && (
+                                    <Text fontSize="xs" color="fg.muted">
+                                        Задача будет привязана к текущей записи.
+                                    </Text>
+                                )}
+
+                                {/* Привязка выбирается только у новой задачи и только когда
+                                    диалог открыт не из карточки сущности. Перепривязка
+                                    существующей задачи — отдельная история, её API не умеет. */}
+                                {!isEdit && !entity && (
+                                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                        <Field
+                                            label="К чему привязать"
+                                            helperText="Необязательно — задача может жить сама по себе"
+                                            errorText={error('entity_type')}
+                                            invalid={!!error('entity_type')}
+                                        >
+                                            <NativeSelectRoot>
+                                                <NativeSelectField
+                                                    value={linkType}
+                                                    onChange={(e) => {
+                                                        setLinkType(e.target.value);
+                                                        setLinkEntity(null);
+                                                    }}
+                                                >
+                                                    <option value="">Без привязки</option>
+                                                    {(options?.entity_types || []).map((item) => (
+                                                        <option key={item.value} value={item.value}>{item.label}</option>
+                                                    ))}
+                                                </NativeSelectField>
+                                            </NativeSelectRoot>
+                                        </Field>
+
+                                        {linkType && (
+                                            <Field
+                                                label="Запись"
+                                                errorText={error('entity_id')}
+                                                invalid={!!error('entity_id')}
+                                            >
+                                                <EntitySelector
+                                                    value={linkEntity}
+                                                    onChange={setLinkEntity}
+                                                    searchUrl={route('crm.tasks.entities')}
+                                                    searchParams={{ type: linkType }}
+                                                    placeholder={linkType === 'client'
+                                                        ? 'Имя, email или телефон клиента'
+                                                        : 'Номер документа'}
+                                                    renderItem={(item) => (
+                                                        <Box>
+                                                            <Text fontSize="sm">{item.label}</Text>
+                                                            {item.sublabel && (
+                                                                <Text fontSize="xs" color="fg.muted">{item.sublabel}</Text>
+                                                            )}
+                                                        </Box>
+                                                    )}
+                                                />
+                                            </Field>
+                                        )}
+                                    </SimpleGrid>
                                 )}
 
                                 <Field label="Что сделать" required errorText={error('title')} invalid={!!error('title')}>
