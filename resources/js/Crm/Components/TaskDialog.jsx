@@ -10,11 +10,11 @@ import {
     Portal,
     SimpleGrid,
     Text,
-    Textarea,
     VStack,
 } from '@chakra-ui/react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import VoiceTextarea from '@/shared/voice/VoiceTextarea';
 import { EntitySelector } from '@/Admin/Components/EntitySelector';
 import { useTaskOptions } from '@/Crm/Components/useTaskOptions';
 import CommentThread from '@/Crm/Components/CommentThread';
@@ -233,9 +233,9 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
                                 </Field>
 
                                 <Field label="Описание" errorText={error('description')} invalid={!!error('description')}>
-                                    <Textarea
+                                    <VoiceTextarea
                                         value={form.description}
-                                        onChange={(e) => set('description', e.target.value)}
+                                        onChange={(value) => set('description', value)}
                                         rows={3}
                                         placeholder="Подробности, если нужны"
                                         disabled={!canEditFields}

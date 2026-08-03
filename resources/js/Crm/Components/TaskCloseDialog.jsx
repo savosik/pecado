@@ -10,12 +10,12 @@ import {
     Portal,
     SimpleGrid,
     Text,
-    Textarea,
     VStack,
 } from '@chakra-ui/react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
+import VoiceTextarea from '@/shared/voice/VoiceTextarea';
 import { useTaskOptions } from '@/Crm/Components/useTaskOptions';
 import { toastError, toastSuccess } from '@/utils/toast';
 
@@ -115,9 +115,9 @@ export default function TaskCloseDialog({ task, onClose, onClosed }) {
                                     errorText={error('comment')}
                                     invalid={!!error('comment')}
                                 >
-                                    <Textarea
+                                    <VoiceTextarea
                                         value={comment}
-                                        onChange={(e) => setComment(e.target.value)}
+                                        onChange={setComment}
                                         rows={3}
                                         placeholder="Договорились о поставке на следующей неделе"
                                         autoFocus

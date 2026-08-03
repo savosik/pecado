@@ -8,13 +8,14 @@ import {
     NativeSelectRoot,
     SimpleGrid,
     Text,
-    Textarea,
     VStack,
 } from '@chakra-ui/react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { TagSelector } from '@/Admin/Components/TagSelector';
 import { MarkdownTextEditor } from '@/Admin/Components/Editor/MarkdownTextEditor';
+import VoiceTextarea from '@/shared/voice/VoiceTextarea';
+import VoiceButton from '@/shared/voice/VoiceButton';
 import { toastSuccess } from '@/utils/toast';
 
 /**
@@ -90,9 +91,9 @@ export default function ClientProfileForm({ clientId, profile, options, canEdit 
                         errorText={errors.decision_process}
                         invalid={!!errors.decision_process}
                     >
-                        <Textarea
+                        <VoiceTextarea
                             value={data.decision_process}
-                            onChange={(e) => setData('decision_process', e.target.value)}
+                            onChange={(value) => setData('decision_process', value)}
                             rows={3}
                         />
                     </Field>
@@ -163,6 +164,19 @@ export default function ClientProfileForm({ clientId, profile, options, canEdit 
                 </Section>
 
                 <Section title="Заметки">
+                    {/* Микрофон рядом с редактором, а не внутри: markdown-редактор
+                        рисует свою панель инструментов, и кнопка поверх неё легла бы
+                        на кнопку разметки. Надиктованное дописывается в конец. */}
+                    <HStack justify="flex-end">
+                        <VoiceButton
+                            size="sm"
+                            title="Надиктовать заметку"
+                            onAppend={(text) => setData(
+                                'notes_md',
+                                data.notes_md ? `${data.notes_md.trimEnd()} ${text}` : text,
+                            )}
+                        />
+                    </HStack>
                     <MarkdownTextEditor
                         value={data.notes_md}
                         onChange={(v) => setData('notes_md', v)}

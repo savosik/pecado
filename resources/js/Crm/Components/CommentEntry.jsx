@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Box, HStack, Text, Textarea, VStack, Badge } from '@chakra-ui/react';
+import { Box, HStack, Text, VStack, Badge } from '@chakra-ui/react';
+import VoiceTextarea from '@/shared/voice/VoiceTextarea';
 import { Button } from '@/components/ui/button';
 import { LuPin, LuPinOff, LuPencil, LuTrash2, LuPaperclip } from 'react-icons/lu';
 import { usePermission } from '@/shared/Panel/usePermission';
@@ -117,9 +118,9 @@ export default function CommentEntry({ entry, showEntity = false, onUpdate, onDe
 
                 {editing ? (
                     <VStack align="stretch" gap={2}>
-                        <Textarea
+                        <VoiceTextarea
                             value={draft}
-                            onChange={(e) => setDraft(e.target.value)}
+                            onChange={setDraft}
                             rows={3}
                             autoFocus
                         />

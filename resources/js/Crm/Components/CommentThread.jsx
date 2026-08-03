@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Box, HStack, Spinner, Text, Textarea, VStack } from '@chakra-ui/react';
+import { Box, HStack, Spinner, Text, VStack } from '@chakra-ui/react';
+import VoiceTextarea from '@/shared/voice/VoiceTextarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
@@ -43,9 +44,9 @@ export default function CommentThread({ entityType, entityId, canCreate = true }
         <VStack align="stretch" gap={3}>
             {canCreate && (
                 <VStack align="stretch" gap={2}>
-                    <Textarea
+                    <VoiceTextarea
                         value={body}
-                        onChange={(e) => setBody(e.target.value)}
+                        onChange={setBody}
                         placeholder="Что важного узнали или о чём договорились?"
                         rows={3}
                     />
