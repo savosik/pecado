@@ -6,7 +6,7 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { Alert } from '@/components/ui/alert';
 import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
-import { LuEye } from 'react-icons/lu';
+import { LuEye, LuUserX } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { usePermission } from '@/shared/Panel/usePermission';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -14,6 +14,7 @@ import PresetsBar from '@/Crm/Components/PresetsBar';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import CallDialog from '@/Crm/Components/CallDialog';
+import ClientKindDialog from '@/Crm/Components/ClientKindDialog';
 import ClientsFilterBar from './components/ClientsFilterBar';
 import QuickFilters from './components/QuickFilters';
 import TasksCell from './components/TasksCell';
@@ -47,12 +48,15 @@ export default function Index({
     const [taskFor, setTaskFor] = useState(null);
     const [emailFor, setEmailFor] = useState(null);
     const [callFor, setCallFor] = useState(null);
+    const [kindFor, setKindFor] = useState(null);
     const [savedPresets, setSavedPresets] = useState(presets);
 
     const canEditLifecycle = can('crm-profile.edit');
     const canWriteEmail = can('crm-emails.create');
     const canCreateTask = can('crm-tasks.create');
     const canLogCall = can('crm-calls.create');
+    // Состав клиентской базы отдела — дело того, кто за отдел отвечает.
+    const canManageKind = can('crm-clients-all.edit');
 
     const applyFilters = useCallback((patch) => {
         router.get(route('crm.clients.index'), { ...filters, ...patch }, {
@@ -182,14 +186,28 @@ export default function Index({
             key: 'actions',
             label: '',
             render: (_, row) => (
-                <Button
-                    size="xs"
-                    variant="ghost"
-                    onClick={() => router.visit(route('crm.clients.show', row.id))}
-                    aria-label="Открыть карточку клиента"
-                >
-                    <LuEye />
-                </Button>
+                <HStack gap={1}>
+                    <Button
+                        size="xs"
+                        variant="ghost"
+                        onClick={() => router.visit(route('crm.clients.show', row.id))}
+                        aria-label="Открыть карточку клиента"
+                    >
+                        <LuEye />
+                    </Button>
+                    {canManageKind && (
+                        <Button
+                            size="xs"
+                            variant="ghost"
+                            colorPalette="red"
+                            onClick={() => setKindFor(row)}
+                            aria-label="Это не клиент — убрать из базы отдела"
+                            title="Это не клиент"
+                        >
+                            <LuUserX />
+                        </Button>
+                    )}
+                </HStack>
             ),
         },
     ];
@@ -284,6 +302,12 @@ export default function Index({
                 entity={emailFor ? { type: 'client', id: emailFor.id } : null}
                 defaultTo={emailFor?.email}
                 onClose={() => setEmailFor(null)}
+            />
+
+            <ClientKindDialog
+                open={kindFor !== null}
+                client={kindFor}
+                onClose={() => setKindFor(null)}
             />
         </>
     );

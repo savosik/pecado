@@ -79,6 +79,14 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
             ->whereNumber('client');
     });
 
+    // Тип аккаунта — состав клиентской базы отдела, а не работа с клиентом,
+    // поэтому право отдельное и менеджеру не выдано.
+    Route::middleware('permission:crm-clients-all.edit')->group(function () {
+        Route::put('/clients/{client}/kind', [ClientProfileController::class, 'kind'])
+            ->name('clients.kind.update')
+            ->whereNumber('client');
+    });
+
     // Комментарии. Отдают JSON: тот же компонент ленты встраивается и в карточку
     // клиента, и в админские карточки заказа и реализации.
     Route::middleware('permission:crm-comments.view')->group(function () {
@@ -236,6 +244,14 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
 
     Route::middleware('permission:crm-team.view')->group(function () {
         Route::get('/team', [TeamController::class, 'index'])->name('team.index');
+    });
+
+    // Скрыть нерабочую карточку менеджера. Не удаление: карточку с erp_uuid
+    // следующий обмен создаст заново, а её клиенты остались бы без менеджера.
+    Route::middleware('permission:crm-team.edit')->group(function () {
+        Route::put('/team/{manager}/active', [TeamController::class, 'setActive'])
+            ->name('team.active')
+            ->whereNumber('manager');
     });
 
     Route::middleware('permission:crm-analytics.view')->group(function () {

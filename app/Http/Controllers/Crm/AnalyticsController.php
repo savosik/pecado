@@ -403,6 +403,7 @@ class AnalyticsController extends CrmController
 
         $options['managers'] = $seesAll
             ? PersonalManager::query()
+                ->active()
                 ->whereHas('users')
                 ->orderBy('name')
                 ->get(['id', 'name'])

@@ -251,6 +251,9 @@ class SalesPlanService
 
         $managers = PersonalManager::query()
             ->select('id', 'name')
+            // Скрытые карточки в сетку не попадают: ставить план уволившемуся
+            // и техническому дублю — ровно тот мусор, ради которого флаг заведён.
+            ->active()
             ->when(
                 ! $actor->can('crm-clients-all.view'),
                 fn (Builder $query) => $query->whereKey($ownManagerId),

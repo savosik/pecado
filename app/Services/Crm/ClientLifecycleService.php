@@ -3,16 +3,17 @@
 namespace App\Services\Crm;
 
 use App\Enums\Crm\ClientLifecycleStatus;
+use App\Enums\UserKind;
 use App\Models\CrmClientProfile;
 use App\Models\CrmClientStatusChange;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Единственная точка смены жизненного статуса клиента.
+ * Единственная точка смены статусов клиента: жизненного и типа аккаунта.
  *
- * Профиль и журнал пишутся в одной транзакции: статус без записи «кто и почему»
- * через месяц никому ничего не объясняет.
+ * Оба журналируются в `crm_client_status_changes` в одной транзакции со сменой:
+ * статус без записи «кто и почему» через месяц никому ничего не объясняет.
  */
 class ClientLifecycleService
 {
@@ -62,6 +63,43 @@ class ClientLifecycleService
     }
 
     /**
+     * Сменить тип аккаунта: клиент ↔ сотрудник ↔ служебный.
+     *
+     * Так из клиентской базы убирают то, что 1С прислала партнёром наравне
+     * с покупателями: закупщиков, собственных сотрудников, технические учётки.
+     * Причина обязательна не по формату, а по смыслу — через полгода «почему
+     * этого нет в базе» спросят обязательно.
+     *
+     * Аккаунт не удаляется и не блокируется: он просто перестаёт быть клиентом
+     * для CRM (User::scopeClients), а заказы, документы и вход в кабинет
+     * остаются как были.
+     */
+    public function changeKind(User $client, UserKind $to, User $actor, ?string $reason = null): User
+    {
+        return DB::transaction(function () use ($client, $to, $actor, $reason): User {
+            $from = $client->user_kind;
+
+            if ($from === $to) {
+                return $client;
+            }
+
+            $client->user_kind = $to;
+            $client->save();
+
+            CrmClientStatusChange::create([
+                'client_user_id' => $client->getKey(),
+                'field' => CrmClientStatusChange::FIELD_KIND,
+                'from_value' => $from->value,
+                'to_value' => $to->value,
+                'user_id' => $actor->getKey(),
+                'reason' => $reason,
+            ]);
+
+            return $client;
+        });
+    }
+
+    /**
      * История смен статусов клиента для карточки.
      *
      * @return list<array<string, mixed>>
@@ -76,10 +114,14 @@ class ClientLifecycleService
             ->get()
             ->map(fn (CrmClientStatusChange $change): array => [
                 'id' => $change->id,
+                'field' => $change->field,
+                'field_label' => $change->field === CrmClientStatusChange::FIELD_KIND
+                    ? 'Тип аккаунта'
+                    : 'Жизненный статус',
                 'from' => $change->from_value === null
                     ? null
-                    : ClientLifecycleStatus::tryFrom($change->from_value)?->label(),
-                'to' => ClientLifecycleStatus::tryFrom($change->to_value)?->label() ?? $change->to_value,
+                    : $this->valueLabel($change->field, $change->from_value),
+                'to' => $this->valueLabel($change->field, $change->to_value),
                 // user_id обнуляется при удалении сотрудника — журнал переживает автора.
                 // @phpstan-ignore-next-line nullsafe.neverNull
                 'author' => $change->author?->name ?? 'Сотрудник удалён',
@@ -87,5 +129,19 @@ class ClientLifecycleService
                 'created_at' => $change->created_at?->format('d.m.Y H:i'),
             ])
             ->all();
+    }
+
+    /**
+     * Человекочитаемое значение записи журнала — своё перечисление на каждое поле.
+     *
+     * Неизвестное значение отдаётся как есть: журнал переживает переименование
+     * вариантов, и подставить «—» вместо исторической записи было бы враньём.
+     */
+    private function valueLabel(string $field, string $value): string
+    {
+        return match ($field) {
+            CrmClientStatusChange::FIELD_KIND => UserKind::tryFrom($value)?->label() ?? $value,
+            default => ClientLifecycleStatus::tryFrom($value)?->label() ?? $value,
+        };
     }
 }

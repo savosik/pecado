@@ -22,8 +22,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class CrmClientStatusChange extends Model
 {
-    /** Жизненный статус клиента — пока единственное, что журналируется. */
+    /** Жизненный статус клиента: лид / активен / закрылся. */
     public const FIELD_LIFECYCLE = 'lifecycle';
+
+    /**
+     * Тип аккаунта (users.user_kind): клиент / сотрудник / служебный.
+     *
+     * Живёт в том же журнале, что и жизненный статус: «этот аккаунт больше
+     * не клиент» — решение того же порядка, что «клиент закрылся», и через
+     * полгода вопрос «кто убрал его из базы» задают ровно так же.
+     */
+    public const FIELD_KIND = 'user_kind';
 
     protected $fillable = [
         'client_user_id',

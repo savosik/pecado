@@ -300,6 +300,7 @@ class PlanController extends CrmController
         }
 
         return PersonalManager::query()
+            ->active()
             ->select('id', 'name')
             ->orderBy('name')
             ->get()
@@ -355,7 +356,7 @@ class PlanController extends CrmController
             )),
             'clients' => $this->plans->clientRows($actor, $month, $filters),
             'managerOptions' => $seesAll
-                ? PersonalManager::query()->select('id', 'name')->orderBy('name')->get()
+                ? PersonalManager::query()->active()->select('id', 'name')->orderBy('name')->get()
                 : [],
             'canSeeAll' => $seesAll,
             'canEdit' => $actor->can('crm-plans.edit'),

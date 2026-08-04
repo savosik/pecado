@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Crm;
 
 use App\Enums\Crm\ClientLifecycleStatus;
+use App\Enums\UserKind;
+use App\Http\Requests\Crm\ChangeClientKindRequest;
 use App\Http\Requests\Crm\ChangeClientLifecycleRequest;
 use App\Http\Requests\Crm\UpdateClientProfileRequest;
 use App\Models\User;
@@ -48,6 +50,39 @@ class ClientProfileController extends CrmController
         $lifecycle->change($user, $status, $this->crmActor($request), $request->validated('reason'));
 
         return back()->with('success', "Жизненный статус клиента: {$status->label()}");
+    }
+
+    /**
+     * Тип аккаунта: убрать из клиентской базы отдела или вернуть обратно.
+     *
+     * Скоуп поиска — не `visibleInCrm()`, а вся закреплённая за отделом база:
+     * помеченный сотрудником аккаунт из CRM-выборки сразу выпадает, и по ней
+     * его было бы уже не найти, чтобы отменить ошибочную пометку. Пользователи
+     * без менеджера сюда не попадают вовсе — это не клиентская база отдела,
+     * а лиды и служебные учётки, ими занимается админка.
+     */
+    public function kind(
+        ChangeClientKindRequest $request,
+        int $client,
+        ClientLifecycleService $lifecycle,
+    ): RedirectResponse {
+        $user = User::query()
+            ->whereNotNull('personal_manager_id')
+            ->findOrFail($client);
+
+        $kind = UserKind::from($request->validated('user_kind'));
+
+        $lifecycle->changeKind($user, $kind, $this->crmActor($request), $request->validated('reason'));
+
+        if ($kind->belongsInCrm()) {
+            return back()->with('success', "{$user->name} снова в клиентской базе отдела");
+        }
+
+        // Возвращаться некуда: карточка клиента, с которой пришёл запрос, для
+        // не-клиента отдаёт 404.
+        return redirect()
+            ->route('crm.clients.index')
+            ->with('success', "{$user->name}: тип аккаунта — {$kind->label()}. Аккаунт убран из клиентской базы отдела.");
     }
 
     /**

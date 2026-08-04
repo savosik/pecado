@@ -151,8 +151,12 @@ class PlanProgressService
             ->where('target_type', PlanTarget::MANAGER->value)
             ->pluck('amount', 'target_id');
 
+        // Скрытые карточки не отфильтровываем запросом: если за менеджером
+        // числятся отгрузки месяца, его выручка обязана остаться в разрезе,
+        // иначе сумма строк не сойдётся с итогом отдела. Пустые строки уберёт
+        // общий фильтр ниже — он же убирает и весь мусор справочника.
         $managers = PersonalManager::query()
-            ->select('id', 'name')
+            ->select('id', 'name', 'is_active')
             ->orderBy('name')
             ->get();
 
@@ -166,6 +170,7 @@ class PlanProgressService
             $rows[] = [
                 'manager_id' => $id,
                 'name' => (string) $manager->name,
+                'is_active' => (bool) $manager->is_active,
                 'plan' => $plan,
                 'fact' => round($fact, 2),
                 'percent' => $plan !== null && $plan > 0 ? (int) round($fact / $plan * 100) : null,

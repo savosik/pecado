@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { LuMail } from 'react-icons/lu';
+import { LuMail, LuUserX } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
-import { Badge, Box, Card, SimpleGrid, Tabs, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, Card, HStack, SimpleGrid, Tabs, Text, VStack } from '@chakra-ui/react';
 import {
     AccordionItem,
     AccordionItemContent,
@@ -20,6 +20,7 @@ import ClientProfileForm from '@/Crm/Components/ClientProfileForm';
 import ClientLifecyclePanel from '@/Crm/Components/ClientLifecyclePanel';
 import TaskPanel from '@/Crm/Components/TaskPanel';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
+import ClientKindDialog from '@/Crm/Components/ClientKindDialog';
 import ClientSummaryBar from './components/ClientSummaryBar';
 
 function InfoRow({ label, value }) {
@@ -40,6 +41,9 @@ export default function Show() {
     const canViewFiles = can('crm-attachments.view');
     const canViewTasks = can('crm-tasks.view');
     const [composeOpen, setComposeOpen] = useState(false);
+    const [kindOpen, setKindOpen] = useState(false);
+    // Состав клиентской базы отдела — дело того, кто за отдел отвечает.
+    const canManageKind = can('crm-clients-all.edit');
 
     // Лента — единственная главная вкладка: карточка отвечает на вопрос «что известно»,
     // а работа идёт в хронологии.
@@ -51,13 +55,25 @@ export default function Show() {
             <PageHeader
                 title={client.name}
                 description="Карточка клиента"
-                actions={can('crm-emails.create')
-                    ? (
-                        <Button size="sm" variant="outline" onClick={() => setComposeOpen(true)}>
-                            <LuMail /> Написать письмо
-                        </Button>
-                    )
-                    : null}
+                actions={(
+                    <HStack gap={2}>
+                        {can('crm-emails.create') && (
+                            <Button size="sm" variant="outline" onClick={() => setComposeOpen(true)}>
+                                <LuMail /> Написать письмо
+                            </Button>
+                        )}
+                        {canManageKind && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                colorPalette="red"
+                                onClick={() => setKindOpen(true)}
+                            >
+                                <LuUserX /> Это не клиент
+                            </Button>
+                        )}
+                    </HStack>
+                )}
             />
 
             <VStack gap={3} align="stretch">
@@ -222,6 +238,12 @@ export default function Show() {
                 entity={{ type: 'client', id: client.id }}
                 defaultTo={client.email}
                 onClose={() => setComposeOpen(false)}
+            />
+
+            <ClientKindDialog
+                open={kindOpen}
+                client={client}
+                onClose={() => setKindOpen(false)}
             />
         </>
     );

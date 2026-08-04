@@ -37,7 +37,7 @@ class ClientController extends CrmController
         return Inertia::render('Crm/Pages/Clients/Index', [
             'clients' => $clients->paginate($actor, $filters),
             'managers' => $seesAll
-                ? PersonalManager::query()->select('id', 'name')->orderBy('name')->get()
+                ? PersonalManager::query()->active()->select('id', 'name')->orderBy('name')->get()
                 : [],
             'canSeeAll' => $seesAll,
             'canSeeTasks' => $canSeeTasks,

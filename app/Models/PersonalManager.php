@@ -47,7 +47,31 @@ class PersonalManager extends Model implements HasMedia
         'name',
         'phone',
         'email',
+        'is_active',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+        ];
+    }
+
+    /**
+     * Карточки, которым место в списках и выборах CRM.
+     *
+     * 1С заводит карточку каждому, кого хоть раз указали менеджером в документе,
+     * поэтому справочник обрастает уволившимися и техническими записями. Удалить
+     * их нельзя — следующий обмен создаст их заново по erp_uuid, — поэтому
+     * нерабочие карточки прячутся флагом.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<self>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<self>
+     */
+    public function scopeActive(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->where('personal_managers.is_active', true);
+    }
 
     /**
      * Клиенты, закреплённые за этим менеджером (users.personal_manager_id).

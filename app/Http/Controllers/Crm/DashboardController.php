@@ -28,7 +28,7 @@ class DashboardController extends CrmController
                     ? User::query()->clients()->whereNotNull('personal_manager_id')->count()
                     : null,
                 'managers' => $seesAll
-                    ? \App\Models\PersonalManager::query()->count()
+                    ? \App\Models\PersonalManager::query()->active()->count()
                     : null,
             ],
             'seesAll' => $seesAll,
