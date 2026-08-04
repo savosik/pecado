@@ -85,6 +85,12 @@ export default function BedDrawer({ tile, month, scope, scopeId, onClose }) {
             return;
         }
 
+        // Чистим ответ предыдущего клиента до запроса: иначе при переходе
+        // с грядки на грядку панель успевает показать чужие цифры под новым
+        // именем — а это не «мигнуло», а неверные данные о клиенте.
+        setData(null);
+        setError(null);
+
         let cancelled = false;
         const params = { month };
         if (scope === 'manager') {
@@ -113,11 +119,15 @@ export default function BedDrawer({ tile, month, scope, scopeId, onClose }) {
                 <DrawerBody>
                     {error && <Alert status="error" title="Ошибка">{error}</Alert>}
 
-                    {!error && !data && (
+                    {!error && tile && !data && (
                         <HStack justify="center" py={10}><Spinner size="lg" /></HStack>
                     )}
 
-                    {data && (
+                    {/* Обе проверки обязательны. Панель остаётся смонтированной ради
+                        анимации закрытия, и на закрытии `tile` обнуляется раньше,
+                        чем сбрасывается `data`: без защиты по `tile` тело успевает
+                        отрендериться на старых данных и падает на `tile.id`. */}
+                    {tile && data && (
                         <VStack align="stretch" gap={5}>
                             <HStack gap={2} flexWrap="wrap">
                                 {signals?.abc && (
