@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers\Crm;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Organization;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
+use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\Crm\CrmEntityResolver;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Http\Request;
@@ -13,7 +17,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Карточки заказа и реализации внутри CRM.
+ * Заказы и реализации внутри CRM: списки и карточки.
  *
  * Раньше из ленты и из списка документов ссылка вела в админку — куда роли
  * `sales-head` и `sales-manager-crm` намеренно не пускают. Менеджер видел
@@ -28,7 +32,260 @@ use Inertia\Response;
  */
 class DocumentController extends CrmController
 {
+    /**
+     * Поля, по которым разрешена сортировка списков.
+     *
+     * Белый список, а не проверка «есть такая колонка»: значение уходит
+     * в orderBy как есть.
+     *
+     * @var list<string>
+     */
+    private const SORTS = ['id', 'number', 'erp_number', 'total_amount', 'created_at', 'erp_created_at', 'date'];
+
     public function __construct(private readonly CrmEntityResolver $resolver) {}
+
+    /**
+     * Список заказов клиентов актора.
+     *
+     * Скоуп тот же, что у списка клиентов: менеджер видит документы только своих
+     * клиентов, РОП — всего отдела. Реализовано подзапросом по user_id, а не
+     * фильтром на фронте — иначе первый же `per_page=100` показал бы чужое.
+     */
+    public function orders(Request $request): Response
+    {
+        $actor = $this->crmActor($request);
+
+        $query = Order::query()
+            ->whereIn('user_id', User::query()->visibleInCrm($actor)->select('users.id'))
+            ->with(['user:id,name,email', 'company:id,name', 'organization:id,name,is_stub', 'warehouse:id,name'])
+            ->withCount('items');
+
+        if ($search = $this->search($request)) {
+            $like = '%'.$search.'%';
+
+            $query->where(function ($inner) use ($search, $like): void {
+                $inner->where('number', 'like', $like)
+                    ->orWhere('erp_number', 'like', $like)
+                    ->orWhere('id', $search)
+                    ->orWhereHas('user', fn ($user) => $user
+                        ->where('name', 'like', $like)
+                        ->orWhere('email', 'like', $like))
+                    ->orWhereHas('items', fn ($item) => $item->where('name', 'like', $like));
+            });
+        }
+
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+
+        $this->applyCommonFilters($query, $request, 'erp_created_at');
+
+        $sortBy = in_array($request->input('sort_by'), self::SORTS, true)
+            ? (string) $request->input('sort_by')
+            : 'erp_created_at';
+        $sortOrder = $request->input('sort_order') === 'asc' ? 'asc' : 'desc';
+        $perPage = min(max((int) $request->input('per_page', 15), 5), 100);
+
+        $orders = $query->orderBy($sortBy, $sortOrder)->paginate($perPage)->withQueryString();
+
+        $orders->getCollection()->transform(fn (Order $order): array => [
+            'id' => (int) $order->getKey(),
+            'number' => $order->number,
+            'erp_number' => $order->erp_number,
+            'status_label' => $order->status->label(),
+            'status_color' => $order->status->color(),
+            'date_label' => ($order->erp_created_at ?? $order->created_at)?->format('d.m.Y H:i'),
+            'total_label' => $this->money((float) $order->total_amount, $order->currency_code),
+            'items_count' => (int) ($order->items_count ?? 0),
+            'client' => $order->user === null ? null : [
+                'id' => (int) $order->user->getKey(),
+                'name' => $order->user->name,
+                'url' => route('crm.clients.show', $order->user->getKey()),
+            ],
+            'organization' => $order->organization === null ? null : [
+                'name' => $order->organization->getAttribute('name'),
+                'is_stub' => (bool) $order->organization->getAttribute('is_stub'),
+            ],
+            'warehouse' => $order->warehouse?->getAttribute('name'),
+            'url' => route('crm.orders.show', $order->getKey()),
+        ]);
+
+        return Inertia::render('Crm/Pages/Documents/Orders', array_merge(
+            ['orders' => $orders],
+            $this->listOptions($request, $sortBy, $sortOrder, $perPage, $search),
+            [
+                'statuses' => array_map(
+                    fn (OrderStatus $case): array => [
+                        'value' => $case->value,
+                        'label' => $case->label(),
+                        'color' => $case->color(),
+                    ],
+                    OrderStatus::cases(),
+                ),
+            ],
+        ));
+    }
+
+    /**
+     * Список реализаций клиентов актора.
+     */
+    public function shipments(Request $request): Response
+    {
+        $actor = $this->crmActor($request);
+
+        $query = Shipment::query()
+            ->whereIn('user_id', User::query()->visibleInCrm($actor)->select('users.id'))
+            ->with(['user:id,name,email', 'company:id,name', 'organization:id,name,is_stub', 'warehouse:id,name'])
+            ->withCount('items');
+
+        if ($search = $this->search($request)) {
+            $like = '%'.$search.'%';
+
+            $query->where(function ($inner) use ($search, $like): void {
+                $inner->where('number', 'like', $like)
+                    ->orWhere('erp_number', 'like', $like)
+                    ->orWhere('id', $search)
+                    ->orWhereHas('user', fn ($user) => $user
+                        ->where('name', 'like', $like)
+                        ->orWhere('email', 'like', $like))
+                    ->orWhereHas('items', fn ($item) => $item->where('product_name_snapshot', 'like', $like));
+            });
+        }
+
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+
+        $this->applyCommonFilters($query, $request, 'erp_created_at');
+
+        $sortBy = in_array($request->input('sort_by'), self::SORTS, true)
+            ? (string) $request->input('sort_by')
+            : 'erp_created_at';
+        $sortOrder = $request->input('sort_order') === 'asc' ? 'asc' : 'desc';
+        $perPage = min(max((int) $request->input('per_page', 15), 5), 100);
+
+        $shipments = $query->orderBy($sortBy, $sortOrder)->paginate($perPage)->withQueryString();
+
+        $shipments->getCollection()->transform(fn (Shipment $shipment): array => [
+            'id' => (int) $shipment->getKey(),
+            'number' => $shipment->number,
+            'erp_number' => $shipment->erp_number,
+            'status_label' => $shipment->status_label,
+            'status_color' => $shipment->status === 'completed' ? 'green' : 'blue',
+            'date_label' => ($shipment->erp_created_at ?? $shipment->date)?->format('d.m.Y H:i'),
+            'total_label' => $this->money((float) $shipment->total_amount, $shipment->currency_code),
+            'items_count' => (int) ($shipment->items_count ?? 0),
+            'client' => $shipment->user === null ? null : [
+                'id' => (int) $shipment->user->getKey(),
+                'name' => $shipment->user->name,
+                'url' => route('crm.clients.show', $shipment->user->getKey()),
+            ],
+            'organization' => $shipment->organization === null ? null : [
+                'name' => $shipment->organization->getAttribute('name'),
+                'is_stub' => (bool) $shipment->organization->getAttribute('is_stub'),
+            ],
+            'warehouse' => $shipment->warehouse?->getAttribute('name'),
+            'url' => route('crm.shipments.show', $shipment->getKey()),
+        ]);
+
+        return Inertia::render('Crm/Pages/Documents/Shipments', array_merge(
+            ['shipments' => $shipments],
+            $this->listOptions($request, $sortBy, $sortOrder, $perPage, $search),
+            [
+                'statuses' => [
+                    ['value' => 'new', 'label' => 'Новая', 'color' => 'blue'],
+                    ['value' => 'in_progress', 'label' => 'В обработке', 'color' => 'orange'],
+                    ['value' => 'completed', 'label' => 'Выполнена', 'color' => 'green'],
+                    ['value' => 'cancelled', 'label' => 'Отменена', 'color' => 'gray'],
+                ],
+            ],
+        ));
+    }
+
+    /**
+     * Фильтры, одинаковые у обоих списков: организация, склад, даты, суммы.
+     *
+     * Шаблонный параметр, а не объединение Order|Shipment: дженерик Builder
+     * инвариантен, и объединение не приняло бы ни один из двух конкретных типов.
+     *
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<TModel>  $query
+     */
+    private function applyCommonFilters(\Illuminate\Database\Eloquent\Builder $query, Request $request, string $dateColumn): void
+    {
+        // 'none' — документы без организации: их много в переходный период,
+        // и именно их бывает нужно отобрать.
+        $organizationId = $request->input('organization_id');
+
+        if ($organizationId === 'none') {
+            $query->whereNull('organization_id');
+        } elseif ($organizationId) {
+            $query->where('organization_id', $organizationId);
+        }
+
+        $warehouseId = $request->input('warehouse_id');
+
+        if ($warehouseId === 'none') {
+            $query->whereNull('warehouse_id');
+        } elseif ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId);
+        }
+
+        if ($dateFrom = $request->input('date_from')) {
+            $query->whereDate($dateColumn, '>=', $dateFrom);
+        }
+
+        if ($dateTo = $request->input('date_to')) {
+            $query->whereDate($dateColumn, '<=', $dateTo);
+        }
+
+        if ($amountFrom = $request->input('amount_from')) {
+            $query->where('total_amount', '>=', (float) $amountFrom);
+        }
+
+        if ($amountTo = $request->input('amount_to')) {
+            $query->where('total_amount', '<=', (float) $amountTo);
+        }
+    }
+
+    /**
+     * Общие пропсы списков: справочники фильтров и снимок текущего отбора.
+     *
+     * @return array<string, mixed>
+     */
+    private function listOptions(Request $request, string $sortBy, string $sortOrder, int $perPage, ?string $search): array
+    {
+        $organizationsEnabled = (bool) config('erp.organizations.enabled');
+
+        return [
+            'organizations' => $organizationsEnabled
+                ? Organization::query()->ordered()->where('is_stub', false)->get(['id', 'name'])
+                : [],
+            'organizationsEnabled' => $organizationsEnabled,
+            'warehouses' => Warehouse::query()->orderBy('name')->get(['id', 'name']),
+            'filters' => [
+                'search' => $search,
+                'status' => $request->input('status'),
+                'organization_id' => $request->input('organization_id'),
+                'warehouse_id' => $request->input('warehouse_id'),
+                'date_from' => $request->input('date_from'),
+                'date_to' => $request->input('date_to'),
+                'amount_from' => $request->input('amount_from'),
+                'amount_to' => $request->input('amount_to'),
+                'sort_by' => $sortBy,
+                'sort_order' => $sortOrder,
+                'per_page' => $perPage,
+            ],
+        ];
+    }
+
+    private function search(Request $request): ?string
+    {
+        $search = trim((string) $request->input('search', ''));
+
+        return $search === '' ? null : mb_substr($search, 0, 120);
+    }
 
     public function order(Request $request, int $order): Response
     {

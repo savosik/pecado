@@ -6,6 +6,8 @@ import {
     LuListChecks,
     LuMail,
     LuTarget,
+    LuFileText,
+    LuTruck,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -39,6 +41,16 @@ export const menuConfig: MenuGroup[] = [
             { label: "Планы продаж", icon: LuTarget, path: "/crm/plans", permission: "crm-plans.view" },
             { label: "Отчёты продаж", icon: LuChartLine, path: "/crm/analytics", permission: "crm-analytics.view" },
             { label: "Команда", icon: LuUsersRound, path: "/crm/team", permission: "crm-team.view" },
+        ],
+    },
+    {
+        // Документы 1С: читаются, но не редактируются. Живут отдельной группой,
+        // потому что это не работа с клиентом, а её результат.
+        title: "Документы",
+        icon: LuFileText,
+        items: [
+            { label: "Заказы", icon: LuFileText, path: "/crm/orders", permission: "crm-clients.view" },
+            { label: "Реализации", icon: LuTruck, path: "/crm/shipments", permission: "crm-clients.view" },
         ],
     },
 ];

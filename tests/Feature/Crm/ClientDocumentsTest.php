@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Crm;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PersonalManager;
@@ -223,6 +224,86 @@ class ClientDocumentsTest extends TestCase
                 ->has('document.related', 1)
                 ->where('document.related.0.title', 'Реализация №РЕ-300')
             );
+    }
+
+    #[Test]
+    public function orders_list_shows_only_own_clients(): void
+    {
+        $mine = $this->orderFor($this->client);
+        $foreign = $this->orderFor($this->foreignClient());
+
+        $ids = collect(
+            $this->actingAs($this->manager)
+                ->get(route('crm.orders.index'))
+                ->assertOk()
+                ->viewData('page')['props']['orders']['data']
+        )->pluck('id')->all();
+
+        $this->assertSame([$mine->id], $ids);
+        $this->assertNotContains($foreign->id, $ids);
+    }
+
+    #[Test]
+    public function shipments_list_shows_only_own_clients(): void
+    {
+        $mine = $this->shipmentFor($this->client);
+        $this->shipmentFor($this->foreignClient());
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.shipments.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Crm/Pages/Documents/Shipments')
+                ->where('shipments.total', 1)
+                ->where('shipments.data.0.id', $mine->id)
+            );
+    }
+
+    #[Test]
+    public function sales_head_sees_documents_of_whole_department(): void
+    {
+        $this->orderFor($this->client);
+        $this->orderFor($this->foreignClient());
+
+        $head = User::factory()->create();
+        $head->assignRole('sales-head');
+
+        $this->actingAs($head)
+            ->get(route('crm.orders.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('orders.total', 2));
+    }
+
+    #[Test]
+    public function orders_list_search_does_not_leak_foreign_documents(): void
+    {
+        // Номер чужого документа известен — по нему всё равно ничего не находится.
+        $foreign = $this->orderFor($this->foreignClient());
+        $foreign->update(['erp_number' => 'ЗК-СЕКРЕТ']);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.orders.index', ['search' => 'ЗК-СЕКРЕТ']))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('orders.total', 0));
+    }
+
+    #[Test]
+    public function orders_list_filters_by_status(): void
+    {
+        $order = $this->orderFor($this->client);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.orders.index', ['status' => $order->status->value]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('orders.total', 1));
+
+        $other = collect(OrderStatus::cases())
+            ->first(fn (OrderStatus $case) => $case !== $order->status);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.orders.index', ['status' => $other->value]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('orders.total', 0));
     }
 
     #[Test]

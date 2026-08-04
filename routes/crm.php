@@ -47,9 +47,14 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
             ->name('clients.show')
             ->whereNumber('client');
 
-        // Документы клиента внутри CRM. Отдельного права нет: «вижу клиента,
-        // но не вижу его заказы» — состояние, которого быть не должно. Доступ
-        // решает тот же скоуп через CrmEntityResolver, чужой документ — 404.
+        // Документы внутри CRM. Отдельного права нет: «вижу клиента, но не вижу
+        // его заказы» — состояние, которого быть не должно. Списки ограничены тем же
+        // скоупом клиентов, карточка резолвится через CrmEntityResolver (чужая — 404).
+        //
+        // Списки объявлены до /{order} и /{shipment} — иначе «orders» ушло бы
+        // в биндинг модели.
+        Route::get('/orders', [DocumentController::class, 'orders'])->name('orders.index');
+        Route::get('/shipments', [DocumentController::class, 'shipments'])->name('shipments.index');
         Route::get('/orders/{order}', [DocumentController::class, 'order'])
             ->name('orders.show')
             ->whereNumber('order');
