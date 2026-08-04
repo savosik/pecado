@@ -105,8 +105,13 @@ class RolesAndPermissionsSeeder extends Seeder
         // Возможности: только view — список ничего не меняет, он предлагает,
         // а действия по строке идут через права задач, писем и звонков.
         'crm-opportunities' => ['view'],
+        // Грядки: только view — витрина поверх планов и сигналов, ничего не меняет.
+        'crm-beds' => ['view'],
         // Вложения: edit нет — заменить файл это удалить и загрузить заново.
         'crm-attachments' => ['view', 'create', 'delete'],
+        // Токены ИИ-агентов: выдача и отзыв. Только РОП — токен даёт запись
+        // в CRM от имени сотрудника, и раздавать их самим сотрудникам нельзя.
+        'crm-agent-tokens' => ['view', 'create', 'delete'],
 
         // WMS — права домена /wms/ (кабинет склада). Префикс `wms-` значим:
         // он в User::PANEL_PERMISSION_PREFIXES, поэтому не даёт входа в /admin.
@@ -187,7 +192,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-emails' => 'CRM: Письма',
         'crm-plans' => 'CRM: Планы продаж',
         'crm-opportunities' => 'CRM: Возможности',
+        'crm-beds' => 'CRM: Грядки',
         'crm-attachments' => 'CRM: Вложения',
+        'crm-agent-tokens' => 'CRM: Токены ИИ-агентов',
         'wms-dashboard' => 'Склад: Рабочий стол',
         'wms-defects' => 'Склад: Некондиция',
         'defects' => 'Уценка (цены и публикация)',
@@ -223,7 +230,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'orders', 'carts', 'returns', 'shipments',
                 'favorites', 'wishlist', 'supplier-preorders',
                 // CRM: свои клиенты (те, что закреплены за его карточкой менеджера)
-                'crm-dashboard', 'crm-clients', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities',
+                'crm-dashboard', 'crm-clients', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds',
             ],
         ],
         'sales-manager-crm' => [
@@ -231,14 +238,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
                 // Для менеджеров, которым нужны свои клиенты, но не нужна админка.
-                'crm-dashboard', 'crm-clients', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities',
+                'crm-dashboard', 'crm-clients', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds',
             ],
         ],
         'sales-head' => [
             'label' => 'Руководитель отдела продаж',
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
-                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities',
+                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-agent-tokens',
             ],
         ],
         'catalogist' => [

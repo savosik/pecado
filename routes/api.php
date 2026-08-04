@@ -97,6 +97,35 @@ Route::prefix('content')
     });
 
 // ──────────────────────────────────────────────────────────────
+// CRM API — для ИИ-агентов менеджеров отдела продаж
+//
+// Маршруты не перечислены руками, а собраны обходом OperationRegistry: реестр —
+// единственный источник, из которого растут и адреса, и документация, и каталог
+// инструментов MCP. Добавление операции здесь не требует правок.
+//
+// Токен превращается в сотрудника (AuthenticateCrmAgent), поэтому право на
+// каждой операции проверяется его же правами — см. OperationRunner.
+// ──────────────────────────────────────────────────────────────
+Route::prefix('crm')
+    ->middleware([\App\Http\Middleware\AuthenticateCrmAgent::class, 'throttle:crm-api'])
+    ->name(\App\Http\Controllers\Api\Crm\CrmApiController::ROUTE_PREFIX)
+    ->group(function () {
+        Route::get('me', [\App\Http\Controllers\Api\Crm\CrmApiController::class, 'me'])->name('me');
+
+        foreach (app(\App\Services\Crm\Api\OperationRegistry::class)->callable() as $operation) {
+            $route = Route::match([$operation->method], $operation->uri, [
+                \App\Http\Controllers\Api\Crm\CrmApiController::class, 'run',
+            ])->name($operation->id);
+
+            // Идентификаторы всегда числовые: иначе `clients/me` ушло бы
+            // в карточку клиента и вернуло 404 вместо осмысленного ответа.
+            foreach ($operation->pathParams() as $param) {
+                $route->whereNumber($param);
+            }
+        }
+    });
+
+// ──────────────────────────────────────────────────────────────
 // Kanban API — для LLM-агентов (публичный, без авторизации)
 // Активируется переменной KANBAN_API_ENABLED=true
 // ──────────────────────────────────────────────────────────────

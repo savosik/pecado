@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Middleware\AuthenticateAnalyticsMcp;
+use App\Http\Middleware\AuthenticateCrmAgent;
 use App\Mcp\Servers\AnalyticsServer;
+use App\Mcp\Servers\CrmServer;
 use Laravel\Mcp\Facades\Mcp;
 
 /*
@@ -32,3 +34,19 @@ Mcp::local('analytics', AnalyticsServer::class);
  */
 Mcp::web('/mcp/analytics', AnalyticsServer::class)
     ->middleware([AuthenticateAnalyticsMcp::class, 'throttle:60,1']);
+
+/*
+ * CRM отдела продаж — чтение и запись от имени менеджера.
+ *
+ * Отдельный сервер и отдельные токены, а не расширение аналитического: там весь
+ * смысл в том, что писать в БД невозможно даже с валидным токеном, и добавлять
+ * туда запись означало бы разрушить единственную гарантию, ради которой сервер
+ * и сделан таким.
+ *
+ * Локального (stdio) транспорта нет намеренно: пишущий доступ имеет смысл только
+ * с машины менеджера, а команда в контейнере — это уже доступ на сервер.
+ *
+ * URL для менеджеров: https://pecado.ru/mcp/crm
+ */
+Mcp::web('/mcp/crm', CrmServer::class)
+    ->middleware([AuthenticateCrmAgent::class, 'throttle:60,1']);

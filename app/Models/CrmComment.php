@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasCrmAttachments;
+use App\Models\Concerns\RecordsCrmSource;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,7 +34,7 @@ use Spatie\MediaLibrary\HasMedia;
 class CrmComment extends Model implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\CrmCommentFactory> */
-    use HasCrmAttachments, HasFactory, SoftDeletes;
+    use HasCrmAttachments, HasFactory, RecordsCrmSource, SoftDeletes;
 
     protected $fillable = [
         'commentable_type',

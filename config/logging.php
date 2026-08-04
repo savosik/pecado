@@ -89,6 +89,22 @@ return [
             'replace_placeholders' => true,
         ],
 
+        /*
+         * Аудит агентского гейта CRM (/mcp/crm, /api/crm).
+         *
+         * Отдельный канал по той же причине, что и bi: запись, сделанную ИИ-агентом
+         * от имени менеджера, нужно уметь найти по имени токена и операции, а в потоке
+         * обычных записей она потеряется. Читают этот журнал ровно тогда, когда
+         * спрашивают «кто это написал клиенту», — и ответ должен находиться.
+         */
+        'crm-agent' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/crm-agent.log'),
+            'level' => 'info',
+            'days' => env('LOG_CRM_AGENT_DAYS', 180),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

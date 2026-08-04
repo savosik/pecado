@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Crm\EmailStatus;
 use App\Models\Concerns\HasCrmAttachments;
+use App\Models\Concerns\RecordsCrmSource;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -39,7 +40,7 @@ use Spatie\MediaLibrary\HasMedia;
 class CrmEmail extends Model implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\CrmEmailFactory> */
-    use HasCrmAttachments, HasFactory;
+    use HasCrmAttachments, HasFactory, RecordsCrmSource;
 
     protected $fillable = [
         'user_id',

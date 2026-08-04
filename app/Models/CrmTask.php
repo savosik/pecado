@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Crm\TaskPriority;
 use App\Enums\Crm\TaskStatus;
 use App\Models\Concerns\HasCrmAttachments;
+use App\Models\Concerns\RecordsCrmSource;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -45,7 +46,7 @@ use Spatie\MediaLibrary\HasMedia;
 class CrmTask extends Model implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\CrmTaskFactory> */
-    use HasCrmAttachments, HasFactory, SoftDeletes;
+    use HasCrmAttachments, HasFactory, RecordsCrmSource, SoftDeletes;
 
     protected $fillable = [
         'title',

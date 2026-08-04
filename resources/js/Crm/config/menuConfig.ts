@@ -9,6 +9,8 @@ import {
     LuLightbulb,
     LuFileText,
     LuTruck,
+    LuKeyRound,
+    LuSprout,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -41,8 +43,10 @@ export const menuConfig: MenuGroup[] = [
             { label: "Письма", icon: LuMail, path: "/crm/emails", permission: "crm-emails.view" },
             { label: "Планы продаж", icon: LuTarget, path: "/crm/plans", permission: "crm-plans.view" },
             { label: "Возможности", icon: LuLightbulb, path: "/crm/opportunities", permission: "crm-opportunities.view" },
+            { label: "Грядки", icon: LuSprout, path: "/crm/beds", permission: "crm-beds.view" },
             { label: "Отчёты продаж", icon: LuChartLine, path: "/crm/analytics", permission: "crm-analytics.view" },
             { label: "Команда", icon: LuUsersRound, path: "/crm/team", permission: "crm-team.view" },
+            { label: "Токены ИИ-агентов", icon: LuKeyRound, path: "/crm/agent-tokens", permission: "crm-agent-tokens.view" },
         ],
     },
     {

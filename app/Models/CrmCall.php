@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Crm\CallDirection;
 use App\Enums\Crm\CallResult;
 use App\Models\Concerns\HasCrmAttachments;
+use App\Models\Concerns\RecordsCrmSource;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -48,7 +49,7 @@ use Spatie\MediaLibrary\HasMedia;
 class CrmCall extends Model implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\CrmCallFactory> */
-    use HasCrmAttachments, HasFactory, SoftDeletes;
+    use HasCrmAttachments, HasFactory, RecordsCrmSource, SoftDeletes;
 
     /**
      * Источник записи, заведённой руками.

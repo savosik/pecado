@@ -239,6 +239,13 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Rate limiter для CRM API. Считаем по владельцу токена, а не по IP:
+        // агенты нескольких менеджеров могут сидеть за одним офисным адресом,
+        // и лимит по IP превратился бы в общий на весь отдел.
+        RateLimiter::for('crm-api', function (Request $request) {
+            return Limit::perMinute(120)->by('crm-api:'.($request->user()?->id ?: $request->ip()));
+        });
+
         // Scramble: спека API (/docs/api, /docs/api.json) публично доступна.
         // По умолчанию RestrictedDocsAccess пускает только в local; открываем всем,
         // чтобы ИИ-агент мог скачать OpenAPI-контракт по URL на dev/prod.
@@ -304,5 +311,35 @@ class AppServiceProvider extends ServiceProvider
 
         Scramble::registerUiRoute(path: 'docs/kanban-api', api: 'kanban');
         Scramble::registerJsonSpecificationRoute(path: 'docs/kanban-api.json', api: 'kanban');
+
+        $this->registerCrmApiDocs();
+    }
+
+    /**
+     * Документация CRM API.
+     *
+     * Спецификация не сканируется из контроллеров, а строится из
+     * OperationRegistry: контроллер там один на все операции, и вывести из его
+     * сигнатуры аргументы тридцати разных вызовов невозможно — зато в реестре
+     * они уже описаны вместе с правилами проверки. Интерфейс при этом остаётся
+     * тот же, что у /docs/api и /docs/kanban-api: чужой вёрстки не заводим.
+     */
+    private function registerCrmApiDocs(): void
+    {
+        $config = Scramble::registerApi('crm', [
+            'api_path' => 'api/crm',
+            'info' => [
+                'title' => 'Pecado CRM API',
+                'version' => '1.0',
+            ],
+        ]);
+
+        \Illuminate\Support\Facades\Route::get('docs/crm-api', function (\App\Services\Crm\Api\CrmApiDocument $document) use ($config) {
+            return view('scramble::docs', ['spec' => $document->build(), 'config' => $config]);
+        })->middleware(\Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess::class);
+
+        \Illuminate\Support\Facades\Route::get('docs/crm-api.json', function (\App\Services\Crm\Api\CrmApiDocument $document) {
+            return response()->json($document->build(), options: JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        })->middleware(\Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess::class);
     }
 }

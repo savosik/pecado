@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Support\Crm\CrmSource;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\DB;
 
@@ -23,6 +24,11 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         $this->withoutVite();
+
+        // Источник записей CRM — статическое состояние процесса: без сброса
+        // «агент», поднятый одним тестом, протёк бы в следующие и пометил бы
+        // чужие записи чужим источником.
+        CrmSource::reset();
     }
 
     /**

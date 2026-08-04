@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Crm\AgentTokenController;
 use App\Http\Controllers\Crm\AnalyticsController;
 use App\Http\Controllers\Crm\AttachmentController;
+use App\Http\Controllers\Crm\BedsController;
 use App\Http\Controllers\Crm\CallController;
 use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientProfileController;
@@ -241,6 +243,17 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/opportunities/export', [OpportunityController::class, 'export'])->name('opportunities.export');
     });
 
+    // Грядки (crm-08): тот же план и те же сигналы, что на «Планах» и
+    // «Возможностях», но одной картинкой. Своих расчётов раздел не добавляет.
+    Route::middleware('permission:crm-beds.view')->group(function () {
+        Route::get('/beds', [BedsController::class, 'index'])->name('beds.index');
+        // До /beds/{client}: иначе «data» ушло бы в биндинг клиента.
+        Route::get('/beds/data', [BedsController::class, 'data'])->name('beds.data');
+        Route::get('/beds/{client}/details', [BedsController::class, 'details'])
+            ->name('beds.details')
+            ->whereNumber('client');
+    });
+
     Route::middleware('permission:crm-plans.edit')->group(function () {
         Route::post('/plans', [PlanController::class, 'store'])->name('plans.store');
         Route::post('/plans/copy-previous', [PlanController::class, 'copyPrevious'])
@@ -263,6 +276,22 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::put('/team/{manager}/active', [TeamController::class, 'setActive'])
             ->name('team.active')
             ->whereNumber('manager');
+    });
+
+    // Токены ИИ-агентов (crm-13). Только у РОПа: токен даёт запись в CRM
+    // от имени сотрудника, и выдавать его себе сотрудник не должен.
+    Route::middleware('permission:crm-agent-tokens.view')->group(function () {
+        Route::get('/agent-tokens', [AgentTokenController::class, 'index'])->name('agent-tokens.index');
+    });
+
+    Route::middleware('permission:crm-agent-tokens.create')->group(function () {
+        Route::post('/agent-tokens', [AgentTokenController::class, 'store'])->name('agent-tokens.store');
+    });
+
+    Route::middleware('permission:crm-agent-tokens.delete')->group(function () {
+        Route::delete('/agent-tokens/{token}', [AgentTokenController::class, 'destroy'])
+            ->name('agent-tokens.destroy')
+            ->whereNumber('token');
     });
 
     Route::middleware('permission:crm-analytics.view')->group(function () {
