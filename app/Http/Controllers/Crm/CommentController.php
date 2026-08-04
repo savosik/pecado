@@ -27,7 +27,7 @@ class CommentController extends CrmController
     ) {}
 
     /**
-     * Сквозная лента клиента: комментарии по нему, его заказам и отгрузкам.
+     * Сквозная лента клиента: записи менеджеров и документы клиента в одной хронологии.
      */
     public function timeline(Request $request, int $client): JsonResponse
     {
@@ -39,8 +39,18 @@ class CommentController extends CrmController
             ->visibleInCrm($actor)
             ->findOrFail($client);
 
+        $validated = $request->validate([
+            'types' => ['sometimes', 'array'],
+            'types.*' => ['string', Rule::in(ClientTimelineService::types())],
+        ]);
+
         return response()->json(
-            $this->timeline->forClient($clientModel, $actor, $this->perPage($request, 20))
+            $this->timeline->forClient(
+                $clientModel,
+                $actor,
+                $this->perPage($request, 20),
+                $validated['types'] ?? null,
+            )
         );
     }
 

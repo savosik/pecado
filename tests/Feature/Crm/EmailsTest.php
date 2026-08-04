@@ -226,8 +226,9 @@ class EmailsTest extends TestCase
         CrmEmail::factory()->by($this->manager)->on($order)->sent()->create(['subject' => 'Отправленное']);
         CrmEmail::factory()->by($this->manager)->on($order)->create(['subject' => 'Черновик']);
 
+        // Сам заказ тоже событие ленты, поэтому сужаемся до писем.
         $timeline = $this->actingAs($this->manager)
-            ->getJson(route('crm.clients.timeline', $this->client))
+            ->getJson(route('crm.clients.timeline', [$this->client, 'types' => ['email']]))
             ->assertOk()
             ->json('data');
 

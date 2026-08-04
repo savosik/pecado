@@ -100,8 +100,9 @@ class TasksTest extends TestCase
             'entity_id' => $order->id,
         ]))->assertCreated();
 
+        // Сам заказ тоже событие ленты, поэтому сужаемся до задач.
         $timeline = $this->actingAs($this->manager)
-            ->getJson(route('crm.clients.timeline', $this->client))
+            ->getJson(route('crm.clients.timeline', [$this->client, 'types' => ['task']]))
             ->assertOk()
             ->json('data');
 

@@ -100,6 +100,18 @@ export function useCommentFeed(url, params = {}) {
         }
     }, []);
 
+    /**
+     * Поставить готовую запись в начало ленты.
+     *
+     * Нужна ленте-чату: задача, письмо и звонок создаются своими эндпоинтами,
+     * и перечитывать всю страницу ради одной новой записи означало бы терять
+     * позицию скролла на каждое действие.
+     */
+    const prepend = useCallback((entry) => {
+        setEntries((prev) => [entry, ...prev]);
+        setTotal((prev) => prev + 1);
+    }, []);
+
     return {
         entries,
         total,
@@ -112,5 +124,6 @@ export function useCommentFeed(url, params = {}) {
         create,
         update,
         remove,
+        prepend,
     };
 }

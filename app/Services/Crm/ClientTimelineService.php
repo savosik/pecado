@@ -5,6 +5,8 @@ namespace App\Services\Crm;
 use App\Models\CrmComment;
 use App\Models\CrmEmail;
 use App\Models\CrmTask;
+use App\Models\Order;
+use App\Models\Shipment;
 use App\Models\User;
 use App\Support\Crm\CrmAttachments;
 use App\Support\Crm\CrmEntityMap;
@@ -14,11 +16,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Сквозная лента клиента: всё, что менеджеры оставили по нему и его документам.
+ * Сквозная лента клиента: всё, что происходило с ним и вокруг него.
  *
- * Источников уже два — комментарии и задачи, письма (crm-10) добавятся третьим.
- * Все они сводятся к одной форме записи, а не заводят по вкладке: карточка клиента
- * должна показывать одну хронологию, а не три ленты с разным поведением.
+ * Источников пять: что менеджеры написали (комментарии, задачи, письма) и что
+ * клиент сделал (заказы, реализации). Все сводятся к одной форме записи, а не
+ * заводят по вкладке: карточка клиента должна показывать одну хронологию,
+ * а не пять лент с разным поведением.
+ *
+ * Документы отличаются от записей менеджеров только флагом `system`: у них нет
+ * автора и их нельзя править. Отдельной формой они не заводятся — иначе фронт
+ * рисовал бы ленту двумя разными компонентами и рассинхронизировался бы в первом
+ * же изменении.
  */
 class ClientTimelineService
 {
@@ -32,58 +40,134 @@ class ClientTimelineService
 
     private const TYPE_EMAIL = 'email';
 
+    private const TYPE_ORDER = 'order';
+
+    private const TYPE_SHIPMENT = 'shipment';
+
+    /**
+     * Все типы записей ленты — для валидации фильтра `types[]`.
+     *
+     * @return list<string>
+     */
+    public static function types(): array
+    {
+        return [
+            self::TYPE_COMMENT,
+            self::TYPE_TASK,
+            self::TYPE_EMAIL,
+            self::TYPE_ORDER,
+            self::TYPE_SHIPMENT,
+        ];
+    }
+
     public function __construct(
         private readonly CrmTaskService $tasks,
         private readonly CrmEmailService $emails,
     ) {}
 
     /**
-     * Лента клиента: комментарии и задачи по нему самому, его заказам и отгрузкам.
+     * Лента клиента: записи менеджеров и документы клиента в одной хронологии.
      *
      * Источники сливаются UNION-ом по ключам (тип, id, дата), и только страница
-     * результата догружается моделями. Альтернатива — вычитать оба источника целиком
+     * результата догружается моделями. Альтернатива — вычитать все источники целиком
      * и слить в памяти — на клиенте с длинной историей означала бы тянуть сотни
      * записей ради двадцати показанных.
      *
+     * @param  list<string>|null  $types  фильтр источников; null — все
      * @return LengthAwarePaginator<int, array<string, mixed>>
      */
-    public function forClient(User $client, User $viewer, int $perPage = 20): LengthAwarePaginator
+    public function forClient(User $client, User $viewer, int $perPage = 20, ?array $types = null): LengthAwarePaginator
     {
         $clientId = (int) $client->getKey();
+        $wanted = $types === null || $types === []
+            ? self::types()
+            : array_values(array_intersect(self::types(), $types));
 
-        $comments = DB::table('crm_comments')
-            ->selectRaw("'".self::TYPE_COMMENT."' as source, id, created_at as happened_at, is_pinned")
-            ->where('client_user_id', $clientId)
-            ->whereNull('deleted_at');
+        $sources = [];
 
-        $tasks = DB::table('crm_tasks')
-            ->selectRaw("'".self::TYPE_TASK."' as source, id, created_at as happened_at, 0 as is_pinned")
-            ->where('client_user_id', $clientId)
-            ->whereNull('deleted_at');
+        if (in_array(self::TYPE_COMMENT, $wanted, true)) {
+            $sources[] = DB::table('crm_comments')
+                ->selectRaw("'".self::TYPE_COMMENT."' as source, id, created_at as happened_at, is_pinned")
+                ->where('client_user_id', $clientId)
+                ->whereNull('deleted_at');
+        }
 
-        // Черновики в ленту не идут: письмо становится событием в жизни клиента,
-        // только когда его отправили.
-        $emails = DB::table('crm_emails')
-            ->selectRaw("'".self::TYPE_EMAIL."' as source, id, created_at as happened_at, 0 as is_pinned")
-            ->where('client_user_id', $clientId)
-            ->whereIn('status', ['queued', 'sent', 'failed']);
+        if (in_array(self::TYPE_TASK, $wanted, true)) {
+            $tasks = DB::table('crm_tasks')
+                ->selectRaw("'".self::TYPE_TASK."' as source, id, created_at as happened_at, 0 as is_pinned")
+                ->where('client_user_id', $clientId)
+                ->whereNull('deleted_at');
 
-        // Задачи коллег по общему клиенту рядовому менеджеру не показываем — то же
-        // правило, что в CrmTaskPolicy: поручения между сотрудниками не публичная лента.
-        if (! $viewer->can('crm-clients-all.view')) {
-            $tasks->where(fn ($query) => $query
-                ->where('author_id', $viewer->getKey())
-                ->orWhere('assignee_id', $viewer->getKey()));
+            // Задачи коллег по общему клиенту рядовому менеджеру не показываем — то же
+            // правило, что в CrmTaskPolicy: поручения между сотрудниками не публичная лента.
+            if (! $viewer->can('crm-clients-all.view')) {
+                $tasks->where(fn ($query) => $query
+                    ->where('author_id', $viewer->getKey())
+                    ->orWhere('assignee_id', $viewer->getKey()));
+            }
+
+            $sources[] = $tasks;
+        }
+
+        if (in_array(self::TYPE_EMAIL, $wanted, true)) {
+            // Черновики в ленту не идут: письмо становится событием в жизни клиента,
+            // только когда его отправили.
+            $sources[] = DB::table('crm_emails')
+                ->selectRaw("'".self::TYPE_EMAIL."' as source, id, created_at as happened_at, 0 as is_pinned")
+                ->where('client_user_id', $clientId)
+                ->whereIn('status', ['queued', 'sent', 'failed']);
+        }
+
+        if (in_array(self::TYPE_ORDER, $wanted, true)) {
+            // Бизнес-дата 1С, а не created_at: вся историческая база импортирована
+            // разом, и по created_at заказы 2024 года встали бы поверх свежих записей.
+            // whereNull('deleted_at') явно — DB::table() не применяет SoftDeletes.
+            $sources[] = DB::table('orders')
+                ->selectRaw("'".self::TYPE_ORDER."' as source, id, COALESCE(erp_created_at, created_at) as happened_at, 0 as is_pinned")
+                ->where('user_id', $clientId)
+                ->whereNull('deleted_at');
+        }
+
+        if (in_array(self::TYPE_SHIPMENT, $wanted, true)) {
+            $sources[] = DB::table('shipments')
+                ->selectRaw("'".self::TYPE_SHIPMENT."' as source, id, COALESCE(erp_created_at, date, created_at) as happened_at, 0 as is_pinned")
+                ->where('user_id', $clientId)
+                ->whereNull('deleted_at');
+        }
+
+        if ($sources === []) {
+            return $this->emptyPage($perPage);
+        }
+
+        $union = array_shift($sources);
+
+        foreach ($sources as $source) {
+            $union->unionAll($source);
         }
 
         $paginator = DB::query()
-            ->fromSub($comments->unionAll($tasks)->unionAll($emails), 'timeline')
+            ->fromSub($union, 'timeline')
             ->orderByDesc('is_pinned')
             ->orderByDesc('happened_at')
             ->orderByDesc('id')
+            // Четвёртый ключ: id уникален внутри источника, но не между ними —
+            // без него страницы «плавали» бы на записях с одинаковой датой.
+            ->orderBy('source')
             ->paginate($perPage);
 
         return $this->hydrate($paginator, $viewer);
+    }
+
+    /**
+     * Пустая страница — когда фильтр не оставил ни одного источника.
+     *
+     * @return LengthAwarePaginator<int, array<string, mixed>>
+     */
+    private function emptyPage(int $perPage): LengthAwarePaginator
+    {
+        return new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPage, 1, [
+            'path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(),
+        ]);
     }
 
     /**
@@ -117,34 +201,119 @@ class ClientTimelineService
             ->get()
             ->keyBy('id');
 
+        $orders = Order::query()
+            ->whereIn('id', $rows->where('source', self::TYPE_ORDER)->pluck('id')->all())
+            ->withCount('items')
+            ->get()
+            ->keyBy('id');
+
+        $shipments = Shipment::query()
+            ->whereIn('id', $rows->where('source', self::TYPE_SHIPMENT)->pluck('id')->all())
+            ->withCount('items')
+            ->get()
+            ->keyBy('id');
+
         /** @var LengthAwarePaginator<int, array<string, mixed>> $hydrated */
-        $hydrated = $paginator->through(function (object $row) use ($comments, $tasks, $emails, $viewer): array {
+        $hydrated = $paginator->through(function (object $row) use ($comments, $tasks, $emails, $orders, $shipments, $viewer): array {
             $id = (int) $row->id;
 
-            if ($row->source === self::TYPE_COMMENT) {
-                $comment = $comments->get($id);
-
-                return $comment instanceof CrmComment
+            // Неизвестный источник уходит в заглушку, а не роняет ленту: между
+            // выкаткой кода и прогоном миграции состав источников может разойтись.
+            return match ($row->source) {
+                self::TYPE_COMMENT => ($comment = $comments->get($id)) instanceof CrmComment
                     ? $this->commentEntry($comment, $viewer)
-                    : $this->missingEntry(self::TYPE_COMMENT, $id);
-            }
-
-            if ($row->source === self::TYPE_TASK) {
-                $task = $tasks->get($id);
-
-                return $task instanceof CrmTask
+                    : $this->missingEntry(self::TYPE_COMMENT, $id),
+                self::TYPE_TASK => ($task = $tasks->get($id)) instanceof CrmTask
                     ? $this->taskEntry($task, $viewer)
-                    : $this->missingEntry(self::TYPE_TASK, $id);
-            }
-
-            $email = $emails->get($id);
-
-            return $email instanceof CrmEmail
-                ? $this->emailEntry($email, $viewer)
-                : $this->missingEntry(self::TYPE_EMAIL, $id);
+                    : $this->missingEntry(self::TYPE_TASK, $id),
+                self::TYPE_EMAIL => ($email = $emails->get($id)) instanceof CrmEmail
+                    ? $this->emailEntry($email, $viewer)
+                    : $this->missingEntry(self::TYPE_EMAIL, $id),
+                self::TYPE_ORDER => ($order = $orders->get($id)) instanceof Order
+                    ? $this->orderEntry($order, $viewer)
+                    : $this->missingEntry(self::TYPE_ORDER, $id),
+                self::TYPE_SHIPMENT => ($shipment = $shipments->get($id)) instanceof Shipment
+                    ? $this->shipmentEntry($shipment, $viewer)
+                    : $this->missingEntry(self::TYPE_SHIPMENT, $id),
+                default => $this->missingEntry((string) $row->source, $id),
+            };
         });
 
         return $hydrated;
+    }
+
+    /**
+     * Заказ в общей форме записи ленты.
+     *
+     * Автора нет и правки нет: документ пришёл из 1С, а не написан менеджером.
+     * Флаг `system` даёт фронту отличить «что случилось» от «что записали».
+     *
+     * @return array<string, mixed>
+     */
+    public function orderEntry(Order $order, User $viewer): array
+    {
+        $happened = $order->erp_created_at ?? $order->created_at;
+
+        return [
+            'type' => self::TYPE_ORDER,
+            'id' => (int) $order->getKey(),
+            'system' => true,
+            'happened_at' => $happened?->toIso8601String(),
+            'happened_at_label' => $happened?->format('d.m.Y H:i'),
+            'author' => null,
+            'title' => 'Заказ №'.($order->erp_number ?: $order->number ?: $order->getKey()),
+            'excerpt' => $order->comment,
+            'amount_label' => $this->money((float) $order->total_amount, $order->currency_code),
+            'status_label' => $order->status->label(),
+            'status_color' => $order->status->color(),
+            'items_count' => (int) ($order->items_count ?? 0),
+            'entity' => CrmEntityMap::describe($order, $viewer),
+            'attachments_count' => 0,
+            'can' => ['update' => false, 'delete' => false],
+        ];
+    }
+
+    /**
+     * Реализация в общей форме записи ленты.
+     *
+     * @return array<string, mixed>
+     */
+    public function shipmentEntry(Shipment $shipment, User $viewer): array
+    {
+        $happened = $shipment->erp_created_at ?? $shipment->date ?? $shipment->created_at;
+
+        return [
+            'type' => self::TYPE_SHIPMENT,
+            'id' => (int) $shipment->getKey(),
+            'system' => true,
+            'happened_at' => $happened?->toIso8601String(),
+            'happened_at_label' => $happened?->format('d.m.Y H:i'),
+            'author' => null,
+            'title' => 'Реализация №'.($shipment->erp_number ?: $shipment->number ?: $shipment->getKey()),
+            'excerpt' => null,
+            'amount_label' => $this->money((float) $shipment->total_amount, $shipment->currency_code),
+            'status_label' => $shipment->status_label,
+            'status_color' => $shipment->status === 'completed' ? 'green' : 'blue',
+            'items_count' => (int) ($shipment->items_count ?? 0),
+            'entity' => CrmEntityMap::describe($shipment, $viewer),
+            'attachments_count' => 0,
+            'can' => ['update' => false, 'delete' => false],
+        ];
+    }
+
+    /**
+     * Сумма документа с валютой — форматируется на сервере, как и даты.
+     */
+    private function money(float $amount, ?string $currencyCode): string
+    {
+        $symbol = match ($currencyCode) {
+            'RUB', null => '₽',
+            'KZT' => '₸',
+            'BYN' => 'Br',
+            default => $currencyCode,
+        };
+
+        return number_format($amount, 2, ',', ' ').' '.$symbol;
     }
 
     /**
