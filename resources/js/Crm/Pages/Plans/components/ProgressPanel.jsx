@@ -6,7 +6,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { ProgressBar, ProgressRoot } from '@/components/ui/progress';
-import { LuDownload } from 'react-icons/lu';
+import { LuDownload, LuX } from 'react-icons/lu';
 import BurndownChart from './BurndownChart';
 
 const money = (value) => (value === null || value === undefined
@@ -56,54 +56,88 @@ function KpiTile({ title, value, hint, accent = 'gray' }) {
  * Факт приходит с сервера из ShipmentAnalyticsService — той же цифрой, что
  * показывает /crm/analytics. Ничего не пересчитываем на клиенте: расхождение
  * этих экранов в цифрах было бы багом, а не «разными методиками».
+ *
+ * Два уровня скоупа. Верхний (отдел или менеджер) задаёт список клиентов и не
+ * меняется при провале в клиента — иначе, кликнув по строке таблицы, менеджер
+ * терял бы сам список и не мог перейти к следующему. Нижний (выбранный клиент)
+ * меняет только сводку и burndown.
  */
 export default function ProgressPanel({ month, canSeeAll = false }) {
     const [scope, setScope] = useState('department');
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [data, setData] = useState(null);
+    const [clientId, setClientId] = useState(null);
+
+    const [parentData, setParentData] = useState(null);
+    const [clientDetail, setClientDetail] = useState(null);
     const [burndown, setBurndown] = useState(null);
     const [managers, setManagers] = useState([]);
 
-    const scopeParams = useMemo(() => {
-        if (scope === 'department') {
-            return { month, scope: 'department' };
-        }
+    const [loadingScope, setLoadingScope] = useState(true);
+    const [loadingDetail, setLoadingDetail] = useState(false);
+    const [error, setError] = useState(null);
 
-        return { month, scope: 'manager', scope_id: Number(scope) };
-    }, [month, scope]);
+    const scopeParams = useMemo(() => (scope === 'department'
+        ? { month, scope: 'department' }
+        : { month, scope: 'manager', scope_id: Number(scope) }), [month, scope]);
 
-    const load = useCallback(async () => {
-        setLoading(true);
+    const detailParams = useMemo(() => (clientId === null
+        ? scopeParams
+        : { month, scope: 'client', scope_id: clientId }), [clientId, month, scopeParams]);
+
+    // Верхний уровень: сводка скоупа, список клиентов и разрез по менеджерам.
+    const loadScope = useCallback(async () => {
+        setLoadingScope(true);
         setError(null);
 
         try {
-            const requests = [
-                axios.get(route('crm.plans.progress'), { params: scopeParams }),
-                axios.get(route('crm.plans.burndown'), { params: scopeParams }),
-            ];
+            const requests = [axios.get(route('crm.plans.progress'), { params: scopeParams })];
 
             if (canSeeAll) {
                 requests.push(axios.get(route('crm.plans.by-manager'), { params: { month } }));
             }
 
-            const [progressRes, burndownRes, managersRes] = await Promise.all(requests);
+            const [progressRes, managersRes] = await Promise.all(requests);
 
-            setData(progressRes.data);
-            setBurndown(burndownRes.data);
+            setParentData(progressRes.data);
             setManagers(managersRes?.data?.rows ?? []);
         } catch (e) {
             setError(e?.response?.data?.message || 'Не удалось загрузить выполнение планов.');
         } finally {
-            setLoading(false);
+            setLoadingScope(false);
         }
     }, [scopeParams, canSeeAll, month]);
 
-    useEffect(() => {
-        load();
-    }, [load]);
+    // Нижний уровень: burndown всегда по выбранному объекту, сводка — только
+    // когда выбран клиент (для скоупа она уже приехала верхним запросом).
+    const loadDetail = useCallback(async () => {
+        setLoadingDetail(true);
 
-    if (loading && data === null) {
+        try {
+            const requests = [axios.get(route('crm.plans.burndown'), { params: detailParams })];
+
+            if (clientId !== null) {
+                requests.push(axios.get(route('crm.plans.progress'), { params: detailParams }));
+            }
+
+            const [burndownRes, detailRes] = await Promise.all(requests);
+
+            setBurndown(burndownRes.data);
+            setClientDetail(detailRes?.data ?? null);
+        } catch (e) {
+            setError(e?.response?.data?.message || 'Не удалось загрузить график.');
+        } finally {
+            setLoadingDetail(false);
+        }
+    }, [detailParams, clientId]);
+
+    useEffect(() => {
+        loadScope();
+    }, [loadScope]);
+
+    useEffect(() => {
+        loadDetail();
+    }, [loadDetail]);
+
+    if (loadingScope && parentData === null) {
         return (
             <HStack justify="center" py={10}>
                 <Spinner size="lg" />
@@ -115,12 +149,33 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
         return <Alert status="error" title="Ошибка">{error}</Alert>;
     }
 
-    if (data === null) {
+    if (parentData === null) {
         return null;
     }
 
-    const { summary, distribution, clients = [], scopeOptions = [] } = data;
+    const detail = clientId === null ? parentData : clientDetail;
+    const clients = parentData.clients ?? [];
+    const scopeOptions = parentData.scopeOptions ?? [];
+
+    // Пока сводка по выбранному клиенту не приехала, показываем скоуп — иначе
+    // плитки на мгновение опустели бы.
+    const shown = detail ?? parentData;
+    const summary = shown.summary;
+    const distribution = clientId === null ? shown.distribution : null;
     const pace = summary.pace ? PACE[summary.pace] : null;
+    const busy = loadingScope || loadingDetail;
+
+    const selectScope = (value) => {
+        setScope(value);
+        // Клиент принадлежал прежнему скоупу — при смене менеджера он бессмыслен.
+        setClientId(null);
+        setClientDetail(null);
+    };
+
+    const selectClient = (value) => {
+        setClientId(value);
+        setClientDetail(null);
+    };
 
     return (
         <VStack align="stretch" gap={4}>
@@ -130,7 +185,7 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
                         <select
                             style={selectStyle}
                             value={scope}
-                            onChange={(e) => setScope(e.target.value)}
+                            onChange={(e) => selectScope(e.target.value)}
                         >
                             <option value="department">Отдел целиком</option>
                             {scopeOptions.map((manager) => (
@@ -138,17 +193,41 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
                             ))}
                         </select>
                     )}
-                    <Text fontSize="sm" color="fg.muted">
-                        {data.scope.label} · {data.monthLabel} · клиентов в расчёте: {data.scope.clients_count}
-                    </Text>
-                    {loading && <Spinner size="xs" />}
+
+                    {clients.length > 0 && (
+                        <select
+                            style={selectStyle}
+                            value={clientId ?? ''}
+                            onChange={(e) => selectClient(e.target.value ? Number(e.target.value) : null)}
+                        >
+                            <option value="">Все клиенты скоупа</option>
+                            {clients.map((client) => (
+                                <option key={client.id} value={client.id}>{client.name}</option>
+                            ))}
+                        </select>
+                    )}
+
+                    {busy && <Spinner size="xs" />}
                 </HStack>
 
                 <Button size="sm" variant="outline" asChild>
-                    <a href={route('crm.plans.export', scopeParams)}>
+                    <a href={route('crm.plans.export', detailParams)}>
                         <LuDownload /> Выгрузить XLSX
                     </a>
                 </Button>
+            </HStack>
+
+            <HStack gap={2} flexWrap="wrap" align="center">
+                <Text fontSize="sm" fontWeight="600">{shown.scope.label}</Text>
+                <Text fontSize="sm" color="fg.muted">
+                    · {shown.monthLabel}
+                    {clientId === null && ` · клиентов в расчёте: ${shown.scope.clients_count}`}
+                </Text>
+                {clientId !== null && (
+                    <Button size="xs" variant="ghost" onClick={() => selectClient(null)}>
+                        <LuX /> Вернуться к скоупу
+                    </Button>
+                )}
             </HStack>
 
             {summary.plan === null && (
@@ -201,7 +280,11 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
                 </Alert>
             )}
 
-            <BurndownChart points={burndown?.points ?? []} plan={burndown?.plan ?? null} />
+            <BurndownChart
+                points={burndown?.points ?? []}
+                plan={burndown?.plan ?? null}
+                subject={shown.scope.label}
+            />
 
             {canSeeAll && managers.length > 0 && (
                 <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4}>
@@ -220,7 +303,12 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
                             </Table.Header>
                             <Table.Body>
                                 {managers.map((row) => (
-                                    <Table.Row key={row.manager_id}>
+                                    <Table.Row
+                                        key={row.manager_id}
+                                        cursor="pointer"
+                                        bg={String(scope) === String(row.manager_id) ? 'bg.subtle' : undefined}
+                                        onClick={() => selectScope(String(row.manager_id))}
+                                    >
                                         <Table.Cell>
                                             <Text fontSize="sm" fontWeight="500">{row.name}</Text>
                                         </Table.Cell>
@@ -253,7 +341,8 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
             <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4}>
                 <Text fontWeight="600" mb={1}>По клиентам</Text>
                 <Text fontSize="xs" color="fg.muted" mb={3}>
-                    Сверху — кто сильнее отстаёт от своего плана. Клиенты без плана идут в конце списка.
+                    Сверху — кто сильнее отстаёт от своего плана. Клик по строке строит график
+                    по этому клиенту; клиенты без плана идут в конце списка.
                 </Text>
 
                 {clients.length === 0 ? (
@@ -274,10 +363,22 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
                             </Table.Header>
                             <Table.Body>
                                 {clients.map((row) => (
-                                    <Table.Row key={row.id}>
+                                    <Table.Row
+                                        key={row.id}
+                                        cursor="pointer"
+                                        bg={clientId === row.id ? 'bg.subtle' : undefined}
+                                        onClick={() => selectClient(clientId === row.id ? null : row.id)}
+                                    >
                                         <Table.Cell>
-                                            <a href={route('crm.clients.show', row.id)}>
-                                                <Text fontSize="sm" fontWeight="500">{row.name}</Text>
+                                            {/* Ссылка на карточку не должна проваливать в график —
+                                                клик по строке и клик по имени решают разные задачи. */}
+                                            <a
+                                                href={route('crm.clients.show', row.id)}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <Text fontSize="sm" fontWeight="500" textDecoration="underline" textDecorationStyle="dotted">
+                                                    {row.name}
+                                                </Text>
                                             </a>
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">{money(row.plan)}</Table.Cell>

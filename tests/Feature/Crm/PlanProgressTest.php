@@ -353,6 +353,52 @@ class PlanProgressTest extends TestCase
     }
 
     #[Test]
+    public function client_scope_shows_plan_and_burndown_of_one_client(): void
+    {
+        $target = $this->client();
+        $this->shipment($target, 120000, '2026-08-04');
+        $this->plan(PlanTarget::CLIENT, $target->id, 300000);
+
+        // Второй клиент того же менеджера в цифру провала попасть не должен.
+        $other = $this->client();
+        $this->shipment($other, 500000);
+
+        $params = ['scope' => 'client', 'scope_id' => $target->id];
+        $summary = $this->progress($this->manager, $params)['summary'];
+
+        $this->assertEqualsWithDelta(300000.0, $summary['plan'], 0.01);
+        $this->assertEqualsWithDelta(120000.0, $summary['fact'], 0.01);
+        $this->assertSame(40, $summary['percent']);
+
+        $points = $this->actingAs($this->manager)
+            ->getJson(route('crm.plans.burndown', ['month' => $this->month] + $params))
+            ->assertOk()
+            ->json('points');
+
+        $this->assertCount(10, $points);
+        // До 4-го числа не отгружено ничего, дальше остаток падает на 120 000.
+        $this->assertEqualsWithDelta(300000.0, $points[2]['actual_remaining'], 0.01);
+        $this->assertEqualsWithDelta(180000.0, $points[3]['actual_remaining'], 0.01);
+    }
+
+    #[Test]
+    public function foreign_client_scope_leaks_nothing(): void
+    {
+        $foreign = $this->client($this->foreignProfile);
+        $this->shipment($foreign, 999999);
+        $this->plan(PlanTarget::CLIENT, $foreign->id, 800000);
+
+        $payload = $this->progress($this->manager, [
+            'scope' => 'client',
+            'scope_id' => $foreign->id,
+        ]);
+
+        $this->assertSame(0, $payload['scope']['clients_count']);
+        $this->assertEqualsWithDelta(0.0, $payload['summary']['fact'], 0.01);
+        $this->assertNull($payload['summary']['plan']);
+    }
+
+    #[Test]
     public function clients_table_is_sorted_by_lag(): void
     {
         $behind = $this->client();

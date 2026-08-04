@@ -70,7 +70,9 @@ export default function Index({
     const [drafts, setDrafts] = useState({});
     const [busy, setBusy] = useState(false);
     const [copyOpen, setCopyOpen] = useState(false);
-    const [tab, setTab] = useState('input');
+    // Выполнение открыто по умолчанию: план расставляют раз в месяц, а смотрят
+    // на него каждый день.
+    const [tab, setTab] = useState('progress');
 
     const dirtyCount = Object.keys(drafts).length;
 
@@ -190,9 +192,13 @@ export default function Index({
 
                 <Tabs.Root value={tab} onValueChange={(e) => setTab(e.value)} lazyMount>
                     <Tabs.List>
-                        <Tabs.Trigger value="input">Ввод планов</Tabs.Trigger>
                         <Tabs.Trigger value="progress">Выполнение</Tabs.Trigger>
+                        <Tabs.Trigger value="input">Ввод планов</Tabs.Trigger>
                     </Tabs.List>
+
+                    <Tabs.Content value="progress" px={0} pt={4}>
+                        <ProgressPanel month={month} canSeeAll={canSeeAll} />
+                    </Tabs.Content>
 
                     <Tabs.Content value="input" px={0} pt={4}>
                         <VStack gap={4} align="stretch">
@@ -388,10 +394,6 @@ export default function Index({
                                 </Card.Body>
                             </Card.Root>
                         </VStack>
-                    </Tabs.Content>
-
-                    <Tabs.Content value="progress" px={0} pt={4}>
-                        <ProgressPanel month={month} canSeeAll={canSeeAll} />
                     </Tabs.Content>
                 </Tabs.Root>
             </VStack>

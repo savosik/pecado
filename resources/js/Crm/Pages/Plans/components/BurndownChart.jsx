@@ -57,7 +57,7 @@ function makeTooltip() {
  * Пересечение нуля — план перевыполнен, поэтому ось уходит в минус, а не
  * обрезается по нулю.
  */
-export default function BurndownChart({ points = [], plan = null }) {
+export default function BurndownChart({ points = [], plan = null, subject = null }) {
     // Кирпичный бренд-цвет на тёмной подложке даёт контраст 2.2:1 — линию
     // становится не видно, поэтому в тёмной теме берётся осветлённый шаг.
     const actualColor = useColorModeValue('#9e1b32', '#e05a72');
@@ -70,7 +70,8 @@ export default function BurndownChart({ points = [], plan = null }) {
         return (
             <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={6} textAlign="center">
                 <Text color="fg.muted" fontSize="sm">
-                    План на этот месяц не задан — сгорать нечему. Поставьте план на вкладке «Ввод планов».
+                    {subject ? `«${subject}»: план` : 'План'} на этот месяц не задан — сгорать нечему.
+                    Поставьте план на вкладке «Ввод планов».
                 </Text>
             </Box>
         );
@@ -86,7 +87,9 @@ export default function BurndownChart({ points = [], plan = null }) {
 
     return (
         <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4}>
-            <Text fontWeight="600" mb={1}>Сколько осталось добрать</Text>
+            <Text fontWeight="600" mb={1}>
+                Сколько осталось добрать{subject ? ` — ${subject}` : ''}
+            </Text>
             <Text fontSize="xs" color="fg.muted" mb={3}>
                 Пунктир — равномерный темп по плану, сплошная — реальный остаток. Ниже пунктира значит идём с опережением.
             </Text>
