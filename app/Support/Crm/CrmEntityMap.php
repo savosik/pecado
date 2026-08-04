@@ -171,10 +171,10 @@ final class CrmEntityMap
     /**
      * Описание сущности для ленты и списков: тип, заголовок и ссылка.
      *
-     * Ссылка на заказ и реализацию ведёт в админку, куда роли `sales-head` и
-     * `sales-manager-crm` не ходят. Поэтому URL отдаётся только тем, кто реально
-     * может его открыть — остальным сущность показывается подписью без ссылки,
-     * чтобы не вести менеджера в 403.
+     * Все ссылки ведут внутрь CRM, включая заказы и реализации: раньше они уходили
+     * в /admin, куда роли `sales-head` и `sales-manager-crm` намеренно не пускают,
+     * и менеджер упирался в 403. `$viewer` остаётся в сигнатуре — он понадобится,
+     * когда у ссылок появятся правила видимости сложнее скоупа клиента.
      *
      * @return array{type: string, id: int, label: string, title: string, url: string|null}
      */
@@ -191,7 +191,7 @@ final class CrmEntityMap
             'id' => (int) $entity->getKey(),
             'label' => self::labelFor($type),
             'title' => self::titleFor($entity, $type),
-            'url' => self::urlFor($entity, $type, $viewer),
+            'url' => self::urlFor($entity, $type),
         ];
     }
 
@@ -209,7 +209,7 @@ final class CrmEntityMap
         };
     }
 
-    private static function urlFor(Model $entity, string $type, ?User $viewer): ?string
+    private static function urlFor(Model $entity, string $type): ?string
     {
         if ($type === self::CLIENT) {
             return route('crm.clients.show', $entity->getKey());
@@ -232,13 +232,14 @@ final class CrmEntityMap
             return $clientId === null ? null : route('crm.clients.show', $clientId);
         }
 
-        if ($viewer !== null && ! $viewer->hasAdminAccess()) {
-            return null;
-        }
-
+        // Заказы и реализации открываются в CRM, а не в админке. Раньше ссылка вела
+        // в /admin, куда роли sales-head и sales-manager-crm намеренно не пускают:
+        // менеджер видел ссылку и упирался в 403, а без неё не мог посмотреть состав
+        // документа вообще. Кнопка «Открыть в админке» осталась в самой карточке —
+        // для тех, у кого доступ есть.
         return match ($type) {
-            self::ORDER => route('admin.orders.show', $entity->getKey()),
-            self::SHIPMENT => route('admin.shipments.show', $entity->getKey()),
+            self::ORDER => route('crm.orders.show', $entity->getKey()),
+            self::SHIPMENT => route('crm.shipments.show', $entity->getKey()),
             default => null,
         };
     }

@@ -178,14 +178,14 @@ export default function ClientFeed({ clientId, client = null, clientEmail = null
             </HStack>
 
             {pinned.length > 0 && (
-                <VStack align="stretch" gap={2} pb={4} mb={3} borderBottomWidth="1px">
+                <VStack align="stretch" gap={3} pb={5} mb={4} borderBottomWidth="1px">
                     <Text fontSize="xs" fontWeight="600" color="fg.muted">Закреплено</Text>
                     {pinned.map(renderEntry)}
                 </VStack>
             )}
 
-            <Box maxH="60vh" overflowY="auto" pr={2}>
-                <VStack align="stretch" gap={5}>
+            <Box maxH="62vh" overflowY="auto" pr={2} py={1}>
+                <VStack align="stretch" gap={8}>
                     {feed.loading && feed.entries.length === 0 && (
                         <HStack justify="center" py={6}><Spinner size="sm" /></HStack>
                     )}
@@ -201,7 +201,7 @@ export default function ClientFeed({ clientId, client = null, clientEmail = null
                     )}
 
                     {days.map((day) => (
-                        <VStack key={day.key} align="stretch" gap={2.5}>
+                        <VStack key={day.key} align="stretch" gap={4}>
                             <HStack gap={3}>
                                 <Badge colorPalette="gray" variant="subtle" size="sm">
                                     {dayLabel(day.key)}

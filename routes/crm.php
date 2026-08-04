@@ -7,6 +7,7 @@ use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientProfileController;
 use App\Http\Controllers\Crm\CommentController;
 use App\Http\Controllers\Crm\DashboardController;
+use App\Http\Controllers\Crm\DocumentController;
 use App\Http\Controllers\Crm\EmailController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\TaskController;
@@ -45,6 +46,16 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/clients/{client}', [ClientController::class, 'show'])
             ->name('clients.show')
             ->whereNumber('client');
+
+        // Документы клиента внутри CRM. Отдельного права нет: «вижу клиента,
+        // но не вижу его заказы» — состояние, которого быть не должно. Доступ
+        // решает тот же скоуп через CrmEntityResolver, чужой документ — 404.
+        Route::get('/orders/{order}', [DocumentController::class, 'order'])
+            ->name('orders.show')
+            ->whereNumber('order');
+        Route::get('/shipments/{shipment}', [DocumentController::class, 'shipment'])
+            ->name('shipments.show')
+            ->whereNumber('shipment');
     });
 
     // Профиль клиента — то, что знает менеджер, но не знает 1С.

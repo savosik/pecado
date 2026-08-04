@@ -126,26 +126,28 @@ class ClientTimelineTest extends TestCase
     }
 
     #[Test]
-    public function entity_link_is_hidden_from_crm_only_roles(): void
+    public function entity_link_leads_into_crm_for_every_sales_role(): void
     {
         $order = Order::factory()->create(['user_id' => $this->client->id]);
         CrmComment::factory()->on($order)->by($this->manager)->create();
 
-        // sales-manager ходит в админку — ссылка на заказ ему полезна.
-        $this->actingAs($this->manager)
-            ->getJson(route('crm.clients.timeline', $this->client))
-            ->assertOk()
-            ->assertJsonPath('data.0.entity.url', route('admin.orders.show', $order->id));
+        $crmUrl = route('crm.orders.show', $order->id);
 
-        // sales-head в /admin намеренно не пускают: вместо ссылки в 403
-        // показываем подпись без URL.
+        // Раньше ссылка вела в /admin, и роли без доступа туда получали null:
+        // менеджер видел подпись без ссылки и не мог посмотреть состав заказа.
+        // Теперь документ открывается внутри CRM — одинаково для всех ролей продаж.
+        $this->actingAs($this->manager)
+            ->getJson(route('crm.clients.timeline', [$this->client, 'types' => ['comment']]))
+            ->assertOk()
+            ->assertJsonPath('data.0.entity.url', $crmUrl);
+
         $head = User::factory()->create();
         $head->assignRole('sales-head');
 
         $this->actingAs($head)
-            ->getJson(route('crm.clients.timeline', $this->client))
+            ->getJson(route('crm.clients.timeline', [$this->client, 'types' => ['comment']]))
             ->assertOk()
-            ->assertJsonPath('data.0.entity.url', null)
+            ->assertJsonPath('data.0.entity.url', $crmUrl)
             ->assertJsonPath('data.0.entity.title', 'Заказ №'.$order->number);
     }
 

@@ -148,7 +148,10 @@ class Shipment extends Model implements HasMedia
             ->values();
 
         if ($orderUuids->isEmpty()) {
-            return collect();
+            // Именно Eloquent-коллекция, а не collect(): при объявленном типе возврата
+            // обычная Support-коллекция роняла метод TypeError на каждой реализации
+            // без привязки к заказу.
+            return Order::query()->whereRaw('1 = 0')->get();
         }
 
         return Order::withoutGlobalScopes()

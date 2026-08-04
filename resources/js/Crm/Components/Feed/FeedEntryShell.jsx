@@ -72,13 +72,13 @@ export default function FeedEntryShell({
             borderRadius="md"
             bg={pinned ? 'yellow.50' : 'bg.panel'}
             _dark={{ bg: pinned ? 'yellow.950' : 'bg.panel' }}
-            px={3}
-            py={2.5}
+            px={4}
+            py={3.5}
             opacity={muted ? 0.7 : 1}
             transition="border-color 0.15s"
             _hover={{ borderColor: pinned ? 'yellow.400' : 'border' }}
         >
-            <VStack align="stretch" gap={2}>
+            <VStack align="stretch" gap={2.5}>
                 <HStack justify="space-between" align="start" gap={2}>
                     <HStack gap={2} flexWrap="wrap" flex="1" minW="0">
                         <HStack gap={1.5} color={`${palette}.fg`} flexShrink={0}>
