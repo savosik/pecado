@@ -6,105 +6,113 @@ use App\Enums\Crm\ClientLifecycleStatus;
 use App\Enums\Crm\ClientSentiment;
 use App\Enums\Crm\PaymentBehavior;
 use App\Enums\Crm\PreferredChannel;
-use App\Enums\Crm\TaskStatus;
+use App\Models\CrmClientFilterPreset;
 use App\Models\CrmClientProfileRevision;
 use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Crm\ClientLifecycleService;
+use App\Services\Crm\ClientListService;
 use App\Services\Crm\ClientProfileService;
 use App\Services\Crm\CrmTaskService;
+use App\Support\Crm\ClientListFilters;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ClientController extends CrmController
 {
-    public function index(Request $request, CrmTaskService $tasks): Response
+    public function index(Request $request, CrmTaskService $tasks, ClientListService $clients): Response
     {
         $actor = $this->crmActor($request);
         $seesAll = $this->seesAllClients($request);
 
         $canSeeProfile = $actor->can('crm-profile.view');
         $canSeeTasks = $actor->can('crm-tasks.view');
+        $canSeePlans = $actor->can('crm-plans.view');
 
-        $query = User::query()
-            ->visibleInCrm($actor)
-            ->with(['personalManager:id,name', 'clientStatus:id,name,color'])
-            ->when($canSeeProfile, fn ($q) => $q->with(
-                'crmProfile:id,user_id,lifecycle_status,lifecycle_hint'
-            ))
-            ->when($canSeeTasks, fn ($q) => $q->withCount($tasks->activeTasksCount()));
-
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%");
-            });
-        }
-
-        // Фильтр по менеджеру — только тем, кто и так видит весь отдел.
-        // Иначе менеджер подставил бы чужой manager_id в адрес и увидел чужих.
-        $managerId = $seesAll ? $request->input('manager_id') : null;
-
-        if ($managerId) {
-            $query->where('personal_manager_id', $managerId);
-        }
-
-        $lifecycle = $canSeeProfile
-            ? ClientLifecycleStatus::tryFrom((string) $request->input('lifecycle'))
-            : null;
-
-        if ($lifecycle !== null) {
-            $this->filterByLifecycle($query, $lifecycle);
-        }
-
-        // Покрытие задачами: «по кому нет следующего шага» — рабочий список
-        // на неделю, а не отчётная цифра.
-        $coverage = $canSeeTasks && in_array($request->input('coverage'), ['uncovered', 'covered'], true)
-            ? (string) $request->input('coverage')
-            : null;
-
-        if ($coverage !== null) {
-            $active = TaskStatus::activeValues();
-            $hasActiveTask = fn ($q) => $q->whereIn('status', $active);
-
-            $coverage === 'uncovered'
-                ? $query->whereDoesntHave('crmTasks', $hasActiveTask)
-                : $query->whereHas('crmTasks', $hasActiveTask);
-        }
-
-        $sortBy = $request->input('sort_by', 'id');
-        $sortOrder = $request->input('sort_order', 'desc');
-
-        $allowedSortFields = ['id', 'name', 'email', 'created_at'];
-        if (in_array($sortBy, $allowedSortFields, true)) {
-            $query->orderBy($sortBy, $sortOrder === 'asc' ? 'asc' : 'desc');
-        }
-
-        $perPage = (int) $request->input('per_page', 15);
-        $perPage = min(max($perPage, 5), 100);
+        $filters = ClientListFilters::fromRequest($request, $actor, $seesAll);
 
         return Inertia::render('Crm/Pages/Clients/Index', [
-            'clients' => $query->paginate($perPage)->withQueryString(),
+            'clients' => $clients->paginate($actor, $filters),
             'managers' => $seesAll
                 ? PersonalManager::query()->select('id', 'name')->orderBy('name')->get()
                 : [],
             'canSeeAll' => $seesAll,
             'canSeeTasks' => $canSeeTasks,
+            'canSeePlans' => $canSeePlans,
             'uncoveredCount' => $canSeeTasks ? $tasks->uncoveredClients($actor)->count() : null,
             'lifecycleOptions' => $canSeeProfile ? ClientLifecycleStatus::optionsWithColor() : [],
             'managerProfileLinked' => $seesAll || $actor->managerProfile !== null,
-            'filters' => [
-                'search' => $search,
-                'manager_id' => $managerId,
-                'lifecycle' => $lifecycle?->value,
-                'coverage' => $coverage,
-                'sort_by' => $sortBy,
-                'sort_order' => $sortOrder,
-                'per_page' => $perPage,
-            ],
+            'presets' => $this->presetsPayload($actor),
+            'filters' => $filters->toArray(),
         ]);
+    }
+
+    /**
+     * Сохранить текущий отбор списка.
+     *
+     * Отбор личный, поэтому отдельного права нет: он живёт под тем же
+     * `crm-clients.view`, что и сам список — ровно как пресеты отчёта продаж.
+     */
+    public function storePreset(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:80'],
+            'payload' => ['required', 'array'],
+        ]);
+
+        // Сохраняем не то, что прислал фронт, а разобранный набор: иначе в отборе
+        // осел бы мусор из адресной строки и однажды вернулся бы в запрос.
+        $filters = ClientListFilters::fromRequest(
+            new Request($data['payload']),
+            $actor,
+            $this->seesAllClients($request),
+        );
+
+        $preset = $actor->crmClientFilterPresets()->create([
+            'name' => $data['name'],
+            'payload' => $filters->toArray(),
+        ]);
+
+        return response()->json([
+            'id' => (int) $preset->getKey(),
+            'name' => $preset->name,
+            'payload' => $preset->payload,
+        ], 201);
+    }
+
+    /**
+     * Удалить свой отбор. Чужой — 404: его существование не подтверждаем.
+     */
+    public function destroyPreset(Request $request, int $preset): JsonResponse
+    {
+        $this->crmActor($request)
+            ->crmClientFilterPresets()
+            ->findOrFail($preset)
+            ->delete();
+
+        return response()->json(status: 204);
+    }
+
+    /**
+     * Личные отборы актора.
+     *
+     * @return list<array{id: int, name: string, payload: array<string, mixed>}>
+     */
+    private function presetsPayload(User $actor): array
+    {
+        return $actor->crmClientFilterPresets()
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (CrmClientFilterPreset $preset): array => [
+                'id' => (int) $preset->getKey(),
+                'name' => $preset->name,
+                'payload' => $preset->payload,
+            ])
+            ->all();
     }
 
     public function show(
@@ -150,30 +158,6 @@ class ClientController extends CrmController
                 'created_at' => $user->created_at?->format('d.m.Y H:i'),
             ],
         ]);
-    }
-
-    /**
-     * Фильтр по жизненному статусу.
-     *
-     * Клиент без профиля считается активным — так же, как задаёт дефолт колонки.
-     * Без этой ветки фильтр «Активен» прятал бы всех, кого ещё никто не описывал,
-     * то есть почти всю базу.
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder<User>  $query
-     */
-    private function filterByLifecycle(\Illuminate\Database\Eloquent\Builder $query, ClientLifecycleStatus $status): void
-    {
-        $matchesProfile = fn ($profile) => $profile->where('lifecycle_status', $status->value);
-
-        if ($status === ClientLifecycleStatus::ACTIVE) {
-            $query->where(fn ($q) => $q
-                ->whereDoesntHave('crmProfile')
-                ->orWhereHas('crmProfile', $matchesProfile));
-
-            return;
-        }
-
-        $query->whereHas('crmProfile', $matchesProfile);
     }
 
     /**

@@ -400,6 +400,19 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
+     * Реализации (отгрузки) клиента.
+     *
+     * Нужна для поиска клиента по номеру документа в списке CRM. Расчёт выручки
+     * через неё вести нельзя — он живёт в ShipmentAnalyticsService и только там.
+     *
+     * @return HasMany<Shipment, $this>
+     */
+    public function shipments(): HasMany
+    {
+        return $this->hasMany(Shipment::class);
+    }
+
+    /**
      * Подписки пользователя на изменения сущностей разделов кабинета
      * (email/telegram). См. App\Models\EntitySubscription.
      */
@@ -414,6 +427,16 @@ class User extends Authenticatable implements HasMedia
     public function crmAnalyticsFilterPresets(): HasMany
     {
         return $this->hasMany(CrmAnalyticsFilterPreset::class);
+    }
+
+    /**
+     * Личные отборы списка клиентов CRM.
+     *
+     * @return HasMany<CrmClientFilterPreset, $this>
+     */
+    public function crmClientFilterPresets(): HasMany
+    {
+        return $this->hasMany(CrmClientFilterPreset::class);
     }
 
     /**
@@ -496,6 +519,29 @@ class User extends Authenticatable implements HasMedia
     public function crmTasks(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(CrmTask::class, 'client_user_id');
+    }
+
+    /**
+     * Комментарии CRM, сводящиеся к этому клиенту.
+     *
+     * Та же денормализация, что у задач: комментарий к заказу клиента — это
+     * комментарий по клиенту. Нужна для поиска по тексту переписки в списке.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<CrmComment, $this>
+     */
+    public function crmComments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CrmComment::class, 'client_user_id');
+    }
+
+    /**
+     * Письма CRM, отправленные по этому клиенту.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<CrmEmail, $this>
+     */
+    public function crmEmails(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CrmEmail::class, 'client_user_id');
     }
 
     /**

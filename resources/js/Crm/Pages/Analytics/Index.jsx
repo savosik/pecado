@@ -13,7 +13,7 @@ import AbcXyzPanel from '@/Pages/User/Cabinet/Analytics/components/AbcXyzPanel';
 import KpiGrid from './components/KpiGrid';
 import TrendChart from './components/TrendChart';
 import FiltersBar from './components/FiltersBar';
-import PresetsBar from './components/PresetsBar';
+import PresetsBar from '@/Crm/Components/PresetsBar';
 import GapPanel from './components/GapPanel';
 
 const DEFAULT_FILTERS = {

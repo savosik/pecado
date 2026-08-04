@@ -463,8 +463,11 @@ class TasksTest extends TestCase
         $this->assertSame([$covered->id], array_column($this->clientsFor(['coverage' => 'covered']), 'id'));
 
         $rows = collect($this->clientsFor([]))->keyBy('id');
-        $this->assertSame(1, $rows[$covered->id]['active_tasks_count']);
-        $this->assertSame(0, $rows[$this->client->id]['active_tasks_count']);
+        $this->assertSame(1, $rows[$covered->id]['tasks']['active_count']);
+        $this->assertSame(0, $rows[$this->client->id]['tasks']['active_count']);
+        // Клиент без следующего шага приходит с пустой ближайшей задачей,
+        // а не с отсутствующим блоком — колонке есть что показать.
+        $this->assertNull($rows[$this->client->id]['tasks']['next']);
     }
 
     #[Test]

@@ -31,6 +31,14 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
 
     Route::middleware('permission:crm-clients.view')->group(function () {
         Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
+        // Личные отборы списка — до /clients/{client}, иначе «presets» ушло бы
+        // в маршрут карточки. Отдельного права нет: отбор личный и живёт под тем
+        // же crm-clients.view, что и сам список.
+        Route::post('/clients/presets', [ClientController::class, 'storePreset'])
+            ->name('clients.presets.store');
+        Route::delete('/clients/presets/{preset}', [ClientController::class, 'destroyPreset'])
+            ->name('clients.presets.destroy')
+            ->whereNumber('preset');
         // Без implicit binding: клиента резолвим через scope, иначе чужой
         // вернул бы 403 вместо 404 и подтвердил факт существования.
         Route::get('/clients/{client}', [ClientController::class, 'show'])

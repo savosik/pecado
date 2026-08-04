@@ -90,13 +90,13 @@ export const useResourceIndex = (routeName, filters = {}, options = {}) => {
         });
     };
 
+    // Фильтры сохраняются: раньше здесь пересобирался только search/per_page/sort_*,
+    // и ввод в поиск молча сбрасывал всё остальное (стадию, менеджера, статус).
     const handleSearch = (value) => {
         setSearchQuery(value);
         navigate({
+            ...filters,
             search: value,
-            per_page: filters.per_page,
-            sort_by: filters.sort_by,
-            sort_order: filters.sort_order,
         });
     };
 

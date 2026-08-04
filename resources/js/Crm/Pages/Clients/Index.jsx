@@ -1,118 +1,177 @@
+import { useCallback, useState } from 'react';
+import axios from 'axios';
 import { Head, router } from '@inertiajs/react';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
-import { SearchInput } from '@/Admin/Components/SearchInput';
 import { Alert } from '@/components/ui/alert';
-import { Box, Badge, HStack, Text } from '@chakra-ui/react';
+import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
 import { LuEye } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
+import { usePermission } from '@/shared/Panel/usePermission';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import PresetsBar from '@/Crm/Components/PresetsBar';
+import TaskDialog from '@/Crm/Components/TaskDialog';
+import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
+import ClientsFilterBar from './components/ClientsFilterBar';
+import QuickFilters from './components/QuickFilters';
+import TasksCell from './components/TasksCell';
+import PlanFactCell from './components/PlanFactCell';
+import LifecycleCell from './components/LifecycleCell';
+import ActivityHint from './components/ActivityHint';
+import { EmailCell, PhoneCell } from './components/ContactCells';
+import { toastError, toastSuccess } from '@/utils/toast';
 
 export default function Index({
     clients,
     managers,
     filters,
+    presets = [],
     canSeeAll,
     canSeeTasks = false,
+    canSeePlans = false,
     uncoveredCount = null,
     managerProfileLinked,
     lifecycleOptions = [],
 }) {
-    // Раздел read-only: из хука берём только поиск и сортировку,
-    // массовое удаление (оно завязано на admin.bulk-delete-*) не задействуем.
+    const { can } = usePermission();
+    // Раздел не даёт удалять клиентов (они принадлежат 1С): из хука берём
+    // только поиск и сортировку.
     const { searchQuery, handleSearch, handleSort } = useResourceIndex('crm.clients', filters, {
         entityLabel: 'Клиент',
     });
 
-    const handleManagerFilter = (managerId) => {
-        router.get(route('crm.clients.index'), { ...filters, manager_id: managerId || undefined }, {
+    // Диалоги монтируются по одному на страницу, а не на строку: пятнадцать
+    // копий модалки в DOM — верный способ уронить таблицу на скролле.
+    const [taskFor, setTaskFor] = useState(null);
+    const [emailFor, setEmailFor] = useState(null);
+    const [savedPresets, setSavedPresets] = useState(presets);
+
+    const canEditLifecycle = can('crm-profile.edit');
+    const canWriteEmail = can('crm-emails.create');
+    const canCreateTask = can('crm-tasks.create');
+
+    const applyFilters = useCallback((patch) => {
+        router.get(route('crm.clients.index'), { ...filters, ...patch }, {
             preserveState: true,
             replace: true,
         });
+    }, [filters]);
+
+    const resetFilters = useCallback(() => {
+        router.get(route('crm.clients.index'), { per_page: filters.per_page }, {
+            preserveState: false,
+            replace: true,
+        });
+    }, [filters.per_page]);
+
+    const savePreset = async (name) => {
+        try {
+            const { data } = await axios.post(route('crm.clients.presets.store'), {
+                name,
+                payload: filters,
+            });
+            setSavedPresets((prev) => [data, ...prev]);
+            toastSuccess('Отбор сохранён');
+        } catch {
+            toastError('Не удалось сохранить отбор');
+        }
     };
 
-    const handleLifecycleFilter = (lifecycle) => {
-        router.get(route('crm.clients.index'), { ...filters, lifecycle: lifecycle || undefined }, {
-            preserveState: true,
+    const deletePreset = async (id) => {
+        try {
+            await axios.delete(route('crm.clients.presets.destroy', id));
+            setSavedPresets((prev) => prev.filter((preset) => preset.id !== id));
+        } catch {
+            toastError('Не удалось удалить отбор');
+        }
+    };
+
+    const applyPreset = (preset) => {
+        router.get(route('crm.clients.index'), preset.payload || {}, {
+            preserveState: false,
             replace: true,
         });
     };
-
-    const handleCoverageFilter = (coverage) => {
-        router.get(route('crm.clients.index'), { ...filters, coverage: coverage || undefined }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    // Клиент без профиля считается активным — так же, как задаёт дефолт колонки в БД.
-    const lifecycleOf = (row) => lifecycleOptions.find(
-        (option) => option.value === (row.crm_profile?.lifecycle_status || 'active'),
-    );
 
     const columns = [
-        {
-            key: 'id',
-            label: 'ID',
-            sortable: true,
-            render: (_, row) => <Box fontFamily="mono" fontSize="sm">{row.id}</Box>,
-        },
         {
             key: 'name',
             label: 'Клиент',
             sortable: true,
-            render: (_, row) => <Text fontWeight="semibold">{row.name}</Text>,
+            render: (_, row) => (
+                <VStack align="start" gap={0}>
+                    <HStack gap={2}>
+                        <Text fontWeight="semibold">{row.name}</Text>
+                        <Text fontFamily="mono" fontSize="10px" color="fg.muted">#{row.id}</Text>
+                    </HStack>
+                    <ActivityHint activity={row.activity} />
+                </VStack>
+            ),
         },
         {
             key: 'email',
             label: 'Email',
             sortable: true,
-            render: (_, row) => <Text fontSize="sm">{row.email}</Text>,
+            render: (_, row) => (
+                <EmailCell
+                    email={row.email}
+                    canWrite={canWriteEmail}
+                    onCompose={() => setEmailFor(row)}
+                />
+            ),
         },
         {
             key: 'phone',
             label: 'Телефон',
-            render: (_, row) => <Text fontSize="sm">{row.phone || '—'}</Text>,
+            render: (_, row) => (
+                <PhoneCell
+                    phone={row.phone}
+                    digits={row.phone_digits}
+                    onCreateTask={() => setTaskFor(row)}
+                />
+            ),
         },
         ...(lifecycleOptions.length ? [{
             key: 'lifecycle',
             label: 'Стадия',
-            render: (_, row) => {
-                const status = lifecycleOf(row);
-
-                return (
-                    <HStack gap={1}>
-                        <Badge colorPalette={status?.color || 'gray'} variant="subtle">
-                            {status?.label || '—'}
-                        </Badge>
-                        {row.crm_profile?.lifecycle_hint && (
-                            <Badge colorPalette="orange" variant="outline" title="Система предлагает сменить стадию">
-                                есть предложение
-                            </Badge>
-                        )}
-                    </HStack>
-                );
-            },
+            render: (_, row) => (
+                <LifecycleCell
+                    clientId={row.id}
+                    lifecycle={row.lifecycle}
+                    options={lifecycleOptions}
+                    canEdit={canEditLifecycle}
+                />
+            ),
         }] : []),
         ...(canSeeTasks ? [{
-            key: 'tasks',
+            key: 'next_task_due',
             label: 'Задачи',
-            render: (_, row) => (row.active_tasks_count > 0
-                ? <Badge colorPalette="blue" variant="subtle">{row.active_tasks_count}</Badge>
-                : <Badge colorPalette="orange" variant="outline" title="По клиенту нет следующего шага">нет</Badge>),
+            sortable: true,
+            render: (_, row) => (
+                <TasksCell
+                    tasks={row.tasks}
+                    onCreate={canCreateTask ? () => setTaskFor(row) : undefined}
+                />
+            ),
+        }] : []),
+        ...(canSeePlans ? [{
+            key: 'plan_percent',
+            label: 'План / факт',
+            sortable: true,
+            render: (_, row) => <PlanFactCell value={row.plan_fact} />,
         }] : []),
         {
             key: 'client_status',
-            label: 'Статус клиента',
+            label: 'Статус',
             render: (_, row) => (row.client_status
                 ? <Badge colorPalette="gray" variant="subtle">{row.client_status.name}</Badge>
                 : <Text fontSize="sm" color="fg.muted">—</Text>),
         },
         ...(canSeeAll ? [{
-            key: 'personal_manager',
+            key: 'manager',
             label: 'Менеджер',
-            render: (_, row) => <Text fontSize="sm">{row.personal_manager?.name || '—'}</Text>,
+            render: (_, row) => <Text fontSize="sm">{row.manager?.name || '—'}</Text>,
         }] : []),
         {
             key: 'actions',
@@ -149,53 +208,35 @@ export default function Index({
                 </Box>
             )}
 
-            <HStack mb={4} gap={3} align="center" wrap="wrap">
-                <Box flex="1" minW="240px">
-                    <SearchInput
-                        value={searchQuery}
-                        onChange={handleSearch}
-                        placeholder="Поиск по имени, email или телефону..."
-                    />
-                </Box>
+            <PresetsBar
+                presets={savedPresets}
+                onApply={applyPreset}
+                onDelete={deletePreset}
+                onSave={savePreset}
+            />
 
-                {lifecycleOptions.length > 0 && (
-                    <select
-                        value={filters.lifecycle || ''}
-                        onChange={(e) => handleLifecycleFilter(e.target.value)}
-                        style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border)', minWidth: '180px' }}
-                    >
-                        <option value="">Все стадии</option>
-                        {lifecycleOptions.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                    </select>
-                )}
-
-                {canSeeTasks && (
-                    <select
-                        value={filters.coverage || ''}
-                        onChange={(e) => handleCoverageFilter(e.target.value)}
-                        style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border)', minWidth: '200px' }}
-                    >
-                        <option value="">Задачи: неважно</option>
-                        <option value="uncovered">Без задач{uncoveredCount !== null ? ` (${uncoveredCount})` : ''}</option>
-                        <option value="covered">С активными задачами</option>
-                    </select>
-                )}
-
-                {canSeeAll && (
-                    <select
-                        value={filters.manager_id || ''}
-                        onChange={(e) => handleManagerFilter(e.target.value)}
-                        style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border)', minWidth: '220px' }}
-                    >
-                        <option value="">Все менеджеры</option>
-                        {managers?.map((m) => (
-                            <option key={m.id} value={m.id}>{m.name}</option>
-                        ))}
-                    </select>
-                )}
-            </HStack>
+            <VStack align="stretch" gap={3} mb={4}>
+                <ClientsFilterBar
+                    filters={filters}
+                    searchQuery={searchQuery}
+                    onSearch={handleSearch}
+                    onChange={applyFilters}
+                    lifecycleOptions={lifecycleOptions}
+                    managers={managers}
+                    canSeeAll={canSeeAll}
+                    canSeeTasks={canSeeTasks}
+                    canSeePlans={canSeePlans}
+                    uncoveredCount={uncoveredCount}
+                />
+                <QuickFilters
+                    filters={filters}
+                    onApply={applyFilters}
+                    onReset={resetFilters}
+                    canSeeTasks={canSeeTasks}
+                    canSeePlans={canSeePlans}
+                    uncoveredCount={uncoveredCount}
+                />
+            </VStack>
 
             <DataTable
                 data={clients.data}
@@ -204,6 +245,28 @@ export default function Index({
                 sortColumn={filters.sort_by}
                 sortDirection={filters.sort_order}
                 onSort={handleSort}
+                perPage={filters.per_page}
+                onPerPageChange={(perPage) => applyFilters({ per_page: perPage })}
+                emptyMessage="Клиенты не найдены"
+            />
+
+            <TaskDialog
+                open={taskFor !== null}
+                entity={taskFor ? { type: 'client', id: taskFor.id } : null}
+                onClose={() => setTaskFor(null)}
+                onSaved={() => {
+                    setTaskFor(null);
+                    // Перезагружаем только список: срок ближайшей задачи и счётчик
+                    // считаются на сервере, пересобирать их в стейте — вторая правда.
+                    router.reload({ only: ['clients', 'uncoveredCount'] });
+                }}
+            />
+
+            <EmailComposeDialog
+                open={emailFor !== null}
+                entity={emailFor ? { type: 'client', id: emailFor.id } : null}
+                defaultTo={emailFor?.email}
+                onClose={() => setEmailFor(null)}
             />
         </>
     );
