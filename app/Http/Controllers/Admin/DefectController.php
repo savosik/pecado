@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Contracts\Defect\DefectStockServiceInterface;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\BulkDefectPriceRequest;
 use App\Http\Requests\Admin\UpdateDefectPriceRequest;
 use App\Models\ProductDefect;
+use App\Services\Defect\DefectReferencePriceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -21,7 +23,8 @@ use Inertia\Response;
 class DefectController extends Controller
 {
     public function __construct(
-        private readonly DefectStockServiceInterface $defectStock
+        private readonly DefectStockServiceInterface $defectStock,
+        private readonly DefectReferencePriceService $referencePrices
     ) {}
 
     public function index(Request $request): Response
@@ -51,10 +54,13 @@ class DefectController extends Controller
             ->withQueryString();
 
         $available = $this->defectStock->availableMap($defects->getCollection());
+        $reference = $this->referencePrices->forProducts(
+            $defects->getCollection()->pluck('product_id')->all()
+        );
 
         return Inertia::render('Admin/Pages/Defects/Index', [
             'defects' => $defects->through(
-                fn (ProductDefect $defect) => $this->presentDefect($defect, $available)
+                fn (ProductDefect $defect) => $this->presentDefect($defect, $available, $reference)
             ),
             'filters' => [
                 'search' => $request->string('search')->toString(),
@@ -79,6 +85,75 @@ class DefectController extends Controller
         ]);
 
         return back()->with('success', 'Цена сохранена.');
+    }
+
+    /**
+     * Массово проставить цены выбранным партиям от справочной цены клиента.
+     *
+     * Скидка считается от той же цены, что подсвечена в таблице: справочную
+     * цену пересчитываем на бэкенде, с фронта приходят только id и процент.
+     * Партии без справочной цены и закрытые молча пропускаем — о них
+     * рассказываем в итоговом сообщении.
+     */
+    public function bulkPrice(BulkDefectPriceRequest $request): RedirectResponse
+    {
+        /** @var array<int, int> $ids */
+        $ids = $request->input('ids', []);
+        $discount = (float) $request->input('discount_percent', 0);
+
+        $defects = ProductDefect::query()->whereIn('id', $ids)->get();
+        $reference = $this->referencePrices->forProducts($defects->pluck('product_id')->all());
+
+        $updated = 0;
+        $skippedClosed = 0;
+        $skippedNoPrice = 0;
+
+        foreach ($defects as $defect) {
+            if ($defect->isClosed()) {
+                $skippedClosed++;
+
+                continue;
+            }
+
+            $base = $reference[$defect->product_id]['price'] ?? null;
+
+            if ($base === null || $base <= 0) {
+                $skippedNoPrice++;
+
+                continue;
+            }
+
+            $price = round($base * (1 - $discount / 100), 2);
+
+            if ($price <= 0) {
+                $skippedNoPrice++;
+
+                continue;
+            }
+
+            $defect->update([
+                'price' => $price,
+                'priced_by' => $request->user()->id,
+            ]);
+
+            $updated++;
+        }
+
+        if ($updated === 0) {
+            return back()->with('error', 'Ни одной цены не установлено: у выбранных партий нет справочной цены или они закрыты.');
+        }
+
+        $message = "Цена установлена: {$updated} ".$this->plural($updated, 'партия', 'партии', 'партий').'.';
+
+        if ($skippedNoPrice > 0) {
+            $message .= " Пропущено без справочной цены: {$skippedNoPrice}.";
+        }
+
+        if ($skippedClosed > 0) {
+            $message .= " Пропущено закрытых: {$skippedClosed}.";
+        }
+
+        return back()->with('success', $message);
     }
 
     /**
@@ -134,6 +209,24 @@ class DefectController extends Controller
     }
 
     /**
+     * Русское склонение по числу: 1 партия, 2 партии, 5 партий.
+     */
+    private function plural(int $count, string $one, string $few, string $many): string
+    {
+        $mod100 = $count % 100;
+
+        if ($mod100 >= 11 && $mod100 <= 14) {
+            return $many;
+        }
+
+        return match ($count % 10) {
+            1 => $one,
+            2, 3, 4 => $few,
+            default => $many,
+        };
+    }
+
+    /**
      * @return array{total: int, unpriced: int, unpublished: int, published: int}
      */
     private function stats(): array
@@ -158,9 +251,10 @@ class DefectController extends Controller
 
     /**
      * @param  array<int, int>  $availableMap
+     * @param  array<int, array<string, mixed>>  $referenceMap
      * @return array<string, mixed>
      */
-    private function presentDefect(ProductDefect $defect, array $availableMap): array
+    private function presentDefect(ProductDefect $defect, array $availableMap, array $referenceMap = []): array
     {
         return [
             'id' => $defect->id,
@@ -175,6 +269,7 @@ class DefectController extends Controller
             'created_by_name' => $defect->creator?->name,
             'priced_by_name' => $defect->pricer?->name,
             'created_at' => $defect->created_at?->toIso8601String(),
+            'reference_price' => $referenceMap[$defect->product_id] ?? null,
             'product' => [
                 'id' => $defect->product->id,
                 'name' => $defect->product->name,

@@ -429,6 +429,8 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     });
     Route::put('/defects/{defect}/price', [\App\Http\Controllers\Admin\DefectController::class, 'updatePrice'])
         ->name('defects.price')->middleware('permission:defects.price');
+    Route::post('/defects/prices/bulk', [\App\Http\Controllers\Admin\DefectController::class, 'bulkPrice'])
+        ->name('defects.prices.bulk')->middleware('permission:defects.price');
     Route::put('/defects/{defect}/publish', [\App\Http\Controllers\Admin\DefectController::class, 'togglePublish'])
         ->name('defects.publish')->middleware('permission:defects.publish');
     Route::delete('/defects/{defect}', [\App\Http\Controllers\Admin\DefectController::class, 'destroy'])
