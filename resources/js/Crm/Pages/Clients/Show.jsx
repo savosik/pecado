@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/accordion';
 import { usePermission } from '@/shared/Panel/usePermission';
 import ClientFeed from '@/Crm/Components/Feed/ClientFeed';
+import ClientDocuments from '@/Crm/Components/ClientDocuments';
+import CommentThread from '@/Crm/Components/CommentThread';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
 import ClientProfileForm from '@/Crm/Components/ClientProfileForm';
 import ClientLifecyclePanel from '@/Crm/Components/ClientLifecyclePanel';
@@ -39,9 +41,9 @@ export default function Show() {
     const canViewTasks = can('crm-tasks.view');
     const [composeOpen, setComposeOpen] = useState(false);
 
-    // Лента — главная вкладка: карточка отвечает на вопрос «что известно»,
+    // Лента — единственная главная вкладка: карточка отвечает на вопрос «что известно»,
     // а работа идёт в хронологии.
-    const defaultTab = canViewComments ? 'timeline' : (canViewProfile ? 'profile' : 'files');
+    const defaultTab = canViewComments ? 'timeline' : (canViewTasks ? 'tasks' : 'files');
 
     return (
         <>
@@ -66,12 +68,13 @@ export default function Show() {
                     canEditLifecycle={can('crm-profile.edit')}
                 />
 
-                {/* Подробности — под спойлером: в разговоре с клиентом нужны
-                    считаные факты, а не таблица на пол-экрана. */}
+                {/* Данные о клиенте живут над вкладками, а не среди них: они описывают
+                    клиента, а вкладки — работу с ним. Спойлеры закрыты по умолчанию,
+                    чтобы лента начиналась сразу под шапкой. */}
                 <AccordionRoot collapsible size="sm" variant="outline">
                     <AccordionItem value="details">
                         <AccordionItemTrigger>
-                            <Text fontSize="sm" fontWeight="600">Подробно о клиенте</Text>
+                            <Text fontSize="sm" fontWeight="600">Реквизиты и статусы</Text>
                         </AccordionItemTrigger>
                         <AccordionItemContent>
                             <SimpleGrid columns={{ base: 2, md: 4 }} gap={4} pb={2}>
@@ -106,9 +109,29 @@ export default function Show() {
                             )}
                         </AccordionItemContent>
                     </AccordionItem>
+
+                    {canViewProfile && (
+                        <AccordionItem value="profile">
+                            <AccordionItemTrigger>
+                                <Text fontSize="sm" fontWeight="600">
+                                    Профиль клиента — ЛПР, оплата, интересы, заметки
+                                </Text>
+                            </AccordionItemTrigger>
+                            <AccordionItemContent>
+                                <Box pb={2}>
+                                    <ClientProfileForm
+                                        clientId={client.id}
+                                        profile={profile}
+                                        options={profileOptions}
+                                        canEdit={can('crm-profile.edit')}
+                                    />
+                                </Box>
+                            </AccordionItemContent>
+                        </AccordionItem>
+                    )}
                 </AccordionRoot>
 
-                {(canViewProfile || canViewComments || canViewFiles || canViewTasks) && (
+                {(canViewComments || canViewFiles || canViewTasks) && (
                     <Card.Root>
                         <Card.Body>
                             {/* lazyMount без unmountOnExit: лента держит позицию скролла
@@ -117,8 +140,10 @@ export default function Show() {
                             <Tabs.Root defaultValue={defaultTab} lazyMount>
                                 <Tabs.List>
                                     {canViewComments && <Tabs.Trigger value="timeline">Лента</Tabs.Trigger>}
-                                    {canViewProfile && <Tabs.Trigger value="profile">Профиль</Tabs.Trigger>}
+                                    {canViewComments && <Tabs.Trigger value="comments">Комментарии</Tabs.Trigger>}
                                     {canViewTasks && <Tabs.Trigger value="tasks">Задачи</Tabs.Trigger>}
+                                    {canViewComments && <Tabs.Trigger value="orders">Заказы</Tabs.Trigger>}
+                                    {canViewComments && <Tabs.Trigger value="shipments">Реализации</Tabs.Trigger>}
                                     {canViewFiles && <Tabs.Trigger value="files">Файлы</Tabs.Trigger>}
                                 </Tabs.List>
 
@@ -132,13 +157,15 @@ export default function Show() {
                                     </Tabs.Content>
                                 )}
 
-                                {canViewProfile && (
-                                    <Tabs.Content value="profile">
-                                        <ClientProfileForm
-                                            clientId={client.id}
-                                            profile={profile}
-                                            options={profileOptions}
-                                            canEdit={can('crm-profile.edit')}
+                                {canViewComments && (
+                                    <Tabs.Content value="comments">
+                                        <Text fontSize="xs" color="fg.muted" mb={3}>
+                                            Только комментарии — без задач, писем и документов.
+                                        </Text>
+                                        <CommentThread
+                                            entityType="client"
+                                            entityId={client.id}
+                                            canCreate={can('crm-comments.create')}
                                         />
                                     </Tabs.Content>
                                 )}
@@ -146,6 +173,21 @@ export default function Show() {
                                 {canViewTasks && (
                                     <Tabs.Content value="tasks">
                                         <TaskPanel entityType="client" entityId={client.id} />
+                                    </Tabs.Content>
+                                )}
+
+                                {/* Документы берутся из эндпоинта ленты, поэтому гейтятся
+                                    её правом: отдельного источника для них нет и заводить
+                                    второй, со своими правилами видимости, незачем. */}
+                                {canViewComments && (
+                                    <Tabs.Content value="orders">
+                                        <ClientDocuments clientId={client.id} type="order" />
+                                    </Tabs.Content>
+                                )}
+
+                                {canViewComments && (
+                                    <Tabs.Content value="shipments">
+                                        <ClientDocuments clientId={client.id} type="shipment" />
                                     </Tabs.Content>
                                 )}
 

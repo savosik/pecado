@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react';
-import { Box, HStack, Spinner, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, HStack, Spinner, Text, VStack } from '@chakra-ui/react';
 import { LuFilter } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MenuContent, MenuRoot, MenuTrigger } from '@/components/ui/menu';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
-import CommentEntry from '@/Crm/Components/CommentEntry';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import { useCommentFeed } from '@/Crm/Components/useCommentFeed';
 import CallDialog from '@/Crm/Components/CallDialog';
 import FeedComposer from './FeedComposer';
+import { ENTRY_STYLE } from './FeedEntryShell';
+import CommentFeedEntry from './entries/CommentFeedEntry';
 import DocumentFeedEntry from './entries/DocumentFeedEntry';
 import TaskFeedEntry from './entries/TaskFeedEntry';
 import EmailFeedEntry from './entries/EmailFeedEntry';
@@ -19,15 +20,30 @@ import { entryFromCall, entryFromEmail, entryFromTask } from './timelineEntry';
 
 /**
  * Что можно показать в ленте. Пусто = всё.
+ *
+ * Порядок — от того, что менеджер пишет сам, к тому, что происходит без него.
  */
-const TYPES = [
-    { value: 'comment', label: 'Комментарии' },
-    { value: 'task', label: 'Задачи' },
-    { value: 'call', label: 'Звонки' },
-    { value: 'email', label: 'Письма' },
-    { value: 'order', label: 'Заказы' },
-    { value: 'shipment', label: 'Реализации' },
-];
+const TYPES = ['comment', 'task', 'call', 'email', 'order', 'shipment'];
+
+/**
+ * Заголовок дня в хронологии.
+ *
+ * Метка приходит с сервера в формате `d.m.Y H:i`, поэтому день сравнивается
+ * строками: разбирать дату на фронте означало бы завести второй часовой пояс.
+ */
+function dayLabel(dayKey) {
+    const pad = (n) => String(n).padStart(2, '0');
+    const asKey = (date) => `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()}`;
+
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (dayKey === asKey(today)) return 'Сегодня';
+    if (dayKey === asKey(yesterday)) return 'Вчера';
+
+    return dayKey;
+}
 
 /**
  * Стена клиента: всё, что с ним происходило, и поле ввода снизу.
@@ -36,6 +52,10 @@ const TYPES = [
  * и переворачивать её ради вида чата означало бы либо грузить всю историю,
  * либо считать страницы с конца. Поэтому лента идёт сверху вниз от свежего
  * к старому, а composer прибит снизу: новая запись появляется прямо над ним.
+ *
+ * Записи сгруппированы по дням: без разделителей двадцать карточек подряд
+ * читаются как одна простыня, и понять «что было вчера» можно только сверяя
+ * время в каждой шапке.
  *
  * Закреплённые вынесены отдельным блоком: в хронологии они ломали бы порядок,
  * а в чате «важное» должно быть на виду постоянно.
@@ -53,10 +73,31 @@ export default function ClientFeed({ clientId, client = null, clientEmail = null
 
     const feed = useCommentFeed(`/crm/clients/${clientId}/timeline`, { types });
 
-    const { pinned, chronology } = useMemo(() => ({
-        pinned: feed.entries.filter((entry) => entry.is_pinned),
-        chronology: feed.entries.filter((entry) => !entry.is_pinned),
-    }), [feed.entries]);
+    const pinned = useMemo(
+        () => feed.entries.filter((entry) => entry.is_pinned),
+        [feed.entries],
+    );
+
+    // Группировка по дню сохраняет порядок сервера: записи уже отсортированы,
+    // и достаточно резать их на серии по дате.
+    const days = useMemo(() => {
+        const groups = [];
+
+        feed.entries
+            .filter((entry) => !entry.is_pinned)
+            .forEach((entry) => {
+                const key = (entry.happened_at_label || '').slice(0, 10) || 'Без даты';
+                const last = groups[groups.length - 1];
+
+                if (last && last.key === key) {
+                    last.entries.push(entry);
+                } else {
+                    groups.push({ key, entries: [entry] });
+                }
+            });
+
+        return groups;
+    }, [feed.entries]);
 
     const toggleType = (value, checked) => {
         setTypes((prev) => (checked ? [...prev, value] : prev.filter((item) => item !== value)));
@@ -82,10 +123,9 @@ export default function ClientFeed({ clientId, client = null, clientEmail = null
         }
 
         return (
-            <CommentEntry
+            <CommentFeedEntry
                 key={key}
                 entry={entry}
-                showEntity
                 busy={feed.busy}
                 onUpdate={feed.update}
                 onDelete={setPendingDelete}
@@ -95,7 +135,7 @@ export default function ClientFeed({ clientId, client = null, clientEmail = null
 
     return (
         <VStack align="stretch" gap={0}>
-            <HStack justify="space-between" px={1} pb={2}>
+            <HStack justify="space-between" px={1} pb={3}>
                 <Text fontSize="xs" color="fg.muted">
                     {feed.loading && feed.entries.length === 0 ? 'Загружаем ленту…' : `Записей: ${feed.total}`}
                 </Text>
@@ -106,18 +146,27 @@ export default function ClientFeed({ clientId, client = null, clientEmail = null
                             <LuFilter /> {types.length ? `Показано: ${types.length}` : 'Всё'}
                         </Button>
                     </MenuTrigger>
-                    <MenuContent p={2}>
-                        <VStack align="stretch" gap={1}>
-                            {TYPES.map((type) => (
-                                <Checkbox
-                                    key={type.value}
-                                    size="sm"
-                                    checked={types.includes(type.value)}
-                                    onCheckedChange={(e) => toggleType(type.value, !!e.checked)}
-                                >
-                                    {type.label}
-                                </Checkbox>
-                            ))}
+                    <MenuContent p={2} minW="200px">
+                        <VStack align="stretch" gap={1.5}>
+                            {TYPES.map((type) => {
+                                const style = ENTRY_STYLE[type];
+
+                                return (
+                                    <Checkbox
+                                        key={type}
+                                        size="sm"
+                                        checked={types.includes(type)}
+                                        onCheckedChange={(e) => toggleType(type, !!e.checked)}
+                                    >
+                                        <HStack gap={2}>
+                                            {/* Цвет в фильтре тот же, что у полосы записи —
+                                                иначе фильтр пришлось бы читать, а не узнавать. */}
+                                            <Box w="3px" h="14px" borderRadius="full" bg={`${style.palette}.solid`} />
+                                            <Text fontSize="sm">{style.label}</Text>
+                                        </HStack>
+                                    </Checkbox>
+                                );
+                            })}
                             {types.length > 0 && (
                                 <Button size="xs" variant="ghost" onClick={() => setTypes([])}>
                                     Показать всё
@@ -129,14 +178,14 @@ export default function ClientFeed({ clientId, client = null, clientEmail = null
             </HStack>
 
             {pinned.length > 0 && (
-                <VStack align="stretch" gap={2} pb={3} mb={2} borderBottomWidth="1px">
-                    <Text fontSize="xs" color="fg.muted">Закреплено</Text>
+                <VStack align="stretch" gap={2} pb={4} mb={3} borderBottomWidth="1px">
+                    <Text fontSize="xs" fontWeight="600" color="fg.muted">Закреплено</Text>
                     {pinned.map(renderEntry)}
                 </VStack>
             )}
 
-            <Box maxH="60vh" overflowY="auto" pr={1}>
-                <VStack align="stretch" gap={2}>
+            <Box maxH="60vh" overflowY="auto" pr={2}>
+                <VStack align="stretch" gap={5}>
                     {feed.loading && feed.entries.length === 0 && (
                         <HStack justify="center" py={6}><Spinner size="sm" /></HStack>
                     )}
@@ -151,7 +200,18 @@ export default function ClientFeed({ clientId, client = null, clientEmail = null
                         </Box>
                     )}
 
-                    {chronology.map(renderEntry)}
+                    {days.map((day) => (
+                        <VStack key={day.key} align="stretch" gap={2.5}>
+                            <HStack gap={3}>
+                                <Badge colorPalette="gray" variant="subtle" size="sm">
+                                    {dayLabel(day.key)}
+                                </Badge>
+                                <Box flex="1" h="1px" bg="border.muted" />
+                            </HStack>
+
+                            {day.entries.map(renderEntry)}
+                        </VStack>
+                    ))}
 
                     {feed.hasMore && (
                         <Button size="sm" variant="outline" onClick={feed.loadMore} loading={feed.loading}>
@@ -161,15 +221,17 @@ export default function ClientFeed({ clientId, client = null, clientEmail = null
                 </VStack>
             </Box>
 
-            <FeedComposer
-                clientId={clientId}
-                busy={feed.busy}
-                onCreateComment={feed.create}
-                onCreated={feed.prepend}
-                onCompose={() => setEmailOpen(true)}
-                onFullTask={() => setTaskOpen(true)}
-                onCall={() => setCallOpen(true)}
-            />
+            <Box pt={3}>
+                <FeedComposer
+                    clientId={clientId}
+                    busy={feed.busy}
+                    onCreateComment={feed.create}
+                    onCreated={feed.prepend}
+                    onCompose={() => setEmailOpen(true)}
+                    onFullTask={() => setTaskOpen(true)}
+                    onCall={() => setCallOpen(true)}
+                />
+            </Box>
 
             <TaskDialog
                 open={taskOpen}
