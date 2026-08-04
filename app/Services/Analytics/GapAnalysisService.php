@@ -310,9 +310,13 @@ class GapAnalysisService
     /**
      * Дата последней покупки за всё время, ключ → 'Y-m-d'.
      *
+     * Публичный: этой же картой пользуется `App\Services\Crm\OpportunityService`,
+     * чтобы посчитать давность закупки. Своя копия запроса там означала бы два
+     * ответа на вопрос «когда клиент покупал в последний раз».
+     *
      * @return array<string, string>
      */
-    private function lastPurchaseMap(AnalyticsContext $ctx, string $subject): array
+    public function lastPurchaseMap(AnalyticsContext $ctx, string $subject = 'partner'): array
     {
         $query = DB::table('shipments')
             ->whereNull('deleted_at')

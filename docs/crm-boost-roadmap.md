@@ -223,7 +223,9 @@
 - [x] `crm-05-plans` — в `review`, ждёт визуальной проверки на dev
 - [x] `crm-06-plan-analytics` — в `review`, ждёт визуальной проверки на dev и сверки
       цифры факта с `/crm/analytics` на живых данных
-- [ ] `crm-07-opportunities`
+- [x] `crm-07-opportunities` — в `review`, ждёт визуальной проверки на dev; ранжирование
+      поверх `GapAnalysisService` и `ClientPlanFactService`, ABC по клиентам считается
+      в самом сервисе (у `abcXyz()` нет измерения «партнёр»)
 - [ ] `crm-08-beds`
 
 ### Волна 6 — Рабочее место менеджера

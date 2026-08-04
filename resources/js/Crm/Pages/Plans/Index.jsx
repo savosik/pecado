@@ -11,6 +11,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import { LuCopy, LuSave } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
+import { usePermission } from '@/shared/Panel/usePermission';
+import OpportunityPanel from '@/Crm/Components/OpportunityPanel';
 import ProgressPanel from './components/ProgressPanel';
 
 const fmtMoney = (value) => (value === null || value === undefined
@@ -67,6 +69,9 @@ export default function Index({
     canEdit = false,
     filters = {},
 }) {
+    const { can } = usePermission();
+    const canSeeOpportunities = can('crm-opportunities.view');
+
     const [drafts, setDrafts] = useState({});
     const [busy, setBusy] = useState(false);
     const [copyOpen, setCopyOpen] = useState(false);
@@ -193,12 +198,21 @@ export default function Index({
                 <Tabs.Root value={tab} onValueChange={(e) => setTab(e.value)} lazyMount>
                     <Tabs.List>
                         <Tabs.Trigger value="progress">Выполнение</Tabs.Trigger>
+                        {canSeeOpportunities && <Tabs.Trigger value="opportunities">Возможности</Tabs.Trigger>}
                         <Tabs.Trigger value="input">Ввод планов</Tabs.Trigger>
                     </Tabs.List>
 
                     <Tabs.Content value="progress" px={0} pt={4}>
                         <ProgressPanel month={month} canSeeAll={canSeeAll} />
                     </Tabs.Content>
+
+                    {/* Отставание рядом с ответом на вопрос «и что с ним делать»:
+                        цифра выполнения без списка звонков — отчёт, а не работа. */}
+                    {canSeeOpportunities && (
+                        <Tabs.Content value="opportunities" px={0} pt={4}>
+                            <OpportunityPanel month={month} canSeeAll={canSeeAll} />
+                        </Tabs.Content>
+                    )}
 
                     <Tabs.Content value="input" px={0} pt={4}>
                         <VStack gap={4} align="stretch">

@@ -9,6 +9,7 @@ use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Crm\PlanProgressService;
 use App\Services\Crm\PlanScope;
+use App\Services\Crm\PlanScopeResolver;
 use App\Services\Crm\SalesPlanService;
 use App\Services\SimpleXlsxExporter;
 use Illuminate\Http\JsonResponse;
@@ -31,6 +32,7 @@ class PlanController extends CrmController
     public function __construct(
         private readonly SalesPlanService $plans,
         private readonly PlanProgressService $progress,
+        private readonly PlanScopeResolver $scopes,
     ) {}
 
     public function index(Request $request): Response
@@ -103,11 +105,11 @@ class PlanController extends CrmController
         return response()->json([
             'month' => $month->format('Y-m'),
             'monthLabel' => $this->plans->monthLabel($month),
-            'scope' => $this->scopePayload($scope),
+            'scope' => $this->scopes->payload($scope),
             'summary' => $this->progress->progress($month, $scope),
             'distribution' => $this->progress->distribution($month, $scope),
             'clients' => $this->progress->clients($month, $scope, $actor),
-            'scopeOptions' => $this->scopeOptions($request),
+            'scopeOptions' => $this->scopes->options($actor),
             'canSeeAll' => $this->seesAllClients($request),
         ]);
     }
@@ -218,97 +220,15 @@ class PlanController extends CrmController
     }
 
     /**
-     * Скоуп расчёта выполнения из запроса.
-     *
-     * Менеджеру доступен только собственный скоуп: подставленный в адрес чужой
-     * `scope_id` не должен открыть ни отдел целиком, ни выручку соседа. Поэтому
-     * для него параметр игнорируется, а не проверяется — проверять нечего.
+     * Скоуп расчёта выполнения из запроса — правила доступа живут в резолвере.
      */
     private function resolveScope(Request $request, User $actor): PlanScope
     {
-        $seesAll = $actor->can('crm-clients-all.view');
-        $type = PlanTarget::tryFrom((string) $request->input('scope', PlanTarget::DEPARTMENT->value))
-            ?? PlanTarget::DEPARTMENT;
-        $scopeId = (int) $request->input('scope_id', 0) ?: null;
-
-        if ($type === PlanTarget::CLIENT && $scopeId !== null) {
-            $client = User::query()->visibleInCrm($actor)->whereKey($scopeId)->first(['id', 'name']);
-
-            return $client === null
-                ? PlanScope::empty()
-                : PlanScope::client((int) $client->getKey(), (string) $client->name);
-        }
-
-        if ($type === PlanTarget::MANAGER || ! $seesAll) {
-            $managerId = $seesAll ? $scopeId : $actor->managerProfile?->id;
-
-            if ($managerId === null) {
-                return $seesAll ? $this->departmentScope($actor) : PlanScope::empty();
-            }
-
-            $manager = PersonalManager::query()->find($managerId, ['id', 'name']);
-
-            if ($manager === null) {
-                return PlanScope::empty();
-            }
-
-            /** @var list<int> $clientIds */
-            $clientIds = User::query()
-                ->visibleInCrm($actor)
-                ->where('personal_manager_id', $manager->getKey())
-                ->pluck('users.id')
-                ->map('intval')
-                ->all();
-
-            return PlanScope::manager((int) $manager->getKey(), $clientIds, (string) $manager->name);
-        }
-
-        return $this->departmentScope($actor);
-    }
-
-    private function departmentScope(User $actor): PlanScope
-    {
-        /** @var list<int> $clientIds */
-        $clientIds = User::query()->visibleInCrm($actor)->pluck('users.id')->map('intval')->all();
-
-        return PlanScope::department($clientIds);
-    }
-
-    /**
-     * @return array{type: string, id: int|null, label: string, clients_count: int}
-     */
-    private function scopePayload(PlanScope $scope): array
-    {
-        return [
-            'type' => $scope->target->value,
-            'id' => $scope->targetId,
-            'label' => $scope->label,
-            'clients_count' => count($scope->clientIds),
-        ];
-    }
-
-    /**
-     * Что можно выбрать в переключателе скоупа. Менеджеру выбирать нечего —
-     * его скоуп единственный, и список пустой.
-     *
-     * @return array<int, array{id: int, name: string}>
-     */
-    private function scopeOptions(Request $request): array
-    {
-        if (! $this->seesAllClients($request)) {
-            return [];
-        }
-
-        return PersonalManager::query()
-            ->active()
-            ->select('id', 'name')
-            ->orderBy('name')
-            ->get()
-            ->map(fn (PersonalManager $manager): array => [
-                'id' => (int) $manager->getKey(),
-                'name' => (string) $manager->name,
-            ])
-            ->all();
+        return $this->scopes->resolve(
+            $actor,
+            $request->string('scope')->value() ?: null,
+            (int) $request->input('scope_id', 0) ?: null,
+        );
     }
 
     /**

@@ -192,8 +192,56 @@ function ClientCoverage({ coverage }) {
     );
 }
 
+/**
+ * «Кому позвонить сегодня» — топ-5 возможностей.
+ *
+ * Пресет здесь не выбирают: на рабочем столе нужен ответ, а не срез. За полным
+ * списком — кнопка в раздел, где вопрос можно задать точнее.
+ */
+function TopOpportunities({ rows }) {
+    if (! rows.length) {
+        return null;
+    }
+
+    return (
+        <Card.Root>
+            <Card.Header>
+                <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                    <Text fontWeight="semibold">Кому позвонить сегодня</Text>
+                    <Button
+                        size="xs"
+                        variant="outline"
+                        onClick={() => router.visit(route('crm.opportunities.index'))}
+                    >
+                        Все возможности
+                    </Button>
+                </HStack>
+            </Card.Header>
+            <Card.Body>
+                <VStack align="stretch" gap={3}>
+                    {rows.map((row) => (
+                        <Box key={row.id}>
+                            <HStack justify="space-between" gap={2} align="baseline">
+                                <a href={route('crm.clients.show', row.id)}>
+                                    <Text fontSize="sm" fontWeight="500">{row.name}</Text>
+                                </a>
+                                {row.lag > 0 && (
+                                    <Text fontSize="xs" color="red.fg" whiteSpace="nowrap">
+                                        недобор {Number(row.lag).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽
+                                    </Text>
+                                )}
+                            </HStack>
+                            <Text fontSize="xs" color="fg.muted">{row.explanation}</Text>
+                        </Box>
+                    ))}
+                </VStack>
+            </Card.Body>
+        </Card.Root>
+    );
+}
+
 export default function Dashboard() {
-    const { stats, seesAll, managerProfileLinked, auth, tasks, coverage } = usePage().props;
+    const { stats, seesAll, managerProfileLinked, auth, tasks, coverage, opportunities } = usePage().props;
 
     return (
         <>
@@ -232,14 +280,7 @@ export default function Dashboard() {
 
                 {coverage && <ClientCoverage coverage={coverage} />}
 
-                <Card.Root>
-                    <Card.Body>
-                        <Text fontSize="sm" color="fg.muted">
-                            Раздел в разработке: здесь появятся сделки, планы продаж и воронка.
-                            Сейчас доступны «Мои клиенты», «Задачи»{seesAll ? ' и «Команда»' : ''}.
-                        </Text>
-                    </Card.Body>
-                </Card.Root>
+                {opportunities && <TopOpportunities rows={opportunities} />}
             </VStack>
         </>
     );

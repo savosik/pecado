@@ -9,6 +9,7 @@ use App\Http\Controllers\Crm\CommentController;
 use App\Http\Controllers\Crm\DashboardController;
 use App\Http\Controllers\Crm\DocumentController;
 use App\Http\Controllers\Crm\EmailController;
+use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\TaskController;
 use App\Http\Controllers\Crm\TeamController;
@@ -228,6 +229,16 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/plans/by-manager', [PlanController::class, 'byManager'])
             ->middleware('permission:crm-clients-all.view')
             ->name('plans.by-manager');
+    });
+
+    // Возможности (crm-07): витрина поверх планов и gap-анализа. Своего права
+    // на редактирование нет — список ничего не меняет, он предлагает.
+    Route::middleware('permission:crm-opportunities.view')->group(function () {
+        Route::get('/opportunities', [OpportunityController::class, 'index'])->name('opportunities.index');
+        Route::get('/opportunities/data', [OpportunityController::class, 'data'])->name('opportunities.data');
+        Route::get('/opportunities/dimensions', [OpportunityController::class, 'dimensions'])
+            ->name('opportunities.dimensions');
+        Route::get('/opportunities/export', [OpportunityController::class, 'export'])->name('opportunities.export');
     });
 
     Route::middleware('permission:crm-plans.edit')->group(function () {
