@@ -82,7 +82,7 @@ class DefectReferencePriceTest extends TestCase
     }
 
     #[Test]
-    public function reference_price_takes_highest_status_available(): void
+    public function reference_price_takes_cheapest_status_available(): void
     {
         $statuses = $this->statuses();
         $product = Product::factory()->create();
@@ -122,6 +122,39 @@ class DefectReferencePriceTest extends TestCase
                 ->where('defects.data.0.reference_price.price', 950)
                 ->where('defects.data.0.reference_price.status.name', 'VIP')
                 ->has('defects.data.0.reference_price.ladder', 2)
+                ->etc()
+            );
+    }
+
+    /**
+     * На проде amount_from у статусов не заполнен, и сортировка по нему
+     * схлопывалась в алфавитную — наверх всплывал Bronze. Ориентир должен
+     * определяться ценой, а не названием статуса.
+     */
+    #[Test]
+    public function reference_price_ignores_status_names_when_thresholds_are_empty(): void
+    {
+        $bronze = ClientStatus::create(['name' => 'Bronze', 'amount_from' => null]);
+        $diamond = ClientStatus::create(['name' => 'Diamond', 'amount_from' => null]);
+        $gold = ClientStatus::create(['name' => 'Gold', 'amount_from' => null]);
+
+        $product = Product::factory()->create();
+
+        $this->price($this->client($bronze), $product, 1500);
+        $this->price($this->client($diamond), $product, 900);
+        $this->price($this->client($gold), $product, 1200);
+
+        ProductDefect::factory()->create(['product_id' => $product->id]);
+
+        $this->actingAs($this->buyer())
+            ->get('/admin/defects')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('defects.data.0.reference_price.price', 900)
+                ->where('defects.data.0.reference_price.status.name', 'Diamond')
+                // Лестница в подсказке — от самой выгодной цены к самой дорогой.
+                ->where('defects.data.0.reference_price.ladder.0.name', 'Diamond')
+                ->where('defects.data.0.reference_price.ladder.1.name', 'Gold')
+                ->where('defects.data.0.reference_price.ladder.2.name', 'Bronze')
                 ->etc()
             );
     }

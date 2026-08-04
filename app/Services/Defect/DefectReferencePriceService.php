@@ -18,9 +18,12 @@ use Illuminate\Support\Facades\Log;
  * среднего и минимума — единичный клиент с личным договором не сдвигает
  * ориентир для всего статуса.
  *
- * Лестница статусов идёт от самого «дорогого» (наибольший amount_from —
- * Diamond) к младшим: если по Diamond цены нет, показываем VIP, затем Gold
- * и т.д. Какой статус в итоге сработал — всегда видно в UI.
+ * Показываем статус с самой низкой ценой на товар — это и есть старший
+ * статус (Diamond); если по нему цены нет, следующей окажется цена VIP, за
+ * ней Gold и так далее. Порядок берём из самих цен, а не из названий или
+ * amount_from: на проде amount_from у статусов не заполнен, и сортировка по
+ * нему схлопывалась в алфавитную — наверх всплывал Bronze. Какой статус в
+ * итоге сработал — всегда видно в UI.
  */
 class DefectReferencePriceService
 {
@@ -58,7 +61,7 @@ class DefectReferencePriceService
         foreach ($productIds as $productId) {
             $rows = [];
 
-            foreach ($ladder as $status) {
+            foreach ($ladder as $tier => $status) {
                 $found = $prices[$status['id']][$productId] ?? null;
 
                 if ($found === null) {
@@ -71,8 +74,19 @@ class DefectReferencePriceService
                     'color' => $status['color'],
                     'price' => $found['price'],
                     'clients' => $found['clients'],
+                    'tier' => $tier,
                 ];
             }
+
+            // Первым — самый выгодный для клиента статус. При равных ценах
+            // выигрывает старший статус (порядок из statusLadder()).
+            usort($rows, fn (array $a, array $b) => [$a['price'], $a['tier']] <=> [$b['price'], $b['tier']]);
+
+            $rows = array_map(function (array $row) {
+                unset($row['tier']);
+
+                return $row;
+            }, $rows);
 
             $best = $rows[0] ?? null;
 
@@ -100,7 +114,10 @@ class DefectReferencePriceService
     }
 
     /**
-     * Статусы лояльности с клиентами: от старшего к младшему.
+     * Статусы лояльности, у которых есть клиенты из 1С.
+     *
+     * Порядок здесь — только тай-брейк для статусов с одинаковой ценой:
+     * сперва тот, у кого выше порог amount_from. Основной выбор делает цена.
      *
      * @return list<array{id: int, name: string, color: string|null, partners: list<int>}>
      */

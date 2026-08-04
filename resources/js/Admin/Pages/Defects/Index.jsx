@@ -88,9 +88,9 @@ function DefectPhoto({ defect }) {
 }
 
 /**
- * Справочная цена товара по статусу клиента: показываем старший статус, по
- * которому цена нашлась (Diamond → VIP → Gold → …), а всю лестницу — в
- * подсказке. Это ориентир для уценки, а не цена партии.
+ * Справочная цена товара по статусу клиента: показываем самую выгодную цену
+ * (это и есть старший статус — Diamond, при его отсутствии VIP, затем Gold),
+ * а всю лестницу — в подсказке. Это ориентир для уценки, а не цена партии.
  */
 function ReferencePrice({ defect, previewDiscount }) {
     const reference = defect.reference_price;
@@ -118,7 +118,7 @@ function ReferencePrice({ defect, previewDiscount }) {
                 </HStack>
             ))}
             <Text fontSize="xs" opacity={0.7}>
-                Берём самую распространённую цену внутри статуса.
+                Внутри статуса берём самую распространённую цену, показываем — самую выгодную из статусов.
             </Text>
         </VStack>
     );
@@ -401,7 +401,7 @@ export default function DefectsIndex() {
                                                 <Table.ColumnHeader textAlign="end">Свободно</Table.ColumnHeader>
                                                 <Table.ColumnHeader>
                                                     <Tooltip
-                                                        content="Цена товара для клиентов старшего статуса, по которому она нашлась. Справочно — партия продаётся по цене уценки."
+                                                        content="Самая низкая цена товара среди статусов клиентов и статус, к которому она относится. Справочно — партия продаётся по цене уценки."
                                                         showArrow
                                                         contentProps={{ css: { maxW: '320px' } }}
                                                     >
