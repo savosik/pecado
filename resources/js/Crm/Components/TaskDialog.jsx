@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import { usePage } from '@inertiajs/react';
 import {
     Box,
     Dialog,
@@ -14,6 +15,7 @@ import {
 } from '@chakra-ui/react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import VoiceInput from '@/shared/voice/VoiceInput';
 import VoiceTextarea from '@/shared/voice/VoiceTextarea';
 import { EntitySelector } from '@/Admin/Components/EntitySelector';
 import { useTaskOptions } from '@/Crm/Components/useTaskOptions';
@@ -47,6 +49,8 @@ const EMPTY = {
 export default function TaskDialog({ open, onClose, task = null, entity = null, onSaved }) {
     const options = useTaskOptions(open);
     const { can } = usePermission();
+    const { auth } = usePage().props;
+    const currentUserId = auth?.user?.id ?? null;
     const [form, setForm] = useState(EMPTY);
     const [errors, setErrors] = useState({});
     const [busy, setBusy] = useState(false);
@@ -78,6 +82,22 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
             }
             : EMPTY);
     }, [open, task]);
+
+    // Исполнитель новой задачи по умолчанию — тот, кто её ставит: себе задачи
+    // ставят чаще, чем коллеге. Ждём справочник, потому что подставлять человека,
+    // которого нет в списке (например, админа без доступа в CRM), нельзя —
+    // такую задачу бэкенд не примет.
+    useEffect(() => {
+        if (!open || isEdit || !currentUserId || !options?.assignees) {
+            return;
+        }
+
+        if (!options.assignees.some((user) => Number(user.id) === Number(currentUserId))) {
+            return;
+        }
+
+        setForm((prev) => (prev.assignee_id ? prev : { ...prev, assignee_id: String(currentUserId) }));
+    }, [open, isEdit, currentUserId, options]);
 
     const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -224,10 +244,11 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
                                 )}
 
                                 <Field label="Что сделать" required errorText={error('title')} invalid={!!error('title')}>
-                                    <Input
+                                    <VoiceInput
                                         value={form.title}
-                                        onChange={(e) => set('title', e.target.value)}
+                                        onChange={(value) => set('title', value)}
                                         placeholder="Например: выставить счёт по заявке"
+                                        title="Надиктовать задачу"
                                         disabled={!canEditFields}
                                     />
                                 </Field>

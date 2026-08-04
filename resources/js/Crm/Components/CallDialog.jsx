@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import VoiceInput from '@/shared/voice/VoiceInput';
 import VoiceTextarea from '@/shared/voice/VoiceTextarea';
 import { toastError, toastSuccess } from '@/utils/toast';
 
@@ -253,11 +254,12 @@ export default function CallDialog({ open, client, onClose, onSaved }) {
                                                 errorText={error('follow_up.title')}
                                                 invalid={!!error('follow_up.title')}
                                             >
-                                                <Input
+                                                <VoiceInput
                                                     size="sm"
                                                     value={followUp.title}
-                                                    onChange={(e) => setFollowUp((p) => ({ ...p, title: e.target.value }))}
+                                                    onChange={(value) => setFollowUp((p) => ({ ...p, title: value }))}
                                                     placeholder="Например: выставить счёт"
+                                                    title="Надиктовать следующий шаг"
                                                 />
                                             </Field>
 

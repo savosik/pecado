@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
+import VoiceInput from '@/shared/voice/VoiceInput';
 import VoiceTextarea from '@/shared/voice/VoiceTextarea';
 import { useTaskOptions } from '@/Crm/Components/useTaskOptions';
 import { toastError, toastSuccess } from '@/utils/toast';
@@ -34,7 +35,7 @@ export default function TaskCloseDialog({ task, onClose, onClosed }) {
     const options = useTaskOptions(open);
     const [comment, setComment] = useState('');
     const [withFollowUp, setWithFollowUp] = useState(false);
-    const [followUp, setFollowUp] = useState({ title: '', due_at: '', priority: 'normal' });
+    const [followUp, setFollowUp] = useState({ title: '', due_at: '', priority: 'normal', assignee_id: '' });
     const [errors, setErrors] = useState({});
     const [busy, setBusy] = useState(false);
 
@@ -51,8 +52,27 @@ export default function TaskCloseDialog({ task, onClose, onClosed }) {
             // Неделя — обычный горизонт следующего касания; дату всегда можно поправить.
             due_at: defaultDue(),
             priority: task.priority || 'normal',
+            assignee_id: '',
         });
     }, [open, task]);
+
+    // Следующий шаг остаётся за исполнителем закрываемой задачи — это продолжение
+    // его же работы с клиентом. Подставляем только когда такой человек есть в
+    // справочнике: иначе селект показал бы пустоту при непустом значении, а бэкенд
+    // и без подсказки унаследует исполнителя закрываемой задачи.
+    const assigneeId = task?.assignee?.id ?? null;
+
+    useEffect(() => {
+        if (!open || !assigneeId || !options?.assignees) {
+            return;
+        }
+
+        if (!options.assignees.some((user) => Number(user.id) === Number(assigneeId))) {
+            return;
+        }
+
+        setFollowUp((prev) => (prev.assignee_id ? prev : { ...prev, assignee_id: String(assigneeId) }));
+    }, [open, assigneeId, options]);
 
     const submit = async () => {
         setBusy(true);
@@ -66,6 +86,8 @@ export default function TaskCloseDialog({ task, onClose, onClosed }) {
                     title: followUp.title,
                     due_at: followUp.due_at || null,
                     priority: followUp.priority,
+                    // Пусто — бэкенд сам возьмёт исполнителя закрываемой задачи.
+                    assignee_id: followUp.assignee_id || null,
                 };
             }
 
@@ -144,14 +166,33 @@ export default function TaskCloseDialog({ task, onClose, onClosed }) {
                                             errorText={error('follow_up.title')}
                                             invalid={!!error('follow_up.title')}
                                         >
-                                            <Input
+                                            <VoiceInput
                                                 value={followUp.title}
-                                                onChange={(e) => setFollowUp((prev) => ({ ...prev, title: e.target.value }))}
+                                                onChange={(value) => setFollowUp((prev) => ({ ...prev, title: value }))}
                                                 placeholder="Например: позвонить и уточнить объём"
+                                                title="Надиктовать следующий шаг"
                                             />
                                         </Field>
 
                                         <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                            <Field
+                                                label="Исполнитель"
+                                                errorText={error('follow_up.assignee_id')}
+                                                invalid={!!error('follow_up.assignee_id')}
+                                            >
+                                                <NativeSelectRoot>
+                                                    <NativeSelectField
+                                                        value={followUp.assignee_id}
+                                                        onChange={(e) => setFollowUp((prev) => ({ ...prev, assignee_id: e.target.value }))}
+                                                    >
+                                                        <option value="">Как в текущей задаче</option>
+                                                        {(options?.assignees || []).map((user) => (
+                                                            <option key={user.id} value={user.id}>{user.name}</option>
+                                                        ))}
+                                                    </NativeSelectField>
+                                                </NativeSelectRoot>
+                                            </Field>
+
                                             <Field
                                                 label="Срок"
                                                 errorText={error('follow_up.due_at')}
@@ -179,7 +220,7 @@ export default function TaskCloseDialog({ task, onClose, onClosed }) {
                                         </SimpleGrid>
 
                                         <Text fontSize="xs" color="fg.muted">
-                                            Привязка и исполнитель унаследуются от закрываемой задачи.
+                                            Привязка унаследуется от закрываемой задачи.
                                         </Text>
                                     </VStack>
                                 )}
