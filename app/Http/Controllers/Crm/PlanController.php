@@ -6,22 +6,32 @@ use App\Enums\Crm\PlanTarget;
 use App\Http\Requests\Crm\StoreSalesPlansRequest;
 use App\Models\CrmSalesPlan;
 use App\Models\PersonalManager;
+use App\Models\User;
+use App\Services\Crm\PlanProgressService;
+use App\Services\Crm\PlanScope;
 use App\Services\Crm\SalesPlanService;
+use App\Services\SimpleXlsxExporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Планы продаж: сколько отдел, менеджер и клиент должны дать выручки за месяц.
+ * Планы продаж: сколько отдел, менеджер и клиент должны дать выручки за месяц,
+ * и сколько дали на самом деле.
  *
- * Здесь только ввод и хранение. Выполнение, прогноз и burndown считает `crm-06`
- * поверх `ShipmentAnalyticsService` — второго движка расчёта продаж не заводим.
+ * Ввод и хранение — `SalesPlanService`; выполнение, прогноз и burndown —
+ * `PlanProgressService` поверх `ShipmentAnalyticsService`. Второго движка расчёта
+ * продаж не заводим: расхождение /crm/plans с /crm/analytics — баг по определению.
  */
 class PlanController extends CrmController
 {
-    public function __construct(private readonly SalesPlanService $plans) {}
+    public function __construct(
+        private readonly SalesPlanService $plans,
+        private readonly PlanProgressService $progress,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -78,6 +88,122 @@ class PlanController extends CrmController
         return response()->json($result);
     }
 
+    /**
+     * Сводка выполнения: план, факт, остаток, прогноз при текущем темпе.
+     * GET /crm/plans/progress
+     */
+    public function progressData(Request $request): JsonResponse
+    {
+        Gate::authorize('viewAny', CrmSalesPlan::class);
+
+        $actor = $this->crmActor($request);
+        $month = $this->plans->parseMonth($request->string('month')->value());
+        $scope = $this->resolveScope($request, $actor);
+
+        return response()->json([
+            'month' => $month->format('Y-m'),
+            'monthLabel' => $this->plans->monthLabel($month),
+            'scope' => $this->scopePayload($scope),
+            'summary' => $this->progress->progress($month, $scope),
+            'distribution' => $this->progress->distribution($month, $scope),
+            'clients' => $this->progress->clients($month, $scope, $actor),
+            'scopeOptions' => $this->scopeOptions($request),
+            'canSeeAll' => $this->seesAllClients($request),
+        ]);
+    }
+
+    /**
+     * Точки burndown по дням месяца. GET /crm/plans/burndown
+     */
+    public function burndown(Request $request): JsonResponse
+    {
+        Gate::authorize('viewAny', CrmSalesPlan::class);
+
+        $month = $this->plans->parseMonth($request->string('month')->value());
+        $scope = $this->resolveScope($request, $this->crmActor($request));
+
+        return response()->json([
+            'month' => $month->format('Y-m'),
+            'plan' => $this->progress->planAmount($month, $scope),
+            'points' => $this->progress->burndown($month, $scope),
+        ]);
+    }
+
+    /**
+     * Разрез по менеджерам. GET /crm/plans/by-manager
+     *
+     * Маршрут закрыт `crm-clients-all.view`: чужая цифра выручки не дело
+     * соседнего менеджера.
+     */
+    public function byManager(Request $request): JsonResponse
+    {
+        Gate::authorize('viewAny', CrmSalesPlan::class);
+
+        $month = $this->plans->parseMonth($request->string('month')->value());
+
+        return response()->json([
+            'month' => $month->format('Y-m'),
+            'rows' => $this->progress->byManager($month, $this->crmActor($request)),
+        ]);
+    }
+
+    /**
+     * XLSX выполнения планов: сводка, менеджеры (если доступны), клиенты.
+     * GET /crm/plans/export
+     */
+    public function export(Request $request, SimpleXlsxExporter $exporter): StreamedResponse
+    {
+        Gate::authorize('viewAny', CrmSalesPlan::class);
+
+        $actor = $this->crmActor($request);
+        $month = $this->plans->parseMonth($request->string('month')->value());
+        $scope = $this->resolveScope($request, $actor);
+
+        $summary = $this->progress->progress($month, $scope);
+        $headers = ['Раздел', 'Объект', 'План, ₽', 'Факт, ₽', 'Выполнение, %', 'Отставание, ₽', 'Прогноз при текущем темпе, ₽'];
+
+        $rows = [[
+            'Сводка',
+            $scope->label,
+            $summary['plan'] ?? 0,
+            $summary['fact'],
+            $summary['percent'] ?? '',
+            $summary['remaining'] ?? '',
+            $summary['forecast'] ?? '',
+        ]];
+
+        foreach ($this->progress->byManager($month, $actor) as $row) {
+            $rows[] = [
+                'Менеджеры',
+                $row['name'],
+                $row['plan'] ?? 0,
+                $row['fact'],
+                $row['percent'] ?? '',
+                $row['plan'] !== null ? round(max(0.0, $row['plan'] - $row['fact']), 2) : '',
+                $row['forecast'] ?? '',
+            ];
+        }
+
+        foreach ($this->progress->clients($month, $scope, $actor) as $row) {
+            $rows[] = [
+                'Клиенты',
+                $row['name'],
+                $row['plan'] ?? 0,
+                $row['fact'],
+                $row['percent'] ?? '',
+                $row['lag'] ?? '',
+                '',
+            ];
+        }
+
+        return $exporter->stream(
+            'crm-plan-progress-'.$month->format('Y-m'),
+            $headers,
+            $rows,
+            'Выполнение планов',
+        );
+    }
+
     public function destroy(Request $request, int $plan): JsonResponse
     {
         // Резолвим через скоуп: чужой план — 404, а не 403. Иначе перебором id
@@ -89,6 +215,99 @@ class PlanController extends CrmController
         $model->delete();
 
         return response()->json(['deleted' => true]);
+    }
+
+    /**
+     * Скоуп расчёта выполнения из запроса.
+     *
+     * Менеджеру доступен только собственный скоуп: подставленный в адрес чужой
+     * `scope_id` не должен открыть ни отдел целиком, ни выручку соседа. Поэтому
+     * для него параметр игнорируется, а не проверяется — проверять нечего.
+     */
+    private function resolveScope(Request $request, User $actor): PlanScope
+    {
+        $seesAll = $actor->can('crm-clients-all.view');
+        $type = PlanTarget::tryFrom((string) $request->input('scope', PlanTarget::DEPARTMENT->value))
+            ?? PlanTarget::DEPARTMENT;
+        $scopeId = (int) $request->input('scope_id', 0) ?: null;
+
+        if ($type === PlanTarget::CLIENT && $scopeId !== null) {
+            $client = User::query()->visibleInCrm($actor)->whereKey($scopeId)->first(['id', 'name']);
+
+            return $client === null
+                ? PlanScope::empty()
+                : PlanScope::client((int) $client->getKey(), (string) $client->name);
+        }
+
+        if ($type === PlanTarget::MANAGER || ! $seesAll) {
+            $managerId = $seesAll ? $scopeId : $actor->managerProfile?->id;
+
+            if ($managerId === null) {
+                return $seesAll ? $this->departmentScope($actor) : PlanScope::empty();
+            }
+
+            $manager = PersonalManager::query()->find($managerId, ['id', 'name']);
+
+            if ($manager === null) {
+                return PlanScope::empty();
+            }
+
+            /** @var list<int> $clientIds */
+            $clientIds = User::query()
+                ->visibleInCrm($actor)
+                ->where('personal_manager_id', $manager->getKey())
+                ->pluck('users.id')
+                ->map('intval')
+                ->all();
+
+            return PlanScope::manager((int) $manager->getKey(), $clientIds, (string) $manager->name);
+        }
+
+        return $this->departmentScope($actor);
+    }
+
+    private function departmentScope(User $actor): PlanScope
+    {
+        /** @var list<int> $clientIds */
+        $clientIds = User::query()->visibleInCrm($actor)->pluck('users.id')->map('intval')->all();
+
+        return PlanScope::department($clientIds);
+    }
+
+    /**
+     * @return array{type: string, id: int|null, label: string, clients_count: int}
+     */
+    private function scopePayload(PlanScope $scope): array
+    {
+        return [
+            'type' => $scope->target->value,
+            'id' => $scope->targetId,
+            'label' => $scope->label,
+            'clients_count' => count($scope->clientIds),
+        ];
+    }
+
+    /**
+     * Что можно выбрать в переключателе скоупа. Менеджеру выбирать нечего —
+     * его скоуп единственный, и список пустой.
+     *
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function scopeOptions(Request $request): array
+    {
+        if (! $this->seesAllClients($request)) {
+            return [];
+        }
+
+        return PersonalManager::query()
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (PersonalManager $manager): array => [
+                'id' => (int) $manager->getKey(),
+                'name' => (string) $manager->name,
+            ])
+            ->all();
     }
 
     /**

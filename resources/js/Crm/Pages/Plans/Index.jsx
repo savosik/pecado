@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import axios from 'axios';
-import { Box, Card, HStack, Input, SimpleGrid, Table, Text, VStack } from '@chakra-ui/react';
+import { Box, Card, HStack, Input, SimpleGrid, Table, Tabs, Text, VStack } from '@chakra-ui/react';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Pagination } from '@/Admin/Components/Pagination';
@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import { LuCopy, LuSave } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
+import ProgressPanel from './components/ProgressPanel';
 
 const fmtMoney = (value) => (value === null || value === undefined
     ? '—'
@@ -69,6 +70,7 @@ export default function Index({
     const [drafts, setDrafts] = useState({});
     const [busy, setBusy] = useState(false);
     const [copyOpen, setCopyOpen] = useState(false);
+    const [tab, setTab] = useState('input');
 
     const dirtyCount = Object.keys(drafts).length;
 
@@ -151,12 +153,12 @@ export default function Index({
                 description={`Месяц: ${monthLabel}. Суммы в рублях, факт считается по отгрузкам.`}
                 actions={(
                     <HStack gap={2}>
-                        {canEdit && (
+                        {canEdit && tab === 'input' && (
                             <Button size="sm" variant="outline" onClick={() => setCopyOpen(true)} disabled={busy}>
                                 <LuCopy /> Скопировать {previousMonthLabel}
                             </Button>
                         )}
-                        {canEdit && (
+                        {canEdit && tab === 'input' && (
                             <Button size="sm" onClick={save} loading={busy} disabled={dirtyCount === 0}>
                                 <LuSave /> Сохранить{dirtyCount > 0 ? ` (${dirtyCount})` : ''}
                             </Button>
@@ -186,197 +188,212 @@ export default function Index({
                     </Card.Body>
                 </Card.Root>
 
-                {(department.can_edit || department.amount !== null) && (
-                    <Card.Root>
-                        <Card.Header>
-                            <Text fontWeight="semibold" fontSize="lg">План отдела</Text>
-                        </Card.Header>
-                        <Card.Body>
-                            <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
-                                <Box>
-                                    <Text fontSize="xs" color="fg.muted" mb="1">{monthLabel}</Text>
-                                    <PlanCell
-                                        value={valueOf('department', department.amount)}
-                                        disabled={!department.can_edit}
-                                        onChange={(value) => setDraft('department', value)}
-                                    />
-                                </Box>
-                                <Box>
-                                    <Text fontSize="xs" color="fg.muted" mb="1">{previousMonthLabel}</Text>
-                                    <Text fontSize="sm">{fmtMoney(department.previous_amount)}</Text>
-                                </Box>
-                                <Box>
-                                    <Text fontSize="xs" color="fg.muted" mb="1">Сумма планов менеджеров</Text>
-                                    <Text fontSize="sm">{fmtMoney(managersSum)}</Text>
-                                </Box>
-                            </SimpleGrid>
+                <Tabs.Root value={tab} onValueChange={(e) => setTab(e.value)} lazyMount>
+                    <Tabs.List>
+                        <Tabs.Trigger value="input">Ввод планов</Tabs.Trigger>
+                        <Tabs.Trigger value="progress">Выполнение</Tabs.Trigger>
+                    </Tabs.List>
 
-                            {department.amount !== null && managersSum > Number(department.amount) + 0.01 && (
-                                <Alert status="warning" mt={4} title="Менеджерам расписано больше плана отдела">
-                                    Сумма планов менеджеров ({fmtMoney(managersSum)}) больше плана отдела
-                                    ({fmtMoney(department.amount)}). Это не запрещено — но проверьте, так ли задумано.
-                                </Alert>
-                            )}
-                        </Card.Body>
-                    </Card.Root>
-                )}
-
-                {managers.length > 0 && (
-                    <Card.Root>
-                        <Card.Header>
-                            <Text fontWeight="semibold" fontSize="lg">Менеджеры</Text>
-                        </Card.Header>
-                        <Card.Body>
-                            <Table.Root size="sm">
-                                <Table.Header>
-                                    <Table.Row>
-                                        <Table.ColumnHeader>Менеджер</Table.ColumnHeader>
-                                        <Table.ColumnHeader>{previousMonthLabel}</Table.ColumnHeader>
-                                        <Table.ColumnHeader>План на {monthLabel}</Table.ColumnHeader>
-                                        <Table.ColumnHeader>Расписано по клиентам</Table.ColumnHeader>
-                                    </Table.Row>
-                                </Table.Header>
-                                <Table.Body>
-                                    {managers.map((row) => (
-                                        <Table.Row key={row.id}>
-                                            <Table.Cell>
-                                                <Text fontSize="sm" fontWeight="500">{row.name}</Text>
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                <Text fontSize="sm" color="fg.muted">{fmtMoney(row.previous_amount)}</Text>
-                                            </Table.Cell>
-                                            <Table.Cell>
+                    <Tabs.Content value="input" px={0} pt={4}>
+                        <VStack gap={4} align="stretch">
+                            {(department.can_edit || department.amount !== null) && (
+                                <Card.Root>
+                                    <Card.Header>
+                                        <Text fontWeight="semibold" fontSize="lg">План отдела</Text>
+                                    </Card.Header>
+                                    <Card.Body>
+                                        <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                                            <Box>
+                                                <Text fontSize="xs" color="fg.muted" mb="1">{monthLabel}</Text>
                                                 <PlanCell
-                                                    value={valueOf(`manager:${row.id}`, row.amount)}
-                                                    disabled={!row.can_edit}
-                                                    onChange={(value) => setDraft(`manager:${row.id}`, value)}
+                                                    value={valueOf('department', department.amount)}
+                                                    disabled={!department.can_edit}
+                                                    onChange={(value) => setDraft('department', value)}
                                                 />
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                <Text
-                                                    fontSize="sm"
-                                                    color={row.amount !== null && row.clients_sum > Number(row.amount) + 0.01
-                                                        ? 'orange.500'
-                                                        : 'fg.muted'}
-                                                >
-                                                    {fmtMoney(row.clients_sum)}
-                                                </Text>
-                                            </Table.Cell>
-                                        </Table.Row>
-                                    ))}
-                                </Table.Body>
-                            </Table.Root>
+                                            </Box>
+                                            <Box>
+                                                <Text fontSize="xs" color="fg.muted" mb="1">{previousMonthLabel}</Text>
+                                                <Text fontSize="sm">{fmtMoney(department.previous_amount)}</Text>
+                                            </Box>
+                                            <Box>
+                                                <Text fontSize="xs" color="fg.muted" mb="1">Сумма планов менеджеров</Text>
+                                                <Text fontSize="sm">{fmtMoney(managersSum)}</Text>
+                                            </Box>
+                                        </SimpleGrid>
 
-                            {mismatched.length > 0 && (
-                                <Alert status="info" mt={4} title="Сумма планов клиентов больше плана менеджера">
-                                    {mismatched.map((row) => `${row.name}: расписано ${fmtMoney(row.clients_sum)} из ${fmtMoney(row.amount)}`).join('; ')}.
-                                    Это подсказка, а не запрет.
-                                </Alert>
-                            )}
-                        </Card.Body>
-                    </Card.Root>
-                )}
-
-                <Card.Root>
-                    <Card.Header>
-                        <Text fontWeight="semibold" fontSize="lg">Клиенты</Text>
-                    </Card.Header>
-                    <Card.Body>
-                        <HStack gap={3} mb={4} flexWrap="wrap" align="center">
-                            <Input
-                                size="sm"
-                                maxW="260px"
-                                placeholder="Поиск по имени или email"
-                                defaultValue={filters.search || ''}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        navigate({ search: e.target.value || undefined });
-                                    }
-                                }}
-                            />
-
-                            {canSeeAll && (
-                                <select
-                                    style={selectStyle}
-                                    value={filters.manager_id || ''}
-                                    onChange={(e) => navigate({ manager_id: e.target.value || undefined })}
-                                >
-                                    <option value="">Все менеджеры</option>
-                                    {managerOptions.map((manager) => (
-                                        <option key={manager.id} value={manager.id}>{manager.name}</option>
-                                    ))}
-                                </select>
-                            )}
-
-                            <Checkbox
-                                checked={!!filters.only_with_plan}
-                                onCheckedChange={(e) => navigate({ only_with_plan: e.checked ? 1 : undefined })}
-                            >
-                                Только с планом
-                            </Checkbox>
-                        </HStack>
-
-                        {clients.data.length === 0 ? (
-                            <Text fontSize="sm" color="fg.muted">Клиенты не найдены.</Text>
-                        ) : (
-                            <>
-                                <Table.Root size="sm">
-                                    <Table.Header>
-                                        <Table.Row>
-                                            <Table.ColumnHeader>Клиент</Table.ColumnHeader>
-                                            {canSeeAll && <Table.ColumnHeader>Менеджер</Table.ColumnHeader>}
-                                            <Table.ColumnHeader>{previousMonthLabel}</Table.ColumnHeader>
-                                            <Table.ColumnHeader>План на {monthLabel}</Table.ColumnHeader>
-                                        </Table.Row>
-                                    </Table.Header>
-                                    <Table.Body>
-                                        {clients.data.map((row) => (
-                                            <Table.Row key={row.id}>
-                                                <Table.Cell>
-                                                    <a href={route('crm.clients.show', row.id)}>
-                                                        <Text fontSize="sm" fontWeight="500">{row.name}</Text>
-                                                    </a>
-                                                </Table.Cell>
-                                                {canSeeAll && (
-                                                    <Table.Cell>
-                                                        <Text fontSize="sm" color="fg.muted">{row.manager || '—'}</Text>
-                                                    </Table.Cell>
-                                                )}
-                                                <Table.Cell>
-                                                    <Text fontSize="sm" color="fg.muted">{fmtMoney(row.previous_amount)}</Text>
-                                                </Table.Cell>
-                                                <Table.Cell>
-                                                    <PlanCell
-                                                        value={valueOf(`client:${row.id}`, row.amount)}
-                                                        disabled={!row.can_edit}
-                                                        onChange={(value) => setDraft(`client:${row.id}`, value)}
-                                                    />
-                                                </Table.Cell>
-                                            </Table.Row>
-                                        ))}
-                                    </Table.Body>
-                                </Table.Root>
-
-                                <Box mt={4}>
-                                    <Pagination
-                                        pagination={clients}
-                                        onPageChange={(page) => router.get(
-                                            route('crm.plans.index'),
-                                            { ...filters, month, page },
-                                            { preserveState: false, replace: true },
+                                        {department.amount !== null && managersSum > Number(department.amount) + 0.01 && (
+                                            <Alert status="warning" mt={4} title="Менеджерам расписано больше плана отдела">
+                                                Сумма планов менеджеров ({fmtMoney(managersSum)}) больше плана отдела
+                                                ({fmtMoney(department.amount)}). Это не запрещено — но проверьте, так ли задумано.
+                                            </Alert>
                                         )}
-                                    />
-                                </Box>
-                            </>
-                        )}
+                                    </Card.Body>
+                                </Card.Root>
+                            )}
 
-                        {dirtyCount > 0 && (
-                            <Alert status="warning" mt={4} title="Есть несохранённые изменения">
-                                Изменено ячеек: {dirtyCount}. Переход на другую страницу или смена месяца их потеряет.
-                            </Alert>
-                        )}
-                    </Card.Body>
-                </Card.Root>
+                            {managers.length > 0 && (
+                                <Card.Root>
+                                    <Card.Header>
+                                        <Text fontWeight="semibold" fontSize="lg">Менеджеры</Text>
+                                    </Card.Header>
+                                    <Card.Body>
+                                        <Table.Root size="sm">
+                                            <Table.Header>
+                                                <Table.Row>
+                                                    <Table.ColumnHeader>Менеджер</Table.ColumnHeader>
+                                                    <Table.ColumnHeader>{previousMonthLabel}</Table.ColumnHeader>
+                                                    <Table.ColumnHeader>План на {monthLabel}</Table.ColumnHeader>
+                                                    <Table.ColumnHeader>Расписано по клиентам</Table.ColumnHeader>
+                                                </Table.Row>
+                                            </Table.Header>
+                                            <Table.Body>
+                                                {managers.map((row) => (
+                                                    <Table.Row key={row.id}>
+                                                        <Table.Cell>
+                                                            <Text fontSize="sm" fontWeight="500">{row.name}</Text>
+                                                        </Table.Cell>
+                                                        <Table.Cell>
+                                                            <Text fontSize="sm" color="fg.muted">{fmtMoney(row.previous_amount)}</Text>
+                                                        </Table.Cell>
+                                                        <Table.Cell>
+                                                            <PlanCell
+                                                                value={valueOf(`manager:${row.id}`, row.amount)}
+                                                                disabled={!row.can_edit}
+                                                                onChange={(value) => setDraft(`manager:${row.id}`, value)}
+                                                            />
+                                                        </Table.Cell>
+                                                        <Table.Cell>
+                                                            <Text
+                                                                fontSize="sm"
+                                                                color={row.amount !== null && row.clients_sum > Number(row.amount) + 0.01
+                                                                    ? 'orange.500'
+                                                                    : 'fg.muted'}
+                                                            >
+                                                                {fmtMoney(row.clients_sum)}
+                                                            </Text>
+                                                        </Table.Cell>
+                                                    </Table.Row>
+                                                ))}
+                                            </Table.Body>
+                                        </Table.Root>
+
+                                        {mismatched.length > 0 && (
+                                            <Alert status="info" mt={4} title="Сумма планов клиентов больше плана менеджера">
+                                                {mismatched.map((row) => `${row.name}: расписано ${fmtMoney(row.clients_sum)} из ${fmtMoney(row.amount)}`).join('; ')}.
+                                                Это подсказка, а не запрет.
+                                            </Alert>
+                                        )}
+                                    </Card.Body>
+                                </Card.Root>
+                            )}
+
+                            <Card.Root>
+                                <Card.Header>
+                                    <Text fontWeight="semibold" fontSize="lg">Клиенты</Text>
+                                </Card.Header>
+                                <Card.Body>
+                                    <HStack gap={3} mb={4} flexWrap="wrap" align="center">
+                                        <Input
+                                            size="sm"
+                                            maxW="260px"
+                                            placeholder="Поиск по имени или email"
+                                            defaultValue={filters.search || ''}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    navigate({ search: e.target.value || undefined });
+                                                }
+                                            }}
+                                        />
+
+                                        {canSeeAll && (
+                                            <select
+                                                style={selectStyle}
+                                                value={filters.manager_id || ''}
+                                                onChange={(e) => navigate({ manager_id: e.target.value || undefined })}
+                                            >
+                                                <option value="">Все менеджеры</option>
+                                                {managerOptions.map((manager) => (
+                                                    <option key={manager.id} value={manager.id}>{manager.name}</option>
+                                                ))}
+                                            </select>
+                                        )}
+
+                                        <Checkbox
+                                            checked={!!filters.only_with_plan}
+                                            onCheckedChange={(e) => navigate({ only_with_plan: e.checked ? 1 : undefined })}
+                                        >
+                                            Только с планом
+                                        </Checkbox>
+                                    </HStack>
+
+                                    {clients.data.length === 0 ? (
+                                        <Text fontSize="sm" color="fg.muted">Клиенты не найдены.</Text>
+                                    ) : (
+                                        <>
+                                            <Table.Root size="sm">
+                                                <Table.Header>
+                                                    <Table.Row>
+                                                        <Table.ColumnHeader>Клиент</Table.ColumnHeader>
+                                                        {canSeeAll && <Table.ColumnHeader>Менеджер</Table.ColumnHeader>}
+                                                        <Table.ColumnHeader>{previousMonthLabel}</Table.ColumnHeader>
+                                                        <Table.ColumnHeader>План на {monthLabel}</Table.ColumnHeader>
+                                                    </Table.Row>
+                                                </Table.Header>
+                                                <Table.Body>
+                                                    {clients.data.map((row) => (
+                                                        <Table.Row key={row.id}>
+                                                            <Table.Cell>
+                                                                <a href={route('crm.clients.show', row.id)}>
+                                                                    <Text fontSize="sm" fontWeight="500">{row.name}</Text>
+                                                                </a>
+                                                            </Table.Cell>
+                                                            {canSeeAll && (
+                                                                <Table.Cell>
+                                                                    <Text fontSize="sm" color="fg.muted">{row.manager || '—'}</Text>
+                                                                </Table.Cell>
+                                                            )}
+                                                            <Table.Cell>
+                                                                <Text fontSize="sm" color="fg.muted">{fmtMoney(row.previous_amount)}</Text>
+                                                            </Table.Cell>
+                                                            <Table.Cell>
+                                                                <PlanCell
+                                                                    value={valueOf(`client:${row.id}`, row.amount)}
+                                                                    disabled={!row.can_edit}
+                                                                    onChange={(value) => setDraft(`client:${row.id}`, value)}
+                                                                />
+                                                            </Table.Cell>
+                                                        </Table.Row>
+                                                    ))}
+                                                </Table.Body>
+                                            </Table.Root>
+
+                                            <Box mt={4}>
+                                                <Pagination
+                                                    pagination={clients}
+                                                    onPageChange={(page) => router.get(
+                                                        route('crm.plans.index'),
+                                                        { ...filters, month, page },
+                                                        { preserveState: false, replace: true },
+                                                    )}
+                                                />
+                                            </Box>
+                                        </>
+                                    )}
+
+                                    {dirtyCount > 0 && (
+                                        <Alert status="warning" mt={4} title="Есть несохранённые изменения">
+                                            Изменено ячеек: {dirtyCount}. Переход на другую страницу или смена месяца их потеряет.
+                                        </Alert>
+                                    )}
+                                </Card.Body>
+                            </Card.Root>
+                        </VStack>
+                    </Tabs.Content>
+
+                    <Tabs.Content value="progress" px={0} pt={4}>
+                        <ProgressPanel month={month} canSeeAll={canSeeAll} />
+                    </Tabs.Content>
+                </Tabs.Root>
             </VStack>
 
             <ConfirmDialog

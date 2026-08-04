@@ -221,7 +221,8 @@
 
 ### Волна 4 — Планы и аналитика
 - [x] `crm-05-plans` — в `review`, ждёт визуальной проверки на dev
-- [ ] `crm-06-plan-analytics`
+- [x] `crm-06-plan-analytics` — в `review`, ждёт визуальной проверки на dev и сверки
+      цифры факта с `/crm/analytics` на живых данных
 - [ ] `crm-07-opportunities`
 - [ ] `crm-08-beds`
 

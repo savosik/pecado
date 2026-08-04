@@ -207,6 +207,19 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     Route::middleware('permission:crm-plans.view')->group(function () {
         Route::get('/plans', [PlanController::class, 'index'])->name('plans.index');
         Route::get('/plans/data', [PlanController::class, 'data'])->name('plans.data');
+
+        // Выполнение планов (crm-06). Отдельные адреса, а не один жирный payload:
+        // сводка нужна сразу, burndown и разрез по менеджерам — только на вкладке
+        // «Выполнение», и грузить их при вводе планов незачем.
+        Route::get('/plans/progress', [PlanController::class, 'progressData'])->name('plans.progress');
+        Route::get('/plans/burndown', [PlanController::class, 'burndown'])->name('plans.burndown');
+        Route::get('/plans/export', [PlanController::class, 'export'])->name('plans.export');
+
+        // Разрез по менеджерам закрыт правом на весь отдел: менеджер не должен
+        // видеть выручку соседа даже зная адрес.
+        Route::get('/plans/by-manager', [PlanController::class, 'byManager'])
+            ->middleware('permission:crm-clients-all.view')
+            ->name('plans.by-manager');
     });
 
     Route::middleware('permission:crm-plans.edit')->group(function () {
