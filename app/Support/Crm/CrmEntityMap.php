@@ -2,6 +2,7 @@
 
 namespace App\Support\Crm;
 
+use App\Models\CrmCall;
 use App\Models\CrmComment;
 use App\Models\CrmEmail;
 use App\Models\CrmTask;
@@ -35,6 +36,8 @@ final class CrmEntityMap
 
     public const EMAIL = 'email';
 
+    public const CALL = 'call';
+
     /**
      * Строковый тип для API → класс модели.
      *
@@ -47,6 +50,7 @@ final class CrmEntityMap
         self::COMMENT => CrmComment::class,
         self::TASK => CrmTask::class,
         self::EMAIL => CrmEmail::class,
+        self::CALL => CrmCall::class,
     ];
 
     /**
@@ -61,6 +65,7 @@ final class CrmEntityMap
         self::COMMENT => 'Комментарий',
         self::TASK => 'Задача',
         self::EMAIL => 'Письмо',
+        self::CALL => 'Звонок',
     ];
 
     /**
@@ -73,7 +78,7 @@ final class CrmEntityMap
      */
     public static function taskableTypes(): array
     {
-        return array_values(array_diff(self::types(), [self::COMMENT, self::TASK, self::EMAIL]));
+        return array_values(array_diff(self::types(), [self::COMMENT, self::TASK, self::EMAIL, self::CALL]));
     }
 
     /**
@@ -151,7 +156,7 @@ final class CrmEntityMap
             self::CLIENT => $entity->getKey(),
             self::ORDER, self::SHIPMENT => $entity->getAttribute('user_id'),
             // Комментарий и задача уже знают своего клиента — денормализация из crm-01.
-            self::COMMENT, self::TASK, self::EMAIL => $entity->getAttribute('client_user_id'),
+            self::COMMENT, self::TASK, self::EMAIL, self::CALL => $entity->getAttribute('client_user_id'),
             default => null,
         };
 
@@ -199,6 +204,7 @@ final class CrmEntityMap
             self::COMMENT => 'Комментарий от '.($entity->getAttribute('created_at')?->format('d.m.Y H:i') ?? '—'),
             self::TASK => (string) $entity->getAttribute('title'),
             self::EMAIL => 'Письмо: '.$entity->getAttribute('subject'),
+            self::CALL => 'Звонок от '.($entity->getAttribute('started_at')?->format('d.m.Y H:i') ?? '—'),
             default => (string) $entity->getKey(),
         };
     }
@@ -217,6 +223,13 @@ final class CrmEntityMap
 
         if ($type === self::EMAIL) {
             return route('crm.emails.index', ['email' => $entity->getKey()]);
+        }
+
+        // Отдельного раздела звонков нет — звонок живёт в ленте своего клиента.
+        if ($type === self::CALL) {
+            $clientId = $entity->getAttribute('client_user_id');
+
+            return $clientId === null ? null : route('crm.clients.show', $clientId);
         }
 
         if ($viewer !== null && ! $viewer->hasAdminAccess()) {

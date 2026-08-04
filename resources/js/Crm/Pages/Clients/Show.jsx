@@ -124,7 +124,11 @@ export default function Show() {
 
                                 {canViewComments && (
                                     <Tabs.Content value="timeline">
-                                        <ClientFeed clientId={client.id} clientEmail={client.email} />
+                                        <ClientFeed
+                                            clientId={client.id}
+                                            client={client}
+                                            clientEmail={client.email}
+                                        />
                                     </Tabs.Content>
                                 )}
 

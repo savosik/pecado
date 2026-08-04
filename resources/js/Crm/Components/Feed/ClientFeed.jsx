@@ -9,11 +9,13 @@ import CommentEntry from '@/Crm/Components/CommentEntry';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import { useCommentFeed } from '@/Crm/Components/useCommentFeed';
+import CallDialog from '@/Crm/Components/CallDialog';
 import FeedComposer from './FeedComposer';
 import DocumentFeedEntry from './entries/DocumentFeedEntry';
 import TaskFeedEntry from './entries/TaskFeedEntry';
 import EmailFeedEntry from './entries/EmailFeedEntry';
-import { entryFromEmail, entryFromTask } from './timelineEntry';
+import CallFeedEntry from './entries/CallFeedEntry';
+import { entryFromCall, entryFromEmail, entryFromTask } from './timelineEntry';
 
 /**
  * Что можно показать в ленте. Пусто = всё.
@@ -21,6 +23,7 @@ import { entryFromEmail, entryFromTask } from './timelineEntry';
 const TYPES = [
     { value: 'comment', label: 'Комментарии' },
     { value: 'task', label: 'Задачи' },
+    { value: 'call', label: 'Звонки' },
     { value: 'email', label: 'Письма' },
     { value: 'order', label: 'Заказы' },
     { value: 'shipment', label: 'Реализации' },
@@ -38,12 +41,14 @@ const TYPES = [
  * а в чате «важное» должно быть на виду постоянно.
  *
  * @param {number} clientId
+ * @param {object|null} client — карточка клиента, нужна диалогу звонка (номер)
  * @param {string|null} clientEmail — подставляется в письмо
  */
-export default function ClientFeed({ clientId, clientEmail = null }) {
+export default function ClientFeed({ clientId, client = null, clientEmail = null }) {
     const [types, setTypes] = useState([]);
     const [taskOpen, setTaskOpen] = useState(false);
     const [emailOpen, setEmailOpen] = useState(false);
+    const [callOpen, setCallOpen] = useState(false);
     const [pendingDelete, setPendingDelete] = useState(null);
 
     const feed = useCommentFeed(`/crm/clients/${clientId}/timeline`, { types });
@@ -70,6 +75,10 @@ export default function ClientFeed({ clientId, clientEmail = null }) {
 
         if (entry.type === 'email') {
             return <EmailFeedEntry key={key} entry={entry} />;
+        }
+
+        if (entry.type === 'call') {
+            return <CallFeedEntry key={key} entry={entry} />;
         }
 
         return (
@@ -159,6 +168,7 @@ export default function ClientFeed({ clientId, clientEmail = null }) {
                 onCreated={feed.prepend}
                 onCompose={() => setEmailOpen(true)}
                 onFullTask={() => setTaskOpen(true)}
+                onCall={() => setCallOpen(true)}
             />
 
             <TaskDialog
@@ -181,6 +191,20 @@ export default function ClientFeed({ clientId, clientEmail = null }) {
                     // Черновик в ленту не идёт — он становится событием только после отправки.
                     if (email?.status && email.status !== 'draft') {
                         feed.prepend(entryFromEmail(email));
+                    }
+                }}
+            />
+
+            <CallDialog
+                open={callOpen}
+                client={client}
+                onClose={() => setCallOpen(false)}
+                onSaved={(data) => {
+                    feed.prepend(entryFromCall(data.call));
+                    // Следующий шаг — отдельная запись ленты: он попадает в неё
+                    // тем же событием, что и в раздел задач.
+                    if (data.follow_up) {
+                        feed.prepend(entryFromTask(data.follow_up));
                     }
                 }}
             />

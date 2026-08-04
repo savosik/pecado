@@ -143,6 +143,11 @@ class ClientController extends CrmController
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,
+                // Номер без форматирования — для tel:-ссылки: из 1С он приходит
+                // и в скобках, и с дефисами.
+                'phone_digits' => $user->phone === null
+                    ? null
+                    : (preg_replace('/\D+/', '', $user->phone) ?: null),
                 'city' => $user->city,
                 'country' => $user->country,
                 'status' => $user->status->value,

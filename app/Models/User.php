@@ -535,6 +535,16 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
+     * Звонки CRM по этому клиенту.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<CrmCall, $this>
+     */
+    public function crmCalls(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CrmCall::class, 'client_user_id');
+    }
+
+    /**
      * Письма CRM, отправленные по этому клиенту.
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<CrmEmail, $this>

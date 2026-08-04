@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Crm\AnalyticsController;
 use App\Http\Controllers\Crm\AttachmentController;
+use App\Http\Controllers\Crm\CallController;
 use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientProfileController;
 use App\Http\Controllers\Crm\CommentController;
@@ -110,6 +111,30 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])
             ->name('tasks.destroy')
             ->whereNumber('task');
+    });
+
+    // Звонки. Телефония не подключена — записываются руками из диалога и из ленты;
+    // когда появится АТС, тот же журнал начнёт наполняться вебхуком.
+    Route::middleware('permission:crm-calls.view')->group(function () {
+        // До /calls/{call}: иначе «options» ушло бы в биндинг модели.
+        Route::get('/calls/options', [CallController::class, 'options'])->name('calls.options');
+        Route::get('/calls', [CallController::class, 'index'])->name('calls.index');
+    });
+
+    Route::middleware('permission:crm-calls.create')->group(function () {
+        Route::post('/calls', [CallController::class, 'store'])->name('calls.store');
+    });
+
+    Route::middleware('permission:crm-calls.edit')->group(function () {
+        Route::patch('/calls/{call}', [CallController::class, 'update'])
+            ->name('calls.update')
+            ->whereNumber('call');
+    });
+
+    Route::middleware('permission:crm-calls.delete')->group(function () {
+        Route::delete('/calls/{call}', [CallController::class, 'destroy'])
+            ->name('calls.destroy')
+            ->whereNumber('call');
     });
 
     // Письма. Отправка гейтится фича-флагом MAIL_FEATURE_CRM_OUTBOUND,

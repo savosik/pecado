@@ -13,6 +13,7 @@ import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import PresetsBar from '@/Crm/Components/PresetsBar';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
+import CallDialog from '@/Crm/Components/CallDialog';
 import ClientsFilterBar from './components/ClientsFilterBar';
 import QuickFilters from './components/QuickFilters';
 import TasksCell from './components/TasksCell';
@@ -45,11 +46,13 @@ export default function Index({
     // копий модалки в DOM — верный способ уронить таблицу на скролле.
     const [taskFor, setTaskFor] = useState(null);
     const [emailFor, setEmailFor] = useState(null);
+    const [callFor, setCallFor] = useState(null);
     const [savedPresets, setSavedPresets] = useState(presets);
 
     const canEditLifecycle = can('crm-profile.edit');
     const canWriteEmail = can('crm-emails.create');
     const canCreateTask = can('crm-tasks.create');
+    const canLogCall = can('crm-calls.create');
 
     const applyFilters = useCallback((patch) => {
         router.get(route('crm.clients.index'), { ...filters, ...patch }, {
@@ -128,6 +131,8 @@ export default function Index({
                 <PhoneCell
                     phone={row.phone}
                     digits={row.phone_digits}
+                    canCall={canLogCall}
+                    onCall={() => setCallFor(row)}
                     onCreateTask={() => setTaskFor(row)}
                 />
             ),
@@ -258,6 +263,18 @@ export default function Index({
                     setTaskFor(null);
                     // Перезагружаем только список: срок ближайшей задачи и счётчик
                     // считаются на сервере, пересобирать их в стейте — вторая правда.
+                    router.reload({ only: ['clients', 'uncoveredCount'] });
+                }}
+            />
+
+            <CallDialog
+                open={callFor !== null}
+                client={callFor}
+                onClose={() => setCallFor(null)}
+                onSaved={() => {
+                    setCallFor(null);
+                    // Звонок мог поставить следующий шаг — колонка задач обязана
+                    // это показать сразу, а не после ручного обновления.
                     router.reload({ only: ['clients', 'uncoveredCount'] });
                 }}
             />

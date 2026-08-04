@@ -2,6 +2,7 @@
 
 namespace App\Services\Crm;
 
+use App\Models\CrmCall;
 use App\Models\CrmComment;
 use App\Models\CrmEmail;
 use App\Models\CrmTask;
@@ -44,6 +45,8 @@ class ClientTimelineService
 
     private const TYPE_SHIPMENT = 'shipment';
 
+    private const TYPE_CALL = 'call';
+
     /**
      * Все типы записей ленты — для валидации фильтра `types[]`.
      *
@@ -55,6 +58,7 @@ class ClientTimelineService
             self::TYPE_COMMENT,
             self::TYPE_TASK,
             self::TYPE_EMAIL,
+            self::TYPE_CALL,
             self::TYPE_ORDER,
             self::TYPE_SHIPMENT,
         ];
@@ -63,6 +67,7 @@ class ClientTimelineService
     public function __construct(
         private readonly CrmTaskService $tasks,
         private readonly CrmEmailService $emails,
+        private readonly CrmCallService $calls,
     ) {}
 
     /**
@@ -116,6 +121,15 @@ class ClientTimelineService
                 ->selectRaw("'".self::TYPE_EMAIL."' as source, id, created_at as happened_at, 0 as is_pinned")
                 ->where('client_user_id', $clientId)
                 ->whereIn('status', ['queued', 'sent', 'failed']);
+        }
+
+        if (in_array(self::TYPE_CALL, $wanted, true)) {
+            // Звонок доступен всем, кто видит клиента, — как комментарий, а не как
+            // задача: разговор с клиентом это общий факт, а не поручение.
+            $sources[] = DB::table('crm_calls')
+                ->selectRaw("'".self::TYPE_CALL."' as source, id, COALESCE(started_at, created_at) as happened_at, 0 as is_pinned")
+                ->where('client_user_id', $clientId)
+                ->whereNull('deleted_at');
         }
 
         if (in_array(self::TYPE_ORDER, $wanted, true)) {
@@ -201,6 +215,13 @@ class ClientTimelineService
             ->get()
             ->keyBy('id');
 
+        $calls = CrmCall::query()
+            ->whereIn('id', $rows->where('source', self::TYPE_CALL)->pluck('id')->all())
+            ->with(['author:id,name', 'related'])
+            ->withCount($this->attachmentsCount())
+            ->get()
+            ->keyBy('id');
+
         $orders = Order::query()
             ->whereIn('id', $rows->where('source', self::TYPE_ORDER)->pluck('id')->all())
             ->withCount('items')
@@ -214,7 +235,7 @@ class ClientTimelineService
             ->keyBy('id');
 
         /** @var LengthAwarePaginator<int, array<string, mixed>> $hydrated */
-        $hydrated = $paginator->through(function (object $row) use ($comments, $tasks, $emails, $orders, $shipments, $viewer): array {
+        $hydrated = $paginator->through(function (object $row) use ($comments, $tasks, $emails, $calls, $orders, $shipments, $viewer): array {
             $id = (int) $row->id;
 
             // Неизвестный источник уходит в заглушку, а не роняет ленту: между
@@ -229,6 +250,9 @@ class ClientTimelineService
                 self::TYPE_EMAIL => ($email = $emails->get($id)) instanceof CrmEmail
                     ? $this->emailEntry($email, $viewer)
                     : $this->missingEntry(self::TYPE_EMAIL, $id),
+                self::TYPE_CALL => ($call = $calls->get($id)) instanceof CrmCall
+                    ? $this->callEntry($call, $viewer)
+                    : $this->missingEntry(self::TYPE_CALL, $id),
                 self::TYPE_ORDER => ($order = $orders->get($id)) instanceof Order
                     ? $this->orderEntry($order, $viewer)
                     : $this->missingEntry(self::TYPE_ORDER, $id),
@@ -240,6 +264,38 @@ class ClientTimelineService
         });
 
         return $hydrated;
+    }
+
+    /**
+     * Звонок в общей форме записи ленты.
+     *
+     * @return array<string, mixed>
+     */
+    public function callEntry(CrmCall $call, User $viewer): array
+    {
+        $happened = $call->started_at ?? $call->created_at;
+
+        return [
+            'type' => self::TYPE_CALL,
+            'id' => (int) $call->getKey(),
+            'happened_at' => $happened?->toIso8601String(),
+            'happened_at_label' => $happened?->format('d.m.Y H:i'),
+            'author' => [
+                'id' => (int) $call->user_id,
+                'name' => $call->author->name,
+            ],
+            'title' => $call->direction->label().': '.$call->result->label(),
+            'excerpt' => $call->summary === null ? null : Str::limit($call->summary, 300),
+            'entity' => $call->related instanceof Model
+                ? CrmEntityMap::describe($call->related, $viewer)
+                : null,
+            'call' => $this->calls->payload($call, $viewer),
+            'attachments_count' => (int) ($call->attachments_count ?? 0),
+            'can' => [
+                'update' => $viewer->can('update', $call),
+                'delete' => $viewer->can('delete', $call),
+            ],
+        ];
     }
 
     /**
