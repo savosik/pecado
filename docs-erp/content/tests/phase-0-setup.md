@@ -15,6 +15,7 @@
 | 0.1.6 | DLQ очереди | UI → Queues | `erp_dlq.*` |
 | 0.1.7 | Внешние остатки (ESB) | UI → Queues | `external.remains_for_erp` + exchange `external.remains` (fanout, v12.14). Очередь `external.remains_for_website` удалена в v15.2 — её быть **не должно** |
 | 0.1.8 | Shovel `moscow-remains` | UI → Admin → Shovel Status | Состояние `running`, тянет из ESB (v12.14) |
+| 0.1.8а | Заказы из чужой 1С (ESB Andrey) | UI → Queues | `external.orders_from_andrey_for_erp` + exchange `external.orders_from_andrey` (fanout). Очередь-зеркало `external.orders_from_andrey_for_website` удалена в v15.9.1 — её быть **не должно** |
 | 0.1.9 | Пользователи и права | `rabbitmqctl list_users` / `list_user_permissions erp_1c` | `pecado_admin`, `pecado_app`, `erp_1c`; у `erp_1c` есть configure/write/read на `external.remains_for_erp` (v12.14, fix 2026-04-25) |
 | 0.1.10 | Пересоздание | `docker exec pecado-app php artisan rabbitmq:setup` | Топология (включая promotions, contractors, external.remains) создана идемпотентно |
 

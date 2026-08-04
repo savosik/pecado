@@ -27,6 +27,8 @@ class SetupRabbitMQTopology extends Command
             'external.remains_for_erp',
         ],
         'external.orders_from_andrey' => [
+            // external.orders_from_andrey_for_website выведена из топологии 2026-05-18:
+            // зеркало для отладки, потребителя нет. Очередь удаляется в DELETED_QUEUES.
             'external.orders_from_andrey_for_erp',
         ],
     ];
@@ -40,10 +42,18 @@ class SetupRabbitMQTopology extends Command
      * остатки через external.remains_for_erp. queue_delete идемпотентен:
      * если очереди уже нет (CI / свежий dev), 404 ловится и не роняет setup.
      *
+     * v15.9.1 (2026-08-04): сюда же добавлена external.orders_from_andrey_for_website.
+     * Из `EXTERNAL_FANOUTS` её убрали ещё 2026-05-18, но в этот список не внесли —
+     * рассчитывали на разовое ручное `rabbitmqctl delete_queue`. На prod очередь
+     * пережила ту чистку, осталась привязанной к fanout и к 2026-08-04 накопила
+     * 5003 сообщения (296 МБ): потребителя нет, а policy `external-remains-ttl`
+     * ловит только `^external\.remains_for_.*$`, так что TTL на неё не действует.
+     *
      * @var array<int, string>
      */
     private const DELETED_QUEUES = [
         'external.remains_for_website',
+        'external.orders_from_andrey_for_website',
     ];
 
     /**

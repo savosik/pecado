@@ -6,6 +6,43 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [15.9.1] — 2026-08-04
+
+### Удалено
+
+- **Очередь-зеркало `external.orders_from_andrey_for_website`.** Заказы из чужой 1С
+  (ESB Andrey → shovel `andrey-orders` → fanout `external.orders_from_andrey`)
+  копировались в две очереди: рабочую `_for_erp` (её читает 1С Pecado) и зеркало
+  `_for_website`, заведённое для отладки. Потребителя у зеркала не было никогда.
+    - Из `EXTERNAL_FANOUTS` очередь убрали ещё 2026-05-18, но в `DELETED_QUEUES`
+      не внесли — рассчитывали на разовое `rabbitmqctl delete_queue`. На prod она
+      это пережила, осталась привязанной к fanout и к 2026-08-04 накопила
+      **5003 сообщения (296 МБ)**; самое старое — от 2026-05-21.
+    - TTL не срабатывал: policy `external-remains-ttl` ловит только паттерн
+      `^external\.remains_for_.*$`, очередь Andrey под него не подпадает.
+    - Незаметно это было потому, что список внешних очередей в админке
+      «Шина ERP» захардкожен (`ErpBusController::EXTERNAL_QUEUES`), и очередь,
+      выведенная из топологии, в UI не отображается.
+    - **Починка:** имя добавлено в `DELETED_QUEUES` — `rabbitmq:setup` удаляет
+      очередь вместе с binding при каждом деплое (`queue_delete` идемпотентен,
+      404 на отсутствующей очереди setup не роняет).
+- **Не затронуто:** shovel `andrey-orders`, fanout `external.orders_from_andrey`
+  и очередь `external.orders_from_andrey_for_erp` сохранены — **1С Pecado
+  продолжает получать заказы от Andrey** без изменений. Контракт payload
+  не менялся, AsyncAPI не затронут (это отдельный протокол внешнего ESB,
+  а не 1С↔Сайт).
+
+### Примечания
+
+- Покрыто интеграционным тестом `AndreyOrdersTopologyIntegrationTest`: после
+  `rabbitmq:setup` очередь `external.orders_from_andrey_for_website` отсутствует,
+  а `_for_erp` по-прежнему получает копии из fanout.
+- Урок на будущее: очередь-зеркало без потребителя заводить только вместе с
+  TTL-policy и записью в `ErpBusController::EXTERNAL_QUEUES`. См.
+  `docs/ANDREY_ESB_CONNECTION.md`.
+
+---
+
 ## [15.9.0] — 2026-08-02
 
 ### Изменено

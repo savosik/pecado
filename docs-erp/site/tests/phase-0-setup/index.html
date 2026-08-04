@@ -1747,6 +1747,12 @@
 <td>Состояние <code>running</code>, тянет из ESB (v12.14)</td>
 </tr>
 <tr>
+<td>0.1.8а</td>
+<td>Заказы из чужой 1С (ESB Andrey)</td>
+<td>UI → Queues</td>
+<td><code>external.orders_from_andrey_for_erp</code> + exchange <code>external.orders_from_andrey</code> (fanout). Очередь-зеркало <code>external.orders_from_andrey_for_website</code> удалена в v15.9.1 — её быть <strong>не должно</strong></td>
+</tr>
+<tr>
 <td>0.1.9</td>
 <td>Пользователи и права</td>
 <td><code>rabbitmqctl list_users</code> / <code>list_user_permissions erp_1c</code></td>
