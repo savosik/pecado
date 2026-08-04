@@ -23,7 +23,7 @@ function InfoRow({ label, value }) {
     );
 }
 
-export default function Show({ shipment, related_orders }) {
+export default function Show({ shipment, related_orders, organizationsEnabled }) {
     const fmt = (v) =>
         parseFloat(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -98,6 +98,34 @@ export default function Show({ shipment, related_orders }) {
                             ) : <Text color="gray.500" fontSize="sm">—</Text>}
                         </Box>
                     </SimpleGrid>
+
+                    {/* Организация и склад пришли из 1С: чьей накладной уехал товар
+                        и откуда. Пустых строк не рисуем — у исторических реализаций
+                        этих полей нет, и «—» на каждой карточке только шумел бы. */}
+                    {organizationsEnabled && (shipment.organization || shipment.warehouse) && (
+                        <>
+                            <Separator my={4} />
+
+                            <SimpleGrid columns={{ base: 1, md: 3 }} gap={6}>
+                                {shipment.organization && (
+                                    <Box>
+                                        <Text fontSize="xs" color="gray.500" mb={1}>Организация</Text>
+                                        <HStack gap={2}>
+                                            <Text fontSize="sm">{shipment.organization.name}</Text>
+                                            {shipment.organization.is_stub && (
+                                                <Badge colorPalette="orange" variant="subtle" size="sm">
+                                                    не заведена
+                                                </Badge>
+                                            )}
+                                        </HStack>
+                                    </Box>
+                                )}
+                                {shipment.warehouse && (
+                                    <InfoRow label="Склад отгрузки" value={shipment.warehouse.name} />
+                                )}
+                            </SimpleGrid>
+                        </>
+                    )}
                 </Card.Body>
             </Card.Root>
 

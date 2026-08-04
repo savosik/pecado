@@ -32,7 +32,7 @@ function InfoRow({ label, value }) {
 }
 
 export default function Show() {
-    const { client, profile, profileOptions, lifecycle } = usePage().props;
+    const { client, profile, profileOptions, lifecycle, organizations, organizationsEnabled } = usePage().props;
     const { can } = usePermission();
 
     const canViewProfile = can('crm-profile.view') && !!profile;
@@ -181,13 +181,23 @@ export default function Show() {
                                     второй, со своими правилами видимости, незачем. */}
                                 {canViewComments && (
                                     <Tabs.Content value="orders">
-                                        <ClientDocuments clientId={client.id} type="order" />
+                                        <ClientDocuments
+                                            clientId={client.id}
+                                            type="order"
+                                            organizations={organizations}
+                                            organizationsEnabled={organizationsEnabled}
+                                        />
                                     </Tabs.Content>
                                 )}
 
                                 {canViewComments && (
                                     <Tabs.Content value="shipments">
-                                        <ClientDocuments clientId={client.id} type="shipment" />
+                                        <ClientDocuments
+                                            clientId={client.id}
+                                            type="shipment"
+                                            organizations={organizations}
+                                            organizationsEnabled={organizationsEnabled}
+                                        />
                                     </Tabs.Content>
                                 )}
 

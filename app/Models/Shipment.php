@@ -124,6 +124,8 @@ class Shipment extends Model implements HasMedia
 
     /**
      * Склад отгрузки, определённый 1С.
+     *
+     * @return BelongsTo<Warehouse, $this>
      */
     public function warehouse(): BelongsTo
     {

@@ -100,8 +100,22 @@ export default function Show() {
                         <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
                             <InfoRow label="Номер в 1С" value={document.erp_number} />
                             <InfoRow label="Номер на сайте" value={document.number} />
-                            <InfoRow label="Организация" value={document.organization} />
-                            <InfoRow label="Склад" value={document.warehouse} />
+                            {document.organization && (
+                                <Box>
+                                    <Text fontSize="xs" color="fg.muted" mb="0.5">Организация</Text>
+                                    <HStack gap={2}>
+                                        <Text fontSize="sm" fontWeight="500">{document.organization.name}</Text>
+                                        {/* У незаведённого юрлица вместо названия лежит UUID из 1С —
+                                            бейдж объясняет менеджеру, почему строка выглядит так. */}
+                                        {document.organization.is_stub && (
+                                            <Badge colorPalette="orange" variant="subtle" size="sm">
+                                                не заведена
+                                            </Badge>
+                                        )}
+                                    </HStack>
+                                </Box>
+                            )}
+                            <InfoRow label="Склад отгрузки" value={document.warehouse} />
                             <InfoRow label="Юрлицо клиента" value={document.company} />
                             <InfoRow label="Создан на сайте" value={document.created_at_label} />
                             <InfoRow label="Адрес доставки" value={document.delivery_address} />

@@ -42,7 +42,18 @@ class CommentController extends CrmController
         $validated = $request->validate([
             'types' => ['sometimes', 'array'],
             'types.*' => ['string', Rule::in(ClientTimelineService::types())],
+            // Организация приходит и числом, и словом 'none' — «документы без организации».
+            'organization_id' => ['sometimes', 'nullable', 'string'],
+        ], [], [
+            'types' => 'типы записей',
+            'organization_id' => 'организация',
         ]);
+
+        $organizationId = $validated['organization_id'] ?? null;
+
+        if ($organizationId !== null && $organizationId !== 'none' && ! ctype_digit($organizationId)) {
+            $organizationId = null;
+        }
 
         return response()->json(
             $this->timeline->forClient(
@@ -50,6 +61,7 @@ class CommentController extends CrmController
                 $actor,
                 $this->perPage($request, 20),
                 $validated['types'] ?? null,
+                $organizationId,
             )
         );
     }

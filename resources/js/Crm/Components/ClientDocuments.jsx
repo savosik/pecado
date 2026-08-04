@@ -1,6 +1,8 @@
+import { useMemo, useState } from 'react';
 import { Badge, Box, HStack, Spinner, Table, Text, VStack } from '@chakra-ui/react';
 import { LuExternalLink } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 import { useCommentFeed } from '@/Crm/Components/useCommentFeed';
 
 /**
@@ -15,30 +17,79 @@ import { useCommentFeed } from '@/Crm/Components/useCommentFeed';
  *
  * @param {number} clientId
  * @param {'order'|'shipment'} type
+ * @param {Array<{id: number, name: string}>} organizations — наши юрлица для фильтра
+ * @param {boolean} organizationsEnabled — показ организаций включён флагом
  */
-export default function ClientDocuments({ clientId, type }) {
-    const feed = useCommentFeed(`/crm/clients/${clientId}/timeline`, { types: [type] });
+export default function ClientDocuments({ clientId, type, organizations = [], organizationsEnabled = false }) {
+    // Фильтр по нашей организации: у клиента бывают документы на разные юрлица,
+    // и сверять с ним конкретную накладную удобнее по одному из них.
+    const [organizationId, setOrganizationId] = useState('');
+
+    const params = useMemo(
+        () => (organizationId ? { types: [type], organization_id: organizationId } : { types: [type] }),
+        [type, organizationId],
+    );
+
+    const feed = useCommentFeed(`/crm/clients/${clientId}/timeline`, params);
 
     const isOrder = type === 'order';
 
+    const filter = organizationsEnabled ? (
+        <HStack gap={2} align="center">
+            <Text fontSize="xs" color="fg.muted" flexShrink="0">Организация</Text>
+            <Box maxW="260px" w="full">
+                <Select.Root
+                    size="sm"
+                    value={organizationId ? [organizationId] : []}
+                    onValueChange={(e) => setOrganizationId(e.value[0] || '')}
+                >
+                    <Select.Trigger>
+                        <Select.ValueText placeholder="Все организации" />
+                    </Select.Trigger>
+                    <Select.Content>
+                        <Select.Item item="">Все организации</Select.Item>
+                        <Select.Item item="none">Не указана</Select.Item>
+                        {organizations?.map((organization) => (
+                            <Select.Item key={organization.id} item={String(organization.id)}>
+                                {organization.name}
+                            </Select.Item>
+                        ))}
+                    </Select.Content>
+                </Select.Root>
+            </Box>
+        </HStack>
+    ) : null;
+
     if (feed.loading && feed.entries.length === 0) {
-        return <HStack justify="center" py={8}><Spinner size="sm" /></HStack>;
+        return (
+            <VStack align="stretch" gap={3}>
+                {filter}
+                <HStack justify="center" py={8}><Spinner size="sm" /></HStack>
+            </VStack>
+        );
     }
 
     if (feed.entries.length === 0) {
         return (
-            <Box py={6}>
-                <Text fontSize="sm" color="fg.muted">
-                    {feed.failed
-                        ? 'Список недоступен.'
-                        : isOrder ? 'Заказов пока нет.' : 'Реализаций пока нет.'}
-                </Text>
-            </Box>
+            <VStack align="stretch" gap={3}>
+                {filter}
+                <Box py={6}>
+                    <Text fontSize="sm" color="fg.muted">
+                        {feed.failed
+                            ? 'Список недоступен.'
+                            : organizationId
+                                ? 'По этой организации документов нет.'
+                                : isOrder ? 'Заказов пока нет.' : 'Реализаций пока нет.'}
+                    </Text>
+                </Box>
+            </VStack>
         );
     }
 
     return (
         <VStack align="stretch" gap={3}>
+            {filter}
+
             <Text fontSize="xs" color="fg.muted">
                 {isOrder ? 'Заказов' : 'Реализаций'}: {feed.total}
             </Text>
@@ -49,6 +100,9 @@ export default function ClientDocuments({ clientId, type }) {
                         <Table.Row>
                             <Table.ColumnHeader>Документ</Table.ColumnHeader>
                             <Table.ColumnHeader>Дата</Table.ColumnHeader>
+                            {organizationsEnabled && (
+                                <Table.ColumnHeader>Организация</Table.ColumnHeader>
+                            )}
                             <Table.ColumnHeader>Статус</Table.ColumnHeader>
                             <Table.ColumnHeader textAlign="end">Позиций</Table.ColumnHeader>
                             <Table.ColumnHeader textAlign="end">Сумма</Table.ColumnHeader>
@@ -64,6 +118,25 @@ export default function ClientDocuments({ clientId, type }) {
                                 <Table.Cell>
                                     <Text fontSize="sm" color="fg.muted">{entry.happened_at_label}</Text>
                                 </Table.Cell>
+                                {organizationsEnabled && (
+                                    <Table.Cell>
+                                        {entry.organization ? (
+                                            <HStack gap={1}>
+                                                <Text fontSize="sm">{entry.organization.name}</Text>
+                                                {entry.organization.is_stub && (
+                                                    <Badge colorPalette="orange" variant="subtle" size="sm">
+                                                        не заведена
+                                                    </Badge>
+                                                )}
+                                            </HStack>
+                                        ) : (
+                                            <Text fontSize="sm" color="fg.muted">—</Text>
+                                        )}
+                                        {entry.warehouse && (
+                                            <Text fontSize="xs" color="fg.muted">склад: {entry.warehouse}</Text>
+                                        )}
+                                    </Table.Cell>
+                                )}
                                 <Table.Cell>
                                     {entry.status_label && (
                                         <Badge colorPalette={entry.status_color || 'gray'} variant="subtle" size="sm">

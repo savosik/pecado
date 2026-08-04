@@ -40,6 +40,17 @@ export default function DocumentFeedEntry({ entry }) {
                 {entry.items_count > 0 && (
                     <Text fontSize="xs" color="fg.muted">позиций: {entry.items_count}</Text>
                 )}
+                {/* Организация и склад приходят, только когда показ включён флагом:
+                    гейт стоит на сервере, поэтому здесь достаточно проверки на наличие. */}
+                {entry.organization && (
+                    <Text fontSize="xs" color="fg.muted">
+                        {entry.organization.name}
+                        {entry.organization.is_stub ? ' (юрлицо не заведено)' : ''}
+                    </Text>
+                )}
+                {entry.warehouse && (
+                    <Text fontSize="xs" color="fg.muted">склад: {entry.warehouse}</Text>
+                )}
             </HStack>
 
             {entry.excerpt && (

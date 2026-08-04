@@ -37,8 +37,8 @@ class OrderController extends AdminController
         $onlyTrashed = $request->boolean('trashed');
 
         $query = $onlyTrashed
-            ? Order::onlyTrashed()->with(['user', 'company', 'organization', 'items'])
-            : Order::query()->with(['user', 'company', 'organization', 'items']);
+            ? Order::onlyTrashed()->with(['user', 'company', 'organization', 'warehouse', 'items'])
+            : Order::query()->with(['user', 'company', 'organization', 'warehouse', 'items']);
 
         // Поиск
         $search = trim((string) $request->input('search', ''));
@@ -91,6 +91,16 @@ class OrderController extends AdminController
             $query->whereNull('organization_id');
         } elseif ($organizationId) {
             $query->where('organization_id', $organizationId);
+        }
+
+        // Фильтрация по складу отгрузки (v15.8.0). Склад, как и организацию,
+        // определяет 1С, поэтому 'none' здесь значит «1С ещё не сказала»,
+        // а не «отгрузки не было».
+        $warehouseId = $request->input('warehouse_id');
+        if ($warehouseId === 'none') {
+            $query->whereNull('warehouse_id');
+        } elseif ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId);
         }
 
         // Фильтрация по дате создания
@@ -154,6 +164,10 @@ class OrderController extends AdminController
                     'name' => $order->organization->name,
                     'is_stub' => $order->organization->is_stub,
                 ] : null,
+                'warehouse' => $order->warehouse ? [
+                    'id' => $order->warehouse->id,
+                    'name' => $order->warehouse->name,
+                ] : null,
                 'items' => $order->items,
             ];
         });
@@ -166,6 +180,7 @@ class OrderController extends AdminController
                 'type' => $request->input('type', ''),
                 'company_id' => $companyId,
                 'organization_id' => $organizationId,
+                'warehouse_id' => $warehouseId,
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
                 'amount_from' => $amountFrom,
@@ -183,6 +198,7 @@ class OrderController extends AdminController
             'types' => OrderType::options(),
             'companies' => Company::select('id', 'name')->orderBy('name')->get(),
             'organizations' => \App\Models\Organization::query()->ordered()->get(['id', 'name', 'is_stub']),
+            'warehouses' => \App\Models\Warehouse::query()->orderBy('name')->get(['id', 'name']),
             'organizationsEnabled' => config('erp.organizations.enabled'),
         ]);
     }

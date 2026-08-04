@@ -86,6 +86,62 @@ class OrderOrganizationUiTest extends TestCase
     }
 
     /**
+     * В списке организация и склад идут одной колонкой: менеджеру нужно
+     * «чьё юрлицо и откуда уехало», а не два столбца на пол-экрана.
+     */
+    #[Test]
+    public function admin_order_list_carries_organization_and_warehouse(): void
+    {
+        config(['erp.organizations.enabled' => true]);
+
+        $organization = Organization::factory()->create(['name' => 'ООО Пекадо']);
+        $warehouse = Warehouse::factory()->create(['name' => 'Москва основной']);
+        $this->makeOrder([
+            'organization_id' => $organization->id,
+            'warehouse_id' => $warehouse->id,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->get(route('admin.orders.index'))
+            ->assertInertia(fn ($page) => $page
+                ->where('orders.data.0.organization.name', 'ООО Пекадо')
+                ->where('orders.data.0.warehouse.name', 'Москва основной')
+                ->where('organizationsEnabled', true)
+                ->has('warehouses')
+            );
+    }
+
+    #[Test]
+    public function admin_order_list_filters_by_warehouse(): void
+    {
+        $warehouse = Warehouse::factory()->create();
+        $matching = $this->makeOrder(['warehouse_id' => $warehouse->id]);
+        $this->makeOrder();
+
+        $this->actingAs($this->admin())
+            ->get(route('admin.orders.index', ['warehouse_id' => $warehouse->id]))
+            ->assertInertia(fn ($page) => $page
+                ->has('orders.data', 1)
+                ->where('orders.data.0.id', $matching->id)
+            );
+    }
+
+    #[Test]
+    public function admin_order_list_filters_orders_without_warehouse(): void
+    {
+        $warehouse = Warehouse::factory()->create();
+        $this->makeOrder(['warehouse_id' => $warehouse->id]);
+        $without = $this->makeOrder();
+
+        $this->actingAs($this->admin())
+            ->get(route('admin.orders.index', ['warehouse_id' => 'none']))
+            ->assertInertia(fn ($page) => $page
+                ->has('orders.data', 1)
+                ->where('orders.data.0.id', $without->id)
+            );
+    }
+
+    /**
      * «Не указана» — рабочий фильтр переходного периода, а не заглушка.
      */
     #[Test]

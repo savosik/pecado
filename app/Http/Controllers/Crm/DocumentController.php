@@ -40,7 +40,9 @@ class DocumentController extends CrmController
         $model->load([
             'user:id,name,email,phone,personal_manager_id',
             'company:id,name,tax_id',
-            'organization:id,name',
+            // is_stub обязателен в выборке: без него незаведённое юрлицо
+            // показалось бы менеджеру голым UUID-ом вместо названия.
+            'organization:id,name,is_stub',
             'warehouse:id,name',
             'items.product:id,name,slug,sku',
             'shipments' => fn ($query) => $query->orderByDesc('date'),
@@ -61,8 +63,8 @@ class DocumentController extends CrmController
                 'comment' => $model->comment,
                 'manager_comment' => $model->manager_comment,
                 'delivery_address' => $model->delivery_address,
-                'organization' => $model->organization?->getAttribute('name'),
-                'warehouse' => $model->warehouse?->getAttribute('name'),
+                'organization' => $this->organization($model),
+                'warehouse' => $this->warehouse($model),
                 'company' => $model->company?->getAttribute('name'),
                 'admin_url' => $actor->hasAdminAccess() ? route('admin.orders.show', $model->getKey()) : null,
                 'items' => $model->items->map(fn (OrderItem $item): array => [
@@ -97,7 +99,9 @@ class DocumentController extends CrmController
         $model->load([
             'user:id,name,email,phone,personal_manager_id',
             'company:id,name,tax_id',
-            'organization:id,name',
+            // is_stub обязателен в выборке: без него незаведённое юрлицо
+            // показалось бы менеджеру голым UUID-ом вместо названия.
+            'organization:id,name,is_stub',
             'warehouse:id,name',
             'items.product:id,name,slug,sku',
         ]);
@@ -134,8 +138,8 @@ class DocumentController extends CrmController
                 'comment' => null,
                 'manager_comment' => null,
                 'delivery_address' => null,
-                'organization' => $model->organization?->getAttribute('name'),
-                'warehouse' => $model->warehouse?->getAttribute('name'),
+                'organization' => $this->organization($model),
+                'warehouse' => $this->warehouse($model),
                 'company' => $model->company?->getAttribute('name'),
                 'admin_url' => $actor->hasAdminAccess() ? route('admin.shipments.show', $model->getKey()) : null,
                 'items' => $model->items->map(fn (ShipmentItem $item): array => [
@@ -151,6 +155,51 @@ class DocumentController extends CrmController
             ],
             'client' => $this->clientPayload($model->user),
         ]);
+    }
+
+    /**
+     * Наша организация документа — юрлицо, на которое 1С его провела.
+     *
+     * Показ гейтит `ORGANIZATIONS_ENABLED`, ровно как в админке и ЛК: приём из 1С
+     * работает всегда, а витрина включается, когда справочник заполнен.
+     *
+     * @param  Order|Shipment  $model
+     * @return array{name: string, is_stub: bool}|null
+     */
+    private function organization(\Illuminate\Database\Eloquent\Model $model): ?array
+    {
+        if (! config('erp.organizations.enabled')) {
+            return null;
+        }
+
+        $organization = $model->getRelationValue('organization');
+
+        if (! $organization instanceof \Illuminate\Database\Eloquent\Model) {
+            return null;
+        }
+
+        return [
+            'name' => (string) $organization->getAttribute('name'),
+            'is_stub' => (bool) $organization->getAttribute('is_stub'),
+        ];
+    }
+
+    /**
+     * Склад отгрузки документа — определён 1С, сайт только показывает.
+     *
+     * @param  Order|Shipment  $model
+     */
+    private function warehouse(\Illuminate\Database\Eloquent\Model $model): ?string
+    {
+        if (! config('erp.organizations.enabled')) {
+            return null;
+        }
+
+        $warehouse = $model->getRelationValue('warehouse');
+
+        return $warehouse instanceof \Illuminate\Database\Eloquent\Model
+            ? (string) $warehouse->getAttribute('name')
+            : null;
     }
 
     /**

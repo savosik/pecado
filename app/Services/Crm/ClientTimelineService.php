@@ -79,14 +79,31 @@ class ClientTimelineService
      * записей ради двадцати показанных.
      *
      * @param  list<string>|null  $types  фильтр источников; null — все
+     * @param  int|string|null  $organizationId  фильтр документов по нашей организации:
+     *                                           id, 'none' — без организации, null — не фильтровать
      * @return LengthAwarePaginator<int, array<string, mixed>>
      */
-    public function forClient(User $client, User $viewer, int $perPage = 20, ?array $types = null): LengthAwarePaginator
-    {
+    public function forClient(
+        User $client,
+        User $viewer,
+        int $perPage = 20,
+        ?array $types = null,
+        int|string|null $organizationId = null,
+    ): LengthAwarePaginator {
         $clientId = (int) $client->getKey();
         $wanted = $types === null || $types === []
             ? self::types()
             : array_values(array_intersect(self::types(), $types));
+
+        // Фильтр по организации — про документы: у комментария, задачи, письма и
+        // звонка юрлица нет. Поэтому при активном фильтре записи менеджеров из ленты
+        // уходят целиком: показывать их «заодно» значило бы врать, что они относятся
+        // к выбранной организации.
+        $byOrganization = $organizationId !== null && $organizationId !== '';
+
+        if ($byOrganization) {
+            $wanted = array_values(array_intersect($wanted, [self::TYPE_ORDER, self::TYPE_SHIPMENT]));
+        }
 
         $sources = [];
 
@@ -136,17 +153,25 @@ class ClientTimelineService
             // Бизнес-дата 1С, а не created_at: вся историческая база импортирована
             // разом, и по created_at заказы 2024 года встали бы поверх свежих записей.
             // whereNull('deleted_at') явно — DB::table() не применяет SoftDeletes.
-            $sources[] = DB::table('orders')
+            $orderSource = DB::table('orders')
                 ->selectRaw("'".self::TYPE_ORDER."' as source, id, COALESCE(erp_created_at, created_at) as happened_at, 0 as is_pinned")
                 ->where('user_id', $clientId)
                 ->whereNull('deleted_at');
+
+            $sources[] = $byOrganization
+                ? $this->whereOrganization($orderSource, $organizationId)
+                : $orderSource;
         }
 
         if (in_array(self::TYPE_SHIPMENT, $wanted, true)) {
-            $sources[] = DB::table('shipments')
+            $shipmentSource = DB::table('shipments')
                 ->selectRaw("'".self::TYPE_SHIPMENT."' as source, id, COALESCE(erp_created_at, date, created_at) as happened_at, 0 as is_pinned")
                 ->where('user_id', $clientId)
                 ->whereNull('deleted_at');
+
+            $sources[] = $byOrganization
+                ? $this->whereOrganization($shipmentSource, $organizationId)
+                : $shipmentSource;
         }
 
         if ($sources === []) {
@@ -170,6 +195,19 @@ class ClientTimelineService
             ->paginate($perPage);
 
         return $this->hydrate($paginator, $viewer);
+    }
+
+    /**
+     * Сузить источник документов до одной нашей организации.
+     *
+     * 'none' — документы без организации: в переходный период их большинство,
+     * и отобрать нужно именно их, а не «все прочие».
+     */
+    private function whereOrganization(\Illuminate\Database\Query\Builder $source, int|string $organizationId): \Illuminate\Database\Query\Builder
+    {
+        return $organizationId === 'none'
+            ? $source->whereNull('organization_id')
+            : $source->where('organization_id', (int) $organizationId);
     }
 
     /**
@@ -222,14 +260,18 @@ class ClientTimelineService
             ->get()
             ->keyBy('id');
 
+        // Организация и склад грузятся вместе с документом: без них лента и вкладки
+        // «Заказы»/«Реализации» делали бы по запросу на строку ради одной подписи.
         $orders = Order::query()
             ->whereIn('id', $rows->where('source', self::TYPE_ORDER)->pluck('id')->all())
+            ->with(['organization:id,name,is_stub', 'warehouse:id,name'])
             ->withCount('items')
             ->get()
             ->keyBy('id');
 
         $shipments = Shipment::query()
             ->whereIn('id', $rows->where('source', self::TYPE_SHIPMENT)->pluck('id')->all())
+            ->with(['organization:id,name,is_stub', 'warehouse:id,name'])
             ->withCount('items')
             ->get()
             ->keyBy('id');
@@ -323,6 +365,8 @@ class ClientTimelineService
             'status_label' => $order->status->label(),
             'status_color' => $order->status->color(),
             'items_count' => (int) ($order->items_count ?? 0),
+            'organization' => $this->organization($order),
+            'warehouse' => $this->warehouse($order),
             'entity' => CrmEntityMap::describe($order, $viewer),
             'attachments_count' => 0,
             'can' => ['update' => false, 'delete' => false],
@@ -351,10 +395,61 @@ class ClientTimelineService
             'status_label' => $shipment->status_label,
             'status_color' => $shipment->status === 'completed' ? 'green' : 'blue',
             'items_count' => (int) ($shipment->items_count ?? 0),
+            'organization' => $this->organization($shipment),
+            'warehouse' => $this->warehouse($shipment),
             'entity' => CrmEntityMap::describe($shipment, $viewer),
             'attachments_count' => 0,
             'can' => ['update' => false, 'delete' => false],
         ];
+    }
+
+    /**
+     * Наша организация документа — юрлицо, на которое 1С его провела.
+     *
+     * Заглушку (`is_stub`) отдаём вместе с флагом, а не прячем: у неё вместо
+     * названия лежит UUID, и менеджер должен видеть, что юрлицо ещё не заведено,
+     * а не гадать над строкой из тридцати шести символов.
+     *
+     * Флаг `ORGANIZATIONS_ENABLED` гейтит показ, поэтому при выключенном флаге
+     * поля не уезжают на фронт вовсе.
+     *
+     * @param  Order|Shipment  $document
+     * @return array{name: string, is_stub: bool}|null
+     */
+    private function organization(Model $document): ?array
+    {
+        if (! config('erp.organizations.enabled')) {
+            return null;
+        }
+
+        $organization = $document->getRelationValue('organization');
+
+        if (! $organization instanceof Model) {
+            return null;
+        }
+
+        return [
+            'name' => (string) $organization->getAttribute('name'),
+            'is_stub' => (bool) $organization->getAttribute('is_stub'),
+        ];
+    }
+
+    /**
+     * Склад отгрузки документа — определяет его 1С, сайт только показывает.
+     *
+     * @param  Order|Shipment  $document
+     */
+    private function warehouse(Model $document): ?string
+    {
+        if (! config('erp.organizations.enabled')) {
+            return null;
+        }
+
+        $warehouse = $document->getRelationValue('warehouse');
+
+        return $warehouse instanceof Model
+            ? (string) $warehouse->getAttribute('name')
+            : null;
     }
 
     /**

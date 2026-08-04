@@ -18,7 +18,7 @@ import { getOrderTypeShortLabel as getTypeLabel, getOrderTypeColor as getTypeCol
 
 const getStatusColor = getOrderStatusColor;
 
-const OrdersIndex = ({ filters, statuses, types, companies, organizations, organizationsEnabled, trashedCount }) => {
+const OrdersIndex = ({ filters, statuses, types, companies, organizations, warehouses, organizationsEnabled, trashedCount }) => {
     const { orders } = usePage().props;
     const { can } = usePermission();
     const [deleteId, setDeleteId] = useState(null);
@@ -76,6 +76,7 @@ const OrdersIndex = ({ filters, statuses, types, companies, organizations, organ
         type:        filters?.type || "",
         company_id:  filters?.company_id || "",
         organization_id: filters?.organization_id || "",
+        warehouse_id: filters?.warehouse_id || "",
         date_from:   filters?.date_from || "",
         date_to:     filters?.date_to || "",
         amount_from: filters?.amount_from || "",
@@ -139,7 +140,7 @@ const OrdersIndex = ({ filters, statuses, types, companies, organizations, organ
 
     const handleResetFilters = useCallback(() => {
         setLocalFilters({
-            status: "", type: "", company_id: "", organization_id: "",
+            status: "", type: "", company_id: "", organization_id: "", warehouse_id: "",
             date_from: "", date_to: "", amount_from: "", amount_to: "",
         });
         router.get(route("admin.orders.index"), {
@@ -234,6 +235,29 @@ const OrdersIndex = ({ filters, statuses, types, companies, organizations, organ
             key: "company",
             render: (_, order) => order.company?.name || "—",
         },
+        // Организация и склад — решение 1С: на какое наше юрлицо проведён заказ
+        // и откуда он уедет. Колонки нет, пока функциональность не включена флагом.
+        ...(organizationsEnabled ? [{
+            label: "Организация",
+            key: "organization",
+            render: (_, order) => (
+                <Box>
+                    {order.organization ? (
+                        <HStack gap={1}>
+                            <Text fontSize="sm">{order.organization.name}</Text>
+                            {order.organization.is_stub && (
+                                <Badge colorPalette="orange" variant="subtle" size="xs">не заведена</Badge>
+                            )}
+                        </HStack>
+                    ) : (
+                        <Text fontSize="sm" color="gray.500">—</Text>
+                    )}
+                    {order.warehouse && (
+                        <Text fontSize="xs" color="gray.500">Склад: {order.warehouse.name}</Text>
+                    )}
+                </Box>
+            ),
+        }] : []),
         {
             label: "Тип",
             key: "type",
@@ -300,7 +324,7 @@ const OrdersIndex = ({ filters, statuses, types, companies, organizations, organ
                 ) : null,
             }
             : createActionsColumn('admin.orders', openDeleteDialog, { permissionPrefix: 'orders', showView: true }),
-    ], [selectedOrders.length, orders.data, selectedOrdersSet, isTrashed, can, handleSelectAll, handleSelectOrder, openDeleteDialog]);
+    ], [selectedOrders.length, orders.data, selectedOrdersSet, isTrashed, organizationsEnabled, can, handleSelectAll, handleSelectOrder, openDeleteDialog]);
 
     const handleDelete = useCallback(() => {
         if (deleteId) {
@@ -497,6 +521,28 @@ const OrdersIndex = ({ filters, statuses, types, companies, organizations, organ
                                             {organizations?.map((organization) => (
                                                 <Select.Item key={organization.id} item={String(organization.id)}>
                                                     {organization.is_stub ? `${organization.name} (не заведена)` : organization.name}
+                                                </Select.Item>
+                                            ))}
+                                        </Select.Content>
+                                    </Select.Root>
+                                </Field>
+                            )}
+
+                            {organizationsEnabled && (
+                                <Field label="Склад отгрузки">
+                                    <Select.Root
+                                        value={localFilters.warehouse_id ? [String(localFilters.warehouse_id)] : []}
+                                        onValueChange={(e) => setLocalFilters({ ...localFilters, warehouse_id: e.value[0] || "" })}
+                                    >
+                                        <Select.Trigger>
+                                            <Select.ValueText placeholder="Все склады" />
+                                        </Select.Trigger>
+                                        <Select.Content>
+                                            <Select.Item item="">Все склады</Select.Item>
+                                            <Select.Item item="none">Не указан</Select.Item>
+                                            {warehouses?.map((warehouse) => (
+                                                <Select.Item key={warehouse.id} item={String(warehouse.id)}>
+                                                    {warehouse.name}
                                                 </Select.Item>
                                             ))}
                                         </Select.Content>

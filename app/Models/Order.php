@@ -223,6 +223,8 @@ class Order extends Model implements HasMedia
      *
      * Не путать со складами оформления: сайт отправляет перечисление складов
      * региона, а конкретный выбирает 1С и возвращает обратно.
+     *
+     * @return BelongsTo<Warehouse, $this>
      */
     public function warehouse(): BelongsTo
     {

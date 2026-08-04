@@ -8,6 +8,7 @@ use App\Enums\Crm\PaymentBehavior;
 use App\Enums\Crm\PreferredChannel;
 use App\Models\CrmClientFilterPreset;
 use App\Models\CrmClientProfileRevision;
+use App\Models\Organization;
 use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Crm\ClientLifecycleService;
@@ -162,6 +163,13 @@ class ClientController extends CrmController
                 ] : null,
                 'created_at' => $user->created_at?->format('d.m.Y H:i'),
             ],
+            // Наши юрлица — для колонки и фильтра во вкладках «Заказы» и «Реализации».
+            // Заглушки в список фильтра не идут: выбирать «юрлицо-UUID» менеджеру
+            // незачем, а в самих документах оно видно с бейджем.
+            'organizations' => config('erp.organizations.enabled')
+                ? Organization::query()->ordered()->where('is_stub', false)->get(['id', 'name'])
+                : [],
+            'organizationsEnabled' => (bool) config('erp.organizations.enabled'),
         ]);
     }
 

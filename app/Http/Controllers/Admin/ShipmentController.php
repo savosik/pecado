@@ -22,8 +22,8 @@ class ShipmentController extends Controller
         $onlyTrashed = $request->boolean('trashed');
 
         $query = $onlyTrashed
-            ? Shipment::onlyTrashed()->with(['user', 'company', 'organization', 'items.product'])
-            : Shipment::query()->with(['user', 'company', 'organization', 'items.product']);
+            ? Shipment::onlyTrashed()->with(['user', 'company', 'organization', 'warehouse', 'items.product'])
+            : Shipment::query()->with(['user', 'company', 'organization', 'warehouse', 'items.product']);
 
         // Поиск по UUID, ИНН, наименованию компании или товару
         if ($search = $request->input('search')) {
@@ -60,6 +60,16 @@ class ShipmentController extends Controller
             $query->whereNull('organization_id');
         } elseif ($organizationId) {
             $query->where('organization_id', $organizationId);
+        }
+
+        // Фильтр по складу отгрузки (v15.8.0): им реализации разбирают по площадкам,
+        // с которых реально уехал товар. 'none' — склад 1С не прислала или он
+        // сайту неизвестен.
+        $warehouseId = $request->input('warehouse_id');
+        if ($warehouseId === 'none') {
+            $query->whereNull('warehouse_id');
+        } elseif ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId);
         }
 
         // Фильтр по дате
@@ -119,18 +129,23 @@ class ShipmentController extends Controller
                     'name' => $shipment->organization->name,
                     'is_stub' => $shipment->organization->is_stub,
                 ] : null,
+                'warehouse' => $shipment->warehouse ? [
+                    'id' => $shipment->warehouse->id,
+                    'name' => $shipment->warehouse->name,
+                ] : null,
             ];
         });
 
         return Inertia::render('Admin/Pages/Shipments/Index', [
             'shipments' => $shipments,
             'filters' => array_merge(
-                $request->only(['search', 'status', 'user_id', 'organization_id', 'date_from', 'date_to', 'currency_code', 'sort_by', 'sort_order', 'per_page']),
+                $request->only(['search', 'status', 'user_id', 'organization_id', 'warehouse_id', 'date_from', 'date_to', 'currency_code', 'sort_by', 'sort_order', 'per_page']),
                 ['trashed' => $onlyTrashed]
             ),
             'trashedCount' => Shipment::onlyTrashed()->count(),
             'statuses' => array_map(fn ($k, $v) => ['value' => $k, 'label' => $v], array_keys(self::STATUS_LABELS), self::STATUS_LABELS),
             'organizations' => \App\Models\Organization::query()->ordered()->get(['id', 'name', 'is_stub']),
+            'warehouses' => \App\Models\Warehouse::query()->orderBy('name')->get(['id', 'name']),
             'organizationsEnabled' => config('erp.organizations.enabled'),
         ]);
     }
