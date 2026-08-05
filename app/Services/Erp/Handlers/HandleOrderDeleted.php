@@ -42,6 +42,11 @@ class HandleOrderDeleted
             $order->deleteQuietly();
         }
 
+        // Заказ уценки снят — партия некондиции освобождается: удаление снимает
+        // резерв, а отгруженное по удалённому заказу больше не считается. Если
+        // партия была закрыта как распроданная, она возвращается в продажу.
+        app(\App\Services\Defect\DefectShipmentService::class)->reconcileForOrder($order);
+
         Log::info('HandleOrderDeleted: заказ помечен удалённым (soft-delete, status=closed)', [
             'uuid' => $uuid,
         ]);

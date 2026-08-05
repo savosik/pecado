@@ -42,6 +42,7 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
         Route::middleware('permission:wms-defects.edit')->group(function () {
             Route::get('/defects/{defect}/edit', [DefectController::class, 'edit'])->name('defects.edit');
             Route::put('/defects/{defect}', [DefectController::class, 'update'])->name('defects.update');
+            Route::post('/defects/{defect}/reopen', [DefectController::class, 'reopen'])->name('defects.reopen');
         });
 
         Route::middleware('permission:wms-defects.delete')->group(function () {

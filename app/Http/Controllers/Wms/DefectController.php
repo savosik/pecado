@@ -485,6 +485,26 @@ class DefectController extends WmsController
         return back()->with('success', 'Партия списана.');
     }
 
+    /**
+     * Вернуть закрытую партию в продажу.
+     *
+     * Нужно, когда 1С отменила реализацию задним числом (или клиент вернул
+     * товар) и остаток физически снова на складе: партия закрыта, править её
+     * нельзя, а заводить заново — терять фотографии и описание дефекта.
+     * Цену и публикацию партия сохраняет, так что закупщику заново ничего
+     * делать не приходится.
+     */
+    public function reopen(Request $request, ProductDefect $defect): RedirectResponse
+    {
+        if (! $defect->isClosed()) {
+            return back()->with('error', 'Партия и так открыта.');
+        }
+
+        $defect->reopen();
+
+        return back()->with('success', 'Партия возвращена в продажу. Проверьте количество остатка.');
+    }
+
     public function destroy(Request $request, ProductDefect $defect): RedirectResponse
     {
         if (! $request->user()->can('wms-defects.delete')) {

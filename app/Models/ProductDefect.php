@@ -175,4 +175,19 @@ class ProductDefect extends Model implements HasMedia
             'closed_reason' => $reason,
         ])->save();
     }
+
+    /**
+     * Вернуть закрытую партию в продажу.
+     *
+     * Используется и автоматикой (отмена реализации в 1С), и кладовщиком вручную:
+     * товар вернулся на склад — партию нужно снова учитывать, а не заводить заново
+     * (иначе теряются фотографии, описание дефекта и история).
+     */
+    public function reopen(): void
+    {
+        $this->forceFill([
+            'closed_at' => null,
+            'closed_reason' => null,
+        ])->save();
+    }
 }

@@ -134,6 +134,112 @@ class DefectShipmentTest extends TestCase
     }
 
     #[Test]
+    public function deleting_shipment_reopens_the_batch_even_when_order_is_deleted_too(): void
+    {
+        // В 1С отменяют разом и заказ, и реализацию. Если заказ уже помечен
+        // удалённым, партия всё равно должна вернуться в продажу.
+        $product = Product::factory()->create(['external_id' => 'def-prod-7']);
+        $defect = ProductDefect::factory()->for($product)->sellable(150)->create(['quantity' => 3]);
+        $order = $this->defectOrder($defect, 3, 'ord-defect-7');
+
+        (new HandleShipmentCreated)->handle(
+            $this->shipmentPayload('ship-7', $order->uuid, $product, 3)
+        );
+        $this->assertTrue($defect->fresh()->isClosed());
+
+        (new \App\Services\Erp\Handlers\HandleOrderDeleted)->handle([
+            'event' => 'order.deleted',
+            'uuid' => $order->uuid,
+        ]);
+        (new HandleShipmentDeleted)->handle(['event' => 'shipment.deleted', 'uuid' => 'ship-7']);
+
+        $this->assertFalse(
+            $defect->fresh()->isClosed(),
+            'Партия должна открыться, даже если заказ уценки уже удалён'
+        );
+    }
+
+    #[Test]
+    public function deleting_defect_order_reopens_the_batch(): void
+    {
+        // Отмена самого заказа уценки: события по реализации может и не быть.
+        $product = Product::factory()->create(['external_id' => 'def-prod-8']);
+        $defect = ProductDefect::factory()->for($product)->sellable(150)->create(['quantity' => 3]);
+        $order = $this->defectOrder($defect, 3, 'ord-defect-8');
+
+        (new HandleShipmentCreated)->handle(
+            $this->shipmentPayload('ship-8', $order->uuid, $product, 3)
+        );
+        $this->assertTrue($defect->fresh()->isClosed());
+
+        (new \App\Services\Erp\Handlers\HandleOrderDeleted)->handle([
+            'event' => 'order.deleted',
+            'uuid' => $order->uuid,
+        ]);
+
+        $reopened = $defect->fresh();
+        $this->assertFalse($reopened->isClosed(), 'Снятие заказа уценки должно вернуть партию в продажу');
+        $this->assertNull($reopened->closed_reason);
+    }
+
+    #[Test]
+    public function cancelled_shipment_reopens_the_batch(): void
+    {
+        // 1С не удаляет документ, а переводит его в статус «Отменена».
+        $product = Product::factory()->create(['external_id' => 'def-prod-9']);
+        $defect = ProductDefect::factory()->for($product)->sellable(150)->create(['quantity' => 3]);
+        $order = $this->defectOrder($defect, 3, 'ord-defect-9');
+
+        (new HandleShipmentCreated)->handle(
+            $this->shipmentPayload('ship-9', $order->uuid, $product, 3)
+        );
+        $this->assertTrue($defect->fresh()->isClosed());
+
+        $payload = $this->shipmentPayload('ship-9', $order->uuid, $product, 3);
+        $payload['event'] = 'shipment.updated';
+        $payload['status'] = 'cancelled';
+
+        (new \App\Services\Erp\Handlers\HandleShipmentUpdated)->handle($payload);
+
+        $reopened = $defect->fresh();
+        $this->assertFalse($reopened->isClosed(), 'Отменённая реализация не должна держать партию закрытой');
+        $this->assertNull($reopened->closed_reason);
+    }
+
+    #[Test]
+    public function reconcile_command_fixes_batches_stuck_as_sold_out(): void
+    {
+        // Данные, накопленные до фикса: партия закрыта, а реализации по ней уже нет.
+        $product = Product::factory()->create(['external_id' => 'def-prod-10']);
+        $defect = ProductDefect::factory()->for($product)->sellable(150)->create(['quantity' => 3]);
+        $order = $this->defectOrder($defect, 3, 'ord-defect-10');
+
+        (new HandleShipmentCreated)->handle(
+            $this->shipmentPayload('ship-10', $order->uuid, $product, 3)
+        );
+        \App\Models\Shipment::where('uuid', 'ship-10')->delete();
+        $this->assertTrue($defect->fresh()->isClosed());
+
+        // Сухой прогон только показывает, ничего не меняя.
+        $this->artisan('defects:reconcile --dry-run')->assertSuccessful();
+        $this->assertTrue($defect->fresh()->isClosed());
+
+        $this->artisan('defects:reconcile')->assertSuccessful();
+        $this->assertFalse($defect->fresh()->isClosed());
+    }
+
+    #[Test]
+    public function reconcile_command_does_not_touch_written_off_batches(): void
+    {
+        $defect = ProductDefect::factory()->sellable(150)->create(['quantity' => 3]);
+        $defect->close(DefectClosedReason::WRITTEN_OFF);
+
+        $this->artisan('defects:reconcile')->assertSuccessful();
+
+        $this->assertSame(DefectClosedReason::WRITTEN_OFF, $defect->fresh()->closed_reason);
+    }
+
+    #[Test]
     public function manually_written_off_batch_is_not_reopened_by_shipment(): void
     {
         $product = Product::factory()->create(['external_id' => 'def-prod-5']);

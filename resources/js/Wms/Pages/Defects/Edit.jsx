@@ -8,7 +8,7 @@ import {
     Text,
     VStack,
 } from '@chakra-ui/react';
-import { LuBan } from 'react-icons/lu';
+import { LuBan, LuRotateCcw } from 'react-icons/lu';
 import WmsLayout from '@/Wms/Layouts/WmsLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { MultipleImageUploader } from '@/Admin/Components/MultipleImageUploader';
@@ -37,6 +37,7 @@ export default function DefectsEdit() {
     const { defect, reserved, defectTypes = [] } = usePage().props;
     const { can } = usePermission();
     const [writeOffOpen, setWriteOffOpen] = useState(false);
+    const [reopenOpen, setReopenOpen] = useState(false);
 
     useFlashToast();
 
@@ -60,6 +61,10 @@ export default function DefectsEdit() {
 
     const handleWriteOff = () => {
         router.post(`/wms/defects/${defect.id}/write-off`, {}, { preserveScroll: true });
+    };
+
+    const handleReopen = () => {
+        router.post(`/wms/defects/${defect.id}/reopen`, {}, { preserveScroll: true });
     };
 
     return (
@@ -99,10 +104,30 @@ export default function DefectsEdit() {
                 {defect.closed_at ? (
                     <Card.Root>
                         <Card.Body>
-                            <Text fontSize="sm" color="fg.muted">
-                                Партия закрыта ({defect.closed_reason_label?.toLowerCase()}) и больше
-                                не продаётся. Редактирование недоступно.
-                            </Text>
+                            <VStack gap={3} align="start">
+                                <Text fontSize="sm" color="fg.muted">
+                                    Партия закрыта ({defect.closed_reason_label?.toLowerCase()}) и больше
+                                    не продаётся. Редактирование недоступно.
+                                </Text>
+                                {can('wms-defects.edit') && (
+                                    <>
+                                        <Text fontSize="sm" color="fg.muted">
+                                            Если товар вернулся на склад — например, в 1С отменили
+                                            реализацию или клиент сделал возврат — верните партию
+                                            в продажу и укажите фактическое количество. Цена
+                                            и публикация сохранятся.
+                                        </Text>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            h="48px"
+                                            onClick={() => setReopenOpen(true)}
+                                        >
+                                            <LuRotateCcw /> Вернуть в продажу
+                                        </Button>
+                                    </>
+                                )}
+                            </VStack>
                         </Card.Body>
                     </Card.Root>
                 ) : (
@@ -214,6 +239,15 @@ export default function DefectsEdit() {
                 title="Списать партию?"
                 description="Партия перестанет продаваться и уйдёт в закрытые. Используйте, если брак утилизирован."
                 confirmLabel="Списать"
+            />
+
+            <ConfirmDialog
+                open={reopenOpen}
+                onClose={() => setReopenOpen(false)}
+                onConfirm={handleReopen}
+                title="Вернуть партию в продажу?"
+                description="Партия снова станет доступна для правки и попадёт на витрину, если у неё есть цена и включена публикация. После возврата проверьте количество остатка."
+                confirmLabel="Вернуть в продажу"
             />
         </>
     );
