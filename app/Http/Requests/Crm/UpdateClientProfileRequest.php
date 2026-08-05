@@ -5,6 +5,7 @@ namespace App\Http\Requests\Crm;
 use App\Enums\Crm\ClientSentiment;
 use App\Enums\Crm\PaymentBehavior;
 use App\Enums\Crm\PreferredChannel;
+use App\Support\Crm\ClientPassport;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -20,7 +21,9 @@ class UpdateClientProfileRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        // Правила паспорта берутся из ClientPassport: перечень полей один
+        // на форму, агентское API и базу — расходиться нечему.
+        return ClientPassport::rules() + [
             'decision_maker_name' => ['nullable', 'string', 'max:255'],
             'decision_maker_role' => ['nullable', 'string', 'max:255'],
             'decision_maker_contact' => ['nullable', 'string', 'max:255'],
@@ -45,7 +48,7 @@ class UpdateClientProfileRequest extends FormRequest
      */
     public function messages(): array
     {
-        return [
+        return ClientPassport::messages() + [
             'decision_maker_name.max' => 'Имя ЛПР длиннее 255 символов.',
             'decision_maker_role.max' => 'Должность ЛПР длиннее 255 символов.',
             'decision_maker_contact.max' => 'Контакт ЛПР длиннее 255 символов.',
@@ -71,7 +74,12 @@ class UpdateClientProfileRequest extends FormRequest
     {
         $normalized = [];
 
-        foreach (['payment_behavior', 'preferred_channel', 'sentiment', 'order_cycle_days'] as $field) {
+        $fields = array_merge(
+            ['payment_behavior', 'preferred_channel', 'sentiment', 'order_cycle_days'],
+            ClientPassport::nullableOnEmpty(),
+        );
+
+        foreach ($fields as $field) {
             if ($this->input($field) === '') {
                 $normalized[$field] = null;
             }

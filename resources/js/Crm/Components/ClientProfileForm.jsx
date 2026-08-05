@@ -19,18 +19,26 @@ import VoiceButton from '@/shared/voice/VoiceButton';
 import { toastSuccess } from '@/utils/toast';
 
 /**
- * Профиль клиента: анкета + свободные заметки.
+ * Профиль клиента: анкета + паспорт бизнеса + свободные заметки.
  *
  * Гибрид не случаен: только поля — менеджер не запишет нестандартное; только текст —
  * нельзя спросить «покажи всех, кто платит по предоплате».
  *
+ * Секции паспорта приходят с бэкенда (`ClientPassport::sections()`) и рисуются циклом,
+ * а не перечислены здесь руками: три десятка полей, продублированные в JSX, разошлись бы
+ * с правилами проверки на первой же правке.
+ *
  * @param {number} clientId
  * @param {object} profile — payload из ClientController::profilePayload()
  * @param {object} options — списки значений енумов с русскими подписями
+ * @param {object} passportSections — секции паспорта: подписи, подсказки, типы полей
  * @param {boolean} canEdit — право crm-profile.edit
  */
-export default function ClientProfileForm({ clientId, profile, options, canEdit }) {
+export default function ClientProfileForm({ clientId, profile, options, passportSections, canEdit }) {
     const [historyOpen, setHistoryOpen] = useState(false);
+
+    const sections = passportSections || {};
+    const passportFields = Object.values(sections).flatMap((section) => section.fields);
 
     const { data, setData, put, processing, errors, isDirty } = useForm({
         decision_maker_name: profile.decision_maker_name || '',
@@ -44,6 +52,7 @@ export default function ClientProfileForm({ clientId, profile, options, canEdit 
         sentiment: profile.sentiment || '',
         notes_md: profile.notes_md || '',
         interests: profile.interests || [],
+        ...Object.fromEntries(passportFields.map((field) => [field.key, profile[field.key] ?? ''])),
     });
 
     const submit = (e) => {
@@ -55,7 +64,7 @@ export default function ClientProfileForm({ clientId, profile, options, canEdit 
     };
 
     if (!canEdit) {
-        return <ProfileReadOnly profile={profile} />;
+        return <ProfileReadOnly profile={profile} sections={sections} />;
     }
 
     return (
@@ -163,6 +172,23 @@ export default function ClientProfileForm({ clientId, profile, options, canEdit 
                     </SimpleGrid>
                 </Section>
 
+                {Object.entries(sections).map(([key, section]) => (
+                    <Section key={key} title={section.label}>
+                        <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                            {section.fields.map((field) => (
+                                <PassportField
+                                    key={field.key}
+                                    field={field}
+                                    value={data[field.key]}
+                                    onChange={(value) => setData(field.key, value)}
+                                    error={errors[field.key]}
+                                    items={options[field.key]}
+                                />
+                            ))}
+                        </SimpleGrid>
+                    </Section>
+                ))}
+
                 <Section title="Заметки">
                     {/* Микрофон рядом с редактором, а не внутри: markdown-редактор
                         рисует свою панель инструментов, и кнопка поверх неё легла бы
@@ -203,6 +229,12 @@ export default function ClientProfileForm({ clientId, profile, options, canEdit 
                         Сохранить профиль
                     </Button>
                     {isDirty && <Text fontSize="xs" color="fg.muted">Есть несохранённые изменения</Text>}
+                    {profile.passport_completeness && (
+                        <Text fontSize="xs" color="fg.muted" ml="auto">
+                            Паспорт заполнен на {profile.passport_completeness.percent}%
+                            {' '}({profile.passport_completeness.filled} из {profile.passport_completeness.total} полей)
+                        </Text>
+                    )}
                 </HStack>
             </VStack>
         </form>
@@ -217,6 +249,34 @@ function Section({ title, children }) {
             </Text>
             {children}
         </VStack>
+    );
+}
+
+/**
+ * Одно поле паспорта. Тип приходит с бэкенда вместе с подписью, поэтому новое поле
+ * появляется в форме само — без правки этого файла.
+ */
+function PassportField({ field, value, onChange, error, items }) {
+    const common = { value: value ?? '', onChange: (e) => onChange(e.target.value) };
+
+    return (
+        <Field
+            label={field.label}
+            helperText={field.hint}
+            errorText={error}
+            invalid={!!error}
+            gridColumn={field.type === 'text' ? { md: 'span 3' } : undefined}
+        >
+            {field.type === 'enum' && (
+                <EnumSelect value={value ?? ''} onChange={onChange} items={items || []} />
+            )}
+            {field.type === 'integer' && <Input type="number" min={0} {...common} />}
+            {field.type === 'date' && <Input type="date" {...common} />}
+            {field.type === 'string' && <Input {...common} />}
+            {field.type === 'text' && (
+                <VoiceTextarea value={value ?? ''} onChange={onChange} rows={2} />
+            )}
+        </Field>
     );
 }
 
@@ -267,7 +327,15 @@ function RevisionHistory({ revisions, open, onToggle }) {
  * Без права на правку профиль показывается как справка: сотруднику с одним
  * `crm-profile.view` форма только мешала бы.
  */
-function ProfileReadOnly({ profile }) {
+function ProfileReadOnly({ profile, sections }) {
+    const passportRows = Object.values(sections || {}).flatMap((section) =>
+        section.fields.map((field) => [
+            field.label,
+            // У енумов показываем русскую подпись, а не машинное значение.
+            profile.passport_labels?.[field.key] ?? profile[field.key],
+        ]),
+    );
+
     const rows = [
         ['ЛПР', profile.decision_maker_name],
         ['Должность ЛПР', profile.decision_maker_role],
@@ -278,6 +346,7 @@ function ProfileReadOnly({ profile }) {
         ['Периодичность закупок, дней', profile.order_cycle_days],
         ['Настроение', profile.sentiment_label],
         ['Интересы', profile.interests?.join(', ')],
+        ...passportRows,
     ];
 
     return (

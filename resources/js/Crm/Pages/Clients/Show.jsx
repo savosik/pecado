@@ -33,7 +33,7 @@ function InfoRow({ label, value }) {
 }
 
 export default function Show() {
-    const { client, profile, profileOptions, lifecycle, organizations, organizationsEnabled } = usePage().props;
+    const { client, profile, profileOptions, passportSections, lifecycle, organizations, organizationsEnabled } = usePage().props;
     const { can } = usePermission();
 
     const canViewProfile = can('crm-profile.view') && !!profile;
@@ -139,6 +139,7 @@ export default function Show() {
                                         clientId={client.id}
                                         profile={profile}
                                         options={profileOptions}
+                                        passportSections={passportSections}
                                         canEdit={can('crm-profile.edit')}
                                     />
                                 </Box>

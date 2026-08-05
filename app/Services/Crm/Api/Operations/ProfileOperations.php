@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Crm\Api\OperationInput;
 use App\Services\Crm\ClientLifecycleService;
 use App\Services\Crm\ClientProfileService;
+use App\Support\Crm\ClientPassport;
 use Spatie\Tags\Tag;
 
 /**
@@ -20,20 +21,30 @@ class ProfileOperations
 {
     use ResolvesCrmEntities;
 
-    /** Поля профиля, доступные для записи через API. */
-    private const FIELDS = [
-        'decision_maker_name',
-        'decision_maker_role',
-        'decision_maker_contact',
-        'decision_process',
-        'payment_behavior',
-        'payment_terms',
-        'order_cycle_days',
-        'preferred_channel',
-        'sentiment',
-        'notes_md',
-        'interests',
-    ];
+    /**
+     * Поля профиля, доступные для записи через API.
+     *
+     * Атрибуты паспорта сюда добавляются из {@see ClientPassport}, а не переписываются
+     * руками: перечень полей один на форму, API и базу.
+     *
+     * @return list<string>
+     */
+    private static function fields(): array
+    {
+        return array_merge([
+            'decision_maker_name',
+            'decision_maker_role',
+            'decision_maker_contact',
+            'decision_process',
+            'payment_behavior',
+            'payment_terms',
+            'order_cycle_days',
+            'preferred_channel',
+            'sentiment',
+            'notes_md',
+            'interests',
+        ], ClientPassport::keys());
+    }
 
     public function __construct(
         private readonly ClientProfileService $profiles,
@@ -59,7 +70,7 @@ class ProfileOperations
 
         // only(): сервис различает «поле не трогали» и «поле очистили», поэтому
         // передаём ровно те ключи, которые пришли, а не весь список полей.
-        $this->profiles->update($client, $input->only(self::FIELDS), $actor);
+        $this->profiles->update($client, $input->only(self::fields()), $actor);
 
         return $this->payload($client->refresh());
     }
@@ -119,8 +130,9 @@ class ProfileOperations
     {
         $profile = $this->profiles->forClient($client);
 
-        return [
+        return ClientPassport::values($profile) + [
             'client_id' => (int) $client->getKey(),
+            'passport_completeness' => ClientPassport::completeness($profile),
             'decision_maker_name' => $profile->decision_maker_name,
             'decision_maker_role' => $profile->decision_maker_role,
             'decision_maker_contact' => $profile->decision_maker_contact,

@@ -16,6 +16,7 @@ use App\Services\Crm\ClientListService;
 use App\Services\Crm\ClientProfileService;
 use App\Services\Crm\CrmTaskService;
 use App\Support\Crm\ClientListFilters;
+use App\Support\Crm\ClientPassport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -132,12 +133,16 @@ class ClientController extends CrmController
 
         return Inertia::render('Crm/Pages/Clients/Show', [
             'profile' => $canSeeProfile ? $this->profilePayload($user, $profiles) : null,
-            'profileOptions' => $canSeeProfile ? [
+            'profileOptions' => $canSeeProfile ? ClientPassport::options() + [
                 'payment_behavior' => PaymentBehavior::options(),
                 'preferred_channel' => PreferredChannel::options(),
                 'sentiment' => ClientSentiment::options(),
                 'lifecycle_status' => ClientLifecycleStatus::options(),
             ] : null,
+            // Секции паспорта приходят с бэкенда, а не описаны в JSX: подпись поля
+            // и его правило проверки должны меняться одной правкой, иначе форма
+            // однажды покажет то, чего сервер уже не принимает.
+            'passportSections' => $canSeeProfile ? ClientPassport::sections() : null,
             'lifecycle' => $canSeeProfile ? $this->lifecyclePayload($user, $profiles, $lifecycle) : null,
             'client' => [
                 'id' => $user->id,
@@ -235,7 +240,9 @@ class ClientController extends CrmController
                 ->all()
             : [];
 
-        return [
+        return ClientPassport::values($profile) + [
+            'passport_labels' => ClientPassport::labels($profile),
+            'passport_completeness' => ClientPassport::completeness($profile),
             'decision_maker_name' => $profile->decision_maker_name,
             'decision_maker_role' => $profile->decision_maker_role,
             'decision_maker_contact' => $profile->decision_maker_contact,

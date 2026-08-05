@@ -2,10 +2,21 @@
 
 namespace App\Models;
 
+use App\Enums\Crm\BusinessType;
 use App\Enums\Crm\ClientLifecycleStatus;
 use App\Enums\Crm\ClientSentiment;
+use App\Enums\Crm\ClientSpecialization;
+use App\Enums\Crm\CreditRating;
+use App\Enums\Crm\DeliveryMethod;
+use App\Enums\Crm\NoveltyAttitude;
 use App\Enums\Crm\PaymentBehavior;
+use App\Enums\Crm\PaymentType;
+use App\Enums\Crm\PointLocation;
 use App\Enums\Crm\PreferredChannel;
+use App\Enums\Crm\PriceSegment;
+use App\Enums\Crm\Psychotype;
+use App\Enums\Crm\SalesChannel;
+use App\Enums\Crm\StaffLevel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,7 +30,37 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $decision_maker_name
  * @property string|null $decision_maker_role
  * @property string|null $decision_maker_contact
+ * @property \Illuminate\Support\Carbon|null $decision_maker_birthday
  * @property string|null $decision_process
+ * @property BusinessType|null $business_type
+ * @property int|null $points_count
+ * @property ClientSpecialization|null $specialization
+ * @property SalesChannel|null $primary_channel
+ * @property SalesChannel|null $secondary_channel
+ * @property PointLocation|null $point_location
+ * @property PriceSegment|null $price_segment
+ * @property StaffLevel|null $staff_level
+ * @property string|null $regions
+ * @property DeliveryMethod|null $delivery_method
+ * @property string|null $carrier
+ * @property string|null $receiving_hours
+ * @property string|null $packaging_notes
+ * @property PaymentType|null $payment_type
+ * @property int|null $deferral_days
+ * @property CreditRating|null $credit_rating
+ * @property string|null $commercial_terms
+ * @property string|null $unique_terms
+ * @property string|null $taboo_categories
+ * @property string|null $taboo_brands
+ * @property string|null $competitors
+ * @property string|null $accountant_name
+ * @property string|null $accountant_contact
+ * @property string|null $owner_name
+ * @property string|null $owner_contact
+ * @property NoveltyAttitude|null $novelty_attitude
+ * @property Psychotype|null $psychotype
+ * @property string|null $marketing_needs
+ * @property string|null $traffic_work
  * @property PaymentBehavior|null $payment_behavior
  * @property string|null $payment_terms
  * @property int|null $order_cycle_days
@@ -51,12 +92,43 @@ class CrmClientProfile extends Model
         'decision_maker_name',
         'decision_maker_role',
         'decision_maker_contact',
+        'decision_maker_birthday',
         'decision_process',
         'payment_behavior',
         'payment_terms',
         'order_cycle_days',
         'preferred_channel',
         'sentiment',
+        // Паспорт клиента: бизнес, логистика, условия, ограничения, контакты по ролям.
+        'business_type',
+        'points_count',
+        'specialization',
+        'primary_channel',
+        'secondary_channel',
+        'point_location',
+        'price_segment',
+        'staff_level',
+        'regions',
+        'delivery_method',
+        'carrier',
+        'receiving_hours',
+        'packaging_notes',
+        'payment_type',
+        'deferral_days',
+        'credit_rating',
+        'commercial_terms',
+        'unique_terms',
+        'taboo_categories',
+        'taboo_brands',
+        'competitors',
+        'accountant_name',
+        'accountant_contact',
+        'owner_name',
+        'owner_contact',
+        'novelty_attitude',
+        'psychotype',
+        'marketing_needs',
+        'traffic_work',
         'notes_md',
         'notes_updated_at',
         'notes_updated_by',
@@ -80,6 +152,21 @@ class CrmClientProfile extends Model
             'lifecycle_hint' => ClientLifecycleStatus::class,
             'lifecycle_changed_at' => 'datetime',
             'lifecycle_hint_at' => 'datetime',
+            'decision_maker_birthday' => 'date',
+            'business_type' => BusinessType::class,
+            'points_count' => 'integer',
+            'specialization' => ClientSpecialization::class,
+            'primary_channel' => SalesChannel::class,
+            'secondary_channel' => SalesChannel::class,
+            'point_location' => PointLocation::class,
+            'price_segment' => PriceSegment::class,
+            'staff_level' => StaffLevel::class,
+            'delivery_method' => DeliveryMethod::class,
+            'payment_type' => PaymentType::class,
+            'deferral_days' => 'integer',
+            'credit_rating' => CreditRating::class,
+            'novelty_attitude' => NoveltyAttitude::class,
+            'psychotype' => Psychotype::class,
         ];
     }
 

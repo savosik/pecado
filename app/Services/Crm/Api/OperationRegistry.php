@@ -22,6 +22,7 @@ use App\Services\Crm\Api\Operations\PlanOperations;
 use App\Services\Crm\Api\Operations\ProfileOperations;
 use App\Services\Crm\Api\Operations\TaskOperations;
 use App\Support\Crm\ClientListFilters;
+use App\Support\Crm\ClientPassport;
 use App\Support\Crm\CrmEntityMap;
 
 /**
@@ -193,8 +194,9 @@ class OperationRegistry
                 method: 'GET',
                 uri: 'clients/{client}/profile',
                 permission: 'crm-profile.view',
-                summary: 'Профиль клиента: ЛПР, платёжное поведение, заметки, интересы',
-                description: 'То, что знает менеджер и не знает 1С.',
+                summary: 'Профиль клиента: ЛПР, паспорт бизнеса, условия, ограничения, заметки',
+                description: 'То, что знает менеджер и не знает 1С. В ответе есть passport_completeness — '
+                    .'сколько полей паспорта заполнено: по нему видно, кого стоит расспросить.',
                 params: [
                     Param::integer('client', 'Идентификатор клиента', required: true, rules: ['min:1']),
                 ],
@@ -206,24 +208,26 @@ class OperationRegistry
                 method: 'PATCH',
                 uri: 'clients/{client}/profile',
                 permission: 'crm-profile.edit',
-                summary: 'Обновить поля профиля и заметки менеджера',
+                summary: 'Обновить поля профиля, паспорт клиента и заметки менеджера',
                 description: 'Передавайте только те поля, которые меняете: непереданное остаётся как было, '
                     .'а переданное пустым — очищается. Лояльность клиента (client_status) здесь не меняется: '
-                    .'ею владеет 1С и перезапишет её следующим обменом.',
-                params: [
+                    .'ею владеет 1С и перезапишет её следующим обменом. Поля паспорта (вид бизнеса, сегмент, '
+                    .'логистика, условия, табу, контакты по ролям) собираются интервью с менеджером и заполняются '
+                    .'по мере разговора — сохраняйте после каждого блока, а не в конце.',
+                params: array_merge([
                     Param::integer('client', 'Идентификатор клиента', required: true, rules: ['min:1']),
                     Param::string('decision_maker_name', 'Имя ЛПР', rules: ['max:255'], nullable: true),
                     Param::string('decision_maker_role', 'Должность ЛПР', rules: ['max:255'], nullable: true),
                     Param::string('decision_maker_contact', 'Контакт ЛПР', rules: ['max:255'], nullable: true),
                     Param::string('decision_process', 'Как принимается решение о закупке', rules: ['max:5000'], nullable: true),
-                    Param::string('payment_behavior', 'Платёжное поведение', enum: array_column(PaymentBehavior::cases(), 'value'), nullable: true),
+                    Param::string('payment_behavior', 'Платёжное поведение — наблюдение менеджера', enum: array_column(PaymentBehavior::cases(), 'value'), nullable: true),
                     Param::string('payment_terms', 'Условия оплаты', rules: ['max:255'], nullable: true),
                     Param::integer('order_cycle_days', 'Обычная периодичность закупок, дней', rules: ['min:1', 'max:1095'], nullable: true),
                     Param::string('preferred_channel', 'Предпочитаемый канал связи', enum: array_column(PreferredChannel::cases(), 'value'), nullable: true),
                     Param::string('sentiment', 'Настроение клиента', enum: array_column(ClientSentiment::cases(), 'value'), nullable: true),
-                    Param::string('notes_md', 'Заметки менеджера (Markdown)', rules: ['max:65535'], nullable: true),
+                    Param::string('notes_md', 'Заметки менеджера (Markdown) — всё, что не уложилось в поля', rules: ['max:65535'], nullable: true),
                     Param::list('interests', 'Интересы клиента — список названий', required: false),
-                ],
+                ], ClientPassport::apiParams()),
                 handler: [ProfileOperations::class, 'update'],
                 mutating: true,
             ),
