@@ -326,7 +326,7 @@ class AppServiceProvider extends ServiceProvider
      */
     private function registerCrmApiDocs(): void
     {
-        $config = Scramble::registerApi('crm', [
+        Scramble::registerApi('crm', [
             'api_path' => 'api/crm',
             'info' => [
                 'title' => 'Pecado CRM API',
@@ -334,8 +334,16 @@ class AppServiceProvider extends ServiceProvider
             ],
         ]);
 
-        \Illuminate\Support\Facades\Route::get('docs/crm-api', function (\App\Services\Crm\Api\CrmApiDocument $document) use ($config) {
-            return view('scramble::docs', ['spec' => $document->build(), 'config' => $config]);
+        // Конфиг берётся внутри замыкания, а не захватывается через use: при
+        // route:cache замыкание маршрута сериализуется вместе с захваченным
+        // окружением, а GeneratorConfig хранит Closure-свойства и переживает
+        // сериализацию объектом-сериализатором вместо замыкания — прод падает
+        // на прогреве кешей. Сам Scramble в registerUiRoute делает так же.
+        \Illuminate\Support\Facades\Route::get('docs/crm-api', function (\App\Services\Crm\Api\CrmApiDocument $document) {
+            return view('scramble::docs', [
+                'spec' => $document->build(),
+                'config' => Scramble::getGeneratorConfig('crm'),
+            ]);
         })->middleware(\Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess::class);
 
         \Illuminate\Support\Facades\Route::get('docs/crm-api.json', function (\App\Services\Crm\Api\CrmApiDocument $document) {
