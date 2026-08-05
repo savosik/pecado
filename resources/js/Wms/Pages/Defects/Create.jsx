@@ -19,11 +19,15 @@ import { DefectStockWarning } from '@/Wms/Components/DefectStockWarning';
 import { QuantityStepper } from '@/Wms/Components/QuantityStepper';
 
 export default function DefectsCreate() {
-    const { warehouses, defectTypes = [] } = usePage().props;
+    // prefill приходит из отчёта «Не закрыто партиями»: товар и склад уже известны,
+    // кладовщику остаётся описать дефект и приложить фото.
+    const { warehouses, defectTypes = [], prefill = null } = usePage().props;
 
     const { data, setData, post, processing, errors } = useForm({
-        product_id: null,
-        warehouse_id: warehouses.length === 1 ? String(warehouses[0].id) : '',
+        product_id: prefill?.product?.id ?? null,
+        warehouse_id: prefill?.warehouse_id
+            ? String(prefill.warehouse_id)
+            : (warehouses.length === 1 ? String(warehouses[0].id) : ''),
         defect_description: '',
         quantity: 1,
         photos: [],
@@ -31,7 +35,7 @@ export default function DefectsCreate() {
 
     // ProductSelector работает с объектом товара, а на бэк уходит только id,
     // поэтому объект держим вне формы — иначе он поедет в запрос лишним полем.
-    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [selectedProduct, setSelectedProduct] = useState(prefill?.product ?? null);
 
     const handleSubmit = (event) => {
         event.preventDefault();

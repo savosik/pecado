@@ -26,6 +26,7 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
     Route::middleware('permission:wms-defects.view')->group(function () {
         Route::get('/defects', [DefectController::class, 'index'])->name('defects.index');
         Route::get('/defects/shipping', [DefectController::class, 'shipping'])->name('defects.shipping');
+        Route::get('/defects/uncovered', [DefectController::class, 'uncovered'])->name('defects.uncovered');
         Route::get('/defects/codes', [DefectController::class, 'codes'])->name('defects.codes');
         Route::get('/defects/codes/export', [DefectController::class, 'codesExport'])->name('defects.codes-export');
         Route::get('/defects/search-products', [DefectController::class, 'searchProducts'])->name('defects.search-products');

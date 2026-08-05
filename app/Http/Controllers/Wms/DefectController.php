@@ -10,6 +10,7 @@ use App\Models\DefectType;
 use App\Models\Product;
 use App\Models\ProductDefect;
 use App\Models\Warehouse;
+use App\Services\Defect\DefectCoverageService;
 use App\Services\SimpleXlsxExporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -29,7 +30,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class DefectController extends WmsController
 {
     public function __construct(
-        private readonly DefectStockServiceInterface $defectStock
+        private readonly DefectStockServiceInterface $defectStock,
+        private readonly DefectCoverageService $defectCoverage
     ) {}
 
     public function index(Request $request): Response
@@ -71,6 +73,65 @@ class DefectController extends WmsController
             'stats' => $this->stats(),
             'isWarehouseHead' => $this->isWarehouseHead($request),
         ]);
+    }
+
+    /**
+     * Остатки склада некондиции, не закрытые партиями.
+     *
+     * Уценка попадает на витрину только через партию: пока кладовщик её не
+     * завёл, остаток из 1С висит на складе и никому не предлагается. Здесь
+     * видно потоварно, сколько такого остатка и по каким артикулам, а заодно
+     * обратные расхождения — партий заведено больше, чем числится в 1С.
+     */
+    public function uncovered(Request $request): Response
+    {
+        $filter = $request->string('filter')->toString() ?: DefectCoverageService::FILTER_UNCOVERED;
+        $search = trim($request->string('search')->toString());
+        $warehouseId = $request->integer('warehouse_id') ?: null;
+
+        $rows = $this->defectCoverage
+            ->rows($filter, $search ?: null, $warehouseId)
+            // При расхождении интереснее самые «минусовые» позиции, в остальных
+            // случаях — самый большой непокрытый остаток.
+            ->orderBy(
+                'uncovered_quantity',
+                $filter === DefectCoverageService::FILTER_OVER ? 'asc' : 'desc'
+            )
+            ->orderBy('product_name')
+            ->paginate(30)
+            ->withQueryString()
+            ->through($this->presentCoverageRow(...));
+
+        return Inertia::render('Wms/Pages/Defects/Uncovered', [
+            'rows' => $rows,
+            'filters' => [
+                'filter' => $filter,
+                'search' => $search,
+                'warehouse_id' => $warehouseId,
+            ],
+            'warehouses' => $this->defectCoverage->warehouses(),
+            'stats' => $this->defectCoverage->stats($search ?: null, $warehouseId),
+        ]);
+    }
+
+    /**
+     * @param  object  $row  Строка отчёта покрытия (сырой результат запроса)
+     * @return array<string, mixed>
+     */
+    private function presentCoverageRow(object $row): array
+    {
+        return [
+            'product_id' => (int) $row->product_id,
+            'product_name' => $row->product_name,
+            'product_sku' => $row->product_sku,
+            'warehouse_id' => (int) $row->warehouse_id,
+            'warehouse_name' => $row->warehouse_name,
+            'stock_quantity' => (int) $row->stock_quantity,
+            'covered_quantity' => (int) $row->covered_quantity,
+            'idle_quantity' => (int) $row->idle_quantity,
+            'batches_count' => (int) $row->batches_count,
+            'uncovered_quantity' => (int) $row->uncovered_quantity,
+        ];
     }
 
     /**
@@ -196,12 +257,48 @@ class DefectController extends WmsController
             ->all();
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
         return Inertia::render('Wms/Pages/Defects/Create', [
             'warehouses' => $this->defectWarehouses(),
             'defectTypes' => $this->defectTypeChips(),
+            'prefill' => $this->createPrefill($request),
         ]);
+    }
+
+    /**
+     * Предзаполнение формы из отчёта о непокрытых остатках: кладовщик переходит
+     * по строке «остаток есть, партии нет» и сразу видит товар и склад.
+     *
+     * @return array{product: array<string, mixed>, warehouse_id: int}|null
+     */
+    private function createPrefill(Request $request): ?array
+    {
+        $productId = $request->integer('product_id');
+
+        if (! $productId) {
+            return null;
+        }
+
+        $product = Product::query()->with('media')->find($productId);
+
+        if (! $product) {
+            return null;
+        }
+
+        $warehouseId = $request->integer('warehouse_id');
+        $warehouseId = Warehouse::query()->defect()->whereKey($warehouseId)->value('id');
+
+        return [
+            'product' => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'image_url' => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main'),
+                'defect_stock' => (object) ($this->defectStockMap([(int) $product->id])[(int) $product->id] ?? []),
+            ],
+            'warehouse_id' => (int) $warehouseId,
+        ];
     }
 
     /**
