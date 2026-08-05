@@ -348,6 +348,15 @@ jobs:
             echo "PROMO_ISSUE_ENABLED=true" >> /srv/pecado/.env
           fi
 
+          echo "==> [0.7/7] Флаг организаций (графа «Продавец» в документах)..."
+          # config/erp.php → erp.organizations.enabled. Гейтит только показ
+          # организации в админке/ЛК/CRM; приём из 1С работает всегда.
+          if grep -q "^ORGANIZATIONS_ENABLED=" /srv/pecado/.env; then
+            sed -i 's|^ORGANIZATIONS_ENABLED=.*|ORGANIZATIONS_ENABLED=true|' /srv/pecado/.env
+          else
+            echo "ORGANIZATIONS_ENABLED=true" >> /srv/pecado/.env
+          fi
+
           echo "==> [1/7] Установка PHP зависимостей..."
           sg docker -c 'docker compose exec -T app composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader'
 

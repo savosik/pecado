@@ -301,6 +301,15 @@ jobs:
             echo "PROMO_ISSUE_ENABLED=true" >> /srv/pecado/.env
           fi
 
+          echo "==> [0.2/9] Флаг организаций (графа «Продавец» в документах)..."
+          # config/erp.php → erp.organizations.enabled. Гейтит только показ
+          # организации в админке/ЛК/CRM; приём из 1С работает всегда.
+          if grep -q "^ORGANIZATIONS_ENABLED=" /srv/pecado/.env; then
+            sed -i 's|^ORGANIZATIONS_ENABLED=.*|ORGANIZATIONS_ENABLED=true|' /srv/pecado/.env
+          else
+            echo "ORGANIZATIONS_ENABLED=true" >> /srv/pecado/.env
+          fi
+
           echo "==> [0/9] Maintenance mode ON..."
           sg docker -c "$DC exec -T app php artisan down --retry=30 --refresh=5" || true
 
