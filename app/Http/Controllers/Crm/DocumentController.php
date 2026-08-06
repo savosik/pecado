@@ -14,6 +14,7 @@ use App\Models\ShipmentItem;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Crm\CrmEntityResolver;
+use App\Services\SimpleXlsxExporter;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Заказы и реализации внутри CRM: списки и карточки.
@@ -60,6 +62,15 @@ class DocumentController extends CrmController
         ['value' => 'cancelled', 'label' => 'Отменена', 'color' => 'gray'],
     ];
 
+    /**
+     * Потолок выгрузки. Экран режется страницами, файл — этим числом: журнал
+     * без фильтров у РОПа — это десятки тысяч документов, и вся эта таблица
+     * собирается в памяти PhpSpreadsheet до отдачи.
+     */
+    private const EXPORT_LIMIT = 10000;
+
+    private const EXPORT_CHUNK = 500;
+
     public function __construct(private readonly CrmEntityResolver $resolver) {}
 
     /**
@@ -73,34 +84,13 @@ class DocumentController extends CrmController
     {
         $actor = $this->crmActor($request);
         $clients = $this->visibleClients($request, $actor);
+        $search = $this->search($request);
 
-        $query = Order::query()
-            ->whereIn('user_id', (clone $clients))
+        $query = $this->ordersQuery($request, $clients, $search)
             ->with(['user:id,name,erp_name,email', 'company:id,name', 'organization:id,name,is_stub', 'warehouse:id,name'])
             ->withCount('items');
 
-        if ($search = $this->search($request)) {
-            $like = '%'.$search.'%';
-
-            $query->where(function ($inner) use ($search, $like): void {
-                $inner->where('number', 'like', $like)
-                    ->orWhere('erp_number', 'like', $like)
-                    ->orWhere('id', $search)
-                    ->orWhereHas('user', fn ($user) => $user
-                        ->where('name', 'like', $like)
-                        ->orWhere('email', 'like', $like))
-                    ->orWhereHas('items', fn ($item) => $item->where('name', 'like', $like));
-            });
-        }
-
-        $statuses = array_map(fn (OrderStatus $case): string => $case->value, OrderStatus::cases());
-
-        $this->applyCommonFilters($query, $request, 'erp_created_at', $statuses);
-
-        $sortBy = in_array($request->input('sort_by'), self::SORTS, true)
-            ? (string) $request->input('sort_by')
-            : 'erp_created_at';
-        $sortOrder = $request->input('sort_order') === 'asc' ? 'asc' : 'desc';
+        [$sortBy, $sortOrder] = $this->sort($request);
         $perPage = min(max((int) $request->input('per_page', 15), 5), 100);
 
         $orders = $query->orderBy($sortBy, $sortOrder)->paginate($perPage)->withQueryString();
@@ -150,37 +140,13 @@ class DocumentController extends CrmController
     {
         $actor = $this->crmActor($request);
         $clients = $this->visibleClients($request, $actor);
+        $search = $this->search($request);
 
-        $query = Shipment::query()
-            ->whereIn('user_id', (clone $clients))
+        $query = $this->shipmentsQuery($request, $clients, $search)
             ->with(['user:id,name,erp_name,email', 'company:id,name', 'organization:id,name,is_stub', 'warehouse:id,name'])
             ->withCount('items');
 
-        if ($search = $this->search($request)) {
-            $like = '%'.$search.'%';
-
-            $query->where(function ($inner) use ($search, $like): void {
-                $inner->where('number', 'like', $like)
-                    ->orWhere('erp_number', 'like', $like)
-                    ->orWhere('id', $search)
-                    ->orWhereHas('user', fn ($user) => $user
-                        ->where('name', 'like', $like)
-                        ->orWhere('email', 'like', $like))
-                    ->orWhereHas('items', fn ($item) => $item->where('product_name_snapshot', 'like', $like));
-            });
-        }
-
-        $this->applyCommonFilters(
-            $query,
-            $request,
-            'erp_created_at',
-            array_column(self::SHIPMENT_STATUSES, 'value'),
-        );
-
-        $sortBy = in_array($request->input('sort_by'), self::SORTS, true)
-            ? (string) $request->input('sort_by')
-            : 'erp_created_at';
-        $sortOrder = $request->input('sort_order') === 'asc' ? 'asc' : 'desc';
+        [$sortBy, $sortOrder] = $this->sort($request);
         $perPage = min(max((int) $request->input('per_page', 15), 5), 100);
 
         $shipments = $query->orderBy($sortBy, $sortOrder)->paginate($perPage)->withQueryString();
@@ -212,6 +178,343 @@ class DocumentController extends CrmController
             $this->listOptions($request, 'shipments', $clients, $sortBy, $sortOrder, $perPage, $search),
             ['statuses' => self::SHIPMENT_STATUSES],
         ));
+    }
+
+    /**
+     * XLSX-выгрузка отобранных заказов. GET /crm/orders/export
+     */
+    public function ordersExport(Request $request, SimpleXlsxExporter $exporter): StreamedResponse
+    {
+        $actor = $this->crmActor($request);
+        $clients = $this->visibleClients($request, $actor);
+        $productIds = $this->ids($request, 'product_ids');
+
+        return $this->exportDocuments(
+            $request,
+            $this->ordersQuery($request, $clients, $this->search($request)),
+            $exporter,
+            'crm-orders-'.now()->format('Y-m-d-His'),
+            'Заказы',
+            fn (array $ids): array => $this->orderItemRows($ids, $productIds),
+        );
+    }
+
+    /**
+     * XLSX-выгрузка отобранных реализаций. GET /crm/shipments/export
+     */
+    public function shipmentsExport(Request $request, SimpleXlsxExporter $exporter): StreamedResponse
+    {
+        $actor = $this->crmActor($request);
+        $clients = $this->visibleClients($request, $actor);
+        $productIds = $this->ids($request, 'product_ids');
+
+        return $this->exportDocuments(
+            $request,
+            $this->shipmentsQuery($request, $clients, $this->search($request)),
+            $exporter,
+            'crm-shipments-'.now()->format('Y-m-d-His'),
+            'Реализации',
+            fn (array $ids): array => $this->shipmentItemRows($ids, $productIds),
+        );
+    }
+
+    /**
+     * Общая сборка выгрузки: тот же отбор, что на экране, но без страниц.
+     *
+     * Читаем страницами и складываем уже готовые скалярные строки: держать в
+     * памяти десять тысяч моделей со связями дороже самой генерации файла.
+     *
+     * @param  Builder<Order>|Builder<Shipment>  $query
+     * @param  \Closure(list<int>): list<list<scalar|null>>  $itemRows  позиции выгруженных документов
+     */
+    private function exportDocuments(
+        Request $request,
+        Builder $query,
+        SimpleXlsxExporter $exporter,
+        string $filename,
+        string $sheetTitle,
+        \Closure $itemRows,
+    ): StreamedResponse {
+        [$sortBy, $sortOrder] = $this->sort($request);
+        $organizationsEnabled = (bool) config('erp.organizations.enabled');
+
+        $total = (clone $query)->count();
+        $rows = [];
+        $ids = [];
+        $page = 1;
+
+        do {
+            $chunk = (clone $query)
+                ->with([
+                    'user:id,name,erp_name,email,personal_manager_id',
+                    'user.personalManager:id,name',
+                    'company:id,name,tax_id',
+                    'organization:id,name,is_stub',
+                    'warehouse:id,name',
+                ])
+                ->withCount('items')
+                // Вторичная сортировка по id: без неё документы с одинаковой
+                // датой могут разъехаться между страницами и попасть в файл
+                // дважды или не попасть вовсе.
+                ->orderBy($sortBy, $sortOrder)
+                ->orderBy('id')
+                ->forPage($page, self::EXPORT_CHUNK)
+                ->get();
+
+            foreach ($chunk as $document) {
+                $rows[] = $this->exportRow($document, $organizationsEnabled);
+                $ids[] = (int) $document->getKey();
+
+                if (count($rows) >= self::EXPORT_LIMIT) {
+                    break 2;
+                }
+            }
+
+            $page++;
+        } while ($chunk->count() === self::EXPORT_CHUNK);
+
+        $shown = count($rows);
+
+        // Обрезку показываем прямо в файле: молча урезанная выгрузка выглядит
+        // как полная, и по ней делают выводы.
+        if ($total > $shown) {
+            $rows[] = [];
+            $rows[] = ['Показаны первые '.$shown.' документов из '.$total.' — уточните фильтры'];
+        }
+
+        $sheets = [[
+            'title' => $sheetTitle,
+            'headers' => $this->exportHeaders($organizationsEnabled),
+            'rows' => $rows,
+        ]];
+
+        // Лист позиций — только при фильтре по товару: без него в него ушли бы
+        // все строки всех документов, а это уже не выгрузка журнала.
+        $items = $ids === [] ? [] : $itemRows($ids);
+
+        if ($items !== []) {
+            $sheets[] = [
+                'title' => 'Позиции',
+                'headers' => ['Документ', 'Дата', 'Клиент', 'Товар', 'Артикул', 'Бренд', 'Количество', 'Цена', 'Сумма'],
+                'rows' => $items,
+            ];
+        }
+
+        return $exporter->streamSheets($filename, $sheets);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function exportHeaders(bool $organizationsEnabled): array
+    {
+        return array_values(array_filter([
+            'Документ',
+            'Номер на сайте',
+            'Дата',
+            'Статус',
+            'Клиент',
+            'Email',
+            'Менеджер',
+            'Контрагент',
+            'ИНН',
+            $organizationsEnabled ? 'Организация' : null,
+            'Склад',
+            'Позиций',
+            'Сумма',
+            'Валюта',
+        ]));
+    }
+
+    /**
+     * Строка документа для XLSX. Сумма уходит числом, а не «1 200,00 ₽»:
+     * иначе в Excel по ней не посчитать итог.
+     *
+     * @param  Order|Shipment  $document
+     * @return list<scalar|null>
+     */
+    private function exportRow(\Illuminate\Database\Eloquent\Model $document, bool $organizationsEnabled): array
+    {
+        $isOrder = $document instanceof Order;
+        $date = $isOrder
+            ? ($document->erp_created_at ?? $document->created_at)
+            : ($document->erp_created_at ?? $document->date);
+
+        /** @var User|null $client */
+        $client = $document->getRelationValue('user');
+        $company = $document->getRelationValue('company');
+        $organization = $document->getRelationValue('organization');
+        $warehouse = $document->getRelationValue('warehouse');
+
+        $row = [
+            'number' => $document->erp_number ?: $document->number ?: '#'.$document->getKey(),
+            'site_number' => $document->number,
+            'date' => $date?->format('d.m.Y H:i'),
+            'status' => $isOrder ? $document->status->label() : $document->status_label,
+            'client' => $client?->display_name,
+            'email' => $client?->email,
+            'manager' => $client?->personalManager?->name,
+            'company' => $company?->getAttribute('name'),
+            'tax_id' => $company?->getAttribute('tax_id'),
+            'organization' => $organization?->getAttribute('name'),
+            'warehouse' => $warehouse?->getAttribute('name'),
+            'items_count' => (int) ($document->items_count ?? 0),
+            'total' => round((float) $document->total_amount, 2),
+            'currency' => $document->currency_code ?: 'RUB',
+        ];
+
+        // Колонка организации следует за витриной: справочник ещё не заполнен —
+        // её нет ни на экране, ни в файле.
+        if (! $organizationsEnabled) {
+            unset($row['organization']);
+        }
+
+        return array_values($row);
+    }
+
+    /**
+     * Позиции заказов по выбранным товарам.
+     *
+     * @param  list<int>  $orderIds
+     * @param  list<int>  $productIds
+     * @return list<list<scalar|null>>
+     */
+    private function orderItemRows(array $orderIds, array $productIds): array
+    {
+        if ($productIds === []) {
+            return [];
+        }
+
+        return OrderItem::query()
+            ->whereIn('order_id', $orderIds)
+            ->whereIn('product_id', $productIds)
+            ->with(['order:id,number,erp_number,created_at,erp_created_at,user_id', 'order.user:id,name,erp_name', 'product:id,sku'])
+            ->get()
+            ->map(fn (OrderItem $item): array => [
+                $item->order?->erp_number ?: $item->order?->number ?: '#'.$item->getAttribute('order_id'),
+                ($item->order->erp_created_at ?? $item->order->created_at)?->format('d.m.Y H:i'),
+                $item->order?->user?->display_name,
+                $item->name ?: $item->product?->name,
+                $item->product?->sku,
+                $item->brand_name_snapshot,
+                (int) $item->quantity,
+                round((float) $item->final_price, 2),
+                round((float) $item->subtotal, 2),
+            ])
+            ->all();
+    }
+
+    /**
+     * Позиции реализаций по выбранным товарам.
+     *
+     * @param  list<int>  $shipmentIds
+     * @param  list<int>  $productIds
+     * @return list<list<scalar|null>>
+     */
+    private function shipmentItemRows(array $shipmentIds, array $productIds): array
+    {
+        if ($productIds === []) {
+            return [];
+        }
+
+        return ShipmentItem::query()
+            ->whereIn('shipment_id', $shipmentIds)
+            ->whereIn('product_id', $productIds)
+            ->with(['shipment:id,number,erp_number,date,erp_created_at,user_id', 'shipment.user:id,name,erp_name', 'product:id,sku'])
+            ->get()
+            ->map(fn (ShipmentItem $item): array => [
+                $item->shipment?->erp_number ?: $item->shipment?->number ?: '#'.$item->getAttribute('shipment_id'),
+                ($item->shipment->erp_created_at ?? $item->shipment->date)?->format('d.m.Y H:i'),
+                $item->shipment?->user?->display_name,
+                $item->product_name_snapshot ?: $item->product?->name,
+                $item->product?->sku,
+                $item->brand_name_snapshot,
+                (int) $item->quantity,
+                round((float) $item->price, 2),
+                round((float) $item->total, 2),
+            ])
+            ->all();
+    }
+
+    /**
+     * Отобранные заказы — без сортировки и постраничности.
+     *
+     * Один источник для экрана и для выгрузки: разъедься они, XLSX начал бы
+     * показывать не то, что менеджер видит на экране, и доверять файлу стало
+     * бы нельзя.
+     *
+     * @param  Builder<User>  $clients
+     * @return Builder<Order>
+     */
+    private function ordersQuery(Request $request, Builder $clients, ?string $search): Builder
+    {
+        $query = Order::query()->whereIn('user_id', (clone $clients));
+
+        $this->applySearch($query, $search, 'name');
+        $this->applyCommonFilters(
+            $query,
+            $request,
+            'erp_created_at',
+            array_map(fn (OrderStatus $case): string => $case->value, OrderStatus::cases()),
+        );
+
+        return $query;
+    }
+
+    /**
+     * Отобранные реализации — без сортировки и постраничности.
+     *
+     * @param  Builder<User>  $clients
+     * @return Builder<Shipment>
+     */
+    private function shipmentsQuery(Request $request, Builder $clients, ?string $search): Builder
+    {
+        $query = Shipment::query()->whereIn('user_id', (clone $clients));
+
+        // В позициях реализации название лежит снимком: 1С шлёт его строкой,
+        // и товара сайта у позиции может не быть вовсе.
+        $this->applySearch($query, $search, 'product_name_snapshot');
+        $this->applyCommonFilters($query, $request, 'erp_created_at', array_column(self::SHIPMENT_STATUSES, 'value'));
+
+        return $query;
+    }
+
+    /**
+     * Строка поиска: номер документа, клиент или товар в позициях.
+     *
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     */
+    private function applySearch(Builder $query, ?string $search, string $itemNameColumn): void
+    {
+        if ($search === null) {
+            return;
+        }
+
+        $like = '%'.$search.'%';
+
+        $query->where(function (Builder $inner) use ($search, $like, $itemNameColumn): void {
+            $inner->where('number', 'like', $like)
+                ->orWhere('erp_number', 'like', $like)
+                ->orWhere('id', $search)
+                ->orWhereHas('user', fn ($user) => $user
+                    ->where('name', 'like', $like)
+                    ->orWhere('email', 'like', $like))
+                ->orWhereHas('items', fn ($item) => $item->where($itemNameColumn, 'like', $like));
+        });
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function sort(Request $request): array
+    {
+        $sortBy = in_array($request->input('sort_by'), self::SORTS, true)
+            ? (string) $request->input('sort_by')
+            : 'erp_created_at';
+
+        return [$sortBy, $request->input('sort_order') === 'asc' ? 'asc' : 'desc'];
     }
 
     /**

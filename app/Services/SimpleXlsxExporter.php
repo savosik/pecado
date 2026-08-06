@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -103,7 +104,15 @@ class SimpleXlsxExporter
         $rowIndex = 2;
         foreach ($rows as $row) {
             foreach (array_values($row) as $i => $value) {
-                $sheet->setCellValue([$i + 1, $rowIndex], $value);
+                // Строку, похожую на число (ИНН, артикул, штрихкод), пишем явно
+                // текстом: иначе Excel съедает ведущие нули и разворачивает
+                // длинные коды в экспоненту. Числа приходят числами и типом не
+                // трогаются — по ним считают итоги.
+                if (is_string($value) && $value !== '' && is_numeric($value)) {
+                    $sheet->setCellValueExplicit([$i + 1, $rowIndex], $value, DataType::TYPE_STRING);
+                } else {
+                    $sheet->setCellValue([$i + 1, $rowIndex], $value);
+                }
             }
             $rowIndex++;
         }

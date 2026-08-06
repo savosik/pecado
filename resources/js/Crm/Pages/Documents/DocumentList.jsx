@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { Badge, Box, Flex, HStack, Input, Text, VStack } from '@chakra-ui/react';
-import { LuEye } from 'react-icons/lu';
+import { LuDownload, LuEye } from 'react-icons/lu';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { SearchInput } from '@/Admin/Components/SearchInput';
@@ -45,21 +45,37 @@ export default function DocumentList({
 
     // Пустые значения выкидываем: иначе каждый сброшенный мультивыбор оставлял бы
     // в адресе висячий `?partner_ids=`, и ссылка на отбор переставала читаться.
+    const activeParams = (patch = {}) => Object.entries({ ...filters, ...patch }).reduce((acc, [key, value]) => {
+        const empty = Array.isArray(value)
+            ? value.length === 0
+            : value === null || value === undefined || value === '';
+
+        if (!empty) acc[key] = value;
+
+        return acc;
+    }, {});
+
     const apply = (patch) => {
-        const params = Object.entries({ ...filters, ...patch }).reduce((acc, [key, value]) => {
-            const empty = Array.isArray(value)
-                ? value.length === 0
-                : value === null || value === undefined || value === '';
-
-            if (!empty) acc[key] = value;
-
-            return acc;
-        }, {});
-
-        router.get(route(`${routeName}.index`), params, {
+        router.get(route(`${routeName}.index`), activeParams(patch), {
             preserveState: true,
             replace: true,
         });
+    };
+
+    // Выгрузка уходит обычным переходом, а не router.visit: Inertia ждёт JSON,
+    // а сервер отдаёт файл — ответ она просто не поймёт.
+    const exportXlsx = () => {
+        const query = new URLSearchParams();
+
+        Object.entries(activeParams()).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+                value.forEach((item) => query.append(`${key}[]`, item));
+            } else {
+                query.append(key, value);
+            }
+        });
+
+        window.location.href = `${route(`${routeName}.export`)}?${query.toString()}`;
     };
 
     const reset = () => {
@@ -310,6 +326,10 @@ export default function DocumentList({
                     {hasFilters && (
                         <Button size="xs" variant="ghost" onClick={reset}>Сбросить</Button>
                     )}
+
+                    <Button size="xs" variant="outline" onClick={exportXlsx} ml="auto">
+                        <LuDownload /> XLSX
+                    </Button>
                 </HStack>
             </VStack>
 

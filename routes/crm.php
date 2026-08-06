@@ -58,6 +58,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // в биндинг модели.
         Route::get('/orders', [DocumentController::class, 'orders'])->name('orders.index');
         Route::get('/shipments', [DocumentController::class, 'shipments'])->name('shipments.index');
+        // XLSX по текущему отбору — тот же скоуп и те же фильтры, что у списка.
+        Route::get('/orders/export', [DocumentController::class, 'ordersExport'])->name('orders.export');
+        Route::get('/shipments/export', [DocumentController::class, 'shipmentsExport'])->name('shipments.export');
         // Подсказки товаров для фильтра журналов. Свой маршрут, а не
         // crm.products.search: тот закрыт правом crm-analytics.view, которого
         // у рядового менеджера может не быть.
