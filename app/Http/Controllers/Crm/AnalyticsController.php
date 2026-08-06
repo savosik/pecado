@@ -232,6 +232,11 @@ class AnalyticsController extends CrmController
 
     /**
      * XLSX-выгрузка отчёта по текущим фильтрам. GET /crm/analytics/export
+     *
+     * Разрезы берутся **без лимита** (в отличие от экрана, где строки режутся
+     * потолком UI) — выгрузка должна давать полную картину, а не топ-N.
+     * Каждый разрез уходит на свой лист со своими колонками; первый лист —
+     * «Итоги» с периодом, KPI и количеством строк по разрезам.
      */
     public function export(Request $request, SimpleXlsxExporter $exporter): StreamedResponse
     {
@@ -240,36 +245,178 @@ class AnalyticsController extends CrmController
         $ctx = $this->resolveContext($request, $actor, $seesAll);
         $filters = AnalyticsFilters::fromScopeRequest($request);
 
-        $headers = ['Группировка', 'Значение', 'Сумма, ₽', 'Штук', 'Поставок', 'Контрагентов'];
-        $rows = [];
+        $sections = $this->exportSections($ctx, $filters, $seesAll);
 
-        $sections = [
-            'Организация' => $this->analytics->byOrganization($ctx, $filters),
-            'Склад отгрузки' => $this->analytics->byWarehouse($ctx, $filters),
-            'Бренд' => $this->analytics->byBrand($ctx, $filters),
-            'Категория' => $this->analytics->byCategory($ctx, $filters),
-            'Партнёр' => $this->analytics->byPartner($ctx, $filters),
-            'Контрагент' => $this->analytics->byContractor($ctx, $filters),
-            'Товар' => $this->analytics->byProduct($ctx, $filters),
-        ];
+        $sheets = [$this->summarySheet($ctx, $filters, $sections)];
+
+        foreach ($sections as $section) {
+            $sheets[] = [
+                'title' => $section['title'],
+                'headers' => $section['headers'],
+                'rows' => $this->exportRows($section),
+            ];
+        }
+
+        return $exporter->streamSheets('crm-analytics-'.now()->format('Y-m-d-His'), $sheets);
+    }
+
+    /**
+     * Описание листов-разрезов: заголовки колонок, строки и маппер.
+     *
+     * @return array<string, array{title: string, headers: list<string>, items: \Illuminate\Support\Collection<int, array<string, mixed>>, mapper: callable}>
+     */
+    private function exportSections(AnalyticsContext $ctx, AnalyticsFilters $filters, bool $seesAll): array
+    {
+        $base = ['Значение', 'Поставок', 'Контрагентов', 'Штук', 'Сумма, ₽', 'Доля, %'];
+
+        $sections = [];
+
         if ($seesAll) {
-            $sections = ['Менеджер' => $this->analytics->byManager($ctx, $filters)] + $sections;
+            $sections['managers'] = [
+                'title' => 'Менеджеры',
+                'headers' => ['Менеджер', 'Клиентов', 'Поставок', 'Контрагентов', 'Штук', 'Сумма, ₽', 'Доля, %'],
+                'items' => $this->analytics->byManager($ctx, $filters, null),
+                'mapper' => fn (array $r) => [
+                    $r['label'] ?? '',
+                    (int) ($r['clients_count'] ?? 0),
+                    (int) ($r['shipments_count'] ?? 0),
+                    (int) ($r['contractors_count'] ?? 0),
+                    (int) ($r['qty'] ?? 0),
+                    round((float) ($r['amount'] ?? 0), 2),
+                ],
+            ];
         }
 
-        foreach ($sections as $sectionLabel => $items) {
-            foreach ($items as $item) {
-                $rows[] = [
-                    $sectionLabel,
-                    $item['label'] ?? '',
-                    round((float) ($item['amount'] ?? 0), 2),
-                    (int) ($item['qty'] ?? 0),
-                    (int) ($item['shipments_count'] ?? 0),
-                    (int) ($item['contractors_count'] ?? 0),
-                ];
-            }
+        $sections['organizations'] = [
+            'title' => 'Организации',
+            'headers' => $base,
+            'items' => $this->analytics->byOrganization($ctx, $filters, null),
+            'mapper' => $this->baseMapper(),
+        ];
+
+        $sections['warehouses'] = [
+            'title' => 'Склады отгрузки',
+            'headers' => $base,
+            'items' => $this->analytics->byWarehouse($ctx, $filters, null),
+            'mapper' => $this->baseMapper(),
+        ];
+
+        $sections['brands'] = [
+            'title' => 'Бренды',
+            'headers' => $base,
+            'items' => $this->analytics->byBrand($ctx, $filters, null),
+            'mapper' => $this->baseMapper(),
+        ];
+
+        $sections['categories'] = [
+            'title' => 'Категории',
+            'headers' => $base,
+            'items' => $this->analytics->byCategory($ctx, $filters, null),
+            'mapper' => $this->baseMapper(),
+        ];
+
+        $sections['partners'] = [
+            'title' => 'Партнёры',
+            'headers' => $base,
+            'items' => $this->analytics->byPartner($ctx, $filters, null),
+            'mapper' => $this->baseMapper(),
+        ];
+
+        $sections['contractors'] = [
+            'title' => 'Контрагенты',
+            'headers' => ['Контрагент', 'ИНН', 'Поставок', 'Штук', 'Сумма, ₽', 'Доля, %'],
+            'items' => $this->analytics->byContractor($ctx, $filters, null),
+            'mapper' => fn (array $r) => [
+                $r['label'] ?? '',
+                (string) ($r['tax_id'] ?? ''),
+                (int) ($r['shipments_count'] ?? 0),
+                (int) ($r['qty'] ?? 0),
+                round((float) ($r['amount'] ?? 0), 2),
+            ],
+        ];
+
+        $sections['products'] = [
+            'title' => 'Товары',
+            'headers' => ['Товар', 'Артикул', 'Поставок', 'Контрагентов', 'Штук', 'Сумма, ₽', 'Доля, %'],
+            'items' => $this->analytics->byProduct($ctx, $filters, null),
+            'mapper' => fn (array $r) => [
+                $r['label'] ?? '',
+                (string) ($r['sku'] ?? ''),
+                (int) ($r['shipments_count'] ?? 0),
+                (int) ($r['contractors_count'] ?? 0),
+                (int) ($r['qty'] ?? 0),
+                round((float) ($r['amount'] ?? 0), 2),
+            ],
+        ];
+
+        return $sections;
+    }
+
+    /**
+     * Колонки, общие для большинства разрезов.
+     */
+    private function baseMapper(): callable
+    {
+        return fn (array $r) => [
+            $r['label'] ?? '',
+            (int) ($r['shipments_count'] ?? 0),
+            (int) ($r['contractors_count'] ?? 0),
+            (int) ($r['qty'] ?? 0),
+            round((float) ($r['amount'] ?? 0), 2),
+        ];
+    }
+
+    /**
+     * Строки листа: маппер + доля строки в сумме разреза последней колонкой.
+     *
+     * @param  array{items: \Illuminate\Support\Collection<int, array<string, mixed>>, mapper: callable}  $section
+     * @return list<array<int, scalar|null>>
+     */
+    private function exportRows(array $section): array
+    {
+        $total = (float) $section['items']->sum(fn (array $r) => (float) ($r['amount'] ?? 0));
+
+        return $section['items']
+            ->map(function (array $row) use ($section, $total) {
+                $cells = ($section['mapper'])($row);
+                $cells[] = $total > 0 ? round((float) ($row['amount'] ?? 0) / $total * 100, 2) : 0.0;
+
+                return $cells;
+            })
+            ->all();
+    }
+
+    /**
+     * Лист «Итоги»: период, KPI и число строк в каждом разрезе —
+     * чтобы по файлу было видно, что выгрузка полная.
+     *
+     * @param  array<string, array{title: string, items: \Illuminate\Support\Collection<int, array<string, mixed>>}>  $sections
+     * @return array{title: string, headers: list<string>, rows: list<array<int, scalar|null>>}
+     */
+    private function summarySheet(AnalyticsContext $ctx, AnalyticsFilters $filters, array $sections): array
+    {
+        $metrics = $this->analytics->metrics($ctx, $filters);
+
+        $rows = [
+            ['Период с', $filters->dateFrom->toDateString()],
+            ['Период по', $filters->dateTo->toDateString()],
+            ['Выгружено', now()->format('d.m.Y H:i')],
+            ['Поставок', $metrics['shipments_count'] ?? 0],
+            ['Сумма, ₽', $metrics['total_amount'] ?? 0],
+            ['Средний чек, ₽', $metrics['avg_check'] ?? 0],
+            ['Штук', $metrics['items_total_qty'] ?? 0],
+            ['Контрагентов', $metrics['contractors_count'] ?? 0],
+        ];
+
+        foreach ($sections as $section) {
+            $rows[] = ['Строк в разрезе «'.$section['title'].'»', $section['items']->count()];
         }
 
-        return $exporter->stream('crm-analytics-'.now()->format('Y-m-d-His'), $headers, $rows, 'Отчёт продаж');
+        return [
+            'title' => 'Итоги',
+            'headers' => ['Показатель', 'Значение'],
+            'rows' => $rows,
+        ];
     }
 
     /**
@@ -329,23 +476,42 @@ class AnalyticsController extends CrmController
         $metrics = $this->analytics->metrics($ctx, $filters);
         $timeSeries = $this->analytics->timeSeries($ctx, $filters);
 
+        // Разрезы тянем с одной «запасной» строкой сверх лимита: так видно,
+        // что данные на экране обрезаны, и можно честно предложить XLSX.
+        $limit = ShipmentAnalyticsService::UI_LIMIT_DEFAULT;
+        $productLimit = ShipmentAnalyticsService::UI_LIMIT_PRODUCTS;
+
+        $breakdowns = [
+            'by_brand' => ShipmentAnalyticsService::cap($this->analytics->byBrand($ctx, $filters, $limit + 1), $limit),
+            'by_category' => ShipmentAnalyticsService::cap($this->analytics->byCategory($ctx, $filters, $limit + 1), $limit),
+            'by_partner' => ShipmentAnalyticsService::cap($this->analytics->byPartner($ctx, $filters, $limit + 1), $limit),
+            'by_contractor' => ShipmentAnalyticsService::cap($this->analytics->byContractor($ctx, $filters, $limit + 1), $limit),
+            'by_product' => ShipmentAnalyticsService::cap($this->analytics->byProduct($ctx, $filters, $productLimit + 1), $productLimit),
+            'by_manager' => $seesAll
+                ? ShipmentAnalyticsService::cap($this->analytics->byManager($ctx, $filters, $limit + 1), $limit)
+                : ['rows' => [], 'truncated' => false, 'limit' => $limit],
+            // v15.8.0: разрезы по нашим юрлицам и складам отгрузки
+            'by_organization' => ShipmentAnalyticsService::cap($this->analytics->byOrganization($ctx, $filters, $limit + 1), $limit),
+            'by_warehouse' => ShipmentAnalyticsService::cap($this->analytics->byWarehouse($ctx, $filters, $limit + 1), $limit),
+        ];
+
         $payload = [
             'filters' => $filters->toArray(),
             'currency' => ['code' => 'RUB', 'symbol' => '₽'],
             'metrics' => $metrics,
             'insights' => $this->analytics->insights($ctx, $filters),
             'time_series' => $timeSeries,
-            'by_brand' => $this->analytics->byBrand($ctx, $filters),
-            'by_category' => $this->analytics->byCategory($ctx, $filters),
-            'by_partner' => $this->analytics->byPartner($ctx, $filters),
-            'by_contractor' => $this->analytics->byContractor($ctx, $filters),
-            'by_product' => $this->analytics->byProduct($ctx, $filters),
-            'by_manager' => $seesAll ? $this->analytics->byManager($ctx, $filters) : [],
-            // v15.8.0: разрезы по нашим юрлицам и складам отгрузки
-            'by_organization' => $this->analytics->byOrganization($ctx, $filters),
-            'by_warehouse' => $this->analytics->byWarehouse($ctx, $filters),
             'comparison' => null,
+            // Признак «показаны не все строки» по каждому разрезу
+            'truncation' => array_map(
+                fn (array $b) => ['truncated' => $b['truncated'], 'limit' => $b['limit']],
+                $breakdowns,
+            ),
         ];
+
+        foreach ($breakdowns as $key => $breakdown) {
+            $payload[$key] = $breakdown['rows'];
+        }
 
         $prevFilters = $filters->comparisonPeriod($compareMode, $compareOffset);
 

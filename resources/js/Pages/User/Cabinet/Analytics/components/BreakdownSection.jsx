@@ -95,10 +95,12 @@ export default function BreakdownSection({
     getLabelClick,
     onExport,
     selectedTags = [],
+    truncation = null,
 }) {
     const symbol = currency?.symbol || '₽';
     const pieData = aggregateForPie(rows);
     const totalAmount = rows.reduce((acc, r) => acc + Number(r.amount || 0), 0);
+    const truncated = Boolean(truncation?.truncated);
 
     if (rows.length === 0) {
         return (
@@ -175,6 +177,12 @@ export default function BreakdownSection({
                             </Table.Body>
                         </Table.Root>
                     </Box>
+                    {truncated && (
+                        <Text fontSize="xs" color="fg.muted" mt={2}>
+                            Показаны первые {fmtInt(truncation.limit)} строк по сумме.
+                            Полный список — в выгрузке XLSX.
+                        </Text>
+                    )}
                 </Tabs.Content>
 
                 <Tabs.Content value="chart" px={0}>

@@ -69,8 +69,8 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * XLSX-выгрузка отчёта по текущим фильтрам.
-     * Без `section` — все 4 секции одним листом.
+     * XLSX-выгрузка отчёта по текущим фильтрам. Строки не режутся лимитом UI.
+     * Без `section` — все 4 разреза, каждый на своём листе.
      * С `section=brands|categories|contractors|products` — только одна секция со своими колонками.
      * GET /cabinet/analytics/export
      */
@@ -89,33 +89,37 @@ class AnalyticsController extends Controller
         return $this->exportSection($ctx, $filters, $currencyCode, $section, $exporter);
     }
 
+    /**
+     * Сводная выгрузка: по листу на разрез, все строки без лимита UI —
+     * иначе в файл попадал бы только топ, показанный на экране.
+     */
     private function exportAll(AnalyticsContext $ctx, AnalyticsFilters $filters, string $currencyCode, SimpleXlsxExporter $exporter): StreamedResponse
     {
-        $headers = ['Группировка', 'Значение', 'Сумма', 'Штук', 'Поставок', 'Контрагентов', 'Валюта'];
-        $rows = [];
-
         $sections = [
-            'Бренд' => $this->analytics->byBrand($ctx, $filters),
-            'Категория' => $this->analytics->byCategory($ctx, $filters),
-            'Контрагент' => $this->analytics->byContractor($ctx, $filters),
-            'Товар' => $this->analytics->byProduct($ctx, $filters),
+            'Бренды' => $this->analytics->byBrand($ctx, $filters, null),
+            'Категории' => $this->analytics->byCategory($ctx, $filters, null),
+            'Контрагенты' => $this->analytics->byContractor($ctx, $filters, null),
+            'Товары' => $this->analytics->byProduct($ctx, $filters, null),
         ];
 
+        $sheets = [];
+
         foreach ($sections as $sectionLabel => $items) {
-            foreach ($items as $item) {
-                $rows[] = [
-                    $sectionLabel,
+            $sheets[] = [
+                'title' => $sectionLabel,
+                'headers' => ['Значение', 'Сумма', 'Штук', 'Поставок', 'Контрагентов', 'Валюта'],
+                'rows' => $items->map(fn ($item) => [
                     $item['label'] ?? '',
                     round((float) ($item['amount'] ?? 0), 2),
                     (int) ($item['qty'] ?? 0),
                     (int) ($item['shipments_count'] ?? 0),
                     (int) ($item['contractors_count'] ?? 0),
                     $currencyCode,
-                ];
-            }
+                ])->all(),
+            ];
         }
 
-        return $exporter->stream('analytics-'.now()->format('Y-m-d-His'), $headers, $rows, 'Аналитика');
+        return $exporter->streamSheets('analytics-'.now()->format('Y-m-d-His'), $sheets);
     }
 
     private function exportSection(AnalyticsContext $ctx, AnalyticsFilters $filters, string $currencyCode, string $section, SimpleXlsxExporter $exporter): StreamedResponse
@@ -123,7 +127,7 @@ class AnalyticsController extends Controller
         [$title, $items, $headers, $mapper] = match ($section) {
             'brands' => [
                 'Бренды',
-                $this->analytics->byBrand($ctx, $filters),
+                $this->analytics->byBrand($ctx, $filters, null),
                 ['Бренд', 'Поставок', 'Контрагентов', 'Штук', 'Сумма', 'Валюта'],
                 fn ($r) => [
                     $r['label'] ?? '',
@@ -136,7 +140,7 @@ class AnalyticsController extends Controller
             ],
             'categories' => [
                 'Категории',
-                $this->analytics->byCategory($ctx, $filters),
+                $this->analytics->byCategory($ctx, $filters, null),
                 ['Категория', 'Поставок', 'Контрагентов', 'Штук', 'Сумма', 'Валюта'],
                 fn ($r) => [
                     $r['label'] ?? '',
@@ -149,7 +153,7 @@ class AnalyticsController extends Controller
             ],
             'contractors' => [
                 'Контрагенты',
-                $this->analytics->byContractor($ctx, $filters),
+                $this->analytics->byContractor($ctx, $filters, null),
                 ['Контрагент', 'ИНН', 'Поставок', 'Штук', 'Сумма', 'Валюта'],
                 fn ($r) => [
                     $r['label'] ?? '',
@@ -162,7 +166,7 @@ class AnalyticsController extends Controller
             ],
             'products' => [
                 'Товары',
-                $this->analytics->byProduct($ctx, $filters),
+                $this->analytics->byProduct($ctx, $filters, null),
                 ['Товар', 'Артикул', 'Поставок', 'Контрагентов', 'Штук', 'Сумма', 'Валюта'],
                 fn ($r) => [
                     $r['label'] ?? '',
@@ -190,6 +194,18 @@ class AnalyticsController extends Controller
     {
         $currency = $ctx->currency;
 
+        // Разрезы тянем с «запасной» строкой сверх лимита, чтобы понять,
+        // что таблица на экране обрезана, и подсказать про XLSX.
+        $limit = ShipmentAnalyticsService::UI_LIMIT_DEFAULT;
+        $productLimit = ShipmentAnalyticsService::UI_LIMIT_PRODUCTS;
+
+        $breakdowns = [
+            'by_brand' => ShipmentAnalyticsService::cap($this->analytics->byBrand($ctx, $filters, $limit + 1), $limit),
+            'by_category' => ShipmentAnalyticsService::cap($this->analytics->byCategory($ctx, $filters, $limit + 1), $limit),
+            'by_contractor' => ShipmentAnalyticsService::cap($this->analytics->byContractor($ctx, $filters, $limit + 1), $limit),
+            'by_product' => ShipmentAnalyticsService::cap($this->analytics->byProduct($ctx, $filters, $productLimit + 1), $productLimit),
+        ];
+
         return [
             'filters' => $filters->toArray(),
             'currency' => [
@@ -199,10 +215,14 @@ class AnalyticsController extends Controller
             'metrics' => $this->analytics->metrics($ctx, $filters),
             'insights' => $this->analytics->insights($ctx, $filters),
             'time_series' => $this->analytics->timeSeries($ctx, $filters),
-            'by_brand' => $this->analytics->byBrand($ctx, $filters),
-            'by_category' => $this->analytics->byCategory($ctx, $filters),
-            'by_contractor' => $this->analytics->byContractor($ctx, $filters),
-            'by_product' => $this->analytics->byProduct($ctx, $filters),
+            'by_brand' => $breakdowns['by_brand']['rows'],
+            'by_category' => $breakdowns['by_category']['rows'],
+            'by_contractor' => $breakdowns['by_contractor']['rows'],
+            'by_product' => $breakdowns['by_product']['rows'],
+            'truncation' => array_map(
+                fn (array $b) => ['truncated' => $b['truncated'], 'limit' => $b['limit']],
+                $breakdowns,
+            ),
         ];
     }
 }

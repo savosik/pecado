@@ -24,9 +24,36 @@ use Illuminate\Support\Facades\DB;
  */
 class ShipmentAnalyticsService
 {
+    /**
+     * Сколько строк разреза отдаётся в UI по умолчанию.
+     * Экраны рисуют таблицу целиком, поэтому потолок нужен; в XLSX-выгрузку
+     * разрезы уходят без лимита ($limit = null) — там нужна полная картина.
+     */
+    public const UI_LIMIT_DEFAULT = 200;
+
+    /** Товаров в разрезе заметно больше, чем брендов и контрагентов. */
+    public const UI_LIMIT_PRODUCTS = 500;
+
     public function __construct(
         private readonly CurrencyService $currencyService,
     ) {}
+
+    /**
+     * Обрезает разрез, запрошенный с «запасной» строкой ($limit + 1), до лимита
+     * и сообщает, что на экране показано не всё — экраны по этому флагу
+     * рисуют подсказку про XLSX-выгрузку.
+     *
+     * @param  Collection<int, array<string, mixed>>  $rows
+     * @return array{rows: list<array<string, mixed>>, truncated: bool, limit: int}
+     */
+    public static function cap(Collection $rows, int $limit): array
+    {
+        return [
+            'rows' => $rows->take($limit)->values()->all(),
+            'truncated' => $rows->count() > $limit,
+            'limit' => $limit,
+        ];
+    }
 
     /**
      * KPI-блок: количество поставок, сумма, средний чек, штук, контрагентов.
@@ -62,7 +89,7 @@ class ShipmentAnalyticsService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function byBrand(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 50): Collection
+    public function byBrand(AnalyticsContext $ctx, AnalyticsFilters $filters, ?int $limit = self::UI_LIMIT_DEFAULT): Collection
     {
         $rows = $this->itemsBaseQuery($ctx, $filters)
             ->leftJoin('products as products_brand', 'products_brand.id', '=', 'shipment_items.product_id')
@@ -76,7 +103,7 @@ class ShipmentAnalyticsService
             ")
             ->groupBy('label')
             ->orderByDesc('total_in_rub')
-            ->limit($limit)
+            ->when($limit !== null, fn ($q) => $q->limit($limit))
             ->get();
 
         return collect($rows)->map(fn ($row) => [
@@ -95,7 +122,7 @@ class ShipmentAnalyticsService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function byCategory(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 50): Collection
+    public function byCategory(AnalyticsContext $ctx, AnalyticsFilters $filters, ?int $limit = self::UI_LIMIT_DEFAULT): Collection
     {
         $rows = $this->itemsBaseQuery($ctx, $filters)
             ->leftJoin('products', 'products.id', '=', 'shipment_items.product_id')
@@ -108,7 +135,7 @@ class ShipmentAnalyticsService
             ')
             ->groupBy('products.category_id')
             ->orderByDesc('total_in_rub')
-            ->limit($limit)
+            ->when($limit !== null, fn ($q) => $q->limit($limit))
             ->get();
 
         $categoryIds = $rows->pluck('category_id')->filter()->unique()->values()->all();
@@ -137,7 +164,7 @@ class ShipmentAnalyticsService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function byPartner(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 50): Collection
+    public function byPartner(AnalyticsContext $ctx, AnalyticsFilters $filters, ?int $limit = self::UI_LIMIT_DEFAULT): Collection
     {
         $rows = $this->itemsBaseQuery($ctx, $filters)
             ->leftJoin('users as partner', 'partner.id', '=', 'shipments.user_id')
@@ -152,7 +179,7 @@ class ShipmentAnalyticsService
             ')
             ->groupBy('shipments.user_id')
             ->orderByDesc('total_in_rub')
-            ->limit($limit)
+            ->when($limit !== null, fn ($q) => $q->limit($limit))
             ->get();
 
         return $rows->map(function ($row) use ($ctx) {
@@ -178,7 +205,7 @@ class ShipmentAnalyticsService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function byContractor(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 50): Collection
+    public function byContractor(AnalyticsContext $ctx, AnalyticsFilters $filters, ?int $limit = self::UI_LIMIT_DEFAULT): Collection
     {
         $rows = $this->itemsBaseQuery($ctx, $filters)
             ->leftJoin('companies', 'companies.id', '=', 'shipments.company_id')
@@ -193,7 +220,7 @@ class ShipmentAnalyticsService
             ')
             ->groupBy('shipments.company_id', 'shipments.tax_id')
             ->orderByDesc('total_in_rub')
-            ->limit($limit)
+            ->when($limit !== null, fn ($q) => $q->limit($limit))
             ->get();
 
         return $rows->map(function ($row) use ($ctx) {
@@ -223,7 +250,7 @@ class ShipmentAnalyticsService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function byProduct(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 100): Collection
+    public function byProduct(AnalyticsContext $ctx, AnalyticsFilters $filters, ?int $limit = self::UI_LIMIT_PRODUCTS): Collection
     {
         $rows = $this->itemsBaseQuery($ctx, $filters)
             ->leftJoin('products', 'products.id', '=', 'shipment_items.product_id')
@@ -239,7 +266,7 @@ class ShipmentAnalyticsService
             ")
             ->groupBy('shipment_items.product_id', 'shipment_items.product_name_snapshot')
             ->orderByDesc('total_in_rub')
-            ->limit($limit)
+            ->when($limit !== null, fn ($q) => $q->limit($limit))
             ->get();
 
         return $rows->map(function ($row) use ($ctx) {
@@ -264,7 +291,7 @@ class ShipmentAnalyticsService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function byManager(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 100): Collection
+    public function byManager(AnalyticsContext $ctx, AnalyticsFilters $filters, ?int $limit = self::UI_LIMIT_DEFAULT): Collection
     {
         $rows = $this->itemsBaseQuery($ctx, $filters)
             ->join('users as buyer', 'buyer.id', '=', 'shipments.user_id')
@@ -280,7 +307,7 @@ class ShipmentAnalyticsService
             ")
             ->groupBy('manager_id', 'label')
             ->orderByDesc('total_in_rub')
-            ->limit($limit)
+            ->when($limit !== null, fn ($q) => $q->limit($limit))
             ->get();
 
         return collect($rows)->map(fn ($row) => [
@@ -304,7 +331,7 @@ class ShipmentAnalyticsService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function byOrganization(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 100): Collection
+    public function byOrganization(AnalyticsContext $ctx, AnalyticsFilters $filters, ?int $limit = self::UI_LIMIT_DEFAULT): Collection
     {
         $rows = $this->itemsBaseQuery($ctx, $filters)
             ->leftJoin('organizations as org', 'org.id', '=', 'shipments.organization_id')
@@ -320,7 +347,7 @@ class ShipmentAnalyticsService
             ")
             ->groupBy('organization_id', 'label', 'is_stub')
             ->orderByDesc('total_in_rub')
-            ->limit($limit)
+            ->when($limit !== null, fn ($q) => $q->limit($limit))
             ->get();
 
         return collect($rows)->map(fn ($row) => [
@@ -342,7 +369,7 @@ class ShipmentAnalyticsService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function byWarehouse(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 100): Collection
+    public function byWarehouse(AnalyticsContext $ctx, AnalyticsFilters $filters, ?int $limit = self::UI_LIMIT_DEFAULT): Collection
     {
         $rows = $this->itemsBaseQuery($ctx, $filters)
             ->leftJoin('warehouses as wh', 'wh.id', '=', 'shipments.warehouse_id')
@@ -356,7 +383,7 @@ class ShipmentAnalyticsService
             ")
             ->groupBy('warehouse_id', 'label')
             ->orderByDesc('total_in_rub')
-            ->limit($limit)
+            ->when($limit !== null, fn ($q) => $q->limit($limit))
             ->get();
 
         return collect($rows)->map(fn ($row) => [

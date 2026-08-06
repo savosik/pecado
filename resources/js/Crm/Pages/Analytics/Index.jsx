@@ -201,14 +201,23 @@ export default function CrmAnalyticsIndex() {
     const currency = data?.currency ?? { code: 'RUB', symbol: '₽' };
     const comparison = data?.comparison ?? null;
 
+    // Разрезы на экране режутся потолком UI — отдаём таблице признак обрезки,
+    // а в бейдже показываем «N+», чтобы число не читалось как полное.
+    const truncationOf = (key) => data?.truncation?.[key] ?? null;
+    const countOf = (key, rows) => {
+        const total = rows?.length ?? 0;
+        return truncationOf(key)?.truncated ? `${total}+` : total;
+    };
+
     const managerGroup = seesAll ? [{
         value: 'managers',
         title: 'По менеджерам',
-        count: data?.by_manager?.length ?? 0,
+        count: countOf('by_manager', data?.by_manager),
         section: (
             <BreakdownSection
                 title="Менеджер"
                 rows={data?.by_manager ?? []}
+                truncation={truncationOf('by_manager')}
                 currency={currency}
                 extraColumns={[
                     { key: 'clients', label: 'Клиентов', render: (r) => r.clients_count },
@@ -227,11 +236,12 @@ export default function CrmAnalyticsIndex() {
     const organizationGroup = (data?.by_organization?.length ?? 0) > 0 ? [{
         value: 'organizations',
         title: 'По организациям',
-        count: data?.by_organization?.length ?? 0,
+        count: countOf('by_organization', data?.by_organization),
         section: (
             <BreakdownSection
                 title="Организация"
                 rows={data?.by_organization ?? []}
+                truncation={truncationOf('by_organization')}
                 currency={currency}
                 extraColumns={[
                     { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
@@ -244,11 +254,12 @@ export default function CrmAnalyticsIndex() {
     const warehouseGroup = (data?.by_warehouse?.length ?? 0) > 0 ? [{
         value: 'warehouses',
         title: 'По складам',
-        count: data?.by_warehouse?.length ?? 0,
+        count: countOf('by_warehouse', data?.by_warehouse),
         section: (
             <BreakdownSection
                 title="Склад отгрузки"
                 rows={data?.by_warehouse ?? []}
+                truncation={truncationOf('by_warehouse')}
                 currency={currency}
                 extraColumns={[
                     { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
@@ -265,11 +276,12 @@ export default function CrmAnalyticsIndex() {
         {
             value: 'brands',
             title: 'По брендам',
-            count: data?.by_brand?.length ?? 0,
+            count: countOf('by_brand', data?.by_brand),
             section: (
                 <BreakdownSection
                     title="Бренд"
                     rows={data?.by_brand ?? []}
+                    truncation={truncationOf('by_brand')}
                     currency={currency}
                     extraColumns={[
                         { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
@@ -283,11 +295,12 @@ export default function CrmAnalyticsIndex() {
         {
             value: 'categories',
             title: 'По категориям',
-            count: data?.by_category?.length ?? 0,
+            count: countOf('by_category', data?.by_category),
             section: (
                 <BreakdownSection
                     title="Категория"
                     rows={data?.by_category ?? []}
+                    truncation={truncationOf('by_category')}
                     currency={currency}
                     extraColumns={[
                         { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
@@ -301,11 +314,12 @@ export default function CrmAnalyticsIndex() {
         {
             value: 'partners',
             title: 'По партнёрам',
-            count: data?.by_partner?.length ?? 0,
+            count: countOf('by_partner', data?.by_partner),
             section: (
                 <BreakdownSection
                     title="Партнёр"
                     rows={data?.by_partner ?? []}
+                    truncation={truncationOf('by_partner')}
                     currency={currency}
                     extraColumns={[
                         { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
@@ -319,11 +333,12 @@ export default function CrmAnalyticsIndex() {
         {
             value: 'contractors',
             title: 'По контрагентам',
-            count: data?.by_contractor?.length ?? 0,
+            count: countOf('by_contractor', data?.by_contractor),
             section: (
                 <BreakdownSection
                     title="Контрагент"
                     rows={data?.by_contractor ?? []}
+                    truncation={truncationOf('by_contractor')}
                     currency={currency}
                     extraColumns={[
                         { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
@@ -336,11 +351,12 @@ export default function CrmAnalyticsIndex() {
         {
             value: 'products',
             title: 'По товарам',
-            count: data?.by_product?.length ?? 0,
+            count: countOf('by_product', data?.by_product),
             section: (
                 <BreakdownSection
                     title="Товар"
                     rows={data?.by_product ?? []}
+                    truncation={truncationOf('by_product')}
                     currency={currency}
                     extraColumns={[
                         { key: 'sku', label: 'Артикул', render: (r) => r.sku || '—' },

@@ -95,6 +95,14 @@ export default function AnalyticsIndex({ initial, filterOptions }) {
 
     const currency = data?.currency ?? { code: 'RUB', symbol: '₽' };
 
+    // Таблицы разрезов ограничены потолком UI; признак обрезки идёт с бэкенда,
+    // чтобы подсказать про полную выгрузку в XLSX.
+    const truncationOf = (key) => data?.truncation?.[key] ?? null;
+    const countOf = (key, rows) => {
+        const total = rows?.length ?? 0;
+        return truncationOf(key)?.truncated ? `${total}+` : total;
+    };
+
     return (
         <CabinetLayout
             title="Аналитика"
@@ -147,11 +155,12 @@ export default function AnalyticsIndex({ initial, filterOptions }) {
                         {
                             value: 'brands',
                             title: 'По брендам',
-                            count: data?.by_brand?.length ?? 0,
+                            count: countOf('by_brand', data?.by_brand),
                             section: (
                                 <BreakdownSection
                                     title="Бренд"
                                     rows={data?.by_brand ?? []}
+                                    truncation={truncationOf('by_brand')}
                                     currency={currency}
                                     extraColumns={[
                                         { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
@@ -165,11 +174,12 @@ export default function AnalyticsIndex({ initial, filterOptions }) {
                         {
                             value: 'categories',
                             title: 'По категориям',
-                            count: data?.by_category?.length ?? 0,
+                            count: countOf('by_category', data?.by_category),
                             section: (
                                 <BreakdownSection
                                     title="Категория"
                                     rows={data?.by_category ?? []}
+                                    truncation={truncationOf('by_category')}
                                     currency={currency}
                                     extraColumns={[
                                         { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
@@ -183,11 +193,12 @@ export default function AnalyticsIndex({ initial, filterOptions }) {
                         {
                             value: 'contractors',
                             title: 'По контрагентам',
-                            count: data?.by_contractor?.length ?? 0,
+                            count: countOf('by_contractor', data?.by_contractor),
                             section: (
                                 <BreakdownSection
                                     title="Контрагент"
                                     rows={data?.by_contractor ?? []}
+                                    truncation={truncationOf('by_contractor')}
                                     currency={currency}
                                     extraColumns={[
                                         { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
@@ -200,11 +211,12 @@ export default function AnalyticsIndex({ initial, filterOptions }) {
                         {
                             value: 'products',
                             title: 'По товарам',
-                            count: data?.by_product?.length ?? 0,
+                            count: countOf('by_product', data?.by_product),
                             section: (
                                 <BreakdownSection
                                     title="Товар"
                                     rows={data?.by_product ?? []}
+                                    truncation={truncationOf('by_product')}
                                     currency={currency}
                                     extraColumns={[
                                         { key: 'sku', label: 'Артикул', render: (r) => r.sku || '—' },
