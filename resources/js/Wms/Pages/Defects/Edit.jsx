@@ -190,6 +190,7 @@ export default function DefectsEdit() {
                                         maxFiles={10}
                                         maxSize={20}
                                         capture="environment"
+                                        webcam
                                     />
                                 </Card.Body>
                             </Card.Root>

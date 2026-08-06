@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Box, Flex, Spinner, Stack, Text } from '@chakra-ui/react';
+import { LuCamera } from 'react-icons/lu';
+import { Button } from '@/components/ui/button';
 
 /**
  * BarcodeCameraView — общий компонент сканера штрихкодов через камеру устройства.
@@ -12,10 +14,20 @@ import { Box, Flex, Spinner, Stack, Text } from '@chakra-ui/react';
  * @param {(text: string) => void} props.onScan — колбэк с распознанным штрихкодом.
  * @param {boolean} [props.paused=false] — приостановить распознавание (например, на время запроса).
  * @param {string|number} [props.height='100%'] — высота видео-области.
+ * @param {((file: File) => void)|null} [props.onCapture] — если задан, поверх видео появляется
+ *   кнопка съёмки: текущий кадр отдаётся наверх готовым File. Отдельный поток под фото не
+ *   поднимаем — камера у устройства одна, второй getUserMedia на неё браузер не даст.
+ * @param {string} [props.captureLabel='Сфотографировать'] — подпись кнопки съёмки.
  */
 const DEDUP_WINDOW_MS = 1500;
 
-export default function BarcodeCameraView({ onScan, paused = false, height = '100%' }) {
+export default function BarcodeCameraView({
+    onScan,
+    paused = false,
+    height = '100%',
+    onCapture = null,
+    captureLabel = 'Сфотографировать',
+}) {
     const videoRef = useRef(null);
     const onScanRef = useRef(onScan);
     const lastScanRef = useRef({ text: '', at: 0 });
@@ -88,6 +100,28 @@ export default function BarcodeCameraView({ onScan, paused = false, height = '10
         };
     }, [paused]);
 
+    const capture = () => {
+        const video = videoRef.current;
+        const width = video?.videoWidth;
+        const videoHeight = video?.videoHeight;
+        if (!video || !width || !videoHeight) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, width, videoHeight);
+
+        canvas.toBlob((blob) => {
+            if (!blob) return;
+            const stamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+            const file = new File([blob], `defect-${stamp}-${Math.random().toString(36).slice(2, 6)}.jpg`, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+            });
+            onCapture(file);
+        }, 'image/jpeg', 0.9);
+    };
+
     return (
         <Box position="relative" w="100%" h={height} bg="black" overflow="hidden">
             {/* Субтитров у видео нет намеренно: это живой поток камеры для сканера штрихкодов, а не медиаконтент. */}
@@ -135,6 +169,20 @@ export default function BarcodeCameraView({ onScan, paused = false, height = '10
             {status === 'error' && (
                 <Flex position="absolute" inset="0" align="center" justify="center" bg="blackAlpha.700" p="4">
                     <Text color="red.300" fontSize="sm" textAlign="center">{error}</Text>
+                </Flex>
+            )}
+
+            {onCapture && (
+                <Flex position="absolute" left="0" right="0" bottom="2" justify="center">
+                    <Button
+                        size="sm"
+                        type="button"
+                        onClick={capture}
+                        disabled={status !== 'scanning'}
+                        shadow="md"
+                    >
+                        <LuCamera /> {captureLabel}
+                    </Button>
                 </Flex>
             )}
         </Box>

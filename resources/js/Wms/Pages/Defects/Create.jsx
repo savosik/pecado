@@ -68,6 +68,9 @@ export default function DefectsCreate() {
                                     <ProductSelector
                                         mode="single"
                                         searchRoute="wms.defects.search-products"
+                                        // Фокус сразу в поиск: к рабочему месту подключён
+                                        // сканер ШК — он печатает в активное поле и жмёт Enter.
+                                        autoFocus={!prefill?.product}
                                         value={selectedProduct}
                                         onChange={(product) => {
                                             setSelectedProduct(product);
@@ -162,8 +165,10 @@ export default function DefectsCreate() {
                                 maxFiles={10}
                                 maxSize={20}
                                 capture="environment"
+                                webcam
                             />
                             <Text fontSize="xs" color="fg.muted" mt={2}>
+                                Снимите товар веб-камерой или загрузите файлы с диска.
                                 Фотографии увидит клиент на сайте — снимайте так, чтобы дефект был понятен.
                             </Text>
                         </Card.Body>

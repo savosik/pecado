@@ -21,6 +21,7 @@ import axios from 'axios';
  * @param {Function} onSelect - Callback (вызывается при выборе товара)
  * @param {string} error - Ошибка валидации
  * @param {string} mode - Режим работы: 'multi', 'single', 'search' (default: 'multi')
+ * @param {boolean} autoFocus - Ставить фокус в поле поиска при монтировании (для работы со сканером ШК)
  */
 export const ProductSelector = ({
     value = [],
@@ -32,12 +33,22 @@ export const ProductSelector = ({
     searchParams: customSearchParams = {},
     renderItemActions = null,
     compactSelected = false,
+    autoFocus = false,
 }) => {
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const containerRef = useRef(null);
+    const inputRef = useRef(null);
+
+    // Фокус в поиск при монтировании: со сканером ШК (он печатает как клавиатура
+    // и жмёт Enter) это избавляет от лишнего клика перед каждым сканом.
+    useEffect(() => {
+        if (autoFocus) {
+            inputRef.current?.focus();
+        }
+    }, [autoFocus]);
 
     // Click outside handler
     useEffect(() => {
@@ -162,6 +173,7 @@ export const ProductSelector = ({
         <Box ref={containerRef} width="100%">
             <Box position="relative" mb={mode === 'search' ? 0 : 4}>
                 <Input
+                    ref={inputRef}
                     id="product-selector-search"
                     placeholder="Поиск товара по названию, артикулу, штрихкоду..."
                     value={query}

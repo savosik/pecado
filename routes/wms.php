@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Wms\DashboardController;
 use App\Http\Controllers\Wms\DefectController;
+use App\Http\Controllers\Wms\DefectTypeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -49,5 +50,18 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
             Route::post('/defects/{defect}/write-off', [DefectController::class, 'writeOff'])->name('defects.write-off');
             Route::delete('/defects/{defect}', [DefectController::class, 'destroy'])->name('defects.destroy');
         });
+    });
+
+    // Справочник типовых дефектов: ведёт начальник склада (в /admin роль не пускает).
+    // Кладовщик справочник только использует чипами — прав на правку у него нет.
+    Route::middleware('permission:wms-defect-types.view')->group(function () {
+        Route::get('/defect-types', [DefectTypeController::class, 'index'])->name('defect-types.index');
+
+        Route::post('/defect-types', [DefectTypeController::class, 'store'])
+            ->name('defect-types.store')->middleware('permission:wms-defect-types.create');
+        Route::put('/defect-types/{defectType}', [DefectTypeController::class, 'update'])
+            ->name('defect-types.update')->middleware('permission:wms-defect-types.edit');
+        Route::delete('/defect-types/{defectType}', [DefectTypeController::class, 'destroy'])
+            ->name('defect-types.destroy')->middleware('permission:wms-defect-types.delete');
     });
 });

@@ -25,6 +25,8 @@ import { QuantityStepper } from '@/Wms/Components/QuantityStepper';
 
 const emptyDraft = () => ({ product: null, quantity: 1, description: '', photos: [] });
 
+const MAX_PHOTOS = 10;
+
 export default function DefectsQuick() {
     const { warehouses, defectTypes = [] } = usePage().props;
 
@@ -122,6 +124,18 @@ export default function DefectsQuick() {
         }
     }, [resolving, focusBarcode]);
 
+    // Кадр с камеры-сканера кладём в фото текущей партии.
+    const addPhoto = useCallback((file) => {
+        setDraft((d) => {
+            if (d.photos.length >= MAX_PHOTOS) {
+                toaster.create({ description: `Больше ${MAX_PHOTOS} фото на партию не нужно.`, type: 'warning' });
+                return d;
+            }
+
+            return { ...d, photos: [...d.photos, file] };
+        });
+    }, []);
+
     const submitManual = (e) => {
         e.preventDefault();
         if (manualBarcode.trim()) {
@@ -214,6 +228,11 @@ export default function DefectsQuick() {
                                 onScan={handleBarcode}
                                 paused={resolving || saving}
                                 height="240px"
+                                // Фото снимаем кадром из этого же потока: камера у рабочего
+                                // места одна, отдельный getUserMedia на неё браузер не даст.
+                                // До выбора товара складывать снимок некуда — кнопки нет.
+                                onCapture={draft.product ? addPhoto : null}
+                                captureLabel="Сфотографировать дефект"
                             />
                             <Box position="absolute" top={2} left={2}>
                                 <Badge colorPalette="blackAlpha" variant="solid">
@@ -305,12 +324,16 @@ export default function DefectsQuick() {
                                         <Text fontSize="sm" color="fg.muted" mb={1}>
                                             Фото дефекта <Text as="span" color="red.500">*</Text>
                                         </Text>
+                                        <Text fontSize="xs" color="fg.muted" mb={2}>
+                                            Снимите кнопкой «Сфотографировать дефект» на камере выше
+                                            или загрузите файлы с диска.
+                                        </Text>
                                         <MultipleImageUploader
                                             name="photos"
                                             label=""
                                             value={draft.photos}
                                             onChange={(files) => setDraft((d) => ({ ...d, photos: files }))}
-                                            maxFiles={10}
+                                            maxFiles={MAX_PHOTOS}
                                             maxSize={20}
                                             capture="environment"
                                         />

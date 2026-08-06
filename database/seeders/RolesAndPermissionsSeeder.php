@@ -117,6 +117,9 @@ class RolesAndPermissionsSeeder extends Seeder
         // он в User::PANEL_PERMISSION_PREFIXES, поэтому не даёт входа в /admin.
         'wms-dashboard' => ['view'],
         'wms-defects' => ['view', 'create', 'edit', 'delete'],
+        // Справочник дефектов глазами склада: формулировки ведёт начальник склада,
+        // кладовщику они приезжают чипами (право не выдаётся).
+        'wms-defect-types' => ['view', 'create', 'edit', 'delete'],
 
         // Уценка глазами закупщика — админский ресурс (без `wms-` префикса):
         // цену и публикацию задаёт buyer-manager в /admin, а не кладовщик.
@@ -197,6 +200,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-agent-tokens' => 'CRM: Токены ИИ-агентов',
         'wms-dashboard' => 'Склад: Рабочий стол',
         'wms-defects' => 'Склад: Некондиция',
+        'wms-defect-types' => 'Склад: Справочник дефектов',
         'defects' => 'Уценка (цены и публикация)',
         'defect-types' => 'Справочник дефектов',
         'supplier-preorders' => 'Предзаказы поставщику',
@@ -263,7 +267,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'label' => 'Начальник склада',
             'resources' => [
                 // Только WMS: в /admin роль намеренно не пускает.
-                'wms-dashboard', 'wms-defects',
+                // Справочник дефектов ведёт начальник склада — у кладовщика его нет.
+                'wms-dashboard', 'wms-defects', 'wms-defect-types',
             ],
         ],
         'storekeeper' => [

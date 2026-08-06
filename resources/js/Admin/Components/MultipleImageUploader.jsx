@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
     Box,
     Image,
@@ -10,6 +10,7 @@ import {
     SimpleGrid,
 } from '@chakra-ui/react';
 import { LuUpload, LuX, LuImage } from 'react-icons/lu';
+import WebcamPhotoCapture from '@/components/common/WebcamPhotoCapture';
 
 /**
  * MultipleImageUploader - компонент для загрузки множественных изображений с превью
@@ -25,6 +26,7 @@ import { LuUpload, LuX, LuImage } from 'react-icons/lu';
  * @param {number} maxSize - Максимальный размер в MB
  * @param {string[]} acceptedTypes - Допустимые типы файлов
  * @param {string|null} capture - 'environment'/'user' — на телефоне открывает камеру; на десктопе игнорируется
+ * @param {boolean} webcam - Показывать съёмку подключённой веб-камерой (только на десктопе)
  */
 export const MultipleImageUploader = ({
     name,
@@ -40,11 +42,31 @@ export const MultipleImageUploader = ({
     // capture: на телефоне открывает сразу камеру ('environment' — задняя).
     // На десктопе браузером игнорируется. По умолчанию не задан — обычный выбор файла.
     capture = null,
+    // webcam: съёмка веб-камерой прямо на странице — для рабочих мест с USB-камерой.
+    // На тач-устройствах компонент сам себя не показывает (там работает capture выше).
+    webcam = false,
 }) => {
     const [previews, setPreviews] = useState([]);
     const [uploadError, setUploadError] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const inputRef = useRef(null);
+
+    // Превью считаем от value, а не копим отдельным состоянием: файлы приходят
+    // не только из инпута (веб-камера, сброс черновика снаружи), и собственный
+    // список превью с ними рассинхронизировался.
+    //
+    // Зависимость — «подпись» набора файлов, а не сам массив: value часто
+    // приезжает новым массивом на каждый рендер, и по ссылке эффект крутился бы
+    // бесконечно (setPreviews → рендер → эффект).
+    const filesSignature = value.map((file) => `${file.name}:${file.size}:${file.lastModified}`).join('|');
+
+    useEffect(() => {
+        const urls = value.map((file) => URL.createObjectURL(file));
+        setPreviews(urls);
+
+        return () => urls.forEach((url) => URL.revokeObjectURL(url));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filesSignature]);
 
     const handleFilesSelect = (files) => {
         if (!files || files.length === 0) return;
@@ -59,7 +81,6 @@ export const MultipleImageUploader = ({
         }
 
         const validFiles = [];
-        const newPreviews = [];
 
         for (const file of newFilesArray) {
             // Валидация размера
@@ -75,16 +96,6 @@ export const MultipleImageUploader = ({
             }
 
             validFiles.push(file);
-
-            // Создание превью
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                newPreviews.push(reader.result);
-                if (newPreviews.length === validFiles.length) {
-                    setPreviews([...previews, ...newPreviews]);
-                }
-            };
-            reader.readAsDataURL(file);
         }
 
         if (validFiles.length > 0) {
@@ -96,6 +107,9 @@ export const MultipleImageUploader = ({
     const handleInputChange = (e) => {
         const files = e.target.files;
         handleFilesSelect(files);
+        // Сбрасываем значение инпута: иначе повторный выбор того же файла
+        // не вызовет change (браузер считает значение неизменившимся).
+        e.target.value = '';
     };
 
     const handleDrop = (e) => {
@@ -118,10 +132,6 @@ export const MultipleImageUploader = ({
         const newFiles = [...value];
         newFiles.splice(index, 1);
 
-        const newPreviews = [...previews];
-        newPreviews.splice(index, 1);
-
-        setPreviews(newPreviews);
         onChange(newFiles);
         setUploadError(null);
     };
@@ -148,6 +158,15 @@ export const MultipleImageUploader = ({
                 display="none"
                 multiple
             />
+
+            {/* Съёмка веб-камерой: рабочее место с USB-камерой снимает товар,
+                не переключаясь на телефон. Файл идёт той же валидацией. */}
+            {webcam && (
+                <WebcamPhotoCapture
+                    onCapture={(file) => handleFilesSelect([file])}
+                    disabled={value.length + existingImages.length >= maxFiles}
+                />
+            )}
 
             {/* Существующие изображения */}
             {existingImages.length > 0 && (
