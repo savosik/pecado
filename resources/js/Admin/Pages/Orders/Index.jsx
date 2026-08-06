@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { HStack, Badge, Button, Input, Box, VStack, Text, IconButton, Icon } from "@chakra-ui/react";
+import { HStack, Badge, Button, Input, Box, VStack, Text, IconButton, Icon, createListCollection } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
 import { LuPlus, LuFilter, LuX, LuTrash2, LuSearch } from "react-icons/lu";
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
@@ -17,6 +17,31 @@ import { getOrderStatusColor } from '@/constants/orderStatus';
 import { getOrderTypeShortLabel as getTypeLabel, getOrderTypeColor as getTypeColor } from '@/constants/orderType';
 
 const getStatusColor = getOrderStatusColor;
+
+/**
+ * Селект фильтра. Chakra v3 требует collection у Select.Root и объект
+ * (а не строку) в item — без этого выпадающий список не выбирается.
+ */
+const FilterSelect = ({ label, collection, value, onChange, placeholder }) => (
+    <Field label={label}>
+        <Select.Root
+            collection={collection}
+            value={[value ?? ""]}
+            onValueChange={(e) => onChange(e.value[0] ?? "")}
+        >
+            <Select.Trigger>
+                <Select.ValueText placeholder={placeholder} />
+            </Select.Trigger>
+            <Select.Content>
+                {collection.items.map((item) => (
+                    <Select.Item key={item.value} item={item}>
+                        {item.label}
+                    </Select.Item>
+                ))}
+            </Select.Content>
+        </Select.Root>
+    </Field>
+);
 
 const OrdersIndex = ({ filters, statuses, types, companies, organizations, warehouses, organizationsEnabled, trashedCount }) => {
     const { orders } = usePage().props;
@@ -82,6 +107,52 @@ const OrdersIndex = ({ filters, statuses, types, companies, organizations, wareh
         amount_from: filters?.amount_from || "",
         amount_to:   filters?.amount_to || "",
     });
+
+    // Коллекции для селектов фильтров. «Не указана»/«Не указан» — рабочий
+    // фильтр переходного периода, а не заглушка: таких заказов много.
+    const statusCollection = useMemo(() => createListCollection({
+        items: [
+            { label: "Все статусы", value: "" },
+            ...(statuses ?? []).map((status) => ({ label: status.label, value: status.value })),
+        ],
+    }), [statuses]);
+
+    const typeCollection = useMemo(() => createListCollection({
+        items: [
+            { label: "Все типы", value: "" },
+            ...(types ?? []).map((type) => ({ label: type.label, value: type.value })),
+        ],
+    }), [types]);
+
+    const companyCollection = useMemo(() => createListCollection({
+        items: [
+            { label: "Все компании", value: "" },
+            ...(companies ?? []).map((company) => ({ label: company.name, value: String(company.id) })),
+        ],
+    }), [companies]);
+
+    const organizationCollection = useMemo(() => createListCollection({
+        items: [
+            { label: "Все организации", value: "" },
+            { label: "Не указана", value: "none" },
+            ...(organizations ?? []).map((organization) => ({
+                label: organization.is_stub ? `${organization.name} (не заведена)` : organization.name,
+                value: String(organization.id),
+            })),
+        ],
+    }), [organizations]);
+
+    const warehouseCollection = useMemo(() => createListCollection({
+        items: [
+            { label: "Все склады", value: "" },
+            { label: "Не указан", value: "none" },
+            ...(warehouses ?? []).map((warehouse) => ({ label: warehouse.name, value: String(warehouse.id) })),
+        ],
+    }), [warehouses]);
+
+    const bulkStatusCollection = useMemo(() => createListCollection({
+        items: (statuses ?? []).map((status) => ({ label: status.label, value: status.value })),
+    }), [statuses]);
 
     const [searchInput, setSearchInput] = useState(filters?.search || "");
     const lastSentSearchRef = useRef(filters?.search || "");
@@ -444,62 +515,29 @@ const OrdersIndex = ({ filters, statuses, types, companies, organizations, wareh
                 <Box p={4} borderWidth="1px" borderRadius="md" mb={4}>
                     <VStack align="stretch" gap={4}>
                         <HStack align="end" gap={4}>
-                            <Field label="Статус">
-                                <Select.Root
-                                    value={localFilters.status ? [localFilters.status] : []}
-                                    onValueChange={(e) => setLocalFilters({ ...localFilters, status: e.value[0] || "" })}
-                                >
-                                    <Select.Trigger>
-                                        <Select.ValueText placeholder="Все статусы" />
-                                    </Select.Trigger>
-                                    <Select.Content>
-                                        <Select.Item item="">Все статусы</Select.Item>
-                                        {statuses?.map((status) => (
-                                            <Select.Item key={status.value} item={status.value}>
-                                                {status.label}
-                                            </Select.Item>
-                                        ))}
-                                    </Select.Content>
-                                </Select.Root>
-                            </Field>
+                            <FilterSelect
+                                label="Статус"
+                                collection={statusCollection}
+                                placeholder="Все статусы"
+                                value={localFilters.status}
+                                onChange={(value) => setLocalFilters((prev) => ({ ...prev, status: value }))}
+                            />
 
-                            <Field label="Тип">
-                                <Select.Root
-                                    value={localFilters.type ? [localFilters.type] : []}
-                                    onValueChange={(e) => setLocalFilters({ ...localFilters, type: e.value[0] || "" })}
-                                >
-                                    <Select.Trigger>
-                                        <Select.ValueText placeholder="Все типы" />
-                                    </Select.Trigger>
-                                    <Select.Content>
-                                        <Select.Item item="">Все типы</Select.Item>
-                                        {types?.map((t) => (
-                                            <Select.Item key={t.value} item={t.value}>
-                                                {t.label}
-                                            </Select.Item>
-                                        ))}
-                                    </Select.Content>
-                                </Select.Root>
-                            </Field>
+                            <FilterSelect
+                                label="Тип"
+                                collection={typeCollection}
+                                placeholder="Все типы"
+                                value={localFilters.type}
+                                onChange={(value) => setLocalFilters((prev) => ({ ...prev, type: value }))}
+                            />
 
-                            <Field label="Компания">
-                                <Select.Root
-                                    value={localFilters.company_id ? [String(localFilters.company_id)] : []}
-                                    onValueChange={(e) => setLocalFilters({ ...localFilters, company_id: e.value[0] || "" })}
-                                >
-                                    <Select.Trigger>
-                                        <Select.ValueText placeholder="Все компании" />
-                                    </Select.Trigger>
-                                    <Select.Content>
-                                        <Select.Item item="">Все компании</Select.Item>
-                                        {companies?.map((company) => (
-                                            <Select.Item key={company.id} item={String(company.id)}>
-                                                {company.name}
-                                            </Select.Item>
-                                        ))}
-                                    </Select.Content>
-                                </Select.Root>
-                            </Field>
+                            <FilterSelect
+                                label="Компания"
+                                collection={companyCollection}
+                                placeholder="Все компании"
+                                value={localFilters.company_id ? String(localFilters.company_id) : ""}
+                                onChange={(value) => setLocalFilters((prev) => ({ ...prev, company_id: value }))}
+                            />
 
                             {/*
                                 «Не указана» — не техническая заглушка, а рабочий фильтр:
@@ -507,47 +545,23 @@ const OrdersIndex = ({ filters, statuses, types, companies, organizations, wareh
                                 нужно уметь отобрать именно их.
                             */}
                             {organizationsEnabled && (
-                                <Field label="Организация">
-                                    <Select.Root
-                                        value={localFilters.organization_id ? [String(localFilters.organization_id)] : []}
-                                        onValueChange={(e) => setLocalFilters({ ...localFilters, organization_id: e.value[0] || "" })}
-                                    >
-                                        <Select.Trigger>
-                                            <Select.ValueText placeholder="Все организации" />
-                                        </Select.Trigger>
-                                        <Select.Content>
-                                            <Select.Item item="">Все организации</Select.Item>
-                                            <Select.Item item="none">Не указана</Select.Item>
-                                            {organizations?.map((organization) => (
-                                                <Select.Item key={organization.id} item={String(organization.id)}>
-                                                    {organization.is_stub ? `${organization.name} (не заведена)` : organization.name}
-                                                </Select.Item>
-                                            ))}
-                                        </Select.Content>
-                                    </Select.Root>
-                                </Field>
+                                <FilterSelect
+                                    label="Организация"
+                                    collection={organizationCollection}
+                                    placeholder="Все организации"
+                                    value={localFilters.organization_id ? String(localFilters.organization_id) : ""}
+                                    onChange={(value) => setLocalFilters((prev) => ({ ...prev, organization_id: value }))}
+                                />
                             )}
 
                             {organizationsEnabled && (
-                                <Field label="Склад отгрузки">
-                                    <Select.Root
-                                        value={localFilters.warehouse_id ? [String(localFilters.warehouse_id)] : []}
-                                        onValueChange={(e) => setLocalFilters({ ...localFilters, warehouse_id: e.value[0] || "" })}
-                                    >
-                                        <Select.Trigger>
-                                            <Select.ValueText placeholder="Все склады" />
-                                        </Select.Trigger>
-                                        <Select.Content>
-                                            <Select.Item item="">Все склады</Select.Item>
-                                            <Select.Item item="none">Не указан</Select.Item>
-                                            {warehouses?.map((warehouse) => (
-                                                <Select.Item key={warehouse.id} item={String(warehouse.id)}>
-                                                    {warehouse.name}
-                                                </Select.Item>
-                                            ))}
-                                        </Select.Content>
-                                    </Select.Root>
-                                </Field>
+                                <FilterSelect
+                                    label="Склад отгрузки"
+                                    collection={warehouseCollection}
+                                    placeholder="Все склады"
+                                    value={localFilters.warehouse_id ? String(localFilters.warehouse_id) : ""}
+                                    onChange={(value) => setLocalFilters((prev) => ({ ...prev, warehouse_id: value }))}
+                                />
                             )}
 
                             <Field label="Дата от">
@@ -605,15 +619,16 @@ const OrdersIndex = ({ filters, statuses, types, companies, organizations, wareh
                     <HStack>
                         <span>Выбрано: {selectedOrders.length}</span>
                         <Select.Root
+                            collection={bulkStatusCollection}
                             value={bulkStatus ? [bulkStatus] : []}
-                            onValueChange={(e) => setBulkStatus(e.value[0])}
+                            onValueChange={(e) => setBulkStatus(e.value[0] ?? "")}
                         >
                             <Select.Trigger width="200px">
                                 <Select.ValueText placeholder="Выберите статус" />
                             </Select.Trigger>
                             <Select.Content>
-                                {statuses?.map((status) => (
-                                    <Select.Item key={status.value} item={status.value}>
+                                {bulkStatusCollection.items.map((status) => (
+                                    <Select.Item key={status.value} item={status}>
                                         {status.label}
                                     </Select.Item>
                                 ))}
