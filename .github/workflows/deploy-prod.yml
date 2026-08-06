@@ -310,6 +310,16 @@ jobs:
             echo "ORGANIZATIONS_ENABLED=true" >> /srv/pecado/.env
           fi
 
+          echo "==> [0.3/9] Флаг отправки предзаказов поставщику (sex-opt.ru)..."
+          # config/services.php → services.sex_opt.preorder.enabled. Мастер-выключатель:
+          # гейтит и автоотправку при создании предзаказа, и кнопку «Отправить повторно».
+          # ВРЕМЕННО выключено — чтобы включить обратно, поменяй false на true в обеих строках.
+          if grep -q "^SUPPLIER_PREORDER_ENABLED=" /srv/pecado/.env; then
+            sed -i 's|^SUPPLIER_PREORDER_ENABLED=.*|SUPPLIER_PREORDER_ENABLED=false|' /srv/pecado/.env
+          else
+            echo "SUPPLIER_PREORDER_ENABLED=false" >> /srv/pecado/.env
+          fi
+
           echo "==> [0/9] Maintenance mode ON..."
           sg docker -c "$DC exec -T app php artisan down --retry=30 --refresh=5" || true
 

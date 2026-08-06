@@ -111,6 +111,14 @@
 | `SUPPLIER_PREORDER_TESTMODE` | `true` везде, кроме `production` | тестовый режим: поставщик откатывает транзакцию |
 | `SUPPLIER_PREORDER_ROLLBACK_ON_WARNINGS` | `false` | откатывать заказ целиком при нехватке остатка |
 
+### Статус на проде
+
+С 2026-08-06 отправка **временно выключена**: деплой принудительно ставит
+`SUPPLIER_PREORDER_ENABLED=false` в `/srv/pecado/.env` (шаг `[0.3/9]` в
+[deploy-prod.yml](../.github/workflows/deploy-prod.yml)). Чтобы вернуть отправку,
+поменяй `false` на `true` в обеих строках этого шага и выкати релиз — правка
+`.env` руками на сервере переживёт до первого деплоя, но не дольше.
+
 Порядок включения на проде: прописать `SUPPLIER_ORDER_API_KEY`, включить
 `SUPPLIER_PREORDER_ENABLED=true` при `SUPPLIER_PREORDER_TESTMODE=true`, проверить
 в журнале ответы поставщика (коды товаров совпадают, `unknown_items` пуст) и
