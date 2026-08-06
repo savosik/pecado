@@ -171,11 +171,14 @@ class OrderAssemblerTest extends TestCase
 
     /**
      * Уценка: цена зафиксирована в строке, скидки к ней не применяются,
-     * описание дефекта сохраняется снапшотом.
+     * описание дефекта сохраняется снапшотом. Базовая цена при этом —
+     * прайсовая цена товара-родителя (v15.9.3), иначе 1С вернёт свою
+     * первым же order.updated и в истории заказа появится фантомная правка.
      */
     #[Test]
     public function фиксированная_цена_строки_не_пересчитывается_по_прайсу(): void
     {
+        // Прайсовая цена товара из мока PriceService — 120 ₽.
         $product = Product::factory()->create();
 
         $orders = $this->assembler()->assemble($this->draft([
@@ -186,11 +189,57 @@ class OrderAssemblerTest extends TestCase
 
         $item = $orders->first()->items()->first();
 
-        $this->assertEquals(45.5, $item->price);
-        $this->assertEquals(45.5, $item->base_price, 'Базовая цена равна цене партии');
-        $this->assertEquals(0, $item->discount_percent, 'Скидка к уценке не применяется');
-        $this->assertEquals(91.0, $item->subtotal);
+        $this->assertEquals(45.5, $item->price, 'Цена партии не пересчитывается по прайсу');
+        $this->assertEquals(120.0, $item->base_price, 'Базовая цена — прайсовая цена товара-родителя');
+        $this->assertEquals(62.08, $item->discount_percent, 'Скидка — производная глубина уценки');
+        $this->assertEquals(91.0, $item->subtotal, 'Сумма считается по цене партии');
         $this->assertSame('скол на корпусе', $item->defect_description);
+    }
+
+    /**
+     * Прайсовая цена не выше цены уценки — прежнее поведение:
+     * base_price = цена партии, скидка 0. Отрицательная «скидка» выглядела бы
+     * в документе 1С наценкой на некондицию.
+     */
+    #[Test]
+    public function уценка_дороже_прайса_оставляет_базовую_равной_цене_партии(): void
+    {
+        $product = Product::factory()->create();
+
+        $orders = $this->assembler()->assemble($this->draft([
+            OrderType::DEFECT->value => [
+                OrderLine::defect($product, 1, 200.0, null, null),
+            ],
+        ]));
+
+        $item = $orders->first()->items()->first();
+
+        $this->assertEquals(200.0, $item->base_price);
+        $this->assertEquals(0, $item->discount_percent);
+    }
+
+    /**
+     * Прайсовой цены у товара нет вовсе — тот же фолбэк, без деления на ноль.
+     */
+    #[Test]
+    public function уценка_без_прайсовой_цены_оставляет_базовую_равной_цене_партии(): void
+    {
+        $priceMock = $this->createMock(PriceServiceInterface::class);
+        $priceMock->method('getPriceResult')->willReturn(PriceResult::withoutDiscount(0.0));
+        $this->app->instance(PriceServiceInterface::class, $priceMock);
+
+        $product = Product::factory()->create();
+
+        $orders = $this->assembler()->assemble($this->draft([
+            OrderType::DEFECT->value => [
+                OrderLine::defect($product, 1, 45.5, null, null),
+            ],
+        ]));
+
+        $item = $orders->first()->items()->first();
+
+        $this->assertEquals(45.5, $item->base_price);
+        $this->assertEquals(0, $item->discount_percent);
     }
 
     #[Test]

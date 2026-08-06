@@ -320,6 +320,59 @@ class DefectCartCheckoutTest extends TestCase
         $this->assertSame(2, $service->available($defect));
     }
 
+    /**
+     * v15.9.3: в позиции уценки base_price — прайсовая цена товара-родителя,
+     * а не цена партии. Иначе 1С вернёт свою базовую цену первым же
+     * order.updated, и в истории заказа появится фантомная правка базовой цены.
+     */
+    #[Test]
+    public function defect_order_keeps_parent_base_price_in_erp_payload(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+
+        // Без external_id склада некондиции заказ уценки в 1С не публикуется.
+        \App\Models\Warehouse::factory()->create([
+            'external_id' => 'defect-wh-uuid',
+            'is_defect' => true,
+        ]);
+
+        $user = User::factory()->create(['erp_id' => 'defect-base-price-erp']);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+        $cart = Cart::factory()->create(['user_id' => $user->id, 'is_active' => true]);
+
+        // Прайсовая цена товара — 100 (мок PriceService), цена партии — 60.
+        $product = Product::factory()->create(['external_id' => 'defect-base-price-prod']);
+        $defect = ProductDefect::factory()->for($product)->sellable(60)->create(['quantity' => 5]);
+
+        $this->cartService()->setDefectQuantity($user, $cart, $defect, 2);
+        $cart->load('items.product', 'items.productDefect', 'user');
+
+        $orders = $this->app->make(CheckoutServiceInterface::class)
+            ->checkout($cart, $company, 'г. Москва, ул. Тестовая, д. 1');
+
+        $order = $orders->firstWhere('type', OrderType::DEFECT);
+        $item = $order->items()->first();
+
+        $this->assertEquals(60.0, $item->price, 'Клиент платит цену партии');
+        $this->assertEquals(100.0, $item->base_price, 'Базовая цена — прайсовая цена товара');
+        $this->assertEquals(40.0, $item->discount_percent, 'Глубина уценки 40%');
+        $this->assertEquals(120.0, $item->subtotal);
+
+        (new \App\Listeners\PublishOrderToErp)->handle(new \App\Events\OrderCreated($order));
+
+        \Illuminate\Support\Facades\Queue::assertPushed(
+            \App\Jobs\PublishOrderToErpJob::class,
+            function ($job) {
+                $line = $job->payload['items'][0] ?? [];
+
+                return ($job->payload['type'] ?? null) === 'defect'
+                    && $line['base_price'] === 100.0
+                    && $line['discount_percent'] === 40.0
+                    && $line['final_price'] === 60.0;
+            }
+        );
+    }
+
     #[Test]
     public function checkout_only_defect_creates_single_defect_order(): void
     {

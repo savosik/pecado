@@ -157,9 +157,20 @@ class OrderAssembler
         }
 
         // Фиксированная цена строки (уценка): индивидуальные цены и скидки к ней
-        // не применяются — клиент видел именно её
+        // не применяются — клиент видел именно её. Но base_price остаётся
+        // прайсовой ценой товара-родителя: 1С хранит свою базовую цену и
+        // возвращает её первым же order.updated, а раньше сайт слал сюда цену
+        // уценки — в истории заказа возникало фантомное «Базовая цена:
+        // 1 400 → 2 560 ₽». discount_percent — производная (глубина уценки),
+        // сумма позиции считается по final_price (v15.9.3).
         if ($line->price !== null) {
-            return [$line->price, $line->price, 0.0];
+            $base = (float) $this->priceService->getPriceResult($line->product, $user)->basePrice;
+
+            if ($base <= $line->price) {
+                return [$line->price, $line->price, 0.0];
+            }
+
+            return [$line->price, $base, round((1 - $line->price / $base) * 100, 2)];
         }
 
         $result = $this->priceService->getPriceResult($line->product, $user);
