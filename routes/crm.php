@@ -58,6 +58,11 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // в биндинг модели.
         Route::get('/orders', [DocumentController::class, 'orders'])->name('orders.index');
         Route::get('/shipments', [DocumentController::class, 'shipments'])->name('shipments.index');
+        // Подсказки товаров для фильтра журналов. Свой маршрут, а не
+        // crm.products.search: тот закрыт правом crm-analytics.view, которого
+        // у рядового менеджера может не быть.
+        Route::get('/documents/products/search', [DocumentController::class, 'searchProducts'])
+            ->name('documents.products.search');
         Route::get('/orders/{order}', [DocumentController::class, 'order'])
             ->name('orders.show')
             ->whereNumber('order');

@@ -1,11 +1,12 @@
 import { Head, router } from '@inertiajs/react';
-import { Badge, Box, HStack, Input, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, Flex, HStack, Input, Text, VStack } from '@chakra-ui/react';
 import { LuEye } from 'react-icons/lu';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { SearchInput } from '@/Admin/Components/SearchInput';
+import { ProductSelector } from '@/Admin/Components/ProductSelector';
 import { Button } from '@/components/ui/button';
-import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
+import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 
 /**
@@ -32,13 +33,30 @@ export default function DocumentList({
     organizations = [],
     organizationsEnabled = false,
     warehouses = [],
+    partners = [],
+    companies = [],
+    managers = [],
+    seesAll = false,
+    selectedProducts = [],
 }) {
     const { searchQuery, handleSearch, handleSort } = useResourceIndex(routeName, filters, {
         entityLabel: 'Документ',
     });
 
+    // Пустые значения выкидываем: иначе каждый сброшенный мультивыбор оставлял бы
+    // в адресе висячий `?partner_ids=`, и ссылка на отбор переставала читаться.
     const apply = (patch) => {
-        router.get(route(`${routeName}.index`), { ...filters, ...patch }, {
+        const params = Object.entries({ ...filters, ...patch }).reduce((acc, [key, value]) => {
+            const empty = Array.isArray(value)
+                ? value.length === 0
+                : value === null || value === undefined || value === '';
+
+            if (!empty) acc[key] = value;
+
+            return acc;
+        }, {});
+
+        router.get(route(`${routeName}.index`), params, {
             preserveState: true,
             replace: true,
         });
@@ -51,10 +69,19 @@ export default function DocumentList({
         });
     };
 
+    const selected = (key) => filters[key] ?? [];
+
     const hasFilters = Boolean(
-        filters.search || filters.status || filters.organization_id || filters.warehouse_id
-        || filters.date_from || filters.date_to || filters.amount_from || filters.amount_to,
-    );
+        filters.search || filters.date_from || filters.date_to
+        || filters.amount_from || filters.amount_to,
+    ) || [
+        'statuses', 'partner_ids', 'company_ids', 'manager_ids',
+        'organization_ids', 'warehouse_ids', 'product_ids',
+    ].some((key) => selected(key).length > 0);
+
+    // 'none' — псевдо-значение «поле пустое»: документов без организации,
+    // склада или контрагента в базе хватает, и отобрать их бывает нужно.
+    const withNone = (options, label) => [{ id: 'none', name: label }, ...options];
 
     const columns = [
         {
@@ -163,54 +190,83 @@ export default function DocumentList({
                             placeholder="Номер, клиент или товар..."
                         />
                     </Box>
+                </HStack>
 
-                    <Box minW="200px">
-                        <NativeSelectRoot size="sm">
-                            <NativeSelectField
-                                value={filters.status ?? ''}
-                                onChange={(e) => apply({ status: e.target.value || undefined })}
-                            >
-                                <option value="">Все статусы</option>
-                                {statuses.map((status) => (
-                                    <option key={status.value} value={status.value}>{status.label}</option>
-                                ))}
-                            </NativeSelectField>
-                        </NativeSelectRoot>
-                    </Box>
+                <Flex gap={3} wrap="wrap" align="start">
+                    <MultiSelectFilter
+                        label="Статус"
+                        options={statuses}
+                        idKey="value"
+                        labelKey="label"
+                        allLabel="Все статусы"
+                        selectedIds={selected('statuses')}
+                        onChange={(values) => apply({ statuses: values })}
+                        minW="180px"
+                    />
 
-                    {organizationsEnabled && (
-                        <Box minW="200px">
-                            <NativeSelectRoot size="sm">
-                                <NativeSelectField
-                                    value={filters.organization_id ?? ''}
-                                    onChange={(e) => apply({ organization_id: e.target.value || undefined })}
-                                >
-                                    <option value="">Все организации</option>
-                                    <option value="none">Без организации</option>
-                                    {organizations.map((organization) => (
-                                        <option key={organization.id} value={organization.id}>
-                                            {organization.name}
-                                        </option>
-                                    ))}
-                                </NativeSelectField>
-                            </NativeSelectRoot>
-                        </Box>
+                    <MultiSelectFilter
+                        label="Партнёр"
+                        options={partners}
+                        allLabel="Все партнёры"
+                        selectedIds={selected('partner_ids')}
+                        onChange={(values) => apply({ partner_ids: values })}
+                        minW="220px"
+                    />
+
+                    <MultiSelectFilter
+                        label="Контрагент"
+                        options={withNone(companies, 'Без контрагента')}
+                        allLabel="Все контрагенты"
+                        selectedIds={selected('company_ids')}
+                        onChange={(values) => apply({ company_ids: values })}
+                        minW="220px"
+                    />
+
+                    {seesAll && (
+                        <MultiSelectFilter
+                            label="Менеджер"
+                            options={managers}
+                            allLabel="Все менеджеры"
+                            selectedIds={selected('manager_ids')}
+                            onChange={(values) => apply({ manager_ids: values })}
+                            minW="180px"
+                        />
                     )}
 
-                    <Box minW="180px">
-                        <NativeSelectRoot size="sm">
-                            <NativeSelectField
-                                value={filters.warehouse_id ?? ''}
-                                onChange={(e) => apply({ warehouse_id: e.target.value || undefined })}
-                            >
-                                <option value="">Все склады</option>
-                                {warehouses.map((warehouse) => (
-                                    <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>
-                                ))}
-                            </NativeSelectField>
-                        </NativeSelectRoot>
-                    </Box>
-                </HStack>
+                    {organizationsEnabled && (
+                        <MultiSelectFilter
+                            label="Организация"
+                            options={withNone(organizations, 'Без организации')}
+                            allLabel="Все организации"
+                            selectedIds={selected('organization_ids')}
+                            onChange={(values) => apply({ organization_ids: values })}
+                            minW="200px"
+                        />
+                    )}
+
+                    <MultiSelectFilter
+                        label="Склад"
+                        options={withNone(warehouses, 'Без склада')}
+                        allLabel="Все склады"
+                        selectedIds={selected('warehouse_ids')}
+                        onChange={(values) => apply({ warehouse_ids: values })}
+                        minW="200px"
+                    />
+
+                    <VStack align="stretch" gap={1} flex="1" minW="280px">
+                        <Text fontSize="xs" color="fg.muted" fontWeight="500">
+                            Товар в документе
+                            {selectedProducts.length > 0 ? ` — выбрано ${selectedProducts.length}` : ''}
+                        </Text>
+                        <ProductSelector
+                            mode="multi"
+                            value={selectedProducts}
+                            onChange={(items) => apply({ product_ids: items.map((item) => item.id) })}
+                            searchRoute="crm.documents.products.search"
+                            compactSelected
+                        />
+                    </VStack>
+                </Flex>
 
                 <HStack gap={3} align="center" wrap="wrap">
                     <HStack gap={2}>

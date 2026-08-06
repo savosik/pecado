@@ -3,16 +3,22 @@
 namespace App\Http\Controllers\Crm;
 
 use App\Enums\OrderStatus;
+use App\Models\Company;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Organization;
+use App\Models\PersonalManager;
+use App\Models\Product;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Crm\CrmEntityResolver;
 use App\Support\Crm\CrmEntityMap;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -42,6 +48,18 @@ class DocumentController extends CrmController
      */
     private const SORTS = ['id', 'number', 'erp_number', 'total_amount', 'created_at', 'erp_created_at', 'date'];
 
+    /**
+     * Статусы реализаций: у них нет enum-а, 1С шлёт голые строки.
+     *
+     * @var list<array{value: string, label: string, color: string}>
+     */
+    private const SHIPMENT_STATUSES = [
+        ['value' => 'new', 'label' => 'Новая', 'color' => 'blue'],
+        ['value' => 'in_progress', 'label' => 'В обработке', 'color' => 'orange'],
+        ['value' => 'completed', 'label' => 'Выполнена', 'color' => 'green'],
+        ['value' => 'cancelled', 'label' => 'Отменена', 'color' => 'gray'],
+    ];
+
     public function __construct(private readonly CrmEntityResolver $resolver) {}
 
     /**
@@ -54,9 +72,10 @@ class DocumentController extends CrmController
     public function orders(Request $request): Response
     {
         $actor = $this->crmActor($request);
+        $clients = $this->visibleClients($request, $actor);
 
         $query = Order::query()
-            ->whereIn('user_id', User::query()->visibleInCrm($actor)->select('users.id'))
+            ->whereIn('user_id', (clone $clients))
             ->with(['user:id,name,erp_name,email', 'company:id,name', 'organization:id,name,is_stub', 'warehouse:id,name'])
             ->withCount('items');
 
@@ -74,11 +93,9 @@ class DocumentController extends CrmController
             });
         }
 
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        }
+        $statuses = array_map(fn (OrderStatus $case): string => $case->value, OrderStatus::cases());
 
-        $this->applyCommonFilters($query, $request, 'erp_created_at');
+        $this->applyCommonFilters($query, $request, 'erp_created_at', $statuses);
 
         $sortBy = in_array($request->input('sort_by'), self::SORTS, true)
             ? (string) $request->input('sort_by')
@@ -112,7 +129,7 @@ class DocumentController extends CrmController
 
         return Inertia::render('Crm/Pages/Documents/Orders', array_merge(
             ['orders' => $orders],
-            $this->listOptions($request, $sortBy, $sortOrder, $perPage, $search),
+            $this->listOptions($request, 'orders', $clients, $sortBy, $sortOrder, $perPage, $search),
             [
                 'statuses' => array_map(
                     fn (OrderStatus $case): array => [
@@ -132,9 +149,10 @@ class DocumentController extends CrmController
     public function shipments(Request $request): Response
     {
         $actor = $this->crmActor($request);
+        $clients = $this->visibleClients($request, $actor);
 
         $query = Shipment::query()
-            ->whereIn('user_id', User::query()->visibleInCrm($actor)->select('users.id'))
+            ->whereIn('user_id', (clone $clients))
             ->with(['user:id,name,erp_name,email', 'company:id,name', 'organization:id,name,is_stub', 'warehouse:id,name'])
             ->withCount('items');
 
@@ -152,11 +170,12 @@ class DocumentController extends CrmController
             });
         }
 
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        }
-
-        $this->applyCommonFilters($query, $request, 'erp_created_at');
+        $this->applyCommonFilters(
+            $query,
+            $request,
+            'erp_created_at',
+            array_column(self::SHIPMENT_STATUSES, 'value'),
+        );
 
         $sortBy = in_array($request->input('sort_by'), self::SORTS, true)
             ? (string) $request->input('sort_by')
@@ -190,20 +209,19 @@ class DocumentController extends CrmController
 
         return Inertia::render('Crm/Pages/Documents/Shipments', array_merge(
             ['shipments' => $shipments],
-            $this->listOptions($request, $sortBy, $sortOrder, $perPage, $search),
-            [
-                'statuses' => [
-                    ['value' => 'new', 'label' => 'Новая', 'color' => 'blue'],
-                    ['value' => 'in_progress', 'label' => 'В обработке', 'color' => 'orange'],
-                    ['value' => 'completed', 'label' => 'Выполнена', 'color' => 'green'],
-                    ['value' => 'cancelled', 'label' => 'Отменена', 'color' => 'gray'],
-                ],
-            ],
+            $this->listOptions($request, 'shipments', $clients, $sortBy, $sortOrder, $perPage, $search),
+            ['statuses' => self::SHIPMENT_STATUSES],
         ));
     }
 
     /**
-     * Фильтры, одинаковые у обоих списков: организация, склад, даты, суммы.
+     * Фильтры, одинаковые у обоих списков: статусы, партнёры, контрагенты,
+     * организации, склады, товар в позициях, даты, суммы.
+     *
+     * Менеджер сюда не попал намеренно: он сужает набор клиентов, а не
+     * документов, и применяется раньше — в visibleClients(). Партнёр же —
+     * обычная колонка user_id, и чужой id безопасен: скоуп клиентов уже сузил
+     * выборку, пересечение с ним ничего не открывает.
      *
      * Шаблонный параметр, а не объединение Order|Shipment: дженерик Builder
      * инвариантен, и объединение не приняло бы ни один из двух конкретных типов.
@@ -211,25 +229,29 @@ class DocumentController extends CrmController
      * @template TModel of \Illuminate\Database\Eloquent\Model
      *
      * @param  \Illuminate\Database\Eloquent\Builder<TModel>  $query
+     * @param  list<string>  $allowedStatuses
      */
-    private function applyCommonFilters(\Illuminate\Database\Eloquent\Builder $query, Request $request, string $dateColumn): void
+    private function applyCommonFilters(Builder $query, Request $request, string $dateColumn, array $allowedStatuses): void
     {
-        // 'none' — документы без организации: их много в переходный период,
-        // и именно их бывает нужно отобрать.
-        $organizationId = $request->input('organization_id');
+        $statuses = array_values(array_intersect($this->values($request, 'statuses', 'status'), $allowedStatuses));
 
-        if ($organizationId === 'none') {
-            $query->whereNull('organization_id');
-        } elseif ($organizationId) {
-            $query->where('organization_id', $organizationId);
+        if ($statuses !== []) {
+            $query->whereIn('status', $statuses);
         }
 
-        $warehouseId = $request->input('warehouse_id');
+        $this->applyIdFilter($query, 'user_id', $this->values($request, 'partner_ids'));
+        $this->applyIdFilter($query, 'company_id', $this->values($request, 'company_ids'));
+        // 'none' — документы без организации: их много в переходный период,
+        // и именно их бывает нужно отобрать.
+        $this->applyIdFilter($query, 'organization_id', $this->values($request, 'organization_ids', 'organization_id'));
+        $this->applyIdFilter($query, 'warehouse_id', $this->values($request, 'warehouse_ids', 'warehouse_id'));
 
-        if ($warehouseId === 'none') {
-            $query->whereNull('warehouse_id');
-        } elseif ($warehouseId) {
-            $query->where('warehouse_id', $warehouseId);
+        // Товар — «в каком документе он есть»: whereHas по позициям, а не join,
+        // иначе документ с двумя выбранными товарами задвоился бы в списке.
+        $productIds = $this->ids($request, 'product_ids');
+
+        if ($productIds !== []) {
+            $query->whereHas('items', fn (Builder $item) => $item->whereIn('product_id', $productIds));
         }
 
         if ($dateFrom = $request->input('date_from')) {
@@ -252,11 +274,15 @@ class DocumentController extends CrmController
     /**
      * Общие пропсы списков: справочники фильтров и снимок текущего отбора.
      *
+     * @param  'orders'|'shipments'  $table
+     * @param  Builder<User>  $clients  скоуп клиентов актора (уже с фильтром по менеджеру)
      * @return array<string, mixed>
      */
-    private function listOptions(Request $request, string $sortBy, string $sortOrder, int $perPage, ?string $search): array
+    private function listOptions(Request $request, string $table, Builder $clients, string $sortBy, string $sortOrder, int $perPage, ?string $search): array
     {
         $organizationsEnabled = (bool) config('erp.organizations.enabled');
+        $seesAll = $this->seesAllClients($request);
+        $productIds = $this->ids($request, 'product_ids');
 
         return [
             'organizations' => $organizationsEnabled
@@ -264,11 +290,24 @@ class DocumentController extends CrmController
                 : [],
             'organizationsEnabled' => $organizationsEnabled,
             'warehouses' => Warehouse::query()->orderBy('name')->get(['id', 'name']),
+            'partners' => $this->partnerOptions($table, $clients),
+            'companies' => $this->companyOptions($table, $clients),
+            // Менеджер — только РОПу: у рядового менеджера в скоупе и так
+            // только свои клиенты, фильтр был бы кнопкой без эффекта.
+            'managers' => $seesAll ? $this->managerOptions() : [],
+            'seesAll' => $seesAll,
+            // Выбранные товары приезжают целиком: в URL только id, а рисовать
+            // фильтр нужно с названиями.
+            'selectedProducts' => $this->selectedProducts($productIds),
             'filters' => [
                 'search' => $search,
-                'status' => $request->input('status'),
-                'organization_id' => $request->input('organization_id'),
-                'warehouse_id' => $request->input('warehouse_id'),
+                'statuses' => $this->values($request, 'statuses', 'status'),
+                'partner_ids' => $this->ids($request, 'partner_ids'),
+                'company_ids' => $this->values($request, 'company_ids'),
+                'manager_ids' => $seesAll ? $this->ids($request, 'manager_ids') : [],
+                'organization_ids' => $this->values($request, 'organization_ids', 'organization_id'),
+                'warehouse_ids' => $this->values($request, 'warehouse_ids', 'warehouse_id'),
+                'product_ids' => $productIds,
                 'date_from' => $request->input('date_from'),
                 'date_to' => $request->input('date_to'),
                 'amount_from' => $request->input('amount_from'),
@@ -278,6 +317,247 @@ class DocumentController extends CrmController
                 'per_page' => $perPage,
             ],
         ];
+    }
+
+    /**
+     * Скоуп клиентов актора с учётом фильтра по менеджеру.
+     *
+     * Менеджер сужает не документ, а набор клиентов, поэтому живёт здесь, а не
+     * в applyCommonFilters: тем же скоупом собираются справочники фильтров, и
+     * выбор менеджера заодно сужает список его партнёров и контрагентов.
+     *
+     * Фильтр по партнёру сюда не входит намеренно — иначе, выбрав одного,
+     * второго уже не добавить: справочник схлопнулся бы до выбранного.
+     *
+     * @return Builder<User>
+     */
+    private function visibleClients(Request $request, User $actor): Builder
+    {
+        $query = User::query()->visibleInCrm($actor)->select('users.id');
+
+        // Менеджера подставляет только РОП: у рядового менеджера скоуп и так
+        // сведён к своим клиентам, а чужой id в запросе не должен ничего давать.
+        if ($this->seesAllClients($request)) {
+            $managerIds = $this->ids($request, 'manager_ids');
+
+            if ($managerIds !== []) {
+                $query->whereIn('users.personal_manager_id', $managerIds);
+            }
+        }
+
+        return $query;
+    }
+
+    /**
+     * Мультивыбор по числовой колонке. Псевдо-значение 'none' — «пусто»
+     * (документ без организации, без склада, без контрагента).
+     *
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     * @param  list<string>  $values
+     */
+    private function applyIdFilter(Builder $query, string $column, array $values): void
+    {
+        if ($values === []) {
+            return;
+        }
+
+        $withoutNone = array_values(array_filter($values, fn (string $value): bool => $value !== 'none'));
+        $ids = array_values(array_filter(array_map('intval', $withoutNone), fn (int $id): bool => $id > 0));
+        $hasNone = count($withoutNone) !== count($values);
+
+        if ($ids === [] && ! $hasNone) {
+            return;
+        }
+
+        $query->where(function (Builder $inner) use ($column, $ids, $hasNone): void {
+            if ($ids !== []) {
+                $inner->whereIn($column, $ids);
+            }
+
+            if ($hasNone) {
+                $ids === [] ? $inner->whereNull($column) : $inner->orWhereNull($column);
+            }
+        });
+    }
+
+    /**
+     * Значения мультивыбора из запроса. Старые ссылки со скалярным параметром
+     * (?status=new) продолжают работать — их читает $legacyKey.
+     *
+     * @return list<string>
+     */
+    private function values(Request $request, string $key, ?string $legacyKey = null): array
+    {
+        $input = $request->input($key);
+
+        if ($input === null && $legacyKey !== null) {
+            $input = $request->input($legacyKey);
+        }
+
+        if ($input === null || $input === '') {
+            return [];
+        }
+
+        $values = array_map(
+            fn (mixed $value): string => trim((string) $value),
+            is_array($input) ? $input : [$input],
+        );
+
+        return array_values(array_unique(array_filter($values, fn (string $value): bool => $value !== '')));
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function ids(Request $request, string $key): array
+    {
+        $ids = array_map('intval', $this->values($request, $key));
+
+        return array_values(array_filter($ids, fn (int $id): bool => $id > 0));
+    }
+
+    /**
+     * Партнёры — клиенты, у которых в этом журнале есть хотя бы один документ.
+     *
+     * Берём из самих документов, а не из списка клиентов: у РОПа клиентов
+     * восемь сотен, и большинство в конкретном журнале не встречается ни разу.
+     *
+     * @param  'orders'|'shipments'  $table
+     * @param  Builder<User>  $clients
+     * @return list<array{id: int, name: string}>
+     */
+    private function partnerOptions(string $table, Builder $clients): array
+    {
+        // Сначала голые id из журнала, потом сами карточки: join с users по всей
+        // таблице документов заставил бы MySQL читать строки, а так хватает
+        // индекса по user_id.
+        $ids = DB::table($table)
+            ->whereNull($table.'.deleted_at')
+            ->whereIn($table.'.user_id', (clone $clients))
+            ->distinct()
+            ->pluck($table.'.user_id')
+            ->all();
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return User::query()
+            ->whereIn('id', $ids)
+            ->get(['id', 'name', 'erp_name', 'email'])
+            ->map(fn (User $user): array => [
+                'id' => (int) $user->getKey(),
+                'name' => (string) $user->display_name,
+            ])
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Контрагенты — юрлица, на которые проведены документы журнала.
+     *
+     * @param  'orders'|'shipments'  $table
+     * @param  Builder<User>  $clients
+     * @return list<array{id: int, name: string}>
+     */
+    private function companyOptions(string $table, Builder $clients): array
+    {
+        $ids = DB::table($table)
+            ->whereNull($table.'.deleted_at')
+            ->whereIn($table.'.user_id', (clone $clients))
+            ->whereNotNull($table.'.company_id')
+            ->distinct()
+            ->pluck($table.'.company_id')
+            ->all();
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return Company::query()
+            ->whereIn('id', $ids)
+            ->get(['id', 'name', 'legal_name', 'tax_id'])
+            ->map(fn (Company $company): array => [
+                'id' => (int) $company->getKey(),
+                'name' => (string) ($company->name ?: $company->legal_name ?: ($company->tax_id ? 'ИНН '.$company->tax_id : 'Контрагент #'.$company->getKey())),
+            ])
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array{id: int, name: string}>
+     */
+    private function managerOptions(): array
+    {
+        return PersonalManager::query()
+            ->active()
+            ->whereHas('users')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (PersonalManager $manager): array => [
+                'id' => (int) $manager->getKey(),
+                'name' => (string) $manager->name,
+            ])
+            ->all();
+    }
+
+    /**
+     * Подсказки товаров для фильтра «товар в документе».
+     *
+     * Отдельный маршрут вместо `crm.products.search`: тот закрыт правом
+     * `crm-analytics.view`, которого у рядового менеджера может не быть, а
+     * журналы документов открыты по `crm-clients.view`.
+     */
+    public function searchProducts(Request $request): JsonResponse
+    {
+        $query = trim((string) $request->input('query', ''));
+
+        if (mb_strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        $products = Product::search($query)
+            ->take(20)
+            ->get()
+            ->load(['media', 'brand:id,name'])
+            ->map(fn (Product $product): array => [
+                'id' => (int) $product->getKey(),
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'image_url' => $product->getFirstMediaUrl('main'),
+                'brand_name' => $product->brand?->name,
+            ]);
+
+        return response()->json($products);
+    }
+
+    /**
+     * @param  list<int>  $productIds
+     * @return list<array{id: int, name: string, sku: string|null, image_url: string, brand_name: string|null}>
+     */
+    private function selectedProducts(array $productIds): array
+    {
+        if ($productIds === []) {
+            return [];
+        }
+
+        return Product::query()
+            ->whereIn('id', $productIds)
+            ->with(['media', 'brand:id,name'])
+            ->get(['id', 'name', 'sku', 'brand_id'])
+            ->map(fn (Product $product): array => [
+                'id' => (int) $product->getKey(),
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'image_url' => $product->getFirstMediaUrl('main'),
+                'brand_name' => $product->brand?->name,
+            ])
+            ->all();
     }
 
     private function search(Request $request): ?string
