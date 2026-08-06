@@ -24,7 +24,14 @@ const STATUS_COLORS = {
     cancelled: 'red',
 };
 
-export default function ShipmentsIndex({ filters, statuses, exportEnabled = false, suggestion = null }) {
+const PAYMENT_STATUS_COLORS = {
+    unpaid: 'gray',
+    partial: 'orange',
+    paid: 'green',
+    overpaid: 'purple',
+};
+
+export default function ShipmentsIndex({ filters, statuses, paymentStatuses = [], exportEnabled = false, suggestion = null }) {
     const { shipments, currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
 
@@ -33,8 +40,12 @@ export default function ShipmentsIndex({ filters, statuses, exportEnabled = fals
     const initialStatus = Array.isArray(filters?.status)
         ? filters.status
         : (filters?.status ? [filters.status] : []);
+    const initialPaymentStatus = Array.isArray(filters?.payment_status)
+        ? filters.payment_status
+        : (filters?.payment_status ? [filters.payment_status] : []);
     const [localFilters, setLocalFilters] = useState({
         status: initialStatus,
+        payment_status: initialPaymentStatus,
         date_from: filters?.date_from || '',
         date_to: filters?.date_to || '',
         amount_from: filters?.amount_from || '',
@@ -78,7 +89,7 @@ export default function ShipmentsIndex({ filters, statuses, exportEnabled = fals
     const handleApplyFilters = () => navigateWithParams({ ...localFilters, page: 1 });
 
     const handleResetFilters = () => {
-        const reset = { status: [], date_from: '', date_to: '', amount_from: '', amount_to: '' };
+        const reset = { status: [], payment_status: [], date_from: '', date_to: '', amount_from: '', amount_to: '' };
         setLocalFilters(reset);
         navigateWithParams({ ...reset, search: '', order_uuid: null, brand_ids: [], page: 1 });
         setSearch('');
@@ -113,6 +124,11 @@ export default function ShipmentsIndex({ filters, statuses, exportEnabled = fals
         return count;
     })();
 
+    const paymentStatusCollection = useMemo(
+        () => createListCollection({ items: paymentStatuses?.map((s) => ({ label: s.label, value: s.value })) ?? [] }),
+        [paymentStatuses],
+    );
+
     const statusCollection = useMemo(
         () => createListCollection({ items: statuses?.map((s) => ({ label: s.label, value: s.value })) ?? [] }),
         [statuses]
@@ -121,13 +137,14 @@ export default function ShipmentsIndex({ filters, statuses, exportEnabled = fals
     const filterFields = useMemo(() => [
         { key: 'search', label: 'Поиск', formatter: (v) => `«${v}»` },
         { key: 'status', label: 'Статус', formatter: (v) => statuses?.find((s) => s.value === v)?.label || v },
+        { key: 'payment_status', label: 'Оплата', formatter: (v) => paymentStatuses?.find((s) => s.value === v)?.label || v },
         { key: 'date_from', label: 'Дата от' },
         { key: 'date_to', label: 'Дата до' },
         { key: 'amount_from', label: 'Сумма от' },
         { key: 'amount_to', label: 'Сумма до' },
         { key: 'order_uuid', label: 'Заказ', formatter: (v) => `#${String(v).slice(0, 8)}` },
         { key: 'brand_ids', label: 'Бренд', formatter: (v) => `#${v}` },
-    ], [statuses]);
+    ], [statuses, paymentStatuses]);
 
     const handleRemoveFilter = (key, value) => {
         const current = filters?.[key];
@@ -137,8 +154,8 @@ export default function ShipmentsIndex({ filters, statuses, exportEnabled = fals
         } else {
             nextValue = '';
         }
-        if (key === 'status') {
-            setLocalFilters({ ...localFilters, status: Array.isArray(nextValue) ? nextValue : [] });
+        if (key === 'status' || key === 'payment_status') {
+            setLocalFilters({ ...localFilters, [key]: Array.isArray(nextValue) ? nextValue : [] });
         } else if (key === 'search') {
             setSearch('');
             lastSubmittedSearch.current = '';
@@ -268,6 +285,26 @@ export default function ShipmentsIndex({ filters, statuses, exportEnabled = fals
                                     </Select.Root>
                                 </Field>
 
+                                <Field label="Оплата" flex="1">
+                                    <Select.Root
+                                        multiple
+                                        collection={paymentStatusCollection}
+                                        value={localFilters.payment_status}
+                                        onValueChange={(e) => setLocalFilters({ ...localFilters, payment_status: e.value })}
+                                    >
+                                        <Select.Trigger>
+                                            <Select.ValueText placeholder="Любая">
+                                                {localFilters.payment_status.length === 0 ? 'Любая' : `Выбрано: ${localFilters.payment_status.length}`}
+                                            </Select.ValueText>
+                                        </Select.Trigger>
+                                        <Select.Content>
+                                            {paymentStatusCollection.items.map((s) => (
+                                                <Select.Item key={s.value} item={s}>{s.label}</Select.Item>
+                                            ))}
+                                        </Select.Content>
+                                    </Select.Root>
+                                </Field>
+
                                 <Field label="Дата от" flex="1">
                                     <Input
                                         type="date"
@@ -387,6 +424,17 @@ export default function ShipmentsIndex({ filters, statuses, exportEnabled = fals
                                                         {shipment.status_label}
                                                     </Badge>
                                                     */}
+                                                    {/* Оплата — производное поле, его считает 1С через
+                                                        разнесение платежей. Клиенту это первый вопрос
+                                                        к накладной, поэтому бейдж прямо в строке. */}
+                                                    {shipment.payment_status && (
+                                                        <Badge
+                                                            colorPalette={PAYMENT_STATUS_COLORS[shipment.payment_status] || 'gray'}
+                                                            variant="subtle" fontSize="xs" borderRadius="full" px="2.5"
+                                                        >
+                                                            {shipment.payment_status_label}
+                                                        </Badge>
+                                                    )}
                                                     {shipment.updated_at && (
                                                         <Text fontSize="2xs" color="gray.400">{shipment.updated_at}</Text>
                                                     )}
@@ -426,6 +474,11 @@ export default function ShipmentsIndex({ filters, statuses, exportEnabled = fals
                                             {shipment.currency_code && shipment.currency_code !== currency?.code && (
                                                 <Text fontSize="xs" color="gray.400" whiteSpace="nowrap">
                                                     {fmt(shipment.total_amount)} {shipment.currency_code}
+                                                </Text>
+                                            )}
+                                            {shipment.unpaid_amount > 0 && (
+                                                <Text fontSize="xs" color="orange.500" whiteSpace="nowrap">
+                                                    к оплате: {fmt(shipment.unpaid_amount)} {shipment.currency_code || currencySymbol}
                                                 </Text>
                                             )}
                                         </VStack>

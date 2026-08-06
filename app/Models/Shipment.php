@@ -24,6 +24,11 @@ use Spatie\MediaLibrary\HasMedia;
  * @property string $status
  * @property string|null $currency_code
  * @property numeric $total_amount
+ * @property numeric $paid_amount
+ * @property string $payment_status
+ * @property \Illuminate\Support\Carbon|null $paid_at
+ * @property-read string $payment_status_label
+ * @property-read float $unpaid_amount
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property \Carbon\Carbon|null $erp_created_at
@@ -78,8 +83,33 @@ class Shipment extends Model implements HasMedia
         'status',
         'currency_code',
         'total_amount',
+        'paid_amount',
+        'payment_status',
+        'paid_at',
         'erp_created_at',
         'erp_updated_at',
+    ];
+
+    /**
+     * Статусы оплаты реализации.
+     *
+     * Держим константами на модели, чтобы CRM, кабинет и экспорт не разъехались
+     * в написании: это производное поле, его значения задаёт только PaymentAllocationService.
+     */
+    public const PAYMENT_UNPAID = 'unpaid';
+
+    public const PAYMENT_PARTIAL = 'partial';
+
+    public const PAYMENT_PAID = 'paid';
+
+    public const PAYMENT_OVERPAID = 'overpaid';
+
+    /** @var list<string> */
+    public const PAYMENT_STATUSES = [
+        self::PAYMENT_UNPAID,
+        self::PAYMENT_PARTIAL,
+        self::PAYMENT_PAID,
+        self::PAYMENT_OVERPAID,
     ];
 
     protected function casts(): array
@@ -87,6 +117,8 @@ class Shipment extends Model implements HasMedia
         return [
             'date' => 'date',
             'total_amount' => 'decimal:2',
+            'paid_amount' => 'decimal:2',
+            'paid_at' => 'datetime',
             'erp_created_at' => \App\Casts\ErpDatetime::class,
             'erp_updated_at' => \App\Casts\ErpDatetime::class,
         ];
@@ -159,6 +191,49 @@ class Shipment extends Model implements HasMedia
         return Order::withoutGlobalScopes()
             ->whereIn('uuid', $orderUuids)
             ->get();
+    }
+
+    /**
+     * Строки расшифровки платежей, разнесённых на эту реализацию.
+     *
+     * @return HasMany<\App\Models\PaymentAllocation, $this>
+     */
+    public function paymentAllocations(): HasMany
+    {
+        return $this->hasMany(PaymentAllocation::class);
+    }
+
+    /**
+     * Платежи, которыми закрывается реализация.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<Payment, $this>
+     */
+    public function payments(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Payment::class, 'payment_allocations')
+            ->withPivot(['amount', 'order_uuid', 'line_number'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Метка статуса оплаты на русском.
+     */
+    public function getPaymentStatusLabelAttribute(): string
+    {
+        return match ($this->payment_status) {
+            self::PAYMENT_PAID => 'Оплачена',
+            self::PAYMENT_PARTIAL => 'Оплачена частично',
+            self::PAYMENT_OVERPAID => 'Переплата',
+            default => 'Не оплачена',
+        };
+    }
+
+    /**
+     * Остаток к оплате. Переплата остатка не создаёт — отсюда max(0, …).
+     */
+    public function getUnpaidAmountAttribute(): float
+    {
+        return max(0.0, round((float) $this->total_amount - (float) $this->paid_amount, 2));
     }
 
     /**

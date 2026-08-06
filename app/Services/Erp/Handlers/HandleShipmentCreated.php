@@ -2,17 +2,19 @@
 
 namespace App\Services\Erp\Handlers;
 
-use App\Models\Company;
 use App\Models\Product;
 use App\Models\Shipment;
-use App\Models\User;
 use App\Services\Erp\Support\LinksOverdueDetailsToShipment;
+use App\Services\Erp\Support\LinksPaymentAllocationsToShipment;
+use App\Services\Erp\Support\ResolvesContractorParty;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
 use Illuminate\Support\Facades\Log;
 
 class HandleShipmentCreated
 {
     use LinksOverdueDetailsToShipment;
+    use LinksPaymentAllocationsToShipment;
+    use ResolvesContractorParty;
     use ResolvesDocumentOrganization;
 
     /**
@@ -89,52 +91,16 @@ class HandleShipmentCreated
         // Баланс с этой реализацией мог прийти раньше документа — связываем.
         $this->linkOverdueDetails($shipment, 'HandleShipmentCreated');
 
+        // v15.11.0: платежи идут своей очередью, их расшифровка регулярно
+        // приезжает раньше реализации — доклеиваем и пересчитываем оплату.
+        $this->linkPaymentAllocations($shipment, 'HandleShipmentCreated');
+
         Log::info('HandleShipmentCreated: реализация создана/обновлена', [
             'uuid' => $uuid,
             'company_id' => $companyId,
             'organization_id' => $fields['organization_id'] ?? 'не прислана',
             'warehouse_id' => $fields['warehouse_id'] ?? 'не прислан',
         ]);
-    }
-
-    /**
-     * Резолв Company + User по приоритету: contractor_uuid → tax_id + user_id.
-     *
-     * @return array{0: ?int, 1: ?int} [company_id, user_id]
-     */
-    private function resolveCompanyAndUser(?string $contractorUuid, ?string $taxId, ?string $partnerUuid): array
-    {
-        $userId = null;
-        if ($partnerUuid) {
-            $userId = User::where('erp_id', $partnerUuid)->value('id');
-        }
-
-        $company = null;
-
-        if ($contractorUuid) {
-            $company = Company::withoutGlobalScopes()
-                ->where('erp_id', $contractorUuid)
-                ->first();
-        }
-
-        if (! $company && $taxId && $userId) {
-            $company = Company::withoutGlobalScopes()
-                ->where('user_id', $userId)
-                ->where('tax_id', $taxId)
-                ->first();
-
-            if ($company && $contractorUuid && ! $company->erp_id) {
-                Company::withoutEvents(function () use ($company, $contractorUuid) {
-                    $company->update(['erp_id' => $contractorUuid]);
-                });
-            }
-        }
-
-        if ($company) {
-            return [$company->id, $company->user_id ?? $userId];
-        }
-
-        return [null, $userId];
     }
 
     /**

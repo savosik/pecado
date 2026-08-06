@@ -9,7 +9,7 @@ import {
     Text,
     VStack,
 } from '@chakra-ui/react';
-import { LuArrowLeft, LuExternalLink, LuFileText, LuTruck } from 'react-icons/lu';
+import { LuArrowLeft, LuExternalLink, LuFileText, LuReceipt, LuTruck } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
@@ -38,8 +38,12 @@ export default function Show() {
     const { document, client } = usePage().props;
 
     const isOrder = document.type === 'order';
-    const palette = isOrder ? 'blue' : 'green';
-    const Icon = isOrder ? LuFileText : LuTruck;
+    const isPayment = document.type === 'payment';
+    const palette = isPayment ? 'purple' : (isOrder ? 'blue' : 'green');
+    const Icon = isPayment ? LuReceipt : (isOrder ? LuFileText : LuTruck);
+    const typeLabel = isPayment
+        ? 'Платёж клиента'
+        : (isOrder ? 'Заказ клиента' : 'Реализация клиента');
 
     return (
         <>
@@ -47,7 +51,7 @@ export default function Show() {
 
             <PageHeader
                 title={document.title}
-                description={isOrder ? 'Заказ клиента' : 'Реализация клиента'}
+                description={typeLabel}
                 actions={(
                     <HStack gap={2}>
                         {client && (
@@ -95,6 +99,27 @@ export default function Show() {
                     </HStack>
                 </Box>
 
+                {/* Плитки итогов есть только у платежа: у заказа и реализации
+                    одна сумма, и отдельный блок под неё был бы шумом. */}
+                {document.summary?.length > 0 && (
+                    <SimpleGrid columns={{ base: 1, md: document.summary.length }} gap={3}>
+                        {document.summary.map((tile) => (
+                            <Card.Root key={tile.label}>
+                                <Card.Body>
+                                    <Text fontSize="xs" color="fg.muted" mb={1}>{tile.label}</Text>
+                                    <Text
+                                        fontSize="lg"
+                                        fontWeight="700"
+                                        color={{ positive: 'green.fg', warning: 'orange.fg' }[tile.tone]}
+                                    >
+                                        {tile.value}
+                                    </Text>
+                                </Card.Body>
+                            </Card.Root>
+                        ))}
+                    </SimpleGrid>
+                )}
+
                 <Card.Root>
                     <Card.Body>
                         <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
@@ -140,23 +165,110 @@ export default function Show() {
                     </Card.Body>
                 </Card.Root>
 
+                {/* Реквизиты платёжного поручения. Пропа нет у заказов
+                    и реализаций — блок для них просто не рисуется. */}
+                {document.details?.length > 0 && (
+                    <Card.Root>
+                        <Card.Header>
+                            <Text fontWeight="semibold">Реквизиты документа</Text>
+                        </Card.Header>
+                        <Card.Body>
+                            <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
+                                {document.details.map((detail) => (
+                                    <InfoRow key={detail.label} label={detail.label} value={detail.value} />
+                                ))}
+                            </SimpleGrid>
+                        </Card.Body>
+                    </Card.Root>
+                )}
+
+                {/* Оплата реализации: чем закрыта и сколько осталось. */}
+                {document.payment_summary && (
+                    <Card.Root>
+                        <Card.Header>
+                            <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                                <Text fontWeight="semibold">Оплата</Text>
+                                <Badge
+                                    colorPalette={{
+                                        paid: 'green', partial: 'orange', overpaid: 'purple', unpaid: 'gray',
+                                    }[document.payment_summary.status] || 'gray'}
+                                    variant="subtle"
+                                >
+                                    {document.payment_summary.status_label}
+                                </Badge>
+                            </HStack>
+                        </Card.Header>
+                        <Card.Body>
+                            <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} mb={document.payments?.length ? 4 : 0}>
+                                <InfoRow label="Сумма реализации" value={document.payment_summary.total_label} />
+                                <InfoRow label="Оплачено" value={document.payment_summary.paid_label} />
+                                <InfoRow label="Остаток к оплате" value={document.payment_summary.unpaid_label} />
+                            </SimpleGrid>
+
+                            {document.payments?.length > 0 ? (
+                                <VStack align="stretch" gap={2}>
+                                    {document.payments.map((payment) => (
+                                        <HStack
+                                            key={payment.id}
+                                            justify="space-between"
+                                            borderWidth="1px"
+                                            borderColor="border.muted"
+                                            borderRadius="md"
+                                            px={3}
+                                            py={2}
+                                            _hover={{ bg: 'bg.muted' }}
+                                        >
+                                            <HStack gap={3} flexWrap="wrap">
+                                                <Text fontSize="sm" fontWeight="600">
+                                                    Платёж №{payment.number || payment.id}
+                                                </Text>
+                                                <Text fontSize="xs" color="fg.muted">{payment.date_label}</Text>
+                                                <Badge
+                                                    colorPalette={payment.direction === 'out' ? 'red' : 'green'}
+                                                    variant="subtle"
+                                                >
+                                                    {payment.direction_label}
+                                                </Badge>
+                                                <Text fontSize="sm">{payment.amount_label}</Text>
+                                            </HStack>
+                                            <Button size="xs" variant="ghost" onClick={() => router.visit(payment.url)}>
+                                                Открыть
+                                            </Button>
+                                        </HStack>
+                                    ))}
+                                </VStack>
+                            ) : (
+                                <Text fontSize="sm" color="fg.muted">
+                                    Платежей по этой реализации пока нет.
+                                </Text>
+                            )}
+                        </Card.Body>
+                    </Card.Root>
+                )}
+
                 <Card.Root>
                     <Card.Header>
-                        <Text fontWeight="semibold">Позиции · {document.items.length}</Text>
+                        <Text fontWeight="semibold">
+                            {document.items_title || 'Позиции'} · {document.items.length}
+                        </Text>
                     </Card.Header>
                     <Card.Body>
                         {document.items.length === 0 ? (
-                            <Text fontSize="sm" color="fg.muted">Позиций нет.</Text>
+                            <Text fontSize="sm" color="fg.muted">
+                                {isPayment
+                                    ? 'Платёж не разнесён по реализациям — вся сумма числится авансом.'
+                                    : 'Позиций нет.'}
+                            </Text>
                         ) : (
                             <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" overflowX="auto">
                                 <Table.Root size="sm" variant="line">
                                     <Table.Header>
                                         <Table.Row>
-                                            <Table.ColumnHeader>Товар</Table.ColumnHeader>
-                                            <Table.ColumnHeader>Артикул</Table.ColumnHeader>
-                                            <Table.ColumnHeader textAlign="end">Кол-во</Table.ColumnHeader>
-                                            <Table.ColumnHeader textAlign="end">Цена</Table.ColumnHeader>
-                                            <Table.ColumnHeader textAlign="end">Сумма</Table.ColumnHeader>
+                                            <Table.ColumnHeader>{isPayment ? 'Документ' : 'Товар'}</Table.ColumnHeader>
+                                            <Table.ColumnHeader>{isPayment ? 'UUID в 1С' : 'Артикул'}</Table.ColumnHeader>
+                                            {!isPayment && <Table.ColumnHeader textAlign="end">Кол-во</Table.ColumnHeader>}
+                                            <Table.ColumnHeader textAlign="end">{isPayment ? 'Сумма документа' : 'Цена'}</Table.ColumnHeader>
+                                            <Table.ColumnHeader textAlign="end">{isPayment ? 'Разнесено' : 'Сумма'}</Table.ColumnHeader>
                                         </Table.Row>
                                     </Table.Header>
                                     <Table.Body>
@@ -173,9 +285,11 @@ export default function Show() {
                                                         {item.sku || '—'}
                                                     </Text>
                                                 </Table.Cell>
-                                                <Table.Cell textAlign="end">
-                                                    <Text fontSize="sm">{item.quantity}</Text>
-                                                </Table.Cell>
+                                                {!isPayment && (
+                                                    <Table.Cell textAlign="end">
+                                                        <Text fontSize="sm">{item.quantity}</Text>
+                                                    </Table.Cell>
+                                                )}
                                                 <Table.Cell textAlign="end">
                                                     <Text fontSize="sm" whiteSpace="nowrap">{item.price_label}</Text>
                                                 </Table.Cell>
@@ -197,7 +311,9 @@ export default function Show() {
                     <Card.Root>
                         <Card.Header>
                             <Text fontWeight="semibold">
-                                {isOrder ? 'Реализации по этому заказу' : 'Заказы, по которым сделана отгрузка'}
+                                {isPayment
+                                    ? 'Реализации, на которые разнесён платёж'
+                                    : (isOrder ? 'Реализации по этому заказу' : 'Заказы, по которым сделана отгрузка')}
                             </Text>
                         </Card.Header>
                         <Card.Body>

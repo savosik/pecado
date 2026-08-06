@@ -2,17 +2,19 @@
 
 namespace App\Services\Erp\Handlers;
 
-use App\Models\Company;
 use App\Models\Product;
 use App\Models\Shipment;
-use App\Models\User;
 use App\Services\Erp\Support\LinksOverdueDetailsToShipment;
+use App\Services\Erp\Support\LinksPaymentAllocationsToShipment;
+use App\Services\Erp\Support\ResolvesContractorParty;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
 use Illuminate\Support\Facades\Log;
 
 class HandleShipmentUpdated
 {
     use LinksOverdueDetailsToShipment;
+    use LinksPaymentAllocationsToShipment;
+    use ResolvesContractorParty;
     use ResolvesDocumentOrganization;
 
     /**
@@ -110,50 +112,13 @@ class HandleShipmentUpdated
         // до появления FK или баланс обновился между created и updated).
         $this->linkOverdueDetails($shipment, 'HandleShipmentUpdated');
 
+        // v15.11.0: та же страховка для расшифровки платежей.
+        $this->linkPaymentAllocations($shipment, 'HandleShipmentUpdated');
+
         Log::info('HandleShipmentUpdated: реализация обновлена', [
             'uuid' => $uuid,
             'status' => $payload['status'] ?? 'не изменён',
         ]);
-    }
-
-    /**
-     * Резолв Company + User по приоритету: contractor_uuid → tax_id + user_id.
-     *
-     * @return array{0: ?int, 1: ?int} [company_id, user_id]
-     */
-    private function resolveCompanyAndUser(?string $contractorUuid, ?string $taxId, ?string $partnerUuid): array
-    {
-        $userId = null;
-        if ($partnerUuid) {
-            $userId = User::where('erp_id', $partnerUuid)->value('id');
-        }
-
-        $company = null;
-
-        if ($contractorUuid) {
-            $company = Company::withoutGlobalScopes()
-                ->where('erp_id', $contractorUuid)
-                ->first();
-        }
-
-        if (! $company && $taxId && $userId) {
-            $company = Company::withoutGlobalScopes()
-                ->where('user_id', $userId)
-                ->where('tax_id', $taxId)
-                ->first();
-
-            if ($company && $contractorUuid && ! $company->erp_id) {
-                Company::withoutEvents(function () use ($company, $contractorUuid) {
-                    $company->update(['erp_id' => $contractorUuid]);
-                });
-            }
-        }
-
-        if ($company) {
-            return [$company->id, $company->user_id ?? $userId];
-        }
-
-        return [null, $userId];
     }
 
     /**

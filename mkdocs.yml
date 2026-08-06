@@ -60,6 +60,7 @@ nav:
     - Заказы: rules/orders.md
     - Возвраты: rules/returns.md
     - Реализации: rules/shipments.md
+    - Платежи: rules/payments.md
     - Баланс: rules/balances.md
     - Организации (наши юрлица): rules/organizations.md
     - Индивидуальные цены: rules/individual-prices.md

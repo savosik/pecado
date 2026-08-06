@@ -60,6 +60,10 @@ class RolesAndPermissionsSeeder extends Seeder
         'organizations' => ['view', 'create', 'edit', 'delete'],
         'currencies' => ['view', 'create', 'edit', 'delete'],
         'contractor-balances' => ['view', 'create', 'edit', 'delete'],
+        // Платежи из 1С: реквизиты только для чтения, мастер — учётная система.
+        // edit — локальные поля (комментарий, вложения), delete — мягкое удаление
+        // и восстановление.
+        'payments' => ['view', 'edit', 'delete'],
         'individual-prices' => ['view', 'create', 'edit', 'delete'],
 
         // Контент
@@ -172,6 +176,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'organizations' => 'Организации (наши юрлица)',
         'currencies' => 'Валюты',
         'contractor-balances' => 'Балансы контрагентов',
+        'payments' => 'Платежи (из 1С)',
         'individual-prices' => 'Инд. цены',
         'articles' => 'Статьи',
         'brand-stories' => 'О брендах',
@@ -233,6 +238,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 'orders', 'carts', 'returns', 'shipments',
                 'favorites', 'wishlist', 'supplier-preorders',
+                // Финансовые документы менеджер только смотрит
+                'payments' => ['view'],
                 // CRM: свои клиенты (те, что закреплены за его карточкой менеджера)
                 'crm-dashboard', 'crm-clients', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds',
             ],

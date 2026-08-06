@@ -9,7 +9,7 @@ import CollapsibleFilterCard from '../Products/filters/CollapsibleFilterCard';
 import {
     LuLayoutDashboard, LuShoppingBag, LuShoppingCart,
     LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin,
-    LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuLayoutGrid, LuWrench, LuCode,
+    LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuReceipt, LuLayoutGrid, LuWrench, LuCode,
     LuChartPie, LuMessageSquare, LuArrowRightLeft,
 } from 'react-icons/lu';
 
@@ -27,6 +27,7 @@ const menuGroups = [
             { href: '/cabinet/orders', label: 'Мои заказы', icon: LuShoppingBag },
             { href: '/cabinet/order-changes', label: 'Изменения заказов', icon: LuArrowRightLeft },
             { href: '/cabinet/shipments', label: 'Отгрузки', icon: LuTruck },
+            { href: '/cabinet/payments', label: 'Оплаты', icon: LuReceipt },
             { href: '/cabinet/returns', label: 'Возвраты', icon: LuRotateCcw },
             { href: '/cabinet/carts', label: 'Мои корзины', icon: LuShoppingCart },
         ],

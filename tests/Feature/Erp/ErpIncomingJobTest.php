@@ -2949,4 +2949,91 @@ class ErpIncomingJobTest extends TestCase
         $this->assertStringContainsString('29УТ-009892', (string) $logged->error_message);
         $this->assertStringContainsString('order.created', (string) $logged->error_message);
     }
+
+    /**
+     * US-17: платежи маршрутизируются по полю event, а не по имени очереди —
+     * makeJob подставляет erp_in.partners, и это ничего не меняет.
+     */
+    #[Test]
+    public function payment_created_is_routed_to_handler_through_job(): void
+    {
+        $shipment = \App\Models\Shipment::factory()->create([
+            'currency_code' => 'RUB',
+            'total_amount' => 2325.20,
+        ]);
+
+        $job = $this->makeJob([
+            'event' => 'payment.created',
+            'message_id' => 'msg-payment-001',
+            'uuid' => '00000000-0000-4000-b000-0000000000f1',
+            'number' => '29УТ-002488',
+            'date' => '2026-07-30T23:59:59+03:00',
+            'direction' => 'in',
+            'contractor_uuid' => '00000000-0000-4000-b000-0000000000f2',
+            'amount' => 2325.20,
+            'currency_code' => 'RUB',
+            'allocations' => [
+                ['shipment_uuid' => $shipment->uuid, 'amount' => 2325.20],
+            ],
+        ]);
+        $job->fire();
+
+        $this->assertDatabaseHas('payments', [
+            'uuid' => '00000000-0000-4000-b000-0000000000f1',
+            'number' => '29УТ-002488',
+        ]);
+        $this->assertSame('paid', $shipment->fresh()->payment_status);
+    }
+
+    /**
+     * US-17: идемпотентность по message_id — повтор не задваивает разнесение.
+     */
+    #[Test]
+    public function duplicate_payment_message_is_ignored_by_idempotency(): void
+    {
+        ErpProcessedMessage::create([
+            'message_id' => 'msg-payment-dup',
+            'event' => 'payment.created',
+            'processed_at' => now(),
+        ]);
+
+        $job = $this->makeJob([
+            'event' => 'payment.created',
+            'message_id' => 'msg-payment-dup',
+            'uuid' => '00000000-0000-4000-b000-0000000000f3',
+            'number' => '29УТ-002489',
+            'date' => '2026-07-30T23:59:59+03:00',
+            'contractor_uuid' => '00000000-0000-4000-b000-0000000000f2',
+            'amount' => 100.00,
+        ]);
+        $job->fire();
+
+        $this->assertDatabaseMissing('payments', ['uuid' => '00000000-0000-4000-b000-0000000000f3']);
+    }
+
+    /**
+     * US-17: невалидный payload (нет обязательного number) не создаёт платёж
+     * и помечается failed в логе шины — повтор такого сообщения не поможет.
+     */
+    #[Test]
+    public function invalid_payment_payload_is_logged_as_failed(): void
+    {
+        config(['erp.bus_logging_enabled' => true]);
+
+        $job = $this->makeJob([
+            'event' => 'payment.created',
+            'message_id' => 'msg-payment-invalid',
+            'uuid' => '00000000-0000-4000-b000-0000000000f4',
+            'date' => '2026-07-30T23:59:59+03:00',
+            'contractor_uuid' => '00000000-0000-4000-b000-0000000000f2',
+            'amount' => 100.00,
+        ]);
+        $job->fire();
+
+        $this->assertDatabaseMissing('payments', ['uuid' => '00000000-0000-4000-b000-0000000000f4']);
+
+        $logged = ErpBusMessage::where('message_id', 'msg-payment-invalid')->first();
+        $this->assertNotNull($logged, 'Сообщение обязано попасть в лог шины');
+        $this->assertSame('failed', $logged->status);
+    }
 }

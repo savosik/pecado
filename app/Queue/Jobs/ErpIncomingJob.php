@@ -21,6 +21,9 @@ use App\Services\Erp\Handlers\HandleOrderUpdated;
 use App\Services\Erp\Handlers\HandlePartnerCreated;
 use App\Services\Erp\Handlers\HandlePartnerDeleted;
 use App\Services\Erp\Handlers\HandlePartnerUpdated;
+use App\Services\Erp\Handlers\HandlePaymentCreated;
+use App\Services\Erp\Handlers\HandlePaymentDeleted;
+use App\Services\Erp\Handlers\HandlePaymentUpdated;
 use App\Services\Erp\Handlers\HandlePriceUpdated;
 use App\Services\Erp\Handlers\HandleProductCreated;
 use App\Services\Erp\Handlers\HandleProductUpdated;
@@ -89,6 +92,10 @@ class ErpIncomingJob extends BaseJob
         'promotion.created' => HandlePromotionCreated::class,
         'promotion.updated' => HandlePromotionUpdated::class,
         'promotion.deleted' => HandlePromotionDeleted::class,
+        // US-17: Платежи
+        'payment.created' => HandlePaymentCreated::class,
+        'payment.updated' => HandlePaymentUpdated::class,
+        'payment.deleted' => HandlePaymentDeleted::class,
     ];
 
     /**

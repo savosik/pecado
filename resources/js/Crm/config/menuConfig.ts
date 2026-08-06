@@ -9,6 +9,7 @@ import {
     LuLightbulb,
     LuFileText,
     LuTruck,
+    LuReceipt,
     LuKeyRound,
     LuSprout,
 } from "react-icons/lu";
@@ -57,6 +58,7 @@ export const menuConfig: MenuGroup[] = [
         items: [
             { label: "Заказы", icon: LuFileText, path: "/crm/orders", permission: "crm-clients.view" },
             { label: "Реализации", icon: LuTruck, path: "/crm/shipments", permission: "crm-clients.view" },
+            { label: "Платежи", icon: LuReceipt, path: "/crm/payments", permission: "crm-clients.view" },
         ],
     },
 ];

@@ -69,6 +69,11 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/orders/{order}', [DocumentController::class, 'order'])
             ->name('orders.show')
             ->whereNumber('order');
+        Route::get('/payments', [DocumentController::class, 'payments'])->name('payments.index');
+        Route::get('/payments/export', [DocumentController::class, 'paymentsExport'])->name('payments.export');
+        Route::get('/payments/{payment}', [DocumentController::class, 'payment'])
+            ->name('payments.show')
+            ->whereNumber('payment');
         Route::get('/shipments/{shipment}', [DocumentController::class, 'shipment'])
             ->name('shipments.show')
             ->whereNumber('shipment');

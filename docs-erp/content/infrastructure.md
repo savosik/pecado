@@ -21,6 +21,7 @@
 | `erp_in.orders` | `order.*` | `order.created`, `order.updated`, `order.deleted` |
 | `erp_in.returns` | `return.*` | `return.updated`, `return.deleted` |
 | `erp_in.documents` | `shipment.*` | `shipment.created`, `shipment.updated`, `shipment.deleted` |
+| `erp_in.payments` | `payment.*` | `payment.created`, `payment.updated`, `payment.deleted` |
 | `erp_in.balance` | `balance.*` | `balance.updated` |
 | `erp_in.catalog` | `category.*`, `product.*` | Каталог и номенклатура |
 | `erp_in.promotions` | `promotion.*` | `promotion.created`, `promotion.updated`, `promotion.deleted` |
@@ -152,6 +153,9 @@ Policy регистрируется автоматически командой 
 | `shipment.created` | 1С → Сайт | `erp.events` | `erp_in.documents` |
 | `shipment.updated` | 1С → Сайт | `erp.events` | `erp_in.documents` |
 | `shipment.deleted` | 1С → Сайт | `erp.events` | `erp_in.documents` |
+| `payment.created` | 1С → Сайт | `erp.events` | `erp_in.payments` |
+| `payment.updated` | 1С → Сайт | `erp.events` | `erp_in.payments` |
+| `payment.deleted` | 1С → Сайт | `erp.events` | `erp_in.payments` |
 | `balance.updated` | 1С → Сайт | `erp.events` | `erp_in.balance` |
 | `category.created` | 1С → Сайт | `erp.events` | `erp_in.catalog` |
 | `category.updated` | 1С → Сайт | `erp.events` | `erp_in.catalog` |

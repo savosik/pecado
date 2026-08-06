@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 15.9.0
+  version: 15.11.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -207,6 +207,31 @@ channels:
         is: queue
         queue:
           name: erp_in.documents
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+
+  erpInPayments:
+    address: erp_in.payments
+    title: Платежи (1С → Сайт)
+    description: |
+      Очередь для платёжных документов: поступления оплаты от клиентов и возвраты
+      оплаты клиентам, вместе с расшифровкой платежа по реализациям.
+      Routing key: `payment.*`
+    messages:
+      paymentCreated:
+        $ref: '#/components/messages/PaymentCreated'
+      paymentUpdated:
+        $ref: '#/components/messages/PaymentUpdated'
+      paymentDeleted:
+        $ref: '#/components/messages/PaymentDeleted'
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.payments
           durable: true
           autoDelete: false
         bindingVersion: 0.3.0
@@ -894,6 +919,71 @@ operations:
       - name: US-10
       - name: shipments
 
+  # ── US-17: Платежи ─────────────────────────
+  receivePaymentCreated:
+    title: Создание платежа
+    summary: 1С отправляет платёжный документ при первом проведении
+    description: |
+      Обработчик: `HandlePaymentCreated`
+
+      Один платёж может быть разнесён на несколько реализаций, и одна реализация
+      закрывается несколькими платежами. Разнесение приходит массивом `allocations`
+      внутри самого сообщения.
+
+      Платёж без `allocations` легитимен — он показывается как нераспределённый аванс.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPayments'
+    messages:
+      - $ref: '#/channels/erpInPayments/messages/paymentCreated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-17
+      - name: payments
+
+  receivePaymentUpdated:
+    title: Обновление платежа
+    summary: 1С обновляет платёж при перепроведении или изменении расшифровки
+    description: |
+      Обработчик: `HandlePaymentUpdated`
+
+      Разнесение заменяется целиком содержимым `allocations`. Отсутствие ключа
+      и пустой массив означают разное: ключа нет — сайт не трогает сохранённое
+      разнесение, пустой массив — очищает его полностью.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPayments'
+    messages:
+      - $ref: '#/channels/erpInPayments/messages/paymentUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-17
+      - name: payments
+
+  receivePaymentDeleted:
+    title: Удаление платежа
+    summary: 1С отменяет проведение платёжного документа
+    description: |
+      Обработчик: `HandlePaymentDeleted`
+
+      Платёж помечается удалённым, оплата связанных реализаций пересчитывается.
+      Строки расшифровки сохраняются — повторное проведение вернёт разнесение как было.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPayments'
+    messages:
+      - $ref: '#/channels/erpInPayments/messages/paymentDeleted'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-17
+      - name: payments
+
   # ── US-11: Баланс ──────────────────────────
   receiveBalanceUpdated:
     title: Обновление баланса
@@ -1333,6 +1423,36 @@ components:
         - $ref: '#/components/messageTraits/erpEnvelope'
       payload:
         $ref: '#/components/schemas/ShipmentDeletedPayload'
+
+    # ── US-17: payment.created ───────────────
+    PaymentCreated:
+      name: payment.created
+      title: Платёж создан
+      summary: Первое проведение платёжного документа в 1С
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/PaymentCreatedPayload'
+
+    # ── US-17: payment.updated ───────────────
+    PaymentUpdated:
+      name: payment.updated
+      title: Платёж обновлён
+      summary: Перепроведение платежа или изменение расшифровки
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/PaymentUpdatedPayload'
+
+    # ── US-17: payment.deleted ───────────────
+    PaymentDeleted:
+      name: payment.deleted
+      title: Платёж удалён
+      summary: Отмена проведения платёжного документа
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/PaymentDeletedPayload'
 
     # ── US-11: balance.updated ───────────────
     BalanceUpdated:
@@ -3093,6 +3213,381 @@ components:
             $ref: '#/components/schemas/ShipmentItem'
 
     # ── US-11: Баланс ────────────────────────
+    # ── US-17: Платежи ───────────────────────
+    PaymentBankAccount:
+      type: object
+      description: |
+        Банковский счёт в платёжном документе — наш или плательщика. Справка для сотрудника
+        и клиента: сайт показывает её как есть и связей по ней не строит.
+
+        Не путать с `BankAccount` — там полные реквизиты счёта из справочника контрагентов.
+      properties:
+        number:
+          type:
+            - string
+            - 'null'
+          description: Номер счёта.
+          examples:
+            - '2693'
+        bank_name:
+          type:
+            - string
+            - 'null'
+          description: Наименование банка.
+          examples:
+            - 'ПАО СБЕРБАНК'
+
+    PaymentAllocation:
+      type: object
+      description: |
+        Строка табличной части «Расшифровка платежа» — сумма, разнесённая на один документ.
+
+        Связь строится по `shipment_uuid`, а не по номеру: реализация может ещё не приехать
+        на сайт, и тогда строка сохраняется без привязки, а связь доклеивается при получении
+        `shipment.created`.
+      required:
+        - shipment_uuid
+        - amount
+      properties:
+        shipment_uuid:
+          $ref: '#/components/schemas/UUID'
+        order_uuid:
+          description: UUID заказа, если 1С указала его в строке расшифровки. Справочная связь.
+          oneOf:
+            - $ref: '#/components/schemas/UUID'
+            - type: 'null'
+        shipment_number:
+          type:
+            - string
+            - 'null'
+          description: Номер реализации. Только для диагностики и логов — связь по нему сайт не строит.
+          examples:
+            - '29УТ-003413'
+        target_type:
+          type:
+            - string
+            - 'null'
+          enum:
+            - shipment
+            - null
+          description: |
+            Тип документа расшифровки. Сейчас поддерживается только `shipment`;
+            поле заведено на вырост. Строки с другим значением сайт пропускает
+            и пишет предупреждение в лог.
+        amount:
+          type: number
+          minimum: 0
+          description: Сумма, разнесённая на этот документ, в валюте платежа. Всегда положительная — знак определяет `direction` платежа.
+          examples:
+            - 1200.00
+        line_number:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+          description: Номер строки в табличной части. Сохраняет порядок показа.
+
+    PaymentCreatedPayload:
+      type: object
+      description: |
+        Платёжный документ из 1С: поступление оплаты от клиента или возврат оплаты клиенту
+        (банк или касса). Онлайн-эквайринг сайта по этой очереди не передаётся.
+      required:
+        - event
+        - message_id
+        - uuid
+        - contractor_uuid
+        - tax_id
+        - number
+        - date
+        - direction
+        - amount
+        - currency_code
+        - allocations
+      properties:
+        event:
+          type: string
+          const: payment.created
+        message_id:
+          type: string
+          examples:
+            - 'msg-payment-p1a2b3c4'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        number:
+          type: string
+          minLength: 1
+          description: "Номер документа в 1С. Не уникален: номера повторяются между организациями и годами, поэтому связь строится только по uuid."
+          examples:
+            - '29УТ-002488'
+        date:
+          type: string
+          format: date-time
+          description: "Дата и время документа в 1С. Время значимо: порядок платежей внутри дня определяет, каким из них закрыта реализация."
+          examples:
+            - '2026-07-30T23:59:59+03:00'
+        direction:
+          type: string
+          enum:
+            - in
+            - out
+          description: "Направление движения денег: `in` — поступление оплаты от клиента, `out` — возврат оплаты клиенту. Присылайте явно: выводить направление из текста операции сайт не будет."
+        operation_code:
+          type:
+            - string
+            - 'null'
+          description: "Машинный код операции 1С латиницей: `customer_payment`, `customer_refund`. Нужен вместо разбора русского наименования — оно меняется вместе с настройками учёта."
+          examples:
+            - 'customer_payment'
+        operation_name:
+          type:
+            - string
+            - 'null'
+          description: "Наименование операции как в 1С. Показывается сотрудникам как есть, в логике не участвует."
+          examples:
+            - 'Поступление оплаты от клиента'
+        document_type:
+          type:
+            - string
+            - 'null'
+          description: "Тип документа 1С. Только для показа."
+          examples:
+            - 'Платежное поручение'
+        contractor_uuid:
+          type: string
+          format: uuid
+          description: "UUID контрагента-плательщика (Company.erp_id на сайте). Приоритетный способ матчинга; fallback на tax_id работает только в паре с partner_uuid. Сохраняется на сайте всегда, даже если контрагент ещё не приехал."
+        partner_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: "UUID партнёра-владельца. Настоятельно рекомендуется: без него платёж не привяжется к пользователю сайта и клиент не увидит свою оплату в личном кабинете."
+        tax_id:
+          type: string
+          description: "Налоговый идентификатор плательщика (ИНН / УНП / БИН) на момент проведения документа."
+          examples:
+            - '7710140679'
+        amount:
+          type: number
+          minimum: 0
+          description: "Сумма документа в валюте документа. Всегда положительная — знак определяет `direction`."
+          examples:
+            - 2325.20
+        currency_code:
+          $ref: '#/components/schemas/CurrencyCode'
+        organization:
+          $ref: '#/components/schemas/DocumentOrganization'
+        organization_account:
+          $ref: '#/components/schemas/PaymentBankAccount'
+        payer_account:
+          $ref: '#/components/schemas/PaymentBankAccount'
+        bank_number:
+          type:
+            - string
+            - 'null'
+          description: "Номер документа по банку. Отличается от номера в 1С — по нему клиенты ищут платёж в своей выписке."
+          examples:
+            - '9202'
+        bank_date:
+          type:
+            - string
+            - 'null'
+          format: date
+          description: Дата документа по банку.
+        bank_confirmed:
+          type:
+            - boolean
+            - 'null'
+          description: Флаг «Проведено банком» из 1С.
+        bank_confirmed_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: Дата проведения банком.
+        uip:
+          type:
+            - string
+            - 'null'
+          description: "УИП — уникальный идентификатор платежа. Значение «0» означает, что УИП не присвоен, и сохраняется как есть."
+        purpose:
+          type:
+            - string
+            - 'null'
+          description: Назначение платежа из платёжного поручения.
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: "Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ)."
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: "Аудит-метка: дата-время последнего изменения документа в 1С (ISO-8601 с TZ)."
+        allocations:
+          type: array
+          description: |
+            Расшифровка платежа. Присылается целиком: сайт заменяет всё разнесение
+            платежа содержимым этого массива.
+
+            Пустой массив допустим — платёж целиком станет нераспределённым авансом.
+          items:
+            $ref: '#/components/schemas/PaymentAllocation'
+
+    PaymentUpdatedPayload:
+      type: object
+      description: |
+        Перепроведение платежа в 1С. Структура совпадает с `PaymentCreatedPayload`;
+        отличается значением `event` и правилом обработки `allocations`.
+
+        **Отсутствие ключа `allocations` и пустой массив означают разное.** Ключа нет —
+        сайт не трогает сохранённое разнесение (используйте, когда меняется только шапка).
+        Пустой массив — сайт очищает разнесение полностью, платёж становится авансом.
+
+        Если платежа с таким `uuid` на сайте нет, он будет создан из этого payload:
+        потерянный `payment.created` означал бы потерянные деньги в отчётах.
+      required:
+        - event
+        - message_id
+        - uuid
+        - contractor_uuid
+        - tax_id
+        - number
+        - date
+        - direction
+        - amount
+        - currency_code
+      properties:
+        event:
+          type: string
+          const: payment.updated
+        message_id:
+          type: string
+          examples:
+            - 'msg-payment-p1a2b3c4'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        number:
+          type: string
+          minLength: 1
+          examples:
+            - '29УТ-002488'
+        date:
+          type: string
+          format: date-time
+          examples:
+            - '2026-07-30T23:59:59+03:00'
+        direction:
+          type: string
+          enum:
+            - in
+            - out
+        operation_code:
+          type:
+            - string
+            - 'null'
+        operation_name:
+          type:
+            - string
+            - 'null'
+        document_type:
+          type:
+            - string
+            - 'null'
+        contractor_uuid:
+          type: string
+          format: uuid
+        partner_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        tax_id:
+          type: string
+        amount:
+          type: number
+          minimum: 0
+        currency_code:
+          $ref: '#/components/schemas/CurrencyCode'
+        organization:
+          $ref: '#/components/schemas/DocumentOrganization'
+        organization_account:
+          $ref: '#/components/schemas/PaymentBankAccount'
+        payer_account:
+          $ref: '#/components/schemas/PaymentBankAccount'
+        bank_number:
+          type:
+            - string
+            - 'null'
+        bank_date:
+          type:
+            - string
+            - 'null'
+          format: date
+        bank_confirmed:
+          type:
+            - boolean
+            - 'null'
+        bank_confirmed_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        uip:
+          type:
+            - string
+            - 'null'
+        purpose:
+          type:
+            - string
+            - 'null'
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        allocations:
+          type: array
+          description: |
+            Разнесение целиком. Ключ отсутствует — сайт сохраняет текущее разнесение
+            без изменений; пустой массив — очищает его.
+          items:
+            $ref: '#/components/schemas/PaymentAllocation'
+
+    PaymentDeletedPayload:
+      type: object
+      description: |
+        Отмена проведения платёжного документа. Сайт помечает платёж удалённым
+        и пересчитывает оплату связанных реализаций. Строки расшифровки сохраняются:
+        повторное проведение того же документа вернёт разнесение как было.
+      required:
+        - event
+        - message_id
+        - uuid
+      properties:
+        event:
+          type: string
+          const: payment.deleted
+          description: Тип события
+        message_id:
+          type: string
+          description: Уникальный ID сообщения для идемпотентности
+        uuid:
+          $ref: '#/components/schemas/UUID'
+      examples:
+        - event: payment.deleted
+          message_id: msg-payment-del-p1a2b3c4
+          uuid: p1a2b3c4-d5e6-7890-abcd-ef1234567890
+
     OverdueDetail:
       type: object
       properties:

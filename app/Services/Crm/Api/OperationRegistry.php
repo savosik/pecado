@@ -18,6 +18,7 @@ use App\Services\Crm\Api\Operations\ClientOperations;
 use App\Services\Crm\Api\Operations\CommentOperations;
 use App\Services\Crm\Api\Operations\EmailOperations;
 use App\Services\Crm\Api\Operations\OpportunityOperations;
+use App\Services\Crm\Api\Operations\PaymentOperations;
 use App\Services\Crm\Api\Operations\PlanOperations;
 use App\Services\Crm\Api\Operations\ProfileOperations;
 use App\Services\Crm\Api\Operations\TaskOperations;
@@ -50,6 +51,7 @@ class OperationRegistry
         'plans' => 'Планы продаж',
         'opportunities' => 'Возможности',
         'attachments' => 'Вложения',
+        'payments' => 'Платежи',
     ];
 
     /** @var list<Operation>|null */
@@ -70,6 +72,7 @@ class OperationRegistry
             $this->plans(),
             $this->opportunities(),
             $this->attachments(),
+            $this->payments(),
         );
     }
 
@@ -122,6 +125,71 @@ class OperationRegistry
     /**
      * @return list<Operation>
      */
+    /**
+     * Платежи из 1С. Только чтение: реквизиты и разнесение ведёт учётная система.
+     *
+     * @return list<Operation>
+     */
+    private function payments(): array
+    {
+        return [
+            new Operation(
+                id: 'payment.list',
+                section: 'payments',
+                method: 'GET',
+                uri: 'payments',
+                permission: 'crm-clients.view',
+                summary: 'Платежи клиентов: поступления и возвраты с разнесением по отгрузкам',
+                description: 'Состав ограничен скоупом актора. Направление передавайте явно: '
+                    .'`in` — поступление от клиента, `out` — возврат клиенту, и суммировать их '
+                    .'вместе нельзя. `only_unallocated` отбирает висящие авансы — деньги, '
+                    .'которые клиент заплатил, но которые не привязаны ни к одной отгрузке.',
+                params: [
+                    Param::integer('client_id', 'Клиент — платежи только по нему', rules: ['min:1']),
+                    Param::string('direction', 'Направление платежа', enum: ['in', 'out']),
+                    Param::string('date_from', 'Дата платежа с (Y-m-d)', rules: ['date_format:Y-m-d']),
+                    Param::string('date_to', 'Дата платежа по (Y-m-d)', rules: ['date_format:Y-m-d']),
+                    Param::boolean('only_unallocated', 'Только платежи с нераспределённым остатком (авансы)'),
+                    Param::integer('per_page', 'Платежей на странице (до 100)', rules: ['min:1', 'max:100']),
+                    Param::integer('page', 'Номер страницы', rules: ['min:1']),
+                ],
+                handler: [PaymentOperations::class, 'list'],
+            ),
+            new Operation(
+                id: 'payment.unpaid-shipments',
+                section: 'payments',
+                method: 'GET',
+                uri: 'payments/unpaid-shipments',
+                permission: 'crm-clients.view',
+                summary: 'Неоплаченные и частично оплаченные отгрузки',
+                description: 'Готовый ответ на «что клиент нам должен»: сумма отгрузки, оплачено '
+                    .'и остаток берутся из посчитанных полей, а не собираются запросом по '
+                    .'разнесению — так возвраты не попадают в приход.',
+                params: [
+                    Param::integer('client_id', 'Клиент — отгрузки только по нему', rules: ['min:1']),
+                    Param::string('date_from', 'Дата отгрузки с (Y-m-d)', rules: ['date_format:Y-m-d']),
+                    Param::integer('per_page', 'Отгрузок на странице (до 100)', rules: ['min:1', 'max:100']),
+                    Param::integer('page', 'Номер страницы', rules: ['min:1']),
+                ],
+                handler: [PaymentOperations::class, 'unpaidShipments'],
+            ),
+            new Operation(
+                id: 'payment.show',
+                section: 'payments',
+                method: 'GET',
+                uri: 'payments/{payment}',
+                permission: 'crm-clients.view',
+                summary: 'Карточка платежа: реквизиты и расшифровка по отгрузкам',
+                description: 'Платёж вне скоупа даёт 404, а не 403. Строка расшифровки без '
+                    .'`shipment_id` — отгрузка ещё не приехала из 1С, связь доклеится позже.',
+                params: [
+                    Param::integer('payment', 'Идентификатор платежа', required: true, rules: ['min:1']),
+                ],
+                handler: [PaymentOperations::class, 'show'],
+            ),
+        ];
+    }
+
     private function clients(): array
     {
         return [

@@ -550,6 +550,18 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::delete('/shipments/{shipment}', [\App\Http\Controllers\Admin\ShipmentController::class, 'destroy'])->name('shipments.destroy')->middleware('permission:shipments.delete');
     Route::delete('/shipments/{id}/force-delete', [\App\Http\Controllers\Admin\ShipmentController::class, 'forceDestroy'])->name('shipments.force-delete')->middleware('permission:shipments.delete');
 
+    // Платежи (платёжные документы из 1С). Реквизиты только для чтения:
+    // мастер — 1С, и следующий payment.updated всё равно перезапишет правку.
+    // Редактируется лишь локальный комментарий.
+    Route::middleware('permission:payments.view')->group(function () {
+        Route::get('/payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->name('payments.index');
+        Route::get('/payments/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'show'])->name('payments.show')->whereNumber('payment');
+    });
+    Route::patch('/payments/{payment}/comment', [\App\Http\Controllers\Admin\PaymentController::class, 'updateComment'])->name('payments.comment')->middleware('permission:payments.edit')->whereNumber('payment');
+    Route::delete('/payments/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'destroy'])->name('payments.destroy')->middleware('permission:payments.delete')->whereNumber('payment');
+    Route::post('/payments/{id}/restore', [\App\Http\Controllers\Admin\PaymentController::class, 'restore'])->name('payments.restore')->middleware('permission:payments.delete')->whereNumber('id');
+    Route::delete('/payments/{id}/force-delete', [\App\Http\Controllers\Admin\PaymentController::class, 'forceDestroy'])->name('payments.force-delete')->middleware('permission:payments.delete')->whereNumber('id');
+
     // Избранное
     Route::middleware('permission:favorites.view')->group(function () {
         Route::get('/favorites', [\App\Http\Controllers\Admin\FavoriteController::class, 'index'])->name('favorites.index');

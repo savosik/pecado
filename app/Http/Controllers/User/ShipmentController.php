@@ -81,6 +81,13 @@ class ShipmentController extends Controller
                 'currency_code' => $shipment->currency_code,
                 'total_amount' => $shipment->total_amount,
                 'total_converted' => $totalConverted,
+                // Оплата — денормализованные поля, их ведёт PaymentAllocationService.
+                // Считать на лету нельзя: экспорт идёт cursor()-ом, а фильтр —
+                // по колонке.
+                'payment_status' => $shipment->payment_status,
+                'payment_status_label' => $shipment->payment_status_label,
+                'paid_amount' => (float) $shipment->paid_amount,
+                'unpaid_amount' => $shipment->unpaid_amount,
                 'items_count' => $shipment->items->count(),
                 'company' => $shipment->company ? [
                     'id' => $shipment->company->id,
@@ -100,6 +107,7 @@ class ShipmentController extends Controller
             'filters' => [
                 'search' => $search,
                 'status' => $context['selected_statuses'],
+                'payment_status' => $context['payment_statuses'],
                 'order_uuid' => $context['order_uuid'] ?: null,
                 'brand_ids' => $context['brand_ids'],
                 'date_from' => $context['date_from'],
@@ -115,6 +123,12 @@ class ShipmentController extends Controller
                 array_keys(self::STATUS_LABELS),
                 self::STATUS_LABELS
             ),
+            'paymentStatuses' => [
+                ['value' => Shipment::PAYMENT_UNPAID, 'label' => 'Не оплачена'],
+                ['value' => Shipment::PAYMENT_PARTIAL, 'label' => 'Оплачена частично'],
+                ['value' => Shipment::PAYMENT_PAID, 'label' => 'Оплачена'],
+                ['value' => Shipment::PAYMENT_OVERPAID, 'label' => 'Переплата'],
+            ],
             'exportEnabled' => (bool) config('search-cabinet.export'),
             'suggestion' => $suggestion,
         ]);
@@ -168,7 +182,8 @@ class ShipmentController extends Controller
         $headers = array_merge(
             ['Номер', 'Статус', 'Дата отгрузки', 'Контрагент'],
             $withSeller ? ['Продавец'] : [],
-            ['Позиций', 'Сумма', 'Валюта', 'Сумма в валюте кабинета'],
+            ['Позиций', 'Сумма', 'Валюта', 'Сумма в валюте кабинета',
+                'Статус оплаты', 'Оплачено', 'Остаток к оплате'],
         );
 
         // with('organization') в buildIndexQuery — иначе колонка даст N+1 на выгрузке
@@ -188,6 +203,9 @@ class ShipmentController extends Controller
                         round((float) $shipment->total_amount, 2),
                         $shipment->currency_code ?? 'RUB',
                         round((float) $totalConverted, 2),
+                        $shipment->payment_status_label,
+                        round((float) $shipment->paid_amount, 2),
+                        round($shipment->unpaid_amount, 2),
                     ],
                 );
             }
@@ -281,6 +299,16 @@ class ShipmentController extends Controller
             $query->whereHas('items.product', fn ($p) => $p->whereIn('brand_id', $brandIds));
         }
 
+        // Статус оплаты (v15.11.0) — мультивыбор по индексу
+        // shipments_user_payment_status_index.
+        $paymentStatuses = array_values(array_intersect(
+            array_map('strval', (array) $request->input('payment_status', [])),
+            Shipment::PAYMENT_STATUSES,
+        ));
+        if (count($paymentStatuses) > 0) {
+            $query->whereIn('payment_status', $paymentStatuses);
+        }
+
         // Фильтр по дате
         if ($dateFrom = $request->input('date_from')) {
             $query->whereDate('date', '>=', $dateFrom);
@@ -314,6 +342,7 @@ class ShipmentController extends Controller
         return [$query, [
             'search' => $search,
             'selected_statuses' => $selectedStatuses,
+            'payment_statuses' => $paymentStatuses,
             'order_uuid' => $orderUuid,
             'brand_ids' => $brandIds,
             'date_from' => $dateFrom,
@@ -379,6 +408,10 @@ class ShipmentController extends Controller
 
         $ordersByUuid = $relatedOrders->keyBy('uuid');
 
+        // Платежи, разнесённые на эту реализацию. Загружаем отдельно, а не
+        // через with() выше: связь нужна только на карточке.
+        $shipment->load(['paymentAllocations.payment:id,number,date,direction,currency_code']);
+
         return Inertia::render('User/Cabinet/Shipments/Show', [
             'shipment' => [
                 'id' => $shipment->id,
@@ -391,6 +424,27 @@ class ShipmentController extends Controller
                 'currency_code' => $shipment->currency_code,
                 'total_amount' => $shipment->total_amount,
                 'total_converted' => $totalConverted,
+                'payment_status' => $shipment->payment_status,
+                'payment_status_label' => $shipment->payment_status_label,
+                'paid_amount' => (float) $shipment->paid_amount,
+                'unpaid_amount' => $shipment->unpaid_amount,
+                'payments' => $shipment->paymentAllocations
+                    ->filter(fn ($allocation) => $allocation->payment !== null)
+                    ->sortByDesc(fn ($allocation) => $allocation->payment->date)
+                    ->values()
+                    ->map(fn ($allocation) => [
+                        'id' => $allocation->payment->id,
+                        'number' => $allocation->payment->number,
+                        'date' => $allocation->payment->date?->format('d.m.Y'),
+                        'direction' => $allocation->payment->direction,
+                        'direction_label' => $allocation->payment->direction === 'out' ? 'Возврат' : 'Поступление',
+                        'amount' => (float) $allocation->amount,
+                        'amount_converted' => $this->convertAmount(
+                            (float) $allocation->amount,
+                            $allocation->payment->currency_code,
+                            $currency,
+                        ),
+                    ])->all(),
                 'company' => $shipment->company ? [
                     'id' => $shipment->company->id,
                     'name' => $shipment->company->name,

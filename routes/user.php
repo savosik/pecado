@@ -234,6 +234,12 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/shipments/{shipment}/items/export', [ShipmentController::class, 'exportItems'])->name('shipments.items.export');
     Route::get('/shipments/{shipment}', [ShipmentController::class, 'show'])->name('shipments.show');
 
+    // Оплаты (платёжные документы из 1С). Только чтение: платёж заводит 1С.
+    // export строго до /{payment}, иначе «export» уйдёт в биндинг модели.
+    Route::get('/payments', [\App\Http\Controllers\User\PaymentController::class, 'index'])->name('payments.index');
+    Route::get('/payments/export', [\App\Http\Controllers\User\PaymentController::class, 'export'])->name('payments.export');
+    Route::get('/payments/{payment}', [\App\Http\Controllers\User\PaymentController::class, 'show'])->name('payments.show')->whereNumber('payment');
+
     // Мои вопросы (FAQ)
     Route::get('/questions', [CabinetQuestionsController::class, 'index'])->name('questions.index');
     Route::get('/questions/{question}', [CabinetQuestionsController::class, 'show'])->name('questions.show');

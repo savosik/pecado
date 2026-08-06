@@ -7,6 +7,7 @@ use App\Models\CrmComment;
 use App\Models\CrmEmail;
 use App\Models\CrmTask;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\Shipment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -30,6 +31,8 @@ final class CrmEntityMap
 
     public const SHIPMENT = 'shipment';
 
+    public const PAYMENT = 'payment';
+
     public const COMMENT = 'comment';
 
     public const TASK = 'task';
@@ -47,6 +50,7 @@ final class CrmEntityMap
         self::CLIENT => User::class,
         self::ORDER => Order::class,
         self::SHIPMENT => Shipment::class,
+        self::PAYMENT => Payment::class,
         self::COMMENT => CrmComment::class,
         self::TASK => CrmTask::class,
         self::EMAIL => CrmEmail::class,
@@ -62,6 +66,7 @@ final class CrmEntityMap
         self::CLIENT => 'Клиент',
         self::ORDER => 'Заказ',
         self::SHIPMENT => 'Реализация',
+        self::PAYMENT => 'Платёж',
         self::COMMENT => 'Комментарий',
         self::TASK => 'Задача',
         self::EMAIL => 'Письмо',
@@ -154,7 +159,7 @@ final class CrmEntityMap
     {
         $clientId = match (self::typeOf($entity)) {
             self::CLIENT => $entity->getKey(),
-            self::ORDER, self::SHIPMENT => $entity->getAttribute('user_id'),
+            self::ORDER, self::SHIPMENT, self::PAYMENT => $entity->getAttribute('user_id'),
             // Комментарий и задача уже знают своего клиента — денормализация из crm-01.
             self::COMMENT, self::TASK, self::EMAIL, self::CALL => $entity->getAttribute('client_user_id'),
             default => null,
@@ -201,6 +206,7 @@ final class CrmEntityMap
             self::CLIENT => (string) ($entity->getAttribute('name') ?: 'Клиент №'.$entity->getKey()),
             self::ORDER => 'Заказ №'.($entity->getAttribute('number') ?: $entity->getKey()),
             self::SHIPMENT => 'Реализация №'.($entity->getAttribute('number') ?: $entity->getKey()),
+            self::PAYMENT => 'Платёж №'.($entity->getAttribute('number') ?: $entity->getKey()),
             self::COMMENT => 'Комментарий от '.($entity->getAttribute('created_at')?->format('d.m.Y H:i') ?? '—'),
             self::TASK => (string) $entity->getAttribute('title'),
             self::EMAIL => 'Письмо: '.$entity->getAttribute('subject'),
@@ -240,6 +246,7 @@ final class CrmEntityMap
         return match ($type) {
             self::ORDER => route('crm.orders.show', $entity->getKey()),
             self::SHIPMENT => route('crm.shipments.show', $entity->getKey()),
+            self::PAYMENT => route('crm.payments.show', $entity->getKey()),
             default => null,
         };
     }

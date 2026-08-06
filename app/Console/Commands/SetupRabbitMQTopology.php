@@ -67,6 +67,7 @@ class SetupRabbitMQTopology extends Command
         'erp_in.orders' => ['order.*'],
         'erp_in.returns' => ['return.*'],
         'erp_in.documents' => ['shipment.*'],
+        'erp_in.payments' => ['payment.*'],
         'erp_in.balance' => ['balance.*'],
         'erp_in.catalog' => ['category.*', 'product.*'],
         'erp_in.promotions' => ['promotion.*'],

@@ -8,6 +8,7 @@ import { ProductSelector } from '@/Admin/Components/ProductSelector';
 import { Button } from '@/components/ui/button';
 import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import { useDocumentFilters } from '@/Crm/hooks/useDocumentFilters';
 
 /**
  * Список документов 1С внутри CRM — заказы или реализации.
@@ -43,49 +44,7 @@ export default function DocumentList({
         entityLabel: 'Документ',
     });
 
-    // Пустые значения выкидываем: иначе каждый сброшенный мультивыбор оставлял бы
-    // в адресе висячий `?partner_ids=`, и ссылка на отбор переставала читаться.
-    const activeParams = (patch = {}) => Object.entries({ ...filters, ...patch }).reduce((acc, [key, value]) => {
-        const empty = Array.isArray(value)
-            ? value.length === 0
-            : value === null || value === undefined || value === '';
-
-        if (!empty) acc[key] = value;
-
-        return acc;
-    }, {});
-
-    const apply = (patch) => {
-        router.get(route(`${routeName}.index`), activeParams(patch), {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    // Выгрузка уходит обычным переходом, а не router.visit: Inertia ждёт JSON,
-    // а сервер отдаёт файл — ответ она просто не поймёт.
-    const exportXlsx = () => {
-        const query = new URLSearchParams();
-
-        Object.entries(activeParams()).forEach(([key, value]) => {
-            if (Array.isArray(value)) {
-                value.forEach((item) => query.append(`${key}[]`, item));
-            } else {
-                query.append(key, value);
-            }
-        });
-
-        window.location.href = `${route(`${routeName}.export`)}?${query.toString()}`;
-    };
-
-    const reset = () => {
-        router.get(route(`${routeName}.index`), { per_page: filters.per_page }, {
-            preserveState: false,
-            replace: true,
-        });
-    };
-
-    const selected = (key) => filters[key] ?? [];
+    const { apply, exportXlsx, reset, selected } = useDocumentFilters(routeName, filters);
 
     const hasFilters = Boolean(
         filters.search || filters.date_from || filters.date_to

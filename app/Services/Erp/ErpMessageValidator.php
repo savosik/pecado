@@ -62,6 +62,10 @@ class ErpMessageValidator
         'promotion.created' => 'promotion.created.json',
         'promotion.updated' => 'promotion.updated.json',
         'promotion.deleted' => 'promotion.deleted.json',
+        // US-17: Платежи
+        'payment.created' => 'payment.created.json',
+        'payment.updated' => 'payment.updated.json',
+        'payment.deleted' => 'payment.deleted.json',
     ];
 
     /**

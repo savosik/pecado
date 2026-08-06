@@ -29,6 +29,13 @@ function InfoBlock({ label, value, mono = false }) {
     );
 }
 
+const PAYMENT_STATUS_COLORS = {
+    unpaid: 'gray',
+    partial: 'orange',
+    paid: 'green',
+    overpaid: 'purple',
+};
+
 export default function ShipmentShow({ shipment, related_orders, overdue_detail }) {
     const { currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
@@ -141,6 +148,86 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                 </HStack>
                             </Box>
                         </HStack>
+                    </Card.Body>
+                </Card.Root>
+            )}
+
+            {/* Оплата этой отгрузки: чем закрыта и сколько осталось.
+                Суммы приходят из 1С через разнесение платежей. */}
+            {shipment.payment_status && (
+                <Card.Root bg="bg" mb={6} borderRadius="xl" border="1px solid" borderColor="border.muted">
+                    <Card.Body p={4}>
+                        <Flex justify="space-between" align="center" flexWrap="wrap" gap="2" mb="3">
+                            <Text fontWeight="700" fontSize="md">Оплата</Text>
+                            <Badge
+                                colorPalette={PAYMENT_STATUS_COLORS[shipment.payment_status] || 'gray'}
+                                variant="subtle" px="3" py="1" borderRadius="full" fontSize="sm"
+                            >
+                                {shipment.payment_status_label}
+                            </Badge>
+                        </Flex>
+
+                        <HStack gap="6" flexWrap="wrap" mb={shipment.payments?.length ? '4' : '0'}>
+                            <Box>
+                                <Text fontSize="xs" color="gray.500">Оплачено</Text>
+                                <Text fontFamily="mono" fontWeight="700">
+                                    {fmt(shipment.paid_amount)} {shipment.currency_code || currencySymbol}
+                                </Text>
+                            </Box>
+                            <Box>
+                                <Text fontSize="xs" color="gray.500">Остаток к оплате</Text>
+                                <Text
+                                    fontFamily="mono"
+                                    fontWeight="700"
+                                    color={shipment.unpaid_amount > 0 ? 'orange.600' : undefined}
+                                    _dark={shipment.unpaid_amount > 0 ? { color: 'orange.400' } : undefined}
+                                >
+                                    {fmt(shipment.unpaid_amount)} {shipment.currency_code || currencySymbol}
+                                </Text>
+                            </Box>
+                        </HStack>
+
+                        {shipment.payments?.length > 0 ? (
+                            <VStack gap="2" align="stretch">
+                                {shipment.payments.map((payment) => (
+                                    <Link key={payment.id} href={`/cabinet/payments/${payment.id}`}>
+                                        <Flex
+                                            justify="space-between"
+                                            align="center"
+                                            gap="3"
+                                            flexWrap="wrap"
+                                            border="1px solid"
+                                            borderColor="border.muted"
+                                            borderRadius="lg"
+                                            px="3"
+                                            py="2"
+                                            _hover={{ borderColor: 'pecado.200', _dark: { borderColor: 'pecado.700' } }}
+                                            transition="all 0.15s"
+                                        >
+                                            <HStack gap="3" flexWrap="wrap">
+                                                <Text fontSize="sm" fontWeight="600" fontFamily="mono">
+                                                    {payment.number || `#${payment.id}`}
+                                                </Text>
+                                                <Text fontSize="xs" color="gray.500">{payment.date}</Text>
+                                                <Badge
+                                                    colorPalette={payment.direction === 'out' ? 'red' : 'green'}
+                                                    variant="subtle" fontSize="2xs" px="1.5"
+                                                >
+                                                    {payment.direction_label}
+                                                </Badge>
+                                            </HStack>
+                                            <Text fontSize="sm" fontFamily="mono" fontWeight="600" whiteSpace="nowrap">
+                                                {fmt(payment.amount)} {shipment.currency_code || currencySymbol}
+                                            </Text>
+                                        </Flex>
+                                    </Link>
+                                ))}
+                            </VStack>
+                        ) : (
+                            <Text fontSize="sm" color="gray.500">
+                                Платежей по этой отгрузке пока нет.
+                            </Text>
+                        )}
                     </Card.Body>
                 </Card.Root>
             )}
