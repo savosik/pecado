@@ -146,7 +146,10 @@ class ClientController extends CrmController
             'lifecycle' => $canSeeProfile ? $this->lifecyclePayload($user, $profiles, $lifecycle) : null,
             'client' => [
                 'id' => $user->id,
-                'name' => $user->name,
+                // Заголовок карточки — рабочее наименование из 1С; имя из кабинета
+                // показываем рядом, только если клиент назвал себя иначе.
+                'name' => $user->display_name,
+                'personal_name' => $user->personal_name_if_differs,
                 'email' => $user->email,
                 'phone' => $user->phone,
                 // Номер без форматирования — для tel:-ссылки: из 1С он приходит

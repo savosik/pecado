@@ -112,6 +112,13 @@ export default function Index({
                         <Text fontWeight="semibold">{row.name}</Text>
                         <Text fontFamily="mono" fontSize="10px" color="fg.muted">#{row.id}</Text>
                     </HStack>
+                    {/* Имя из кабинета — только когда клиент назвал себя иначе,
+                        чем записано в карточке 1С. */}
+                    {row.personal_name && (
+                        <Text fontSize="xs" color="fg.muted">
+                            на сайте: {row.personal_name}
+                        </Text>
+                    )}
                     <ActivityHint activity={row.activity} />
                 </VStack>
             ),

@@ -57,7 +57,7 @@ class DocumentController extends CrmController
 
         $query = Order::query()
             ->whereIn('user_id', User::query()->visibleInCrm($actor)->select('users.id'))
-            ->with(['user:id,name,email', 'company:id,name', 'organization:id,name,is_stub', 'warehouse:id,name'])
+            ->with(['user:id,name,erp_name,email', 'company:id,name', 'organization:id,name,is_stub', 'warehouse:id,name'])
             ->withCount('items');
 
         if ($search = $this->search($request)) {
@@ -99,7 +99,7 @@ class DocumentController extends CrmController
             'items_count' => (int) ($order->items_count ?? 0),
             'client' => $order->user === null ? null : [
                 'id' => (int) $order->user->getKey(),
-                'name' => $order->user->name,
+                'name' => $order->user->display_name,
                 'url' => route('crm.clients.show', $order->user->getKey()),
             ],
             'organization' => $order->organization === null ? null : [
@@ -135,7 +135,7 @@ class DocumentController extends CrmController
 
         $query = Shipment::query()
             ->whereIn('user_id', User::query()->visibleInCrm($actor)->select('users.id'))
-            ->with(['user:id,name,email', 'company:id,name', 'organization:id,name,is_stub', 'warehouse:id,name'])
+            ->with(['user:id,name,erp_name,email', 'company:id,name', 'organization:id,name,is_stub', 'warehouse:id,name'])
             ->withCount('items');
 
         if ($search = $this->search($request)) {
@@ -177,7 +177,7 @@ class DocumentController extends CrmController
             'items_count' => (int) ($shipment->items_count ?? 0),
             'client' => $shipment->user === null ? null : [
                 'id' => (int) $shipment->user->getKey(),
-                'name' => $shipment->user->name,
+                'name' => $shipment->user->display_name,
                 'url' => route('crm.clients.show', $shipment->user->getKey()),
             ],
             'organization' => $shipment->organization === null ? null : [
@@ -295,7 +295,7 @@ class DocumentController extends CrmController
         $model = $this->resolver->resolveForActor($actor, CrmEntityMap::ORDER, $order);
 
         $model->load([
-            'user:id,name,email,phone,personal_manager_id',
+            'user:id,name,erp_name,email,phone,personal_manager_id',
             'company:id,name,tax_id',
             // is_stub обязателен в выборке: без него незаведённое юрлицо
             // показалось бы менеджеру голым UUID-ом вместо названия.
@@ -354,7 +354,7 @@ class DocumentController extends CrmController
         $model = $this->resolver->resolveForActor($actor, CrmEntityMap::SHIPMENT, $shipment);
 
         $model->load([
-            'user:id,name,email,phone,personal_manager_id',
+            'user:id,name,erp_name,email,phone,personal_manager_id',
             'company:id,name,tax_id',
             // is_stub обязателен в выборке: без него незаведённое юрлицо
             // показалось бы менеджеру голым UUID-ом вместо названия.
@@ -472,7 +472,8 @@ class DocumentController extends CrmController
 
         return [
             'id' => (int) $client->getKey(),
-            'name' => $client->name,
+            'name' => $client->display_name,
+            'personal_name' => $client->personal_name_if_differs,
             'email' => $client->email,
             'phone' => $client->phone,
             'url' => route('crm.clients.show', $client->getKey()),

@@ -29,6 +29,9 @@ class UserController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
+                    // Рабочее наименование из 1С: клиент мог переименовать себя
+                    // в кабинете, а искать его продолжают по карточке партнёра.
+                    ->orWhere('erp_name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%");
             });
@@ -159,6 +162,7 @@ class UserController extends Controller
                 'user_kind_label' => $user->user_kind->label(),
                 'comment' => $user->comment,
                 'erp_id' => $user->erp_id,
+                'erp_name' => $user->erp_name,
                 'is_subscribed' => $user->is_subscribed,
                 'created_at' => $user->created_at?->format('d.m.Y H:i'),
                 'updated_at' => $user->updated_at?->format('d.m.Y H:i'),

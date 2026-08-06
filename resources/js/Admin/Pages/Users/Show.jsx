@@ -50,6 +50,9 @@ export default function Show() {
                         <SimpleGrid columns={{ base: 2, md: 3 }} gap={4}>
                             <InfoRow label="ID" value={user.id?.toString()} />
                             <InfoRow label="Имя" value={user.name} />
+                            {/* Наименование карточки в 1С: правится только там,
+                                на сайте — для чтения. */}
+                            <InfoRow label="Рабочее наименование (1С)" value={user.erp_name} />
                             <InfoRow label="Email" value={user.email} />
                             <InfoRow label="Телефон" value={user.phone} />
                             <InfoRow label="Страна" value={user.country} />

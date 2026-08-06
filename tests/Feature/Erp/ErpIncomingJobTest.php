@@ -86,6 +86,43 @@ class ErpIncomingJobTest extends TestCase
     }
 
     #[Test]
+    public function partner_updated_via_incoming_queue_fills_working_name_only(): void
+    {
+        // Полный проход через шину: валидация payload по JSON Schema, маршрутизация
+        // в HandlePartnerUpdated и запись атрибутов. Проверяем, что наименование
+        // из 1С садится в рабочее поле, а имя из кабинета переживает сообщение.
+        $user = User::factory()->create([
+            'email' => 'renamed-partner@example.com',
+            'erp_id' => '00000000-0000-4000-a000-000000000099',
+            'name' => 'Как я себя назвал',
+            'erp_name' => 'ООО «Ромашка»',
+        ]);
+
+        $job = $this->makeJob([
+            'event' => 'partner.updated',
+            'uuid' => '00000000-0000-4000-a000-000000000099',
+            'login' => 'renamed-partner@example.com',
+            'name' => 'ООО «Ромашка» (Иванов И.И.)',
+            'email' => 'renamed-partner@example.com',
+            'city' => 'Тюмень',
+            'message_id' => 'msg-partner-upd-name',
+            'timestamp' => now()->toIso8601String(),
+        ]);
+
+        $job->fire();
+
+        $user->refresh();
+
+        $this->assertEquals('ООО «Ромашка» (Иванов И.И.)', $user->erp_name);
+        $this->assertEquals('Как я себя назвал', $user->name);
+        $this->assertEquals('Тюмень', $user->city);
+        $this->assertDatabaseHas('erp_processed_messages', [
+            'message_id' => 'msg-partner-upd-name',
+            'event' => 'partner.updated',
+        ]);
+    }
+
+    #[Test]
     public function partner_deleted_blocks_user_through_job(): void
     {
         $user = User::factory()->create([

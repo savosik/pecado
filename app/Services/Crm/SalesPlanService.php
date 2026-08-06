@@ -291,12 +291,13 @@ class SalesPlanService
 
         $query = User::query()
             ->visibleInCrm($actor)
-            ->select('id', 'name', 'email', 'personal_manager_id')
+            ->select('id', 'name', 'erp_name', 'email', 'personal_manager_id')
             ->with('personalManager:id,name');
 
         if ($search = trim((string) ($filters['search'] ?? ''))) {
             $query->where(fn (Builder $inner) => $inner
                 ->where('name', 'like', "%{$search}%")
+                ->orWhere('erp_name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%"));
         }
 
@@ -345,7 +346,7 @@ class SalesPlanService
 
         return [
             'id' => $id,
-            'name' => $client->name,
+            'name' => $client->display_name,
             'manager' => $client->personalManager?->name,
             'amount' => isset($plans[$id]) ? $plans[$id]->amountValue() : null,
             'previous_amount' => isset($previous[$id]) ? $previous[$id]->amountValue() : null,

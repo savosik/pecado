@@ -75,14 +75,14 @@ class ClientProfileController extends CrmController
         $lifecycle->changeKind($user, $kind, $this->crmActor($request), $request->validated('reason'));
 
         if ($kind->belongsInCrm()) {
-            return back()->with('success', "{$user->name} снова в клиентской базе отдела");
+            return back()->with('success', "{$user->display_name} снова в клиентской базе отдела");
         }
 
         // Возвращаться некуда: карточка клиента, с которой пришёл запрос, для
         // не-клиента отдаёт 404.
         return redirect()
             ->route('crm.clients.index')
-            ->with('success', "{$user->name}: тип аккаунта — {$kind->label()}. Аккаунт убран из клиентской базы отдела.");
+            ->with('success', "{$user->display_name}: тип аккаунта — {$kind->label()}. Аккаунт убран из клиентской базы отдела.");
     }
 
     /**

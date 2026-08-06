@@ -29,11 +29,11 @@ class PlanScopeResolver
         $target = PlanTarget::tryFrom((string) $type) ?? PlanTarget::DEPARTMENT;
 
         if ($target === PlanTarget::CLIENT && $scopeId !== null) {
-            $client = User::query()->visibleInCrm($actor)->whereKey($scopeId)->first(['id', 'name']);
+            $client = User::query()->visibleInCrm($actor)->whereKey($scopeId)->first(['id', 'name', 'erp_name']);
 
             return $client === null
                 ? PlanScope::empty()
-                : PlanScope::client((int) $client->getKey(), (string) $client->name);
+                : PlanScope::client((int) $client->getKey(), (string) $client->display_name);
         }
 
         if ($target === PlanTarget::MANAGER || ! $seesAll) {

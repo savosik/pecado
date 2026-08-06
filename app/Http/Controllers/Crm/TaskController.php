@@ -155,17 +155,18 @@ class TaskController extends CrmController
     {
         return User::query()
             ->visibleInCrm($actor)
-            ->select('id', 'name', 'email')
+            ->select('id', 'name', 'erp_name', 'email')
             ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $inner) => $inner
                 ->where('name', 'like', "%{$search}%")
+                ->orWhere('erp_name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%")
                 ->orWhere('phone', 'like', "%{$search}%")))
-            ->orderBy('name')
+            ->orderByRaw("COALESCE(NULLIF(erp_name, ''), name)")
             ->take(20)
             ->get()
             ->map(fn (User $client): array => [
                 'id' => (int) $client->getKey(),
-                'label' => (string) $client->name,
+                'label' => (string) $client->display_name,
                 'sublabel' => $client->email,
             ])
             ->all();
@@ -192,7 +193,7 @@ class TaskController extends CrmController
             ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $inner) => $inner
                 ->where('number', 'like', "%{$search}%")
                 ->orWhere('erp_number', 'like', "%{$search}%")))
-            ->with('user:id,name')
+            ->with('user:id,name,erp_name')
             ->latest('id')
             ->take(20)
             ->get()
@@ -204,7 +205,7 @@ class TaskController extends CrmController
                 return [
                     'id' => (int) $document->getKey(),
                     'label' => $label.' №'.($document->getAttribute('number') ?: $document->getKey()),
-                    'sublabel' => $client instanceof User ? (string) $client->name : null,
+                    'sublabel' => $client instanceof User ? (string) $client->display_name : null,
                 ];
             })
             ->all();

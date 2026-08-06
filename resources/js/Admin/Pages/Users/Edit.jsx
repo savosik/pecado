@@ -97,6 +97,18 @@ export default function Edit({ user, regions, countries, statuses, userKinds, av
                                         onChange={(e) => setData('name', e.target.value)}
                                     />
                                 </FormField>
+
+                                {/* Наименование карточки партнёра в 1С. Мастер — 1С,
+                                    правка здесь всё равно уехала бы при следующем
+                                    partner.updated, поэтому поле только для чтения. */}
+                                {user.erp_name && (
+                                    <FormField
+                                        label="Рабочее наименование (из 1С)"
+                                        helpText="Приходит из 1С, на сайте не редактируется"
+                                    >
+                                        <Input value={user.erp_name} readOnly disabled />
+                                    </FormField>
+                                )}
                             </SimpleGrid>
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>

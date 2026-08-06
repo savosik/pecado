@@ -54,7 +54,9 @@ export default function Show() {
             <Head title={`CRM — ${client.name}`} />
             <PageHeader
                 title={client.name}
-                description="Карточка клиента"
+                description={client.personal_name
+                    ? `Карточка клиента · на сайте назвался «${client.personal_name}»`
+                    : 'Карточка клиента'}
                 actions={(
                     <HStack gap={2}>
                         {can('crm-emails.create') && (
@@ -95,6 +97,11 @@ export default function Show() {
                         <AccordionItemContent>
                             <SimpleGrid columns={{ base: 2, md: 4 }} gap={4} pb={2}>
                                 <InfoRow label="ID" value={client.id?.toString()} />
+                                {/* Заголовок карточки — рабочее наименование из 1С,
+                                    здесь показываем имя, которое клиент задал сам. */}
+                                {client.personal_name && (
+                                    <InfoRow label="Имя на сайте" value={client.personal_name} />
+                                )}
                                 <InfoRow label="Email" value={client.email} />
                                 <InfoRow label="Телефон" value={client.phone} />
                                 <InfoRow label="Город" value={client.city} />

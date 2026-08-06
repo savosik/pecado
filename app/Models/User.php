@@ -36,6 +36,7 @@ use Spatie\Tags\HasTags;
  * @property UserStatus $status
  * @property UserKind $user_kind
  * @property string|null $erp_id
+ * @property string|null $erp_name
  * @property string|null $view_token
  * @property int|null $region_id
  * @property int|null $currency_id
@@ -82,6 +83,8 @@ use Spatie\Tags\HasTags;
  * @property-read int|null $search_histories_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\SocialAccount> $socialAccounts
  * @property-read int|null $social_accounts_count
+ * @property-read mixed $display_name
+ * @property-read mixed $personal_name_if_differs
  * @property-read mixed $status_label
  * @property-read mixed $temporary_password
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \Laravel\Sanctum\PersonalAccessToken> $tokens
@@ -183,6 +186,36 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
+     * Имя, под которым клиента знает отдел продаж.
+     *
+     * Менеджеры сличают отчёты сайта и 1С по рабочему наименованию карточки
+     * партнёра, а `name` клиент правит в кабинете как хочет. Поэтому везде, где
+     * страницу читает сотрудник (CRM, админка), подписью идёт `erp_name`, и
+     * только у партнёров без карточки в 1С остаётся то имя, что ввёл сам клиент.
+     */
+    protected function displayName(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => filled($this->erp_name) ? $this->erp_name : $this->name,
+        );
+    }
+
+    /**
+     * Личное имя — только когда оно расходится с рабочим наименованием.
+     *
+     * Показывать «Иванов (Иванов)» незачем: второй строкой в CRM имя выводится
+     * ровно тогда, когда клиент назвал себя иначе, чем записано в 1С.
+     */
+    protected function personalNameIfDiffers(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => filled($this->erp_name) && trim((string) $this->erp_name) !== trim((string) $this->name)
+                ? $this->name
+                : null,
+        );
+    }
+
+    /**
      * E-mail всегда храним в нижнем регистре (с trim).
      *
      * Иначе temporary_password (crc32 от email) расходится с паролем, который
@@ -226,6 +259,7 @@ class User extends Authenticatable implements HasMedia
         'password',
         'must_change_password',
         'erp_id',
+        'erp_name',
         'view_token',
         'region_id',
         'client_status_id',

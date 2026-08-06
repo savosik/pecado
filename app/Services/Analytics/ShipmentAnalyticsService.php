@@ -556,7 +556,7 @@ class ShipmentAnalyticsService
             ->leftJoin('users', 'users.id', '=', 'shipments.user_id')
             ->whereNull('shipments.deleted_at')
             ->whereIn('shipments.user_id', $ctx->userIds)
-            ->select('users.id', 'users.name', 'users.email')
+            ->select('users.id', 'users.email', DB::raw("COALESCE(NULLIF(users.erp_name, ''), users.name) as name"))
             ->distinct()
             ->get()
             ->map(fn ($u) => [

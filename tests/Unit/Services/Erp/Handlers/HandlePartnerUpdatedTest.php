@@ -48,7 +48,9 @@ class HandlePartnerUpdatedTest extends TestCase
 
         $user->refresh();
 
-        $this->assertEquals('Новое Имя', $user->name);
+        // Наименование из 1С — в рабочее поле; личное имя клиента не трогаем.
+        $this->assertEquals('Новое Имя', $user->erp_name);
+        $this->assertEquals('Old Name', $user->name);
         $this->assertEquals('+79999999999', $user->phone);
         $this->assertEquals('Екатеринбург', $user->city);
     }
@@ -75,7 +77,8 @@ class HandlePartnerUpdatedTest extends TestCase
 
         $user->refresh();
 
-        $this->assertEquals('Updated Name', $user->name);
+        $this->assertEquals('Updated Name', $user->erp_name);
+        $this->assertEquals('Original Name', $user->name);
         $this->assertEquals('+70001111111', $user->phone);
         $this->assertEquals('Москва', $user->city);
     }
@@ -106,7 +109,7 @@ class HandlePartnerUpdatedTest extends TestCase
         $user->refresh();
 
         $this->assertEquals('new-erp-uuid-1234', $user->erp_id);
-        $this->assertEquals('Updated Name', $user->name);
+        $this->assertEquals('Updated Name', $user->erp_name);
         $this->assertEquals(UserStatus::ACTIVE, $user->status);
     }
 
@@ -130,7 +133,7 @@ class HandlePartnerUpdatedTest extends TestCase
         $user->refresh();
 
         $this->assertEquals('uuid-email-lookup', $user->erp_id);
-        $this->assertEquals('Found By Email', $user->name);
+        $this->assertEquals('Found By Email', $user->erp_name);
     }
 
     // ──────────────────────────────────────────────
@@ -514,6 +517,61 @@ class HandlePartnerUpdatedTest extends TestCase
         $user->refresh();
 
         $this->assertSame(UserKind::STAFF, $user->user_kind);
-        $this->assertEquals('Закупщик Иванов', $user->name);
+        $this->assertEquals('Закупщик Иванов', $user->erp_name);
+    }
+
+    // ──────────────────────────────────────────────
+    // Рабочее наименование и личное имя (v15.10)
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function it_keeps_name_edited_by_client_in_cabinet(): void
+    {
+        // Ровно тот случай, ради которого поле заведено: клиент переименовал
+        // себя в кабинете, а 1С продолжает слать наименование карточки.
+        $user = User::factory()->create([
+            'email' => 'renamed@example.com',
+            'erp_id' => 'uuid-renamed',
+            'name' => 'Как я себя назвал',
+            'erp_name' => 'ООО «Ромашка» (Иванов)',
+        ]);
+
+        $handler = new HandlePartnerUpdated;
+        $handler->handle([
+            'event' => 'partner.updated',
+            'message_id' => 'msg-upd-rename',
+            'uuid' => 'uuid-renamed',
+            'name' => 'ООО «Ромашка» (Иванов И.И.)',
+        ]);
+
+        $user->refresh();
+
+        $this->assertEquals('Как я себя назвал', $user->name);
+        $this->assertEquals('ООО «Ромашка» (Иванов И.И.)', $user->erp_name);
+    }
+
+    #[Test]
+    public function it_keeps_erp_name_when_payload_has_no_name(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'noname@example.com',
+            'erp_id' => 'uuid-no-name',
+            'name' => 'Личное имя',
+            'erp_name' => 'Рабочее наименование',
+        ]);
+
+        $handler = new HandlePartnerUpdated;
+        $handler->handle([
+            'event' => 'partner.updated',
+            'message_id' => 'msg-upd-no-name',
+            'uuid' => 'uuid-no-name',
+            'city' => 'Тюмень',
+        ]);
+
+        $user->refresh();
+
+        $this->assertEquals('Рабочее наименование', $user->erp_name);
+        $this->assertEquals('Личное имя', $user->name);
+        $this->assertEquals('Тюмень', $user->city);
     }
 }

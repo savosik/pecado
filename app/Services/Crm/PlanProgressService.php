@@ -12,6 +12,7 @@ use App\Services\Analytics\ShipmentAnalyticsService;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Выполнение месячных планов: сводка, прогноз, burndown и разрез по менеджерам.
@@ -218,8 +219,8 @@ class PlanProgressService
         }
 
         $names = $query
-            ->select('users.id', 'users.name', 'users.email')
-            ->pluck('users.name', 'users.id');
+            ->select('users.id', 'users.email', DB::raw("COALESCE(NULLIF(users.erp_name, ''), users.name) as name"))
+            ->pluck('name', 'id');
 
         $rows = [];
 

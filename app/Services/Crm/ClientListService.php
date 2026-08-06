@@ -124,6 +124,9 @@ class ClientListService
 
         $query->where(function (Builder $inner) use ($search, $like, $seesAll, $actorId): void {
             $inner->where('users.name', 'like', $like)
+                // Рабочее наименование ищется наравне с именем: менеджер копирует
+                // его из отчёта 1С, а не вспоминает, как клиент подписался сам.
+                ->orWhere('users.erp_name', 'like', $like)
                 ->orWhere('users.email', 'like', $like);
 
             // Телефон нормализуем с обеих сторон: в базе номера приходят из 1С
@@ -332,6 +335,14 @@ class ClientListService
             return;
         }
 
+        if ($filters->sortBy === 'name') {
+            // Сортируем по тому, что видно в колонке: у партнёра из 1С это
+            // рабочее наименование, у зарегистрировавшегося на сайте — его имя.
+            $query->orderByRaw('COALESCE(NULLIF(users.erp_name, \'\'), users.name) '.$direction);
+
+            return;
+        }
+
         $query->orderBy('users.'.$filters->sortBy, $direction);
     }
 
@@ -518,7 +529,11 @@ class ClientListService
 
         return [
             'id' => (int) $client->getKey(),
-            'name' => $client->name,
+            // Подпись строки — рабочее наименование из 1С: по нему менеджеры
+            // сличают списки сайта и 1С. Личное имя идёт отдельным полем и
+            // показывается, только когда клиент переименовал себя в кабинете.
+            'name' => $client->display_name,
+            'personal_name' => $client->personal_name_if_differs,
             'email' => $client->email,
             'phone' => $client->phone,
             // Номер для tel:-ссылки: в базе он приходит из 1С в произвольном формате.

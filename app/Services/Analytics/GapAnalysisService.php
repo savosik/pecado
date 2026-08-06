@@ -371,7 +371,7 @@ class GapAnalysisService
             $rows = DB::table('users')
                 ->leftJoin('personal_managers as pm', 'pm.id', '=', 'users.personal_manager_id')
                 ->whereIn('users.id', $ids)
-                ->select('users.id', 'users.name', 'users.email', 'pm.id as manager_id', 'pm.name as manager_name')
+                ->select('users.id', 'users.email', DB::raw("COALESCE(NULLIF(users.erp_name, ''), users.name) as name"), 'pm.id as manager_id', 'pm.name as manager_name')
                 ->get();
 
             $map = [];

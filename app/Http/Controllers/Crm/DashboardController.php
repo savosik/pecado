@@ -67,13 +67,13 @@ class DashboardController extends CrmController
             'uncovered_count' => $uncoveredCount,
             'covered_percent' => $total === 0 ? null : (int) round(($total - $uncoveredCount) / $total * 100),
             'examples' => $uncovered
-                ->select('id', 'name')
+                ->select('id', 'name', 'erp_name')
                 ->orderBy('name')
                 ->take(5)
                 ->get()
                 ->map(fn (User $client): array => [
                     'id' => (int) $client->getKey(),
-                    'name' => (string) $client->name,
+                    'name' => (string) $client->display_name,
                 ])
                 ->all(),
         ];

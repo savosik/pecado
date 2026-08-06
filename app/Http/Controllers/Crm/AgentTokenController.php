@@ -62,7 +62,7 @@ class AgentTokenController extends CrmController
 
         CrmAgentToken::issue($validated['name'], (int) $user->getKey());
 
-        return back()->with('success', "Токен для «{$user->name}» выпущен");
+        return back()->with('success', "Токен для «{$user->display_name}» выпущен");
     }
 
     /**

@@ -635,4 +635,77 @@ class HandlePartnerCreatedTest extends TestCase
         $this->assertNotNull($user);
         $this->assertEquals($minId, $user->region_id);
     }
+
+    // ──────────────────────────────────────────────
+    // Рабочее наименование и личное имя (v15.10)
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function it_fills_both_names_for_new_user(): void
+    {
+        $handler = new HandlePartnerCreated;
+        $handler->handle([
+            'event' => 'partner.created',
+            'uuid' => 'uuid-new-names',
+            'email' => 'newnames@example.com',
+            'name' => 'ООО «Ромашка» (Иванов)',
+            'password' => 'temp123',
+        ]);
+
+        $user = User::where('email', 'newnames@example.com')->first();
+
+        // Клиента у нас ещё не было — стартовое имя совпадает с наименованием.
+        $this->assertNotNull($user);
+        $this->assertEquals('ООО «Ромашка» (Иванов)', $user->name);
+        $this->assertEquals('ООО «Ромашка» (Иванов)', $user->erp_name);
+    }
+
+    #[Test]
+    public function it_keeps_personal_name_of_existing_user_found_by_erp_id(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'existing-erp@example.com',
+            'erp_id' => 'uuid-existing-erp',
+            'name' => 'Как я себя назвал',
+        ]);
+
+        $handler = new HandlePartnerCreated;
+        $handler->handle([
+            'event' => 'partner.created',
+            'uuid' => 'uuid-existing-erp',
+            'email' => 'existing-erp@example.com',
+            'name' => 'ООО «Ромашка» (Иванов)',
+        ]);
+
+        $user->refresh();
+
+        $this->assertEquals('Как я себя назвал', $user->name);
+        $this->assertEquals('ООО «Ромашка» (Иванов)', $user->erp_name);
+    }
+
+    #[Test]
+    public function it_fills_erp_name_when_binding_by_email(): void
+    {
+        // Клиент зарегистрировался на сайте сам, 1С завела карточку под своим
+        // наименованием — имя из кабинета должно остаться за клиентом.
+        $user = User::factory()->create([
+            'email' => 'selfsignup@example.com',
+            'erp_id' => null,
+            'name' => 'Иван',
+        ]);
+
+        $handler = new HandlePartnerCreated;
+        $handler->handle([
+            'event' => 'partner.created',
+            'uuid' => 'uuid-bind-name',
+            'email' => 'selfsignup@example.com',
+            'name' => 'ИП Иванов Иван Иванович',
+        ]);
+
+        $user->refresh();
+
+        $this->assertEquals('uuid-bind-name', $user->erp_id);
+        $this->assertEquals('Иван', $user->name);
+        $this->assertEquals('ИП Иванов Иван Иванович', $user->erp_name);
+    }
 }

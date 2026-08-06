@@ -72,9 +72,12 @@ class HandlePartnerCreated
         $user = User::where('erp_id', $uuid)->first();
 
         if ($user) {
-            User::withoutEvents(function () use ($user, $uuid, $city, $country, $phone, $userStatus, $clientStatusId, $personalManagerId) {
+            User::withoutEvents(function () use ($user, $uuid, $name, $city, $country, $phone, $userStatus, $clientStatusId, $personalManagerId) {
                 $updateData = array_filter([
                     'erp_id' => $uuid,
+                    // Рабочее наименование обновляем, личное `name` — нет: им
+                    // распоряжается клиент из кабинета.
+                    'erp_name' => $name,
                     'status' => $userStatus,
                     'city' => $city,
                     'country' => $country,
@@ -108,11 +111,17 @@ class HandlePartnerCreated
         $user = User::where('email', $login)->first();
 
         if ($user) {
-            User::withoutEvents(function () use ($user, $uuid, $userStatus, $clientStatusId, $personalManagerId) {
+            User::withoutEvents(function () use ($user, $uuid, $name, $userStatus, $clientStatusId, $personalManagerId) {
                 $updateData = [
                     'erp_id' => $uuid,
                     'status' => $userStatus,
                 ];
+
+                // Карточка из 1С привязалась к аккаунту, зарегистрированному на
+                // сайте: наименование берём, имя оставляем клиенту.
+                if ($name !== null) {
+                    $updateData['erp_name'] = $name;
+                }
 
                 if ($clientStatusId !== false) {
                     $updateData['client_status_id'] = $clientStatusId;
@@ -150,7 +159,10 @@ class HandlePartnerCreated
         $defaultRegionId = Region::defaultId();
 
         $createData = [
+            // Клиента у нас ещё не было — стартовое имя и рабочее наименование
+            // совпадают; дальше они расходятся, если клиент переименует себя.
             'name' => $name ?? $login,
+            'erp_name' => $name,
             'city' => $city,
             'country' => $country,
             'email' => $email,

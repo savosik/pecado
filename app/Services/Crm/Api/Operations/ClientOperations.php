@@ -71,7 +71,7 @@ class ClientOperations
 
         $card = [
             'id' => (int) $client->getKey(),
-            'name' => $client->name,
+            'name' => $client->display_name,
             'email' => $client->email,
             'phone' => $client->phone,
             'manager' => $client->personalManager?->name,

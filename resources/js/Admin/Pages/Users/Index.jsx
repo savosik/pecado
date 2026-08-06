@@ -95,6 +95,15 @@ export default function Index({ users, filters, statuses, statusCounts, userKind
             ),
         },
         {
+            key: 'erp_name',
+            label: 'Рабочее наименование',
+            // Наименование карточки партнёра в 1С. Совпадает с ФИО, пока клиент
+            // не переименовал себя в кабинете, — тогда и расходится.
+            render: (erpName) => erpName
+                ? <Text fontSize="sm">{erpName}</Text>
+                : <Text fontSize="sm" color="fg.muted">—</Text>,
+        },
+        {
             key: 'phone',
             label: 'Телефон',
             render: (phone) => phone || '—',

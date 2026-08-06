@@ -539,7 +539,9 @@ class OpportunityService
             ->whereIn('users.id', $ids)
             ->select(
                 'users.id',
-                'users.name',
+                // Подпись клиента в CRM — рабочее наименование из 1С; личное имя
+                // подставляем, только когда карточки в 1С нет.
+                DB::raw("COALESCE(NULLIF(users.erp_name, ''), users.name) as name"),
                 'users.email',
                 'users.phone',
                 'users.created_at',
