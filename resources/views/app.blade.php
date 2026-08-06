@@ -98,6 +98,17 @@
             </script>
             <noscript><div><img src="https://mc.yandex.ru/watch/109735102" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
             <!-- /Yandex.Metrika counter -->
+
+            <!-- Google tag (gtag.js) -->
+            <script async src="https://www.googletagmanager.com/gtag/js?id=G-R8WPGNCEN0"></script>
+            <script>
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+
+                gtag('config', 'G-R8WPGNCEN0');
+            </script>
+            <!-- /Google tag (gtag.js) -->
         @endproduction
     </head>
     <body class="font-sans antialiased">
