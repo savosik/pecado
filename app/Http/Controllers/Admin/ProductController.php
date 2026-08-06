@@ -288,10 +288,39 @@ class ProductController extends AdminController
     }
 
     /**
+     * Приводит поле certificates к массиву id.
+     *
+     * Форма товара хранит выбранные сертификаты объектами {id, name, type, status},
+     * поэтому без нормализации правило exists:certificates,id падает на массиве.
+     */
+    private function normalizeCertificatesInput(Request $request): void
+    {
+        if (! $request->has('certificates')) {
+            return;
+        }
+
+        $certificates = $request->input('certificates');
+
+        if (! is_array($certificates)) {
+            return;
+        }
+
+        $request->merge([
+            'certificates' => collect($certificates)
+                ->map(fn ($certificate) => is_array($certificate) ? ($certificate['id'] ?? null) : $certificate)
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->values()
+                ->all(),
+        ]);
+    }
+
+    /**
      * Store a newly created product in storage.
      */
     public function store(Request $request): RedirectResponse
     {
+        $this->normalizeCertificatesInput($request);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:products,slug',
@@ -548,6 +577,8 @@ class ProductController extends AdminController
     public function update(Request $request, $id): RedirectResponse
     {
         $product = Product::withoutGlobalScope(HiddenScope::class)->findOrFail($id);
+
+        $this->normalizeCertificatesInput($request);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',

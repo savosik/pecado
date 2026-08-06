@@ -65,6 +65,8 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
 
     transform((data) => ({
         ...data,
+        // Селектор хранит сертификаты объектами, на бэкенд уходят только id
+        certificates: (data.certificates || []).map((cert) => (cert && typeof cert === 'object' ? cert.id : cert)),
         _close: closeAfterSaveRef.current ? 1 : 0,
     }));
 
