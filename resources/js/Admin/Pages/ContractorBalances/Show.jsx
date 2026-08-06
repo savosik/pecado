@@ -8,7 +8,25 @@ import { LuPencil } from 'react-icons/lu';
 
 const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export default function Show({ balance, organizationBalances = [], organizationsEnabled = false }) {
+// Подпись реализации: номер из 1С + дата документа. Часть полей может быть пустой —
+// 1С не всегда присылает номер, поэтому подпись собирается из того, что есть.
+const shipmentLabel = (shipment) => {
+    const number = shipment.erp_number || shipment.number;
+    const date = shipment.date ? new Date(shipment.date).toLocaleDateString('ru-RU') : null;
+
+    if (number && date) return `№ ${number} от ${date}`;
+    if (number) return `№ ${number}`;
+    if (date) return `Реализация от ${date}`;
+
+    return `Реализация #${shipment.id}`;
+};
+
+export default function Show({
+    balance,
+    organizationBalances = [],
+    organizationsEnabled = false,
+    canViewShipments = false,
+}) {
     const hasOverdue = parseFloat(balance.overdue_debt) > 0;
 
     return (
@@ -178,7 +196,7 @@ export default function Show({ balance, organizationBalances = [], organizations
                                 <Table.Root size="sm">
                                     <Table.Header>
                                         <Table.Row bg="bg.subtle">
-                                            <Table.ColumnHeader>UUID реализации</Table.ColumnHeader>
+                                            <Table.ColumnHeader>Реализация</Table.ColumnHeader>
                                             <Table.ColumnHeader textAlign="right">Сумма просрочки (₽)</Table.ColumnHeader>
                                             <Table.ColumnHeader textAlign="right">Дата оплаты</Table.ColumnHeader>
                                         </Table.Row>
@@ -187,9 +205,39 @@ export default function Show({ balance, organizationBalances = [], organizations
                                         {balance.overdue_details.map((detail) => (
                                             <Table.Row key={detail.id}>
                                                 <Table.Cell>
-                                                    <Text fontFamily="mono" fontSize="sm" color="gray.600">
-                                                        {detail.shipment_uuid}
-                                                    </Text>
+                                                    {detail.shipment ? (
+                                                        <VStack align="start" gap={0}>
+                                                            {canViewShipments ? (
+                                                                <Link href={route('admin.shipments.show', detail.shipment.id)}>
+                                                                    <Text
+                                                                        fontSize="sm"
+                                                                        fontWeight="medium"
+                                                                        color="blue.600"
+                                                                        _dark={{ color: 'blue.300' }}
+                                                                        _hover={{ textDecoration: 'underline' }}
+                                                                    >
+                                                                        {shipmentLabel(detail.shipment)}
+                                                                    </Text>
+                                                                </Link>
+                                                            ) : (
+                                                                <Text fontSize="sm" fontWeight="medium">
+                                                                    {shipmentLabel(detail.shipment)}
+                                                                </Text>
+                                                            )}
+                                                            <Text fontFamily="mono" fontSize="2xs" color="gray.400">
+                                                                {detail.shipment_uuid}
+                                                            </Text>
+                                                        </VStack>
+                                                    ) : (
+                                                        <VStack align="start" gap={0}>
+                                                            <Text fontFamily="mono" fontSize="sm" color="gray.600">
+                                                                {detail.shipment_uuid}
+                                                            </Text>
+                                                            <Text fontSize="2xs" color="gray.400">
+                                                                Реализация ещё не пришла из 1С
+                                                            </Text>
+                                                        </VStack>
+                                                    )}
                                                 </Table.Cell>
                                                 <Table.Cell textAlign="right">
                                                     <Text fontFamily="mono" fontWeight="medium" color="red.600" _dark={{ color: 'red.400' }}>

@@ -6,11 +6,13 @@ use App\Models\Company;
 use App\Models\Product;
 use App\Models\Shipment;
 use App\Models\User;
+use App\Services\Erp\Support\LinksOverdueDetailsToShipment;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
 use Illuminate\Support\Facades\Log;
 
 class HandleShipmentCreated
 {
+    use LinksOverdueDetailsToShipment;
     use ResolvesDocumentOrganization;
 
     /**
@@ -83,6 +85,9 @@ class HandleShipmentCreated
 
         // v15.5: списание партий некондиции, если реализация относится к заказу уценки.
         app(\App\Services\Defect\DefectShipmentService::class)->reconcileForShipment($shipment);
+
+        // Баланс с этой реализацией мог прийти раньше документа — связываем.
+        $this->linkOverdueDetails($shipment, 'HandleShipmentCreated');
 
         Log::info('HandleShipmentCreated: реализация создана/обновлена', [
             'uuid' => $uuid,

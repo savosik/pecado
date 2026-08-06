@@ -6,11 +6,13 @@ use App\Models\Company;
 use App\Models\Product;
 use App\Models\Shipment;
 use App\Models\User;
+use App\Services\Erp\Support\LinksOverdueDetailsToShipment;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
 use Illuminate\Support\Facades\Log;
 
 class HandleShipmentUpdated
 {
+    use LinksOverdueDetailsToShipment;
     use ResolvesDocumentOrganization;
 
     /**
@@ -103,6 +105,10 @@ class HandleShipmentUpdated
 
         // v15.5: пересчёт списания партий некондиции (количество могло измениться).
         app(\App\Services\Defect\DefectShipmentService::class)->reconcileForShipment($shipment);
+
+        // Страховка: строки просрочки, оставшиеся без связи (документ пришёл
+        // до появления FK или баланс обновился между created и updated).
+        $this->linkOverdueDetails($shipment, 'HandleShipmentUpdated');
 
         Log::info('HandleShipmentUpdated: реализация обновлена', [
             'uuid' => $uuid,

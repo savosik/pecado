@@ -104,6 +104,7 @@ class ContractorBalanceController extends Controller
             foreach ($validated['overdue_details'] ?? [] as $detail) {
                 $balance->overdueDetails()->create([
                     'shipment_uuid' => $detail['shipment_uuid'],
+                    'shipment_id' => $this->resolveShipmentId($detail['shipment_uuid']),
                     'amount' => $detail['amount'],
                     'due_date' => $detail['due_date'],
                 ]);
@@ -119,7 +120,14 @@ class ContractorBalanceController extends Controller
 
     public function show(ContractorBalance $contractorBalance)
     {
-        $contractorBalance->load(['user', 'company', 'overdueDetails.organization']);
+        $contractorBalance->load([
+            'user',
+            'company',
+            'overdueDetails.organization',
+            // Реализация нужна ради номера и даты: без неё в таблице остаётся
+            // голый UUID из 1С. NULL — документ ещё не приехал.
+            'overdueDetails.shipment:id,uuid,erp_number,number,date,total_amount',
+        ]);
 
         return Inertia::render('Admin/Pages/ContractorBalances/Show', [
             'balance' => $contractorBalance,
@@ -127,6 +135,8 @@ class ContractorBalanceController extends Controller
             // ещё не присылала, блок в интерфейсе не показывается.
             'organizationBalances' => $this->organizationBalances($contractorBalance),
             'organizationsEnabled' => config('erp.organizations.enabled'),
+            // Карточка реализации закрыта своим правом — без него ссылка не нужна.
+            'canViewShipments' => (bool) auth()->user()?->can('shipments.view'),
         ]);
     }
 
@@ -218,6 +228,7 @@ class ContractorBalanceController extends Controller
             foreach ($validated['overdue_details'] ?? [] as $detail) {
                 $contractorBalance->overdueDetails()->create([
                     'shipment_uuid' => $detail['shipment_uuid'],
+                    'shipment_id' => $this->resolveShipmentId($detail['shipment_uuid']),
                     'amount' => $detail['amount'],
                     'due_date' => $detail['due_date'],
                 ]);
@@ -227,6 +238,15 @@ class ContractorBalanceController extends Controller
         return redirect()
             ->route('admin.contractor-balances.show', $contractorBalance)
             ->with('success', 'Баланс контрагента успешно обновлён');
+    }
+
+    /**
+     * Реализация сайта по UUID из формы. NULL — документа ещё нет,
+     * связь доклеится, когда 1С пришлёт реализацию.
+     */
+    private function resolveShipmentId(string $shipmentUuid): ?int
+    {
+        return \App\Models\Shipment::where('uuid', $shipmentUuid)->value('id');
     }
 
     public function destroy(ContractorBalance $contractorBalance)

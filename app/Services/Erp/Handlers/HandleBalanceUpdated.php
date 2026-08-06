@@ -120,13 +120,21 @@ class HandleBalanceUpdated
                 $balance->overdueDetails()->delete();
 
                 $overdueDetails = $contractorData['overdue_details'] ?? [];
+
+                // Реализации сайта под UUID-ами просрочки — одним запросом.
+                // Из них берётся и FK, и организация строки (org-04).
+                $shipmentsByUuid = $this->resolveOverdueShipments($overdueDetails);
+
                 foreach ($overdueDetails as $detail) {
                     if (empty($detail['shipment_uuid'])) {
                         continue;
                     }
+                    $shipment = $shipmentsByUuid[$detail['shipment_uuid']] ?? null;
+
                     ContractorBalanceOverdueDetail::create([
                         'contractor_balance_id' => $balance->id,
-                        'organization_id' => $this->resolveOverdueOrganizationId($detail, $organizationsByUuid),
+                        'organization_id' => $this->resolveOverdueOrganizationId($detail, $organizationsByUuid, $shipment),
+                        'shipment_id' => $shipment?->id,
                         'shipment_uuid' => $detail['shipment_uuid'],
                         'amount' => $detail['amount'] ?? 0,
                         'due_date' => $detail['due_date'],
@@ -285,12 +293,39 @@ class HandleBalanceUpdated
     }
 
     /**
+     * Реализации сайта под UUID-ами строк просрочки.
+     *
+     * Найдётся не всё: баланс и реализации приезжают разными очередями без
+     * гарантии порядка, поэтому отсутствие реализации — штатная ситуация.
+     * Связь для таких строк доклеит HandleShipmentCreated, когда документ придёт.
+     *
+     * @param  array<int, array<string, mixed>>  $overdueDetails
+     * @return array<string, Shipment>
+     */
+    private function resolveOverdueShipments(array $overdueDetails): array
+    {
+        $uuids = array_values(array_filter(
+            array_map(fn ($detail) => $detail['shipment_uuid'] ?? null, $overdueDetails),
+            fn ($uuid) => is_string($uuid) && $uuid !== '',
+        ));
+
+        if ($uuids === []) {
+            return [];
+        }
+
+        return Shipment::whereIn('uuid', array_unique($uuids))
+            ->get(['id', 'uuid', 'organization_id'])
+            ->keyBy('uuid')
+            ->all();
+    }
+
+    /**
      * Организация строки просрочки: из payload либо по реализации `shipment_uuid`.
      *
      * @param  array<string, mixed>  $detail
      * @param  array<string, int>  $organizationsByUuid
      */
-    private function resolveOverdueOrganizationId(array $detail, array $organizationsByUuid): ?int
+    private function resolveOverdueOrganizationId(array $detail, array $organizationsByUuid, ?Shipment $shipment): ?int
     {
         $uuid = $detail['organization_uuid'] ?? null;
 
@@ -304,7 +339,7 @@ class HandleBalanceUpdated
 
         // Организацию не прислали — выводим по реализации (org-04).
         // Не нашлась или у неё нет организации — NULL, сумма всё равно учитывается.
-        return Shipment::where('uuid', $detail['shipment_uuid'])->value('organization_id');
+        return $shipment?->organization_id;
     }
 
     /**

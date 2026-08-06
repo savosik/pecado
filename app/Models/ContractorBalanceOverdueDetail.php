@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * @property int $id
  * @property int $contractor_balance_id
+ * @property int|null $shipment_id Реализация сайта (shipments.id)
  * @property string $shipment_uuid UUID реализации из 1С
  * @property numeric $amount Сумма просрочки
  * @property \Illuminate\Support\Carbon $due_date Дата оплаты
@@ -33,6 +34,7 @@ class ContractorBalanceOverdueDetail extends Model
     protected $fillable = [
         'contractor_balance_id',
         'organization_id',
+        'shipment_id',
         'shipment_uuid',
         'amount',
         'due_date',
@@ -49,6 +51,17 @@ class ContractorBalanceOverdueDetail extends Model
     public function contractorBalance(): BelongsTo
     {
         return $this->belongsTo(ContractorBalance::class);
+    }
+
+    /**
+     * Реализация сайта, соответствующая `shipment_uuid`.
+     *
+     * NULL, пока реализация не пришла из 1С: баланс и реализации идут разными
+     * очередями без гарантии порядка. Связь доклеивается в HandleShipmentCreated.
+     */
+    public function shipment(): BelongsTo
+    {
+        return $this->belongsTo(Shipment::class);
     }
 
     /**
