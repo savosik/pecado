@@ -15,6 +15,9 @@ class RolesAndPermissionsSeeder extends Seeder
     protected array $resources = [
         // Каталог
         'products' => ['view', 'create', 'edit', 'delete'],
+        // Себестоимость — отдельное право: карточку товара ведут одни, а во сколько
+        // товар обошёлся, видят другие. Только просмотр: значение пишет 1С.
+        'product-costs' => ['view'],
         'categories' => ['view', 'create', 'edit', 'delete'],
         'brands' => ['view', 'create', 'edit', 'delete'],
         'product-models' => ['view', 'create', 'edit', 'delete'],
@@ -146,6 +149,7 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     protected array $resourceLabels = [
         'products' => 'Товары',
+        'product-costs' => 'Себестоимость товаров',
         'categories' => 'Категории',
         'brands' => 'Бренды',
         'product-models' => 'Модели товаров',
@@ -257,6 +261,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
                 'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-agent-tokens',
+                // Себестоимость и маржа — уровень руководителя, рядовым менеджерам не видны.
+                'product-costs',
             ],
         ],
         'catalogist' => [

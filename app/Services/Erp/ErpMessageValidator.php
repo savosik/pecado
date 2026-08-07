@@ -30,6 +30,8 @@ class ErpMessageValidator
         'partner.deleted' => 'partner.deleted.json',
         // US-03: Базовые цены
         'price.updated' => 'price.updated.json',
+        // US-18: Себестоимость
+        'cost.updated' => 'cost.updated.json',
         // US-05: Курсы валют
         'exchange_rate.updated' => 'exchange_rate.updated.json',
         // US-06: Остатки

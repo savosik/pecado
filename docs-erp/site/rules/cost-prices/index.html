@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/rules/stocks/">
+        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/rules/cost-prices/">
       
       
-        <link rel="prev" href="../cost-prices/">
+        <link rel="prev" href="../prices/">
       
       
-        <link rel="next" href="../external-remains/">
+        <link rel="next" href="../stocks/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Остатки - Pecado ERP — Интеграция 1С ↔ Сайт</title>
+        <title>Себестоимость - Pecado ERP — Интеграция 1С ↔ Сайт</title>
       
     
     
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Остатки
+              Себестоимость
             
           </span>
         </div>
@@ -481,34 +481,6 @@
                 
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../cost-prices/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Себестоимость
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -528,7 +500,7 @@
   <span class="md-ellipsis">
     
   
-    Остатки
+    Себестоимость
   
 
     
@@ -546,7 +518,7 @@
   <span class="md-ellipsis">
     
   
-    Остатки
+    Себестоимость
   
 
     
@@ -572,6 +544,18 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#costupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Себестоимость товара (cost.updated)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Себестоимость товара (cost.updated)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#-" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -580,21 +564,60 @@
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
+    <nav class="md-nav" aria-label="Бизнес-правила">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ⚠️ Остаток присылается агрегатом по складу
+        ⚠️ Только рубли
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠️ Себестоимость присылается агрегатом, без разреза по организациям и складам
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Фиксация в реализациях
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Кто видит себестоимость
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -603,11 +626,44 @@
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
     </ul>
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../stocks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Остатки
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1701,6 +1757,18 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#costupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Себестоимость товара (cost.updated)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Себестоимость товара (cost.updated)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#-" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1709,27 +1777,71 @@
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
+    <nav class="md-nav" aria-label="Бизнес-правила">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ⚠️ Остаток присылается агрегатом по складу
+        ⚠️ Только рубли
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠️ Себестоимость присылается агрегатом, без разреза по организациям и складам
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Фиксация в реализациях
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Кто видит себестоимость
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
       
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1750,38 +1862,96 @@
 
 
 
-<h1 id="_1">Остатки<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<h1 id="_1">Себестоимость<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>JSON Schema:</strong> <a href="/docs/erp/schemas/stock.updated.json"><code>stock.updated.json</code></a><br />
-<strong>AsyncAPI:</strong> <a href="/docs/erp/spec.yaml">Полная спецификация</a></p>
+<p><strong>JSON Schema:</strong> <a href="/docs/erp/schemas/cost.updated.json"><code>cost.updated.json</code></a><br />
+<strong>AsyncAPI:</strong> <a href="/docs/erp/spec.yaml">Полная спецификация</a><br />
+<strong>Задание разработчику 1С:</strong> <a href="../../guides/cost-price-for-1c/">Себестоимость: что сделать в 1С</a></p>
 </blockquote>
-<p><strong>Направление:</strong> 1С → Сайт | <strong>Очередь:</strong> <code>erp_in.stock</code></p>
-<h2 id="-">Бизнес-правила<a class="headerlink" href="#-" title="Permanent link">&para;</a></h2>
+<h2 id="costupdated">Себестоимость товара (cost.updated)<a class="headerlink" href="#costupdated" title="Permanent link">&para;</a></h2>
+<p><strong>Направление:</strong> 1С → Сайт | <strong>Очередь:</strong> <code>erp_in.prices</code> | <strong>Routing key:</strong> <code>cost.updated</code></p>
+<p>Себестоимость нужна сайту для отчётов по прибыли и марже и для контроля продаж ниже
+себестоимости. Клиенту она не показывается никогда.</p>
+<h3 id="-">Бизнес-правила<a class="headerlink" href="#-" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>quantity</code> = ВНаличии − КОтгрузке. Отрицательные значения приводятся к 0</li>
-<li>Склады заводятся в админке сайта вручную с привязкой к UUID</li>
-<li>Пользователь привязан к региону; склады делятся на «для заказа» и «для предзаказа»</li>
-<li>1С отправляет остатки по всем организациям в разрезе складов</li>
-<li>Клиент не может заказать больше свободных остатков на доступных складах</li>
+<li>Себестоимость приезжает <strong>отдельным событием</strong> <code>cost.updated</code>. Через <code>product.updated</code>
+  и <code>price.updated</code> она не обновляется — так же, как цена не обновляется через
+  <code>product.updated</code> (см. <a href="../prices/">Цены</a>).</li>
+<li>Товар ищется по <code>product_uuid</code> (<code>products.external_id</code>). Если товар не найден —
+  событие игнорируется без ошибки.</li>
+<li>Скрытые товары (снятые с публикации) себестоимость получают наравне с остальными:
+  она нужна для отчётов по уже отгруженным документам.</li>
+<li>Сайт <strong>не</strong> отправляет себестоимость в 1С.</li>
+<li>Событие идемпотентно по <code>message_id</code>: повторная доставка того же сообщения ничего
+  не меняет.</li>
 </ul>
-<h2 id="_2">⚠️ Остаток присылается агрегатом по складу<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<p><strong>Требование контракта, а не деталь реализации</strong> (зафиксировано в v15.8.0, подтверждено
-стороной 1С).</p>
-<p>Одно сообщение <code>stock.updated</code> содержит <strong>суммарный</strong> остаток товара на складе по всем
-нашим организациям. Раздельные сообщения по организациям на один и тот же склад
-<strong>недопустимы</strong>.</p>
-<p>Причина: сайт пишет остаток <strong>перезаписью</strong> по ключу (товар, склад). Если по одному складу
-придут два сообщения — по одной организации в каждом, — второе затрёт первое, и наличие
-на витрине окажется занижено. Ошибка при этом будет молчаливой: сообщения валидны,
-в логах чисто, а товар просто не продаётся.</p>
-<p>Того же требования придерживаются и цены — см. <a href="../prices/">Цены</a>. Организация как разрез
-существует только в документах и взаиморасчётах, см.
-<a href="../organizations/">Организации</a>.</p>
-<h2 id="_3">Критерии приёмки<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<h4 id="_2">⚠️ Только рубли<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h4>
+<p>Сайт хранит себестоимость в рублях, поле валюты у товара отсутствует (базовая цена
+тоже рублёвая). Поле <code>currency_code</code> можно не присылать; если оно присутствует
+и отличается от <code>RUB</code>, сообщение отбрасывается с предупреждением в лог и значение
+в БД <strong>не записывается</strong> — молча пересчитывать по курсу сайт не будет, иначе
+себестоимость «поплывёт» вместе с курсом задним числом.</p>
+<h4 id="_3">⚠️ Себестоимость присылается агрегатом, без разреза по организациям и складам<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h4>
+<p><strong>Требование контракта</strong> (зафиксировано в v15.13.0).</p>
+<p>Сообщение <code>cost.updated</code> содержит одно значение на товар. Раздельная себестоимость
+по организациям, складам или партиям <strong>не передаётся</strong>: сайт хранит одно значение
+и перезаписывает его каждым сообщением, поэтому второе значение молча затёрло бы первое.</p>
+<p>То же ограничение действует для цен — см. <a href="../prices/">Цены</a> — и для остатков —
+см. <a href="../stocks/">Остатки</a>. Разрез по организациям существует только в документах
+и взаиморасчётах, см. <a href="../organizations/">Организации</a>.</p>
+<h3 id="_4">Фиксация в реализациях<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<p>Себестоимость меняется во времени, а реализация — исторический документ. Поэтому
+в момент создания строки реализации сайт <strong>сам</strong> копирует текущее значение
+<code>products.cost_price</code> в строку документа (снимок). Дальнейшие <code>cost.updated</code>
+уже проведённые реализации не переписывают — отчёт за прошлый месяц остаётся
+таким же, каким был.</p>
+<p>Тот же механизм, что у снимков наименования товара и бренда — см.
+<a href="../shipments/">Реализации</a>.</p>
+<p><strong>Следствие для исторических документов:</strong> у реализаций, проведённых до внедрения
+v15.13.0, снимок себестоимости пуст и останется пустым — восстанавливать его не из чего,
+истории себестоимости не существует ни на сайте, ни в контракте. Прибыль по ним
+не считается.</p>
+<h3 id="_5">Кто видит себестоимость<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Канал</th>
+<th>Видимость</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Админка <code>/admin</code> — карточка товара</td>
+<td>Только с правом <code>product-costs.view</code> (супер-админ, закупщик)</td>
+</tr>
+<tr>
+<td>CRM <code>/crm</code></td>
+<td>Только руководитель отдела продаж (<code>sales-head</code>)</td>
+</tr>
+<tr>
+<td>Личный кабинет клиента, каталог, поиск</td>
+<td><strong>Нет</strong></td>
+</tr>
+<tr>
+<td>Выгрузки товаров, фиды маркетплейсов, клиентские API</td>
+<td><strong>Нет</strong></td>
+</tr>
+<tr>
+<td>Аналитический MCP (<code>bi_agent</code>)</td>
+<td><strong>Нет</strong> — колонка скрыта вьюхой</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_6">Критерии приёмки<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Сайт принимает <code>stock.updated</code> и обновляет остаток товара на складе</li>
-<li>[ ] Склады привязаны к регионам через <code>region_warehouse</code></li>
-<li>[ ] Если товар или склад не найдены — событие игнорируется</li>
+<li>[ ] Сайт принимает <code>cost.updated</code> и обновляет себестоимость товара по UUID</li>
+<li>[ ] Если товар не найден — событие игнорируется без ошибок</li>
+<li>[ ] Себестоимость в валюте, отличной от <code>RUB</code>, не записывается</li>
+<li>[ ] Отрицательная себестоимость отклоняется валидацией схемы</li>
+<li>[ ] Повторная доставка сообщения с тем же <code>message_id</code> ничего не меняет</li>
+<li>[ ] При создании строки реализации себестоимость фиксируется снимком</li>
+<li>[ ] Последующие <code>cost.updated</code> снимок в проведённой реализации не меняют</li>
+<li>[ ] Себестоимость не попадает в каталог, поиск, выгрузки и клиентские API</li>
 </ul>
 
 

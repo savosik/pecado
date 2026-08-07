@@ -12,7 +12,7 @@ import { LuCircleAlert, LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, L
 import { WarehousesSection } from './Components/WarehousesSection';
 import { CategoryAttributesSection } from './Components/CategoryAttributesSection';
 
-export default function Edit({ product, brands, categoryTree, modelName, sizeCharts, warehouses, attributes, certificates, productSelections }) {
+export default function Edit({ product, brands, categoryTree, modelName, sizeCharts, warehouses, attributes, certificates, productSelections, can_view_cost: canViewCost = false }) {
     const { data, setData, post, processing, errors, transform } = useForm({
         name: product.name || '',
         slug: product.slug || '',
@@ -522,7 +522,26 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                             />
                                         </FormField>
 
-                                        <Box /> {/* Пустая ячейка для выравнивания */}
+                                        {canViewCost ? (
+                                            <FormField
+                                                label="Себестоимость"
+                                                helpText={
+                                                    product.cost_price_updated_at
+                                                        ? `Приходит из 1С, редактирование недоступно. Обновлена ${product.cost_price_updated_at}`
+                                                        : 'Приходит из 1С, редактирование недоступно'
+                                                }
+                                            >
+                                                <Input
+                                                    type="text"
+                                                    value={product.cost_price ?? ''}
+                                                    placeholder="Не получена из 1С"
+                                                    readOnly
+                                                    disabled
+                                                />
+                                            </FormField>
+                                        ) : (
+                                            <Box /> /* Пустая ячейка для выравнивания */
+                                        )}
 
                                         <FormField label="Новинка">
                                             <Switch

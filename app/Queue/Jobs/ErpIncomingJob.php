@@ -13,6 +13,7 @@ use App\Services\Erp\Handlers\HandleCategoryUpdated;
 use App\Services\Erp\Handlers\HandleContractorCreated;
 use App\Services\Erp\Handlers\HandleContractorDeleted;
 use App\Services\Erp\Handlers\HandleContractorUpdated;
+use App\Services\Erp\Handlers\HandleCostUpdated;
 use App\Services\Erp\Handlers\HandleExchangeRateUpdated;
 use App\Services\Erp\Handlers\HandleIndividualPricesReady;
 use App\Services\Erp\Handlers\HandleOrderCreated;
@@ -60,6 +61,8 @@ class ErpIncomingJob extends BaseJob
         'partner.deleted' => HandlePartnerDeleted::class,
         // US-03: Базовые цены
         'price.updated' => HandlePriceUpdated::class,
+        // US-18: Себестоимость
+        'cost.updated' => HandleCostUpdated::class,
         // US-05: Курсы валют
         'exchange_rate.updated' => HandleExchangeRateUpdated::class,
         // US-06: Остатки

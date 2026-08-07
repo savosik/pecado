@@ -62,7 +62,7 @@ class SetupRabbitMQTopology extends Command
     private const INCOMING_QUEUES = [
         'erp_in.partners' => ['partner.*'],
         'erp_in.contractors' => ['contractor.*'],
-        'erp_in.prices' => ['price.*', 'exchange_rate.*', 'individual_prices.*'],
+        'erp_in.prices' => ['price.*', 'cost.*', 'exchange_rate.*', 'individual_prices.*'],
         'erp_in.stock' => ['stock.*'],
         'erp_in.orders' => ['order.*'],
         'erp_in.returns' => ['return.*'],

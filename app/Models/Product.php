@@ -23,6 +23,8 @@ use Spatie\Tags\HasTags;
  * @property int $id
  * @property string $name
  * @property numeric $base_price
+ * @property numeric|null $cost_price Себестоимость из 1С. Конфиденциально — скрыта в $hidden.
+ * @property \Illuminate\Support\Carbon|null $cost_price_updated_at
  * @property string|null $external_id
  * @property string|null $sex_opt_id
  * @property bool $is_new
@@ -213,6 +215,11 @@ class Product extends Model implements HasMedia
         });
     }
 
+    /**
+     * Себестоимость (`cost_price`, `cost_price_updated_at`) в $fillable намеренно нет:
+     * поле пишет только HandleCostUpdated из события 1С, из админской формы оно
+     * не принимается никогда.
+     */
     protected $fillable = [
         'name',
         'base_price',
@@ -258,6 +265,19 @@ class Product extends Model implements HasMedia
     ];
 
     /**
+     * Себестоимость конфиденциальна: она не должна попасть ни в Inertia-пропсы каталога,
+     * ни в клиентские API — то есть никуда, где товар сериализуется целиком.
+     * Единственный надёжный барьер — скрыть её на уровне модели; в админке поле
+     * открывается точечно через makeVisible() под правом product-costs.view.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'cost_price',
+        'cost_price_updated_at',
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -266,6 +286,8 @@ class Product extends Model implements HasMedia
     {
         return [
             'base_price' => 'decimal:2',
+            'cost_price' => 'decimal:2',
+            'cost_price_updated_at' => 'datetime',
             'is_new' => 'boolean',
             'is_bestseller' => 'boolean',
             'is_marked' => 'boolean',

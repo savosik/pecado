@@ -14,6 +14,7 @@ use Laravel\Scout\Searchable;
  * @property int|null $product_id
  * @property string|null $product_name_snapshot Имя товара на момент создания строки реализации.
  * @property string|null $brand_name_snapshot Имя бренда товара на момент создания строки реализации.
+ * @property numeric|null $cost_price_snapshot Себестоимость товара на момент создания строки реализации.
  * @property string|null $order_uuid
  * @property int $quantity
  * @property numeric $price
@@ -61,6 +62,7 @@ class ShipmentItem extends Model
         'product_id',
         'product_name_snapshot',
         'brand_name_snapshot',
+        'cost_price_snapshot',
         'order_uuid',
         'quantity',
         'price',
@@ -71,8 +73,19 @@ class ShipmentItem extends Model
         'vat_rate',
     ];
 
+    /**
+     * Снимок себестоимости конфиденциален ровно так же, как products.cost_price:
+     * строки реализаций отдаются клиенту в личном кабинете целиком.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'cost_price_snapshot',
+    ];
+
     protected $casts = [
         'price' => 'decimal:2',
+        'cost_price_snapshot' => 'decimal:2',
         'auto_discount_percent' => 'decimal:2',
         'manual_discount_percent' => 'decimal:2',
         'total' => 'decimal:2',
@@ -88,27 +101,43 @@ class ShipmentItem extends Model
         });
     }
 
+    /**
+     * Снимки атрибутов товара на момент создания строки.
+     *
+     * Себестоимость (v15.13.0) фиксируется здесь же: она меняется во времени, а реализация —
+     * исторический документ, и без снимка прибыль за прошлый период пересчитывалась бы
+     * при каждом cost.updated.
+     */
     public function fillSnapshotFields(): void
     {
         if (! $this->product_id) {
             return;
         }
 
-        if (! empty($this->product_name_snapshot) && ! empty($this->brand_name_snapshot)) {
+        $needsName = empty($this->product_name_snapshot);
+        $needsBrand = empty($this->brand_name_snapshot);
+        $needsCost = $this->cost_price_snapshot === null;
+
+        if (! $needsName && ! $needsBrand && ! $needsCost) {
             return;
         }
 
-        $product = Product::with('brand:id,name')->find($this->product_id);
+        // withoutGlobalScopes: строки реализаций приходят из 1С и по скрытым товарам тоже —
+        // под HiddenScope снимки для них не заполнялись вовсе.
+        $product = Product::withoutGlobalScopes()->with('brand:id,name')->find($this->product_id);
         if (! $product) {
             return;
         }
 
-        if (empty($this->product_name_snapshot)) {
+        if ($needsName) {
             $this->product_name_snapshot = (string) data_get($product, 'name');
         }
-        if (empty($this->brand_name_snapshot)) {
+        if ($needsBrand) {
             $brandName = data_get($product, 'brand.name');
             $this->brand_name_snapshot = $brandName !== null ? (string) $brandName : null;
+        }
+        if ($needsCost) {
+            $this->cost_price_snapshot = $product->cost_price;
         }
     }
 

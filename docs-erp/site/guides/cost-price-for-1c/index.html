@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/rules/stocks/">
+        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/guides/cost-price-for-1c/">
       
       
-        <link rel="prev" href="../cost-prices/">
+        <link rel="prev" href="../payment-schedule-for-1c/">
       
       
-        <link rel="next" href="../external-remains/">
+        <link rel="next" href="../../initial-load/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Остатки - Pecado ERP — Интеграция 1С ↔ Сайт</title>
+        <title>Себестоимость: что сделать в 1С (v15.13.0) - Pecado ERP — Интеграция 1С ↔ Сайт</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#_1" class="md-skip">
+        <a href="#-1-v15130" class="md-skip">
           Перейти к содержанию
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Остатки
+              Себестоимость: что сделать в 1С (v15.13.0)
             
           </span>
         </div>
@@ -343,8 +343,6 @@
       
   
   
-    
-  
   
   
     
@@ -357,11 +355,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -382,7 +382,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -400,7 +400,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../partners/" class="md-nav__link">
+      <a href="../../rules/partners/" class="md-nav__link">
         
   
   
@@ -428,7 +428,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../catalog/" class="md-nav__link">
+      <a href="../../rules/catalog/" class="md-nav__link">
         
   
   
@@ -456,7 +456,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../prices/" class="md-nav__link">
+      <a href="../../rules/prices/" class="md-nav__link">
         
   
   
@@ -484,7 +484,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../cost-prices/" class="md-nav__link">
+      <a href="../../rules/cost-prices/" class="md-nav__link">
         
   
   
@@ -509,37 +509,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Остатки
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../rules/stocks/" class="md-nav__link">
         
   
   
@@ -555,59 +528,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Содержание">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Содержание
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#-" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Бизнес-правила
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ⚠️ Остаток присылается агрегатом по складу
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Критерии приёмки
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -620,7 +540,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../external-remains/" class="md-nav__link">
+      <a href="../../rules/external-remains/" class="md-nav__link">
         
   
   
@@ -648,7 +568,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../contractors/" class="md-nav__link">
+      <a href="../../rules/contractors/" class="md-nav__link">
         
   
   
@@ -676,7 +596,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../orders/" class="md-nav__link">
+      <a href="../../rules/orders/" class="md-nav__link">
         
   
   
@@ -704,7 +624,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../returns/" class="md-nav__link">
+      <a href="../../rules/returns/" class="md-nav__link">
         
   
   
@@ -732,7 +652,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../shipments/" class="md-nav__link">
+      <a href="../../rules/shipments/" class="md-nav__link">
         
   
   
@@ -760,7 +680,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../payments/" class="md-nav__link">
+      <a href="../../rules/payments/" class="md-nav__link">
         
   
   
@@ -788,7 +708,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../balances/" class="md-nav__link">
+      <a href="../../rules/balances/" class="md-nav__link">
         
   
   
@@ -816,7 +736,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../organizations/" class="md-nav__link">
+      <a href="../../rules/organizations/" class="md-nav__link">
         
   
   
@@ -844,7 +764,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../individual-prices/" class="md-nav__link">
+      <a href="../../rules/individual-prices/" class="md-nav__link">
         
   
   
@@ -872,7 +792,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pricing-model/" class="md-nav__link">
+      <a href="../../rules/pricing-model/" class="md-nav__link">
         
   
   
@@ -900,7 +820,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../product-attributes/" class="md-nav__link">
+      <a href="../../rules/product-attributes/" class="md-nav__link">
         
   
   
@@ -928,7 +848,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../client-segments/" class="md-nav__link">
+      <a href="../../rules/client-segments/" class="md-nav__link">
         
   
   
@@ -956,7 +876,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../promotions/" class="md-nav__link">
+      <a href="../../rules/promotions/" class="md-nav__link">
         
   
   
@@ -984,7 +904,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../data-normalization/" class="md-nav__link">
+      <a href="../../rules/data-normalization/" class="md-nav__link">
         
   
   
@@ -1217,8 +1137,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -1229,13 +1151,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
@@ -1256,7 +1176,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1274,7 +1194,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/erp-timestamps-for-1c/" class="md-nav__link">
+      <a href="../erp-timestamps-for-1c/" class="md-nav__link">
         
   
   
@@ -1302,7 +1222,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/payment-schedule-for-1c/" class="md-nav__link">
+      <a href="../payment-schedule-for-1c/" class="md-nav__link">
         
   
   
@@ -1327,10 +1247,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../guides/cost-price-for-1c/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Себестоимость: что сделать в 1С (v15.13.0)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1346,6 +1293,92 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Содержание">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Роль и задача
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что уже сделано на стороне сайта
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Актуальная документация (единственный источник правды)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Формат сообщения
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Правила выгрузки
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Критерии приёмки
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1701,10 +1734,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#-" class="md-nav__link">
+  <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Бизнес-правила
+        Роль и задача
       
     </span>
   </a>
@@ -1715,7 +1748,7 @@
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ⚠️ Остаток присылается агрегатом по складу
+        Что уже сделано на стороне сайта
       
     </span>
   </a>
@@ -1724,6 +1757,39 @@
       
         <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Актуальная документация (единственный источник правды)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Формат сообщения
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Правила выгрузки
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -1750,38 +1816,163 @@
 
 
 
-<h1 id="_1">Остатки<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<h1 id="-1-v15130">Промт для ИИ-агента 1С: выгрузка себестоимости (протокол v15.13.0)<a class="headerlink" href="#-1-v15130" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>JSON Schema:</strong> <a href="/docs/erp/schemas/stock.updated.json"><code>stock.updated.json</code></a><br />
-<strong>AsyncAPI:</strong> <a href="/docs/erp/spec.yaml">Полная спецификация</a></p>
+<p>Скопируйте всё, что ниже разделителя, в ИИ-агента, который дорабатывает обмен на стороне
+1С:КА2. Промт самодостаточен: в нём есть контракт, правила, порядок работ и критерии приёмки.</p>
 </blockquote>
-<p><strong>Направление:</strong> 1С → Сайт | <strong>Очередь:</strong> <code>erp_in.stock</code></p>
-<h2 id="-">Бизнес-правила<a class="headerlink" href="#-" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="_1">Роль и задача<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>Ты — разработчик 1С:Комплексная автоматизация 2, дорабатывающий обмен данными с сайтом
+<code>pecado.ru</code> через RabbitMQ.</p>
+<p><strong>Задача:</strong> начать выгружать на сайт <strong>себестоимость номенклатуры</strong> новым сообщением
+<code>cost.updated</code>. Сайт уже принимает эти данные: доработка нужна только на стороне 1С.</p>
+<p><strong>Зачем это бизнесу.</strong> Сайт знает цену продажи, но не знает, во сколько товар обошёлся.
+Из-за этого невозможны ни отчёт по прибыли и марже в разрезе брендов, категорий, клиентов
+и менеджеров, ни предупреждение менеджеру о продаже ниже себестоимости. Пока 1С
+не начнёт присылать себестоимость, эти отчёты построить не из чего.</p>
+<h2 id="_2">Что уже сделано на стороне сайта<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>Ничего менять и согласовывать не нужно — приём готов:</p>
 <ul>
-<li><code>quantity</code> = ВНаличии − КОтгрузке. Отрицательные значения приводятся к 0</li>
-<li>Склады заводятся в админке сайта вручную с привязкой к UUID</li>
-<li>Пользователь привязан к региону; склады делятся на «для заказа» и «для предзаказа»</li>
-<li>1С отправляет остатки по всем организациям в разрезе складов</li>
-<li>Клиент не может заказать больше свободных остатков на доступных складах</li>
+<li>новое сообщение <code>cost.updated</code> принимается <strong>существующей очередью</strong> <code>erp_in.prices</code>,
+  туда же, куда уже идут <code>price.updated</code> и <code>exchange_rate.updated</code>;</li>
+<li>новой очереди заводить не нужно — добавлен только routing key <code>cost.*</code>
+  на обменнике <code>erp.events</code>;</li>
+<li>сайт сам фиксирует себестоимость снимком в строках реализаций, чтобы отчёты
+  за прошлые периоды не пересчитывались задним числом.</li>
 </ul>
-<h2 id="_2">⚠️ Остаток присылается агрегатом по складу<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<p><strong>Требование контракта, а не деталь реализации</strong> (зафиксировано в v15.8.0, подтверждено
-стороной 1С).</p>
-<p>Одно сообщение <code>stock.updated</code> содержит <strong>суммарный</strong> остаток товара на складе по всем
-нашим организациям. Раздельные сообщения по организациям на один и тот же склад
-<strong>недопустимы</strong>.</p>
-<p>Причина: сайт пишет остаток <strong>перезаписью</strong> по ключу (товар, склад). Если по одному складу
-придут два сообщения — по одной организации в каждом, — второе затрёт первое, и наличие
-на витрине окажется занижено. Ошибка при этом будет молчаливой: сообщения валидны,
-в логах чисто, а товар просто не продаётся.</p>
-<p>Того же требования придерживаются и цены — см. <a href="../prices/">Цены</a>. Организация как разрез
-существует только в документах и взаиморасчётах, см.
-<a href="../organizations/">Организации</a>.</p>
-<h2 id="_3">Критерии приёмки<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<h2 id="_3">Актуальная документация (единственный источник правды)<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Что</th>
+<th>Ссылка</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Полная спецификация AsyncAPI</td>
+<td>https://pecado.ru/docs/erp/spec.yaml</td>
+</tr>
+<tr>
+<td>JSON Schema себестоимости</td>
+<td>https://pecado.ru/docs/erp/schemas/cost.updated.json</td>
+</tr>
+<tr>
+<td>Бизнес-правила по себестоимости</td>
+<td>https://pecado.ru/docs/erp-guide/rules/cost-prices/</td>
+</tr>
+<tr>
+<td>Changelog, раздел 15.13.0</td>
+<td>https://pecado.ru/docs/erp-guide/changelog/</td>
+</tr>
+<tr>
+<td>Интерактивная документация payload-ов</td>
+<td>https://pecado.ru/docs/erp/</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Прочитай JSON Schema перед тем, как писать код.</strong> Сообщение, не прошедшее валидацию
+по схеме, отбрасывается сайтом целиком и попадает в очередь недоставленных (DLQ).</p>
+<h2 id="_4">Формат сообщения<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<p><strong>Обменник:</strong> <code>erp.events</code> (topic, durable) — тот же, что для всех остальных сообщений.
+<strong>Routing key:</strong> <code>cost.updated</code>
+<strong>Очередь-получатель:</strong> <code>erp_in.prices</code> (привязана на стороне сайта, настраивать не нужно).</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cost.updated&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;msg-cost-a1b2c3d4&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;product_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;550e8400-e29b-41d4-a716-446655440000&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;cost&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8450.00</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;currency_code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RUB&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Тип</th>
+<th>Обязательно</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>event</code></td>
+<td>строка</td>
+<td>да</td>
+<td>Всегда <code>cost.updated</code></td>
+</tr>
+<tr>
+<td><code>message_id</code></td>
+<td>строка</td>
+<td>да</td>
+<td>Уникальный идентификатор сообщения. По нему сайт отбрасывает дубли</td>
+</tr>
+<tr>
+<td><code>product_uuid</code></td>
+<td>UUID</td>
+<td>да</td>
+<td>GUID элемента справочника «Номенклатура»</td>
+</tr>
+<tr>
+<td><code>cost</code></td>
+<td>число ≥ 0</td>
+<td>да</td>
+<td>Себестоимость единицы товара в рублях</td>
+</tr>
+<tr>
+<td><code>currency_code</code></td>
+<td>строка</td>
+<td>нет</td>
+<td>Только <code>RUB</code>. Можно не присылать</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_5">Правила выгрузки<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>Что считать себестоимостью.</strong> Значение берётся из того же источника, который
+   бухгалтерия использует для отчёта о валовой прибыли, — согласуйте конкретный регистр
+   с ответственным за учёт (типично: «Себестоимость товаров» на дату расчёта).
+   Важно, чтобы источник был <strong>один и тот же</strong> для всех товаров: сайт складывает эти числа
+   в отчёты и не сможет распознать, что часть из них посчитана по другой методике.</p>
+</li>
+<li>
+<p><strong>Одно значение на товар.</strong> Разрез по организациям, складам и партиям сайт не хранит:
+   он держит одно число на номенклатуру и перезаписывает его каждым сообщением.
+   Если прислать два сообщения с разной себестоимостью по разным организациям —
+   второе молча затрёт первое. Если бизнесу нужен разрез — это отдельная доработка
+   контракта, её нужно согласовать до начала выгрузки, а не обходить.</p>
+</li>
+<li>
+<p><strong>Только рубли.</strong> Себестоимость в валюте сайт отбрасывает и в БД не пишет.
+   Пересчитайте в рубли на стороне 1С по той же методике, что используется в отчётности.</p>
+</li>
+<li>
+<p><strong>Когда слать.</strong> При каждом изменении себестоимости номенклатуры (после расчёта
+   себестоимости за период, после поступления, изменившего среднюю). Досылать
+   неизменившиеся значения не нужно, но и не вредно — обработка идемпотентна.</p>
+</li>
+<li>
+<p><strong>Первоначальная выгрузка.</strong> Разово выгрузить себестоимость по всей активной
+   номенклатуре — иначе отчёты будут пустыми до первого изменения по каждому товару.
+   Порядок и приоритеты — см. <a href="../../initial-load/">Первоначальная выгрузка</a>.</p>
+</li>
+<li>
+<p><strong><code>message_id</code> должен быть уникальным для каждого сообщения.</strong> Если переиспользовать
+   один и тот же идентификатор, сайт посчитает второе сообщение дублем и не применит его.</p>
+</li>
+</ol>
+<h2 id="_6">Критерии приёмки<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
 <ul>
-<li>[ ] Сайт принимает <code>stock.updated</code> и обновляет остаток товара на складе</li>
-<li>[ ] Склады привязаны к регионам через <code>region_warehouse</code></li>
-<li>[ ] Если товар или склад не найдены — событие игнорируется</li>
+<li>[ ] В 1С реализована выгрузка <code>cost.updated</code> с routing key <code>cost.updated</code></li>
+<li>[ ] <code>product_uuid</code> совпадает с GUID номенклатуры, который уже используется
+      в <code>price.updated</code> и <code>stock.updated</code></li>
+<li>[ ] Себестоимость выгружается в рублях</li>
+<li>[ ] <code>message_id</code> уникален для каждого сообщения</li>
+<li>[ ] Выполнена первоначальная выгрузка по всей активной номенклатуре</li>
+<li>[ ] В админке сайта в карточке товара видно ненулевое значение себестоимости</li>
+<li>[ ] Очередь недоставленных <code>erp_dlq.prices</code> пуста после прогона</li>
 </ul>
 
 

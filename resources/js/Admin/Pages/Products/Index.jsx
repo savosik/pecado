@@ -8,7 +8,7 @@ import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import { usePermission } from '@/Admin/hooks/usePermission';
 import ProductsFilterPanel from './Components/ProductsFilterPanel';
 
-export default function Index({ products, filters }) {
+export default function Index({ products, filters, can_view_cost: canViewCost = false }) {
     const { can } = usePermission();
     const {
         searchQuery,
@@ -168,6 +168,15 @@ export default function Index({ products, filters }) {
             sortable: true,
             render: (_, product) => `${parseFloat(product.base_price).toFixed(2)} ₽`,
         },
+        ...(canViewCost ? [{
+            key: 'cost_price',
+            label: 'Себестоимость',
+            render: (_, product) => (
+                product.cost_price != null
+                    ? `${parseFloat(product.cost_price).toFixed(2)} ₽`
+                    : '—'
+            ),
+        }] : []),
         {
             key: 'created_at',
             label: 'Создан',

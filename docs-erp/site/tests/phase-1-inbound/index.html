@@ -484,6 +484,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../rules/cost-prices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Себестоимость
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../rules/stocks/" class="md-nav__link">
         
   
@@ -1202,6 +1230,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#16-costupdated-v15130" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.6а — Себестоимость (cost.updated, v15.13.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#17-stockupdated" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1858,6 +1897,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/cost-price-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Себестоимость: что сделать в 1С (v15.13.0)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2350,6 +2417,17 @@
     <span class="md-ellipsis">
       
         1.6 — Базовые цены (price.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16-costupdated-v15130" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.6а — Себестоимость (cost.updated, v15.13.0)
       
     </span>
   </a>
@@ -2986,6 +3064,26 @@
 <ul>
 <li>[ ] Цена товара обновлена</li>
 <li>[ ] Цена отображается в каталоге</li>
+</ul>
+<hr />
+<h2 id="16-costupdated-v15130">1.6а — Себестоимость (<code>cost.updated</code>, v15.13.0)<a class="headerlink" href="#16-costupdated-v15130" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.3 (товар)</p>
+<p>🔵 <strong>1С отправляет</strong> <code>cost.updated</code> с <code>product_uuid</code> и <code>cost</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/cost.updated.json">JSON Schema</a>
+Бизнес-правила → <a href="../../rules/cost-prices/">Себестоимость</a></p>
+</blockquote>
+<ul>
+<li>[ ] Себестоимость товара сохранена, проставлена дата обновления</li>
+<li>[ ] Себестоимость видна в админке в карточке товара (вкладка «Цена и статусы»)</li>
+<li>[ ] Поле в админке доступно только для чтения</li>
+<li>[ ] Сообщение с <code>currency_code: "USD"</code> отброшено, значение в БД не изменилось</li>
+<li>[ ] Сообщение с отрицательным <code>cost</code> попало в ошибки валидации</li>
+<li>[ ] Повторная доставка того же <code>message_id</code> ничего не изменила</li>
+<li>[ ] Себестоимость обновилась и у скрытого товара (<code>hidden = true</code>)</li>
+<li>[ ] После <code>shipment.created</code> в строке реализации зафиксирован снимок себестоимости</li>
+<li>[ ] Повторный <code>cost.updated</code> снимок в проведённой реализации не изменил</li>
+<li>[ ] Себестоимости нет в каталоге, поиске, выгрузке товаров и клиентском API</li>
 </ul>
 <hr />
 <h2 id="17-stockupdated">1.7 — Остатки (<code>stock.updated</code>)<a class="headerlink" href="#17-stockupdated" title="Permanent link">&para;</a></h2>

@@ -34,6 +34,12 @@ class ProductController extends AdminController
 
         $products = $query->paginate($perPage)->withQueryString();
 
+        // Себестоимость скрыта в Product::$hidden — открываем её только тем, кому положено.
+        $canViewCost = auth()->user()?->can('product-costs.view') ?? false;
+        if ($canViewCost) {
+            $products->getCollection()->each->makeVisible(['cost_price', 'cost_price_updated_at']);
+        }
+
         // Подписи выбранных элементов мультивыборов — чтобы чипы рендерились
         // сразу после перезагрузки страницы (не дожидаясь async-поиска).
         $brandIds = array_filter(array_map('intval', (array) $request->input('brands', [])));
@@ -42,6 +48,7 @@ class ProductController extends AdminController
 
         return Inertia::render('Admin/Pages/Products/Index', [
             'products' => $products,
+            'can_view_cost' => $canViewCost,
             'filters' => [
                 'search' => $request->input('search'),
                 'sort_by' => $request->input('sort_by', 'id'),
@@ -233,7 +240,10 @@ class ProductController extends AdminController
             'attributeValues.attribute',
         ]);
 
+        $canViewCost = auth()->user()?->can('product-costs.view') ?? false;
+
         return Inertia::render('Admin/Pages/Products/Show', [
+            'can_view_cost' => $canViewCost,
             'product' => [
                 'id' => $product->id,
                 'name' => $product->name,
@@ -243,6 +253,8 @@ class ProductController extends AdminController
                 'external_id' => $product->external_id,
                 'variant_name' => $product->variant_name,
                 'base_price' => $product->base_price,
+                'cost_price' => $canViewCost ? $product->cost_price : null,
+                'cost_price_updated_at' => $canViewCost ? $product->cost_price_updated_at?->format('d.m.Y H:i') : null,
                 'hidden' => (bool) $product->hidden,
                 'is_new' => (bool) $product->is_new,
                 'is_bestseller' => (bool) $product->is_bestseller,
@@ -470,12 +482,19 @@ class ProductController extends AdminController
             'productSelections',
         ]);
 
+        $canViewCost = auth()->user()?->can('product-costs.view') ?? false;
+
         return Inertia::render('Admin/Pages/Products/Edit', [
+            'can_view_cost' => $canViewCost,
             'product' => [
                 'id' => $product->id,
                 'name' => $product->name,
                 'slug' => $product->slug,
                 'base_price' => $product->base_price,
+                // Только для чтения: значение пишет 1С событием cost.updated,
+                // в правилах валидации store/update поля намеренно нет.
+                'cost_price' => $canViewCost ? $product->cost_price : null,
+                'cost_price_updated_at' => $canViewCost ? $product->cost_price_updated_at?->format('d.m.Y H:i') : null,
                 'category_id' => $product->category_id,
                 'brand_id' => $product->brand_id,
                 'model_id' => $product->model_id,

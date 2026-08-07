@@ -435,6 +435,110 @@ class ErpIncomingJobTest extends TestCase
     }
 
     // ========================================================
+    // US-18: cost.updated — себестоимость товаров (v15.13.0)
+    // ========================================================
+
+    #[Test]
+    public function cost_updated_changes_product_cost_price_through_job(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => '00000000-0000-4000-a000-0000000000c1',
+        ]);
+
+        $job = $this->makeJob([
+            'event' => 'cost.updated',
+            'product_uuid' => '00000000-0000-4000-a000-0000000000c1',
+            'cost' => 8450.00,
+            'message_id' => 'msg-cost-001',
+            'timestamp' => now()->toIso8601String(),
+        ]);
+
+        $job->fire();
+
+        $product->refresh();
+
+        $this->assertEquals(8450.00, (float) $product->cost_price);
+        $this->assertNotNull($product->cost_price_updated_at);
+        $this->assertDatabaseHas('erp_processed_messages', [
+            'message_id' => 'msg-cost-001',
+            'event' => 'cost.updated',
+        ]);
+    }
+
+    #[Test]
+    public function cost_updated_idempotency_prevents_reprocessing(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => '00000000-0000-4000-a000-0000000000c2',
+        ]);
+
+        ErpProcessedMessage::create([
+            'message_id' => 'msg-cost-duplicate',
+            'event' => 'cost.updated',
+            'processed_at' => now(),
+        ]);
+
+        $job = $this->makeJob([
+            'event' => 'cost.updated',
+            'product_uuid' => '00000000-0000-4000-a000-0000000000c2',
+            'cost' => 99999.00,
+            'message_id' => 'msg-cost-duplicate',
+        ]);
+
+        $job->fire();
+
+        $product->refresh();
+
+        $this->assertNull($product->cost_price);
+    }
+
+    #[Test]
+    public function cost_updated_with_negative_value_fails_validation(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => '00000000-0000-4000-a000-0000000000c3',
+        ]);
+
+        $job = $this->makeJob([
+            'event' => 'cost.updated',
+            'product_uuid' => '00000000-0000-4000-a000-0000000000c3',
+            'cost' => -5,
+            'message_id' => 'msg-cost-negative',
+        ]);
+
+        $job->fire();
+
+        $product->refresh();
+
+        $this->assertNull($product->cost_price);
+        $this->assertDatabaseHas('erp_validation_errors', [
+            'event' => 'cost.updated',
+            'message_id' => 'msg-cost-negative',
+        ]);
+        $this->assertDatabaseMissing('erp_processed_messages', [
+            'message_id' => 'msg-cost-negative',
+        ]);
+    }
+
+    #[Test]
+    public function cost_updated_for_unknown_product_completes_without_error(): void
+    {
+        $job = $this->makeJob([
+            'event' => 'cost.updated',
+            'product_uuid' => '00000000-0000-4000-a000-0000000000c4',
+            'cost' => 8450.00,
+            'message_id' => 'msg-cost-unknown',
+        ]);
+
+        $job->fire();
+
+        $this->assertDatabaseHas('erp_processed_messages', [
+            'message_id' => 'msg-cost-unknown',
+            'event' => 'cost.updated',
+        ]);
+    }
+
+    // ========================================================
     // US-04: exchange_rate.updated — синхронизация курсов валют
     // ========================================================
 

@@ -55,6 +55,18 @@ class BiSyncGrants extends Command
         'users.must_change_password', // булев флаг «пароль просрочен», не сам пароль
     ];
 
+    /**
+     * Не секреты в смысле шаблона выше, но коммерческая тайна: BI-агентом пользуются
+     * рядовые менеджеры, а себестоимость и маржа — уровень руководителя (право
+     * `product-costs.view`). Прячем так же, как секреты: колонка вырезается вьюхой,
+     * грант выдаётся на вьюху вместо таблицы.
+     */
+    private const CONFIDENTIAL_COLUMNS = [
+        'products.cost_price',
+        'products.cost_price_updated_at',
+        'shipment_items.cost_price_snapshot',
+    ];
+
     /** Таблицы, состоящие из секретов целиком: не выдаём ни напрямую, ни вьюхой. */
     private const SECRET_TABLES = [
         'sessions',
@@ -182,6 +194,10 @@ class BiSyncGrants extends Command
 
     private function isSecret(string $table, string $column): bool
     {
+        if (in_array("{$table}.{$column}", self::CONFIDENTIAL_COLUMNS, true)) {
+            return true;
+        }
+
         if (in_array("{$table}.{$column}", self::NOT_SECRET, true)) {
             return false;
         }

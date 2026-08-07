@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 15.12.0
+  version: 15.13.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -100,11 +100,14 @@ channels:
     address: erp_in.prices
     title: Цены и курсы валют (1С → Сайт)
     description: |
-      Очередь для обновления базовых цен, курсов валют и уведомлений об индивидуальных ценах.
-      Routing keys: `price.*`, `exchange_rate.*`, `individual_prices.*`
+      Очередь для обновления базовых цен, себестоимости, курсов валют
+      и уведомлений об индивидуальных ценах.
+      Routing keys: `price.*`, `cost.*`, `exchange_rate.*`, `individual_prices.*`
     messages:
       priceUpdated:
         $ref: '#/components/messages/PriceUpdated'
+      costUpdated:
+        $ref: '#/components/messages/CostUpdated'
       exchangeRateUpdated:
         $ref: '#/components/messages/ExchangeRateUpdated'
       individualPricesReady:
@@ -515,6 +518,33 @@ operations:
         bindingVersion: 0.3.0
     tags:
       - name: US-03
+      - name: prices
+
+  # ── US-18: Себестоимость ───────────────────
+  receiveCostUpdated:
+    title: Обновление себестоимости
+    summary: 1С обновляет себестоимость товара
+    description: |
+      Обработчик: `HandleCostUpdated`
+
+      Сайт обновляет себестоимость товара по `product_uuid`.
+      Если товар не найден — событие игнорируется.
+
+      Себестоимость принимается только в рублях: если `currency_code` присутствует
+      и отличается от `RUB`, сообщение отбрасывается без записи в БД.
+
+      Значение приходит агрегатом на товар — без разреза по организациям и складам.
+      Сайт хранит одно значение на товар и перезаписывает его каждым сообщением.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPrices'
+    messages:
+      - $ref: '#/channels/erpInPrices/messages/costUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-18
       - name: prices
 
   # ── US-05: Курсы валют ─────────────────────
@@ -1280,6 +1310,16 @@ components:
       payload:
         $ref: '#/components/schemas/PriceUpdatedPayload'
 
+    # ── US-18: cost.updated ──────────────────
+    CostUpdated:
+      name: cost.updated
+      title: Себестоимость обновлена
+      summary: Обновление себестоимости товара
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/CostUpdatedPayload'
+
     # ── US-05: exchange_rate.updated ─────────
     ExchangeRateUpdated:
       name: exchange_rate.updated
@@ -1988,6 +2028,39 @@ components:
           description: Базовая цена
           examples:
             - 12500.50
+
+    # ── US-18: Себестоимость ─────────────────
+    CostUpdatedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - product_uuid
+        - cost
+      properties:
+        event:
+          type: string
+          const: cost.updated
+        message_id:
+          type: string
+          examples:
+            - 'msg-cost-a1b2c3d4'
+        product_uuid:
+          $ref: '#/components/schemas/UUID'
+        cost:
+          type: number
+          minimum: 0
+          description: Себестоимость единицы товара в рублях
+          examples:
+            - 8450.00
+        currency_code:
+          allOf:
+            - $ref: '#/components/schemas/CurrencyCode'
+          description: |
+            Валюта себестоимости. Поддерживается только `RUB`; поле можно не присылать.
+            Любое другое значение — сообщение отбрасывается.
+          examples:
+            - 'RUB'
 
     # ── US-05: Курсы валют ───────────────────
     ExchangeRateUpdatedPayload:

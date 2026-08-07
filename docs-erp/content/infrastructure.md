@@ -16,7 +16,7 @@
 |---|---|---|
 | `erp_in.partners` | `partner.*` | `partner.created`, `partner.updated`, `partner.deleted` |
 | `erp_in.contractors` | `contractor.*` | `contractor.created`, `contractor.updated`, `contractor.deleted` |
-| `erp_in.prices` | `price.*`, `exchange_rate.*`, `individual_prices.*` | `price.updated`, `exchange_rate.updated`, `individual_prices.ready` |
+| `erp_in.prices` | `price.*`, `cost.*`, `exchange_rate.*`, `individual_prices.*` | `price.updated`, `cost.updated`, `exchange_rate.updated`, `individual_prices.ready` |
 | `erp_in.stock` | `stock.*` | `stock.updated` |
 | `erp_in.orders` | `order.*` | `order.created`, `order.updated`, `order.deleted` |
 | `erp_in.returns` | `return.*` | `return.updated`, `return.deleted` |
@@ -140,6 +140,7 @@ Policy регистрируется автоматически командой 
 | `contractor.updated` | 1С → Сайт | `erp.events` | `erp_in.contractors` |
 | `contractor.deleted` | 1С → Сайт | `erp.events` | `erp_in.contractors` |
 | `price.updated` | 1С → Сайт | `erp.events` | `erp_in.prices` |
+| `cost.updated` | 1С → Сайт | `erp.events` | `erp_in.prices` |
 | `individual_prices.ready` | 1С → Сайт | `erp.events` | `erp_in.prices` |
 | `exchange_rate.updated` | 1С → Сайт | `erp.events` | `erp_in.prices` |
 | `stock.updated` | 1С → Сайт | `erp.events` | `erp_in.stock` |

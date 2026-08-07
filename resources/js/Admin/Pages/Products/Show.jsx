@@ -21,7 +21,7 @@ const fmt = (v) => v ? parseFloat(v).toLocaleString('ru-RU', { minimumFractionDi
 const fmtNum = (v) => v != null ? parseFloat(v).toLocaleString('ru-RU') : null;
 
 export default function Show() {
-    const { product } = usePage().props;
+    const { product, can_view_cost: canViewCost = false } = usePage().props;
     const { can } = usePermission();
 
     return (
@@ -61,6 +61,12 @@ export default function Show() {
                             <InfoRow label="Категория" value={product.category?.name} />
                             <InfoRow label="Модель" value={product.model?.name} />
                             <InfoRow label="Базовая цена" value={fmt(product.base_price) ? `${fmt(product.base_price)} ₽` : null} />
+                            {canViewCost && (
+                                <InfoRow
+                                    label="Себестоимость"
+                                    value={fmt(product.cost_price) ? `${fmt(product.cost_price)} ₽` : null}
+                                />
+                            )}
                             {product.variant_name && (
                                 <InfoRow label="Вариант" value={product.variant_name} />
                             )}
