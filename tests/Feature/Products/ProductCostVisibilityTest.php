@@ -65,9 +65,20 @@ class ProductCostVisibilityTest extends TestCase
     {
         $product = $this->productWithCost();
 
-        $array = $product->makeVisible(['cost_price', 'cost_price_updated_at'])->toArray();
+        $array = $product->makeCostVisible()->toArray();
 
         $this->assertArrayHasKey('cost_price', $array);
+        $this->assertArrayHasKey('cost_price_updated_at', $array);
+    }
+
+    #[Test]
+    public function hiding_cost_does_not_break_searchability(): void
+    {
+        // Регрессия: штатный $hidden столкнулся бы с колонкой products.hidden
+        // и обнулил бы shouldBeSearchable() для всех товаров разом.
+        $product = $this->productWithCost();
+
+        $this->assertTrue($product->shouldBeSearchable());
     }
 
     #[Test]

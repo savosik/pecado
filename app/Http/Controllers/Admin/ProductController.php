@@ -34,10 +34,10 @@ class ProductController extends AdminController
 
         $products = $query->paginate($perPage)->withQueryString();
 
-        // Себестоимость скрыта в Product::$hidden — открываем её только тем, кому положено.
+        // Себестоимость скрыта при сериализации — открываем её только тем, кому положено.
         $canViewCost = auth()->user()?->can('product-costs.view') ?? false;
         if ($canViewCost) {
-            $products->getCollection()->each->makeVisible(['cost_price', 'cost_price_updated_at']);
+            $products->getCollection()->each->makeCostVisible();
         }
 
         // Подписи выбранных элементов мультивыборов — чтобы чипы рендерились

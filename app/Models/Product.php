@@ -272,10 +272,47 @@ class Product extends Model implements HasMedia
      *
      * @var list<string>
      */
-    protected $hidden = [
+    /**
+     * Себестоимость конфиденциальна: она не должна попасть ни в Inertia-пропсы каталога,
+     * ни в клиентские API — то есть никуда, где товар сериализуется целиком.
+     *
+     * Штатный `$hidden` здесь применить НЕЛЬЗЯ: у товара есть собственная колонка
+     * `hidden` («Скрыть в интернете»), и непустой массив в одноимённом свойстве Eloquent
+     * ломает `shouldBeSearchable()` — `$this->hidden` там читает свойство, а не атрибут.
+     * Поэтому прячем вручную, а открываем точечно через makeCostVisible().
+     *
+     * @var list<string>
+     */
+    private const CONFIDENTIAL_ATTRIBUTES = [
         'cost_price',
         'cost_price_updated_at',
     ];
+
+    /** Себестоимость открыта для сериализации у этого экземпляра. */
+    protected bool $costVisible = false;
+
+    /**
+     * Открыть себестоимость для сериализации — только под правом product-costs.view.
+     */
+    public function makeCostVisible(): static
+    {
+        $this->costVisible = true;
+
+        return $this;
+    }
+
+    public function attributesToArray(): array
+    {
+        $attributes = parent::attributesToArray();
+
+        if (! $this->costVisible) {
+            foreach (self::CONFIDENTIAL_ATTRIBUTES as $attribute) {
+                unset($attributes[$attribute]);
+            }
+        }
+
+        return $attributes;
+    }
 
     /**
      * Get the attributes that should be cast.

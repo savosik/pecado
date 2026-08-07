@@ -261,8 +261,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
                 'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-agent-tokens',
-                // Себестоимость и маржа — уровень руководителя, рядовым менеджерам не видны.
-                'product-costs',
+                // Себестоимость руководителю отдела появится вместе с отчётом по марже
+                // и только под `crm-`-префиксом: `product-costs` — админский ресурс,
+                // и выдача его этой роли открыла бы ей вход в /admin (PermissionNamingTest).
             ],
         ],
         'catalogist' => [

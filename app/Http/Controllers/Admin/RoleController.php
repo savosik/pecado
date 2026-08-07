@@ -17,7 +17,7 @@ class RoleController extends Controller
      * Группировка ресурсов для UI матрицы прав.
      */
     protected array $permissionGroups = [
-        'Каталог' => ['products', 'categories', 'brands', 'product-models', 'attributes', 'attribute-groups', 'size-charts', 'product-barcodes', 'certificates', 'product-exports'],
+        'Каталог' => ['products', 'product-costs', 'categories', 'brands', 'product-models', 'attributes', 'attribute-groups', 'size-charts', 'product-barcodes', 'certificates', 'product-exports'],
         'Склады' => ['warehouses', 'regions'],
         'Продажи' => ['orders', 'carts', 'returns', 'shipments', 'supplier-preorders', 'favorites', 'wishlist', 'defects', 'defect-types'],
         'CRM' => ['crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-analytics', 'crm-profile', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-agent-tokens'],
@@ -31,7 +31,8 @@ class RoleController extends Controller
     ];
 
     protected array $resourceLabels = [
-        'products' => 'Товары', 'categories' => 'Категории', 'brands' => 'Бренды',
+        'products' => 'Товары', 'product-costs' => 'Себестоимость товаров',
+        'categories' => 'Категории', 'brands' => 'Бренды',
         'product-models' => 'Модели', 'attributes' => 'Атрибуты',
         'attribute-groups' => 'Группы атрибутов', 'size-charts' => 'Размерные сетки',
         'product-barcodes' => 'Штрихкоды', 'certificates' => 'Сертификаты',

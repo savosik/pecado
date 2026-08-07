@@ -8,8 +8,13 @@ use Spatie\Permission\Models\Role;
  * US-18 (v15.13.0): право на просмотр себестоимости товаров.
  *
  * Отдельное от `products.*`: карточку товара ведёт каталоговед, а во сколько товар
- * обошёлся — знать ему незачем. Право получают закупщик (ведёт цены и уценку),
- * руководитель отдела продаж (маржа) и супер-админ.
+ * обошёлся — знать ему незачем. Право получают закупщик (ведёт цены и уценку)
+ * и супер-админ.
+ *
+ * Руководителю отдела продаж себестоимость даётся не здесь: `product-costs` —
+ * админский ресурс, и выдача его роли `sales-head` открыла бы ей вход в /admin
+ * (роль намеренно CRM-only, страхует PermissionNamingTest). Её право приедет
+ * вместе с отчётом по марже как `crm-product-costs.view`.
  *
  * Роль `buyer-manager` заведена на prod вручную и сидером не покрывается, поэтому
  * выдача точечная и идемпотентная (givePermissionTo) — прогон
@@ -20,7 +25,6 @@ return new class extends Migration
     /** @var array<string, string[]> */
     private const GRANTS = [
         'buyer-manager' => ['product-costs.view'],
-        'sales-head' => ['product-costs.view'],
     ];
 
     public function up(): void
