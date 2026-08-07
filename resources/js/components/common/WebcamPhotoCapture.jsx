@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, Flex, HStack, NativeSelect, Spinner, Text } from '@chakra-ui/react';
 import { LuCamera, LuCameraOff, LuRefreshCw } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
+import { captureVideoFrame, PHOTO_ASPECT_RATIO } from '@/utils/captureVideoFrame';
 
 /**
  * WebcamPhotoCapture — съёмка фото подключённой веб-камерой прямо на странице.
@@ -14,18 +15,24 @@ import { Button } from '@/components/ui/button';
  * По умолчанию компонент показывается только на «мышиных» устройствах
  * (pointer: fine): на телефоне для этого есть кнопка съёмки в загрузчике файлов.
  *
+ * Видоискатель и снимок держат одну пропорцию (по умолчанию 1:1.5): кадр
+ * камеры обрезается ровно по тому, что кладовщик видит на экране.
+ *
  * @param {(file: File) => void} onCapture — колбэк со снятым кадром.
  * @param {boolean} [autoStart=true] — поднимать камеру сразу при открытии страницы.
  * @param {boolean} [desktopOnly=true] — не показывать на тач-устройствах.
  * @param {boolean} [disabled=false] — заблокировать съёмку (например, идёт сохранение).
- * @param {string|number} [height='240px'] — высота видео-области.
+ * @param {number} [aspectRatio=1/1.5] — пропорция видоискателя и снимка (ширина/высота).
+ * @param {string|number} [maxWidth='280px'] — ширина видоискателя: вертикальный кадр
+ *   во всю ширину карточки занял бы пол-экрана.
  */
 export default function WebcamPhotoCapture({
     onCapture,
     autoStart = true,
     desktopOnly = true,
     disabled = false,
-    height = '240px',
+    aspectRatio = PHOTO_ASPECT_RATIO,
+    maxWidth = '280px',
 }) {
     const videoRef = useRef(null);
     const streamRef = useRef(null);
@@ -74,7 +81,14 @@ export default function WebcamPhotoCapture({
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: preferredDeviceId
                     ? { deviceId: { exact: preferredDeviceId } }
-                    : { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+                    : {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        // Пожелание, а не требование: камера, умеющая вертикальный
+                        // кадр, отдаст его сама, остальные обрежем при съёмке.
+                        aspectRatio: { ideal: aspectRatio },
+                    },
                 audio: false,
             });
 
@@ -103,7 +117,7 @@ export default function WebcamPhotoCapture({
                 setError('Не удалось запустить камеру.');
             }
         }
-    }, []);
+    }, [aspectRatio]);
 
     // Автостарт на открытии страницы + гарантированная остановка при уходе:
     // иначе индикатор камеры останется гореть после перехода на другую страницу.
@@ -118,29 +132,18 @@ export default function WebcamPhotoCapture({
         };
     }, [visible, autoStart, start]);
 
-    const capture = () => {
-        const video = videoRef.current;
-        if (!video || status !== 'live' || disabled) return;
+    const capture = async () => {
+        if (status !== 'live' || disabled) return;
 
-        const width = video.videoWidth;
-        const height2 = video.videoHeight;
-        if (!width || !height2) return;
+        const file = await captureVideoFrame(videoRef.current, {
+            aspectRatio,
+            prefix: 'defect',
+        });
 
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height2;
-        canvas.getContext('2d').drawImage(video, 0, 0, width, height2);
+        if (!file) return;
 
-        canvas.toBlob((blob) => {
-            if (!blob) return;
-            const stamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
-            const file = new File([blob], `defect-${stamp}-${Math.random().toString(36).slice(2, 6)}.jpg`, {
-                type: 'image/jpeg',
-                lastModified: Date.now(),
-            });
-            onCaptureRef.current?.(file);
-            setShot((n) => n + 1);
-        }, 'image/jpeg', 0.9);
+        onCaptureRef.current?.(file);
+        setShot((n) => n + 1);
     };
 
     if (!visible) {
@@ -149,14 +152,16 @@ export default function WebcamPhotoCapture({
 
     return (
         <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" overflow="hidden" mb={4}>
-            <Box position="relative" bg="black" h={height}>
+            {/* Видоискатель той же пропорции, что и будущий снимок: objectFit
+                cover обрезает поток ровно так же, как captureVideoFrame — кадр. */}
+            <Box position="relative" bg="black" aspectRatio={aspectRatio} maxW={maxWidth} mx="auto" w="100%">
                 {/* Субтитров нет намеренно: это живой поток камеры, а не медиаконтент. */}
                 <video
                     ref={videoRef}
                     autoPlay
                     playsInline
                     muted
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
 
                 {status === 'starting' && (

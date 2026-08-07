@@ -126,6 +126,35 @@ class WmsDefectStockWarningTest extends TestCase
     }
 
     #[Test]
+    public function storing_batch_over_undistributed_remainder_flashes_warning(): void
+    {
+        // Остатка формально хватает, но он уже расписан другими партиями —
+        // иначе один и тот же брак уехал бы на витрину дважды.
+        Storage::fake('public');
+        $warehouse = $this->defectWarehouse();
+        $product = Product::factory()->create();
+        $this->setStock($product, $warehouse, 5);
+
+        \App\Models\ProductDefect::factory()->create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 4,
+        ]);
+
+        $this->actingAs($this->storekeeper())
+            ->post('/wms/defects', [
+                'product_id' => $product->id,
+                'warehouse_id' => $warehouse->id,
+                'defect_description' => 'Порвана упаковка',
+                'quantity' => 2,
+                'photos' => [UploadedFile::fake()->image('defect.jpg')],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('warning', fn (?string $warning) => $warning !== null
+                && str_contains($warning, 'уже разобрано другими партиями'));
+    }
+
+    #[Test]
     public function storing_batch_within_stock_has_no_warning(): void
     {
         Storage::fake('public');

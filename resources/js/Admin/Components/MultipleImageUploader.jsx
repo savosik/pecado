@@ -11,6 +11,7 @@ import {
 } from '@chakra-ui/react';
 import { LuUpload, LuX, LuImage } from 'react-icons/lu';
 import WebcamPhotoCapture from '@/components/common/WebcamPhotoCapture';
+import { PHOTO_ASPECT_RATIO } from '@/utils/captureVideoFrame';
 
 /**
  * MultipleImageUploader - компонент для загрузки множественных изображений с превью
@@ -181,7 +182,7 @@ export const MultipleImageUploader = ({
                                     src={img.url}
                                     alt={`Изображение ${index + 1}`}
                                     w="full"
-                                    aspectRatio={2 / 3}
+                                    aspectRatio={PHOTO_ASPECT_RATIO}
                                     objectFit="cover"
                                     borderRadius="md"
                                     borderWidth="1px"
@@ -219,7 +220,7 @@ export const MultipleImageUploader = ({
                                     src={preview}
                                     alt={`Новое изображение ${index + 1}`}
                                     w="full"
-                                    aspectRatio={2 / 3}
+                                    aspectRatio={PHOTO_ASPECT_RATIO}
                                     objectFit="cover"
                                     borderRadius="md"
                                     borderWidth="1px"

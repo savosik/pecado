@@ -19,6 +19,7 @@ import { MultipleImageUploader } from '@/Admin/Components/MultipleImageUploader'
 import { Button } from '@/components/ui/button';
 import { toaster } from '@/components/ui/toaster';
 import BarcodeCameraView from '@/components/common/BarcodeCameraView';
+import { PHOTO_ASPECT_RATIO } from '@/utils/captureVideoFrame';
 import { DefectDescriptionField } from '@/Wms/Components/DefectDescriptionField';
 import { DefectStockWarning } from '@/Wms/Components/DefectStockWarning';
 import { QuantityStepper } from '@/Wms/Components/QuantityStepper';
@@ -221,13 +222,15 @@ export default function DefectsQuick() {
                         </NativeSelect.Root>
                     )}
 
-                    {/* Камера-сканер: на паузе, пока идёт резолв/сохранение */}
+                    {/* Камера-сканер: на паузе, пока идёт резолв/сохранение.
+                        Кадр вертикальный 1:1.5 — в той же пропорции уйдёт фото дефекта
+                        и покажется превью, так что кладовщик снимает то, что видит. */}
                     <Card.Root overflow="hidden">
-                        <Box position="relative" bg="black" minH="220px">
+                        <Box position="relative" bg="black" maxW="320px" mx="auto" w="100%">
                             <BarcodeCameraView
                                 onScan={handleBarcode}
                                 paused={resolving || saving}
-                                height="240px"
+                                aspectRatio={PHOTO_ASPECT_RATIO}
                                 // Фото снимаем кадром из этого же потока: камера у рабочего
                                 // места одна, отдельный getUserMedia на неё браузер не даст.
                                 // До выбора товара складывать снимок некуда — кнопки нет.

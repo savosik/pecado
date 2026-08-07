@@ -19,6 +19,7 @@ import { usePermission } from '@/Admin/hooks/usePermission';
 import { useFlashToast } from '@/hooks/useFlashToast';
 import { DefectStatusBadge } from '@/Wms/Components/DefectStatusBadge';
 import { DefectDescriptionField } from '@/Wms/Components/DefectDescriptionField';
+import { DefectStockWarning } from '@/Wms/Components/DefectStockWarning';
 import { QuantityStepper } from '@/Wms/Components/QuantityStepper';
 
 const formatPrice = (value) =>
@@ -34,14 +35,16 @@ function InfoRow({ label, children }) {
 }
 
 export default function DefectsEdit() {
-    const { defect, reserved, defectTypes = [] } = usePage().props;
+    const { defect, reserved, warehouseStock = null, defectTypes = [] } = usePage().props;
     const { can } = usePermission();
     const [writeOffOpen, setWriteOffOpen] = useState(false);
     const [reopenOpen, setReopenOpen] = useState(false);
+    // Какая из кнопок сохранения нажата — чтобы спиннер крутился только на ней.
+    const [continueMode, setContinueMode] = useState(false);
 
     useFlashToast();
 
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         _method: 'put',
         defect_description: defect.defect_description,
         quantity: defect.quantity,
@@ -53,10 +56,18 @@ export default function DefectsEdit() {
         (photo) => !data.removed_media_ids.includes(photo.id)
     );
 
-    const handleSubmit = (event) => {
-        event.preventDefault();
+    // continue=1 оставляет кладовщика в карточке партии, иначе бэк вернёт к списку.
+    // Через transform, а не setData: значение нужно ровно в момент отправки.
+    const submit = (keepEditing) => {
+        setContinueMode(keepEditing);
+        transform((current) => ({ ...current, continue: keepEditing ? 1 : 0 }));
         // Inertia не умеет слать файлы через put — идём через post + _method.
         post(`/wms/defects/${defect.id}`, { forceFormData: true });
+    };
+
+    const handleSubmit = (event) => {
+        event.preventDefault();
+        submit(false);
     };
 
     const handleWriteOff = () => {
@@ -168,6 +179,16 @@ export default function DefectsEdit() {
                                                 max={10000}
                                             />
                                         </Field>
+
+                                        {/* Свободный остаток считается без этой партии:
+                                            её объём как раз и правят в поле выше. */}
+                                        {warehouseStock && (
+                                            <DefectStockWarning
+                                                stock={warehouseStock.stock}
+                                                covered={warehouseStock.covered_other}
+                                                quantity={data.quantity}
+                                            />
+                                        )}
                                     </VStack>
                                 </Card.Body>
                             </Card.Root>
@@ -201,11 +222,29 @@ export default function DefectsEdit() {
                                 justify="space-between"
                             >
                                 <Stack direction={{ base: 'column', sm: 'row' }} gap={2}>
-                                    <Button type="submit" h="48px" loading={processing}>
+                                    {/* «Сохранить» завершает правку и возвращает к списку,
+                                        «Сохранить и продолжить» оставляет в карточке —
+                                        например, чтобы дофотографировать дефект. */}
+                                    <Button
+                                        type="submit"
+                                        h="48px"
+                                        loading={processing && !continueMode}
+                                        disabled={processing}
+                                    >
                                         Сохранить
                                     </Button>
                                     <Button
+                                        type="button"
                                         variant="outline"
+                                        h="48px"
+                                        loading={processing && continueMode}
+                                        disabled={processing}
+                                        onClick={() => submit(true)}
+                                    >
+                                        Сохранить и продолжить
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
                                         type="button"
                                         h="48px"
                                         onClick={() => router.get('/wms/defects')}

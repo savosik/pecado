@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Box, Flex, Spinner, Stack, Text } from '@chakra-ui/react';
 import { LuCamera } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
+import { captureVideoFrame } from '@/utils/captureVideoFrame';
 
 /**
  * BarcodeCameraView — общий компонент сканера штрихкодов через камеру устройства.
@@ -13,7 +14,9 @@ import { Button } from '@/components/ui/button';
  * @param {object} props
  * @param {(text: string) => void} props.onScan — колбэк с распознанным штрихкодом.
  * @param {boolean} [props.paused=false] — приостановить распознавание (например, на время запроса).
- * @param {string|number} [props.height='100%'] — высота видео-области.
+ * @param {string|number} [props.height='100%'] — высота видео-области; игнорируется, если задан aspectRatio.
+ * @param {number|null} [props.aspectRatio] — пропорция видео-области (ширина/высота) вместо высоты.
+ *   Она же применяется к снимку: видоискатель и фото совпадают.
  * @param {((file: File) => void)|null} [props.onCapture] — если задан, поверх видео появляется
  *   кнопка съёмки: текущий кадр отдаётся наверх готовым File. Отдельный поток под фото не
  *   поднимаем — камера у устройства одна, второй getUserMedia на неё браузер не даст.
@@ -25,6 +28,7 @@ export default function BarcodeCameraView({
     onScan,
     paused = false,
     height = '100%',
+    aspectRatio = null,
     onCapture = null,
     captureLabel = 'Сфотографировать',
 }) {
@@ -100,30 +104,27 @@ export default function BarcodeCameraView({
         };
     }, [paused]);
 
-    const capture = () => {
-        const video = videoRef.current;
-        const width = video?.videoWidth;
-        const videoHeight = video?.videoHeight;
-        if (!video || !width || !videoHeight) return;
+    const capture = async () => {
+        // Снимок обрезаем по пропорции видоискателя — кладовщик получает ровно
+        // тот кадр, который видел на экране.
+        const file = await captureVideoFrame(videoRef.current, {
+            aspectRatio,
+            prefix: 'defect',
+        });
 
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0, width, videoHeight);
-
-        canvas.toBlob((blob) => {
-            if (!blob) return;
-            const stamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
-            const file = new File([blob], `defect-${stamp}-${Math.random().toString(36).slice(2, 6)}.jpg`, {
-                type: 'image/jpeg',
-                lastModified: Date.now(),
-            });
+        if (file) {
             onCapture(file);
-        }, 'image/jpeg', 0.9);
+        }
     };
 
     return (
-        <Box position="relative" w="100%" h={height} bg="black" overflow="hidden">
+        <Box
+            position="relative"
+            w="100%"
+            {...(aspectRatio ? { aspectRatio } : { h: height })}
+            bg="black"
+            overflow="hidden"
+        >
             {/* Субтитров у видео нет намеренно: это живой поток камеры для сканера штрихкодов, а не медиаконтент. */}
             <video
                 ref={videoRef}

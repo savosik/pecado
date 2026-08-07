@@ -13,6 +13,7 @@ use App\Models\Warehouse;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
@@ -40,6 +41,18 @@ class WmsDefectControllerTest extends TestCase
     private function defectWarehouse(): Warehouse
     {
         return Warehouse::factory()->defect()->create();
+    }
+
+    /** Остаток склада некондиции по данным 1С. */
+    private function stock(Product $product, Warehouse $warehouse, int $quantity): void
+    {
+        DB::table('product_warehouse')->insert([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => $quantity,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     /** Резерв возникает только через заказ уценки. */
@@ -196,6 +209,36 @@ class WmsDefectControllerTest extends TestCase
     }
 
     #[Test]
+    public function save_and_continue_returns_clean_form_on_same_warehouse(): void
+    {
+        // Кладовщик заводит партии серией: после сохранения нужна пустая форма
+        // с уже выбранным складом, а не карточка только что заведённой партии.
+        $product = Product::factory()->create();
+        $warehouse = $this->defectWarehouse();
+
+        $this->actingAs($this->storekeeper())
+            ->post('/wms/defects', [
+                'product_id' => $product->id,
+                'warehouse_id' => $warehouse->id,
+                'defect_description' => 'Порвана упаковка',
+                'quantity' => 1,
+                'continue' => 1,
+            ])
+            ->assertRedirect("/wms/defects/create?warehouse_id={$warehouse->id}");
+
+        $this->assertSame(1, ProductDefect::count());
+
+        $this->actingAs($this->storekeeper())
+            ->get("/wms/defects/create?warehouse_id={$warehouse->id}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Wms/Pages/Defects/Create')
+                ->where('prefill.warehouse_id', $warehouse->id)
+                ->where('prefill.product', null)
+            );
+    }
+
+    #[Test]
     public function defect_cannot_be_created_on_regular_warehouse(): void
     {
         // Остатки обычных складов ведёт 1С — некондиция там всё бы рассинхронизировала.
@@ -246,6 +289,72 @@ class WmsDefectControllerTest extends TestCase
 
         $this->assertSame('Скол на корпусе', $defect->defect_description);
         $this->assertSame(5, $defect->quantity);
+    }
+
+    #[Test]
+    public function saving_returns_to_list_and_continue_keeps_the_card(): void
+    {
+        $defect = ProductDefect::factory()->create(['quantity' => 2]);
+
+        $this->actingAs($this->storekeeper())
+            ->put("/wms/defects/{$defect->id}", [
+                'defect_description' => 'Скол на корпусе',
+                'quantity' => 3,
+            ])
+            ->assertRedirect('/wms/defects');
+
+        $this->actingAs($this->storekeeper())
+            ->from("/wms/defects/{$defect->id}/edit")
+            ->put("/wms/defects/{$defect->id}", [
+                'defect_description' => 'Скол на корпусе',
+                'quantity' => 4,
+                'continue' => 1,
+            ])
+            ->assertRedirect("/wms/defects/{$defect->id}/edit");
+
+        $this->assertSame(4, $defect->fresh()->quantity);
+    }
+
+    #[Test]
+    public function edit_shows_stock_left_undistributed_by_other_batches(): void
+    {
+        // Свободный остаток под партию — это остаток склада минус другие открытые
+        // партии; собственный объём партии из счёта выпадает, его как раз правят.
+        $warehouse = $this->defectWarehouse();
+        $product = Product::factory()->create();
+
+        $this->stock($product, $warehouse, 10);
+
+        $defect = ProductDefect::factory()->create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 4,
+        ]);
+
+        ProductDefect::factory()->create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 3,
+        ]);
+
+        // Закрытая партия остаток не держит.
+        ProductDefect::factory()->create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 5,
+            'closed_at' => now(),
+            'closed_reason' => DefectClosedReason::WRITTEN_OFF,
+        ]);
+
+        $this->actingAs($this->storekeeper())
+            ->get("/wms/defects/{$defect->id}/edit")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Wms/Pages/Defects/Edit')
+                ->where('warehouseStock.stock', 10)
+                ->where('warehouseStock.covered_other', 3)
+                ->where('warehouseStock.free', 7)
+            );
     }
 
     #[Test]
@@ -394,6 +503,30 @@ class WmsDefectControllerTest extends TestCase
 
         $this->assertCount(1, $response->json());
         $this->assertSame($product->id, $response->json('0.id'));
+    }
+
+    #[Test]
+    public function product_search_reports_stock_and_how_much_batches_took(): void
+    {
+        // Форма показывает нераспределённый остаток = остаток минус открытые
+        // партии, чтобы один и тот же брак не завели дважды.
+        $warehouse = $this->defectWarehouse();
+        $product = Product::factory()->create(['name' => 'Вибратор Тест', 'sku' => 'SKU-7712']);
+
+        $this->stock($product, $warehouse, 9);
+
+        ProductDefect::factory()->create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 2,
+        ]);
+
+        $response = $this->actingAs($this->storekeeper())
+            ->getJson('/wms/defects/search-products?query=SKU-7712')
+            ->assertOk();
+
+        $this->assertSame(9, $response->json("0.defect_stock.{$warehouse->id}"));
+        $this->assertSame(2, $response->json("0.defect_covered.{$warehouse->id}"));
     }
 
     #[Test]

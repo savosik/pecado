@@ -267,37 +267,32 @@ class DefectController extends WmsController
     }
 
     /**
-     * Предзаполнение формы из отчёта о непокрытых остатках: кладовщик переходит
-     * по строке «остаток есть, партии нет» и сразу видит товар и склад.
+     * Предзаполнение формы: товаром и складом из отчёта о непокрытых остатках
+     * (кладовщик переходит по строке «остаток есть, партии нет») либо одним
+     * складом — так возвращается форма после «Сохранить и продолжить».
      *
-     * @return array{product: array<string, mixed>, warehouse_id: int}|null
+     * @return array{product: array<string, mixed>|null, warehouse_id: int}|null
      */
     private function createPrefill(Request $request): ?array
     {
-        $productId = $request->integer('product_id');
+        $warehouseId = (int) (Warehouse::query()
+            ->defect()
+            ->whereKey($request->integer('warehouse_id'))
+            ->value('id') ?? 0);
 
-        if (! $productId) {
-            return null;
+        $product = null;
+
+        if ($productId = $request->integer('product_id')) {
+            $product = Product::query()->with($this->productFormRelations())->find($productId);
         }
 
-        $product = Product::query()->with('media')->find($productId);
-
-        if (! $product) {
+        if (! $product && ! $warehouseId) {
             return null;
         }
-
-        $warehouseId = $request->integer('warehouse_id');
-        $warehouseId = Warehouse::query()->defect()->whereKey($warehouseId)->value('id');
 
         return [
-            'product' => [
-                'id' => $product->id,
-                'name' => $product->name,
-                'sku' => $product->sku,
-                'image_url' => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main'),
-                'defect_stock' => (object) ($this->defectStockMap([(int) $product->id])[(int) $product->id] ?? []),
-            ],
-            'warehouse_id' => (int) $warehouseId,
+            'product' => $product ? $this->presentProductOption($product) : null,
+            'warehouse_id' => $warehouseId,
         ];
     }
 
@@ -341,8 +336,18 @@ class DefectController extends WmsController
         $warning = $this->stockWarning(
             (int) $defect->product_id,
             (int) $defect->warehouse_id,
-            (int) $defect->quantity
+            (int) $defect->quantity,
+            (int) $defect->id
         );
+
+        // «Сохранить и продолжить»: кладовщик заводит партии серией — возвращаем
+        // чистую форму на том же складе, чтобы не кликать «Завести партию» заново.
+        if ($request->boolean('continue')) {
+            return redirect()
+                ->route('wms.defects.create', ['warehouse_id' => $defect->warehouse_id])
+                ->with('success', "Партия #{$defect->id} заведена. Заводите следующую.")
+                ->with('warning', $warning);
+        }
 
         return redirect()
             ->route('wms.defects.edit', $defect)
@@ -376,7 +381,7 @@ class DefectController extends WmsController
         $product = Product::query()
             ->where('barcode', $barcode)
             ->orWhereHas('barcodes', fn ($q) => $q->where('barcode', $barcode))
-            ->with('media')
+            ->with($this->productFormRelations())
             ->first();
 
         if (! $product) {
@@ -385,13 +390,7 @@ class DefectController extends WmsController
 
         return response()->json([
             'found' => true,
-            'product' => [
-                'id' => $product->id,
-                'name' => $product->name,
-                'sku' => $product->sku,
-                'image_url' => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main'),
-                'defect_stock' => (object) ($this->defectStockMap([(int) $product->id])[(int) $product->id] ?? []),
-            ],
+            'product' => $this->presentProductOption($product),
         ]);
     }
 
@@ -422,7 +421,8 @@ class DefectController extends WmsController
             'warning' => $this->stockWarning(
                 (int) $defect->product_id,
                 (int) $defect->warehouse_id,
-                (int) $defect->quantity
+                (int) $defect->quantity,
+                (int) $defect->id
             ),
         ], 201);
     }
@@ -436,8 +436,32 @@ class DefectController extends WmsController
                 $defect->id => $this->defectStock->available($defect),
             ]),
             'reserved' => $this->defectStock->reserved($defect),
+            'warehouseStock' => $this->batchWarehouseStock($defect),
             'defectTypes' => $this->defectTypeChips(),
         ]);
+    }
+
+    /**
+     * Остаток склада некондиции под конкретную партию: сколько числится в 1С,
+     * сколько уже разобрано другими открытыми партиями и сколько остаётся
+     * свободным под эту. Нужно кладовщику рядом с полем количества, чтобы он
+     * не расписал один и тот же остаток несколькими партиями.
+     *
+     * @return array{stock: int, covered_other: int, free: int}
+     */
+    private function batchWarehouseStock(ProductDefect $defect): array
+    {
+        $productId = (int) $defect->product_id;
+        $warehouseId = (int) $defect->warehouse_id;
+
+        $stock = $this->defectStockMap([$productId])[$productId][$warehouseId] ?? 0;
+        $covered = $this->defectCoveredMap([$productId], $defect->id)[$productId][$warehouseId] ?? 0;
+
+        return [
+            'stock' => $stock,
+            'covered_other' => $covered,
+            'free' => $stock - $covered,
+        ];
     }
 
     public function update(UpdateProductDefectRequest $request, ProductDefect $defect): RedirectResponse
@@ -457,7 +481,15 @@ class DefectController extends WmsController
             $this->attachPhotos($defect, $request);
         });
 
-        return back()->with('success', 'Партия обновлена.');
+        // «Сохранить и продолжить» оставляет кладовщика в карточке партии,
+        // обычное «Сохранить» — завершает правку и возвращает к списку.
+        if ($request->boolean('continue')) {
+            return back()->with('success', 'Партия обновлена.');
+        }
+
+        return redirect()
+            ->route('wms.defects.index')
+            ->with('success', 'Партия обновлена.');
     }
 
     /**
@@ -544,14 +576,47 @@ class DefectController extends WmsController
                     ->orWhere('code', 'like', "%{$query}%")
                     ->orWhereHas('barcodes', fn ($b) => $b->where('barcode', 'like', "%{$query}%"));
             })
-            ->with(['brand:id,name', 'media', 'barcodes'])
+            ->with($this->productFormRelations())
             ->orderByRaw('CASE WHEN sku = ? THEN 0 ELSE 1 END', [$query])
             ->limit(15)
             ->get();
 
-        $stock = $this->defectStockMap($products->pluck('id')->map(fn ($id) => (int) $id)->all());
+        $productIds = $products->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $stock = $this->defectStockMap($productIds);
+        $covered = $this->defectCoveredMap($productIds);
 
-        $products = $products->map(fn (Product $product) => [
+        return response()->json(
+            $products->map(fn (Product $product) => $this->presentProductOption($product, $stock, $covered))
+        );
+    }
+
+    /**
+     * Связи товара, из которых собирается карточка в форме заведения партии.
+     *
+     * @return array<int, string>
+     */
+    private function productFormRelations(): array
+    {
+        return ['brand:id,name', 'media', 'barcodes'];
+    }
+
+    /**
+     * Товар для формы заведения партии.
+     *
+     * Карты остатка и покрытия можно передать заранее посчитанными (список
+     * поиска) либо доверить методу — тогда он посчитает их по одному товару.
+     *
+     * @param  array<int, array<int, int>>|null  $stockMap
+     * @param  array<int, array<int, int>>|null  $coveredMap
+     * @return array<string, mixed>
+     */
+    private function presentProductOption(Product $product, ?array $stockMap = null, ?array $coveredMap = null): array
+    {
+        $id = (int) $product->id;
+        $stockMap ??= $this->defectStockMap([$id]);
+        $coveredMap ??= $this->defectCoveredMap([$id]);
+
+        return [
             'id' => $product->id,
             'name' => $product->name,
             'sku' => $product->sku,
@@ -563,10 +628,11 @@ class DefectController extends WmsController
             'barcodes' => $product->barcodes->pluck('barcode')->all(),
             // Остаток по складам некондиции — форма предупреждает, если товара там нет.
             // Объект, а не число: складов некондиции может быть несколько.
-            'defect_stock' => (object) ($stock[(int) $product->id] ?? []),
-        ]);
-
-        return response()->json($products);
+            'defect_stock' => (object) ($stockMap[$id] ?? []),
+            // Сколько этого остатка уже разобрано открытыми партиями — форма
+            // показывает разницу, чтобы один остаток не завели дважды.
+            'defect_covered' => (object) ($coveredMap[$id] ?? []),
+        ];
     }
 
     /**
@@ -599,14 +665,52 @@ class DefectController extends WmsController
     }
 
     /**
+     * Объём уже заведённых открытых партий по складам некондиции.
+     *
+     * Остаток из 1С «разбирается» партиями: пока по товару заведено партий
+     * меньше, чем числится остатка, разницу можно оформить новой партией.
+     * Закрытые и удалённые партии остаток не держат — они из счёта выпадают.
+     *
+     * @param  array<int, int>  $productIds
+     * @param  int|null  $excludeDefectId  Партия, которую сейчас правят — её объём
+     *                                     не считаем, иначе она вычтет сама себя.
+     * @return array<int, array<int, int>> [product_id => [warehouse_id => quantity]]
+     */
+    private function defectCoveredMap(array $productIds, ?int $excludeDefectId = null): array
+    {
+        if ($productIds === []) {
+            return [];
+        }
+
+        $rows = DB::table('product_defects')
+            ->selectRaw('product_id, warehouse_id, SUM(quantity) as covered')
+            ->whereIn('product_id', $productIds)
+            ->whereNull('deleted_at')
+            ->whereNull('closed_at')
+            ->when($excludeDefectId, fn ($query) => $query->where('id', '<>', $excludeDefectId))
+            ->groupBy('product_id', 'warehouse_id')
+            ->get();
+
+        $result = [];
+        foreach ($rows as $row) {
+            $result[(int) $row->product_id][(int) $row->warehouse_id] = (int) $row->covered;
+        }
+
+        return $result;
+    }
+
+    /**
      * Текст предупреждения о нехватке остатка под заводимую партию — или null,
      * если остатка хватает.
      *
      * Дублирует подсказку формы намеренно: форма предупреждает до сохранения,
      * этот флеш — после, чтобы предупреждение не потерялось, если кладовщик
      * заполнял партию до выбора склада.
+     *
+     * @param  int|null  $excludeDefectId  Только что сохранённая партия — её объём
+     *                                     в «уже разобрано» не попадает.
      */
-    private function stockWarning(int $productId, int $warehouseId, int $quantity): ?string
+    private function stockWarning(int $productId, int $warehouseId, int $quantity, ?int $excludeDefectId = null): ?string
     {
         $warehouse = Warehouse::query()->defect()->find($warehouseId);
 
@@ -621,8 +725,12 @@ class DefectController extends WmsController
                 .'Проверьте, оприходован ли брак на склад некондиции в 1С.';
         }
 
-        if ($available < $quantity) {
+        $covered = $this->defectCoveredMap([$productId], $excludeDefectId)[$productId][$warehouseId] ?? 0;
+        $free = $available - $covered;
+
+        if ($free < $quantity) {
             return "Внимание: на складе «{$warehouse->name}» числится {$available} шт., "
+                .($covered > 0 ? "из них {$covered} шт. уже разобрано другими партиями — свободно {$free} шт., " : '')
                 ."а в партии {$quantity} шт. Проверьте остатки в 1С.";
         }
 

@@ -14,16 +14,21 @@ import { ProductSelector } from '@/Admin/Components/ProductSelector';
 import { MultipleImageUploader } from '@/Admin/Components/MultipleImageUploader';
 import { Field } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
+import { useFlashToast } from '@/hooks/useFlashToast';
 import { DefectDescriptionField } from '@/Wms/Components/DefectDescriptionField';
 import { DefectStockWarning } from '@/Wms/Components/DefectStockWarning';
 import { QuantityStepper } from '@/Wms/Components/QuantityStepper';
 
 export default function DefectsCreate() {
-    // prefill приходит из отчёта «Не закрыто партиями»: товар и склад уже известны,
-    // кладовщику остаётся описать дефект и приложить фото.
+    // prefill приходит из отчёта «Не закрыто партиями» (товар + склад) или из
+    // «Сохранить и продолжить» (только склад) — форма возвращается чистой.
     const { warehouses, defectTypes = [], prefill = null } = usePage().props;
 
-    const { data, setData, post, processing, errors } = useForm({
+    // Флеш от предыдущей партии: после «Сохранить и продолжить» подтверждение
+    // и предупреждение об остатке приходят уже на новую пустую форму.
+    useFlashToast();
+
+    const { data, setData, post, processing, errors, transform } = useForm({
         product_id: prefill?.product?.id ?? null,
         warehouse_id: prefill?.warehouse_id
             ? String(prefill.warehouse_id)
@@ -37,9 +42,21 @@ export default function DefectsCreate() {
     // поэтому объект держим вне формы — иначе он поедет в запрос лишним полем.
     const [selectedProduct, setSelectedProduct] = useState(prefill?.product ?? null);
 
+    // Какая из кнопок сохранения нажата — чтобы спиннер крутился только на ней.
+    const [continueMode, setContinueMode] = useState(false);
+
+    // continue=1 — бэк вернёт чистую форму на том же складе вместо карточки
+    // заведённой партии. Через transform, а не setData: значение нужно ровно
+    // в момент отправки, а setData применился бы только к следующему рендеру.
+    const submit = (keepCreating) => {
+        setContinueMode(keepCreating);
+        transform((current) => ({ ...current, continue: keepCreating ? 1 : 0 }));
+        post('/wms/defects', { forceFormData: true });
+    };
+
     const handleSubmit = (event) => {
         event.preventDefault();
-        post('/wms/defects', { forceFormData: true });
+        submit(false);
     };
 
     return (
@@ -135,7 +152,7 @@ export default function DefectsCreate() {
                                     required
                                     invalid={!!errors.quantity}
                                     errorText={errors.quantity}
-                                    helperText="Столько единиц с этим же дефектом"
+                                    helperText="Столько единиц с этим же дефектом — не больше нераспределённого остатка"
                                 >
                                     <QuantityStepper
                                         value={data.quantity}
@@ -187,10 +204,23 @@ export default function DefectsCreate() {
                             type="submit"
                             h="48px"
                             flex={{ base: 'none', sm: '0 0 auto' }}
-                            loading={processing}
-                            disabled={warehouses.length === 0}
+                            loading={processing && !continueMode}
+                            disabled={warehouses.length === 0 || processing}
                         >
                             Завести партию
+                        </Button>
+                        {/* Серия партий подряд: сохраняем и получаем чистую форму
+                            на том же складе, не заходя в карточку партии. */}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            h="48px"
+                            flex={{ base: 'none', sm: '0 0 auto' }}
+                            loading={processing && continueMode}
+                            disabled={warehouses.length === 0 || processing}
+                            onClick={() => submit(true)}
+                        >
+                            Сохранить и продолжить
                         </Button>
                     </Stack>
                 </VStack>
