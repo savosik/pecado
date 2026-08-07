@@ -127,6 +127,9 @@ class RolesAndPermissionsSeeder extends Seeder
         // Справочник дефектов глазами склада: формулировки ведёт начальник склада,
         // кладовщику они приезжают чипами (право не выдаётся).
         'wms-defect-types' => ['view', 'create', 'edit', 'delete'],
+        // Расходные ордера из 1С: журнал только на чтение — статусами управляет 1С,
+        // поэтому действий create/edit/delete у ресурса нет принципиально.
+        'wms-goods-issues' => ['view', 'export'],
 
         // Уценка глазами закупщика — админский ресурс (без `wms-` префикса):
         // цену и публикацию задаёт buyer-manager в /admin, а не кладовщик.
@@ -210,6 +213,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'wms-dashboard' => 'Склад: Рабочий стол',
         'wms-defects' => 'Склад: Некондиция',
         'wms-defect-types' => 'Склад: Справочник дефектов',
+        'wms-goods-issues' => 'Склад: Расходные ордера',
         'defects' => 'Уценка (цены и публикация)',
         'defect-types' => 'Справочник дефектов',
         'supplier-preorders' => 'Предзаказы поставщику',
@@ -282,14 +286,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только WMS: в /admin роль намеренно не пускает.
                 // Справочник дефектов ведёт начальник склада — у кладовщика его нет.
-                'wms-dashboard', 'wms-defects', 'wms-defect-types',
+                'wms-dashboard', 'wms-defects', 'wms-defect-types', 'wms-goods-issues',
             ],
         ],
         'storekeeper' => [
             'label' => 'Кладовщик',
             'resources' => [
                 // Только WMS: в /admin роль намеренно не пускает.
-                'wms-dashboard', 'wms-defects',
+                'wms-dashboard', 'wms-defects', 'wms-goods-issues',
             ],
         ],
         // Роль buyer-manager (закупщик) намеренно не описана здесь: она заведена

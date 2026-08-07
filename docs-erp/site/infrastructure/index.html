@@ -876,6 +876,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../rules/goods-issues/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Расходные ордера
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../rules/payments/" class="md-nav__link">
         
   
@@ -1467,6 +1495,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/goods-issues-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Расходные ордера: что сделать в 1С (v15.15.0)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2040,6 +2096,11 @@
 <td><code>payment.created</code>, <code>payment.updated</code>, <code>payment.deleted</code></td>
 </tr>
 <tr>
+<td><code>erp_in.warehouse</code></td>
+<td><code>goods_issue.*</code></td>
+<td><code>goods_issue.created</code>, <code>goods_issue.updated</code>, <code>goods_issue.deleted</code></td>
+</tr>
+<tr>
 <td><code>erp_in.balance</code></td>
 <td><code>balance.*</code></td>
 <td><code>balance.updated</code></td>
@@ -2435,6 +2496,24 @@
 <td>1С → Сайт</td>
 <td><code>erp.events</code></td>
 <td><code>erp_in.payments</code></td>
+</tr>
+<tr>
+<td><code>goods_issue.created</code></td>
+<td>1С → Сайт</td>
+<td><code>erp.events</code></td>
+<td><code>erp_in.warehouse</code></td>
+</tr>
+<tr>
+<td><code>goods_issue.updated</code></td>
+<td>1С → Сайт</td>
+<td><code>erp.events</code></td>
+<td><code>erp_in.warehouse</code></td>
+</tr>
+<tr>
+<td><code>goods_issue.deleted</code></td>
+<td>1С → Сайт</td>
+<td><code>erp.events</code></td>
+<td><code>erp_in.warehouse</code></td>
 </tr>
 <tr>
 <td><code>balance.updated</code></td>

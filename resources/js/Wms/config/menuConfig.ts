@@ -41,5 +41,12 @@ export const menuConfig: MenuGroup[] = [
             { label: "Справочник дефектов", icon: LuClipboardList, path: "/wms/defect-types", permission: "wms-defect-types.view" },
         ],
     },
+    {
+        title: "Отгрузка",
+        icon: LuTruck,
+        items: [
+            { label: "Расходные ордера", icon: LuClipboardList, path: "/wms/goods-issues", permission: "wms-goods-issues.view" },
+        ],
+    },
     // Разделы приёмки, отбора и инвентаризации добавятся сюда позже.
 ];

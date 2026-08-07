@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Wms;
 
+use App\Models\GoodsIssue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -21,7 +22,28 @@ class DashboardController extends WmsController
                 'units_total' => $warehouses->sum('units_total'),
             ],
             'isWarehouseHead' => $this->isWarehouseHead($request),
+            'goodsIssues' => $this->goodsIssueSummary($request),
         ]);
+    }
+
+    /**
+     * Сводка по расходным ордерам: сколько в работе и сколько зависло.
+     *
+     * Показываем только тем, у кого есть право на раздел — иначе плитка вела бы
+     * на 403. Пусто (null) — плитки нет вовсе.
+     *
+     * @return array{active: int, stale: int}|null
+     */
+    private function goodsIssueSummary(Request $request): ?array
+    {
+        if (! $request->user()?->can('wms-goods-issues.view')) {
+            return null;
+        }
+
+        return [
+            'active' => GoodsIssue::query()->whereIn('status', GoodsIssue::ACTIVE_STATUSES)->count(),
+            'stale' => GoodsIssue::query()->stale()->count(),
+        ];
     }
 
     /**

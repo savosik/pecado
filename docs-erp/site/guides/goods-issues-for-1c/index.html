@@ -1,0 +1,2531 @@
+
+<!doctype html>
+<html lang="ru" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Документация по интеграции 1С:КА2 и сайта Pecado через RabbitMQ">
+      
+      
+      
+        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/guides/goods-issues-for-1c/">
+      
+      
+        <link rel="prev" href="../cost-price-for-1c/">
+      
+      
+        <link rel="next" href="../../initial-load/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Расходные ордера: что сделать в 1С (v15.15.0) - Pecado ERP — Интеграция 1С ↔ Сайт</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#-1-v15150" class="md-skip">
+          Перейти к содержанию
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Верхний колонтитул">
+    <a href="../.." title="Pecado ERP — Интеграция 1С ↔ Сайт" class="md-header__button md-logo" aria-label="Pecado ERP — Интеграция 1С ↔ Сайт" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Pecado ERP — Интеграция 1С ↔ Сайт
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Расходные ордера: что сделать в 1С (v15.15.0)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Светлая тема"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Светлая тема" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Тёмная тема"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Тёмная тема" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Поиск" placeholder="Поиск" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Поиск">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Очистить" aria-label="Очистить" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Инициализация поиска
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Навигация" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Pecado ERP — Интеграция 1С ↔ Сайт" class="md-nav__button md-logo" aria-label="Pecado ERP — Интеграция 1С ↔ Сайт" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Pecado ERP — Интеграция 1С ↔ Сайт
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Обзор
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Настройки обмена
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Инфраструктура
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Бизнес-правила
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Бизнес-правила
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/partners/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Партнёры
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/catalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Каталог
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/prices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Цены
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/cost-prices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Себестоимость
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/stocks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Остатки
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/external-remains/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Внешние остатки (ESB)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/contractors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Контрагенты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/orders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Заказы
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/returns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Возвраты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/shipments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Реализации
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/goods-issues/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Расходные ордера
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/payments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Платежи
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/balances/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Баланс
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/organizations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Организации (наши юрлица)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/individual-prices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Индивидуальные цены
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/pricing-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ценообразование
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/product-attributes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Атрибуты товаров
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/client-segments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Клиентские сегменты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/promotions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Промо-флаги товаров
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/data-normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Нормализация данных
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Тест-план
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Тест-план
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-0-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 0: Подготовка
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-1-inbound/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 1: 1С → Сайт
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-2-outbound/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 2: Сайт → 1С
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-3-e2e/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 3: Сквозные сценарии
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-4-edge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 4: Edge-кейсы
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Гайды для 1С
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Гайды для 1С
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../erp-timestamps-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Аудит-метки 1С (erp_created_at / erp_updated_at)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../payment-schedule-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    График оплат: что сделать в 1С (v15.12.0)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cost-price-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Себестоимость: что сделать в 1С (v15.13.0)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Расходные ордера: что сделать в 1С (v15.15.0)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Расходные ордера: что сделать в 1С (v15.15.0)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Содержание">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Роль и задача
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что уже сделано на стороне сайта
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Актуальная документация (единственный источник правды)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Формат сообщения
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Формат сообщения">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Поля шапки
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Статусы — таблица соответствия
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Строка items[]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Строка packages[]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Удаление
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Правила выгрузки
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Критерии приёмки
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../initial-load/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Первоначальная выгрузка
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Миграции
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Миграции
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/v13.2-contractor-uuid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v13.2 — UUID для контрагентов
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/v13.6-uniq-companies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v13.6 — UNIQUE на (ИНН, КПП)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../open-questions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Открытые вопросы
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ссылки
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Ссылки
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://dev.pecado.ru/docs/erp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AsyncAPI (интерактивная)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://dev.pecado.ru/docs/erp/spec.yaml" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AsyncAPI (YAML)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://dev.pecado.ru/docs/erp/schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JSON Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Содержание">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Роль и задача
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что уже сделано на стороне сайта
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Актуальная документация (единственный источник правды)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Формат сообщения
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Формат сообщения">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Поля шапки
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Статусы — таблица соответствия
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Строка items[]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Строка packages[]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Удаление
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Правила выгрузки
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Критерии приёмки
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="-1-v15150">Промт для ИИ-агента 1С: выгрузка расходных ордеров (протокол v15.15.0)<a class="headerlink" href="#-1-v15150" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>Скопируйте всё, что ниже разделителя, в ИИ-агента, который дорабатывает обмен на стороне
+1С:КА2. Промт самодостаточен: в нём есть контракт, правила, порядок работ и критерии приёмки.</p>
+</blockquote>
+<hr />
+<h2 id="_1">Роль и задача<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>Ты — разработчик 1С:Комплексная автоматизация 2, дорабатывающий обмен данными с сайтом
+<code>pecado.ru</code> через RabbitMQ.</p>
+<p><strong>Задача:</strong> начать выгружать на сайт документ <strong>«Расходный ордер на товары»</strong> тремя новыми
+сообщениями — <code>goods_issue.created</code>, <code>goods_issue.updated</code>, <code>goods_issue.deleted</code>.
+Сайт уже принимает эти данные: доработка нужна только на стороне 1С.</p>
+<p><strong>Зачем это бизнесу.</strong> Сайт получает из 1С реализации, но реализация отражает <strong>уже
+свершившийся</strong> факт отгрузки. Документ, по которому склад физически собирает, проверяет,
+упаковывает и грузит товар, на сайте отсутствовал вовсе. Из-за этого кладовщики и начальник
+склада вынуждены держать открытым толстый клиент 1С: в кабинете склада не видно ни что
+сейчас в отборе, ни что зависло на этапе, ни сколько мест собрано, ни по каким заказам
+идёт ордер.</p>
+<h2 id="_2">Что уже сделано на стороне сайта<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>Ничего менять и согласовывать не нужно — приём готов:</p>
+<ul>
+<li>заведена <strong>новая очередь</strong> <code>erp_in.warehouse</code> с routing key <code>goods_issue.*</code>
+  и очередь недоставленных <code>erp_dlq.warehouse</code>;</li>
+<li>сайт хранит ордер целиком: шапку, товары по распоряжениям, упаковочные листы;</li>
+<li>сайт <strong>сам ведёт журнал смены статусов</strong> — вам достаточно присылать текущий статус;</li>
+<li>в кабинете склада <code>/wms/goods-issues</code> работает журнал с фильтрами, карточкой документа
+  и выгрузкой в Excel.</li>
+</ul>
+<h2 id="_3">Актуальная документация (единственный источник правды)<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Что</th>
+<th>Ссылка</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Полная спецификация AsyncAPI</td>
+<td>https://pecado.ru/docs/erp/spec.yaml</td>
+</tr>
+<tr>
+<td>JSON Schema создания</td>
+<td>https://pecado.ru/docs/erp/schemas/goods_issue.created.json</td>
+</tr>
+<tr>
+<td>JSON Schema обновления</td>
+<td>https://pecado.ru/docs/erp/schemas/goods_issue.updated.json</td>
+</tr>
+<tr>
+<td>JSON Schema удаления</td>
+<td>https://pecado.ru/docs/erp/schemas/goods_issue.deleted.json</td>
+</tr>
+<tr>
+<td>Бизнес-правила</td>
+<td>https://pecado.ru/docs/erp-guide/rules/goods-issues/</td>
+</tr>
+<tr>
+<td>Changelog, раздел 15.15.0</td>
+<td>https://pecado.ru/docs/erp-guide/changelog/</td>
+</tr>
+<tr>
+<td>Интерактивная документация payload-ов</td>
+<td>https://pecado.ru/docs/erp/</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Прочитай JSON Schema перед тем, как писать код.</strong> Сообщение, не прошедшее валидацию
+по схеме, отбрасывается сайтом целиком и попадает в очередь недоставленных
+(<code>erp_dlq.warehouse</code>).</p>
+<h2 id="_4">Формат сообщения<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<p><strong>Обменник:</strong> <code>erp.events</code> (topic, durable) — тот же, что для всех остальных сообщений.
+<strong>Routing keys:</strong> <code>goods_issue.created</code>, <code>goods_issue.updated</code>, <code>goods_issue.deleted</code>
+<strong>Очередь-получатель:</strong> <code>erp_in.warehouse</code> (привязана на стороне сайта, настраивать не нужно).</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;goods_issue.created&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;msg-gi-a1b2c3d4&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;УТ-00009419&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-07-08T13:25:55+03:00&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;shipment_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-07-08T13:25:55+03:00&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;shipped&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;operation&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Отгрузка клиенту&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;warehouse_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;f8083799-0838-11e0-a1ea-505054503030&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;contractor_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;550e8400-e29b-41d4-a716-446655440000&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;partner_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;tax_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7704217370&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;recipient_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Интернет Решения ООО, г.Москва&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;responsible&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Отгрузка 3 Москва&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;normal&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;comment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Москва и МО доп&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;delivery_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;delivery&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;erp_created_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-07-08T13:25:55+03:00&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;erp_updated_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-07-08T14:02:11+03:00&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;items&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;line_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;product_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;550e8400-e29b-41d4-a716-446655440001&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;product_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Реалистичный страпон Pecado Импульсивная, силикон, 16см&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;order_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;order_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;30УТ-000213&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;order_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-07-08T13:25:33+03:00&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;quantity&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;шт&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;package_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;packages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;number&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;positions_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;number&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;positions_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="_5">Поля шапки<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Тип</th>
+<th>Обязательно</th>
+<th>Соответствие в 1С</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>event</code></td>
+<td>строка</td>
+<td>да</td>
+<td><code>goods_issue.created</code> / <code>.updated</code> / <code>.deleted</code></td>
+</tr>
+<tr>
+<td><code>message_id</code></td>
+<td>строка</td>
+<td>да</td>
+<td>Уникальный идентификатор сообщения. По нему сайт отбрасывает дубли</td>
+</tr>
+<tr>
+<td><code>uuid</code></td>
+<td>UUID</td>
+<td>да</td>
+<td>GUID документа «Расходный ордер на товары»</td>
+</tr>
+<tr>
+<td><code>number</code></td>
+<td>строка</td>
+<td>да</td>
+<td>Номер, например <code>УТ-00009419</code></td>
+</tr>
+<tr>
+<td><code>date</code></td>
+<td>дата-время</td>
+<td>да</td>
+<td>Дата документа («от» в шапке)</td>
+</tr>
+<tr>
+<td><code>shipment_date</code></td>
+<td>дата-время</td>
+<td>нет</td>
+<td>Дата отгрузки</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>код</td>
+<td>да</td>
+<td>Статус — <strong>только машинным кодом</strong>, см. таблицу ниже</td>
+</tr>
+<tr>
+<td><code>operation</code></td>
+<td>строка</td>
+<td>нет</td>
+<td>Операция, например <code>Отгрузка клиенту</code></td>
+</tr>
+<tr>
+<td><code>warehouse_uuid</code></td>
+<td>UUID</td>
+<td>нет</td>
+<td>Склад</td>
+</tr>
+<tr>
+<td><code>organization</code></td>
+<td>объект</td>
+<td>нет</td>
+<td>Организация, достаточно <code>uuid</code></td>
+</tr>
+<tr>
+<td><code>contractor_uuid</code></td>
+<td>UUID</td>
+<td>нет</td>
+<td>Контрагент-получатель</td>
+</tr>
+<tr>
+<td><code>partner_uuid</code></td>
+<td>UUID</td>
+<td>нет</td>
+<td>Партнёр-владелец</td>
+</tr>
+<tr>
+<td><code>tax_id</code></td>
+<td>строка</td>
+<td>нет</td>
+<td>ИНН получателя</td>
+</tr>
+<tr>
+<td><code>recipient_name</code></td>
+<td>строка</td>
+<td>нет*</td>
+<td>Получатель строкой. *Формально необязателен, но присылать нужно всегда — см. правило 3</td>
+</tr>
+<tr>
+<td><code>responsible</code></td>
+<td>строка</td>
+<td>нет</td>
+<td>Ответственный, например <code>Отгрузка 3 Москва</code></td>
+</tr>
+<tr>
+<td><code>priority</code></td>
+<td>код</td>
+<td>нет</td>
+<td><code>low</code> — Низкий, <code>normal</code> — Средний, <code>high</code> — Высокий</td>
+</tr>
+<tr>
+<td><code>comment</code></td>
+<td>строка</td>
+<td>нет</td>
+<td>Комментарий</td>
+</tr>
+<tr>
+<td><code>delivery_type</code></td>
+<td>код</td>
+<td>нет</td>
+<td><code>pickup</code> — Самовывоз, <code>delivery</code> — Доставка</td>
+</tr>
+<tr>
+<td><code>delivery_address</code></td>
+<td>строка</td>
+<td>нет</td>
+<td>Адрес доставки</td>
+</tr>
+<tr>
+<td><code>delivery_order</code></td>
+<td>строка</td>
+<td>нет</td>
+<td>Порядок доставки</td>
+</tr>
+<tr>
+<td><code>erp_created_at</code> / <code>erp_updated_at</code></td>
+<td>дата-время</td>
+<td>нет</td>
+<td>Аудит-метки 1С</td>
+</tr>
+<tr>
+<td><code>items</code></td>
+<td>массив</td>
+<td>да</td>
+<td>Табличная часть «Товары по распоряжениям», минимум одна строка</td>
+</tr>
+<tr>
+<td><code>packages</code></td>
+<td>массив</td>
+<td>нет</td>
+<td>Упаковочные листы</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_6">Статусы — таблица соответствия<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Статус в 1С</th>
+<th>Код для передачи</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Подготовлен</td>
+<td><code>prepared</code></td>
+</tr>
+<tr>
+<td>К отбору</td>
+<td><code>to_pick</code></td>
+</tr>
+<tr>
+<td>К проверке</td>
+<td><code>to_check</code></td>
+</tr>
+<tr>
+<td>Проверен</td>
+<td><code>checked</code></td>
+</tr>
+<tr>
+<td>К отгрузке</td>
+<td><code>to_ship</code></td>
+</tr>
+<tr>
+<td>Отгружен</td>
+<td><code>shipped</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Передавать нужно именно код.</strong> Русское название («Отгружен») сайт не принимает: сообщение
+отбрасывается целиком и уходит в <code>erp_dlq.warehouse</code>.</p>
+<h3 id="items">Строка <code>items[]</code><a class="headerlink" href="#items" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Тип</th>
+<th>Обязательно</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>line_number</code></td>
+<td>целое</td>
+<td>нет</td>
+<td>Номер строки табличной части</td>
+</tr>
+<tr>
+<td><code>product_uuid</code></td>
+<td>UUID</td>
+<td>да</td>
+<td>GUID номенклатуры — тот же, что в <code>price.updated</code> и <code>stock.updated</code></td>
+</tr>
+<tr>
+<td><code>product_name</code></td>
+<td>строка</td>
+<td>нет*</td>
+<td>Наименование. *Присылать нужно — см. правило 4</td>
+</tr>
+<tr>
+<td><code>order_uuid</code></td>
+<td>UUID</td>
+<td>нет*</td>
+<td>GUID заказа-распоряжения. *Без него ордер не связывается с заказом — см. правило 2</td>
+</tr>
+<tr>
+<td><code>order_number</code></td>
+<td>строка</td>
+<td>нет</td>
+<td>Номер заказа, например <code>30УТ-000213</code></td>
+</tr>
+<tr>
+<td><code>order_date</code></td>
+<td>дата-время</td>
+<td>нет</td>
+<td>Дата заказа</td>
+</tr>
+<tr>
+<td><code>quantity</code></td>
+<td>число ≥ 0</td>
+<td>да</td>
+<td>Количество к отгрузке</td>
+</tr>
+<tr>
+<td><code>unit</code></td>
+<td>строка</td>
+<td>нет</td>
+<td>Единица измерения</td>
+</tr>
+<tr>
+<td><code>package_number</code></td>
+<td>целое</td>
+<td>нет</td>
+<td>Номер упаковочного листа для этой строки</td>
+</tr>
+</tbody>
+</table>
+<h3 id="packages">Строка <code>packages[]</code><a class="headerlink" href="#packages" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Тип</th>
+<th>Обязательно</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>number</code></td>
+<td>целое</td>
+<td>да</td>
+<td>Номер упаковочного листа</td>
+</tr>
+<tr>
+<td><code>positions_count</code></td>
+<td>целое</td>
+<td>нет</td>
+<td>Сколько позиций в составе листа</td>
+</tr>
+<tr>
+<td><code>weight</code> / <code>volume</code></td>
+<td>число</td>
+<td>нет</td>
+<td>Вес и объём места, если ведутся</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_7">Удаление<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;goods_issue.deleted&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;msg-gi-del-a1b2c3d4&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="_8">Правила выгрузки<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>Слать при каждом изменении.</strong> <code>goods_issue.created</code> — при первом проведении,
+   <code>goods_issue.updated</code> — <strong>на каждую смену статуса</strong> и при изменении состава или
+   реквизитов, <code>goods_issue.deleted</code> — при отмене проведения или пометке на удаление.
+   Без сообщений на смену статуса журнал склада показывает ордер в том состоянии,
+   в котором он приехал впервые, и весь смысл раздела теряется.</p>
+</li>
+<li>
+<p><strong>Заказ указывается в строке, а не в шапке.</strong> Один расходный ордер может собираться
+   сразу по нескольким заказам клиента, поэтому <code>order_uuid</code> живёт в <code>items[]</code> — та же
+   модель, что у реализаций. Если не заполнить <code>order_uuid</code>, ордер попадёт на сайт,
+   но не свяжется ни с одним заказом, и склад не увидит, что именно он комплектует.</p>
+</li>
+<li>
+<p><strong><code>recipient_name</code> заполнять всегда.</strong> Получателем ордера бывает контрагент, которого
+   в справочниках сайта нет вовсе (маркетплейс, внутреннее перемещение). Сайт не сможет
+   подставить имя из своей базы — и ордер в журнале останется безымянным.</p>
+</li>
+<li>
+<p><strong><code>product_name</code> заполнять всегда.</strong> Товара может не быть в каталоге сайта (снят
+   с публикации, не выгружался). Без наименования строка нечитаема для кладовщика.</p>
+</li>
+<li>
+<p><strong>Документ присылается целиком.</strong> Сайт удаляет прежние строки и упаковочные листы
+   и создаёт их заново. Досылать только изменившиеся строки нельзя — они продублируются.</p>
+</li>
+<li>
+<p><strong><code>packages</code>: отсутствие ключа и пустой массив означают разное.</strong> Ключа нет — сайт
+   не трогает сохранённые упаковочные листы (используйте, когда меняется только статус);
+   <code>[]</code> — очищает их полностью. Та же ловушка, что с графиком оплат в v15.12.0.</p>
+</li>
+<li>
+<p><strong><code>message_id</code> должен быть уникальным для каждого сообщения.</strong> Если переиспользовать
+   один и тот же идентификатор, сайт посчитает второе сообщение дублем и не применит его.
+   Особенно важно при смене статуса: <code>uuid</code> документа тот же, а <code>message_id</code> обязан
+   отличаться.</p>
+</li>
+<li>
+<p><strong>Цены, суммы, серии и штрихкоды маркировки присылать не нужно.</strong> Ордер — складской
+   документ; денежные данные сайт берёт из реализации. Лишние поля сообщение не ломают
+   (сайт их игнорирует), но и смысла в них нет.</p>
+</li>
+<li>
+<p><strong>Первоначальная выгрузка.</strong> Разово выгрузить <strong>незакрытые</strong> ордера (все, кроме давно
+   отгруженных) — иначе журнал склада будет пустым до первого нового проведения. Глубину
+   истории согласуйте со складом; по отгруженным ордерам за прошлые периоды практической
+   ценности мало. Порядок и приоритеты — см. <a href="../../initial-load/">Первоначальная выгрузка</a>.</p>
+</li>
+</ol>
+<h2 id="_9">Критерии приёмки<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] В 1С реализована выгрузка <code>goods_issue.created</code> при первом проведении ордера</li>
+<li>[ ] Реализована выгрузка <code>goods_issue.updated</code> на <strong>каждую</strong> смену статуса</li>
+<li>[ ] Реализована выгрузка <code>goods_issue.deleted</code> при отмене проведения</li>
+<li>[ ] Статус передаётся машинным кодом из таблицы соответствия</li>
+<li>[ ] <code>product_uuid</code> совпадает с GUID номенклатуры, который уже используется
+      в <code>price.updated</code> и <code>stock.updated</code></li>
+<li>[ ] <code>items[].order_uuid</code> заполнен для всех строк, у которых есть распоряжение</li>
+<li>[ ] <code>recipient_name</code> и <code>product_name</code> заполнены всегда</li>
+<li>[ ] <code>message_id</code> уникален для каждого сообщения</li>
+<li>[ ] Выполнена первоначальная выгрузка незакрытых ордеров</li>
+<li>[ ] В кабинете склада сайта ордер виден со своим статусом, позициями и упаковочными листами</li>
+<li>[ ] Очередь недоставленных <code>erp_dlq.warehouse</code> пуста после прогона</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  К началу
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u0421\u043a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u0432 \u0431\u0443\u0444\u0435\u0440", "clipboard.copy": "\u041a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0432 \u0431\u0443\u0444\u0435\u0440", "search.result.more.one": "\u0415\u0449\u0451 1 \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.more.other": "\u0415\u0449\u0451 # \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.none": "\u0421\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e", "search.result.one": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e 1 \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0435", "search.result.other": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439: #", "search.result.placeholder": "\u041d\u0430\u0447\u043d\u0438\u0442\u0435 \u043f\u0435\u0447\u0430\u0442\u0430\u0442\u044c \u0434\u043b\u044f \u043f\u043e\u0438\u0441\u043a\u0430", "search.result.term.missing": "\u041e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442", "select.version": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0435\u0440\u0441\u0438\u044e"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,27 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "goods_issue.deleted",
+    "title": "goods_issue.deleted (1С → Сайт)",
+    "description": "Отмена проведения (или пометка на удаление) расходного ордера в 1С. Сайт помечает ордер удалённым и убирает его из журнала склада, но данные сохраняет: повторное проведение того же документа вернёт ордер со всем составом и историей статусов.",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Уникальный идентификатор сообщения. Ключ идемпотентности."
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID расходного ордера в 1С. Неизвестный сайту uuid ошибкой не считается — сообщение отрабатывает вхолостую."
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "uuid"
+    ]
+}

@@ -8,6 +8,7 @@ use App\Models\ContractorBalance;
 use App\Models\ErpBusMessage;
 use App\Models\ErpProcessedMessage;
 use App\Models\ErpPromotion;
+use App\Models\GoodsIssue;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -3139,5 +3140,143 @@ class ErpIncomingJobTest extends TestCase
         $logged = ErpBusMessage::where('message_id', 'msg-payment-invalid')->first();
         $this->assertNotNull($logged, 'Сообщение обязано попасть в лог шины');
         $this->assertSame('failed', $logged->status);
+    }
+
+    // ========================================================
+    // US-20: goods_issue.* — расходные ордера (v15.15.0)
+    // ========================================================
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function goodsIssuePayload(array $overrides = []): array
+    {
+        return array_merge([
+            'event' => 'goods_issue.created',
+            'message_id' => 'msg-gi-001',
+            'uuid' => '7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f',
+            'number' => 'УТ-00009419',
+            'date' => '2026-07-08T13:25:55+03:00',
+            'status' => 'to_pick',
+            'recipient_name' => 'Интернет Решения ООО, г.Москва',
+            'items' => [
+                [
+                    'product_uuid' => '00000000-0000-4000-a000-0000000000f1',
+                    'product_name' => 'Товар из 1С',
+                    'order_uuid' => '00000000-0000-4000-a000-0000000000f2',
+                    'order_number' => '30УТ-000213',
+                    'quantity' => 15,
+                    'unit' => 'шт',
+                ],
+            ],
+        ], $overrides);
+    }
+
+    #[Test]
+    public function goods_issue_created_stores_order_through_job(): void
+    {
+        $job = $this->makeJob($this->goodsIssuePayload());
+
+        $job->fire();
+
+        $goodsIssue = GoodsIssue::firstWhere('uuid', '7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f');
+
+        $this->assertNotNull($goodsIssue);
+        $this->assertSame('УТ-00009419', $goodsIssue->number);
+        $this->assertSame('to_pick', $goodsIssue->status);
+        $this->assertSame(1, $goodsIssue->items_count);
+        $this->assertDatabaseHas('erp_processed_messages', [
+            'message_id' => 'msg-gi-001',
+            'event' => 'goods_issue.created',
+        ]);
+    }
+
+    #[Test]
+    public function goods_issue_idempotency_prevents_reprocessing(): void
+    {
+        ErpProcessedMessage::create([
+            'message_id' => 'msg-gi-duplicate',
+            'event' => 'goods_issue.created',
+            'processed_at' => now(),
+        ]);
+
+        $job = $this->makeJob($this->goodsIssuePayload(['message_id' => 'msg-gi-duplicate']));
+
+        $job->fire();
+
+        $this->assertSame(0, GoodsIssue::count());
+    }
+
+    #[Test]
+    public function goods_issue_with_unknown_status_fails_validation(): void
+    {
+        // 1С обязана присылать машинный код. Русское название («Отгружен») схема
+        // не принимает — иначе кладовщик увидел бы статус, которого нет в процессе.
+        $job = $this->makeJob($this->goodsIssuePayload([
+            'message_id' => 'msg-gi-bad-status',
+            'status' => 'Отгружен',
+        ]));
+
+        $job->fire();
+
+        $this->assertSame(0, GoodsIssue::count());
+        $this->assertDatabaseHas('erp_validation_errors', [
+            'event' => 'goods_issue.created',
+            'message_id' => 'msg-gi-bad-status',
+        ]);
+        // Записи об обработке быть не должно: после исправления в 1С то же сообщение
+        // можно прислать повторно.
+        $this->assertDatabaseMissing('erp_processed_messages', [
+            'message_id' => 'msg-gi-bad-status',
+        ]);
+    }
+
+    #[Test]
+    public function goods_issue_without_items_fails_validation(): void
+    {
+        $job = $this->makeJob($this->goodsIssuePayload([
+            'message_id' => 'msg-gi-no-items',
+            'items' => [],
+        ]));
+
+        $job->fire();
+
+        $this->assertSame(0, GoodsIssue::count());
+        $this->assertDatabaseHas('erp_validation_errors', [
+            'message_id' => 'msg-gi-no-items',
+        ]);
+    }
+
+    #[Test]
+    public function goods_issue_with_unknown_product_completes_without_error(): void
+    {
+        $job = $this->makeJob($this->goodsIssuePayload(['message_id' => 'msg-gi-unknown-product']));
+
+        $job->fire();
+
+        $goodsIssue = GoodsIssue::firstWhere('uuid', '7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f');
+
+        $this->assertSame(1, $goodsIssue->unresolved_items_count);
+        $this->assertNull($goodsIssue->items->first()->product_id);
+        $this->assertSame('Товар из 1С', $goodsIssue->items->first()->product_name);
+        $this->assertDatabaseHas('erp_processed_messages', [
+            'message_id' => 'msg-gi-unknown-product',
+        ]);
+    }
+
+    #[Test]
+    public function goods_issue_deleted_soft_deletes_order_through_job(): void
+    {
+        $this->makeJob($this->goodsIssuePayload())->fire();
+
+        $this->makeJob([
+            'event' => 'goods_issue.deleted',
+            'message_id' => 'msg-gi-del',
+            'uuid' => '7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f',
+        ])->fire();
+
+        $this->assertSame(0, GoodsIssue::count());
+        $this->assertSame(1, GoodsIssue::withTrashed()->count());
     }
 }

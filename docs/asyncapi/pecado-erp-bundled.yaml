@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 15.14.0
+  version: 15.15.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -3004,6 +3004,972 @@ channels:
         is: queue
         queue:
           name: erp_in.documents
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+  erpInWarehouse:
+    address: erp_in.warehouse
+    title: Складские ордера (1С → Сайт)
+    description: >
+      Очередь для складских документов: расходные ордера на товары.
+
+      Routing key: `goods_issue.*`
+
+
+      Заведена отдельно от `erp_in.documents` намеренно: у очереди реализаций
+      один
+
+      воркер, и первоначальная выгрузка ордеров за всю историю заблокировала бы
+      приём
+
+      реализаций, платежей и балансов.
+    messages:
+      goodsIssueCreated:
+        name: goods_issue.created
+        title: Расходный ордер создан
+        summary: Первое проведение расходного ордера на товары в 1С
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          description: >
+            Расходный ордер на товары — складской документ, по которому товар
+            отбирают,
+
+            проверяют, упаковывают и отгружают.
+
+
+            Денежных полей у ордера нет: цены, скидки и суммы приезжают
+            реализацией
+
+            (`shipment.*`). Серии и штрихкоды маркировки сайт не хранит.
+          required:
+            - event
+            - message_id
+            - uuid
+            - number
+            - date
+            - status
+            - items
+          properties:
+            event:
+              type: string
+              const: goods_issue.created
+              description: Тип события
+            message_id:
+              type: string
+              description: Уникальный ID сообщения для идемпотентности
+              examples:
+                - msg-gi-a1b2c3d4
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            number:
+              type: string
+              minLength: 1
+              description: >-
+                Номер ордера в 1С — по нему склад ищет документ и сверяется с
+                1С.
+              examples:
+                - УТ-00009419
+            date:
+              type: string
+              format: date-time
+              description: Дата и время в формате ISO 8601
+              examples:
+                - '2026-03-17T12:00:00+03:00'
+            shipment_date:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >
+                Дата отгрузки из шапки ордера. Может отличаться от даты
+                документа: ордер
+
+                создаётся заранее, а грузится позже. Необязательно.
+            status:
+              type: string
+              description: >
+                Статус расходного ордера машинным кодом.
+
+
+                | Статус в 1С | Код |
+
+                |---|---|
+
+                | Подготовлен | `prepared` |
+
+                | К отбору | `to_pick` |
+
+                | К проверке | `to_check` |
+
+                | Проверен | `checked` |
+
+                | К отгрузке | `to_ship` |
+
+                | Отгружен | `shipped` |
+
+
+                **Значение вне списка не принимается:** сообщение отбрасывается
+                целиком и попадает
+
+                в очередь недоставленных `erp_dlq.warehouse`. Строгий перечень,
+                а не свободная строка,
+
+                выбран сознательно — статус здесь главное, ради чего журнал
+                склада существует,
+
+                и молча принять неизвестный код хуже, чем заметить расхождение
+                сразу.
+              enum:
+                - prepared
+                - to_pick
+                - to_check
+                - checked
+                - to_ship
+                - shipped
+              examples:
+                - shipped
+            operation:
+              type:
+                - string
+                - 'null'
+              description: >
+                Хозяйственная операция документа как есть. Свободная строка, а
+                не перечень:
+
+                операций у ордера больше, чем отгрузка клиенту (перемещения
+                между складами
+
+                и прочее), и строгий enum отбил бы их в DLQ.
+              examples:
+                - Отгрузка клиенту
+            warehouse_uuid:
+              type:
+                - string
+                - 'null'
+              format: uuid
+              description: >
+                Склад, на который документ **фактически проведён** в 1С
+                (v15.8.0). Опционально.
+
+
+                **Направление: только 1С → Сайт.** Не путать с `warehouse_uuids`
+                исходящего заказа:
+
+                там сайт перечисляет склады региона, а конкретный выбирает 1С.
+
+
+                Неизвестный сайту склад автоматически не заводится: поле
+                останется пустым,
+
+                факт попадёт в лог.
+            organization:
+              type: object
+              description: >
+                Наша организация (юрлицо), от имени которой документ проведён в
+                1С.
+
+
+                **Направление: только 1С → Сайт.** Сайт организацию не
+                определяет и не отправляет —
+
+                её выбирает 1С по своим правилам (для `type=promo` и
+                `type=promo_sample` —
+
+                по хардкоду из v15.7.1).
+
+
+                Справочник организаций **по шине не передаётся**: юрлица
+                заводятся в админке сайта
+
+                вручную, как склады. Поэтому достаточно `uuid` — остальные поля
+                необязательны
+
+                и используются только если организации с таким UUID на сайте ещё
+                нет.
+
+
+                Объект без `uuid` сайт игнорирует. Неизвестный `uuid` создаёт
+                организацию-заглушку,
+
+                которую дозаполняет администратор; связь документа с юрлицом при
+                этом сохраняется.
+              required:
+                - uuid
+              properties:
+                uuid:
+                  type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                name:
+                  type:
+                    - string
+                    - 'null'
+                  description: Краткое название организации. Необязательно.
+                  examples:
+                    - ООО Пекадо
+                legal_name:
+                  type:
+                    - string
+                    - 'null'
+                  description: Полное юридическое наименование. Необязательно.
+                tax_id:
+                  type:
+                    - string
+                    - 'null'
+                  description: ИНН организации. Необязательно.
+                tax_code:
+                  type:
+                    - string
+                    - 'null'
+                  description: КПП организации. Необязательно.
+            contractor_uuid:
+              type:
+                - string
+                - 'null'
+              format: uuid
+              description: >
+                UUID контрагента-получателя в 1С (`Company.erp_id` на сайте).
+                Приоритетный способ
+
+                матчинга. Может быть пустым: получателем ордера бывает
+                контрагент, которого
+
+                на сайте нет вовсе (маркетплейс, внутреннее перемещение).
+            partner_uuid:
+              type:
+                - string
+                - 'null'
+              format: uuid
+              description: >-
+                UUID партнёра-владельца (пользователь сайта). Опционально —
+                ордер может быть техническим.
+            tax_id:
+              type:
+                - string
+                - 'null'
+              description: >
+                ИНН получателя. Запасной способ матчинга контрагента — работает
+                только в паре
+
+                с `partner_uuid`, иначе можно найти чужую организацию с тем же
+                ИНН.
+            recipient_name:
+              type:
+                - string
+                - 'null'
+              description: >
+                Получатель строкой, как он написан в шапке ордера. **Присылать
+                нужно всегда:**
+
+                получателя может не быть в справочниках сайта, и без этой строки
+                ордер
+
+                в журнале склада останется безымянным.
+              examples:
+                - Интернет Решения ООО, г.Москва
+            responsible:
+              type:
+                - string
+                - 'null'
+              description: >-
+                Ответственный за ордер — пользователь или бригада отгрузки в 1С.
+                Склад фильтрует журнал по этому полю.
+              examples:
+                - Отгрузка 3 Москва
+            priority:
+              type:
+                - string
+                - 'null'
+              enum:
+                - low
+                - normal
+                - high
+                - null
+              description: >-
+                Приоритет: `low` — Низкий, `normal` — Средний, `high` — Высокий.
+                Необязательно.
+            comment:
+              type:
+                - string
+                - 'null'
+              description: Комментарий из шапки ордера. Показывается кладовщику как есть.
+              examples:
+                - Москва и МО доп
+            delivery_type:
+              type:
+                - string
+                - 'null'
+              enum:
+                - pickup
+                - delivery
+                - null
+              description: >-
+                Способ передачи товара: `pickup` — Самовывоз, `delivery` —
+                Доставка. Необязательно.
+            delivery_address:
+              type:
+                - string
+                - 'null'
+              description: Адрес доставки («Доставка по …»). Необязательно.
+            delivery_order:
+              type:
+                - string
+                - 'null'
+              description: Порядок доставки из нижней части документа. Необязательно.
+            erp_created_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: 'Аудит-метка: дата-время создания документа в 1С. Необязательно.'
+            erp_updated_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время последнего изменения документа в 1С.
+                Необязательно.
+            items:
+              type: array
+              minItems: 1
+              description: >
+                Табличная часть «Товары по распоряжениям». Присылается
+                **целиком**: сайт удаляет
+
+                прежние строки и создаёт новые. Досылать только изменившиеся
+                строки нельзя —
+
+                так они продублируются.
+              items:
+                type: object
+                description: >
+                  Строка табличной части «Товары по распоряжениям».
+
+
+                  Заказ указывается именно здесь: один ордер может собираться
+                  сразу по нескольким
+
+                  заказам клиента, и связь «ордер ↔ заказ» на сайте строится
+                  через строки.
+                required:
+                  - product_uuid
+                  - quantity
+                properties:
+                  line_number:
+                    type:
+                      - integer
+                      - 'null'
+                    minimum: 1
+                    description: >-
+                      Номер строки табличной части («N»). При отсутствии сайт
+                      нумерует строки по порядку в массиве.
+                  product_uuid:
+                    type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                  product_name:
+                    type:
+                      - string
+                      - 'null'
+                    description: >
+                      Наименование номенклатуры. Формально необязательно, но
+                      присылать нужно:
+
+                      товара может не быть в каталоге сайта, и тогда строка без
+                      имени нечитаема
+
+                      для кладовщика.
+                    examples:
+                      - >-
+                        Фаллоимитатор-ротатор реалистичный Pecado Безупречный,
+                        силикон, 20,5см
+                  order_uuid:
+                    type:
+                      - string
+                      - 'null'
+                    format: uuid
+                    description: UUID заказа-распоряжения, по которому идёт строка.
+                  order_number:
+                    type:
+                      - string
+                      - 'null'
+                    description: >-
+                      Номер заказа-распоряжения. Нужен для показа — заказа может
+                      не быть на сайте.
+                    examples:
+                      - 30УТ-000213
+                  order_date:
+                    type:
+                      - string
+                      - 'null'
+                    format: date-time
+                    description: Дата заказа-распоряжения. Необязательно.
+                  quantity:
+                    type: number
+                    minimum: 0
+                    description: Количество к отгрузке по строке.
+                    examples:
+                      - 15
+                  unit:
+                    type:
+                      - string
+                      - 'null'
+                    description: Единица измерения. Необязательно.
+                    examples:
+                      - шт
+                  package_number:
+                    type:
+                      - integer
+                      - 'null'
+                    minimum: 1
+                    description: >-
+                      Номер упаковочного листа, в который попала строка.
+                      Необязательно.
+            packages:
+              type: array
+              description: >
+                Упаковочные листы (вкладка «Отгружаемые товары»).
+
+
+                **Отсутствие ключа и пустой массив означают разное:** ключа нет
+                — сайт **не трогает**
+
+                сохранённые упаковки; `[]` — **очищает** их полностью.
+                Присылается целиком.
+              items:
+                type: object
+                description: Упаковочный лист (место) из вкладки «Отгружаемые товары».
+                required:
+                  - number
+                properties:
+                  number:
+                    type: integer
+                    minimum: 1
+                    description: Номер упаковочного листа («Упаковочный лист 3»).
+                  positions_count:
+                    type:
+                      - integer
+                      - 'null'
+                    minimum: 0
+                    description: Сколько позиций в составе листа («2 позиции в составе»).
+                  weight:
+                    type:
+                      - number
+                      - 'null'
+                    minimum: 0
+                    description: >-
+                      Вес места. Необязательно — в 1С колонка часто не
+                      используется.
+                  volume:
+                    type:
+                      - number
+                      - 'null'
+                    minimum: 0
+                    description: >-
+                      Объём места. Необязательно — в 1С колонка часто не
+                      используется.
+          examples:
+            - event: goods_issue.created
+              message_id: msg-gi-a1b2c3d4
+              uuid: 7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f
+              number: УТ-00009419
+              date: '2026-07-08T13:25:55+03:00'
+              shipment_date: '2026-07-08T13:25:55+03:00'
+              status: shipped
+              operation: Отгрузка клиенту
+              warehouse_uuid: f8083799-0838-11e0-a1ea-505054503030
+              contractor_uuid: 550e8400-e29b-41d4-a716-446655440000
+              recipient_name: Интернет Решения ООО, г.Москва
+              responsible: Отгрузка 3 Москва
+              priority: normal
+              comment: Москва и МО доп
+              delivery_type: delivery
+              items:
+                - line_number: 1
+                  product_uuid: 550e8400-e29b-41d4-a716-446655440001
+                  product_name: Реалистичный страпон Pecado Импульсивная, силикон, 16см
+                  order_uuid: 8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34
+                  order_number: 30УТ-000213
+                  quantity: 15
+                  unit: шт
+                  package_number: 3
+              packages:
+                - number: 3
+                  positions_count: 2
+                - number: 4
+                  positions_count: 1
+      goodsIssueUpdated:
+        name: goods_issue.updated
+        title: Расходный ордер обновлён
+        summary: Смена статуса, состава или реквизитов ордера
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          description: >
+            Обновление расходного ордера: смена статуса, состава или реквизитов.
+            Структура
+
+            полностью совпадает с `GoodsIssueCreatedPayload`, отличается только
+            значением
+
+            поля `event`. Разделение на две схемы сделано на вырост — при
+            появлении
+
+            у `goods_issue.updated` собственных полей схема эволюционирует
+            независимо.
+          required:
+            - event
+            - message_id
+            - uuid
+            - number
+            - date
+            - status
+            - items
+          properties:
+            event:
+              type: string
+              const: goods_issue.updated
+              description: Тип события
+            message_id:
+              type: string
+              description: Уникальный ID сообщения для идемпотентности
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            number:
+              type: string
+              minLength: 1
+              description: Номер ордера в 1С
+            date:
+              type: string
+              format: date-time
+              description: Дата и время в формате ISO 8601
+              examples:
+                - '2026-03-17T12:00:00+03:00'
+            shipment_date:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: Дата отгрузки из шапки ордера. Необязательно.
+            status:
+              type: string
+              description: >
+                Статус расходного ордера машинным кодом.
+
+
+                | Статус в 1С | Код |
+
+                |---|---|
+
+                | Подготовлен | `prepared` |
+
+                | К отбору | `to_pick` |
+
+                | К проверке | `to_check` |
+
+                | Проверен | `checked` |
+
+                | К отгрузке | `to_ship` |
+
+                | Отгружен | `shipped` |
+
+
+                **Значение вне списка не принимается:** сообщение отбрасывается
+                целиком и попадает
+
+                в очередь недоставленных `erp_dlq.warehouse`. Строгий перечень,
+                а не свободная строка,
+
+                выбран сознательно — статус здесь главное, ради чего журнал
+                склада существует,
+
+                и молча принять неизвестный код хуже, чем заметить расхождение
+                сразу.
+              enum:
+                - prepared
+                - to_pick
+                - to_check
+                - checked
+                - to_ship
+                - shipped
+              examples:
+                - shipped
+            operation:
+              type:
+                - string
+                - 'null'
+              description: Хозяйственная операция документа как есть.
+            warehouse_uuid:
+              type:
+                - string
+                - 'null'
+              format: uuid
+              description: >
+                Склад, на который документ **фактически проведён** в 1С
+                (v15.8.0). Опционально.
+
+
+                **Направление: только 1С → Сайт.** Не путать с `warehouse_uuids`
+                исходящего заказа:
+
+                там сайт перечисляет склады региона, а конкретный выбирает 1С.
+
+
+                Неизвестный сайту склад автоматически не заводится: поле
+                останется пустым,
+
+                факт попадёт в лог.
+            organization:
+              type: object
+              description: >
+                Наша организация (юрлицо), от имени которой документ проведён в
+                1С.
+
+
+                **Направление: только 1С → Сайт.** Сайт организацию не
+                определяет и не отправляет —
+
+                её выбирает 1С по своим правилам (для `type=promo` и
+                `type=promo_sample` —
+
+                по хардкоду из v15.7.1).
+
+
+                Справочник организаций **по шине не передаётся**: юрлица
+                заводятся в админке сайта
+
+                вручную, как склады. Поэтому достаточно `uuid` — остальные поля
+                необязательны
+
+                и используются только если организации с таким UUID на сайте ещё
+                нет.
+
+
+                Объект без `uuid` сайт игнорирует. Неизвестный `uuid` создаёт
+                организацию-заглушку,
+
+                которую дозаполняет администратор; связь документа с юрлицом при
+                этом сохраняется.
+              required:
+                - uuid
+              properties:
+                uuid:
+                  type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                name:
+                  type:
+                    - string
+                    - 'null'
+                  description: Краткое название организации. Необязательно.
+                  examples:
+                    - ООО Пекадо
+                legal_name:
+                  type:
+                    - string
+                    - 'null'
+                  description: Полное юридическое наименование. Необязательно.
+                tax_id:
+                  type:
+                    - string
+                    - 'null'
+                  description: ИНН организации. Необязательно.
+                tax_code:
+                  type:
+                    - string
+                    - 'null'
+                  description: КПП организации. Необязательно.
+            contractor_uuid:
+              type:
+                - string
+                - 'null'
+              format: uuid
+              description: UUID контрагента-получателя в 1С.
+            partner_uuid:
+              type:
+                - string
+                - 'null'
+              format: uuid
+              description: UUID партнёра-владельца. Опционально.
+            tax_id:
+              type:
+                - string
+                - 'null'
+              description: ИНН получателя.
+            recipient_name:
+              type:
+                - string
+                - 'null'
+              description: Получатель строкой, как он написан в шапке ордера.
+            responsible:
+              type:
+                - string
+                - 'null'
+              description: Ответственный за ордер.
+            priority:
+              type:
+                - string
+                - 'null'
+              enum:
+                - low
+                - normal
+                - high
+                - null
+              description: Приоритет ордера. Необязательно.
+            comment:
+              type:
+                - string
+                - 'null'
+              description: Комментарий из шапки ордера.
+            delivery_type:
+              type:
+                - string
+                - 'null'
+              enum:
+                - pickup
+                - delivery
+                - null
+              description: Способ передачи товара. Необязательно.
+            delivery_address:
+              type:
+                - string
+                - 'null'
+              description: Адрес доставки. Необязательно.
+            delivery_order:
+              type:
+                - string
+                - 'null'
+              description: Порядок доставки. Необязательно.
+            erp_created_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: 'Аудит-метка: дата-время создания документа в 1С.'
+            erp_updated_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: 'Аудит-метка: дата-время последнего изменения документа в 1С.'
+            items:
+              type: array
+              minItems: 1
+              description: Табличная часть «Товары по распоряжениям». Присылается целиком.
+              items:
+                type: object
+                description: >
+                  Строка табличной части «Товары по распоряжениям».
+
+
+                  Заказ указывается именно здесь: один ордер может собираться
+                  сразу по нескольким
+
+                  заказам клиента, и связь «ордер ↔ заказ» на сайте строится
+                  через строки.
+                required:
+                  - product_uuid
+                  - quantity
+                properties:
+                  line_number:
+                    type:
+                      - integer
+                      - 'null'
+                    minimum: 1
+                    description: >-
+                      Номер строки табличной части («N»). При отсутствии сайт
+                      нумерует строки по порядку в массиве.
+                  product_uuid:
+                    type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                  product_name:
+                    type:
+                      - string
+                      - 'null'
+                    description: >
+                      Наименование номенклатуры. Формально необязательно, но
+                      присылать нужно:
+
+                      товара может не быть в каталоге сайта, и тогда строка без
+                      имени нечитаема
+
+                      для кладовщика.
+                    examples:
+                      - >-
+                        Фаллоимитатор-ротатор реалистичный Pecado Безупречный,
+                        силикон, 20,5см
+                  order_uuid:
+                    type:
+                      - string
+                      - 'null'
+                    format: uuid
+                    description: UUID заказа-распоряжения, по которому идёт строка.
+                  order_number:
+                    type:
+                      - string
+                      - 'null'
+                    description: >-
+                      Номер заказа-распоряжения. Нужен для показа — заказа может
+                      не быть на сайте.
+                    examples:
+                      - 30УТ-000213
+                  order_date:
+                    type:
+                      - string
+                      - 'null'
+                    format: date-time
+                    description: Дата заказа-распоряжения. Необязательно.
+                  quantity:
+                    type: number
+                    minimum: 0
+                    description: Количество к отгрузке по строке.
+                    examples:
+                      - 15
+                  unit:
+                    type:
+                      - string
+                      - 'null'
+                    description: Единица измерения. Необязательно.
+                    examples:
+                      - шт
+                  package_number:
+                    type:
+                      - integer
+                      - 'null'
+                    minimum: 1
+                    description: >-
+                      Номер упаковочного листа, в который попала строка.
+                      Необязательно.
+            packages:
+              type: array
+              description: Упаковочные листы. Отсутствие ключа и `[]` означают разное.
+              items:
+                type: object
+                description: Упаковочный лист (место) из вкладки «Отгружаемые товары».
+                required:
+                  - number
+                properties:
+                  number:
+                    type: integer
+                    minimum: 1
+                    description: Номер упаковочного листа («Упаковочный лист 3»).
+                  positions_count:
+                    type:
+                      - integer
+                      - 'null'
+                    minimum: 0
+                    description: Сколько позиций в составе листа («2 позиции в составе»).
+                  weight:
+                    type:
+                      - number
+                      - 'null'
+                    minimum: 0
+                    description: >-
+                      Вес места. Необязательно — в 1С колонка часто не
+                      используется.
+                  volume:
+                    type:
+                      - number
+                      - 'null'
+                    minimum: 0
+                    description: >-
+                      Объём места. Необязательно — в 1С колонка часто не
+                      используется.
+          examples:
+            - event: goods_issue.updated
+              message_id: msg-gi-upd-a1b2c3d4
+              uuid: 7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f
+              number: УТ-00009419
+              date: '2026-07-08T13:25:55+03:00'
+              status: to_ship
+              items:
+                - product_uuid: 550e8400-e29b-41d4-a716-446655440001
+                  quantity: 15
+      goodsIssueDeleted:
+        name: goods_issue.deleted
+        title: Расходный ордер удалён
+        summary: Отмена проведения ордера
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          description: >
+            Отмена проведения (или пометка на удаление) расходного ордера в 1С.
+            Сайт помечает
+
+            ордер удалённым и убирает из журнала склада, но данные сохраняет:
+            повторное
+
+            проведение того же документа вернёт ордер со всем составом и
+            историей статусов.
+          required:
+            - event
+            - message_id
+            - uuid
+          properties:
+            event:
+              type: string
+              const: goods_issue.deleted
+              description: Тип события
+            message_id:
+              type: string
+              description: Уникальный ID сообщения для идемпотентности
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+          examples:
+            - event: goods_issue.deleted
+              message_id: msg-gi-del-a1b2c3d4
+              uuid: 7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.warehouse
           durable: true
           autoDelete: false
         bindingVersion: 0.3.0
@@ -6627,6 +7593,113 @@ operations:
     tags:
       - name: US-10
       - name: shipments
+  receiveGoodsIssueCreated:
+    title: Создание расходного ордера
+    summary: 1С отправляет расходный ордер на товары при первом проведении
+    description: >
+      Обработчик: `HandleGoodsIssueCreated`
+
+
+      Расходный ордер — складской документ, по которому товар отбирают,
+      проверяют,
+
+      упаковывают и грузят. Реализация (`shipment.*`) появляется позже и
+      отражает
+
+      уже свершившийся факт отгрузки; ордер нужен складу **до** неё.
+
+
+      **Один ордер может собираться сразу по нескольким заказам клиента.**
+      Поэтому
+
+      заказ-распоряжение указывается в строке (`items[].order_uuid`), а не в
+      шапке.
+
+
+      Документ приезжает **целиком**: сайт удаляет прежние строки и упаковочные
+      листы
+
+      и создаёт их заново. Досылать отдельные изменившиеся строки нельзя.
+
+
+      Пример строки табличной части «Товары по распоряжениям»:
+
+
+      ```json
+
+      "items": [
+        {
+          "line_number": 1,
+          "product_uuid": "550e8400-e29b-41d4-a716-446655440000",
+          "product_name": "Реалистичный страпон Pecado Импульсивная, силикон, 16см",
+          "order_uuid": "8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34",
+          "order_number": "30УТ-000213",
+          "quantity": 15,
+          "unit": "шт",
+          "package_number": 3
+        }
+      ]
+
+      ```
+    action: receive
+    channel:
+      $ref: '#/channels/erpInWarehouse'
+    messages:
+      - $ref: '#/channels/erpInWarehouse/messages/goodsIssueCreated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-20
+      - name: goods-issues
+  receiveGoodsIssueUpdated:
+    title: Обновление расходного ордера
+    summary: 1С обновляет ордер при смене статуса, состава или реквизитов
+    description: >
+      Обработчик: `HandleGoodsIssueUpdated`
+
+
+      Основной сценарий — движение по статусам: Подготовлен → К отбору → К
+      проверке →
+
+      Проверен → К отгрузке → Отгружен. Сайт хранит текущий статус и **ведёт
+      журнал
+
+      смен**: по нему склад видит, сколько ордер простоял на каждом этапе, и
+      находит
+
+      зависшие документы.
+
+
+      Строка в журнал пишется только при фактическом изменении статуса —
+      повторное
+
+      сообщение с тем же статусом журнал не засоряет.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInWarehouse'
+    messages:
+      - $ref: '#/channels/erpInWarehouse/messages/goodsIssueUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-20
+      - name: goods-issues
+  receiveGoodsIssueDeleted:
+    title: Удаление расходного ордера
+    summary: 1С отменила проведение ордера или пометила его на удаление
+    action: receive
+    channel:
+      $ref: '#/channels/erpInWarehouse'
+    messages:
+      - $ref: '#/channels/erpInWarehouse/messages/goodsIssueDeleted'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-20
+      - name: goods-issues
   receivePaymentCreated:
     title: Создание платежа
     summary: 1С отправляет платёжный документ при первом проведении
@@ -10608,6 +11681,943 @@ components:
           - event: shipment.deleted
             message_id: msg-shipment-del-s1a2b3c4
             uuid: s1a2b3c4-d5e6-7890-abcd-ef1234567890
+    GoodsIssueCreated:
+      name: goods_issue.created
+      title: Расходный ордер создан
+      summary: Первое проведение расходного ордера на товары в 1С
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        description: >
+          Расходный ордер на товары — складской документ, по которому товар
+          отбирают,
+
+          проверяют, упаковывают и отгружают.
+
+
+          Денежных полей у ордера нет: цены, скидки и суммы приезжают
+          реализацией
+
+          (`shipment.*`). Серии и штрихкоды маркировки сайт не хранит.
+        required:
+          - event
+          - message_id
+          - uuid
+          - number
+          - date
+          - status
+          - items
+        properties:
+          event:
+            type: string
+            const: goods_issue.created
+            description: Тип события
+          message_id:
+            type: string
+            description: Уникальный ID сообщения для идемпотентности
+            examples:
+              - msg-gi-a1b2c3d4
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          number:
+            type: string
+            minLength: 1
+            description: Номер ордера в 1С — по нему склад ищет документ и сверяется с 1С.
+            examples:
+              - УТ-00009419
+          date:
+            type: string
+            format: date-time
+            description: Дата и время в формате ISO 8601
+            examples:
+              - '2026-03-17T12:00:00+03:00'
+          shipment_date:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >
+              Дата отгрузки из шапки ордера. Может отличаться от даты документа:
+              ордер
+
+              создаётся заранее, а грузится позже. Необязательно.
+          status:
+            type: string
+            description: >
+              Статус расходного ордера машинным кодом.
+
+
+              | Статус в 1С | Код |
+
+              |---|---|
+
+              | Подготовлен | `prepared` |
+
+              | К отбору | `to_pick` |
+
+              | К проверке | `to_check` |
+
+              | Проверен | `checked` |
+
+              | К отгрузке | `to_ship` |
+
+              | Отгружен | `shipped` |
+
+
+              **Значение вне списка не принимается:** сообщение отбрасывается
+              целиком и попадает
+
+              в очередь недоставленных `erp_dlq.warehouse`. Строгий перечень, а
+              не свободная строка,
+
+              выбран сознательно — статус здесь главное, ради чего журнал склада
+              существует,
+
+              и молча принять неизвестный код хуже, чем заметить расхождение
+              сразу.
+            enum:
+              - prepared
+              - to_pick
+              - to_check
+              - checked
+              - to_ship
+              - shipped
+            examples:
+              - shipped
+          operation:
+            type:
+              - string
+              - 'null'
+            description: >
+              Хозяйственная операция документа как есть. Свободная строка, а не
+              перечень:
+
+              операций у ордера больше, чем отгрузка клиенту (перемещения между
+              складами
+
+              и прочее), и строгий enum отбил бы их в DLQ.
+            examples:
+              - Отгрузка клиенту
+          warehouse_uuid:
+            type:
+              - string
+              - 'null'
+            format: uuid
+            description: >
+              Склад, на который документ **фактически проведён** в 1С (v15.8.0).
+              Опционально.
+
+
+              **Направление: только 1С → Сайт.** Не путать с `warehouse_uuids`
+              исходящего заказа:
+
+              там сайт перечисляет склады региона, а конкретный выбирает 1С.
+
+
+              Неизвестный сайту склад автоматически не заводится: поле останется
+              пустым,
+
+              факт попадёт в лог.
+          organization:
+            type: object
+            description: >
+              Наша организация (юрлицо), от имени которой документ проведён в
+              1С.
+
+
+              **Направление: только 1С → Сайт.** Сайт организацию не определяет
+              и не отправляет —
+
+              её выбирает 1С по своим правилам (для `type=promo` и
+              `type=promo_sample` —
+
+              по хардкоду из v15.7.1).
+
+
+              Справочник организаций **по шине не передаётся**: юрлица заводятся
+              в админке сайта
+
+              вручную, как склады. Поэтому достаточно `uuid` — остальные поля
+              необязательны
+
+              и используются только если организации с таким UUID на сайте ещё
+              нет.
+
+
+              Объект без `uuid` сайт игнорирует. Неизвестный `uuid` создаёт
+              организацию-заглушку,
+
+              которую дозаполняет администратор; связь документа с юрлицом при
+              этом сохраняется.
+            required:
+              - uuid
+            properties:
+              uuid:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              name:
+                type:
+                  - string
+                  - 'null'
+                description: Краткое название организации. Необязательно.
+                examples:
+                  - ООО Пекадо
+              legal_name:
+                type:
+                  - string
+                  - 'null'
+                description: Полное юридическое наименование. Необязательно.
+              tax_id:
+                type:
+                  - string
+                  - 'null'
+                description: ИНН организации. Необязательно.
+              tax_code:
+                type:
+                  - string
+                  - 'null'
+                description: КПП организации. Необязательно.
+          contractor_uuid:
+            type:
+              - string
+              - 'null'
+            format: uuid
+            description: >
+              UUID контрагента-получателя в 1С (`Company.erp_id` на сайте).
+              Приоритетный способ
+
+              матчинга. Может быть пустым: получателем ордера бывает контрагент,
+              которого
+
+              на сайте нет вовсе (маркетплейс, внутреннее перемещение).
+          partner_uuid:
+            type:
+              - string
+              - 'null'
+            format: uuid
+            description: >-
+              UUID партнёра-владельца (пользователь сайта). Опционально — ордер
+              может быть техническим.
+          tax_id:
+            type:
+              - string
+              - 'null'
+            description: >
+              ИНН получателя. Запасной способ матчинга контрагента — работает
+              только в паре
+
+              с `partner_uuid`, иначе можно найти чужую организацию с тем же
+              ИНН.
+          recipient_name:
+            type:
+              - string
+              - 'null'
+            description: >
+              Получатель строкой, как он написан в шапке ордера. **Присылать
+              нужно всегда:**
+
+              получателя может не быть в справочниках сайта, и без этой строки
+              ордер
+
+              в журнале склада останется безымянным.
+            examples:
+              - Интернет Решения ООО, г.Москва
+          responsible:
+            type:
+              - string
+              - 'null'
+            description: >-
+              Ответственный за ордер — пользователь или бригада отгрузки в 1С.
+              Склад фильтрует журнал по этому полю.
+            examples:
+              - Отгрузка 3 Москва
+          priority:
+            type:
+              - string
+              - 'null'
+            enum:
+              - low
+              - normal
+              - high
+              - null
+            description: >-
+              Приоритет: `low` — Низкий, `normal` — Средний, `high` — Высокий.
+              Необязательно.
+          comment:
+            type:
+              - string
+              - 'null'
+            description: Комментарий из шапки ордера. Показывается кладовщику как есть.
+            examples:
+              - Москва и МО доп
+          delivery_type:
+            type:
+              - string
+              - 'null'
+            enum:
+              - pickup
+              - delivery
+              - null
+            description: >-
+              Способ передачи товара: `pickup` — Самовывоз, `delivery` —
+              Доставка. Необязательно.
+          delivery_address:
+            type:
+              - string
+              - 'null'
+            description: Адрес доставки («Доставка по …»). Необязательно.
+          delivery_order:
+            type:
+              - string
+              - 'null'
+            description: Порядок доставки из нижней части документа. Необязательно.
+          erp_created_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: 'Аудит-метка: дата-время создания документа в 1С. Необязательно.'
+          erp_updated_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время последнего изменения документа в 1С.
+              Необязательно.
+          items:
+            type: array
+            minItems: 1
+            description: >
+              Табличная часть «Товары по распоряжениям». Присылается
+              **целиком**: сайт удаляет
+
+              прежние строки и создаёт новые. Досылать только изменившиеся
+              строки нельзя —
+
+              так они продублируются.
+            items:
+              type: object
+              description: >
+                Строка табличной части «Товары по распоряжениям».
+
+
+                Заказ указывается именно здесь: один ордер может собираться
+                сразу по нескольким
+
+                заказам клиента, и связь «ордер ↔ заказ» на сайте строится через
+                строки.
+              required:
+                - product_uuid
+                - quantity
+              properties:
+                line_number:
+                  type:
+                    - integer
+                    - 'null'
+                  minimum: 1
+                  description: >-
+                    Номер строки табличной части («N»). При отсутствии сайт
+                    нумерует строки по порядку в массиве.
+                product_uuid:
+                  type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                product_name:
+                  type:
+                    - string
+                    - 'null'
+                  description: >
+                    Наименование номенклатуры. Формально необязательно, но
+                    присылать нужно:
+
+                    товара может не быть в каталоге сайта, и тогда строка без
+                    имени нечитаема
+
+                    для кладовщика.
+                  examples:
+                    - >-
+                      Фаллоимитатор-ротатор реалистичный Pecado Безупречный,
+                      силикон, 20,5см
+                order_uuid:
+                  type:
+                    - string
+                    - 'null'
+                  format: uuid
+                  description: UUID заказа-распоряжения, по которому идёт строка.
+                order_number:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    Номер заказа-распоряжения. Нужен для показа — заказа может
+                    не быть на сайте.
+                  examples:
+                    - 30УТ-000213
+                order_date:
+                  type:
+                    - string
+                    - 'null'
+                  format: date-time
+                  description: Дата заказа-распоряжения. Необязательно.
+                quantity:
+                  type: number
+                  minimum: 0
+                  description: Количество к отгрузке по строке.
+                  examples:
+                    - 15
+                unit:
+                  type:
+                    - string
+                    - 'null'
+                  description: Единица измерения. Необязательно.
+                  examples:
+                    - шт
+                package_number:
+                  type:
+                    - integer
+                    - 'null'
+                  minimum: 1
+                  description: >-
+                    Номер упаковочного листа, в который попала строка.
+                    Необязательно.
+          packages:
+            type: array
+            description: >
+              Упаковочные листы (вкладка «Отгружаемые товары»).
+
+
+              **Отсутствие ключа и пустой массив означают разное:** ключа нет —
+              сайт **не трогает**
+
+              сохранённые упаковки; `[]` — **очищает** их полностью. Присылается
+              целиком.
+            items:
+              type: object
+              description: Упаковочный лист (место) из вкладки «Отгружаемые товары».
+              required:
+                - number
+              properties:
+                number:
+                  type: integer
+                  minimum: 1
+                  description: Номер упаковочного листа («Упаковочный лист 3»).
+                positions_count:
+                  type:
+                    - integer
+                    - 'null'
+                  minimum: 0
+                  description: Сколько позиций в составе листа («2 позиции в составе»).
+                weight:
+                  type:
+                    - number
+                    - 'null'
+                  minimum: 0
+                  description: >-
+                    Вес места. Необязательно — в 1С колонка часто не
+                    используется.
+                volume:
+                  type:
+                    - number
+                    - 'null'
+                  minimum: 0
+                  description: >-
+                    Объём места. Необязательно — в 1С колонка часто не
+                    используется.
+        examples:
+          - event: goods_issue.created
+            message_id: msg-gi-a1b2c3d4
+            uuid: 7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f
+            number: УТ-00009419
+            date: '2026-07-08T13:25:55+03:00'
+            shipment_date: '2026-07-08T13:25:55+03:00'
+            status: shipped
+            operation: Отгрузка клиенту
+            warehouse_uuid: f8083799-0838-11e0-a1ea-505054503030
+            contractor_uuid: 550e8400-e29b-41d4-a716-446655440000
+            recipient_name: Интернет Решения ООО, г.Москва
+            responsible: Отгрузка 3 Москва
+            priority: normal
+            comment: Москва и МО доп
+            delivery_type: delivery
+            items:
+              - line_number: 1
+                product_uuid: 550e8400-e29b-41d4-a716-446655440001
+                product_name: Реалистичный страпон Pecado Импульсивная, силикон, 16см
+                order_uuid: 8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34
+                order_number: 30УТ-000213
+                quantity: 15
+                unit: шт
+                package_number: 3
+            packages:
+              - number: 3
+                positions_count: 2
+              - number: 4
+                positions_count: 1
+    GoodsIssueUpdated:
+      name: goods_issue.updated
+      title: Расходный ордер обновлён
+      summary: Смена статуса, состава или реквизитов ордера
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        description: >
+          Обновление расходного ордера: смена статуса, состава или реквизитов.
+          Структура
+
+          полностью совпадает с `GoodsIssueCreatedPayload`, отличается только
+          значением
+
+          поля `event`. Разделение на две схемы сделано на вырост — при
+          появлении
+
+          у `goods_issue.updated` собственных полей схема эволюционирует
+          независимо.
+        required:
+          - event
+          - message_id
+          - uuid
+          - number
+          - date
+          - status
+          - items
+        properties:
+          event:
+            type: string
+            const: goods_issue.updated
+            description: Тип события
+          message_id:
+            type: string
+            description: Уникальный ID сообщения для идемпотентности
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          number:
+            type: string
+            minLength: 1
+            description: Номер ордера в 1С
+          date:
+            type: string
+            format: date-time
+            description: Дата и время в формате ISO 8601
+            examples:
+              - '2026-03-17T12:00:00+03:00'
+          shipment_date:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: Дата отгрузки из шапки ордера. Необязательно.
+          status:
+            type: string
+            description: >
+              Статус расходного ордера машинным кодом.
+
+
+              | Статус в 1С | Код |
+
+              |---|---|
+
+              | Подготовлен | `prepared` |
+
+              | К отбору | `to_pick` |
+
+              | К проверке | `to_check` |
+
+              | Проверен | `checked` |
+
+              | К отгрузке | `to_ship` |
+
+              | Отгружен | `shipped` |
+
+
+              **Значение вне списка не принимается:** сообщение отбрасывается
+              целиком и попадает
+
+              в очередь недоставленных `erp_dlq.warehouse`. Строгий перечень, а
+              не свободная строка,
+
+              выбран сознательно — статус здесь главное, ради чего журнал склада
+              существует,
+
+              и молча принять неизвестный код хуже, чем заметить расхождение
+              сразу.
+            enum:
+              - prepared
+              - to_pick
+              - to_check
+              - checked
+              - to_ship
+              - shipped
+            examples:
+              - shipped
+          operation:
+            type:
+              - string
+              - 'null'
+            description: Хозяйственная операция документа как есть.
+          warehouse_uuid:
+            type:
+              - string
+              - 'null'
+            format: uuid
+            description: >
+              Склад, на который документ **фактически проведён** в 1С (v15.8.0).
+              Опционально.
+
+
+              **Направление: только 1С → Сайт.** Не путать с `warehouse_uuids`
+              исходящего заказа:
+
+              там сайт перечисляет склады региона, а конкретный выбирает 1С.
+
+
+              Неизвестный сайту склад автоматически не заводится: поле останется
+              пустым,
+
+              факт попадёт в лог.
+          organization:
+            type: object
+            description: >
+              Наша организация (юрлицо), от имени которой документ проведён в
+              1С.
+
+
+              **Направление: только 1С → Сайт.** Сайт организацию не определяет
+              и не отправляет —
+
+              её выбирает 1С по своим правилам (для `type=promo` и
+              `type=promo_sample` —
+
+              по хардкоду из v15.7.1).
+
+
+              Справочник организаций **по шине не передаётся**: юрлица заводятся
+              в админке сайта
+
+              вручную, как склады. Поэтому достаточно `uuid` — остальные поля
+              необязательны
+
+              и используются только если организации с таким UUID на сайте ещё
+              нет.
+
+
+              Объект без `uuid` сайт игнорирует. Неизвестный `uuid` создаёт
+              организацию-заглушку,
+
+              которую дозаполняет администратор; связь документа с юрлицом при
+              этом сохраняется.
+            required:
+              - uuid
+            properties:
+              uuid:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              name:
+                type:
+                  - string
+                  - 'null'
+                description: Краткое название организации. Необязательно.
+                examples:
+                  - ООО Пекадо
+              legal_name:
+                type:
+                  - string
+                  - 'null'
+                description: Полное юридическое наименование. Необязательно.
+              tax_id:
+                type:
+                  - string
+                  - 'null'
+                description: ИНН организации. Необязательно.
+              tax_code:
+                type:
+                  - string
+                  - 'null'
+                description: КПП организации. Необязательно.
+          contractor_uuid:
+            type:
+              - string
+              - 'null'
+            format: uuid
+            description: UUID контрагента-получателя в 1С.
+          partner_uuid:
+            type:
+              - string
+              - 'null'
+            format: uuid
+            description: UUID партнёра-владельца. Опционально.
+          tax_id:
+            type:
+              - string
+              - 'null'
+            description: ИНН получателя.
+          recipient_name:
+            type:
+              - string
+              - 'null'
+            description: Получатель строкой, как он написан в шапке ордера.
+          responsible:
+            type:
+              - string
+              - 'null'
+            description: Ответственный за ордер.
+          priority:
+            type:
+              - string
+              - 'null'
+            enum:
+              - low
+              - normal
+              - high
+              - null
+            description: Приоритет ордера. Необязательно.
+          comment:
+            type:
+              - string
+              - 'null'
+            description: Комментарий из шапки ордера.
+          delivery_type:
+            type:
+              - string
+              - 'null'
+            enum:
+              - pickup
+              - delivery
+              - null
+            description: Способ передачи товара. Необязательно.
+          delivery_address:
+            type:
+              - string
+              - 'null'
+            description: Адрес доставки. Необязательно.
+          delivery_order:
+            type:
+              - string
+              - 'null'
+            description: Порядок доставки. Необязательно.
+          erp_created_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: 'Аудит-метка: дата-время создания документа в 1С.'
+          erp_updated_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: 'Аудит-метка: дата-время последнего изменения документа в 1С.'
+          items:
+            type: array
+            minItems: 1
+            description: Табличная часть «Товары по распоряжениям». Присылается целиком.
+            items:
+              type: object
+              description: >
+                Строка табличной части «Товары по распоряжениям».
+
+
+                Заказ указывается именно здесь: один ордер может собираться
+                сразу по нескольким
+
+                заказам клиента, и связь «ордер ↔ заказ» на сайте строится через
+                строки.
+              required:
+                - product_uuid
+                - quantity
+              properties:
+                line_number:
+                  type:
+                    - integer
+                    - 'null'
+                  minimum: 1
+                  description: >-
+                    Номер строки табличной части («N»). При отсутствии сайт
+                    нумерует строки по порядку в массиве.
+                product_uuid:
+                  type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                product_name:
+                  type:
+                    - string
+                    - 'null'
+                  description: >
+                    Наименование номенклатуры. Формально необязательно, но
+                    присылать нужно:
+
+                    товара может не быть в каталоге сайта, и тогда строка без
+                    имени нечитаема
+
+                    для кладовщика.
+                  examples:
+                    - >-
+                      Фаллоимитатор-ротатор реалистичный Pecado Безупречный,
+                      силикон, 20,5см
+                order_uuid:
+                  type:
+                    - string
+                    - 'null'
+                  format: uuid
+                  description: UUID заказа-распоряжения, по которому идёт строка.
+                order_number:
+                  type:
+                    - string
+                    - 'null'
+                  description: >-
+                    Номер заказа-распоряжения. Нужен для показа — заказа может
+                    не быть на сайте.
+                  examples:
+                    - 30УТ-000213
+                order_date:
+                  type:
+                    - string
+                    - 'null'
+                  format: date-time
+                  description: Дата заказа-распоряжения. Необязательно.
+                quantity:
+                  type: number
+                  minimum: 0
+                  description: Количество к отгрузке по строке.
+                  examples:
+                    - 15
+                unit:
+                  type:
+                    - string
+                    - 'null'
+                  description: Единица измерения. Необязательно.
+                  examples:
+                    - шт
+                package_number:
+                  type:
+                    - integer
+                    - 'null'
+                  minimum: 1
+                  description: >-
+                    Номер упаковочного листа, в который попала строка.
+                    Необязательно.
+          packages:
+            type: array
+            description: Упаковочные листы. Отсутствие ключа и `[]` означают разное.
+            items:
+              type: object
+              description: Упаковочный лист (место) из вкладки «Отгружаемые товары».
+              required:
+                - number
+              properties:
+                number:
+                  type: integer
+                  minimum: 1
+                  description: Номер упаковочного листа («Упаковочный лист 3»).
+                positions_count:
+                  type:
+                    - integer
+                    - 'null'
+                  minimum: 0
+                  description: Сколько позиций в составе листа («2 позиции в составе»).
+                weight:
+                  type:
+                    - number
+                    - 'null'
+                  minimum: 0
+                  description: >-
+                    Вес места. Необязательно — в 1С колонка часто не
+                    используется.
+                volume:
+                  type:
+                    - number
+                    - 'null'
+                  minimum: 0
+                  description: >-
+                    Объём места. Необязательно — в 1С колонка часто не
+                    используется.
+        examples:
+          - event: goods_issue.updated
+            message_id: msg-gi-upd-a1b2c3d4
+            uuid: 7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f
+            number: УТ-00009419
+            date: '2026-07-08T13:25:55+03:00'
+            status: to_ship
+            items:
+              - product_uuid: 550e8400-e29b-41d4-a716-446655440001
+                quantity: 15
+    GoodsIssueDeleted:
+      name: goods_issue.deleted
+      title: Расходный ордер удалён
+      summary: Отмена проведения ордера
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        description: >
+          Отмена проведения (или пометка на удаление) расходного ордера в 1С.
+          Сайт помечает
+
+          ордер удалённым и убирает из журнала склада, но данные сохраняет:
+          повторное
+
+          проведение того же документа вернёт ордер со всем составом и историей
+          статусов.
+        required:
+          - event
+          - message_id
+          - uuid
+        properties:
+          event:
+            type: string
+            const: goods_issue.deleted
+            description: Тип события
+          message_id:
+            type: string
+            description: Уникальный ID сообщения для идемпотентности
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+        examples:
+          - event: goods_issue.deleted
+            message_id: msg-gi-del-a1b2c3d4
+            uuid: 7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f
     PaymentCreated:
       name: payment.created
       title: Платёж создан
@@ -15812,6 +17822,1052 @@ components:
                     examples:
                       - 550e8400-e29b-41d4-a716-446655440000
                   - type: 'null'
+    GoodsIssueStatus:
+      type: string
+      description: >
+        Статус расходного ордера машинным кодом.
+
+
+        | Статус в 1С | Код |
+
+        |---|---|
+
+        | Подготовлен | `prepared` |
+
+        | К отбору | `to_pick` |
+
+        | К проверке | `to_check` |
+
+        | Проверен | `checked` |
+
+        | К отгрузке | `to_ship` |
+
+        | Отгружен | `shipped` |
+
+
+        **Значение вне списка не принимается:** сообщение отбрасывается целиком
+        и попадает
+
+        в очередь недоставленных `erp_dlq.warehouse`. Строгий перечень, а не
+        свободная строка,
+
+        выбран сознательно — статус здесь главное, ради чего журнал склада
+        существует,
+
+        и молча принять неизвестный код хуже, чем заметить расхождение сразу.
+      enum:
+        - prepared
+        - to_pick
+        - to_check
+        - checked
+        - to_ship
+        - shipped
+      examples:
+        - shipped
+    GoodsIssueItem:
+      type: object
+      description: >
+        Строка табличной части «Товары по распоряжениям».
+
+
+        Заказ указывается именно здесь: один ордер может собираться сразу по
+        нескольким
+
+        заказам клиента, и связь «ордер ↔ заказ» на сайте строится через строки.
+      required:
+        - product_uuid
+        - quantity
+      properties:
+        line_number:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+          description: >-
+            Номер строки табличной части («N»). При отсутствии сайт нумерует
+            строки по порядку в массиве.
+        product_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        product_name:
+          type:
+            - string
+            - 'null'
+          description: >
+            Наименование номенклатуры. Формально необязательно, но присылать
+            нужно:
+
+            товара может не быть в каталоге сайта, и тогда строка без имени
+            нечитаема
+
+            для кладовщика.
+          examples:
+            - >-
+              Фаллоимитатор-ротатор реалистичный Pecado Безупречный, силикон,
+              20,5см
+        order_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: UUID заказа-распоряжения, по которому идёт строка.
+        order_number:
+          type:
+            - string
+            - 'null'
+          description: >-
+            Номер заказа-распоряжения. Нужен для показа — заказа может не быть
+            на сайте.
+          examples:
+            - 30УТ-000213
+        order_date:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: Дата заказа-распоряжения. Необязательно.
+        quantity:
+          type: number
+          minimum: 0
+          description: Количество к отгрузке по строке.
+          examples:
+            - 15
+        unit:
+          type:
+            - string
+            - 'null'
+          description: Единица измерения. Необязательно.
+          examples:
+            - шт
+        package_number:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+          description: Номер упаковочного листа, в который попала строка. Необязательно.
+    GoodsIssuePackage:
+      type: object
+      description: Упаковочный лист (место) из вкладки «Отгружаемые товары».
+      required:
+        - number
+      properties:
+        number:
+          type: integer
+          minimum: 1
+          description: Номер упаковочного листа («Упаковочный лист 3»).
+        positions_count:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          description: Сколько позиций в составе листа («2 позиции в составе»).
+        weight:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: Вес места. Необязательно — в 1С колонка часто не используется.
+        volume:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: Объём места. Необязательно — в 1С колонка часто не используется.
+    GoodsIssueCreatedPayload:
+      type: object
+      description: >
+        Расходный ордер на товары — складской документ, по которому товар
+        отбирают,
+
+        проверяют, упаковывают и отгружают.
+
+
+        Денежных полей у ордера нет: цены, скидки и суммы приезжают реализацией
+
+        (`shipment.*`). Серии и штрихкоды маркировки сайт не хранит.
+      required:
+        - event
+        - message_id
+        - uuid
+        - number
+        - date
+        - status
+        - items
+      properties:
+        event:
+          type: string
+          const: goods_issue.created
+          description: Тип события
+        message_id:
+          type: string
+          description: Уникальный ID сообщения для идемпотентности
+          examples:
+            - msg-gi-a1b2c3d4
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        number:
+          type: string
+          minLength: 1
+          description: Номер ордера в 1С — по нему склад ищет документ и сверяется с 1С.
+          examples:
+            - УТ-00009419
+        date:
+          type: string
+          format: date-time
+          description: Дата и время в формате ISO 8601
+          examples:
+            - '2026-03-17T12:00:00+03:00'
+        shipment_date:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >
+            Дата отгрузки из шапки ордера. Может отличаться от даты документа:
+            ордер
+
+            создаётся заранее, а грузится позже. Необязательно.
+        status:
+          type: string
+          description: >
+            Статус расходного ордера машинным кодом.
+
+
+            | Статус в 1С | Код |
+
+            |---|---|
+
+            | Подготовлен | `prepared` |
+
+            | К отбору | `to_pick` |
+
+            | К проверке | `to_check` |
+
+            | Проверен | `checked` |
+
+            | К отгрузке | `to_ship` |
+
+            | Отгружен | `shipped` |
+
+
+            **Значение вне списка не принимается:** сообщение отбрасывается
+            целиком и попадает
+
+            в очередь недоставленных `erp_dlq.warehouse`. Строгий перечень, а не
+            свободная строка,
+
+            выбран сознательно — статус здесь главное, ради чего журнал склада
+            существует,
+
+            и молча принять неизвестный код хуже, чем заметить расхождение
+            сразу.
+          enum:
+            - prepared
+            - to_pick
+            - to_check
+            - checked
+            - to_ship
+            - shipped
+          examples:
+            - shipped
+        operation:
+          type:
+            - string
+            - 'null'
+          description: >
+            Хозяйственная операция документа как есть. Свободная строка, а не
+            перечень:
+
+            операций у ордера больше, чем отгрузка клиенту (перемещения между
+            складами
+
+            и прочее), и строгий enum отбил бы их в DLQ.
+          examples:
+            - Отгрузка клиенту
+        warehouse_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: >
+            Склад, на который документ **фактически проведён** в 1С (v15.8.0).
+            Опционально.
+
+
+            **Направление: только 1С → Сайт.** Не путать с `warehouse_uuids`
+            исходящего заказа:
+
+            там сайт перечисляет склады региона, а конкретный выбирает 1С.
+
+
+            Неизвестный сайту склад автоматически не заводится: поле останется
+            пустым,
+
+            факт попадёт в лог.
+        organization:
+          type: object
+          description: >
+            Наша организация (юрлицо), от имени которой документ проведён в 1С.
+
+
+            **Направление: только 1С → Сайт.** Сайт организацию не определяет и
+            не отправляет —
+
+            её выбирает 1С по своим правилам (для `type=promo` и
+            `type=promo_sample` —
+
+            по хардкоду из v15.7.1).
+
+
+            Справочник организаций **по шине не передаётся**: юрлица заводятся в
+            админке сайта
+
+            вручную, как склады. Поэтому достаточно `uuid` — остальные поля
+            необязательны
+
+            и используются только если организации с таким UUID на сайте ещё
+            нет.
+
+
+            Объект без `uuid` сайт игнорирует. Неизвестный `uuid` создаёт
+            организацию-заглушку,
+
+            которую дозаполняет администратор; связь документа с юрлицом при
+            этом сохраняется.
+          required:
+            - uuid
+          properties:
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            name:
+              type:
+                - string
+                - 'null'
+              description: Краткое название организации. Необязательно.
+              examples:
+                - ООО Пекадо
+            legal_name:
+              type:
+                - string
+                - 'null'
+              description: Полное юридическое наименование. Необязательно.
+            tax_id:
+              type:
+                - string
+                - 'null'
+              description: ИНН организации. Необязательно.
+            tax_code:
+              type:
+                - string
+                - 'null'
+              description: КПП организации. Необязательно.
+        contractor_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: >
+            UUID контрагента-получателя в 1С (`Company.erp_id` на сайте).
+            Приоритетный способ
+
+            матчинга. Может быть пустым: получателем ордера бывает контрагент,
+            которого
+
+            на сайте нет вовсе (маркетплейс, внутреннее перемещение).
+        partner_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: >-
+            UUID партнёра-владельца (пользователь сайта). Опционально — ордер
+            может быть техническим.
+        tax_id:
+          type:
+            - string
+            - 'null'
+          description: >
+            ИНН получателя. Запасной способ матчинга контрагента — работает
+            только в паре
+
+            с `partner_uuid`, иначе можно найти чужую организацию с тем же ИНН.
+        recipient_name:
+          type:
+            - string
+            - 'null'
+          description: >
+            Получатель строкой, как он написан в шапке ордера. **Присылать нужно
+            всегда:**
+
+            получателя может не быть в справочниках сайта, и без этой строки
+            ордер
+
+            в журнале склада останется безымянным.
+          examples:
+            - Интернет Решения ООО, г.Москва
+        responsible:
+          type:
+            - string
+            - 'null'
+          description: >-
+            Ответственный за ордер — пользователь или бригада отгрузки в 1С.
+            Склад фильтрует журнал по этому полю.
+          examples:
+            - Отгрузка 3 Москва
+        priority:
+          type:
+            - string
+            - 'null'
+          enum:
+            - low
+            - normal
+            - high
+            - null
+          description: >-
+            Приоритет: `low` — Низкий, `normal` — Средний, `high` — Высокий.
+            Необязательно.
+        comment:
+          type:
+            - string
+            - 'null'
+          description: Комментарий из шапки ордера. Показывается кладовщику как есть.
+          examples:
+            - Москва и МО доп
+        delivery_type:
+          type:
+            - string
+            - 'null'
+          enum:
+            - pickup
+            - delivery
+            - null
+          description: >-
+            Способ передачи товара: `pickup` — Самовывоз, `delivery` — Доставка.
+            Необязательно.
+        delivery_address:
+          type:
+            - string
+            - 'null'
+          description: Адрес доставки («Доставка по …»). Необязательно.
+        delivery_order:
+          type:
+            - string
+            - 'null'
+          description: Порядок доставки из нижней части документа. Необязательно.
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: 'Аудит-метка: дата-время создания документа в 1С. Необязательно.'
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Аудит-метка: дата-время последнего изменения документа в 1С.
+            Необязательно.
+        items:
+          type: array
+          minItems: 1
+          description: >
+            Табличная часть «Товары по распоряжениям». Присылается **целиком**:
+            сайт удаляет
+
+            прежние строки и создаёт новые. Досылать только изменившиеся строки
+            нельзя —
+
+            так они продублируются.
+          items:
+            type: object
+            description: >
+              Строка табличной части «Товары по распоряжениям».
+
+
+              Заказ указывается именно здесь: один ордер может собираться сразу
+              по нескольким
+
+              заказам клиента, и связь «ордер ↔ заказ» на сайте строится через
+              строки.
+            required:
+              - product_uuid
+              - quantity
+            properties:
+              line_number:
+                type:
+                  - integer
+                  - 'null'
+                minimum: 1
+                description: >-
+                  Номер строки табличной части («N»). При отсутствии сайт
+                  нумерует строки по порядку в массиве.
+              product_uuid:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              product_name:
+                type:
+                  - string
+                  - 'null'
+                description: >
+                  Наименование номенклатуры. Формально необязательно, но
+                  присылать нужно:
+
+                  товара может не быть в каталоге сайта, и тогда строка без
+                  имени нечитаема
+
+                  для кладовщика.
+                examples:
+                  - >-
+                    Фаллоимитатор-ротатор реалистичный Pecado Безупречный,
+                    силикон, 20,5см
+              order_uuid:
+                type:
+                  - string
+                  - 'null'
+                format: uuid
+                description: UUID заказа-распоряжения, по которому идёт строка.
+              order_number:
+                type:
+                  - string
+                  - 'null'
+                description: >-
+                  Номер заказа-распоряжения. Нужен для показа — заказа может не
+                  быть на сайте.
+                examples:
+                  - 30УТ-000213
+              order_date:
+                type:
+                  - string
+                  - 'null'
+                format: date-time
+                description: Дата заказа-распоряжения. Необязательно.
+              quantity:
+                type: number
+                minimum: 0
+                description: Количество к отгрузке по строке.
+                examples:
+                  - 15
+              unit:
+                type:
+                  - string
+                  - 'null'
+                description: Единица измерения. Необязательно.
+                examples:
+                  - шт
+              package_number:
+                type:
+                  - integer
+                  - 'null'
+                minimum: 1
+                description: >-
+                  Номер упаковочного листа, в который попала строка.
+                  Необязательно.
+        packages:
+          type: array
+          description: >
+            Упаковочные листы (вкладка «Отгружаемые товары»).
+
+
+            **Отсутствие ключа и пустой массив означают разное:** ключа нет —
+            сайт **не трогает**
+
+            сохранённые упаковки; `[]` — **очищает** их полностью. Присылается
+            целиком.
+          items:
+            type: object
+            description: Упаковочный лист (место) из вкладки «Отгружаемые товары».
+            required:
+              - number
+            properties:
+              number:
+                type: integer
+                minimum: 1
+                description: Номер упаковочного листа («Упаковочный лист 3»).
+              positions_count:
+                type:
+                  - integer
+                  - 'null'
+                minimum: 0
+                description: Сколько позиций в составе листа («2 позиции в составе»).
+              weight:
+                type:
+                  - number
+                  - 'null'
+                minimum: 0
+                description: Вес места. Необязательно — в 1С колонка часто не используется.
+              volume:
+                type:
+                  - number
+                  - 'null'
+                minimum: 0
+                description: >-
+                  Объём места. Необязательно — в 1С колонка часто не
+                  используется.
+      examples:
+        - event: goods_issue.created
+          message_id: msg-gi-a1b2c3d4
+          uuid: 7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f
+          number: УТ-00009419
+          date: '2026-07-08T13:25:55+03:00'
+          shipment_date: '2026-07-08T13:25:55+03:00'
+          status: shipped
+          operation: Отгрузка клиенту
+          warehouse_uuid: f8083799-0838-11e0-a1ea-505054503030
+          contractor_uuid: 550e8400-e29b-41d4-a716-446655440000
+          recipient_name: Интернет Решения ООО, г.Москва
+          responsible: Отгрузка 3 Москва
+          priority: normal
+          comment: Москва и МО доп
+          delivery_type: delivery
+          items:
+            - line_number: 1
+              product_uuid: 550e8400-e29b-41d4-a716-446655440001
+              product_name: Реалистичный страпон Pecado Импульсивная, силикон, 16см
+              order_uuid: 8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34
+              order_number: 30УТ-000213
+              quantity: 15
+              unit: шт
+              package_number: 3
+          packages:
+            - number: 3
+              positions_count: 2
+            - number: 4
+              positions_count: 1
+    GoodsIssueUpdatedPayload:
+      type: object
+      description: >
+        Обновление расходного ордера: смена статуса, состава или реквизитов.
+        Структура
+
+        полностью совпадает с `GoodsIssueCreatedPayload`, отличается только
+        значением
+
+        поля `event`. Разделение на две схемы сделано на вырост — при появлении
+
+        у `goods_issue.updated` собственных полей схема эволюционирует
+        независимо.
+      required:
+        - event
+        - message_id
+        - uuid
+        - number
+        - date
+        - status
+        - items
+      properties:
+        event:
+          type: string
+          const: goods_issue.updated
+          description: Тип события
+        message_id:
+          type: string
+          description: Уникальный ID сообщения для идемпотентности
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        number:
+          type: string
+          minLength: 1
+          description: Номер ордера в 1С
+        date:
+          type: string
+          format: date-time
+          description: Дата и время в формате ISO 8601
+          examples:
+            - '2026-03-17T12:00:00+03:00'
+        shipment_date:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: Дата отгрузки из шапки ордера. Необязательно.
+        status:
+          type: string
+          description: >
+            Статус расходного ордера машинным кодом.
+
+
+            | Статус в 1С | Код |
+
+            |---|---|
+
+            | Подготовлен | `prepared` |
+
+            | К отбору | `to_pick` |
+
+            | К проверке | `to_check` |
+
+            | Проверен | `checked` |
+
+            | К отгрузке | `to_ship` |
+
+            | Отгружен | `shipped` |
+
+
+            **Значение вне списка не принимается:** сообщение отбрасывается
+            целиком и попадает
+
+            в очередь недоставленных `erp_dlq.warehouse`. Строгий перечень, а не
+            свободная строка,
+
+            выбран сознательно — статус здесь главное, ради чего журнал склада
+            существует,
+
+            и молча принять неизвестный код хуже, чем заметить расхождение
+            сразу.
+          enum:
+            - prepared
+            - to_pick
+            - to_check
+            - checked
+            - to_ship
+            - shipped
+          examples:
+            - shipped
+        operation:
+          type:
+            - string
+            - 'null'
+          description: Хозяйственная операция документа как есть.
+        warehouse_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: >
+            Склад, на который документ **фактически проведён** в 1С (v15.8.0).
+            Опционально.
+
+
+            **Направление: только 1С → Сайт.** Не путать с `warehouse_uuids`
+            исходящего заказа:
+
+            там сайт перечисляет склады региона, а конкретный выбирает 1С.
+
+
+            Неизвестный сайту склад автоматически не заводится: поле останется
+            пустым,
+
+            факт попадёт в лог.
+        organization:
+          type: object
+          description: >
+            Наша организация (юрлицо), от имени которой документ проведён в 1С.
+
+
+            **Направление: только 1С → Сайт.** Сайт организацию не определяет и
+            не отправляет —
+
+            её выбирает 1С по своим правилам (для `type=promo` и
+            `type=promo_sample` —
+
+            по хардкоду из v15.7.1).
+
+
+            Справочник организаций **по шине не передаётся**: юрлица заводятся в
+            админке сайта
+
+            вручную, как склады. Поэтому достаточно `uuid` — остальные поля
+            необязательны
+
+            и используются только если организации с таким UUID на сайте ещё
+            нет.
+
+
+            Объект без `uuid` сайт игнорирует. Неизвестный `uuid` создаёт
+            организацию-заглушку,
+
+            которую дозаполняет администратор; связь документа с юрлицом при
+            этом сохраняется.
+          required:
+            - uuid
+          properties:
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            name:
+              type:
+                - string
+                - 'null'
+              description: Краткое название организации. Необязательно.
+              examples:
+                - ООО Пекадо
+            legal_name:
+              type:
+                - string
+                - 'null'
+              description: Полное юридическое наименование. Необязательно.
+            tax_id:
+              type:
+                - string
+                - 'null'
+              description: ИНН организации. Необязательно.
+            tax_code:
+              type:
+                - string
+                - 'null'
+              description: КПП организации. Необязательно.
+        contractor_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: UUID контрагента-получателя в 1С.
+        partner_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: UUID партнёра-владельца. Опционально.
+        tax_id:
+          type:
+            - string
+            - 'null'
+          description: ИНН получателя.
+        recipient_name:
+          type:
+            - string
+            - 'null'
+          description: Получатель строкой, как он написан в шапке ордера.
+        responsible:
+          type:
+            - string
+            - 'null'
+          description: Ответственный за ордер.
+        priority:
+          type:
+            - string
+            - 'null'
+          enum:
+            - low
+            - normal
+            - high
+            - null
+          description: Приоритет ордера. Необязательно.
+        comment:
+          type:
+            - string
+            - 'null'
+          description: Комментарий из шапки ордера.
+        delivery_type:
+          type:
+            - string
+            - 'null'
+          enum:
+            - pickup
+            - delivery
+            - null
+          description: Способ передачи товара. Необязательно.
+        delivery_address:
+          type:
+            - string
+            - 'null'
+          description: Адрес доставки. Необязательно.
+        delivery_order:
+          type:
+            - string
+            - 'null'
+          description: Порядок доставки. Необязательно.
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: 'Аудит-метка: дата-время создания документа в 1С.'
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: 'Аудит-метка: дата-время последнего изменения документа в 1С.'
+        items:
+          type: array
+          minItems: 1
+          description: Табличная часть «Товары по распоряжениям». Присылается целиком.
+          items:
+            type: object
+            description: >
+              Строка табличной части «Товары по распоряжениям».
+
+
+              Заказ указывается именно здесь: один ордер может собираться сразу
+              по нескольким
+
+              заказам клиента, и связь «ордер ↔ заказ» на сайте строится через
+              строки.
+            required:
+              - product_uuid
+              - quantity
+            properties:
+              line_number:
+                type:
+                  - integer
+                  - 'null'
+                minimum: 1
+                description: >-
+                  Номер строки табличной части («N»). При отсутствии сайт
+                  нумерует строки по порядку в массиве.
+              product_uuid:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              product_name:
+                type:
+                  - string
+                  - 'null'
+                description: >
+                  Наименование номенклатуры. Формально необязательно, но
+                  присылать нужно:
+
+                  товара может не быть в каталоге сайта, и тогда строка без
+                  имени нечитаема
+
+                  для кладовщика.
+                examples:
+                  - >-
+                    Фаллоимитатор-ротатор реалистичный Pecado Безупречный,
+                    силикон, 20,5см
+              order_uuid:
+                type:
+                  - string
+                  - 'null'
+                format: uuid
+                description: UUID заказа-распоряжения, по которому идёт строка.
+              order_number:
+                type:
+                  - string
+                  - 'null'
+                description: >-
+                  Номер заказа-распоряжения. Нужен для показа — заказа может не
+                  быть на сайте.
+                examples:
+                  - 30УТ-000213
+              order_date:
+                type:
+                  - string
+                  - 'null'
+                format: date-time
+                description: Дата заказа-распоряжения. Необязательно.
+              quantity:
+                type: number
+                minimum: 0
+                description: Количество к отгрузке по строке.
+                examples:
+                  - 15
+              unit:
+                type:
+                  - string
+                  - 'null'
+                description: Единица измерения. Необязательно.
+                examples:
+                  - шт
+              package_number:
+                type:
+                  - integer
+                  - 'null'
+                minimum: 1
+                description: >-
+                  Номер упаковочного листа, в который попала строка.
+                  Необязательно.
+        packages:
+          type: array
+          description: Упаковочные листы. Отсутствие ключа и `[]` означают разное.
+          items:
+            type: object
+            description: Упаковочный лист (место) из вкладки «Отгружаемые товары».
+            required:
+              - number
+            properties:
+              number:
+                type: integer
+                minimum: 1
+                description: Номер упаковочного листа («Упаковочный лист 3»).
+              positions_count:
+                type:
+                  - integer
+                  - 'null'
+                minimum: 0
+                description: Сколько позиций в составе листа («2 позиции в составе»).
+              weight:
+                type:
+                  - number
+                  - 'null'
+                minimum: 0
+                description: Вес места. Необязательно — в 1С колонка часто не используется.
+              volume:
+                type:
+                  - number
+                  - 'null'
+                minimum: 0
+                description: >-
+                  Объём места. Необязательно — в 1С колонка часто не
+                  используется.
+      examples:
+        - event: goods_issue.updated
+          message_id: msg-gi-upd-a1b2c3d4
+          uuid: 7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f
+          number: УТ-00009419
+          date: '2026-07-08T13:25:55+03:00'
+          status: to_ship
+          items:
+            - product_uuid: 550e8400-e29b-41d4-a716-446655440001
+              quantity: 15
+    GoodsIssueDeletedPayload:
+      type: object
+      description: >
+        Отмена проведения (или пометка на удаление) расходного ордера в 1С. Сайт
+        помечает
+
+        ордер удалённым и убирает из журнала склада, но данные сохраняет:
+        повторное
+
+        проведение того же документа вернёт ордер со всем составом и историей
+        статусов.
+      required:
+        - event
+        - message_id
+        - uuid
+      properties:
+        event:
+          type: string
+          const: goods_issue.deleted
+          description: Тип события
+        message_id:
+          type: string
+          description: Уникальный ID сообщения для идемпотентности
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+      examples:
+        - event: goods_issue.deleted
+          message_id: msg-gi-del-a1b2c3d4
+          uuid: 7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f
     PaymentBankAccount:
       type: object
       description: >

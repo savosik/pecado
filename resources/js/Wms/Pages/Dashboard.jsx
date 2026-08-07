@@ -1,8 +1,8 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import WmsLayout from '@/Wms/Layouts/WmsLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Box, Card, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
-import { LuWarehouse, LuPackage, LuLayers, LuPackageX } from 'react-icons/lu';
+import { LuWarehouse, LuPackage, LuLayers, LuPackageX, LuTruck } from 'react-icons/lu';
 
 const formatNumber = (value) => new Intl.NumberFormat('ru-RU').format(value ?? 0);
 
@@ -54,7 +54,7 @@ function WarehouseCard({ warehouse }) {
 }
 
 export default function Dashboard() {
-    const { warehouses, totals, isWarehouseHead, auth } = usePage().props;
+    const { warehouses, totals, isWarehouseHead, goodsIssues, auth } = usePage().props;
 
     return (
         <>
@@ -70,6 +70,37 @@ export default function Dashboard() {
                     <StatCard label="Позиций в наличии" value={totals.positions_in_stock} icon={LuPackage} />
                     <StatCard label="Всего единиц товара" value={totals.units_total} icon={LuLayers} />
                 </SimpleGrid>
+
+                {goodsIssues && (
+                    <Link href="/wms/goods-issues">
+                        <Card.Root _hover={{ borderColor: 'colorPalette.solid' }}>
+                            <Card.Body>
+                                <HStack justify="space-between" flexWrap="wrap" gap={3}>
+                                    <HStack gap={2}>
+                                        <Box color="fg.muted"><LuTruck size={20} /></Box>
+                                        <Text fontSize="sm" fontWeight="semibold">Расходные ордера</Text>
+                                    </HStack>
+                                    <HStack gap={6}>
+                                        <VStack align="end" gap={0}>
+                                            <Text fontSize="xs" color="fg.muted">В работе</Text>
+                                            <Text fontSize="xl" fontWeight="bold">{formatNumber(goodsIssues.active)}</Text>
+                                        </VStack>
+                                        <VStack align="end" gap={0}>
+                                            <Text fontSize="xs" color="fg.muted">Зависших</Text>
+                                            <Text
+                                                fontSize="xl"
+                                                fontWeight="bold"
+                                                color={goodsIssues.stale > 0 ? 'orange.500' : undefined}
+                                            >
+                                                {formatNumber(goodsIssues.stale)}
+                                            </Text>
+                                        </VStack>
+                                    </HStack>
+                                </HStack>
+                            </Card.Body>
+                        </Card.Root>
+                    </Link>
+                )}
 
                 <Box>
                     <Text fontSize="sm" fontWeight="semibold" mb={3}>Остатки по складам</Text>

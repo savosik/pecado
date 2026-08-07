@@ -866,6 +866,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#v15140" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Перепривязка контрагента к другому партнёру (v15.14.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1018,6 +1029,34 @@
     
   
     Реализации
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../goods-issues/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Расходные ордера
   
 
     
@@ -1629,6 +1668,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/goods-issues-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Расходные ордера: что сделать в 1С (v15.15.0)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2217,6 +2284,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#v15140" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Перепривязка контрагента к другому партнёру (v15.14.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2472,13 +2550,62 @@
 <h3 id="_14">Правила обработки<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Required поля: <code>event</code>, <code>message_id</code>, <code>uuid</code>. <code>partner_uuid</code> требуется для
-  fallback-матчинга.</li>
+  fallback-матчинга и для перепривязки владельца.</li>
 <li>Частичный апдейт: обновляются только переданные поля.</li>
 <li><code>bank_accounts</code>: если массив передан — полностью заменяет существующие счета;
   если <code>null</code> / не передан — счета не трогаются.</li>
 <li>Если Company не найдена ни по UUID, ни по <code>tax_id+user_id</code> — warning,
   ничего не создаём (это задача <code>contractor.created</code>).</li>
 </ul>
+<h3 id="v15140">Перепривязка контрагента к другому партнёру (v15.14.0)<a class="headerlink" href="#v15140" title="Permanent link">&para;</a></h3>
+<p>В 1С контрагента можно перевести на другого партнёра. Сайт обязан повторить это
+перемещение, иначе клиент не увидит свою организацию в личном кабинете и
+не сможет оформить заказ — блок «Организация» окажется пустым.</p>
+<table>
+<thead>
+<tr>
+<th>Ситуация</th>
+<th>Что делает сайт</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>partner_uuid</code> не передан</td>
+<td><code>user_id</code> не трогает</td>
+</tr>
+<tr>
+<td><code>partner_uuid</code> передан, партнёр по <code>User.erp_id</code> <strong>не найден</strong></td>
+<td>warning, <code>user_id</code> <strong>не трогает</strong> — владельца не обнуляем, иначе опечатка в 1С осиротит контрагента</td>
+</tr>
+<tr>
+<td>Партнёр найден, совпадает с текущим владельцем</td>
+<td>ничего не меняет</td>
+</tr>
+<tr>
+<td>Партнёр найден и <strong>отличается</strong> от текущего владельца</td>
+<td>переносит <code>companies.user_id</code> на нового пользователя, пишет в лог <code>user_id_from</code> / <code>user_id_to</code></td>
+</tr>
+<tr>
+<td>У Company <code>user_id = NULL</code> (контрагент пришёл раньше партнёра)</td>
+<td>привязывает к найденному партнёру</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Переносится <strong>только сама организация</strong>. Ранее созданные заказы, отгрузки, платежи
+  и балансы остаются за прежним пользователем — сайт историю не переписывает.
+  Если требуется перенести и историю, это отдельная ручная операция.</li>
+<li>Смена <code>user_id</code> <strong>не</strong> триггерит обратную публикацию <code>contractor.updated</code> в 1С:
+  <code>user_id</code> не входит в список значимых полей <code>PublishContractorToErp</code>, а обновление
+  идёт через <code>Company::withoutEvents()</code>.</li>
+<li>Банковские счета привязаны к Company, а не к пользователю, и переезжают вместе с ней.</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">До v15.14.0 перепривязка молча игнорировалась</p>
+<p>Обработчик обновлял только реквизиты и не трогал <code>user_id</code>: сообщение
+отрабатывало со статусом <code>success</code>, но контрагент оставался у старого партнёра.
+Симптом на сайте — у клиента 0 организаций и неактивная кнопка «Оформить заказ».</p>
+</div>
 <h2 id="contractordeleted-1-v132">contractor.deleted (1С → Сайт) — v13.2<a class="headerlink" href="#contractordeleted-1-v132" title="Permanent link">&para;</a></h2>
 <h3 id="_15">Правила<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2501,6 +2628,8 @@
       (с v13.8) — но <strong>только</strong> при изменении хотя бы одного значимого поля.</li>
 <li>[ ] Сайт принимает <code>contractor.updated</code> и привязывает <code>erp_id</code> к существующей Company (backfill по <code>tax_id + user_id</code>)</li>
 <li>[ ] <code>contractor.updated</code> обновляет только переданные поля; <code>bank_accounts</code> заменяется только при явной передаче массива</li>
+<li>[ ] <code>contractor.updated</code> с изменившимся <code>partner_uuid</code> переносит Company на нового пользователя (v15.14.0)</li>
+<li>[ ] <code>contractor.updated</code> с неизвестным <code>partner_uuid</code> не обнуляет и не меняет текущего владельца Company</li>
 <li>[ ] Сайт принимает <code>contractor.deleted</code> и делает soft-delete Company по UUID или tax_id</li>
 <li>[ ] Все входящие обработчики (<code>order.*</code>, <code>shipment.*</code>, <code>balance.*</code>) ищут Company сначала по UUID, затем по <code>tax_id + user_id</code></li>
 <li>[ ] UUID-поля (<code>contractor.uuid</code>, <code>contractor_uuid</code>, <code>contractors[].uuid</code>) опциональны — переходный период не требует синхронной выкатки 1С</li>

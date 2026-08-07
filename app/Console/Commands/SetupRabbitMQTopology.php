@@ -68,6 +68,10 @@ class SetupRabbitMQTopology extends Command
         'erp_in.returns' => ['return.*'],
         'erp_in.documents' => ['shipment.*'],
         'erp_in.payments' => ['payment.*'],
+        // US-20: расходные ордера. Отдельно от erp_in.documents намеренно — у очереди
+        // реализаций один воркер, и первоначальная выгрузка ордеров за всю историю
+        // заблокировала бы приём реализаций, платежей и балансов.
+        'erp_in.warehouse' => ['goods_issue.*'],
         'erp_in.balance' => ['balance.*'],
         'erp_in.catalog' => ['category.*', 'product.*'],
         'erp_in.promotions' => ['promotion.*'],

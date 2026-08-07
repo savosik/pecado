@@ -680,6 +680,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../rules/goods-issues/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Расходные ордера
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../rules/payments/" class="md-nav__link">
         
   
@@ -1687,6 +1715,78 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#122-goods_issue-v15150" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.22 — Расходные ордера на товары (goods_issue.*, v15.15.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.22 — Расходные ордера на товары (goods_issue.*, v15.15.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A) Создание ордера по нескольким заказам
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B) Смена статуса
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C) Неизвестный статус
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D) Неизвестный товар и получатель не из справочника
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#e" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        E) Отмена проведения
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1912,6 +2012,34 @@
     
   
     Себестоимость: что сделать в 1С (v15.13.0)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/goods-issues-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Расходные ордера: что сделать в 1С (v15.15.0)
   
 
     
@@ -2881,6 +3009,78 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#122-goods_issue-v15150" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.22 — Расходные ордера на товары (goods_issue.*, v15.15.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.22 — Расходные ордера на товары (goods_issue.*, v15.15.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A) Создание ордера по нескольким заказам
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B) Смена статуса
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C) Неизвестный статус
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D) Неизвестный товар и получатель не из справочника
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#e" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        E) Отмена проведения
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3497,6 +3697,72 @@
 <p>🔵 <strong>ESB присылает</strong> сообщение для товара с неизвестным <code>payload.uid</code> и <code>payload.code</code>.</p>
 <ul>
 <li>[ ] Сообщение тихо пропущено (warning в логах), очередь не блокируется</li>
+</ul>
+<hr />
+<h2 id="122-goods_issue-v15150">1.22 — Расходные ордера на товары (<code>goods_issue.*</code>, v15.15.0)<a class="headerlink" href="#122-goods_issue-v15150" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.3 (товары), 1.13 (заказы), 0.1 (очередь <code>erp_in.warehouse</code>)</p>
+<blockquote>
+<p>Бизнес-правила → <a href="../../rules/goods-issues/">Расходные ордера</a></p>
+</blockquote>
+<h3 id="a">A) Создание ордера по нескольким заказам<a class="headerlink" href="#a" title="Permanent link">&para;</a></h3>
+<p>🔵 <strong>1С отправляет</strong> <code>goods_issue.created</code> со статусом <code>to_pick</code>, шестью строками <code>items[]</code>,
+из которых часть ссылается на заказ <code>30УТ-000213</code>, а часть — на другой заказ,
+и четырьмя упаковочными листами в <code>packages[]</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/goods_issue.created.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Ордер создан, <code>number</code> и <code>status</code> соответствуют присланным</li>
+<li>[ ] Строки сохранены все, у каждой заполнен <code>order_uuid</code> и <code>order_number</code></li>
+<li>[ ] Ордер связан с <strong>обоими</strong> заказами (в карточке позиции сгруппированы по заказам)</li>
+<li>[ ] Упаковочные листы сохранены, «Всего мест» равно их количеству</li>
+<li>[ ] В журнале статусов одна строка: «Ордер принят из 1С» со статусом <code>to_pick</code></li>
+<li>[ ] Ордер виден в <code>/wms/goods-issues</code></li>
+</ul>
+<h3 id="b_2">B) Смена статуса<a class="headerlink" href="#b_2" title="Permanent link">&para;</a></h3>
+<p>🔵 <strong>1С отправляет</strong> <code>goods_issue.updated</code> с тем же <code>uuid</code> и статусом <code>to_ship</code>.</p>
+<ul>
+<li>[ ] Текущий статус ордера изменился на «К отгрузке»</li>
+<li>[ ] В журнале статусов появилась вторая строка: <code>to_pick</code> → <code>to_ship</code></li>
+<li>[ ] Дата смены статуса обновилась</li>
+</ul>
+<p>🔵 <strong>1С повторно отправляет</strong> <code>goods_issue.updated</code> с тем же статусом <code>to_ship</code>
+(новый <code>message_id</code>).</p>
+<ul>
+<li>[ ] Новая строка в журнале статусов <strong>не появилась</strong> — журнал не засоряется</li>
+</ul>
+<h3 id="c">C) Неизвестный статус<a class="headerlink" href="#c" title="Permanent link">&para;</a></h3>
+<p>🔵 <strong>1С отправляет</strong> <code>goods_issue.updated</code> со статусом <code>"Отгружен"</code> (русским названием
+вместо машинного кода).</p>
+<ul>
+<li>[ ] Сообщение отклонено валидатором, ордер не изменился</li>
+<li>[ ] Запись в журнале ошибок валидации (<code>erp_validation_errors</code>)</li>
+<li>[ ] В <code>erp_processed_messages</code> записи <strong>нет</strong> — после исправления в 1С сообщение
+      можно прислать повторно с тем же <code>message_id</code></li>
+<li>[ ] Сообщение ушло в <code>erp_dlq.warehouse</code></li>
+</ul>
+<h3 id="d">D) Неизвестный товар и получатель не из справочника<a class="headerlink" href="#d" title="Permanent link">&para;</a></h3>
+<p>🔵 <strong>1С отправляет</strong> <code>goods_issue.created</code>, где <code>items[0].product_uuid</code> отсутствует
+в каталоге сайта, <code>contractor_uuid</code> не заведён, а <code>recipient_name</code> заполнен
+(<code>Интернет Решения ООО, г.Москва</code>).</p>
+<ul>
+<li>[ ] Ордер создан, обработка не упала</li>
+<li>[ ] Строка сохранена с пустой ссылкой на товар, но с <code>product_name</code> из 1С</li>
+<li>[ ] В журнале склада получатель показан из <code>recipient_name</code></li>
+<li>[ ] Ордер попадает в фильтр «есть позиции без товара на сайте»</li>
+</ul>
+<h3 id="e">E) Отмена проведения<a class="headerlink" href="#e" title="Permanent link">&para;</a></h3>
+<p>🔵 <strong>1С отправляет</strong> <code>goods_issue.deleted</code> с <code>uuid</code> ордера.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/goods_issue.deleted.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Ордер помечен удалённым и исчез из журнала склада</li>
+<li>[ ] Позиции, упаковки и журнал статусов сохранены</li>
+</ul>
+<p>🔵 <strong>1С повторно проводит</strong> документ: <code>goods_issue.created</code> с тем же <code>uuid</code>.</p>
+<ul>
+<li>[ ] Ордер вернулся в журнал со всем составом</li>
 </ul>
 
 

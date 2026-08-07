@@ -3,6 +3,7 @@
 use App\Http\Controllers\Wms\DashboardController;
 use App\Http\Controllers\Wms\DefectController;
 use App\Http\Controllers\Wms\DefectTypeController;
+use App\Http\Controllers\Wms\GoodsIssueController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -50,6 +51,18 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
             Route::post('/defects/{defect}/write-off', [DefectController::class, 'writeOff'])->name('defects.write-off');
             Route::delete('/defects/{defect}', [DefectController::class, 'destroy'])->name('defects.destroy');
         });
+    });
+
+    // Расходные ордера из 1С: журнал только на чтение — документ принадлежит 1С,
+    // статусами управляет она же. Отсюда и всего два права: view + export.
+    Route::middleware('permission:wms-goods-issues.view')->group(function () {
+        Route::get('/goods-issues', [GoodsIssueController::class, 'index'])->name('goods-issues.index');
+
+        Route::get('/goods-issues/export', [GoodsIssueController::class, 'export'])
+            ->name('goods-issues.export')->middleware('permission:wms-goods-issues.export');
+
+        // Ниже export — иначе «export» попал бы в {goodsIssue} как id.
+        Route::get('/goods-issues/{goodsIssue}', [GoodsIssueController::class, 'show'])->name('goods-issues.show');
     });
 
     // Справочник типовых дефектов: ведёт начальник склада (в /admin роль не пускает).

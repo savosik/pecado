@@ -68,6 +68,10 @@ class ErpMessageValidator
         'payment.created' => 'payment.created.json',
         'payment.updated' => 'payment.updated.json',
         'payment.deleted' => 'payment.deleted.json',
+        // US-20: Расходные ордера на товары
+        'goods_issue.created' => 'goods_issue.created.json',
+        'goods_issue.updated' => 'goods_issue.updated.json',
+        'goods_issue.deleted' => 'goods_issue.deleted.json',
     ];
 
     /**

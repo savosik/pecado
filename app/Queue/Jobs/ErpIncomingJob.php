@@ -15,6 +15,9 @@ use App\Services\Erp\Handlers\HandleContractorDeleted;
 use App\Services\Erp\Handlers\HandleContractorUpdated;
 use App\Services\Erp\Handlers\HandleCostUpdated;
 use App\Services\Erp\Handlers\HandleExchangeRateUpdated;
+use App\Services\Erp\Handlers\HandleGoodsIssueCreated;
+use App\Services\Erp\Handlers\HandleGoodsIssueDeleted;
+use App\Services\Erp\Handlers\HandleGoodsIssueUpdated;
 use App\Services\Erp\Handlers\HandleIndividualPricesReady;
 use App\Services\Erp\Handlers\HandleOrderCreated;
 use App\Services\Erp\Handlers\HandleOrderDeleted;
@@ -99,6 +102,10 @@ class ErpIncomingJob extends BaseJob
         'payment.created' => HandlePaymentCreated::class,
         'payment.updated' => HandlePaymentUpdated::class,
         'payment.deleted' => HandlePaymentDeleted::class,
+        // US-20: Расходные ордера на товары
+        'goods_issue.created' => HandleGoodsIssueCreated::class,
+        'goods_issue.updated' => HandleGoodsIssueUpdated::class,
+        'goods_issue.deleted' => HandleGoodsIssueDeleted::class,
     ];
 
     /**
