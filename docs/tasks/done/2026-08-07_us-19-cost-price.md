@@ -86,13 +86,21 @@
 | `ShipmentCostSnapshotTest` | 5 |
 | `ProductCostVisibilityTest` | 10 |
 
+## Доставка
+
+- **dev** — `a34c1350`, деплой зелёный. Миграции применены, биндинг
+  `cost.* → erp_in.prices` создан автоматически (`rabbitmq:setup` есть в workflow).
+- **prod** — `a34c1350`, тем же коммитом.
+
+Первый прогон дев-деплоя упал (16 тестов) — обе причины и разбор в коммите `5ce8b54a`.
+
 ## Осталось
 
 - [ ] 1С начинает присылать `cost.updated` — задание передано
       (`docs-erp/content/guides/cost-price-for-1c.md`)
 - [ ] Первоначальная выгрузка себестоимости по всей активной номенклатуре
-- [ ] После деплоя на серверах: `php artisan rabbitmq:setup` (биндинг `cost.*`)
-      и `php artisan bi:sync-grants` (пересборка вьюх BI)
+- [ ] `php artisan bi:sync-grants` на проде — в workflow его нет, а без него
+      `bi_agent` сохранит прямой грант на `products` и увидит себестоимость
 - [ ] Прибыль и маржа в `/crm/analytics` — отдельной задачей, вместе с правом
       `crm-product-costs.view` для `sales-head`
 
