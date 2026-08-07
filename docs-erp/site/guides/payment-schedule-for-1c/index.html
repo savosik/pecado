@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/migrations/v13.6-uniq-companies/">
+        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/guides/payment-schedule-for-1c/">
       
       
-        <link rel="prev" href="../v13.2-contractor-uuid/">
+        <link rel="prev" href="../erp-timestamps-for-1c/">
       
       
-        <link rel="next" href="../../open-questions/">
+        <link rel="next" href="../../initial-load/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>v13.6 — UNIQUE на (ИНН, КПП) - Pecado ERP — Интеграция 1С ↔ Сайт</title>
+        <title>График оплат: что сделать в 1С (v15.12.0) - Pecado ERP — Интеграция 1С ↔ Сайт</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#v136" class="md-skip">
+        <a href="#-1-v15120" class="md-skip">
           Перейти к содержанию
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              v13.6 — UNIQUE на (ИНН, КПП)
+              График оплат: что сделать в 1С (v15.12.0)
             
           </span>
         </div>
@@ -1109,8 +1109,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -1121,13 +1123,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
@@ -1148,7 +1148,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1166,7 +1166,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/erp-timestamps-for-1c/" class="md-nav__link">
+      <a href="../erp-timestamps-for-1c/" class="md-nav__link">
         
   
   
@@ -1191,10 +1191,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../guides/payment-schedule-for-1c/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    График оплат: что сделать в 1С (v15.12.0)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1210,6 +1237,164 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Содержание">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Роль и задача
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что уже сделано на стороне сайта
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Актуальная документация (единственный источник правды)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Формат данных
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Формат данных">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Соответствие полям формы «Правила оплаты»
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что передавать НЕ нужно
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Соответствие кодов
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Правила, которые нельзя нарушать
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Порядок работ
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Критерии приёмки
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Если что-то не сходится
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Вне этой задачи
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1253,8 +1438,6 @@
       
   
   
-    
-  
   
   
     
@@ -1267,11 +1450,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
         
           
           <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
@@ -1292,7 +1477,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1310,7 +1495,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../v13.2-contractor-uuid/" class="md-nav__link">
+      <a href="../../migrations/v13.2-contractor-uuid/" class="md-nav__link">
         
   
   
@@ -1335,37 +1520,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    v13.6 — UNIQUE на (ИНН, КПП)
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../migrations/v13.6-uniq-companies/" class="md-nav__link">
         
   
   
@@ -1381,148 +1539,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Содержание">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Содержание
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Что меняется
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Что меняется">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#api-breaking" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Контракт API (BREAKING)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Структура БД
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Алгоритм матчинга в обработчиках
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        План применения
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="План применения">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-pre-flight" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Pre-flight: проверить отсутствие дублей
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-cleanup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Адресный cleanup дублей
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Применить миграцию
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#4-1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Согласовать с 1С новый контракт
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Откат
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1737,49 +1753,32 @@
   <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Что меняется
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Что меняется">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#api-breaking" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Контракт API (BREAKING)
+        Роль и задача
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Структура БД
+        Что уже сделано на стороне сайта
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Алгоритм матчинга в обработчиках
+        Актуальная документация (единственный источник правды)
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1787,19 +1786,19 @@
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        План применения
+        Формат данных
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="План применения">
+    <nav class="md-nav" aria-label="Формат данных">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-pre-flight" class="md-nav__link">
+  <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Pre-flight: проверить отсутствие дублей
+        Соответствие полям формы «Правила оплаты»
       
     </span>
   </a>
@@ -1807,10 +1806,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-cleanup" class="md-nav__link">
+  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Адресный cleanup дублей
+        Что передавать НЕ нужно
       
     </span>
   </a>
@@ -1818,21 +1817,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3" class="md-nav__link">
+  <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Применить миграцию
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#4-1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Согласовать с 1С новый контракт
+        Соответствие кодов
       
     </span>
   </a>
@@ -1845,10 +1833,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Откат
+        Правила, которые нельзя нарушать
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Порядок работ
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Критерии приёмки
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Если что-то не сходится
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Вне этой задачи
       
     </span>
   </a>
@@ -1872,100 +1904,303 @@
 
 
 
-<h1 id="v136">Миграция v13.6: устранение дублей контрагентов<a class="headerlink" href="#v136" title="Permanent link">&para;</a></h1>
+<h1 id="-1-v15120">Промт для ИИ-агента 1С: выгрузка графика оплат (протокол v15.12.0)<a class="headerlink" href="#-1-v15120" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>Контекст:</strong> регрессия инцидента 2026-04-25 — 3093 дубля контрагентов
-на dev из-за того, что 1С присылала <code>order.created</code> без UUID контрагента,
-а сайт безусловно создавал новую <code>Company</code> без проверки уникальности.</p>
+<p>Скопируйте всё, что ниже разделителя, в ИИ-агента, который дорабатывает обмен на стороне
+1С:КА2. Промт самодостаточен: в нём есть контракт, правила, порядок работ и критерии приёмки.</p>
 </blockquote>
-<h2 id="_1">Что меняется<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
-<h3 id="api-breaking">Контракт API (BREAKING)<a class="headerlink" href="#api-breaking" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="_1">Роль и задача<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>Ты — разработчик 1С:Комплексная автоматизация 2, дорабатывающий обмен данными с сайтом
+<code>pecado.ru</code> через RabbitMQ.</p>
+<p><strong>Задача:</strong> начать выгружать на сайт <strong>график оплаты реализаций</strong> — табличную часть
+<strong>«Правила оплаты»</strong> документа <em>Реализация товаров и услуг</em>. Сайт уже принимает эти данные:
+доработка нужна только на стороне 1С.</p>
+<p><strong>Зачем это бизнесу.</strong> Сайт уже знает <em>факт</em> оплаты (кто и сколько заплатил) — это
+предыдущая версия протокола. Сейчас он не знает <em>плана</em>: когда клиент <strong>должен</strong> заплатить.
+Из графика строятся два экрана:</p>
+<ul>
+<li><strong>клиенту</strong> в личном кабинете — календарь оплат: когда и сколько он должен перечислить;</li>
+<li><strong>менеджеру</strong> в CRM — календарь поступления денег: план на каждый день против факта,
+  плюс список просроченных платежей.</li>
+</ul>
+<p>Пока 1С не начнёт присылать график, оба календаря пустые.</p>
+<h2 id="_2">Что уже сделано на стороне сайта<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>Ничего менять и согласовывать не нужно — приём готов и выкачен в бой:</p>
+<ul>
+<li>поле <code>payment_schedule</code> принимается в существующих сообщениях <code>shipment.created</code>
+  и <code>shipment.updated</code> (очередь <code>erp_in.documents</code>);</li>
+<li><strong>новой очереди и нового события нет</strong> — график едет внутри самого документа реализации;</li>
+<li>сайт сам сопоставляет строки графика с фактическими платежами (методом FIFO
+  по плановой дате) и считает остаток по каждой дате.</li>
+</ul>
+<h2 id="_3">Актуальная документация (единственный источник правды)<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Событие</th>
-<th>Было</th>
-<th>Стало</th>
+<th>Что</th>
+<th>Ссылка</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>order.created</code></td>
-<td><code>partner_uuid</code> optional, <code>contractor</code> nullable</td>
-<td><code>partner_uuid</code> required, <code>contractor</code> required (с <code>uuid</code>, <code>tax_id</code>)</td>
+<td>Полная спецификация AsyncAPI</td>
+<td>https://pecado.ru/docs/erp/spec.yaml</td>
 </tr>
 <tr>
-<td><code>shipment.created</code></td>
-<td><code>contractor_uuid</code> optional</td>
-<td><code>contractor_uuid</code> required</td>
+<td>JSON Schema реализации (created)</td>
+<td>https://pecado.ru/docs/erp/schemas/shipment.created.json</td>
 </tr>
 <tr>
-<td><code>shipment.updated</code></td>
-<td><code>contractor_uuid</code> optional</td>
-<td><code>contractor_uuid</code> required</td>
+<td>JSON Schema реализации (updated)</td>
+<td>https://pecado.ru/docs/erp/schemas/shipment.updated.json</td>
+</tr>
+<tr>
+<td>Бизнес-правила по реализациям</td>
+<td>https://pecado.ru/docs/erp-guide/rules/shipments/</td>
+</tr>
+<tr>
+<td>Changelog, раздел 15.12.0</td>
+<td>https://pecado.ru/docs/erp-guide/changelog/</td>
+</tr>
+<tr>
+<td>Интерактивная документация payload-ов</td>
+<td>https://pecado.ru/docs/erp/</td>
 </tr>
 </tbody>
 </table>
-<h3 id="_2">Структура БД<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>companies.tax_code</code> теперь <code>NOT NULL DEFAULT ''</code> (раньше nullable).</li>
-<li>Добавлен <code>UNIQUE(tax_id, tax_code, deleted_at)</code> — защита от дублей
-  на уровне БД.</li>
-<li><code>deleted_at</code> в составном UNIQUE компенсирует особенность MySQL: NULL в
-  индексе считается distinct, поэтому soft-deleted Company не блокируют
-  пересоздание.</li>
-</ul>
-<h3 id="_3">Алгоритм матчинга в обработчиках<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Fallback по <code>tax_id + tax_code</code> <strong>без</strong> фильтра <code>user_id</code> (ИНН/КПП
-  юридически уникальны). Это позволяет найти Company даже если она ещё
-  не привязана к партнёру.</li>
-<li>Поиск выполняется внутри <code>DB::transaction</code> с <code>lockForUpdate()</code> —
-  защита от race-condition при параллельной обработке.</li>
-<li>Soft-deleted Company восстанавливается (<code>restoreQuietly</code>), а не
-  дублируется при повторном получении события.</li>
-</ul>
-<h2 id="_4">План применения<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
-<h3 id="1-pre-flight">1. Pre-flight: проверить отсутствие дублей<a class="headerlink" href="#1-pre-flight" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># Найти все ИНН с дублями (среди активных Company):</span>
-docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>pecado-app<span class="w"> </span>php<span class="w"> </span>artisan<span class="w"> </span>tinker<span class="w"> </span>--execute<span class="o">=</span><span class="s2">&quot;DB::table(&#39;companies&#39;)-&gt;select(&#39;tax_id&#39;,&#39;tax_code&#39;,DB::raw(&#39;COUNT(*) as cnt&#39;))-&gt;whereNull(&#39;deleted_at&#39;)-&gt;whereNotNull(&#39;tax_id&#39;)-&gt;groupBy(&#39;tax_id&#39;,&#39;tax_code&#39;)-&gt;having(&#39;cnt&#39;,&#39;&gt;&#39;,1)-&gt;get()-&gt;dd();&quot;</span>
-</code></pre></div>
-<p>Если результат не пустой — нужен cleanup перед миграцией.</p>
-<h3 id="2-cleanup">2. Адресный cleanup дублей<a class="headerlink" href="#2-cleanup" title="Permanent link">&para;</a></h3>
-<p>Для каждого ИНН с дублями (если их немного):</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Сначала dry-run — посмотреть что будет удалено:</span>
-docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>pecado-app<span class="w"> </span>php<span class="w"> </span>artisan<span class="w"> </span>erp:cleanup-contractor-by-tax-id<span class="w"> </span><span class="o">{</span>ИНН<span class="o">}</span><span class="w"> </span>--dry-run
+<p><strong>Прочитай JSON Schema перед тем, как писать код.</strong> Сообщение, не прошедшее валидацию
+по схеме, отбрасывается сайтом целиком и попадает в очередь недоставленных (DLQ) —
+реализация при этом не обновится вообще, а не «обновится без графика».</p>
+<h2 id="_4">Формат данных<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<p>В payload реализации добавляется необязательный массив <code>payment_schedule</code>.
+Одна строка массива = одна строка табличной части «Правила оплаты».</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;shipment.created&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;msg-shipment-a1b2c3&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;29УТ-006915&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;contractor_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;tax_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-07-28&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;completed&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;currency_code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RUB&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;items&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="cm">/* … как раньше … */</span><span class="w"> </span><span class="p">],</span>
 
-<span class="c1"># Применить:</span>
-docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>pecado-app<span class="w"> </span>php<span class="w"> </span>artisan<span class="w"> </span>erp:cleanup-contractor-by-tax-id<span class="w"> </span><span class="o">{</span>ИНН<span class="o">}</span><span class="w"> </span>--force
+<span class="w">  </span><span class="nt">&quot;payment_schedule&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;line_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;due_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-08-27&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;amount&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">2325.20</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;percent&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;term_days&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;basis&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;shipment_date&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;basis_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;от даты отгрузки&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;stage&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;credit&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;stage_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Оплата после отгрузки&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;order_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
 </code></pre></div>
-<p>Команда удаляет <strong>все</strong> Company с указанным ИНН (включая soft-deleted)
-и каскадно удаляет связанные Order через FK <code>orders.company_id ON DELETE CASCADE</code>.
-<code>shipments.company_id</code> и <code>contractor_balances.company_id</code> имеют <code>SET NULL</code> —
-останутся, просто отвязанные.</p>
-<h3 id="3">3. Применить миграцию<a class="headerlink" href="#3" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>pecado-app<span class="w"> </span>php<span class="w"> </span>artisan<span class="w"> </span>migrate
-</code></pre></div>
-<p>Миграция:</p>
+<h3 id="_5">Соответствие полям формы «Правила оплаты»<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Поле JSON</th>
+<th>Колонка / реквизит в 1С</th>
+<th>Обязательно</th>
+<th>Комментарий</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>due_date</code></td>
+<td><strong>Дата платежа</strong></td>
+<td><strong>да</strong></td>
+<td>Формат <code>ГГГГ-ММ-ДД</code>. Без неё строка не сохранится</td>
+</tr>
+<tr>
+<td><code>amount</code></td>
+<td><strong>Сумма платежа</strong></td>
+<td><strong>да</strong></td>
+<td>Число, в валюте документа. Не строка, без пробелов-разделителей</td>
+</tr>
+<tr>
+<td><code>line_number</code></td>
+<td><strong>N</strong></td>
+<td>нет</td>
+<td>Порядок показа. Если не передать — нумерация по порядку в массиве</td>
+</tr>
+<tr>
+<td><code>percent</code></td>
+<td><strong>% платежа</strong></td>
+<td>нет</td>
+<td>Справочно. Расчёты сайт ведёт по <code>amount</code></td>
+</tr>
+<tr>
+<td><code>term_days</code></td>
+<td><strong>Срок (дни)</strong></td>
+<td>нет</td>
+<td>Справочно: дата уже посчитана в 1С и приезжает в <code>due_date</code></td>
+</tr>
+<tr>
+<td><code>basis</code></td>
+<td><strong>Вариант отсчёта</strong> (код)</td>
+<td>нет</td>
+<td>Только: <code>shipment_date</code>, <code>order_date</code>, <code>invoice_date</code></td>
+</tr>
+<tr>
+<td><code>basis_name</code></td>
+<td><strong>Вариант отсчёта</strong> (текст)</td>
+<td>нет</td>
+<td>Как в 1С: «от даты отгрузки»</td>
+</tr>
+<tr>
+<td><code>stage</code></td>
+<td><strong>Контроль</strong> (код)</td>
+<td>нет</td>
+<td>Только: <code>prepayment</code>, <code>advance</code>, <code>credit</code></td>
+</tr>
+<tr>
+<td><code>stage_name</code></td>
+<td><strong>Контроль</strong> (текст)</td>
+<td>нет</td>
+<td>Как в 1С: «Оплата после отгрузки»</td>
+</tr>
+<tr>
+<td><code>order_uuid</code></td>
+<td><strong>Заказ</strong></td>
+<td>нет</td>
+<td>UUID заказа клиента из строки</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_6">Что передавать НЕ нужно<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<p>Из шапки «Правил оплаты» сайту <strong>не нужны и не принимаются</strong>: «Расчёты», «Форма оплаты»,
+«Касса», «Банковский счёт», «УИП» и «Сумма к оплате». УИП уже приходит в платёжном
+документе, сумма документа у сайта есть, остальное на календарь оплат не влияет.
+Не добавляй их «на всякий случай».</p>
+<h3 id="_7">Соответствие кодов<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<p><code>basis</code> и <code>stage</code> — <strong>латинские коды</strong>, а не русский текст. Сопоставь их с типами значений
+1С один раз в общем модуле:</p>
+<table>
+<thead>
+<tr>
+<th>Код</th>
+<th>Смысл</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>basis</code> = <code>shipment_date</code></td>
+<td>отсчёт от даты отгрузки</td>
+</tr>
+<tr>
+<td><code>basis</code> = <code>order_date</code></td>
+<td>отсчёт от даты заказа</td>
+</tr>
+<tr>
+<td><code>basis</code> = <code>invoice_date</code></td>
+<td>отсчёт от даты счёта</td>
+</tr>
+<tr>
+<td><code>stage</code> = <code>prepayment</code></td>
+<td>предоплата до отгрузки</td>
+</tr>
+<tr>
+<td><code>stage</code> = <code>advance</code></td>
+<td>аванс</td>
+</tr>
+<tr>
+<td><code>stage</code> = <code>credit</code></td>
+<td>оплата после отгрузки (кредит)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Почему нельзя обойтись русским наименованием:</strong> оно меняется вместе с настройками учёта
+и переводом конфигурации, а на код опирается логика сайта (что считать предоплатой,
+от чего отсчитывать просрочку). Русский текст передавай <strong>дополнительно</strong>, в полях
+<code>*_name</code> — он показывается клиенту и менеджеру как есть.</p>
+<p>Незнакомый код сайт обнулит и запишет предупреждение в лог, но строку сохранит:
+дата и сумма важнее.</p>
+<h2 id="_8">Правила, которые нельзя нарушать<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
 <ol>
-<li>Backfill <code>tax_code</code> NULL → <code>''</code>.</li>
-<li>Pre-flight check — если остались дубли, миграция падает с подсказкой.</li>
-<li><code>tax_code</code> → NOT NULL DEFAULT ''.</li>
-<li>Добавление UNIQUE-индекса.</li>
+<li><strong>Отсутствие ключа <code>payment_schedule</code> и пустой массив <code>[]</code> означают РАЗНОЕ.</strong></li>
+<li>Ключа в сообщении нет → сайт <strong>не трогает</strong> сохранённый график. Так следует поступать,
+     когда меняются только позиции документа.</li>
+<li>Ключ есть, значение <code>[]</code> → сайт <strong>очищает</strong> график полностью.</li>
 </ol>
-<h3 id="4-1">4. Согласовать с 1С новый контракт<a class="headerlink" href="#4-1" title="Permanent link">&para;</a></h3>
-<p>После применения миграции 1С <strong>обязана</strong> слать:</p>
+<p>Это самая частая ошибка при доработке. Если 1С опустит ключ, подразумевая «графика
+   больше нет», старые плановые даты останутся висеть в календаре клиента.</p>
+<ol>
+<li>
+<p><strong>График присылается целиком, а не дельтой.</strong> Массив полностью заменяет сохранённое.
+   Досылать только изменившиеся строки нельзя: сайт не может отличить «строки не
+   изменились» от «строк больше нет».</p>
+</li>
+<li>
+<p><strong><code>due_date</code> обязателен.</strong> Строка без плановой даты для календаря бессмысленна и будет
+   пропущена (остальные строки сохранятся).</p>
+</li>
+<li>
+<p><strong>Сумма строк должна сходиться с суммой документа.</strong> Расхождение сайт покажет
+   сотруднику предупреждением, но исправлять не будет: арифметику документа ведёт 1С.</p>
+</li>
+<li>
+<p><strong>График передаётся и в <code>shipment.created</code>, и в <code>shipment.updated</code>.</strong> Изменили правила
+   оплаты в проведённом документе — обязательно перепроведите его или отправьте
+   <code>shipment.updated</code>, иначе сайт останется со старым графиком.</p>
+</li>
+</ol>
+<h2 id="_9">Порядок работ<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Изучи <code>shipment.created.json</code> и <code>shipment.updated.json</code> по ссылкам выше.</li>
+<li>Найди в конфигурации место, где формируется payload реализации для отправки в
+   RabbitMQ (обмен <code>erp.events</code>, очередь сайта <code>erp_in.documents</code>).</li>
+<li>Добавь формирование массива <code>payment_schedule</code> из табличной части «Правила оплаты»
+   документа <em>Реализация товаров и услуг</em>.</li>
+<li>Сделай сопоставление кодов <code>basis</code> и <code>stage</code> (таблица выше) отдельной функцией
+   общего модуля — она понадобится и для заказов, когда дойдёт до них очередь.</li>
+<li>Проверь типы: <code>amount</code> и <code>percent</code> — <strong>числа</strong>, <code>due_date</code> — <strong>строка</strong> <code>ГГГГ-ММ-ДД</code>,
+   <code>line_number</code> и <code>term_days</code> — <strong>целые</strong>. Числа в кавычках схему не пройдут.</li>
+<li>Проведи один тестовый документ на <strong>тестовый контур</strong> и убедись, что сообщение
+   не ушло в DLQ.</li>
+<li><strong>Первичное заполнение.</strong> По реализациям, проведённым до этой доработки, график на
+   сайте отсутствует. После приёмки запусти разовую обработку, отправляющую
+   <code>shipment.updated</code> по актуальным реализациям (разумная глубина — незакрытые и
+   отгруженные за последние 3–6 месяцев). Без этого календари останутся почти пустыми.
+   Отправляй пачками с паузой, а не одним залпом.</li>
+</ol>
+<h2 id="_10">Критерии приёмки<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>order.created</code> с заполненным <code>partner_uuid</code> и блоком <code>contractor</code> (с <code>uuid</code> и <code>tax_id</code>).</li>
-<li><code>shipment.created</code> / <code>shipment.updated</code> с заполненным <code>contractor_uuid</code>.</li>
+<li>[ ] Реализация с одной строкой «Правил оплаты» доезжает: в карточке реализации на сайте
+      виден блок «График оплаты» с датой и суммой.</li>
+<li>[ ] Реализация с рассрочкой (несколько строк) отображается несколькими строками,
+      с разными датами и суммами.</li>
+<li>[ ] Изменение правил оплаты в 1С и перепроведение документа обновляет график на сайте
+      (старые строки не задваиваются).</li>
+<li>[ ] Очистка табличной части в 1С отправляет <code>"payment_schedule": []</code>, и график на сайте
+      исчезает.</li>
+<li>[ ] Сообщение об изменении <strong>только позиций</strong> документа приходит <strong>без ключа</strong>
+      <code>payment_schedule</code>, и сохранённый график остаётся нетронутым.</li>
+<li>[ ] Ни одно сообщение не попало в DLQ по ошибке валидации схемы.</li>
+<li>[ ] Проведена первичная выгрузка <code>shipment.updated</code> по историческим реализациям.</li>
 </ul>
-<p>Сообщения без обязательных полей будут отклонены валидатором (<code>ErpMessageValidator</code>)
-и записаны в <code>erp_validation_errors</code> без обработки.</p>
-<h2 id="_5">Откат<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>pecado-app<span class="w"> </span>php<span class="w"> </span>artisan<span class="w"> </span>migrate:rollback<span class="w"> </span>--step<span class="o">=</span><span class="m">1</span>
-</code></pre></div>
-<p>Откат снимает UNIQUE-индекс и возвращает <code>tax_code</code> в nullable. Удалённые
-дубли восстановить нельзя — но это и не нужно, они были ошибочными.</p>
+<h2 id="-">Если что-то не сходится<a class="headerlink" href="#-" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Сообщение ушло в DLQ → причина в очереди <code>erp_dlq.documents</code>, текст ошибки укажет
+  конкретное поле и правило схемы.</li>
+<li>График не появился, а сообщение обработано → проверь, что ключ называется именно
+  <code>payment_schedule</code> и что это массив, а не структура.</li>
+<li>Строка пропала → скорее всего пустой или неверный <code>due_date</code>.</li>
+</ul>
+<p>По спорным местам сверяйся с https://pecado.ru/docs/erp-guide/rules/shipments/ —
+раздел «График оплаты». Спецификация имеет приоритет над этим промтом.</p>
+<h2 id="_11">Вне этой задачи<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<p>График оплат <strong>по заказам клиентов</strong> (плановые предоплаты по ещё не отгруженному)
+в этой версии не передаётся. Это отдельная задача — не добавляй <code>payment_schedule</code>
+в сообщения заказов, сайт его там не ждёт.</p>
 
 
 

@@ -58,6 +58,8 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
   а не инкремент. Страховочная сеть — команда `php artisan payments:recalculate`.
 - График по **заказам** (предоплата по неотгруженному) в этой версии не передаётся.
 - Бизнес-правила и критерии приёмки — [Реализации](rules/shipments.md).
+- Пошаговое задание разработчику 1С —
+  [«График оплат: что сделать в 1С»](guides/payment-schedule-for-1c.md).
 
 ---
 

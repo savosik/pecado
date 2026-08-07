@@ -77,6 +77,7 @@ nav:
     - "Фаза 4: Edge-кейсы": tests/phase-4-edge.md
   - Гайды для 1С:
     - "Аудит-метки 1С (erp_created_at / erp_updated_at)": guides/erp-timestamps-for-1c.md
+    - "График оплат: что сделать в 1С (v15.12.0)": guides/payment-schedule-for-1c.md
   - Первоначальная выгрузка: initial-load.md
   - Миграции:
     - "v13.2 — UUID для контрагентов": migrations/v13.2-contractor-uuid.md
