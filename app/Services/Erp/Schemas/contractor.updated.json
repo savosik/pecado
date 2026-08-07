@@ -2,7 +2,7 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "$id": "contractor.updated",
     "title": "contractor.updated (1С → Сайт)",
-    "description": "Обновление атрибутов существующего контрагента. Сайт сначала ищет Company по uuid (приоритет), затем fallback по tax_id + user_id (резолв через partner_uuid). Все поля кроме event, message_id, uuid — опциональны (частичное обновление). partner_uuid требуется для fallback-матчинга и привязки erp_id существующего контрагента, созданного на сайте.",
+    "description": "Обновление атрибутов существующего контрагента. Сайт сначала ищет Company по uuid (приоритет), затем fallback по tax_id + user_id (резолв через partner_uuid). Все поля кроме event, message_id, uuid — опциональны (частичное обновление). partner_uuid требуется для fallback-матчинга и привязки erp_id существующего контрагента, созданного на сайте, а также для перепривязки контрагента к другому партнёру (v15.14.0).",
     "type": "object",
     "properties": {
         "event": {
@@ -20,7 +20,7 @@
         "partner_uuid": {
             "type": "string",
             "format": "uuid",
-            "description": "UUID партнёра-владельца. Нужен для fallback-матчинга по tax_id и для привязки существующей Company к erp_id (ленивый backfill)."
+            "description": "UUID партнёра-владельца. Нужен для fallback-матчинга по tax_id, для привязки существующей Company к erp_id (ленивый backfill) и для перепривязки контрагента к другому партнёру: если partner_uuid отличается от текущего владельца, сайт переносит Company на нового пользователя (v15.14.0)."
         },
         "name": {
             "type": "string",

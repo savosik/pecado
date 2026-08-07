@@ -16,6 +16,9 @@ use Illuminate\Support\Facades\Log;
  *     генерирует свой UUID и возвращает его; сайт находит Company по
  *     tax_id + user_id и проставляет erp_id (ленивый backfill).
  *  2. Частичное обновление атрибутов существующего контрагента.
+ *  3. v15.14.0: перепривязка контрагента к другому партнёру — если partner_uuid
+ *     резолвится в другого пользователя, Company переезжает к нему. Иначе клиент
+ *     не видит свою организацию в ЛК и не может оформить заказ.
  *
  * Матчинг Company:
  *  1. По erp_id = uuid (приоритет, идемпотентность).
@@ -40,8 +43,15 @@ class HandleContractorUpdated
             return;
         }
 
-        // Резолв пользователя (нужен для fallback-поиска и backfill)
+        // Резолв пользователя (нужен для fallback-поиска, backfill и перепривязки)
         $user = $partnerUuid ? User::where('erp_id', $partnerUuid)->first() : null;
+
+        if ($partnerUuid && ! $user) {
+            Log::warning('contractor.updated: партнёр не найден, владелец контрагента не меняется', [
+                'uuid' => $uuid,
+                'partner_uuid' => $partnerUuid,
+            ]);
+        }
 
         // Сценарий 1: ищем по erp_id (повторная доставка / существующий контрагент)
         $company = Company::withoutGlobalScopes()
@@ -80,24 +90,39 @@ class HandleContractorUpdated
         // CompanyBankAccountObserver проверяют его и пропускают публикацию.
         $company->fromErp = true;
 
-        $this->updateCompany($company, $payload, $bindErpId);
+        // Перепривязка владельца: в 1С контрагента могли перевести на другого
+        // партнёра. Только при найденном партнёре — неизвестный partner_uuid
+        // владельца не обнуляет, иначе опечатка в 1С осиротит контрагента.
+        $previousUserId = $company->user_id;
+        $rebindUserId = ($user && $company->user_id !== $user->id) ? $user->id : null;
+
+        $this->updateCompany($company, $payload, $bindErpId, $rebindUserId);
 
         Log::info('contractor.updated: контрагент обновлён', [
             'company_id' => $company->id,
             'erp_id' => $uuid,
             'partner_uuid' => $partnerUuid,
             'backfill' => $bindErpId,
+            'user_id_from' => $rebindUserId !== null ? $previousUserId : null,
+            'user_id_to' => $rebindUserId,
         ]);
 
         NormalizeCompanyDataJob::dispatch($company->id);
     }
 
-    private function updateCompany(Company $company, array $payload, bool $bindErpId): void
+    /**
+     * @param  int|null  $rebindUserId  Новый владелец контрагента; null — владельца не меняем.
+     */
+    private function updateCompany(Company $company, array $payload, bool $bindErpId, ?int $rebindUserId = null): void
     {
         $updateData = [];
 
         if ($bindErpId && isset($payload['uuid'])) {
             $updateData['erp_id'] = $payload['uuid'];
+        }
+
+        if ($rebindUserId !== null) {
+            $updateData['user_id'] = $rebindUserId;
         }
 
         $fields = [

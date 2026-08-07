@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 15.13.0
+  version: 15.14.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -627,11 +627,23 @@ operations:
         по `tax_id + user_id` и проставляет `erp_id` (ленивый backfill).
       - **Частичное обновление атрибутов** существующего контрагента — только переданные
         поля обновляются (`array_filter`), `bank_accounts` заменяется только если явно передан.
+      - **Перепривязка к другому партнёру** (v15.14.0) — если `partner_uuid` указывает
+        на пользователя, отличного от текущего владельца Company, сайт переносит
+        контрагента на нового пользователя (`companies.user_id`). Без этого клиент
+        не видит свою организацию в личном кабинете и не может оформить заказ.
 
       Стратегия матчинга Company:
       1. По `erp_id = uuid` (приоритет).
       2. Fallback: по `tax_id + user_id` (резолв через `partner_uuid → User.erp_id`).
       3. Если не найдена — warning, ничего не создаём (это задача `contractor.created`).
+
+      Правила перепривязки владельца:
+      - `partner_uuid` не передан → `user_id` не трогаем.
+      - `partner_uuid` передан, но партнёр не найден → warning, `user_id` не трогаем
+        (владельца не обнуляем — иначе контрагент осиротеет из-за опечатки в 1С).
+      - Партнёр найден и отличается от текущего → `user_id` переносится, в лог пишется
+        `user_id_from` / `user_id_to`. Исторические заказы и отгрузки остаются
+        за прежним пользователем — сайт их не переносит.
     action: receive
     channel:
       $ref: '#/channels/erpInContractors'
@@ -2250,8 +2262,9 @@ components:
       description: |
         Частичное обновление атрибутов существующего контрагента (v13.2).
         Все поля кроме `event`, `message_id`, `uuid` — опциональны. `partner_uuid`
-        требуется для fallback-матчинга по `tax_id + user_id` и привязки `erp_id`
-        к Company, созданной на сайте (ленивый backfill).
+        требуется для fallback-матчинга по `tax_id + user_id`, привязки `erp_id`
+        к Company, созданной на сайте (ленивый backfill), и для перепривязки
+        контрагента к другому партнёру (v15.14.0).
       required:
         - event
         - message_id
@@ -2268,7 +2281,7 @@ components:
           $ref: '#/components/schemas/UUID'
         partner_uuid:
           $ref: '#/components/schemas/UUID'
-          description: "UUID партнёра-владельца. Требуется для fallback-матчинга и backfill erp_id."
+          description: "UUID партнёра-владельца. Требуется для fallback-матчинга, backfill erp_id и перепривязки контрагента к другому партнёру: если значение отличается от текущего владельца, сайт переносит Company на нового пользователя (v15.14.0)."
         name:
           type: string
         legal_name:
