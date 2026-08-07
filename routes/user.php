@@ -238,6 +238,8 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     // export строго до /{payment}, иначе «export» уйдёт в биндинг модели.
     Route::get('/payments', [\App\Http\Controllers\User\PaymentController::class, 'index'])->name('payments.index');
     Route::get('/payments/export', [\App\Http\Controllers\User\PaymentController::class, 'export'])->name('payments.export');
+    // Календарь оплат (v15.12.0) — план по графику из 1С. Тоже до /{payment}.
+    Route::get('/payments/calendar', [\App\Http\Controllers\User\PaymentController::class, 'calendar'])->name('payments.calendar');
     Route::get('/payments/{payment}', [\App\Http\Controllers\User\PaymentController::class, 'show'])->name('payments.show')->whereNumber('payment');
 
     // Мои вопросы (FAQ)

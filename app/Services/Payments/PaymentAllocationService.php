@@ -125,6 +125,11 @@ class PaymentAllocationService
             foreach ($shipments as $shipment) {
                 $this->applyAggregate($shipment, $rows->get($shipment->id));
             }
+
+            // v15.12.0: изменился факт оплаты — переехал план. Строки графика
+            // гасятся FIFO от новой суммы, поэтому пересчёт идёт строго после
+            // записи агрегатов, а не параллельно с ней.
+            app(PaymentScheduleService::class)->redistributeMany($chunk);
         }
     }
 

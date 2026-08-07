@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use App\Models\PersonalManager;
 use App\Models\Shipment;
+use App\Models\ShipmentPaymentSchedule;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -218,5 +219,137 @@ class PaymentJournalTest extends TestCase
             'spreadsheetml',
             (string) $response->headers->get('content-type'),
         );
+    }
+
+    /**
+     * Строка графика по реализации клиента.
+     */
+    private function scheduleFor(User $client, string $dueDate, float $amount, float $paid = 0.0): ShipmentPaymentSchedule
+    {
+        $shipment = Shipment::factory()->create([
+            'user_id' => $client->id,
+            'erp_number' => '29УТ-00'.random_int(1000, 9999),
+            'currency_code' => 'RUB',
+        ]);
+
+        return ShipmentPaymentSchedule::factory()->forShipment($shipment)->create([
+            'due_date' => $dueDate,
+            'amount' => $amount,
+            'paid_amount' => $paid,
+        ]);
+    }
+
+    #[Test]
+    public function calendar_is_limited_to_manager_client_scope_v15_12(): void
+    {
+        $inMonth = now()->startOfMonth()->addDays(10)->toDateString();
+        $this->scheduleFor($this->client, $inMonth, 3000.00);
+        $this->scheduleFor($this->foreignClient(), $inMonth, 9999.00);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.payments.calendar'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Crm/Pages/Documents/PaymentCalendar')
+                ->has('entries', 1)
+                ->where('entries.0.unpaid_amount', 3000)
+                ->where('summary.plan_month', 3000));
+    }
+
+    #[Test]
+    public function calendar_counts_plan_and_fact_separately_v15_12(): void
+    {
+        $day = now()->startOfMonth()->addDays(10);
+        $this->scheduleFor($this->client, $day->toDateString(), 3000.00);
+        $this->paymentFor($this->client, [
+            'amount' => 1000.00,
+            'direction' => Payment::DIRECTION_IN,
+            'date' => $day->copy()->setTime(12, 0),
+        ]);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.payments.calendar'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                // План идёт по графику, факт — по проведённым платежам:
+                // одно не подменяет другое даже в один и тот же день.
+                ->where('summary.plan_month', 3000)
+                ->where('summary.fact_month', 1000)
+                ->where('facts.'.$day->toDateString().'.amount', 1000));
+    }
+
+    #[Test]
+    public function refund_reduces_the_fact_of_the_day_v15_12(): void
+    {
+        $day = now()->startOfMonth()->addDays(10);
+
+        $this->paymentFor($this->client, [
+            'amount' => 1000.00,
+            'direction' => Payment::DIRECTION_IN,
+            'date' => $day->copy()->setTime(10, 0),
+        ]);
+        $this->paymentFor($this->client, [
+            'amount' => 400.00,
+            'direction' => Payment::DIRECTION_OUT,
+            'date' => $day->copy()->setTime(15, 0),
+        ]);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.payments.calendar'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('summary.fact_month', 600));
+    }
+
+    #[Test]
+    public function closed_schedule_lines_are_not_expected_money_v15_12(): void
+    {
+        $inMonth = now()->startOfMonth()->addDays(10)->toDateString();
+        $this->scheduleFor($this->client, $inMonth, 3000.00, paid: 3000.00);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.payments.calendar'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('entries', 0)
+                ->where('summary.plan_month', 0));
+    }
+
+    #[Test]
+    public function overdue_is_shown_regardless_of_displayed_month_v15_12(): void
+    {
+        $this->scheduleFor($this->client, now()->subMonth()->startOfMonth()->toDateString(), 1500.00);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.payments.calendar'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('entries', 0)
+                ->has('overdueEntries', 1)
+                ->where('overdueEntries.0.is_overdue', true)
+                ->where('summary.overdue_amount', 1500));
+    }
+
+    #[Test]
+    public function shipment_card_shows_payment_schedule_v15_12(): void
+    {
+        $shipment = Shipment::factory()->create([
+            'user_id' => $this->client->id,
+            'currency_code' => 'RUB',
+            'total_amount' => 10000.00,
+        ]);
+
+        ShipmentPaymentSchedule::factory()->forShipment($shipment)->create([
+            'due_date' => now()->addDays(10)->toDateString(),
+            'amount' => 10000.00,
+            'stage_name' => 'Оплата после отгрузки',
+        ]);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.shipments.show', $shipment->id))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('document.payment_schedule.lines', 1)
+                ->where('document.payment_schedule.lines.0.status_label', 'Ожидается'));
     }
 }

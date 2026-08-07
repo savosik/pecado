@@ -188,4 +188,88 @@ class PaymentOperationsTest extends TestCase
         $response->assertOk();
         $response->assertSee('29УТ-003413');
     }
+
+    /**
+     * Реализация клиента со строкой графика оплаты.
+     */
+    private function scheduleFor(User $client, string $number, string $dueDate, float $amount, float $paid = 0.0): void
+    {
+        $shipment = Shipment::factory()->create([
+            'user_id' => $client->id,
+            'erp_number' => $number,
+            'currency_code' => 'RUB',
+        ]);
+
+        \App\Models\ShipmentPaymentSchedule::factory()->forShipment($shipment)->create([
+            'due_date' => $dueDate,
+            'amount' => $amount,
+            'paid_amount' => $paid,
+        ]);
+    }
+
+    #[Test]
+    #[TestDox('График оплаты ограничен клиентами актора')]
+    public function schedule_is_limited_to_actor_scope(): void
+    {
+        $this->scheduleFor($this->clientA, 'СВОЙ-ГРАФИК', now()->addDays(10)->toDateString(), 3000.00);
+        $this->scheduleFor($this->clientB, 'ЧУЖОЙ-ГРАФИК', now()->addDays(10)->toDateString(), 9999.00);
+
+        $response = CrmServer::actingAs($this->managerA)
+            ->tool(CrmCall::class, ['operation' => 'payment.schedule', 'arguments' => []]);
+
+        $response->assertOk();
+        $response->assertSee('СВОЙ-ГРАФИК');
+        $response->assertDontSee('ЧУЖОЙ-ГРАФИК');
+    }
+
+    #[Test]
+    #[TestDox('Закрытые строки графика в ожидаемые деньги не попадают')]
+    public function schedule_skips_closed_lines(): void
+    {
+        $this->scheduleFor($this->clientA, 'ЖДЁМ', now()->addDays(10)->toDateString(), 3000.00);
+        $this->scheduleFor($this->clientA, 'ПОЛУЧЕНО', now()->addDays(10)->toDateString(), 5000.00, paid: 5000.00);
+
+        $response = CrmServer::actingAs($this->managerA)
+            ->tool(CrmCall::class, ['operation' => 'payment.schedule', 'arguments' => []]);
+
+        $response->assertOk();
+        $response->assertSee('ЖДЁМ');
+        $response->assertDontSee('ПОЛУЧЕНО');
+    }
+
+    #[Test]
+    #[TestDox('Фильтр only_overdue оставляет только просроченные строки')]
+    public function schedule_filters_overdue_only(): void
+    {
+        $this->scheduleFor($this->clientA, 'ПРОСРОЧЕНО', now()->subDays(10)->toDateString(), 1000.00);
+        $this->scheduleFor($this->clientA, 'ВПЕРЕДИ', now()->addDays(10)->toDateString(), 2000.00);
+
+        $response = CrmServer::actingAs($this->managerA)
+            ->tool(CrmCall::class, [
+                'operation' => 'payment.schedule',
+                'arguments' => ['only_overdue' => true],
+            ]);
+
+        $response->assertOk();
+        $response->assertSee('ПРОСРОЧЕНО');
+        $response->assertDontSee('ВПЕРЕДИ');
+    }
+
+    #[Test]
+    #[TestDox('Период отбирается по плановой дате платежа')]
+    public function schedule_filters_by_due_date_range(): void
+    {
+        $this->scheduleFor($this->clientA, 'В-ПЕРИОДЕ', '2026-09-15', 1000.00);
+        $this->scheduleFor($this->clientA, 'ВНЕ-ПЕРИОДА', '2026-11-15', 2000.00);
+
+        $response = CrmServer::actingAs($this->managerA)
+            ->tool(CrmCall::class, [
+                'operation' => 'payment.schedule',
+                'arguments' => ['date_from' => '2026-09-01', 'date_to' => '2026-09-30'],
+            ]);
+
+        $response->assertOk();
+        $response->assertSee('В-ПЕРИОДЕ');
+        $response->assertDontSee('ВНЕ-ПЕРИОДА');
+    }
 }

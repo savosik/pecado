@@ -14,6 +14,9 @@ import { Button } from '@/components/ui/button';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import EntityCrmPanel from '@/Crm/Components/EntityCrmPanel';
+import PaymentScheduleBlock from '@/components/payments/PaymentScheduleBlock';
+
+const CURRENCY_SYMBOLS = { RUB: '₽', KZT: '₸', BYN: 'Br' };
 
 function InfoRow({ label, value }) {
     if (!value) return null;
@@ -244,6 +247,15 @@ export default function Show() {
                             )}
                         </Card.Body>
                     </Card.Root>
+                )}
+
+                {/* График оплаты из 1С. Приходит не по всем реализациям —
+                    блок сам себя скрывает, когда графика нет. */}
+                {document.payment_schedule && (
+                    <PaymentScheduleBlock
+                        schedule={document.payment_schedule}
+                        currencySymbol={CURRENCY_SYMBOLS[document.currency_code] || document.currency_code || '₽'}
+                    />
                 )}
 
                 <Card.Root>

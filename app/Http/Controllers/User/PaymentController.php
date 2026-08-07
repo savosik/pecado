@@ -6,11 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Currency;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
+use App\Models\ShipmentPaymentSchedule;
 use App\Models\User;
 use App\Services\CurrencyService;
 use App\Services\SimpleCsvExporter;
 use App\Services\SimpleXlsxExporter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -134,6 +137,159 @@ class PaymentController extends Controller
             ]),
             'currency_code' => $currency?->code ?? 'RUB',
         ]);
+    }
+
+    /**
+     * Календарь оплат. GET /cabinet/payments/calendar?month=YYYY-MM
+     *
+     * План, а не факт: строится по графику оплаты реализаций («Правила оплаты» 1С),
+     * а не по проведённым платежам. Факт клиент смотрит списком в этом же разделе.
+     */
+    public function calendar(Request $request): InertiaResponse
+    {
+        $user = $request->user();
+        $currency = $this->getUserCurrency($request);
+
+        $month = $this->resolveMonth($request->input('month'));
+        $today = Carbon::today();
+
+        $monthly = $this->scheduleQuery($user)
+            ->whereBetween('sch.due_date', [$month->toDateString(), $month->copy()->endOfMonth()->toDateString()])
+            ->get();
+
+        // Просрочка не привязана к показываемому месяцу: клиент должен видеть её
+        // всегда, в каком бы месяце календаря ни находился.
+        $overdue = $this->scheduleQuery($user)
+            ->whereDate('sch.due_date', '<', $today->toDateString())
+            ->orderBy('sch.due_date')
+            ->limit(200)
+            ->get();
+
+        $weekAhead = $this->scheduleQuery($user)
+            ->whereBetween('sch.due_date', [$today->toDateString(), $today->copy()->addDays(7)->toDateString()])
+            ->get();
+
+        $entries = $monthly->map(fn (object $row): array => $this->scheduleEntry($row, $currency, $today))->all();
+
+        return Inertia::render('User/Cabinet/Payments/Calendar', [
+            'month' => $month->format('Y-m'),
+            'monthLabel' => $this->monthLabel($month),
+            'prevMonth' => $month->copy()->subMonth()->format('Y-m'),
+            'nextMonth' => $month->copy()->addMonth()->format('Y-m'),
+            'today' => $today->toDateString(),
+            'entries' => $entries,
+            'overdueEntries' => $overdue->map(fn (object $row): array => $this->scheduleEntry($row, $currency, $today))->all(),
+            'summary' => [
+                'overdue_amount' => $this->sumUnpaid($overdue, $currency),
+                'overdue_count' => $overdue->count(),
+                'week_amount' => $this->sumUnpaid($weekAhead, $currency),
+                'month_amount' => $this->sumUnpaid($monthly, $currency),
+            ],
+            'currencyCode' => $currency?->code ?? 'RUB',
+        ]);
+    }
+
+    /**
+     * Строки графика клиента с данными реализации.
+     *
+     * Джойном, а не через связь: календарю нужны только плоские поля, а грузить
+     * реализации со связями ради номера документа — лишние запросы на каждый месяц.
+     */
+    private function scheduleQuery(User $user): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('shipment_payment_schedules as sch')
+            ->join('shipments as s', 's.id', '=', 'sch.shipment_id')
+            ->whereNull('s.deleted_at')
+            ->where('s.user_id', $user->id)
+            ->orderBy('sch.due_date')
+            ->orderByRaw('COALESCE(sch.line_number, 2147483647)')
+            ->select([
+                'sch.id',
+                'sch.shipment_id',
+                'sch.due_date',
+                'sch.amount',
+                'sch.paid_amount',
+                'sch.stage_name',
+                'sch.line_number',
+                's.number as shipment_number',
+                's.erp_number as shipment_erp_number',
+                's.date as shipment_date',
+                's.currency_code',
+            ]);
+    }
+
+    /**
+     * Строка календаря в том виде, в каком её рисует фронт.
+     *
+     * @return array<string, mixed>
+     */
+    private function scheduleEntry(object $row, ?Currency $currency, Carbon $today): array
+    {
+        $unpaid = max(0.0, round((float) $row->amount - (float) $row->paid_amount, 2));
+        $dueDate = Carbon::parse($row->due_date);
+        $isPaid = $unpaid <= ShipmentPaymentSchedule::EPSILON;
+
+        return [
+            'id' => $row->id,
+            'due_date' => $dueDate->toDateString(),
+            'due_date_label' => $dueDate->format('d.m.Y'),
+            'amount' => $this->convertAmount((float) $row->amount, $row->currency_code, $currency),
+            'unpaid_amount' => $this->convertAmount($unpaid, $row->currency_code, $currency),
+            'is_paid' => $isPaid,
+            'is_overdue' => ! $isPaid && $dueDate->isBefore($today),
+            'stage_name' => $row->stage_name,
+            'shipment' => [
+                'id' => $row->shipment_id,
+                'number' => $row->shipment_erp_number ?? $row->shipment_number ?? ('#'.$row->shipment_id),
+                'date_label' => $row->shipment_date ? Carbon::parse($row->shipment_date)->format('d.m.Y') : null,
+                'url' => '/cabinet/shipments/'.$row->shipment_id,
+            ],
+        ];
+    }
+
+    /**
+     * Сумма остатков к оплате в валюте кабинета.
+     *
+     * @param  \Illuminate\Support\Collection<int, \stdClass>  $rows
+     */
+    private function sumUnpaid(\Illuminate\Support\Collection $rows, ?Currency $currency): float
+    {
+        return round($rows->sum(function (object $row) use ($currency): float {
+            $unpaid = max(0.0, (float) $row->amount - (float) $row->paid_amount);
+
+            return $this->convertAmount(round($unpaid, 2), $row->currency_code, $currency);
+        }), 2);
+    }
+
+    /**
+     * Месяц из строки YYYY-MM. Мусор в параметре — текущий месяц, а не 500.
+     */
+    private function resolveMonth(mixed $value): Carbon
+    {
+        if (is_string($value) && preg_match('/^\d{4}-\d{2}$/', $value) === 1) {
+            try {
+                return Carbon::createFromFormat('Y-m-d', $value.'-01')->startOfMonth();
+            } catch (\Throwable) {
+                // Падаем в текущий месяц ниже.
+            }
+        }
+
+        return Carbon::today()->startOfMonth();
+    }
+
+    /**
+     * «Август 2026». Carbon::translatedFormat зависит от локали приложения,
+     * а месяцы нужны по-русски в любом окружении.
+     */
+    private function monthLabel(Carbon $month): string
+    {
+        $names = [
+            1 => 'Январь', 2 => 'Февраль', 3 => 'Март', 4 => 'Апрель',
+            5 => 'Май', 6 => 'Июнь', 7 => 'Июль', 8 => 'Август',
+            9 => 'Сентябрь', 10 => 'Октябрь', 11 => 'Ноябрь', 12 => 'Декабрь',
+        ];
+
+        return $names[$month->month].' '.$month->year;
     }
 
     /**

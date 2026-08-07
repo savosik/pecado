@@ -6,6 +6,9 @@ import {
 } from '@chakra-ui/react';
 import { RelatedOrdersSection } from './Components/RelatedOrdersSection';
 import EntityCrmPanel from '@/Crm/Components/EntityCrmPanel';
+import PaymentScheduleBlock from '@/components/payments/PaymentScheduleBlock';
+
+const CURRENCY_SYMBOLS = { RUB: '₽', KZT: '₸', BYN: 'Br' };
 
 const STATUS_COLORS = {
     new: 'blue',
@@ -128,6 +131,16 @@ export default function Show({ shipment, related_orders, organizationsEnabled })
                     )}
                 </Card.Body>
             </Card.Root>
+
+            {/* График оплаты из 1С — read-only, мастер документа остаётся 1С. */}
+            {shipment.payment_schedule && (
+                <Box mb={6}>
+                    <PaymentScheduleBlock
+                        schedule={shipment.payment_schedule}
+                        currencySymbol={CURRENCY_SYMBOLS[shipment.currency_code] || shipment.currency_code || '₽'}
+                    />
+                </Box>
+            )}
 
             {/* Позиции */}
             <Card.Root mb={6}>

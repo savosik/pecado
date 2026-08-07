@@ -410,7 +410,11 @@ class ShipmentController extends Controller
 
         // Платежи, разнесённые на эту реализацию. Загружаем отдельно, а не
         // через with() выше: связь нужна только на карточке.
-        $shipment->load(['paymentAllocations.payment:id,number,date,direction,currency_code']);
+        $shipment->load([
+            'paymentAllocations.payment:id,number,date,direction,currency_code',
+            // v15.12.0: график оплаты — план рядом с фактом на одной карточке.
+            'paymentSchedules',
+        ]);
 
         return Inertia::render('User/Cabinet/Shipments/Show', [
             'shipment' => [
@@ -445,6 +449,10 @@ class ShipmentController extends Controller
                             $currency,
                         ),
                     ])->all(),
+                'payment_schedule' => \App\Support\Payments\PaymentSchedulePresenter::forShipment(
+                    $shipment,
+                    fn (float $amount): float => $this->convertAmount($amount, $shipment->currency_code, $currency),
+                ),
                 'company' => $shipment->company ? [
                     'id' => $shipment->company->id,
                     'name' => $shipment->company->name,

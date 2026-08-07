@@ -71,6 +71,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
             ->whereNumber('order');
         Route::get('/payments', [DocumentController::class, 'payments'])->name('payments.index');
         Route::get('/payments/export', [DocumentController::class, 'paymentsExport'])->name('payments.export');
+        // Календарь поступления денег (v15.12.0): план по графику 1С + факт
+        // по проведённым платежам. Объявлен до /payments/{payment}.
+        Route::get('/payments/calendar', [DocumentController::class, 'paymentsCalendar'])->name('payments.calendar');
         Route::get('/payments/{payment}', [DocumentController::class, 'payment'])
             ->name('payments.show')
             ->whereNumber('payment');

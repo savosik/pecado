@@ -27,6 +27,10 @@ use Illuminate\Console\Command;
  * Побочный эффект — доклейка осиротевших строк разнесения: если реализация
  * приехала, а строка осталась с shipment_id = NULL (например, сообщение
  * реализации обработалось до деплоя этой фичи), команда её свяжет.
+ *
+ * v15.12.0: заодно пересчитывается и график оплаты — `recalculateShipments()`
+ * дёргает PaymentScheduleService, поэтому FIFO-раскладка по строкам «Правил оплаты»
+ * и `shipments.payment_due_date` восстанавливаются той же командой.
  */
 class RecalculatePayments extends Command
 {
@@ -56,7 +60,7 @@ class RecalculatePayments extends Command
             $service->recalculateShipments($batch->pluck('id')->all());
             $shipments += $batch->count();
         });
-        $this->info("Пересчитано реализаций: {$shipments}");
+        $this->info("Пересчитано реализаций (оплата и график): {$shipments}");
 
         return self::SUCCESS;
     }

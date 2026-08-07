@@ -3,6 +3,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { LuArrowLeft, LuPackage, LuShoppingBag, LuTriangleAlert, LuMapPin, LuMessageSquare, LuInfo, LuTruck, LuClock, LuFileSpreadsheet } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Tooltip } from '@/components/ui/tooltip';
+import PaymentScheduleBlock from '@/components/payments/PaymentScheduleBlock';
 import { getOrderTypeShortLabel, getOrderTypeColor } from '@/constants/orderType';
 
 const ORDER_STATUS_COLORS = {
@@ -230,6 +231,17 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                         )}
                     </Card.Body>
                 </Card.Root>
+            )}
+
+            {/* График оплаты из 1С: план рядом с фактом. Приходит не по всем
+                документам — блок сам себя скрывает, когда графика нет. */}
+            {shipment.payment_schedule && (
+                <Box mb={6}>
+                    <PaymentScheduleBlock
+                        schedule={shipment.payment_schedule}
+                        currencySymbol={shipment.currency_code || currencySymbol}
+                    />
+                </Box>
             )}
 
             {/* Связанные заказы */}

@@ -152,7 +152,7 @@ class ShipmentController extends Controller
 
     public function show(Shipment $shipment)
     {
-        $shipment->load(['user', 'company', 'organization', 'warehouse', 'items.product', 'items.order']);
+        $shipment->load(['user', 'company', 'organization', 'warehouse', 'items.product', 'items.order', 'paymentSchedules']);
 
         // Получить связанные заказы с расширенными данными для карточного отображения
         $orderUuids = $shipment->items()
@@ -223,6 +223,8 @@ class ShipmentController extends Controller
                         ] : null,
                     ];
                 }),
+                // v15.12.0: график оплаты из 1С. Read-only, как и вся карточка.
+                'payment_schedule' => \App\Support\Payments\PaymentSchedulePresenter::forShipment($shipment),
             ],
             'related_orders' => $relatedOrders->map(function ($order) {
                 return [

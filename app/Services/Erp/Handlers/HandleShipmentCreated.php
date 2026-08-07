@@ -8,6 +8,7 @@ use App\Services\Erp\Support\LinksOverdueDetailsToShipment;
 use App\Services\Erp\Support\LinksPaymentAllocationsToShipment;
 use App\Services\Erp\Support\ResolvesContractorParty;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
+use App\Services\Erp\Support\SyncsShipmentPaymentSchedule;
 use Illuminate\Support\Facades\Log;
 
 class HandleShipmentCreated
@@ -16,6 +17,7 @@ class HandleShipmentCreated
     use LinksPaymentAllocationsToShipment;
     use ResolvesContractorParty;
     use ResolvesDocumentOrganization;
+    use SyncsShipmentPaymentSchedule;
 
     /**
      * Обработка события shipment.created из 1С.
@@ -94,6 +96,10 @@ class HandleShipmentCreated
         // v15.11.0: платежи идут своей очередью, их расшифровка регулярно
         // приезжает раньше реализации — доклеиваем и пересчитываем оплату.
         $this->linkPaymentAllocations($shipment, 'HandleShipmentCreated');
+
+        // v15.12.0: график оплаты («Правила оплаты» 1С). Строго после доклейки
+        // платежей — раскладка FIFO считается от уже актуальной суммы оплаты.
+        $this->syncPaymentSchedule($shipment, $payload, 'HandleShipmentCreated');
 
         Log::info('HandleShipmentCreated: реализация создана/обновлена', [
             'uuid' => $uuid,

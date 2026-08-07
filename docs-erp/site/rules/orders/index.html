@@ -905,6 +905,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../payments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Платежи
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../balances/" class="md-nav__link">
         
   
@@ -2129,9 +2157,11 @@
 <li>Поле <code>type</code> — внутреннее понятие сайта. 1С <strong>не знает</strong> о типах заказов и <strong>не обязана передавать</strong> это поле обратно; если поле пришло, сайт принимает его, если нет — сохраняет свой</li>
 <li><strong>(v15.5)</strong> Заказ уценки (<code>type: "defect"</code>) — некондиция с сайта:<ul>
 <li><code>warehouse_uuids</code> содержит UUID <strong>склада некондиции</strong> (на сайте помечен флагом <code>is_defect</code>)</li>
-<li><code>final_price</code> каждой позиции — цена уценки (её задаёт закупщик), а не прайсовая; <code>discount_percent</code> = 0, <code>base_price</code> = <code>final_price</code></li>
+<li><code>final_price</code> каждой позиции — цена уценки (её задаёт закупщик), а не прайсовая, и она <strong>авторитетна</strong>: пересчитывать сумму через <code>discount_percent</code> не нужно</li>
+<li><strong>(v15.9.3)</strong> <code>base_price</code> — <strong>прайсовая цена товара-родителя</strong> (карточка товара на сайте), <code>discount_percent</code> — производная от неё глубина уценки: <code>discount_percent = (1 − final_price / base_price) × 100</code>. Раньше сайт отправлял <code>base_price = final_price</code> и <code>discount_percent = 0</code>; 1С подставляла собственную базовую цену, и первый же <code>order.updated</code> показывал в истории заказа фантомное изменение базовой цены (например, 1 400 → 2 560 ₽). Если прайсовая цена товара не задана или не выше цены уценки — сайт передаёт <code>base_price = final_price</code> и <code>discount_percent = 0</code>, как прежде</li>
 <li>1С обрабатывает такой заказ как обычный, отгружая со склада некондиции. Какой именно дефектный экземпляр отгрузить, комплектовщик уточняет на стороне сайта (в кабинете склада) — в заказе эта информация не передаётся</li>
 <li>Ожидается, что на заказ уценки приходит <code>shipment.created</code> (реализация), которая списывает партию некондиции на сайте</li>
+<li><strong>(v15.9.2)</strong> <code>order.deleted</code> по заказу уценки <strong>возвращает партию некондиции в продажу</strong>: снимается резерв, а отгруженное по снятому заказу перестаёт учитываться. Так же действует отмена самой реализации — см. <a href="../shipments/">Реализации</a></li>
 </ul>
 </li>
 <li><strong>(v15.6)</strong> Заказы промо-позиций — то, что выдала акция:<ul>

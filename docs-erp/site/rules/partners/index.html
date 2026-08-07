@@ -910,6 +910,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../payments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Платежи
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../balances/" class="md-nav__link">
         
   
@@ -2047,6 +2075,7 @@
 <li><strong>(v10)</strong> Поле <code>is_active</code> (boolean) — активность партнёра. <code>false</code> → пользователь не может оформлять заказы</li>
 <li><strong>(v11)</strong> Поле <code>client_status</code> — произвольная строка, код статуса клиента (уровень лояльности). Резолвится через <code>ClientStatus.external_id</code>. Примеры: <code>silver</code>, <code>gold</code>, <code>diamond</code>, <code>individual</code></li>
 <li><strong>(v12.7.5)</strong> Поле <code>password</code> — тип изменён с <code>integer</code> на <code>string</code>, <code>maxLength</code> увеличен до 32. 1С передаёт CRC32 как строку длиной до 10 символов</li>
+<li><strong>(v15.10)</strong> Поле <code>name</code> пишется в <code>users.erp_name</code> (рабочее наименование). Для <strong>нового</strong> пользователя оно дополнительно становится стартовым <code>users.name</code>; у существующего личное имя не трогается</li>
 <li><strong>(v15)</strong> Поле <code>manager</code> — объект <code>{ uuid, name }</code> или <code>null</code>. Основной менеджер партнёра в 1С.<ul>
 <li><code>manager.uuid</code> — UUID пользователя 1С (Справочник «Пользователи»), <strong>не</strong> UUID партнёра/контрагента</li>
 <li><code>manager.name</code> — ФИО/наименование для отображения на сайте</li>
@@ -2060,6 +2089,8 @@
 <ul>
 <li>[ ] 1С публикует <code>partner.created</code> через <code>erp.events</code> → <code>erp_in.partners</code></li>
 <li>[ ] Сайт создаёт/обновляет пользователя с <code>name</code> как единое поле</li>
+<li>[ ] <strong>(v15.10)</strong> <code>name</code> сохраняется в <code>users.erp_name</code> во всех трёх сценариях (поиск по <code>erp_id</code>, по email, создание)</li>
+<li>[ ] <strong>(v15.10)</strong> У существующего пользователя <code>users.name</code> не перезаписывается</li>
 <li>[ ] При первом входе — обязательная смена пароля (<code>must_change_password</code>)</li>
 <li>[ ] Партнёры без email пропускаются при выгрузке</li>
 <li>[ ] <strong>(v15)</strong> Поле <code>manager</code> обрабатывается: новый менеджер создаётся или привязывается по <code>erp_uuid</code></li>
@@ -2088,8 +2119,8 @@
 <tbody>
 <tr>
 <td><code>name</code></td>
-<td><code>name</code></td>
-<td>ФИО или название организации</td>
+<td><code>erp_name</code></td>
+<td><strong>Рабочее наименование</strong> — наименование карточки партнёра в 1С. С v15.10 приезжает в отдельное поле, личное <code>users.name</code> не перезаписывается</td>
 </tr>
 <tr>
 <td><code>phone</code></td>
@@ -2123,6 +2154,17 @@
 </tr>
 </tbody>
 </table>
+<div class="admonition warning">
+<p class="admonition-title">Рабочее наименование и личное имя — разные поля (v15.10)</p>
+<p>Клиент вправе переименовать себя в личном кабинете, поэтому <code>users.name</code>
+принадлежит клиенту и из 1С <strong>не перезаписывается</strong>. Наименование из
+<code>partner.created</code> / <code>partner.updated</code> сохраняется в <code>users.erp_name</code> —
+рабочее наименование, по которому менеджеры сличают отчёты сайта и 1С.</p>
+<p>Сотрудникам (CRM, админка) клиент показывается по <code>erp_name</code>; личное имя
+выводится рядом, только когда отличается. Клиент в кабинете и письма ему
+по-прежнему используют <code>name</code>.</p>
+<p>Мастер рабочего наименования — 1С: на сайте поле только для чтения.</p>
+</div>
 <div class="admonition info">
 <p class="admonition-title">Поля, не передаваемые в partner.updated</p>
 <p><code>currency</code> — определяется через регион пользователя, не передаётся из 1С.
@@ -2133,11 +2175,14 @@
 <li><strong>(v12)</strong> Новое событие <code>partner.updated</code> — выделено из <code>partner.created</code> как самостоятельное событие для обновления атрибутов</li>
 <li><strong>(v12)</strong> Удалены поля <code>currency</code> и <code>region</code> из входящих событий партнёра</li>
 <li><strong>(v15.1)</strong> Поле <code>manager</code> (опциональное) — при наличии обрабатывается аналогично <code>partner.created</code>: сайт ищет <code>PersonalManager</code> по <code>erp_uuid</code>, при отсутствии — создаёт. <code>null</code> — сбрасывает привязку. Отсутствие ключа — не меняет</li>
+<li><strong>(v15.10)</strong> Поле <code>name</code> теперь пишется в <code>users.erp_name</code> (рабочее наименование), а не в <code>users.name</code>. Структура payload не изменилась — изменился приёмник на стороне сайта</li>
 </ul>
 <h3 id="_7">Критерии приёмки<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] 1С публикует <code>partner.updated</code> через <code>erp.events</code> → <code>erp_in.partners</code></li>
-<li>[ ] Сайт обновляет атрибуты пользователя (name, phone, city, country, region, status, client_status)</li>
+<li>[ ] Сайт обновляет атрибуты пользователя (phone, city, country, region, status, client_status)</li>
+<li>[ ] <strong>(v15.10)</strong> <code>name</code> из payload попадает в <code>users.erp_name</code></li>
+<li>[ ] <strong>(v15.10)</strong> <code>users.name</code> после <code>partner.updated</code> не меняется — имя, заданное клиентом в кабинете, сохраняется</li>
 <li>[ ] При совпадении email — привязывает <code>erp_id</code> к существующему пользователю</li>
 <li>[ ] При <code>client_status = null</code> — сброс <code>client_status_id</code> пользователя</li>
 <li>[ ] При неизвестном <code>client_status</code> — логирование предупреждения, текущий статус не меняется</li>

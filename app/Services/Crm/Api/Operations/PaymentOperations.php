@@ -5,6 +5,7 @@ namespace App\Services\Crm\Api\Operations;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use App\Models\Shipment;
+use App\Models\ShipmentPaymentSchedule;
 use App\Models\User;
 use App\Services\Crm\Api\OperationInput;
 use App\Services\Crm\CrmEntityResolver;
@@ -160,6 +161,75 @@ class PaymentOperations
                 'payment_status' => $shipment->payment_status,
                 'payment_status_label' => $shipment->payment_status_label,
                 'currency_code' => $shipment->currency_code,
+            ])->all(),
+            'meta' => [
+                'page' => $page->currentPage(),
+                'per_page' => $page->perPage(),
+                'total' => $page->total(),
+                'last_page' => $page->lastPage(),
+            ],
+        ];
+    }
+
+    /**
+     * Ожидаемые поступления по графику оплаты за период.
+     *
+     * Отдельная операция, а не «посчитай сам по отгрузкам»: неоплаченный остаток
+     * отгрузки и остаток по конкретной плановой дате — разные величины. Отгрузка
+     * с рассрочкой на три платежа должна попадать в календарь тремя строками
+     * в разные месяцы, а не одной суммой на дату документа.
+     *
+     * @return array<string, mixed>
+     */
+    public function schedule(User $actor, OperationInput $input): array
+    {
+        $clients = User::query()->visibleInCrm($actor)->select('users.id');
+
+        $query = ShipmentPaymentSchedule::query()
+            ->whereHas('shipment', function ($shipment) use ($clients, $actor, $input): void {
+                $shipment->whereIn('user_id', $clients);
+
+                if ($input->int('client_id')) {
+                    $shipment->where('user_id', $this->client($actor, $input, 'client_id')->getKey());
+                }
+            })
+            // Закрытые строки — уже полученные деньги: в «сколько ждём» им не место.
+            ->outstanding()
+            ->with(['shipment:id,number,erp_number,date,currency_code,user_id', 'shipment.user:id,name,erp_name']);
+
+        if ($dateFrom = $input->string('date_from')) {
+            $query->whereDate('due_date', '>=', $dateFrom);
+        }
+
+        if ($dateTo = $input->string('date_to')) {
+            $query->whereDate('due_date', '<=', $dateTo);
+        }
+
+        if ($input->bool('only_overdue')) {
+            $query->whereDate('due_date', '<', now()->toDateString());
+        }
+
+        $perPage = min(max((int) ($input->int('per_page') ?: 25), 1), 100);
+
+        $page = $query->inFifoOrder()
+            ->paginate($perPage, ['*'], 'page', max(1, (int) ($input->int('page') ?: 1)));
+
+        return [
+            'data' => collect($page->items())->map(fn (ShipmentPaymentSchedule $line): array => [
+                'id' => (int) $line->getKey(),
+                'due_date' => $line->due_date?->format('Y-m-d'),
+                'is_overdue' => $line->is_overdue,
+                'amount' => (float) $line->amount,
+                'paid_amount' => (float) $line->paid_amount,
+                'unpaid_amount' => $line->unpaid_amount,
+                'status' => $line->status,
+                'stage' => $line->stage,
+                'stage_name' => $line->stage_name,
+                'currency_code' => $line->shipment?->currency_code,
+                'shipment_id' => $line->shipment_id,
+                'shipment_number' => $line->shipment?->erp_number ?: $line->shipment?->number,
+                'client' => $line->shipment?->user?->display_name,
+                'client_id' => $line->shipment?->user_id,
             ])->all(),
             'meta' => [
                 'page' => $page->currentPage(),

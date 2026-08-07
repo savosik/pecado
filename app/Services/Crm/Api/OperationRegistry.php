@@ -174,6 +174,29 @@ class OperationRegistry
                 handler: [PaymentOperations::class, 'unpaidShipments'],
             ),
             new Operation(
+                id: 'payment.schedule',
+                section: 'payments',
+                method: 'GET',
+                uri: 'payments/schedule',
+                permission: 'crm-clients.view',
+                summary: 'Ожидаемые поступления по графику оплаты («Правила оплаты» 1С)',
+                description: 'Готовый ответ на «сколько денег ждём за период». Отдаёт строки '
+                    .'графика, по которым остались деньги, — по одной на плановую дату. '
+                    .'Не путайте с `payment.unpaid-shipments`: там остаток по документу целиком, '
+                    .'здесь — по конкретной дате, и отгрузка с рассрочкой попадает сюда '
+                    .'несколькими строками в разные месяцы. График приходит не по всем '
+                    .'отгрузкам: пустой ответ означает «1С его не присылала», а не «долгов нет».',
+                params: [
+                    Param::integer('client_id', 'Клиент — график только по нему', rules: ['min:1']),
+                    Param::string('date_from', 'Плановая дата платежа с (Y-m-d)', rules: ['date_format:Y-m-d']),
+                    Param::string('date_to', 'Плановая дата платежа по (Y-m-d)', rules: ['date_format:Y-m-d']),
+                    Param::boolean('only_overdue', 'Только строки с прошедшей плановой датой'),
+                    Param::integer('per_page', 'Строк на странице (до 100)', rules: ['min:1', 'max:100']),
+                    Param::integer('page', 'Номер страницы', rules: ['min:1']),
+                ],
+                handler: [PaymentOperations::class, 'schedule'],
+            ),
+            new Operation(
                 id: 'payment.show',
                 section: 'payments',
                 method: 'GET',

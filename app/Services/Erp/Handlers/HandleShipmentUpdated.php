@@ -8,6 +8,7 @@ use App\Services\Erp\Support\LinksOverdueDetailsToShipment;
 use App\Services\Erp\Support\LinksPaymentAllocationsToShipment;
 use App\Services\Erp\Support\ResolvesContractorParty;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
+use App\Services\Erp\Support\SyncsShipmentPaymentSchedule;
 use Illuminate\Support\Facades\Log;
 
 class HandleShipmentUpdated
@@ -16,6 +17,7 @@ class HandleShipmentUpdated
     use LinksPaymentAllocationsToShipment;
     use ResolvesContractorParty;
     use ResolvesDocumentOrganization;
+    use SyncsShipmentPaymentSchedule;
 
     /**
      * Обработка события shipment.updated из 1С.
@@ -114,6 +116,10 @@ class HandleShipmentUpdated
 
         // v15.11.0: та же страховка для расшифровки платежей.
         $this->linkPaymentAllocations($shipment, 'HandleShipmentUpdated');
+
+        // v15.12.0: график оплаты. Именно через updated график доезжает
+        // по документам, проведённым до появления этой версии протокола.
+        $this->syncPaymentSchedule($shipment, $payload, 'HandleShipmentUpdated');
 
         Log::info('HandleShipmentUpdated: реализация обновлена', [
             'uuid' => $uuid,

@@ -848,6 +848,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../rules/payments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Платежи
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../rules/balances/" class="md-nav__link">
         
   
@@ -1923,6 +1951,11 @@
 <td><code>shipment.created</code>, <code>shipment.updated</code>, <code>shipment.deleted</code></td>
 </tr>
 <tr>
+<td><code>erp_in.payments</code></td>
+<td><code>payment.*</code></td>
+<td><code>payment.created</code>, <code>payment.updated</code>, <code>payment.deleted</code></td>
+</tr>
+<tr>
 <td><code>erp_in.balance</code></td>
 <td><code>balance.*</code></td>
 <td><code>balance.updated</code></td>
@@ -2294,6 +2327,24 @@
 <td>1С → Сайт</td>
 <td><code>erp.events</code></td>
 <td><code>erp_in.documents</code></td>
+</tr>
+<tr>
+<td><code>payment.created</code></td>
+<td>1С → Сайт</td>
+<td><code>erp.events</code></td>
+<td><code>erp_in.payments</code></td>
+</tr>
+<tr>
+<td><code>payment.updated</code></td>
+<td>1С → Сайт</td>
+<td><code>erp.events</code></td>
+<td><code>erp_in.payments</code></td>
+</tr>
+<tr>
+<td><code>payment.deleted</code></td>
+<td>1С → Сайт</td>
+<td><code>erp.events</code></td>
+<td><code>erp_in.payments</code></td>
 </tr>
 <tr>
 <td><code>balance.updated</code></td>

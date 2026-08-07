@@ -27,8 +27,11 @@ use Spatie\MediaLibrary\HasMedia;
  * @property numeric $paid_amount
  * @property string $payment_status
  * @property \Illuminate\Support\Carbon|null $paid_at
+ * @property \Illuminate\Support\Carbon|null $payment_due_date
  * @property-read string $payment_status_label
  * @property-read float $unpaid_amount
+ * @property-read bool $is_payment_overdue
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ShipmentPaymentSchedule> $paymentSchedules
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property \Carbon\Carbon|null $erp_created_at
@@ -86,6 +89,7 @@ class Shipment extends Model implements HasMedia
         'paid_amount',
         'payment_status',
         'paid_at',
+        'payment_due_date',
         'erp_created_at',
         'erp_updated_at',
     ];
@@ -119,6 +123,7 @@ class Shipment extends Model implements HasMedia
             'total_amount' => 'decimal:2',
             'paid_amount' => 'decimal:2',
             'paid_at' => 'datetime',
+            'payment_due_date' => 'date',
             'erp_created_at' => \App\Casts\ErpDatetime::class,
             'erp_updated_at' => \App\Casts\ErpDatetime::class,
         ];
@@ -213,6 +218,35 @@ class Shipment extends Model implements HasMedia
         return $this->belongsToMany(Payment::class, 'payment_allocations')
             ->withPivot(['amount', 'order_uuid', 'line_number'])
             ->withTimestamps();
+    }
+
+    /**
+     * График оплаты — плановые даты и суммы из «Правил оплаты» 1С (v15.12.0).
+     *
+     * Отдаётся сразу в порядке погашения: строки читают и календарь, и карточка
+     * документа, и FIFO-раскладка — разъехавшийся порядок означал бы, что клиент
+     * видит одну очерёдность, а закрывается другая.
+     *
+     * @return HasMany<\App\Models\ShipmentPaymentSchedule, $this>
+     */
+    public function paymentSchedules(): HasMany
+    {
+        return $this->hasMany(ShipmentPaymentSchedule::class)->inFifoOrder();
+    }
+
+    /**
+     * По ближайшей плановой дате уже просрочено.
+     *
+     * Считается по денормализованной `payment_due_date`, поэтому доступно
+     * и без загрузки строк графика — списки и экспорт этим и пользуются.
+     */
+    public function getIsPaymentOverdueAttribute(): bool
+    {
+        if (! $this->payment_due_date instanceof \Illuminate\Support\Carbon) {
+            return false;
+        }
+
+        return $this->payment_due_date->startOfDay()->isBefore(\Illuminate\Support\Carbon::today());
     }
 
     /**

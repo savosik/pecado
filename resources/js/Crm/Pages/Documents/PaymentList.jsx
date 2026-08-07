@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { Badge, Box, Flex, HStack, Input, Text, VStack } from '@chakra-ui/react';
-import { LuDownload, LuEye } from 'react-icons/lu';
+import { LuDownload, LuEye, LuList, LuCalendarClock } from 'react-icons/lu';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { SearchInput } from '@/Admin/Components/SearchInput';
@@ -166,6 +166,17 @@ export default function PaymentList({
             />
 
             <VStack align="stretch" gap={3} mb={4}>
+                {/* Журнал — факт (проведённые платежи), календарь — план
+                    по графику из 1С вместе с фактом по дням. */}
+                <HStack gap={2} wrap="wrap">
+                    <Button size="sm" variant="solid" colorPalette="pecado">
+                        <LuList size={16} /> Журнал
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => router.get('/crm/payments/calendar')}>
+                        <LuCalendarClock size={16} /> Календарь поступлений
+                    </Button>
+                </HStack>
+
                 <HStack gap={3} align="center" wrap="wrap">
                     <Box flex="1" minW="260px">
                         <SearchInput

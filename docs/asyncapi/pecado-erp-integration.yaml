@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 15.11.0
+  version: 15.12.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -877,6 +877,29 @@ operations:
 
       Одна реализация может включать позиции из нескольких заказов.
       Расчёт задолженности ведётся по реализациям, не по заказам.
+
+      **(v15.12.0)** Вместе с документом приезжает `payment_schedule` — график оплаты
+      («Правила оплаты» в 1С). Сайт гасит его строки фактическими платежами по методу FIFO
+      и строит календарь оплат клиента и календарь поступления денег менеджера.
+
+      Пример строки графика:
+
+      ```json
+      "payment_schedule": [
+        {
+          "line_number": 1,
+          "due_date": "2026-08-27",
+          "amount": 2325.20,
+          "percent": 100,
+          "term_days": 30,
+          "basis": "shipment_date",
+          "basis_name": "от даты отгрузки",
+          "stage": "credit",
+          "stage_name": "Оплата после отгрузки",
+          "order_uuid": "8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34"
+        }
+      ]
+      ```
     action: receive
     channel:
       $ref: '#/channels/erpInDocuments'
@@ -3060,6 +3083,99 @@ components:
           examples:
             - 20
 
+    ShipmentPaymentScheduleLine:
+      type: object
+      description: |
+        Строка графика оплаты — табличная часть «Правила оплаты» реализации в 1С (v15.12.0).
+
+        Обязательны только `due_date` и `amount`: на них строится календарь оплат клиента
+        и календарь поступления денег менеджера. Остальное — справочные поля документа.
+
+        Пары «код + наименование» (`basis` / `basis_name`, `stage` / `stage_name`) заведены
+        намеренно: логика сайта опирается только на латинский код, потому что русское
+        наименование в 1С меняется вместе с настройками учёта.
+      required:
+        - due_date
+        - amount
+      properties:
+        line_number:
+          description: "Номер строки табличной части («N»). При отсутствии сайт нумерует строки по порядку в массиве."
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+          examples:
+            - 1
+        due_date:
+          description: "Плановая дата платежа («Дата платежа»). Обязательное поле: строка без даты для календаря бессмысленна и сайтом пропускается."
+          $ref: '#/components/schemas/ISO8601Date'
+        amount:
+          type: number
+          minimum: 0
+          description: "Сумма платежа по строке в валюте документа. Сумма строк должна сходиться с суммой реализации — расхождение сайт покажет, но исправлять не будет."
+          examples:
+            - 2325.20
+        percent:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          maximum: 100
+          description: "Доля платежа от суммы документа («% платежа»). Только для показа: сайт считает по `amount`."
+          examples:
+            - 100
+        term_days:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          description: "Отсрочка в днях («Срок (дни)»). Справочно — плановая дата уже посчитана в 1С и приходит в `due_date`."
+          examples:
+            - 30
+        basis:
+          type:
+            - string
+            - 'null'
+          enum:
+            - shipment_date
+            - order_date
+            - invoice_date
+            - null
+          description: "Машинный код варианта отсчёта отсрочки («Вариант отсчёта»): `shipment_date` — от даты отгрузки, `order_date` — от даты заказа, `invoice_date` — от даты счёта."
+          examples:
+            - shipment_date
+        basis_name:
+          type:
+            - string
+            - 'null'
+          description: "Наименование варианта отсчёта как в 1С. Показывается как есть, в логике не участвует."
+          examples:
+            - от даты отгрузки
+        stage:
+          type:
+            - string
+            - 'null'
+          enum:
+            - prepayment
+            - advance
+            - credit
+            - null
+          description: "Машинный код этапа оплаты («Контроль»): `prepayment` — предоплата до отгрузки, `advance` — аванс, `credit` — оплата после отгрузки."
+          examples:
+            - credit
+        stage_name:
+          type:
+            - string
+            - 'null'
+          description: "Наименование этапа оплаты как в 1С. Только для показа."
+          examples:
+            - Оплата после отгрузки
+        order_uuid:
+          description: "UUID заказа клиента, к которому относится строка («Заказ»). Мягкая связь без проверки — заказ мог не приехать на сайт."
+          oneOf:
+            - $ref: '#/components/schemas/UUID'
+            - type: 'null'
+
     ShipmentCreatedPayload:
       type: object
       required:
@@ -3133,6 +3249,20 @@ components:
           minItems: 1
           items:
             $ref: '#/components/schemas/ShipmentItem'
+        payment_schedule:
+          type: array
+          description: |
+            **(v15.12.0)** График оплаты реализации — табличная часть «Правила оплаты» документа 1С.
+
+            **Отсутствие ключа и пустой массив означают разное:** ключа нет — сайт **не трогает**
+            сохранённый график (используйте, когда меняются только позиции документа); `[]` —
+            сайт **очищает** график полностью. Если 1С опустит ключ, подразумевая «графика больше
+            нет», старые плановые даты останутся в календаре клиента.
+
+            График присылается **целиком**; досылать только изменившиеся строки нельзя — сайт
+            не умеет отличить «строки не изменились» от «строк больше нет».
+          items:
+            $ref: '#/components/schemas/ShipmentPaymentScheduleLine'
 
     ShipmentUpdatedPayload:
       type: object
@@ -3211,6 +3341,17 @@ components:
           minItems: 1
           items:
             $ref: '#/components/schemas/ShipmentItem'
+        payment_schedule:
+          type: array
+          description: |
+            **(v15.12.0)** График оплаты реализации. Правила те же, что у `shipment.created`:
+            отсутствие ключа оставляет сохранённый график нетронутым, `[]` очищает его,
+            присланный массив заменяет целиком.
+
+            Именно `shipment.updated` — основной способ довезти график по документам,
+            проведённым до v15.12.0.
+          items:
+            $ref: '#/components/schemas/ShipmentPaymentScheduleLine'
 
     # ── US-11: Баланс ────────────────────────
     # ── US-17: Платежи ───────────────────────

@@ -385,4 +385,68 @@ class HandleShipmentCreatedTest extends TestCase
         $this->assertNull($shipment->erp_created_at);
         $this->assertNull($shipment->erp_updated_at);
     }
+
+    #[Test]
+    public function it_stores_payment_schedule_from_payload_v15_12(): void
+    {
+        $handler = new HandleShipmentCreated;
+        $handler->handle($this->payloadWithSchedule('shipment-schedule-001', [
+            [
+                'line_number' => 1,
+                'due_date' => '2026-08-27',
+                'amount' => 2325.20,
+                'percent' => 100,
+                'term_days' => 30,
+                'basis' => 'shipment_date',
+                'basis_name' => 'от даты отгрузки',
+                'stage' => 'credit',
+                'stage_name' => 'Оплата после отгрузки',
+            ],
+        ]));
+
+        $shipment = Shipment::where('uuid', 'shipment-schedule-001')->first();
+        $line = $shipment->paymentSchedules()->sole();
+
+        $this->assertEquals(2325.20, (float) $line->amount);
+        $this->assertSame('2026-08-27', $line->due_date->toDateString());
+        $this->assertSame('Оплата после отгрузки', $line->stage_name);
+        $this->assertSame('2026-08-27', $shipment->fresh()->payment_due_date->toDateString());
+    }
+
+    #[Test]
+    public function repeated_delivery_does_not_duplicate_schedule_lines_v15_12(): void
+    {
+        $payload = $this->payloadWithSchedule('shipment-schedule-002', [
+            ['due_date' => '2026-08-27', 'amount' => 3000.00],
+            ['due_date' => '2026-09-27', 'amount' => 7000.00],
+        ]);
+
+        $handler = new HandleShipmentCreated;
+        $handler->handle($payload);
+        $handler->handle($payload);
+
+        $shipment = Shipment::where('uuid', 'shipment-schedule-002')->first();
+        $this->assertSame(2, $shipment->paymentSchedules()->count());
+    }
+
+    /**
+     * Минимальный валидный payload реализации с графиком оплаты.
+     *
+     * @param  array<int, array<string, mixed>>  $schedule
+     * @return array<string, mixed>
+     */
+    private function payloadWithSchedule(string $uuid, array $schedule): array
+    {
+        return [
+            'event' => 'shipment.created',
+            'uuid' => $uuid,
+            'tax_id' => '1234567890',
+            'number' => '29УТ-006915',
+            'date' => '2026-07-28',
+            'status' => 'completed',
+            'currency_code' => 'RUB',
+            'items' => [],
+            'payment_schedule' => $schedule,
+        ];
+    }
 }

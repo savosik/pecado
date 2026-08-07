@@ -5,6 +5,7 @@ namespace Tests\Feature\User;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use App\Models\Shipment;
+use App\Models\ShipmentPaymentSchedule;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
@@ -203,5 +204,121 @@ class PaymentsCabinetTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('payments.data', 1)
                 ->where('payments.data.0.number', 'НУЖНЫЙ'));
+    }
+
+    /**
+     * Строка графика по реализации клиента.
+     */
+    private function scheduleFor(User $user, string $dueDate, float $amount, float $paid = 0.0): ShipmentPaymentSchedule
+    {
+        $shipment = Shipment::factory()->create([
+            'user_id' => $user->id,
+            'erp_number' => '29УТ-00'.random_int(1000, 9999),
+            'currency_code' => 'RUB',
+        ]);
+
+        return ShipmentPaymentSchedule::factory()->forShipment($shipment)->create([
+            'due_date' => $dueDate,
+            'amount' => $amount,
+            'paid_amount' => $paid,
+        ]);
+    }
+
+    #[Test]
+    public function calendar_shows_only_own_schedule_v15_12(): void
+    {
+        $month = now()->format('Y-m');
+        $this->scheduleFor($this->client, now()->startOfMonth()->addDays(5)->toDateString(), 3000.00);
+        $this->scheduleFor(User::factory()->create(), now()->startOfMonth()->addDays(5)->toDateString(), 9999.00);
+
+        $this->actingAs($this->client)
+            ->get(route('cabinet.payments.calendar', ['month' => $month]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('User/Cabinet/Payments/Calendar')
+                ->has('entries', 1)
+                ->where('entries.0.unpaid_amount', 3000));
+    }
+
+    #[Test]
+    public function calendar_summary_splits_overdue_week_and_month_v15_12(): void
+    {
+        // Просрочка — прошлый месяц: в entries текущего месяца её быть не должно,
+        // а в плитке «Просрочено» — должна, где бы клиент ни находился.
+        $this->scheduleFor($this->client, now()->subMonth()->startOfMonth()->toDateString(), 1000.00);
+        $this->scheduleFor($this->client, now()->addDays(3)->toDateString(), 2000.00);
+
+        $this->actingAs($this->client)
+            ->get(route('cabinet.payments.calendar'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('summary.overdue_amount', 1000)
+                ->where('summary.overdue_count', 1)
+                ->where('summary.week_amount', 2000)
+                ->has('overdueEntries', 1)
+                ->where('overdueEntries.0.is_overdue', true));
+    }
+
+    #[Test]
+    public function fully_paid_line_leaves_no_outstanding_amount_v15_12(): void
+    {
+        $this->scheduleFor($this->client, now()->addDays(3)->toDateString(), 2000.00, paid: 2000.00);
+
+        $this->actingAs($this->client)
+            ->get(route('cabinet.payments.calendar'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('summary.week_amount', 0)
+                ->where('entries.0.is_paid', true)
+                ->where('entries.0.unpaid_amount', 0));
+    }
+
+    #[Test]
+    public function calendar_falls_back_to_current_month_on_garbage_input_v15_12(): void
+    {
+        // Мусор в параметре не должен давать 500: календарь открывается всегда.
+        $this->actingAs($this->client)
+            ->get(route('cabinet.payments.calendar', ['month' => 'не-месяц']))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('month', now()->format('Y-m')));
+    }
+
+    #[Test]
+    public function shipment_card_shows_payment_schedule_v15_12(): void
+    {
+        $shipment = Shipment::factory()->create([
+            'user_id' => $this->client->id,
+            'currency_code' => 'RUB',
+            'total_amount' => 10000.00,
+            'payment_due_date' => now()->addDays(10)->toDateString(),
+        ]);
+
+        ShipmentPaymentSchedule::factory()->forShipment($shipment)->create([
+            'due_date' => now()->addDays(10)->toDateString(),
+            'amount' => 10000.00,
+            'stage_name' => 'Оплата после отгрузки',
+        ]);
+
+        $this->actingAs($this->client)
+            ->get(route('cabinet.shipments.show', $shipment->id))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('shipment.payment_schedule.lines', 1)
+                ->where('shipment.payment_schedule.lines.0.stage_name', 'Оплата после отгрузки')
+                ->where('shipment.payment_schedule.unpaid_amount', 10000)
+                ->where('shipment.payment_schedule.mismatches_document', false));
+    }
+
+    #[Test]
+    public function shipment_card_has_no_schedule_block_when_erp_sent_none_v15_12(): void
+    {
+        $shipment = Shipment::factory()->create(['user_id' => $this->client->id]);
+
+        $this->actingAs($this->client)
+            ->get(route('cabinet.shipments.show', $shipment->id))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('shipment.payment_schedule', null));
     }
 }

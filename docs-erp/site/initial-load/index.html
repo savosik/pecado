@@ -652,6 +652,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../rules/payments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Платежи
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../rules/balances/" class="md-nav__link">
         
   
@@ -1688,12 +1716,18 @@
 </tr>
 <tr>
 <td>10</td>
+<td><code>ВыгрузитьВсеПлатежи()</code></td>
+<td><code>payment.created</code></td>
+<td>Реализации, Контрагенты</td>
+</tr>
+<tr>
+<td>11</td>
 <td><code>ВыгрузитьВсеБалансы()</code></td>
 <td><code>balance.updated</code></td>
 <td>Контрагенты</td>
 </tr>
 <tr>
-<td>11</td>
+<td>12</td>
 <td><code>ВыгрузитьИндивидуальныеЦены()</code></td>
 <td><code>individual_prices.ready</code></td>
 <td>Партнёры, Номенклатура</td>
@@ -1711,6 +1745,9 @@
 <li>[ ] Повторная выгрузка безопасна (идемпотентность)</li>
 <li>[ ] Товары с <code>hidden = true</code> выгружаются с <code>hidden = true</code> (v10)</li>
 <li>[ ] Партнёры с актуальным <code>client_status</code> (v11)</li>
+<li>[ ] <strong>(v15.11.0)</strong> Платежи выгружаются после реализаций — иначе разнесение приедет
+  с неразрешёнными <code>shipment_uuid</code> и оплата проставится только по мере доезда реализаций
+  (связь доклеится автоматически, но заливка займёт заметно дольше)</li>
 </ul>
 
 

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Box, Flex, HStack, VStack, Text, Badge, Button, Input, InputGroup,
+    Box, Flex, HStack, VStack, Text, Badge, Input, InputGroup,
     Card, Stack, createListCollection,
 } from '@chakra-ui/react';
+import { Button } from '@/components/ui/button';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
-    LuFilter, LuX, LuSearch, LuReceipt, LuCalendar,
+    LuFilter, LuX, LuSearch, LuReceipt, LuCalendar, LuList,
     LuChevronLeft, LuChevronRight,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
@@ -126,6 +127,18 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
     return (
         <CabinetLayout title="Оплаты">
             <Head title="Оплаты — Pecado" />
+
+            {/* Список — факт (проведённые платежи), календарь — план (график из 1С). */}
+            <Flex gap="2" mb="4" align="center" wrap="wrap">
+                <Button size="sm" variant="solid" colorPalette="pecado">
+                    <LuList size={16} /> Список
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                    <Link href="/cabinet/payments/calendar">
+                        <LuCalendar size={16} /> Календарь
+                    </Link>
+                </Button>
+            </Flex>
 
             <Flex gap="3" mb="4" direction={{ base: 'column', sm: 'row' }} align={{ sm: 'center' }}>
                 <Box flex="1">
