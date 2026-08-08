@@ -179,6 +179,10 @@ class ClientListTest extends TestCase
     #[Test]
     public function next_task_column_marks_overdue_and_today(): void
     {
+        // Время фиксируем: срок «через 2 часа» после 22:00 уезжает на завтра,
+        // и тест разваливался в зависимости от того, когда его запустили.
+        Carbon::setTestNow(Carbon::today()->setTime(9, 0));
+
         $late = $this->clientOf($this->cardA);
         $today = $this->clientOf($this->cardA);
         $empty = $this->clientOf($this->cardA);
@@ -195,6 +199,8 @@ class ClientListTest extends TestCase
         $this->assertSame(2, $rows[$late->id]['tasks']['next']['overdue_days']);
         $this->assertSame('today', $rows[$today->id]['tasks']['next']['due_state']);
         $this->assertNull($rows[$empty->id]['tasks']['next']);
+
+        Carbon::setTestNow();
     }
 
     #[Test]
