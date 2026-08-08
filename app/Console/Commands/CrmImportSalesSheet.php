@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
+use App\Services\Crm\CrmApiClient;
+use App\Services\Crm\SalesSheetApiImporter;
 use App\Services\Crm\SalesSheetImporter;
 use App\Services\Crm\SalesSheetReader;
 use App\Support\Crm\SalesSheetImportReport;
@@ -22,7 +24,9 @@ class CrmImportSalesSheet extends Command
     protected $signature = 'crm:import-sales-sheet
         {file : Путь к XLSX-выгрузке таблицы продаж}
         {--sheet=ОПТ действующие : Лист с клиентами}
-        {--author= : E-mail сотрудника, от имени которого записываются планы и статусы}
+        {--author= : E-mail сотрудника, от имени которого пишутся планы и статусы (для локальной базы)}
+        {--api= : Адрес сайта для записи через агентское API, например https://pecado.ru}
+        {--token= : Токен CRM-агента; сотрудник определяется им (для режима --api)}
         {--dry-run : Только показать результат, ничего не записывая}
         {--overwrite : Перезаписывать заполненные поля паспорта и статусы, выставленные вручную}';
 
@@ -31,10 +35,14 @@ class CrmImportSalesSheet extends Command
     public function handle(SalesSheetReader $reader, SalesSheetImporter $importer): int
     {
         $dryRun = (bool) $this->option('dry-run');
+        $overwrite = (bool) $this->option('overwrite');
+        $api = trim((string) $this->option('api'));
 
-        $author = $this->resolveAuthor();
+        // Автор в режиме API приходит вместе с токеном: сервер сам превращает
+        // токен в сотрудника, и второй способ его назвать только путал бы.
+        $author = $api === '' ? $this->resolveAuthor() : null;
 
-        if ($author === null) {
+        if ($api === '' && $author === null) {
             return self::FAILURE;
         }
 
@@ -53,11 +61,52 @@ class CrmImportSalesSheet extends Command
             count($sheet->departmentPlans),
         ));
 
-        $report = $importer->import($sheet, $author, $dryRun, (bool) $this->option('overwrite'));
+        try {
+            $report = $api === ''
+                ? $importer->import($sheet, $author, $dryRun, $overwrite)
+                : $this->importThroughApi($api, $sheet, $dryRun, $overwrite);
+        } catch (Throwable $exception) {
+            $this->error($exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        if ($report === null) {
+            return self::FAILURE;
+        }
 
         $this->printReport($report, $dryRun);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Запись в боевую CRM через агентское API — путь для случая, когда доступа
+     * к серверу нет, а данные внести нужно.
+     */
+    private function importThroughApi(string $baseUrl, \App\Support\Crm\SalesSheet $sheet, bool $dryRun, bool $overwrite): ?SalesSheetImportReport
+    {
+        $token = trim((string) $this->option('token'));
+
+        if ($token === '') {
+            $this->error('Для режима --api нужен --token — токен CRM-агента, выданный сотруднику.');
+
+            return null;
+        }
+
+        $client = new CrmApiClient($baseUrl, $token);
+        $me = $client->me();
+
+        $name = $me['name'] ?? $me['data']['name'] ?? 'неизвестно';
+        $this->info("Записи пойдут от имени: {$name} ({$baseUrl}).");
+
+        if (! $dryRun && ! $this->confirm('Записать данные в эту CRM?', false)) {
+            $this->comment('Отменено.');
+
+            return null;
+        }
+
+        return (new SalesSheetApiImporter($client))->import($sheet, $dryRun, $overwrite);
     }
 
     /**

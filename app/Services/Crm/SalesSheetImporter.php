@@ -9,7 +9,6 @@ use App\Support\Crm\SalesSheet;
 use App\Support\Crm\SalesSheetImportReport;
 use App\Support\Crm\SalesSheetRow;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -22,6 +21,8 @@ use Illuminate\Support\Facades\DB;
  */
 class SalesSheetImporter
 {
+    use Concerns\MergesSheetClients;
+
     public function __construct(
         private readonly SalesPlanService $plans,
         private readonly ClientProfileService $profiles,
@@ -104,72 +105,6 @@ class SalesSheetImporter
         DB::transaction($apply);
 
         return $report;
-    }
-
-    /**
-     * Строки одного клиента, слитые в одну.
-     *
-     * В таблице клиент иногда заведён дважды (два договора, переезд строки вниз
-     * списка). Планы таких строк складываются: в CRM клиент один, и его план —
-     * это всё, что на него запланировано.
-     *
-     * @param  list<SalesSheetRow>  $rows
-     * @return list<array{key: string, row: SalesSheetRow}>
-     */
-    private function groupByName(array $rows, SalesSheetImportReport $report): array
-    {
-        /** @var array<string, SalesSheetRow> $merged */
-        $merged = [];
-
-        foreach ($rows as $row) {
-            $key = $this->normalizeName($row->name);
-
-            if ($key === '') {
-                continue;
-            }
-
-            if (! isset($merged[$key])) {
-                $merged[$key] = $row;
-
-                continue;
-            }
-
-            $previous = $merged[$key];
-            $plans = $previous->plans;
-
-            foreach ($row->plans as $month => $amount) {
-                $plans[$month] = ($plans[$month] ?? 0) + $amount;
-            }
-
-            $report->warnings[] = sprintf(
-                'Клиент «%s» встречается в строках %d и %d — планы сложены.',
-                $row->name,
-                $previous->line,
-                $row->line,
-            );
-
-            $merged[$key] = new SalesSheetRow(
-                line: $previous->line,
-                name: $previous->name,
-                kind: $previous->kind,
-                manager: $previous->manager ?? $row->manager,
-                // Паспорт берём из той строки, где он заполнен: дубль обычно
-                // заводят пустым, и он затёр бы данные основной строки.
-                status: $previous->status ?? $row->status,
-                businessType: $previous->businessType ?? $row->businessType,
-                hasOfflinePoints: $previous->hasOfflinePoints ?? $row->hasOfflinePoints,
-                hasOnlineStore: $previous->hasOnlineStore ?? $row->hasOnlineStore,
-                worksWithMarketplaces: $previous->worksWithMarketplaces ?? $row->worksWithMarketplaces,
-                pointsCount: $previous->pointsCount ?? $row->pointsCount,
-                plans: $plans,
-            );
-        }
-
-        return array_map(
-            fn (string $key, SalesSheetRow $row): array => ['key' => $key, 'row' => $row],
-            array_keys($merged),
-            array_values($merged),
-        );
     }
 
     /**
@@ -280,12 +215,13 @@ class SalesSheetImporter
      */
     private function applyNewClientBuckets(array $buckets, array &$byManager, SalesSheetImportReport $report): void
     {
-        $managers = PersonalManager::query()->select('id', 'name')->get();
+        /** @var array<int, string> $managers */
+        $managers = PersonalManager::query()->pluck('name', 'id')->all();
 
         foreach ($buckets as $bucket) {
-            $manager = $this->matchManager($bucket->manager, $managers);
+            $managerId = $this->matchManagerId($bucket->manager, $managers);
 
-            if ($manager === null) {
+            if ($managerId === null) {
                 $report->addUnmatched(
                     sprintf('%s (менеджер «%s»)', $bucket->name, $bucket->manager ?? '—'),
                     $bucket->line,
@@ -296,44 +232,9 @@ class SalesSheetImporter
             }
 
             foreach ($bucket->plans as $month => $amount) {
-                $byManager[(int) $manager->getKey()][$month] = ($byManager[(int) $manager->getKey()][$month] ?? 0) + $amount;
+                $byManager[$managerId][$month] = ($byManager[$managerId][$month] ?? 0) + $amount;
             }
         }
-    }
-
-    /**
-     * @param  Collection<int, PersonalManager>  $managers
-     */
-    private function matchManager(?string $name, Collection $managers): ?PersonalManager
-    {
-        if ($name === null) {
-            return null;
-        }
-
-        // В таблице менеджер записан с городом: «Москва: Курочкина Алёна Валерьевна».
-        $withoutCity = str_contains($name, ':') ? substr($name, strpos($name, ':') + 1) : $name;
-        $key = $this->normalizeName($withoutCity);
-
-        if ($key === '') {
-            return null;
-        }
-
-        $exact = $managers->first(
-            fn (PersonalManager $manager): bool => $this->normalizeName((string) $manager->name) === $key,
-        );
-
-        if ($exact !== null) {
-            return $exact;
-        }
-
-        // Запасной путь — фамилия: в таблице отчество пишут не всегда.
-        $surname = explode(' ', $key)[0];
-
-        $bySurname = $managers->filter(
-            fn (PersonalManager $manager): bool => str_starts_with($this->normalizeName((string) $manager->name), $surname.' '),
-        );
-
-        return $bySurname->count() === 1 ? $bySurname->first() : null;
     }
 
     /**
@@ -363,21 +264,5 @@ class SalesSheetImporter
     private function month(string $month): Carbon
     {
         return Carbon::parse($month.'-01')->startOfMonth()->startOfDay();
-    }
-
-    /**
-     * Имя для сравнения: регистр, «ё», лишние пробелы и хвостовая точка не считаются.
-     *
-     * Пробелы вокруг запятых убираются тоже — «ИП, г.Москва» и «ИП,г. Москва»
-     * в таблице и в 1С пишут по-разному, а клиент за ними один и тот же.
-     */
-    private function normalizeName(string $name): string
-    {
-        $text = mb_strtolower(trim($name));
-        $text = str_replace(["\u{00A0}", 'ё', '«', '»', '"'], [' ', 'е', '', '', ''], $text);
-        $text = (string) preg_replace('/\s*([,.])\s*/u', '$1', $text);
-        $text = (string) preg_replace('/\s+/u', ' ', $text);
-
-        return trim($text, " \t\n\r\0\x0B.,");
     }
 }
