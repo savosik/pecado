@@ -140,6 +140,59 @@ class ShipmentInvoiceAndPaymentCommentTest extends TestCase
     }
 
     /**
+     * v15.16.1: у счёта-фактуры в 1С два номера — внутренний («29УТ-0006968»)
+     * и печатный («УТ-6968»). Клиент сверяет по бумаге, поэтому храним оба,
+     * а показываем печатный.
+     */
+    #[Test]
+    public function invoice_keeps_both_internal_and_printed_numbers(): void
+    {
+        app(HandleShipmentCreated::class)->handle([
+            'event' => 'shipment.created',
+            'uuid' => '00000000-0000-4000-a000-0000000054f1',
+            'number' => '29УТ-004417',
+            'contractor_uuid' => '00000000-0000-4000-a000-0000000054c1',
+            'invoice' => [
+                'number' => '29УТ-0006968',
+                'number_display' => 'УТ-6968',
+                'date' => '2026-08-08',
+            ],
+        ]);
+
+        $shipment = Shipment::where('uuid', '00000000-0000-4000-a000-0000000054f1')->first();
+
+        $this->assertSame('29УТ-0006968', $shipment->invoice_number);
+        $this->assertSame('УТ-6968', $shipment->invoice_number_display);
+    }
+
+    /**
+     * `checking` — седьмое значение статуса расходного ордера (v15.16.1).
+     * В 1С это самостоятельное состояние документа, а не «К проверке»
+     * с признаком работы кладовщика.
+     */
+    #[Test]
+    public function goods_issue_accepts_checking_status(): void
+    {
+        $validator = app(ErpMessageValidator::class);
+
+        $result = $validator->validate('goods_issue.updated', [
+            'event' => 'goods_issue.updated',
+            'uuid' => '00000000-0000-4000-a000-0000000055f1',
+            'number' => 'УТ-00009419',
+            'status' => 'checking',
+            'items' => [
+                ['product_uuid' => '00000000-0000-4000-a000-0000000055a1', 'quantity' => 1],
+            ],
+        ]);
+
+        $this->assertTrue($result['valid'], implode('; ', $result['errors']));
+
+        $this->assertContains('checking', \App\Models\GoodsIssue::STATUSES);
+        $this->assertSame('В процессе проверки', \App\Models\GoodsIssue::STATUS_LABELS['checking']);
+        $this->assertContains('checking', \App\Models\GoodsIssue::ACTIVE_STATUSES, 'Ордер в проверке ещё не уехал');
+    }
+
+    /**
      * `event` ограничен константой: сообщение с чужим значением не должно
      * проходить валидацию не своей схемы.
      */

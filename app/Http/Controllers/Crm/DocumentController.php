@@ -1612,8 +1612,11 @@ class DocumentController extends CrmController
                 'created_at_label' => $model->created_at?->format('d.m.Y H:i'),
                 'total_label' => $this->money((float) $model->total_amount, $model->currency_code),
                 // v15.16.0: счёт-фактура из 1С — справка для менеджера и бухгалтерии клиента
-                'invoice_label' => $model->invoice_number
-                    ? trim($model->invoice_number.' от '.($model->invoice_date?->format('d.m.Y') ?? '—'))
+                // v15.16.1: печатный номер приоритетнее внутреннего — менеджер
+                // и клиент говорят про одну и ту же бумагу
+                'invoice_label' => ($model->invoice_number_display ?: $model->invoice_number)
+                    ? trim(($model->invoice_number_display ?: $model->invoice_number)
+                        .' от '.($model->invoice_date?->format('d.m.Y') ?? '—'))
                     : null,
                 'comment' => null,
                 'manager_comment' => null,

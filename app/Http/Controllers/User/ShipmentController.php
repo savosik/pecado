@@ -422,8 +422,10 @@ class ShipmentController extends Controller
                 'number' => $shipment->erp_number ?? $shipment->number ?? ('#'.$shipment->id),
                 'tax_id' => $shipment->tax_id,
                 'date' => $shipment->date?->format('Y-m-d'),
-                // v15.16.0: счёт-фактура из 1С — нужна бухгалтерии клиента
-                'invoice_number' => $shipment->invoice_number,
+                // v15.16.0: счёт-фактура из 1С — нужна бухгалтерии клиента.
+                // v15.16.1: клиенту показываем ПЕЧАТНЫЙ номер — он сверяет по бумаге,
+                // а не по внутреннему номеру базы 1С
+                'invoice_number' => $shipment->invoice_number_display ?: $shipment->invoice_number,
                 'invoice_date' => $shipment->invoice_date?->format('d.m.Y'),
                 'updated_at' => $shipment->updated_at?->format('d.m.Y H:i'),
                 'status' => $shipment->status,

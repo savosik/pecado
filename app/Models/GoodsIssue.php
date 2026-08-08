@@ -77,6 +77,14 @@ class GoodsIssue extends Model
 
     public const STATUS_TO_CHECK = 'to_check';
 
+    /**
+     * «В процессе проверки» — самостоятельное значение перечисления
+     * СтатусыРасходныхОрдеров в 1С (четвёртое из семи), а не «К проверке»
+     * с признаком работы кладовщика. Добавлено в v15.16.1: до этого 1С
+     * схлопывала этап в to_check, и он терялся на экране склада.
+     */
+    public const STATUS_CHECKING = 'checking';
+
     public const STATUS_CHECKED = 'checked';
 
     public const STATUS_TO_SHIP = 'to_ship';
@@ -95,6 +103,7 @@ class GoodsIssue extends Model
         self::STATUS_PREPARED,
         self::STATUS_TO_PICK,
         self::STATUS_TO_CHECK,
+        self::STATUS_CHECKING,
         self::STATUS_CHECKED,
         self::STATUS_TO_SHIP,
         self::STATUS_SHIPPED,
@@ -113,6 +122,7 @@ class GoodsIssue extends Model
         self::STATUS_PREPARED => 'Подготовлен',
         self::STATUS_TO_PICK => 'К отбору',
         self::STATUS_TO_CHECK => 'К проверке',
+        self::STATUS_CHECKING => 'В процессе проверки',
         self::STATUS_CHECKED => 'Проверен',
         self::STATUS_TO_SHIP => 'К отгрузке',
         self::STATUS_SHIPPED => 'Отгружен',
@@ -123,6 +133,7 @@ class GoodsIssue extends Model
         self::STATUS_PREPARED => 'gray',
         self::STATUS_TO_PICK => 'blue',
         self::STATUS_TO_CHECK => 'orange',
+        self::STATUS_CHECKING => 'yellow',
         self::STATUS_CHECKED => 'purple',
         self::STATUS_TO_SHIP => 'teal',
         self::STATUS_SHIPPED => 'green',
@@ -137,6 +148,7 @@ class GoodsIssue extends Model
         self::STATUS_PREPARED,
         self::STATUS_TO_PICK,
         self::STATUS_TO_CHECK,
+        self::STATUS_CHECKING,
         self::STATUS_CHECKED,
         self::STATUS_TO_SHIP,
     ];

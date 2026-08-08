@@ -77,8 +77,10 @@ class Shipment extends Model implements HasMedia
         'uuid',
         'erp_number',
         'number',
-        // v15.16.0: реквизиты счёта-фактуры из 1С — для бухгалтерии клиента
+        // v15.16.0: реквизиты счёта-фактуры из 1С — для бухгалтерии клиента.
+        // v15.16.1: печатный номер отдельно от внутреннего — клиент сверяет по бумаге
         'invoice_number',
+        'invoice_number_display',
         'invoice_date',
         'user_id',
         'company_id',

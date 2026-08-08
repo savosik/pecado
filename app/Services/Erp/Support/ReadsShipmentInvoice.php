@@ -34,11 +34,18 @@ trait ReadsShipmentInvoice
         $invoice = $payload['invoice'];
 
         if (! is_array($invoice)) {
-            return ['invoice_number' => null, 'invoice_date' => null];
+            return [
+                'invoice_number' => null,
+                'invoice_number_display' => null,
+                'invoice_date' => null,
+            ];
         }
 
         return [
+            // number — внутренний номер 1С («29УТ-0006968»), для сверки с базой;
+            // number_display — печатный («УТ-6968»), его видит клиент (v15.16.1)
             'invoice_number' => $invoice['number'] ?? null,
+            'invoice_number_display' => $invoice['number_display'] ?? null,
             'invoice_date' => $invoice['date'] ?? null,
         ];
     }
