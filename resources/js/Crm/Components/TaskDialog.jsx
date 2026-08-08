@@ -44,9 +44,10 @@ const EMPTY = {
  *
  * @param {object|null} task — правим существующую или создаём новую
  * @param {{type: string, id: number}|null} entity — привязка для новой задачи
+ * @param {string} initialTitle — заголовок новой задачи по умолчанию (правится вручную)
  * @param {Function} onSaved — колбэк с сохранённой задачей
  */
-export default function TaskDialog({ open, onClose, task = null, entity = null, onSaved }) {
+export default function TaskDialog({ open, onClose, task = null, entity = null, initialTitle = '', onSaved }) {
     const options = useTaskOptions(open);
     const { can } = usePermission();
     const { auth } = usePage().props;
@@ -80,8 +81,10 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
                 priority: task.priority || 'normal',
                 due_at: task.due_at || '',
             }
-            : EMPTY);
-    }, [open, task]);
+            // Заголовок-заготовка от вызывающей страницы (например, «Оплата по
+            // реализации …»): экономит набор текста, но остаётся обычным полем.
+            : { ...EMPTY, title: initialTitle || '' });
+    }, [open, task, initialTitle]);
 
     // Исполнитель новой задачи по умолчанию — тот, кто её ставит: себе задачи
     // ставят чаще, чем коллеге. Ждём справочник, потому что подставлять человека,

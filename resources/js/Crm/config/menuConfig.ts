@@ -12,6 +12,11 @@ import {
     LuReceipt,
     LuKeyRound,
     LuSprout,
+    LuWallet,
+    LuGauge,
+    LuTriangleAlert,
+    LuScale,
+    LuCalendarClock,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -48,6 +53,22 @@ export const menuConfig: MenuGroup[] = [
             { label: "Отчёты продаж", icon: LuChartLine, path: "/crm/analytics", permission: "crm-analytics.view" },
             { label: "Команда", icon: LuUsersRound, path: "/crm/team", permission: "crm-team.view" },
             { label: "Токены ИИ-агентов", icon: LuKeyRound, path: "/crm/agent-tokens", permission: "crm-agent-tokens.view" },
+        ],
+    },
+    {
+        // Финансы: деньги, которые уже пришли или должны прийти. Отдельно от
+        // «Документов», потому что это не журнал первички, а работа с долгом:
+        // план поступлений, просрочка и балансы клиентов.
+        title: "Финансы",
+        icon: LuWallet,
+        items: [
+            { label: "Пульт платежей", icon: LuGauge, path: "/crm/finance", permission: "crm-finance.view" },
+            { label: "План поступлений", icon: LuWallet, path: "/crm/finance/plan", permission: "crm-finance.view" },
+            { label: "Просрочка", icon: LuTriangleAlert, path: "/crm/finance/overdue", permission: "crm-finance.view" },
+            { label: "Балансы клиентов", icon: LuScale, path: "/crm/finance/balances", permission: "crm-finance.view" },
+            // Календарь живёт под правом документов: он появился раньше раздела
+            // и остаётся доступен тем, у кого есть журналы, но нет финансов.
+            { label: "Календарь платежей", icon: LuCalendarClock, path: "/crm/payments/calendar", permission: "crm-clients.view" },
         ],
     },
     {

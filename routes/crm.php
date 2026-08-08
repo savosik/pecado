@@ -11,6 +11,7 @@ use App\Http\Controllers\Crm\CommentController;
 use App\Http\Controllers\Crm\DashboardController;
 use App\Http\Controllers\Crm\DocumentController;
 use App\Http\Controllers\Crm\EmailController;
+use App\Http\Controllers\Crm\FinanceController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\TaskController;
@@ -321,5 +322,19 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::delete('/analytics/presets/{preset}', [AnalyticsController::class, 'destroyPreset'])
             ->whereNumber('preset')->name('analytics.presets.destroy');
         Route::get('/products/search', [AnalyticsController::class, 'searchProducts'])->name('products.search');
+    });
+
+    // Финансы: план поступлений, просрочка, балансы. Раздел только читает деньги,
+    // прилетевшие из 1С, поэтому право одно — view. Скоуп клиентов тот же, что
+    // у журналов документов: менеджер видит деньги только своих.
+    Route::middleware('permission:crm-finance.view')->group(function () {
+        Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
+        Route::get('/finance/data', [FinanceController::class, 'data'])->name('finance.data');
+        // Выгрузка объявлена до остальных подстраниц не ради биндинга (его тут нет),
+        // а чтобы не потеряться среди них при чтении файла.
+        Route::get('/finance/export', [FinanceController::class, 'export'])->name('finance.export');
+        Route::get('/finance/plan', [FinanceController::class, 'plan'])->name('finance.plan');
+        Route::get('/finance/overdue', [FinanceController::class, 'overdue'])->name('finance.overdue');
+        Route::get('/finance/balances', [FinanceController::class, 'balances'])->name('finance.balances');
     });
 });

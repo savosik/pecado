@@ -13,13 +13,15 @@ use App\Models\PersonalManager;
 use App\Models\Product;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
-use App\Models\ShipmentPaymentSchedule;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Crm\CrmEntityResolver;
+use App\Services\Crm\Finance\FinanceFilters;
+use App\Services\Crm\Finance\PaymentForecastService;
 use App\Services\SimpleXlsxExporter;
 use App\Support\Crm\CrmEntityMap;
 use App\Support\Payments\PaymentSchedulePresenter;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -96,6 +98,12 @@ class DocumentController extends CrmController
     private const EXPORT_LIMIT = 10000;
 
     private const EXPORT_CHUNK = 500;
+
+    /**
+     * Потолок строк просрочки в календаре: список под сеткой, а не отчёт —
+     * полная просрочка живёт в /crm/finance/overdue.
+     */
+    private const CALENDAR_OVERDUE_LIMIT = 200;
 
     public function __construct(private readonly CrmEntityResolver $resolver) {}
 
@@ -249,8 +257,13 @@ class DocumentController extends CrmController
      * («Правила оплаты» 1С), факт — проведённые платежи по их бизнес-дате `date`.
      * Разрез по менеджерам работает через тот же скоуп клиентов, что и журналы,
      * поэтому отдельного фильтра здесь нет.
+     *
+     * Расчёт берётся из PaymentForecastService — того же, на котором стоит раздел
+     * «Финансы»: календарь и пульт обязаны показывать одно число, а два
+     * независимых запроса неизбежно разъедутся. Оттуда же приходит сведение
+     * валют в рубли — без него месяц с валютным документом складывал бы Br с ₽.
      */
-    public function paymentsCalendar(Request $request): Response
+    public function paymentsCalendar(Request $request, PaymentForecastService $forecast): Response
     {
         $actor = $this->crmActor($request);
         $clients = $this->visibleClients($request, $actor);
@@ -259,17 +272,29 @@ class DocumentController extends CrmController
         $monthStart = $month->toDateString();
         $monthEnd = $month->copy()->endOfMonth()->toDateString();
         $today = Carbon::today();
+        $todayImmutable = CarbonImmutable::today();
 
-        $planned = $this->plannedQuery($clients)
-            ->whereBetween('sch.due_date', [$monthStart, $monthEnd])
-            ->get();
+        // Календарю нужен только период: отбор по менеджерам уже сведён в скоуп клиентов.
+        $filters = new FinanceFilters(
+            dateFrom: CarbonImmutable::parse($monthStart),
+            dateTo: CarbonImmutable::parse($monthEnd),
+        );
+
+        $planned = $forecast->applyDefaultOrder(
+            $forecast->plannedQuery($clients, $filters)
+                ->whereBetween('sch.due_date', [$monthStart, $monthEnd])
+        )->get();
 
         // Просрочка не привязана к показываемому месяцу: менеджеру она нужна
         // всегда, в каком бы месяце он ни находился.
-        $overdue = $this->plannedQuery($clients)
-            ->whereDate('sch.due_date', '<', $today->toDateString())
-            ->limit(200)
-            ->get();
+        $overdue = $forecast->applyDefaultOrder(
+            $forecast->plannedQuery($clients, $filters)
+                ->whereDate('sch.due_date', '<', $today->toDateString())
+        )->limit(self::CALENDAR_OVERDUE_LIMIT)->get();
+
+        $facts = $forecast->factsByDay($clients, $monthStart, $monthEnd);
+        $entries = $planned->map(fn (object $row): array => $forecast->row($row, $todayImmutable));
+        $overdueEntries = $overdue->map(fn (object $row): array => $forecast->row($row, $todayImmutable));
 
         return Inertia::render('Crm/Pages/Documents/PaymentCalendar', [
             'month' => $month->format('Y-m'),
@@ -277,15 +302,14 @@ class DocumentController extends CrmController
             'prevMonth' => $month->copy()->subMonth()->format('Y-m'),
             'nextMonth' => $month->copy()->addMonth()->format('Y-m'),
             'today' => $today->toDateString(),
-            'entries' => $planned->map(fn (object $row): array => $this->plannedEntry($row, $today))->all(),
-            'overdueEntries' => $overdue->map(fn (object $row): array => $this->plannedEntry($row, $today))->all(),
-            'facts' => $this->factsByDay($clients, $monthStart, $monthEnd),
+            'entries' => $entries->all(),
+            'overdueEntries' => $overdueEntries->all(),
+            'facts' => $facts,
             'summary' => [
-                'plan_month' => round($planned->sum(fn (object $row): float => $this->unpaidOf($row)), 2),
-                'fact_month' => round($this->factsByDay($clients, $monthStart, $monthEnd)
-                    ->sum(fn (array $day): float => $day['amount']), 2),
-                'overdue_amount' => round($overdue->sum(fn (object $row): float => $this->unpaidOf($row)), 2),
-                'overdue_count' => $overdue->count(),
+                'plan_month' => round($entries->sum(fn (array $entry): float => $entry['unpaid_rub']), 2),
+                'fact_month' => round($facts->sum(fn (array $day): float => $day['amount']), 2),
+                'overdue_amount' => round($overdueEntries->sum(fn (array $entry): float => $entry['unpaid_rub']), 2),
+                'overdue_count' => $overdueEntries->count(),
             ],
             'managers' => $this->seesAllClients($request) ? $this->managerOptions() : [],
             'seesAll' => $this->seesAllClients($request),
@@ -293,108 +317,6 @@ class DocumentController extends CrmController
                 'manager_ids' => $this->seesAllClients($request) ? $this->ids($request, 'manager_ids') : [],
             ],
         ]);
-    }
-
-    /**
-     * Плановые платежи клиентов в скоупе.
-     *
-     * Джойном, а не через связи: календарю нужны плоские поля, а грузить
-     * реализации со связями ради номера документа — лишние запросы на каждый месяц.
-     *
-     * @param  Builder<User>  $clients
-     */
-    private function plannedQuery(Builder $clients): \Illuminate\Database\Query\Builder
-    {
-        return DB::table('shipment_payment_schedules as sch')
-            ->join('shipments as s', 's.id', '=', 'sch.shipment_id')
-            ->join('users as u', 'u.id', '=', 's.user_id')
-            ->whereNull('s.deleted_at')
-            ->whereIn('s.user_id', (clone $clients))
-            // Закрытые строки в план не идут: деньги по ним уже пришли,
-            // и показывать их как ожидаемые значило бы задвоить выручку.
-            // Константа в SQL, а не биндингом — см. ShipmentPaymentSchedule::scopeOutstanding.
-            ->whereRaw('sch.amount - sch.paid_amount > '.ShipmentPaymentSchedule::EPSILON)
-            ->orderBy('sch.due_date')
-            ->orderByRaw('COALESCE(sch.line_number, 2147483647)')
-            ->select([
-                'sch.id',
-                'sch.shipment_id',
-                'sch.due_date',
-                'sch.amount',
-                'sch.paid_amount',
-                'sch.stage_name',
-                's.number as shipment_number',
-                's.erp_number as shipment_erp_number',
-                's.currency_code',
-                's.user_id',
-                'u.name as client_name',
-                'u.erp_name as client_erp_name',
-            ]);
-    }
-
-    /**
-     * Фактические поступления по дням.
-     *
-     * Бизнес-дата платежа — `date`, а не `created_at`: прод импортировал историю
-     * 1С, и дата создания записи на сайте к дню поступления денег отношения не имеет.
-     * Возвраты вычитаются — иначе день с возвратом выглядел бы прибыльным.
-     *
-     * @param  Builder<User>  $clients
-     * @return \Illuminate\Support\Collection<string, array{amount: float, count: int}>
-     */
-    private function factsByDay(Builder $clients, string $from, string $to): \Illuminate\Support\Collection
-    {
-        return DB::table('payments')
-            ->whereNull('deleted_at')
-            ->whereIn('user_id', (clone $clients))
-            ->whereBetween(DB::raw('DATE(date)'), [$from, $to])
-            ->groupBy(DB::raw('DATE(date)'))
-            ->selectRaw('DATE(date) as day')
-            ->selectRaw("SUM(CASE WHEN direction = 'out' THEN -amount ELSE amount END) as amount")
-            ->selectRaw('COUNT(*) as documents')
-            ->get()
-            ->mapWithKeys(fn (object $row): array => [
-                (string) $row->day => [
-                    'amount' => round((float) $row->amount, 2),
-                    'count' => (int) $row->documents,
-                ],
-            ]);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function plannedEntry(object $row, Carbon $today): array
-    {
-        $dueDate = Carbon::parse($row->due_date);
-        $unpaid = $this->unpaidOf($row);
-
-        return [
-            'id' => $row->id,
-            'due_date' => $dueDate->toDateString(),
-            'due_date_label' => $dueDate->format('d.m.Y'),
-            'amount' => round((float) $row->amount, 2),
-            'unpaid_amount' => $unpaid,
-            'unpaid_label' => $this->money($unpaid, $row->currency_code),
-            'is_overdue' => $dueDate->isBefore($today),
-            'days_overdue' => $dueDate->isBefore($today) ? $dueDate->diffInDays($today) : 0,
-            'stage_name' => $row->stage_name,
-            'client' => [
-                'id' => (int) $row->user_id,
-                'name' => $row->client_erp_name ?: $row->client_name,
-                'url' => route('crm.clients.show', $row->user_id),
-            ],
-            'shipment' => [
-                'id' => (int) $row->shipment_id,
-                'number' => $row->shipment_erp_number ?: $row->shipment_number ?: ('#'.$row->shipment_id),
-                'url' => route('crm.shipments.show', $row->shipment_id),
-            ],
-        ];
-    }
-
-    private function unpaidOf(object $row): float
-    {
-        return round(max(0.0, (float) $row->amount - (float) $row->paid_amount), 2);
     }
 
     /**

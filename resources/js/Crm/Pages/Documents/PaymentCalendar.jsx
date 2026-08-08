@@ -36,7 +36,9 @@ export default function PaymentCalendar({
 
         entries.forEach((entry) => {
             const bucket = map.get(entry.due_date) || { amount: 0, overdue: false, items: [] };
-            bucket.amount += entry.unpaid_amount;
+            // Суммируем рубли, а не сумму документа: в месяце могут встретиться
+            // валютные реализации, и сложение «как есть» дало бы бессмысленный итог.
+            bucket.amount += entry.unpaid_rub;
             bucket.overdue = bucket.overdue || entry.is_overdue;
             bucket.items.push(entry);
             map.set(entry.due_date, bucket);
@@ -144,7 +146,7 @@ export default function PaymentCalendar({
                     {selected.plan ? (
                         <VStack align="stretch" gap={2}>
                             {selected.plan.items.map((entry) => (
-                                <EntryRow key={entry.id} entry={entry} />
+                                <EntryRow key={entry.key} entry={entry} />
                             ))}
                         </VStack>
                     ) : (
@@ -161,7 +163,7 @@ export default function PaymentCalendar({
                     </HStack>
                     <VStack align="stretch" gap={2}>
                         {overdueEntries.map((entry) => (
-                            <EntryRow key={entry.id} entry={entry} showDate />
+                            <EntryRow key={entry.key} entry={entry} showDate />
                         ))}
                     </VStack>
                 </Box>
