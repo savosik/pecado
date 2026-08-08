@@ -42,9 +42,9 @@ final class Param
         return new self($name, 'integer', $description, $required, rules: $rules, nullable: $nullable);
     }
 
-    public static function boolean(string $name, string $description, bool $required = false): self
+    public static function boolean(string $name, string $description, bool $required = false, bool $nullable = false): self
     {
-        return new self($name, 'boolean', $description, $required);
+        return new self($name, 'boolean', $description, $required, nullable: $nullable);
     }
 
     public static function list(string $name, string $description, string $itemType = 'string', bool $required = false): self

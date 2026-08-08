@@ -34,6 +34,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $decision_process
  * @property BusinessType|null $business_type
  * @property int|null $points_count
+ * @property bool|null $has_offline_points
+ * @property bool|null $has_online_store
+ * @property bool|null $works_with_marketplaces
  * @property ClientSpecialization|null $specialization
  * @property SalesChannel|null $primary_channel
  * @property SalesChannel|null $secondary_channel
@@ -102,6 +105,9 @@ class CrmClientProfile extends Model
         // Паспорт клиента: бизнес, логистика, условия, ограничения, контакты по ролям.
         'business_type',
         'points_count',
+        'has_offline_points',
+        'has_online_store',
+        'works_with_marketplaces',
         'specialization',
         'primary_channel',
         'secondary_channel',
@@ -155,6 +161,9 @@ class CrmClientProfile extends Model
             'decision_maker_birthday' => 'date',
             'business_type' => BusinessType::class,
             'points_count' => 'integer',
+            'has_offline_points' => 'boolean',
+            'has_online_store' => 'boolean',
+            'works_with_marketplaces' => 'boolean',
             'specialization' => ClientSpecialization::class,
             'primary_channel' => SalesChannel::class,
             'secondary_channel' => SalesChannel::class,

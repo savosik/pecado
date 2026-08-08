@@ -18,7 +18,9 @@ enum ClientLifecycleStatus: string
     case IN_WORK = 'in_work';
     case ACTIVE = 'active';
     case SLEEPING = 'sleeping';
+    case CLOSING = 'closing';
     case CHURNED = 'churned';
+    case HOPELESS = 'hopeless';
 
     public function label(): string
     {
@@ -27,7 +29,9 @@ enum ClientLifecycleStatus: string
             self::IN_WORK => 'В работе',
             self::ACTIVE => 'Активен',
             self::SLEEPING => 'Спящий',
+            self::CLOSING => 'Закрывается',
             self::CHURNED => 'Ушёл',
+            self::HOPELESS => 'Непреодолимо',
         };
     }
 
@@ -41,7 +45,9 @@ enum ClientLifecycleStatus: string
             self::IN_WORK => 'blue',
             self::ACTIVE => 'green',
             self::SLEEPING => 'orange',
+            self::CLOSING => 'red',
             self::CHURNED => 'gray',
+            self::HOPELESS => 'gray',
         };
     }
 

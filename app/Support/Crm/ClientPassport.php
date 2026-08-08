@@ -46,7 +46,7 @@ final class ClientPassport
     /**
      * Описание полей: ключ → тип, секция, подпись, подсказка, ограничения.
      *
-     * `type`: enum | string | text | integer | date.
+     * `type`: enum | string | text | integer | date | boolean.
      *
      * @return array<string, array<string, mixed>>
      */
@@ -56,11 +56,25 @@ final class ClientPassport
             // --- Бизнес ---
             'business_type' => [
                 'type' => 'enum', 'enum' => BusinessType::class, 'section' => 'business',
-                'label' => 'Вид бизнеса', 'hint' => 'Офлайн-розница, интернет-магазин, сеть или опт',
+                'label' => 'Вид бизнеса', 'hint' => 'Офлайн-розница, интернет-магазин, сеть, опт, селлер или массмаркет',
             ],
             'points_count' => [
                 'type' => 'integer', 'section' => 'business', 'min' => 0, 'max' => 5000,
                 'label' => 'Количество точек', 'hint' => 'Сколько торговых точек у клиента',
+            ],
+            // Три канала — независимые «да/нет», а не одно значение: клиент
+            // регулярно держит и точки, и свой сайт, и продажи на маркетплейсах.
+            'has_offline_points' => [
+                'type' => 'boolean', 'section' => 'business',
+                'label' => 'Есть офлайн-точки', 'hint' => 'Торгует ли клиент в собственных розничных точках',
+            ],
+            'has_online_store' => [
+                'type' => 'boolean', 'section' => 'business',
+                'label' => 'Есть интернет-магазин', 'hint' => 'Собственный сайт с продажами, а не витрина на чужой площадке',
+            ],
+            'works_with_marketplaces' => [
+                'type' => 'boolean', 'section' => 'business',
+                'label' => 'Работает с маркетплейсами', 'hint' => 'Продаёт на Wildberries, Ozon, Яндекс.Маркете и подобных',
             ],
             'specialization' => [
                 'type' => 'enum', 'enum' => ClientSpecialization::class, 'section' => 'business',
@@ -211,7 +225,7 @@ final class ClientPassport
     {
         return array_keys(array_filter(
             self::fields(),
-            fn (array $field): bool => in_array($field['type'], ['enum', 'integer', 'date'], true),
+            fn (array $field): bool => in_array($field['type'], ['enum', 'integer', 'date', 'boolean'], true),
         ));
     }
 
@@ -229,6 +243,7 @@ final class ClientPassport
                 'enum' => ['nullable', Rule::enum($field['enum'])],
                 'integer' => ['nullable', 'integer', 'min:'.($field['min'] ?? 0), 'max:'.($field['max'] ?? 65535)],
                 'date' => ['nullable', 'date'],
+                'boolean' => ['nullable', 'boolean'],
                 default => ['nullable', 'string', 'max:'.($field['max'] ?? 255)],
             };
         }
@@ -256,6 +271,7 @@ final class ClientPassport
                     $key.'.max' => "Значение поля «{$field['label']}» слишком велико.",
                 ],
                 'date' => [$key.'.date' => "Укажите {$label} датой в формате ГГГГ-ММ-ДД."],
+                'boolean' => [$key.'.boolean' => "Поле «{$field['label']}» принимает только «Да» или «Нет»."],
                 default => [$key.'.max' => "Поле «{$field['label']}» длиннее допустимого."],
             };
         }
@@ -279,6 +295,7 @@ final class ClientPassport
                 'enum' => Param::string($key, $description, enum: array_column($field['enum']::cases(), 'value'), nullable: true),
                 'integer' => Param::integer($key, $description, rules: ['min:'.($field['min'] ?? 0), 'max:'.($field['max'] ?? 65535)], nullable: true),
                 'date' => Param::string($key, $description.' (ГГГГ-ММ-ДД)', rules: ['date'], nullable: true),
+                'boolean' => Param::boolean($key, $description, nullable: true),
                 default => Param::string($key, $description, rules: ['max:'.($field['max'] ?? 255)], nullable: true),
             };
         }
@@ -345,6 +362,9 @@ final class ClientPassport
                 $value === null => null,
                 $field['type'] === 'enum' => $value->value,
                 $field['type'] === 'date' => $value->format('Y-m-d'),
+                // Строкой, а не булевым: селект в форме сравнивает значения как
+                // строки, и true превратился бы в невыбранный пункт.
+                $field['type'] === 'boolean' => $value ? '1' : '0',
                 default => $value,
             };
         }
@@ -363,11 +383,18 @@ final class ClientPassport
         $labels = [];
 
         foreach (self::fields() as $key => $field) {
-            if ($field['type'] !== 'enum') {
-                continue;
-            }
+            $value = $profile->getAttribute($key);
 
-            $labels[$key] = $profile->getAttribute($key)?->label();
+            $labels[$key] = match (true) {
+                $field['type'] === 'enum' => $value?->label(),
+                // Без подписи режим чтения показал бы «1» вместо «Да».
+                $field['type'] === 'boolean' => $value === null ? null : ($value ? 'Да' : 'Нет'),
+                default => null,
+            };
+
+            if ($labels[$key] === null && ! in_array($field['type'], ['enum', 'boolean'], true)) {
+                unset($labels[$key]);
+            }
         }
 
         return $labels;

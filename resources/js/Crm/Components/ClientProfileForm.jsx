@@ -270,6 +270,16 @@ function PassportField({ field, value, onChange, error, items }) {
             {field.type === 'enum' && (
                 <EnumSelect value={value ?? ''} onChange={onChange} items={items || []} />
             )}
+            {field.type === 'boolean' && (
+                <EnumSelect
+                    value={value ?? ''}
+                    onChange={onChange}
+                    items={[
+                        { value: '1', label: 'Да' },
+                        { value: '0', label: 'Нет' },
+                    ]}
+                />
+            )}
             {field.type === 'integer' && <Input type="number" min={0} {...common} />}
             {field.type === 'date' && <Input type="date" {...common} />}
             {field.type === 'string' && <Input {...common} />}

@@ -53,6 +53,9 @@ class ClientPassportTest extends TestCase
         return [
             'business_type' => 'chain',
             'points_count' => 12,
+            'has_offline_points' => true,
+            'has_online_store' => true,
+            'works_with_marketplaces' => false,
             'specialization' => 'lingerie',
             'primary_channel' => 'offline',
             'secondary_channel' => 'online',
