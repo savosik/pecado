@@ -90,6 +90,8 @@ class PaymentController extends Controller
             'company',
             'organization:id,name,legal_name,tax_id,is_stub',
             'allocations.shipment:id,number,erp_number,date,total_amount,paid_amount,payment_status,currency_code',
+            // v15.16.0: расшифровка вмещает и заказы (предоплата), и прочие документы
+            'allocations.order:id,uuid,number,erp_number,total_amount,prepaid_amount,created_at,erp_created_at',
         ]);
 
         $currency = $this->getUserCurrency($request);
@@ -122,6 +124,12 @@ class PaymentController extends Controller
                         'id' => $allocation->id,
                         'amount' => (float) $allocation->amount,
                         'amount_converted' => $this->convertAmount((float) $allocation->amount, $payment->currency_code, $currency),
+                        // v15.16.0: тип документа расшифровки. `document_label` —
+                        // единственное, что можно показать по строке `other`:
+                        // такие документы сайт не заводит
+                        'target_type' => $allocation->target_type,
+                        'target_type_label' => PaymentAllocation::TARGET_LABELS[$allocation->target_type] ?? 'Документ',
+                        'document_label' => $allocation->documentLabel(),
                         'shipment' => $allocation->shipment ? [
                             'id' => $allocation->shipment->id,
                             'number' => $allocation->shipment->erp_number
@@ -132,6 +140,15 @@ class PaymentController extends Controller
                             'paid_amount' => (float) $allocation->shipment->paid_amount,
                             'payment_status' => $allocation->shipment->payment_status,
                             'payment_status_label' => $allocation->shipment->payment_status_label,
+                        ] : null,
+                        'order' => $allocation->order ? [
+                            'id' => $allocation->order->id,
+                            'number' => $allocation->order->erp_number
+                                ?? $allocation->order->number
+                                ?? ('#'.$allocation->order->id),
+                            'date' => ($allocation->order->erp_created_at ?? $allocation->order->created_at)?->format('Y-m-d'),
+                            'total_amount' => (float) $allocation->order->total_amount,
+                            'prepaid_amount' => (float) $allocation->order->prepaid_amount,
                         ] : null,
                     ])->all(),
             ]),

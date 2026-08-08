@@ -136,64 +136,83 @@ export default function PaymentShow({ payment }) {
             <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
                 <Card.Body p={4}>
                     <Text fontWeight="700" fontSize="md" mb="3">
-                        Отгрузки, закрытые этим платежом ({payment.allocations.length})
+                        Расшифровка платежа ({payment.allocations.length})
                     </Text>
 
                     {payment.allocations.length === 0 ? (
                         <Text fontSize="sm" color="gray.500">
-                            Платёж пока не разнесён по отгрузкам — вся сумма числится авансом.
+                            Платёж пока не разнесён по документам — вся сумма числится авансом.
                         </Text>
                     ) : (
                         <Box overflowX="auto">
                             <Table.Root size="sm">
                                 <Table.Header>
                                     <Table.Row>
-                                        <Table.ColumnHeader>Отгрузка</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Документ</Table.ColumnHeader>
                                         <Table.ColumnHeader>Дата</Table.ColumnHeader>
-                                        <Table.ColumnHeader textAlign="end">Сумма отгрузки</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="end">Сумма документа</Table.ColumnHeader>
                                         <Table.ColumnHeader textAlign="end">Зачтено</Table.ColumnHeader>
-                                        <Table.ColumnHeader>Оплата отгрузки</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Статус</Table.ColumnHeader>
                                     </Table.Row>
                                 </Table.Header>
                                 <Table.Body>
-                                    {payment.allocations.map((allocation) => (
-                                        <Table.Row key={allocation.id}>
-                                            <Table.Cell>
-                                                {allocation.shipment ? (
-                                                    <Link href={`/cabinet/shipments/${allocation.shipment.id}`}>
-                                                        <Text fontSize="sm" fontFamily="mono" color="pecado.600" textDecoration="underline">
-                                                            {allocation.shipment.number}
+                                    {payment.allocations.map((allocation) => {
+                                        // v15.16.0: строка расшифровки указывает на реализацию,
+                                        // на заказ (предоплата) либо на прочий документ 1С,
+                                        // которого на сайте нет вовсе
+                                        const doc = allocation.shipment || allocation.order || null;
+                                        const href = allocation.shipment
+                                            ? `/cabinet/shipments/${allocation.shipment.id}`
+                                            : (allocation.order ? `/cabinet/orders/${allocation.order.id}` : null);
+
+                                        return (
+                                            <Table.Row key={allocation.id}>
+                                                <Table.Cell>
+                                                    {href ? (
+                                                        <Link href={href}>
+                                                            <Text fontSize="sm" fontFamily="mono" color="pecado.600" textDecoration="underline">
+                                                                {doc.number}
+                                                            </Text>
+                                                        </Link>
+                                                    ) : (
+                                                        <Text fontSize="sm" color="gray.500">
+                                                            {allocation.document_label}
                                                         </Text>
-                                                    </Link>
-                                                ) : (
-                                                    <Text fontSize="sm" color="gray.500">Отгрузка ещё не загружена</Text>
-                                                )}
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                <Text fontSize="sm">
-                                                    {allocation.shipment?.date
-                                                        ? new Date(allocation.shipment.date).toLocaleDateString('ru-RU')
-                                                        : '—'}
-                                                </Text>
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="end" fontFamily="mono">
-                                                {allocation.shipment ? fmt(allocation.shipment.total_amount) : '—'}
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="end" fontFamily="mono" fontWeight="600">
-                                                {fmt(allocation.amount)}
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                {allocation.shipment ? (
-                                                    <Badge
-                                                        colorPalette={PAYMENT_STATUS_COLORS[allocation.shipment.payment_status] || 'gray'}
-                                                        variant="subtle"
-                                                    >
-                                                        {allocation.shipment.payment_status_label}
-                                                    </Badge>
-                                                ) : '—'}
-                                            </Table.Cell>
-                                        </Table.Row>
-                                    ))}
+                                                    )}
+                                                    <Text fontSize="xs" color="fg.muted">
+                                                        {allocation.target_type_label}
+                                                    </Text>
+                                                </Table.Cell>
+                                                <Table.Cell>
+                                                    <Text fontSize="sm">
+                                                        {doc?.date
+                                                            ? new Date(doc.date).toLocaleDateString('ru-RU')
+                                                            : '—'}
+                                                    </Text>
+                                                </Table.Cell>
+                                                <Table.Cell textAlign="end" fontFamily="mono">
+                                                    {doc ? fmt(doc.total_amount) : '—'}
+                                                </Table.Cell>
+                                                <Table.Cell textAlign="end" fontFamily="mono" fontWeight="600">
+                                                    {fmt(allocation.amount)}
+                                                </Table.Cell>
+                                                <Table.Cell>
+                                                    {allocation.shipment ? (
+                                                        <Badge
+                                                            colorPalette={PAYMENT_STATUS_COLORS[allocation.shipment.payment_status] || 'gray'}
+                                                            variant="subtle"
+                                                        >
+                                                            {allocation.shipment.payment_status_label}
+                                                        </Badge>
+                                                    ) : allocation.target_type === 'order' ? (
+                                                        <Badge colorPalette="blue" variant="subtle">
+                                                            Предоплата
+                                                        </Badge>
+                                                    ) : '—'}
+                                                </Table.Cell>
+                                            </Table.Row>
+                                        );
+                                    })}
                                 </Table.Body>
                             </Table.Root>
                         </Box>

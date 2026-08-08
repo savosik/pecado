@@ -7,7 +7,8 @@
     "properties": {
         "event": {
             "type": "string",
-            "const": "promotion.deleted"
+            "const": "promotion.deleted",
+            "description": "Тип события. Всегда «promotion.deleted». Ограничено константой в v15.16.0: до этого поле принимало любую строку, и сообщение с чужим event проходило бы валидацию этой схемы."
         },
         "message_id": {
             "type": "string",
@@ -19,5 +20,8 @@
         }
     },
     "additionalProperties": true,
-    "required": ["event", "uuid"]
+    "required": [
+        "event",
+        "uuid"
+    ]
 }

@@ -790,7 +790,57 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v15160" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Типы документов расшифровки (v15.16.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Типы документов расшифровки (v15.16.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Правила
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что закрывает накладную
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        other — что увидит клиент
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         Порядок первичной выгрузки
@@ -801,7 +851,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
+  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -1031,6 +1081,34 @@
     
   
     Нормализация данных
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../message-ordering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Порядок доставки и свежесть
   
 
     
@@ -1790,7 +1868,57 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v15160" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Типы документов расшифровки (v15.16.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Типы документов расшифровки (v15.16.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Правила
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что закрывает накладную
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        other — что увидит клиент
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         Порядок первичной выгрузки
@@ -1801,7 +1929,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
+  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -1864,8 +1992,8 @@
 <li><strong>(v15.11.0)</strong> Один платёж разносится на <strong>несколько реализаций</strong>, и одна реализация закрывается <strong>несколькими платежами</strong>. Разнесение приходит массивом <code>allocations</code> внутри самого сообщения — отдельного события для расшифровки нет</li>
 <li><strong>(v15.11.0) Разнесение заменяется целиком.</strong> Содержимое <code>allocations</code> полностью вытесняет то, что сохранено на сайте. Досылать только изменившиеся строки нельзя — сайт не умеет отличить «строки не изменились» от «строк больше нет»</li>
 <li><strong>(v15.11.0) Отсутствие ключа <code>allocations</code> и пустой массив означают разное.</strong> Ключа нет — сайт <strong>не трогает</strong> сохранённое разнесение (используйте, когда меняется только шапка документа). Пустой массив <code>[]</code> — сайт <strong>очищает</strong> разнесение полностью, платёж становится авансом. Различие критично: если 1С опустит ключ, подразумевая «разнеси заново на ноль», оплата останется на реализациях</li>
-<li><strong>(v15.11.0) Строка расшифровки связывается по <code>shipment_uuid</code>, а не по номеру.</strong> Реализация может ещё не приехать на сайт: строка сохранится без привязки, а связь доклеится автоматически при получении <code>shipment.created</code> / <code>shipment.updated</code> с этим uuid. Строка без <code>shipment_uuid</code> пропускается — она бессмысленна</li>
-<li><strong>(v15.11.0)</strong> Поле <code>target_type</code> заведено на вырост. Сейчас поддерживается только <code>shipment</code>; строки с другим значением сайт пропускает и пишет предупреждение в лог. Отсутствие поля равнозначно <code>shipment</code></li>
+<li><strong>(v15.11.0) Строка расшифровки связывается по uuid, а не по номеру.</strong> Документ может ещё не приехать на сайт: строка сохранится без привязки, а связь доклеится автоматически при его получении</li>
+<li><strong>(v15.16.0) Расшифровка не ограничена реализациями</strong> — см. раздел «Типы документов расшифровки» ниже</li>
 <li><strong>(v15.11.0) Направление передаётся явно</strong> полем <code>direction</code> (<code>in</code> — поступление от клиента, <code>out</code> — возврат клиенту). Сайт не выводит направление из текста операции: наименование операции меняется вместе с настройками учёта. При отсутствии поля платёж считается поступлением. Сумма <code>amount</code> всегда положительная — знак задаёт <code>direction</code>, а не сама сумма</li>
 <li><strong>(v15.11.0)</strong> <code>operation_code</code> — машинный код операции латиницей (<code>customer_payment</code>, <code>customer_refund</code>). <code>operation_name</code> — русское наименование как в 1С, показывается сотрудникам как есть и в логике не участвует</li>
 <li><strong>(v15.11.0) Привязка к контрагенту</strong> повторяет правило реализаций:<ul>
@@ -1883,12 +2011,107 @@
 <li><strong>(v15.11.0) Номер документа не уникален.</strong> Номера повторяются между организациями и годами, поэтому связь строится только по <code>uuid</code>. Поле <code>bank_number</code> (номер по банку) — отдельный номер, по которому клиент ищет платёж в своей выписке</li>
 <li><strong>(v15.11.0) Время в <code>date</code> значимо.</strong> Порядок платежей внутри дня определяет, каким из них закрыта реализация, поэтому <code>date</code> передаётся как datetime, а не как дата</li>
 <li><strong>(v15.11.0) Реквизиты платежа на сайте не редактируются.</strong> Мастер — 1С. Сотрудник сайта может добавить только комментарий и вложения; эти поля в 1С не уходят и из 1С не перезаписываются</li>
+<li><strong>(v15.16.0) Комментарий 1С хранится отдельно от комментария сотрудника.</strong> Поле <code>comment</code> из payload попадает в собственную колонку и <strong>не затирает</strong> заметку менеджера — иначе первая же доставка документа стирала бы её. Не путать с <code>purpose</code>: там назначение платежа из банковской выписки, это другое поле и другой смысл</li>
+<li><strong>(v15.16.0) <code>organization_account</code> — НАШ счёт, <code>payer_account</code> — счёт КЛИЕНТА.</strong> Состав полей у них одинаковый, различие только смысловое, и до v15.16.0 описания были дословно одинаковыми. Перепутав их, клиент увидел бы в кабинете собственный счёт вместо нашего и решил бы, что деньги ушли не туда</li>
 </ul>
-<h2 id="_3">Порядок первичной выгрузки<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<h2 id="v15160">Типы документов расшифровки (v15.16.0)<a class="headerlink" href="#v15160" title="Permanent link">&para;</a></h2>
+<p>До v15.16.0 строка расшифровки умела указывать <strong>только на реализацию</strong>:
+<code>shipment_uuid</code> был обязателен, <code>target_type</code> знал единственное значение <code>shipment</code>.</p>
+<p>Замер 1С на боевой базе за 2026 год показал, что это вмещает меньше трети денег:</p>
+<table>
+<thead>
+<tr>
+<th>На что указывает строка</th>
+<th>Строк</th>
+<th>Доля строк</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Реализация</td>
+<td>4 366</td>
+<td>58%</td>
+</tr>
+<tr>
+<td><strong>Заказ клиента (предоплата)</strong></td>
+<td><strong>2 033</strong></td>
+<td><strong>27%</strong></td>
+</tr>
+<tr>
+<td><strong>Первичный документ</strong></td>
+<td><strong>880</strong></td>
+<td><strong>12%</strong></td>
+</tr>
+<tr>
+<td><strong>Отчёт комиссионера</strong></td>
+<td><strong>146</strong></td>
+<td><strong>2%</strong></td>
+</tr>
+<tr>
+<td>Прочее</td>
+<td>111</td>
+<td>1%</td>
+</tr>
+</tbody>
+</table>
+<p>В деньгах хуже: из 156 754 061,98 ₽ разнесения на реализации ложится
+44 881 268,77 ₽, а <strong>111 872 793,21 ₽ (71,4%) не помещалось</strong>. Не помещались
+именно крупные предоплаты по заказам: чем больше платёж, тем вероятнее, что
+реализации ещё нет.</p>
+<h3 id="_3">Правила<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<p><code>target_type</code> определяет, какое поле в строке обязательно:</p>
+<table>
+<thead>
+<tr>
+<th><code>target_type</code></th>
+<th>Обязательное поле</th>
+<th>Что делает сайт</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>shipment</code> (или поле отсутствует)</td>
+<td><code>shipment_uuid</code></td>
+<td>Засчитывает оплату реализации</td>
+</tr>
+<tr>
+<td><code>order</code></td>
+<td><code>order_uuid</code></td>
+<td>Показывает предоплату в карточке заказа</td>
+</tr>
+<tr>
+<td><code>other</code></td>
+<td>— (желательны <code>target_uuid</code> и <code>target_name</code>)</td>
+<td>Сохраняет строку и показывает её как есть</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Отсутствие <code>target_type</code> и <code>null</code> означают <code>shipment</code></strong> — обратная совместимость
+  с v15.11.0.</li>
+<li>Строка, не удовлетворяющая требованию своей колонки, <strong>пропускается</strong> с записью
+  в лог. После v15.16.0 это должно стать редким исключением, а не системой.</li>
+<li>Тип вне перечисления пропускается так же.</li>
+</ul>
+<h3 id="_4">Что закрывает накладную<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<p><strong>Оплату реализации закрывают только строки <code>shipment</code>.</strong> Предоплата по заказу
+накладную не гасит: пока реализации нет, гасить нечего.</p>
+<p>Когда реализация появляется, 1С переразносит платёж и присылает его <strong>целиком
+заново</strong> — правило «разнесение заменяется целиком» не меняется. Досылать
+изменившиеся строки по-прежнему нельзя.</p>
+<p>Вариант «1С сама развернёт заказ в реализации» отвергнут обеими сторонами:
+на момент платежа реализации может не быть, а при её появлении пришлось бы
+досылать обновления по всем ранее отправленным платежам заказа.</p>
+<h3 id="other"><code>other</code> — что увидит клиент<a class="headerlink" href="#other" title="Permanent link">&para;</a></h3>
+<p>Строки <code>other</code> сайт ни с чем не связывает. В расшифровке показывается
+<code>target_name</code> — представление документа строкой, как в 1С
+(«Отчёт комиссионера 29УТ-000112 от 14.03.2026»). Если поле не заполнено,
+клиент увидит только сумму, поэтому заполнять его стоит осмысленно.</p>
+<h2 id="_5">Порядок первичной выгрузки<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
 <p>Платежи выгружаются <strong>после реализаций</strong>. Иначе весь массив приедет с неразрешёнными <code>shipment_uuid</code>,
 и оплата проставится только по мере доезда реализаций. Порядок не критичен для корректности
 (связь доклеивается), но экономит часы на первичной заливке.</p>
-<h2 id="_4">Критерии приёмки<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<h2 id="_6">Критерии приёмки<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[x] <strong>(v15.11.0)</strong> Сайт принимает <code>payment.created</code>, <code>payment.updated</code>, <code>payment.deleted</code> из очереди <code>erp_in.payments</code></li>
 <li>[x] <strong>(v15.11.0)</strong> Company находится сначала по <code>contractor_uuid</code>, затем fallback по <code>tax_id + partner_uuid</code>; поиск без <code>partner_uuid</code> не выполняется</li>
@@ -1902,6 +2125,12 @@
 <li>[x] <strong>(v15.11.0)</strong> Платёж в валюте, отличной от валюты реализации, в оплату не засчитывается</li>
 <li>[x] <strong>(v15.11.0)</strong> <code>payment.deleted</code> обнуляет вклад платежа в оплату реализаций, сохраняя строки расшифровки; повторное <code>payment.created</code> возвращает оплату</li>
 <li>[x] <strong>(v15.11.0)</strong> Клиент видит свои оплаты в личном кабинете и разнесённые платежи в карточке реализации</li>
+<li>[x] <strong>(v15.16.0)</strong> Строка с <code>target_type: "order"</code> и заполненным <code>order_uuid</code> сохраняется, а не пропускается</li>
+<li>[x] <strong>(v15.16.0)</strong> Предоплата по заказу видна клиенту в карточке заказа и менеджеру в CRM</li>
+<li>[x] <strong>(v15.16.0)</strong> Предоплата по заказу <strong>не</strong> засчитывается в оплату реализаций этого заказа</li>
+<li>[x] <strong>(v15.16.0)</strong> Строка <code>target_type: "other"</code> сохраняется и показывается по <code>target_name</code></li>
+<li>[x] <strong>(v15.16.0)</strong> Строка <code>order</code> без <code>order_uuid</code> и строка <code>shipment</code> без <code>shipment_uuid</code> пропускаются с записью в лог</li>
+<li>[x] <strong>(v15.16.0)</strong> Строка по заказу, приехавшая раньше самого заказа, доклеивается при его получении</li>
 </ul>
 <blockquote>
 <p>Отмеченное подтверждено автотестами: <code>HandlePayment*Test</code>, <code>PaymentAllocationServiceTest</code>,

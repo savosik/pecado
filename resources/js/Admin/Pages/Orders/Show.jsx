@@ -276,13 +276,19 @@ const OrderShow = () => {
                                     const finalPrice = parseFloat(item.final_price) || parseFloat(item.price) || 0;
 
                                     return (
-                                        <Table.Row key={item.id}>
+                                        <Table.Row key={item.id} opacity={item.cancelled ? 0.6 : 1}>
                                             <Table.Cell>
                                                 <Text>{item.name}</Text>
                                                 {item.product && (
                                                     <Text color="fg.muted" fontSize="xs">
                                                         ID: {item.product.id}
                                                     </Text>
+                                                )}
+                                                {/* Недобор: строка отменена в 1С и в сумму заказа не входит */}
+                                                {item.cancelled && (
+                                                    <Badge colorPalette="gray" variant="subtle" size="xs" mt="1">
+                                                        Отменена в 1С — нет в наличии
+                                                    </Badge>
                                                 )}
                                             </Table.Cell>
                                             <Table.Cell textAlign="right">
@@ -304,7 +310,14 @@ const OrderShow = () => {
                                                 <Text fontFamily="mono">{item.quantity}</Text>
                                             </Table.Cell>
                                             <Table.Cell textAlign="right">
-                                                <Text fontFamily="mono" fontWeight="bold">{fmt(item.subtotal)} ₽</Text>
+                                                <Text
+                                                    fontFamily="mono"
+                                                    fontWeight="bold"
+                                                    textDecoration={item.cancelled ? 'line-through' : undefined}
+                                                    color={item.cancelled ? 'fg.muted' : undefined}
+                                                >
+                                                    {fmt(item.subtotal)} ₽
+                                                </Text>
                                             </Table.Cell>
                                         </Table.Row>
                                     );

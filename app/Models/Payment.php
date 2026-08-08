@@ -116,6 +116,9 @@ class Payment extends Model implements HasMedia
         'bank_confirmed_at',
         'uip',
         'purpose',
+        // v15.16.0: комментарий из 1С. Отдельно от `comment`, который ведёт
+        // сотрудник сайта и который 1С не перезаписывает
+        'erp_comment',
         'amount',
         'currency_code',
         'allocated_amount',

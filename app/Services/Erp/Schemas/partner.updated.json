@@ -7,6 +7,7 @@
     "properties": {
         "event": {
             "type": "string",
+            "description": "Тип события. Всегда «partner.updated». Ограничено константой в v15.16.0: до этого поле принимало любую строку, и сообщение с чужим event проходило бы валидацию этой схемы.",
             "const": "partner.updated"
         },
         "message_id": {
@@ -70,7 +71,10 @@
                     "description": "ФИО/наименование менеджера для отображения"
                 }
             },
-            "required": ["uuid", "name"]
+            "required": [
+                "uuid",
+                "name"
+            ]
         }
     },
     "additionalProperties": true,

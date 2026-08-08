@@ -5,7 +5,12 @@
     "type": "object",
     "properties": {
         "event": {
-            "type": "string"
+            "type": "string",
+            "description": "Тип события: «category.created», «category.updated». Ограничено перечислением в v15.16.0. Структура у этих событий общая, поэтому схема одна на несколько значений.",
+            "enum": [
+                "category.created",
+                "category.updated"
+            ]
         },
         "message_id": {
             "type": "string",

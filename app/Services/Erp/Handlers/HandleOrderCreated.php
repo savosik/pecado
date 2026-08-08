@@ -7,11 +7,10 @@ use App\Enums\OrderType;
 use App\Jobs\SendPreorderToSupplierJob;
 use App\Models\Company;
 use App\Models\Order;
-use App\Models\Product;
 use App\Models\User;
+use App\Services\Erp\Support\LinksPrepaymentToOrder;
+use App\Services\Erp\Support\OrderItemsSynchronizer;
 use App\Services\Erp\Support\OrderStatusMapper;
-use App\Services\Erp\Support\PreservesDefectItemLinks;
-use App\Services\Erp\Support\PreservesPromoItemLinks;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -32,9 +31,12 @@ use Illuminate\Support\Facades\Log;
  */
 class HandleOrderCreated
 {
-    use PreservesDefectItemLinks;
-    use PreservesPromoItemLinks;
+    use LinksPrepaymentToOrder;
     use ResolvesDocumentOrganization;
+
+    public function __construct(
+        private readonly OrderItemsSynchronizer $itemsSynchronizer,
+    ) {}
 
     public function handle(array $payload): void
     {
@@ -220,59 +222,19 @@ class HandleOrderCreated
                 ]));
             });
 
-            // --- Позиции заказа (полная замена при upsert) ---
-            // Складские привязки уценки (product_defect_id, defect_description)
-            // держит сайт — 1С их не присылает. Снимаем до удаления, чтобы
-            // перенести на пересозданные позиции и не потерять партию брака.
-            $defectLinks = $existingOrder ? $this->captureDefectLinks($order) : [];
-            $promoLinks = $existingOrder ? $this->capturePromoLinks($order) : [];
-
-            if ($existingOrder) {
-                $order->items()->delete();
-            }
-
-            $totalAmount = 0;
-
-            foreach ($items as $item) {
-                $productUuid = $item['product_uuid'] ?? null;
-                $product = $productUuid
-                    ? Product::withoutGlobalScopes()->where('external_id', $productUuid)->first()
-                    : null;
-
-                $quantity = $item['quantity'] ?? 0;
-                $basePrice = $item['base_price'] ?? $item['price'] ?? 0;
-                $discountPercent = $item['discount_percent'] ?? 0;
-                $finalPrice = $item['final_price'] ?? $item['price'] ?? $basePrice;
-                $subtotal = round($quantity * $finalPrice, 2);
-
-                // Если товар не найден — сохраняем название (товара может уже не быть)
-                $name = $product
-                    ? $product->name
-                    : ($item['name'] ?? $productUuid ?? 'Неизвестный товар');
-
-                $link = $this->pullDefectLink($defectLinks, $product?->id);
-                $promo = $this->pullPromoLink($promoLinks, $product?->id, $item);
-
-                $order->items()->create([
-                    'product_id' => $product?->id,
-                    'name' => $name,
-                    'quantity' => $quantity,
-                    'price' => $finalPrice,
-                    'base_price' => $basePrice,
-                    'discount_percent' => $discountPercent,
-                    'final_price' => $finalPrice,
-                    'subtotal' => $subtotal,
-                    'product_defect_id' => $link['product_defect_id'],
-                    'defect_description' => $link['defect_description'],
-                    'promotion_rule_id' => $promo['promotion_rule_id'],
-                    'promo_kind' => $promo['promo_kind'],
-                ]);
-
-                $totalAmount += $subtotal;
-            }
+            // --- Позиции заказа ---
+            // v15.16.0: позиции сопоставляются по line_number и обновляются, а не
+            // пересоздаются. Складские привязки уценки и промо (их держит сайт,
+            // 1С про них не знает) синхронизатор переносит сам. Отменённые при
+            // недоборе строки сохраняются, но в сумму заказа не входят.
+            $totalAmount = $this->itemsSynchronizer->sync($order, $items);
 
             // Обновляем сумму заказа
             $order->updateQuietly(['total_amount' => $totalAmount]);
+
+            // v15.16.0: предоплата по заказу могла приехать раньше самого заказа —
+            // платежи идут своей очередью. Пересчитываем агрегат от строк расшифровки.
+            $this->refreshOrderPrepayment($order);
 
             // Если 1С создала/обновила заказ сразу в статусе «Удалён» — soft-delete
             // (status уже выставлен в closed выше). Не диспатчим OrderDeleted,

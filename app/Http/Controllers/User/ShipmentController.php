@@ -422,6 +422,9 @@ class ShipmentController extends Controller
                 'number' => $shipment->erp_number ?? $shipment->number ?? ('#'.$shipment->id),
                 'tax_id' => $shipment->tax_id,
                 'date' => $shipment->date?->format('Y-m-d'),
+                // v15.16.0: счёт-фактура из 1С — нужна бухгалтерии клиента
+                'invoice_number' => $shipment->invoice_number,
+                'invoice_date' => $shipment->invoice_date?->format('d.m.Y'),
                 'updated_at' => $shipment->updated_at?->format('d.m.Y H:i'),
                 'status' => $shipment->status,
                 'status_label' => self::STATUS_LABELS[$shipment->status] ?? $shipment->status,

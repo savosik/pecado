@@ -2,6 +2,7 @@
 
 namespace App\Services\Payments;
 
+use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use App\Models\Shipment;
@@ -36,53 +37,107 @@ class PaymentAllocationService
         // на реализации оплату-призрака: строки уже удалены, и пересчитывать нечего.
         $affected = $payment->allocations()->whereNotNull('shipment_id')->pluck('shipment_id')->all();
 
-        DB::transaction(function () use ($payment, $rows, &$affected) {
+        // То же для заказов: снятая предоплата обязана исчезнуть из карточки заказа.
+        $affectedOrders = $payment->allocations()->whereNotNull('order_uuid')->pluck('order_uuid')->all();
+
+        DB::transaction(function () use ($payment, $rows, &$affected, &$affectedOrders) {
             $payment->allocations()->delete();
 
             foreach (array_values($rows) as $index => $row) {
-                $shipmentUuid = is_array($row) ? ($row['shipment_uuid'] ?? null) : null;
-
-                if (! $shipmentUuid) {
-                    Log::warning('PaymentAllocationService: строка расшифровки без shipment_uuid пропущена', [
-                        'payment_uuid' => $payment->uuid,
-                        'line' => $index + 1,
-                    ]);
-
+                if (! is_array($row)) {
                     continue;
                 }
 
-                // target_type заведён на вырост: сегодня расшифровка бывает только
-                // по реализациям, но контракт допускает другие документы.
-                $targetType = $row['target_type'] ?? 'shipment';
+                $line = $this->parseRow($payment, $row, $index + 1);
 
-                if (! in_array($targetType, [null, 'shipment'], true)) {
-                    Log::warning('PaymentAllocationService: строка расшифровки не по реализации пропущена', [
-                        'payment_uuid' => $payment->uuid,
-                        'target_type' => $targetType,
-                        'line' => $index + 1,
-                    ]);
-
+                if ($line === null) {
                     continue;
                 }
 
-                $shipmentId = Shipment::withoutGlobalScopes()->where('uuid', $shipmentUuid)->value('id');
+                $payment->allocations()->create($line);
 
-                $payment->allocations()->create([
-                    'shipment_uuid' => $shipmentUuid,
-                    'shipment_id' => $shipmentId,
-                    'order_uuid' => $row['order_uuid'] ?? null,
-                    'amount' => round((float) ($row['amount'] ?? 0), 2),
-                    'line_number' => $row['line_number'] ?? $index + 1,
-                ]);
+                if ($line['shipment_id'] !== null) {
+                    $affected[] = $line['shipment_id'];
+                }
 
-                if ($shipmentId) {
-                    $affected[] = $shipmentId;
+                if ($line['order_uuid'] !== null) {
+                    $affectedOrders[] = $line['order_uuid'];
                 }
             }
 
             $this->recalculatePayment($payment);
             $this->recalculateShipments(array_unique($affected));
+            $this->recalculateOrders(array_unique($affectedOrders));
         });
+    }
+
+    /**
+     * Разбор строки расшифровки. null — строку принять нельзя.
+     *
+     * v15.16.0: расшифровка не ограничена реализациями. Ключ связи зависит
+     * от `target_type`, и требование к строке — тоже:
+     *
+     *   shipment (или тип не передан) → обязателен shipment_uuid
+     *   order                          → обязателен order_uuid
+     *   other                          → достаточно суммы
+     *
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>|null
+     */
+    private function parseRow(Payment $payment, array $row, int $line): ?array
+    {
+        // Отсутствие ключа и явный null означают реализацию — совместимость
+        // с v15.11.0, когда другого типа контракт не допускал.
+        $targetType = $row['target_type'] ?? PaymentAllocation::TARGET_SHIPMENT;
+
+        if (! in_array($targetType, PaymentAllocation::TARGET_TYPES, true)) {
+            Log::warning('PaymentAllocationService: строка расшифровки с неизвестным типом документа пропущена', [
+                'payment_uuid' => $payment->uuid,
+                'target_type' => $targetType,
+                'line' => $line,
+            ]);
+
+            return null;
+        }
+
+        $shipmentUuid = $row['shipment_uuid'] ?? null;
+        $orderUuid = $row['order_uuid'] ?? null;
+
+        if ($targetType === PaymentAllocation::TARGET_SHIPMENT && ! $shipmentUuid) {
+            Log::warning('PaymentAllocationService: строка расшифровки по реализации без shipment_uuid пропущена', [
+                'payment_uuid' => $payment->uuid,
+                'line' => $line,
+            ]);
+
+            return null;
+        }
+
+        if ($targetType === PaymentAllocation::TARGET_ORDER && ! $orderUuid) {
+            Log::warning('PaymentAllocationService: строка расшифровки по заказу без order_uuid пропущена', [
+                'payment_uuid' => $payment->uuid,
+                'line' => $line,
+            ]);
+
+            return null;
+        }
+
+        // shipment_id резолвим только для строк по реализации: у строки по заказу
+        // shipment_uuid может быть заполнен справочно, но оплату она не закрывает.
+        // Наличие uuid здесь уже гарантировано проверкой выше.
+        $shipmentId = $targetType === PaymentAllocation::TARGET_SHIPMENT
+            ? Shipment::withoutGlobalScopes()->where('uuid', $shipmentUuid)->value('id')
+            : null;
+
+        return [
+            'target_type' => $targetType,
+            'shipment_uuid' => $shipmentUuid,
+            'shipment_id' => $shipmentId,
+            'order_uuid' => $orderUuid,
+            'target_uuid' => $row['target_uuid'] ?? null,
+            'target_name' => $row['target_name'] ?? null,
+            'amount' => round((float) ($row['amount'] ?? 0), 2),
+            'line_number' => $row['line_number'] ?? $line,
+        ];
     }
 
     /**
@@ -131,6 +186,70 @@ class PaymentAllocationService
             // записи агрегатов, а не параллельно с ней.
             app(PaymentScheduleService::class)->redistributeMany($chunk);
         }
+    }
+
+    /**
+     * Пересчитать предоплату заказов (v15.16.0).
+     *
+     * Предоплата — сумма строк расшифровки с `target_type = order`. Накладную она
+     * не гасит: пока реализации нет, гасить нечего. Когда реализация появится,
+     * 1С переразнесёт платёж и пришлёт его целиком заново — строка станет
+     * `shipment` и попадёт уже в оплату реализации.
+     *
+     * Связь мягкая, по `order_uuid`: заказ мог не приехать на сайт вовсе.
+     *
+     * @param  array<int, string>  $orderUuids
+     */
+    public function recalculateOrders(array $orderUuids): void
+    {
+        $orderUuids = array_values(array_unique(array_filter($orderUuids)));
+
+        if ($orderUuids === []) {
+            return;
+        }
+
+        foreach (array_chunk($orderUuids, 500) as $chunk) {
+            $rows = DB::table('payment_allocations as pa')
+                ->join('payments as p', 'p.id', '=', 'pa.payment_id')
+                ->whereIn('pa.order_uuid', $chunk)
+                ->where('pa.target_type', PaymentAllocation::TARGET_ORDER)
+                ->whereNull('p.deleted_at')
+                ->groupBy('pa.order_uuid')
+                ->selectRaw('pa.order_uuid as order_uuid')
+                // Возврат уменьшает предоплату — та же логика, что у реализаций
+                ->selectRaw("SUM(CASE WHEN p.direction = 'out' THEN -pa.amount ELSE pa.amount END) as prepaid")
+                ->get()
+                ->keyBy('order_uuid');
+
+            $orders = Order::withoutGlobalScopes()->withTrashed()
+                ->whereIn('uuid', $chunk)
+                ->get(['id', 'uuid', 'prepaid_amount']);
+
+            foreach ($orders as $order) {
+                $prepaid = round((float) ($rows->get($order->uuid)->prepaid ?? 0), 2);
+
+                if ((float) $order->prepaid_amount === $prepaid) {
+                    continue;
+                }
+
+                // withoutEvents + saveQuietly: заказ не должен уехать обратно в 1С
+                // из-за служебного пересчёта — на его сохранении висит публикация
+                Order::withoutEvents(function () use ($order, $prepaid) {
+                    $order->forceFill(['prepaid_amount' => $prepaid])->saveQuietly();
+                });
+            }
+        }
+    }
+
+    /**
+     * Доклеить предоплату к заказу, приехавшему позже платежа.
+     *
+     * Вызывается из обработчиков заказов: платежи и заказы идут разными очередями,
+     * и предоплата регулярно приезжает раньше самого заказа.
+     */
+    public function recalculateOrder(Order $order): void
+    {
+        $this->recalculateOrders([$order->uuid]);
     }
 
     /**
@@ -237,6 +356,7 @@ class PaymentAllocationService
     {
         $linked = PaymentAllocation::query()
             ->where('shipment_uuid', $shipment->uuid)
+            ->where('target_type', PaymentAllocation::TARGET_SHIPMENT)
             ->whereNull('shipment_id')
             ->update(['shipment_id' => $shipment->id]);
 

@@ -6,7 +6,9 @@
     "type": "object",
     "properties": {
         "event": {
-            "type": "string"
+            "type": "string",
+            "description": "Тип события. Всегда «goods_issue.deleted». Ограничено константой в v15.16.0: до этого поле принимало любую строку, и сообщение с чужим event проходило бы валидацию этой схемы.",
+            "const": "goods_issue.deleted"
         },
         "message_id": {
             "type": "string",

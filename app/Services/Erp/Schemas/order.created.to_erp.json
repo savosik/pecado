@@ -6,7 +6,9 @@
     "type": "object",
     "properties": {
         "event": {
-            "type": "string"
+            "type": "string",
+            "description": "Тип события. Всегда «order.created». Ограничено константой в v15.16.0: до этого поле принимало любую строку, и сообщение с чужим event проходило бы валидацию этой схемы.",
+            "const": "order.created"
         },
         "message_id": {
             "type": "string",
@@ -245,6 +247,14 @@
             "items": {
                 "type": "object",
                 "properties": {
+                    "line_number": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "description": "Номер строки заказа, присвоенный сайтом (v15.16.0). 1С просят завести документ с этими же номерами: когда заказ вернётся обратным order.created, сайт сопоставит позиции по ним, а не эвристикой по товару."
+                    },
                     "product_uuid": {
                         "type": [
                             "string",

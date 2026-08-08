@@ -77,6 +77,9 @@ class Shipment extends Model implements HasMedia
         'uuid',
         'erp_number',
         'number',
+        // v15.16.0: реквизиты счёта-фактуры из 1С — для бухгалтерии клиента
+        'invoice_number',
+        'invoice_date',
         'user_id',
         'company_id',
         'organization_id',
@@ -120,6 +123,7 @@ class Shipment extends Model implements HasMedia
     {
         return [
             'date' => 'date',
+            'invoice_date' => 'date',
             'total_amount' => 'decimal:2',
             'paid_amount' => 'decimal:2',
             'paid_at' => 'datetime',

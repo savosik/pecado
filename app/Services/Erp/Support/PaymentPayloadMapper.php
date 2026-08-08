@@ -31,6 +31,10 @@ class PaymentPayloadMapper
         'bank_confirmed_at' => 'bank_confirmed_at',
         'uip' => 'uip',
         'purpose' => 'purpose',
+        // v15.16.0: комментарий 1С кладём в отдельную колонку. `payments.comment`
+        // принадлежит сайту — это единственное поле платежа, которое ведёт
+        // сотрудник, и общая колонка стирала бы его заметку при каждой доставке.
+        'comment' => 'erp_comment',
         'amount' => 'amount',
         'currency_code' => 'currency_code',
         'erp_created_at' => 'erp_created_at',

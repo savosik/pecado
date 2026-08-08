@@ -13,6 +13,7 @@ import {
     LuTrendingUp,
     LuUser,
 } from 'react-icons/lu';
+import { buildOrderTimeline } from '@/utils/orderTimeline';
 
 const SOURCE_LABELS = {
     erp: '1С',
@@ -29,40 +30,8 @@ const SOURCE_COLORS = {
 const fmt = (v) =>
     Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function mergeEntries(statusHistories = [], changeLogs = []) {
-    const entries = [];
-
-    for (const h of statusHistories) {
-        entries.push({
-            id: `status-${h.id}`,
-            type: 'status_changed',
-            created_at: h.created_at,
-            created_at_human: h.created_at_human,
-            data: h,
-        });
-    }
-
-    for (const c of changeLogs) {
-        entries.push({
-            id: `change-${c.id}`,
-            type: c.type,
-            created_at: c.created_at,
-            created_at_human: c.created_at_human,
-            data: c,
-        });
-    }
-
-    entries.sort((a, b) => {
-        const da = (a.created_at || '').split('.').reverse().join('-');
-        const db = (b.created_at || '').split('.').reverse().join('-');
-        return db.localeCompare(da);
-    });
-
-    return entries;
-}
-
 export function OrderHistoryTimeline({ statusHistories = [], changeLogs = [] }) {
-    const entries = mergeEntries(statusHistories, changeLogs);
+    const entries = buildOrderTimeline(statusHistories, changeLogs);
 
     return (
         <Card.Root>

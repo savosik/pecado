@@ -1134,6 +1134,124 @@ class ErpIncomingJobTest extends TestCase
     }
 
     // ========================================================
+    // US-22 (v15.16.0): недобор — line_number и cancelled в позициях заказа
+    // ========================================================
+
+    /**
+     * Сквозной путь недобора: raw JSON → JSON Schema → HandleOrderUpdated.
+     *
+     * Данные — из живого сообщения 4609585 по заказу 29УТ-012045: одна строка
+     * раздроблена на активную (2 шт) и отменённую (3 шт), у которых совпадает
+     * всё контрактное, кроме quantity и cancelled.
+     *
+     * Проверяется именно полный путь, а не только обработчик: новые поля обязаны
+     * пройти валидацию схемы, иначе сообщение уйдёт в DLQ вместо обработки.
+     */
+    #[Test]
+    public function order_shortfall_split_line_survives_full_pipeline(): void
+    {
+        $user = User::factory()->create();
+        Company::factory()->create([
+            'user_id' => $user->id,
+            'erp_id' => '00000000-0000-4000-a000-0000000022c1',
+            'tax_id' => '7722000001',
+        ]);
+        $user->update(['erp_id' => '00000000-0000-4000-a000-0000000022b1']);
+
+        $product = Product::factory()->create(['external_id' => '00000000-0000-4000-a000-0000000022a1']);
+
+        $order = Order::factory()->create([
+            'uuid' => '00000000-0000-4000-a000-0000000022f1',
+            'user_id' => $user->id,
+            'total_amount' => 19087.50,
+        ]);
+
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'line_number' => 1,
+            'product_id' => $product->id,
+            'quantity' => 5,
+            'price' => 3817.50,
+            'base_price' => 5090,
+            'discount_percent' => 25,
+            'final_price' => 3817.50,
+            'subtotal' => 19087.50,
+        ]);
+
+        $this->makeJob([
+            'event' => 'order.updated',
+            'uuid' => '00000000-0000-4000-a000-0000000022f1',
+            'message_id' => 'msg-order-shortfall-4609585',
+            'status' => 'shipping',
+            'items' => [
+                [
+                    'line_number' => 1,
+                    'product_uuid' => '00000000-0000-4000-a000-0000000022a1',
+                    'quantity' => 2,
+                    'base_price' => 5090,
+                    'discount_percent' => 25,
+                    'final_price' => 3817.50,
+                    'cancelled' => false,
+                ],
+                [
+                    'line_number' => 2,
+                    'product_uuid' => '00000000-0000-4000-a000-0000000022a1',
+                    'quantity' => 3,
+                    'base_price' => 5090,
+                    'discount_percent' => 25,
+                    'final_price' => 3817.50,
+                    'cancelled' => true,
+                ],
+            ],
+        ])->fire();
+
+        $order->refresh();
+
+        $items = $order->items()->orderBy('line_number')->get();
+
+        $this->assertCount(2, $items, 'Строки на один товар не должны схлопнуться');
+        $this->assertFalse((bool) $items[0]->cancelled);
+        $this->assertTrue((bool) $items[1]->cancelled);
+
+        // Единственное число, которое имеет право видеть клиент
+        $this->assertEquals(7635.00, (float) $order->total_amount);
+    }
+
+    /**
+     * Позиции заказа без line_number контракт по-прежнему принимает: 1С включает
+     * поле не одномоментно, и сообщение старого формата не должно уйти в DLQ.
+     */
+    #[Test]
+    public function order_items_without_line_number_still_pass_validation(): void
+    {
+        $product = Product::factory()->create(['external_id' => '00000000-0000-4000-a000-0000000023a1']);
+
+        $order = Order::factory()->create(['uuid' => '00000000-0000-4000-a000-0000000023f1']);
+
+        $this->makeJob([
+            'event' => 'order.updated',
+            'uuid' => '00000000-0000-4000-a000-0000000023f1',
+            'message_id' => 'msg-order-no-line-number',
+            'items' => [
+                [
+                    'product_uuid' => '00000000-0000-4000-a000-0000000023a1',
+                    'quantity' => 4,
+                    'base_price' => 100,
+                    'discount_percent' => 0,
+                    'final_price' => 100,
+                ],
+            ],
+        ])->fire();
+
+        $item = $order->fresh()->items()->first();
+
+        $this->assertNotNull($item, 'Сообщение без line_number обязано обработаться');
+        $this->assertSame(1, $item->line_number, 'Номер строки достраивается порядковым');
+        $this->assertSame($product->id, $item->product_id);
+        $this->assertEquals(400.00, (float) $order->fresh()->total_amount);
+    }
+
+    // ========================================================
     // US-06/07: order.updated / order.deleted — синхронизация заказов
     // ========================================================
 

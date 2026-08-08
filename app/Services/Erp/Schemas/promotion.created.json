@@ -7,7 +7,8 @@
     "properties": {
         "event": {
             "type": "string",
-            "const": "promotion.created"
+            "const": "promotion.created",
+            "description": "Тип события. Всегда «promotion.created». Ограничено константой в v15.16.0: до этого поле принимало любую строку, и сообщение с чужим event проходило бы валидацию этой схемы."
         },
         "message_id": {
             "type": "string",
@@ -20,7 +21,11 @@
         },
         "type": {
             "type": "string",
-            "enum": ["new", "bestseller", "liquidation"],
+            "enum": [
+                "new",
+                "bestseller",
+                "liquidation"
+            ],
             "description": "Тип промо-флага: new — новинка, bestseller — бестселлер, liquidation — ликвидация"
         },
         "items": {
@@ -35,10 +40,17 @@
                         "description": "UUID товара в 1С (external_id)"
                     }
                 },
-                "required": ["uuid"]
+                "required": [
+                    "uuid"
+                ]
             }
         }
     },
     "additionalProperties": true,
-    "required": ["event", "uuid", "type", "items"]
+    "required": [
+        "event",
+        "uuid",
+        "type",
+        "items"
+    ]
 }

@@ -5,7 +5,9 @@
     "type": "object",
     "properties": {
         "event": {
-            "type": "string"
+            "type": "string",
+            "description": "Тип события. Всегда «exchange_rate.updated». Ограничено константой в v15.16.0: до этого поле принимало любую строку, и сообщение с чужим event проходило бы валидацию этой схемы.",
+            "const": "exchange_rate.updated"
         },
         "message_id": {
             "type": "string",

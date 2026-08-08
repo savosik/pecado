@@ -110,7 +110,7 @@ class OrderAssembler
     {
         $total = 0.0;
 
-        foreach ($lines as $line) {
+        foreach (array_values($lines) as $index => $line) {
             [$price, $basePrice, $discountPercent] = $this->resolvePrice($line, $user);
 
             $subtotal = $price * $line->quantity;
@@ -118,6 +118,10 @@ class OrderAssembler
 
             OrderItem::create([
                 'order_id' => $order->id,
+                // v15.16.0: нумеруем строки и на своей стороне — заказ уезжает
+                // в 1С с номерами, и когда документ вернётся обратным
+                // order.created, позиции сопоставятся по ним, а не эвристикой.
+                'line_number' => $index + 1,
                 'product_id' => $line->product->id,
                 'product_defect_id' => $line->productDefectId,
                 'defect_description' => $line->defectDescription,

@@ -773,6 +773,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#-v15160" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Счёт-фактура (v15.16.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1059,6 +1070,34 @@
     
   
     Нормализация данных
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../message-ordering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Порядок доставки и свежесть
   
 
     
@@ -1857,6 +1896,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#-v15160" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Счёт-фактура (v15.16.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2012,6 +2062,20 @@
 реализации в 1С. Чтобы календарь заполнился сразу, 1С делает повторную выгрузку
 <code>shipment.updated</code> по актуальным реализациям. До неё календарь пуст — это ожидаемо,
 ошибкой не является.</p>
+<h2 id="-v15160">Счёт-фактура (v15.16.0)<a class="headerlink" href="#-v15160" title="Permanent link">&para;</a></h2>
+<p>Реализация может нести реквизиты счёта-фактуры:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;invoice&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;29УТ-004417&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-08-08&quot;</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<ul>
+<li>Данные нужны <strong>бухгалтерии клиента</strong>; в логике сайта не участвуют, показываются
+  как справка в кабинете и в CRM.</li>
+<li>Отсутствие ключа <code>invoice</code> <strong>не сбрасывает</strong> сохранённые реквизиты: 1С может
+  присылать их не по всем документам сразу.</li>
+<li>Не путать со значением <code>invoice_date</code> перечисления <code>basis</code> в графике оплаты —
+  там речь о дате <strong>счёта на оплату</strong>, а не о счёте-фактуре. До v15.16.0 это
+  совпадение имён было единственным упоминанием слова <code>invoice</code> в контракте,
+  из-за чего казалось, что место под счёт-фактуру уже есть.</li>
+</ul>
 <h2 id="_4">Критерии приёмки<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[ ] Сайт принимает <code>shipment.created</code>, <code>shipment.updated</code>, <code>shipment.deleted</code></li>

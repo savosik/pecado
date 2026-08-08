@@ -77,6 +77,17 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                         />
                         <InfoBlock label="ИНН контрагента" value={shipment.tax_id} mono />
                         <InfoBlock label="Компания" value={shipment.company?.name} />
+                        {/* v15.16.0: счёт-фактура из 1С. Показываем, только когда
+                            реквизит пришёл, — 1С заполняет его не по всем документам */}
+                        {shipment.invoice_number && (
+                            <InfoBlock
+                                label="Счёт-фактура"
+                                value={shipment.invoice_date
+                                    ? `${shipment.invoice_number} от ${shipment.invoice_date}`
+                                    : shipment.invoice_number}
+                                mono
+                            />
+                        )}
                         {/* Продавец — наше юрлицо по накладной. Приходит из 1С;
                             пока не пришёл, блок не показываем. */}
                         {shipment.seller && (

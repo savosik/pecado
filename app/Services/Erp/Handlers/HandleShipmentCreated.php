@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Shipment;
 use App\Services\Erp\Support\LinksOverdueDetailsToShipment;
 use App\Services\Erp\Support\LinksPaymentAllocationsToShipment;
+use App\Services\Erp\Support\ReadsShipmentInvoice;
 use App\Services\Erp\Support\ResolvesContractorParty;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
 use App\Services\Erp\Support\SyncsShipmentPaymentSchedule;
@@ -15,6 +16,7 @@ class HandleShipmentCreated
 {
     use LinksOverdueDetailsToShipment;
     use LinksPaymentAllocationsToShipment;
+    use ReadsShipmentInvoice;
     use ResolvesContractorParty;
     use ResolvesDocumentOrganization;
     use SyncsShipmentPaymentSchedule;
@@ -56,6 +58,10 @@ class HandleShipmentCreated
             'status' => $payload['status'] ?? 'new',
             'currency_code' => $payload['currency_code'] ?? null,
         ];
+
+        // v15.16.0: счёт-фактура. Нужна бухгалтерии клиента, в логике сайта
+        // не участвует. Отсутствие ключа не сбрасывает сохранённое значение.
+        $fields = array_merge($fields, $this->invoiceFields($payload));
 
         // v13.7: аудит-метки 1С (опционально). Передача null — явная установка,
         // отсутствие ключа — не трогаем существующее значение в БД.

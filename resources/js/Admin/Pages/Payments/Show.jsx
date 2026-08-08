@@ -263,6 +263,14 @@ export default function Show({ payment, organizationsEnabled }) {
                     <Text fontWeight="semibold" fontSize="lg">Комментарий</Text>
                 </Card.Header>
                 <Card.Body>
+                    {/* v15.16.0: комментарий из 1С. Отдельно от заметки сотрудника
+                        и только для чтения — мастер данных 1С */}
+                    {payment.erp_comment && (
+                        <Box mb={4} pb={4} borderBottomWidth="1px">
+                            <Text fontSize="xs" color="fg.muted" mb={1}>Комментарий из 1С</Text>
+                            <Text fontSize="sm" whiteSpace="pre-wrap">{payment.erp_comment}</Text>
+                        </Box>
+                    )}
                     <form onSubmit={saveComment}>
                         <Field
                             label="Заметка сотрудника"

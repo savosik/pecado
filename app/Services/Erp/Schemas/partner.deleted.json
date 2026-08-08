@@ -5,7 +5,9 @@
     "type": "object",
     "properties": {
         "event": {
-            "type": "string"
+            "type": "string",
+            "description": "Тип события. Всегда «partner.deleted». Ограничено константой в v15.16.0: до этого поле принимало любую строку, и сообщение с чужим event проходило бы валидацию этой схемы.",
+            "const": "partner.deleted"
         },
         "message_id": {
             "type": "string",
@@ -25,7 +27,15 @@
         "event"
     ],
     "anyOf": [
-        {"required": ["uuid"]},
-        {"required": ["email"]}
+        {
+            "required": [
+                "uuid"
+            ]
+        },
+        {
+            "required": [
+                "email"
+            ]
+        }
     ]
 }

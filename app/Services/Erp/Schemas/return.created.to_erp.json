@@ -7,7 +7,8 @@
     "properties": {
         "event": {
             "type": "string",
-            "const": "return.created"
+            "const": "return.created",
+            "description": "Тип события. Всегда «return.created». Ограничено константой в v15.16.0: до этого поле принимало любую строку, и сообщение с чужим event проходило бы валидацию этой схемы."
         },
         "message_id": {
             "type": "string",
@@ -19,7 +20,10 @@
             "format": "uuid"
         },
         "partner_uuid": {
-            "type": ["string", "null"]
+            "type": [
+                "string",
+                "null"
+            ]
         },
         "timestamp": {
             "type": "string",
@@ -32,7 +36,10 @@
                 "type": "object",
                 "properties": {
                     "product_uuid": {
-                        "type": ["string", "null"]
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     },
                     "shipment_uuid": {
                         "type": "string",
@@ -59,7 +66,10 @@
                         "minimum": 0
                     },
                     "reason": {
-                        "type": ["string", "null"]
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 },
                 "required": [

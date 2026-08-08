@@ -22,6 +22,7 @@ import {
     ORDER_STATUS_COLORS as STATUS_COLORS,
 } from '@/constants/orderStatus';
 import { getOrderTypeLabel, getOrderTypeColor } from '@/constants/orderType';
+import { buildOrderTimeline } from '@/utils/orderTimeline';
 
 const SHIPMENT_STATUS_COLORS = {
     new: 'blue',
@@ -50,14 +51,18 @@ export default function OrderShow({ order }) {
     const createdAt = order.created_at_formatted || '—';
 
     // Объединённый timeline
-    const timelineEntries = buildTimeline(order.status_histories, order.change_logs);
+    const timelineEntries = buildOrderTimeline(order.status_histories, order.change_logs);
 
     // ─── Повторить заказ ───
     const cartTotal = useCartStore((s) => s.cartTotals.total);
-    // Кол-во позиций заказа с привязкой к каталогу (только их можно повторить).
-    const repeatableCount = (order.items || []).filter(
-        (it) => it.product?.id && Number(it.quantity) > 0,
-    ).length;
+    // Кол-во товаров заказа с привязкой к каталогу (только их можно повторить).
+    // Считаем уникальные товары, а не строки: при недоборе строка дробится
+    // на активную и отменённую, и повтор всё равно сложит их количество.
+    const repeatableCount = new Set(
+        (order.items || [])
+            .filter((it) => it.product?.id && Number(it.quantity) > 0)
+            .map((it) => it.product.id),
+    ).size;
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [repeating, setRepeating] = useState(false);
 
@@ -266,7 +271,12 @@ export default function OrderShow({ order }) {
 
                 {/* ═══ Позиции заказа ═══ */}
                 {order.items?.length > 0 && (() => {
-                    const totalSavings = (order.items || []).reduce((acc, item) => {
+                    // Отменённые в 1С строки (недобор) не участвуют ни в сумме
+                    // заказа, ни в счётчиках: заказ на них не выставлен
+                    const activeItems = (order.items || []).filter((it) => !it.cancelled);
+                    const cancelledCount = (order.items || []).length - activeItems.length;
+
+                    const totalSavings = activeItems.reduce((acc, item) => {
                         const bp = parseFloat(item.base_price || 0);
                         const fp = parseFloat(item.final_price || item.price || 0);
                         if (bp > fp) acc += (bp - fp) * item.quantity;
@@ -277,10 +287,21 @@ export default function OrderShow({ order }) {
                     <Box>
                         <Flex align="center" gap="2" flexWrap="wrap" mb="3">
                             {typeIcon}
-                            <Text fontWeight="700" fontSize="md">Позиции ({order.items.length})</Text>
+                            <Text fontWeight="700" fontSize="md">Позиции ({activeItems.length})</Text>
                             <Badge colorPalette={typeColor} variant="subtle" ml="1">
-                                {order.items.reduce((s, it) => s + Number(it.quantity || 0), 0)} шт.
+                                {activeItems.reduce((s, it) => s + Number(it.quantity || 0), 0)} шт.
                             </Badge>
+                            {cancelledCount > 0 && (
+                                <Tooltip
+                                    content="Товара не хватило на складе — эти позиции отменены в 1С и в сумму заказа не входят"
+                                    positioning={{ placement: 'top' }}
+                                    openDelay={250}
+                                >
+                                    <Badge colorPalette="gray" variant="subtle">
+                                        {cancelledCount}&nbsp;отменено
+                                    </Badge>
+                                </Tooltip>
+                            )}
                             <Box ml="auto">
                                 <Tooltip content="Скачать в Excel (XLSX)" positioning={{ placement: 'top' }} openDelay={250}>
                                     <Flex
@@ -333,7 +354,11 @@ export default function OrderShow({ order }) {
                                         const basePrice = hasDiscount ? rawBasePrice : finalPrice;
                                         const discountPct = hasDiscount ? rawDiscountPct : 0;
                                         return (
-                                            <Table.Row key={item.id} bg="bg">
+                                            <Table.Row
+                                                key={item.id}
+                                                bg="bg"
+                                                opacity={item.cancelled ? 0.55 : 1}
+                                            >
                                                 <Table.Cell>
                                                     <HStack gap="3">
                                                         {item.product?.image_url && (
@@ -373,12 +398,17 @@ export default function OrderShow({ order }) {
                                                                     </Link>
                                                                 </Tooltip>
                                                             )}
-                                                            <Flex gap="1" mt="0.5">
+                                                            <Flex gap="1" mt="0.5" align="center" flexWrap="wrap">
                                                                 {item.product?.brand?.name && (
                                                                     <Text fontSize="xs" color="fg.muted">{item.product.brand.name}</Text>
                                                                 )}
                                                                 {item.product?.sku && (
                                                                     <Text fontSize="xs" color="fg.muted">• {item.product.sku}</Text>
+                                                                )}
+                                                                {item.cancelled && (
+                                                                    <Badge colorPalette="gray" variant="subtle" size="xs">
+                                                                        Отменена — нет в наличии
+                                                                    </Badge>
                                                                 )}
                                                             </Flex>
                                                         </Box>
@@ -388,7 +418,14 @@ export default function OrderShow({ order }) {
                                                 <Table.Cell textAlign="right">{fmt(basePrice)}</Table.Cell>
                                                 <Table.Cell textAlign="right">{fmt(discountPct)}%</Table.Cell>
                                                 <Table.Cell textAlign="right">{fmt(finalPrice)}</Table.Cell>
-                                                <Table.Cell textAlign="right" fontWeight="600">{fmt(item.subtotal)}</Table.Cell>
+                                                <Table.Cell
+                                                    textAlign="right"
+                                                    fontWeight="600"
+                                                    textDecoration={item.cancelled ? 'line-through' : undefined}
+                                                    color={item.cancelled ? 'fg.muted' : undefined}
+                                                >
+                                                    {fmt(item.subtotal)}
+                                                </Table.Cell>
                                             </Table.Row>
                                         );
                                     })}
@@ -414,6 +451,21 @@ export default function OrderShow({ order }) {
                                                         <Badge colorPalette="green" variant="subtle" size="sm" mt="1">
                                                             Сумма скидки: {fmt(totalSavings)}&nbsp;{currencySymbol}
                                                         </Badge>
+                                                    )}
+                                                    {/* v15.16.0: предоплата из расшифровки платежей 1С.
+                                                        Показываем и остаток к оплате — иначе клиент не поймёт,
+                                                        сколько ещё должен */}
+                                                    {Number(order.prepaid_amount) > 0 && (
+                                                        <>
+                                                            <Badge colorPalette="blue" variant="subtle" size="sm" mt="1">
+                                                                Предоплата: {fmt(order.prepaid_converted)}&nbsp;{currencySymbol}
+                                                            </Badge>
+                                                            {Number(order.total_converted) - Number(order.prepaid_converted) > 0.01 && (
+                                                                <Text fontSize="xs" color="fg.muted" mt="1">
+                                                                    Остаток: {fmt(Number(order.total_converted) - Number(order.prepaid_converted))}&nbsp;{currencySymbol}
+                                                                </Text>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </VStack>
                                             </Flex>
@@ -613,42 +665,6 @@ function RepeatOrderDialog({ open, onClose, busy, onMerge, onReplace }) {
             </Portal>
         </Dialog.Root>
     );
-}
-
-/**
- * Объединяет status_histories и change_logs в один массив, сортирует по дате.
- */
-function buildTimeline(statusHistories = [], changeLogs = []) {
-    const entries = [];
-
-    for (const h of statusHistories) {
-        entries.push({
-            id: `status-${h.id}`,
-            type: 'status_changed',
-            created_at: h.created_at,
-            created_at_human: h.created_at_human,
-            data: h,
-        });
-    }
-
-    for (const c of changeLogs) {
-        entries.push({
-            id: `change-${c.id}`,
-            type: c.type,
-            created_at: c.created_at,
-            created_at_human: c.created_at_human,
-            data: c,
-        });
-    }
-
-    // Сортировка: новейшие сверху
-    entries.sort((a, b) => {
-        const da = a.created_at.split('.').reverse().join('-');
-        const db = b.created_at.split('.').reverse().join('-');
-        return db.localeCompare(da);
-    });
-
-    return entries;
 }
 
 /**

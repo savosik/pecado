@@ -10,6 +10,8 @@ use Laravel\Scout\Searchable;
 /**
  * @property int $id
  * @property int $order_id
+ * @property int|null $line_number Номер строки в табличной части «Товары» документа 1С — ключ сопоставления при обновлении заказа (v15.16.0)
+ * @property bool $cancelled Строка отменена в 1С при недоборе: показывается клиенту, но не входит в сумму заказа (v15.16.0)
  * @property int|null $product_id
  * @property int|null $product_defect_id
  * @property string|null $defect_description
@@ -53,6 +55,8 @@ class OrderItem extends Model
 
     protected $fillable = [
         'order_id',
+        'line_number',
+        'cancelled',
         'product_id',
         'product_defect_id',
         'defect_description',
@@ -75,6 +79,8 @@ class OrderItem extends Model
         'final_price' => 'decimal:2',
         'subtotal' => 'decimal:2',
         'quantity' => 'integer',
+        'line_number' => 'integer',
+        'cancelled' => 'boolean',
     ];
 
     protected static function booted(): void

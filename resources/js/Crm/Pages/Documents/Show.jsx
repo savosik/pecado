@@ -89,6 +89,14 @@ export default function Show() {
                             {document.status_label}
                         </Badge>
 
+                        {/* v15.16.0: предоплата по заказу из расшифровки платежей 1С.
+                            Реализации по такому заказу может ещё не быть */}
+                        {document.prepaid_label && (
+                            <Badge colorPalette="blue" variant="subtle">
+                                Предоплата: {document.prepaid_label}
+                            </Badge>
+                        )}
+
                         <Text fontSize="sm" color="fg.muted">{document.date_label}</Text>
 
                         {client && (
@@ -147,6 +155,8 @@ export default function Show() {
                             <InfoRow label="Юрлицо клиента" value={document.company} />
                             <InfoRow label="Создан на сайте" value={document.created_at_label} />
                             <InfoRow label="Адрес доставки" value={document.delivery_address} />
+                            {/* v15.16.0: счёт-фактура из 1С, приходит не по всем реализациям */}
+                            <InfoRow label="Счёт-фактура" value={document.invoice_label} />
                         </SimpleGrid>
 
                         {(document.comment || document.manager_comment) && (
@@ -285,11 +295,21 @@ export default function Show() {
                                     </Table.Header>
                                     <Table.Body>
                                         {document.items.map((item) => (
-                                            <Table.Row key={item.id} _hover={{ bg: 'bg.muted' }}>
+                                            <Table.Row
+                                                key={item.id}
+                                                _hover={{ bg: 'bg.muted' }}
+                                                opacity={item.cancelled ? 0.6 : 1}
+                                            >
                                                 <Table.Cell>
                                                     <Text fontSize="sm">{item.name}</Text>
                                                     {item.brand && (
                                                         <Text fontSize="xs" color="fg.muted">{item.brand}</Text>
+                                                    )}
+                                                    {/* Недобор: строка отменена в 1С, в сумму документа не входит */}
+                                                    {item.cancelled && (
+                                                        <Text fontSize="xs" color="fg.muted" fontWeight="500">
+                                                            Отменена в 1С — нет в наличии
+                                                        </Text>
                                                     )}
                                                 </Table.Cell>
                                                 <Table.Cell>
@@ -306,7 +326,13 @@ export default function Show() {
                                                     <Text fontSize="sm" whiteSpace="nowrap">{item.price_label}</Text>
                                                 </Table.Cell>
                                                 <Table.Cell textAlign="end">
-                                                    <Text fontSize="sm" fontWeight="600" whiteSpace="nowrap">
+                                                    <Text
+                                                        fontSize="sm"
+                                                        fontWeight="600"
+                                                        whiteSpace="nowrap"
+                                                        textDecoration={item.cancelled ? 'line-through' : undefined}
+                                                        color={item.cancelled ? 'fg.muted' : undefined}
+                                                    >
                                                         {item.total_label}
                                                     </Text>
                                                 </Table.Cell>

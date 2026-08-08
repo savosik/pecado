@@ -6,6 +6,7 @@ use App\Models\ErpProcessedMessage;
 use App\Services\Erp\ErpBusLogger;
 use App\Services\Erp\ErpHandlerOutcome;
 use App\Services\Erp\ErpMessageValidator;
+use App\Services\Erp\ErpRevisionGuard;
 use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
 use App\Services\Erp\Handlers\HandleBalanceUpdated;
 use App\Services\Erp\Handlers\HandleCategoryCreated;
@@ -192,6 +193,37 @@ class ErpIncomingJob extends BaseJob
                 return;
             }
 
+            // v15.16.0: защита от применения устаревших данных. Проверка идёт
+            // ПОСЛЕ валидации схемы (чтобы мусорный payload не сравнивался с БД)
+            // и ДО обработчика — устаревшее сообщение не должно ничего менять.
+            /** @var ErpRevisionGuard $revisionGuard */
+            $revisionGuard = app(ErpRevisionGuard::class);
+            $staleReason = $revisionGuard->staleReason($event, $payload);
+
+            if ($staleReason !== null) {
+                Log::warning('ERP incoming: сообщение отброшено как устаревшее', [
+                    'event' => $event,
+                    'message_id' => $messageId,
+                    'uuid' => $payload['uuid'] ?? null,
+                    'revision' => $payload['revision'] ?? null,
+                    'reason' => $staleReason,
+                ]);
+
+                // В журнал шины — молча терять данные нельзя даже тогда, когда
+                // потеря правильная: 1С должна видеть, что её сообщение не применено
+                ErpBusLogger::logIncoming($event, $payload, 'stale', $staleReason, $this->getQueue());
+
+                // message_id отмечаем обработанным: повторная доставка этого же
+                // сообщения не должна каждый раз перепроверять БД
+                if ($messageId) {
+                    $this->markAsProcessed($messageId, $event);
+                }
+
+                $this->delete();
+
+                return;
+            }
+
             // v15.4: сбрасываем исход перед обработкой — воркер долгоживущий,
             // иначе пометка от предыдущего сообщения протечёт в это.
             /** @var ErpHandlerOutcome $outcome */
@@ -201,6 +233,11 @@ class ErpIncomingJob extends BaseJob
             /** @var object $handler */
             $handler = app($handlerClass);
             $handler->handle($payload);
+
+            // Ревизия сдвигается только после успешной обработки: если handler
+            // бросил исключение, сообщение вернётся в очередь и обязано пройти
+            // проверку свежести повторно.
+            $revisionGuard->remember($event, $payload);
 
             // Записываем message_id для идемпотентности
             if ($messageId) {

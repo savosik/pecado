@@ -509,6 +509,10 @@ class OrderController extends Controller
                 'warehouse_comment' => $order->warehouse_comment,
                 'total_amount' => $order->total_amount,
                 'total_converted' => $this->convertAmount((float) $order->total_amount, $order->currency_code, $this->getUserCurrency($request)),
+                // v15.16.0: предоплата по заказу из расшифровки платежей 1С.
+                // Накладную не гасит — по ней ещё нет реализации
+                'prepaid_amount' => (float) $order->prepaid_amount,
+                'prepaid_converted' => $this->convertAmount((float) $order->prepaid_amount, $order->currency_code, $this->getUserCurrency($request)),
                 'currency_code' => $order->currency_code,
                 'created_at_formatted' => ($order->erp_created_at ?? $order->created_at)?->format('d.m.Y H:i'),
                 'company' => $order->company ? [
@@ -533,6 +537,9 @@ class OrderController extends Controller
                         'discount_percent' => $item->discount_percent,
                         'quantity' => $item->quantity,
                         'subtotal' => $item->subtotal,
+                        // v15.16.0: строка, отменённая в 1С при недоборе. Показываем
+                        // её клиенту, но она не входит в total_amount заказа
+                        'cancelled' => (bool) $item->cancelled,
                         'product' => $item->product ? [
                             'id' => $item->product->id,
                             'name' => $item->product->name,
@@ -584,6 +591,7 @@ class OrderController extends Controller
                         'user_name' => $history->user ? $history->user->name : 'Система',
                         'comment' => $history->comment,
                         'created_at' => $history->created_at->format('d.m.Y H:i'),
+                        'created_at_iso' => $history->created_at->toIso8601String(),
                         'created_at_human' => $history->created_at->locale('ru')->diffForHumans(),
                     ];
                 }),
@@ -598,6 +606,7 @@ class OrderController extends Controller
                         'old_total' => $log->old_total,
                         'new_total' => $log->new_total,
                         'created_at' => $log->created_at->format('d.m.Y H:i'),
+                        'created_at_iso' => $log->created_at->toIso8601String(),
                         'created_at_human' => $log->created_at->locale('ru')->diffForHumans(),
                     ];
                 }),
@@ -694,7 +703,7 @@ class OrderController extends Controller
         $headers = [
             'Товар', 'Артикул',
             'Кол-во', 'Цена без скидки', 'Скидка %', 'Цена со скидкой', 'Сумма',
-            'Валюта',
+            'Валюта', 'Статус строки',
         ];
 
         $rows = $order->items->map(function ($item) use ($order) {
@@ -714,6 +723,9 @@ class OrderController extends Controller
                 round($finalPrice, 2),
                 round((float) $item->subtotal, 2),
                 $order->currency_code ?? 'RUB',
+                // v15.16.0: строку, отменённую в 1С при недоборе, из выгрузки
+                // не выбрасываем — клиент должен видеть, чего не хватило
+                $item->cancelled ? 'Отменена — нет в наличии' : '',
             ];
         });
 

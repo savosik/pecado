@@ -187,7 +187,12 @@ const OrderItemsEditor = ({ value = [], onChange, errors = {}, userId, currencyC
     };
 
     // Подсчёт общей суммы
-    const totalAmount = value.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
+    // Отменённые в 1С строки (недобор) в сумму заказа не входят — так же,
+    // как их не считает бэкенд при сохранении (протокол v15.16.0)
+    const totalAmount = value.reduce(
+        (sum, item) => (item.cancelled ? sum : sum + Number(item.subtotal || 0)),
+        0,
+    );
 
     // Global error for the items array itself (e.g. required|min:1)
     const itemsError = errors.items;
@@ -247,7 +252,7 @@ const OrderItemsEditor = ({ value = [], onChange, errors = {}, userId, currencyC
                                         const hasDiscount = Number(item.discount_percent) !== 0;
 
                                         return (
-                                            <Table.Row key={index}>
+                                            <Table.Row key={index} opacity={item.cancelled ? 0.6 : 1}>
                                                 <Table.Cell>
                                                     {item.image_url ? (
                                                         <Image src={item.image_url} boxSize="40px" objectFit="cover" borderRadius="md" alt={item.name} />
@@ -264,6 +269,13 @@ const OrderItemsEditor = ({ value = [], onChange, errors = {}, userId, currencyC
                                                         {item.brand_name && (
                                                             <Text fontSize="xs" color="blue.500">
                                                                 {item.brand_name}
+                                                            </Text>
+                                                        )}
+                                                        {/* Строка отменена в 1С при недоборе: остаётся в документе,
+                                                            но в сумму заказа не входит (протокол v15.16.0) */}
+                                                        {item.cancelled && (
+                                                            <Text fontSize="xs" color="fg.muted" fontWeight="medium">
+                                                                Отменена в 1С — нет в наличии, в сумму не входит
                                                             </Text>
                                                         )}
                                                     </VStack>

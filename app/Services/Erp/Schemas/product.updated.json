@@ -5,7 +5,9 @@
     "type": "object",
     "properties": {
         "event": {
-            "type": "string"
+            "type": "string",
+            "description": "Тип события. Всегда «product.updated». Ограничено константой в v15.16.0: до этого поле принимало любую строку, и сообщение с чужим event проходило бы валидацию этой схемы.",
+            "const": "product.updated"
         },
         "message_id": {
             "type": "string",
@@ -71,7 +73,10 @@
         "barcodes": {
             "type": "array",
             "items": {
-                "type": ["string", "number"]
+                "type": [
+                    "string",
+                    "number"
+                ]
             }
         },
         "model": {
@@ -90,52 +95,82 @@
             }
         },
         "weight_gross": {
-            "type": ["number", "null"],
+            "type": [
+                "number",
+                "null"
+            ],
             "minimum": 0,
             "description": "Вес брутто упаковки в килограммах. Семантика частичного обновления: поле отсутствует — не трогаем; передано (включая null) — перезаписываем. v13.3+"
         },
         "weight_net": {
-            "type": ["number", "null"],
+            "type": [
+                "number",
+                "null"
+            ],
             "minimum": 0,
             "description": "Вес нетто товара в килограммах. Семантика частичного обновления. v13.3+"
         },
         "width": {
-            "type": ["number", "null"],
+            "type": [
+                "number",
+                "null"
+            ],
             "minimum": 0,
             "description": "Ширина упаковки в метрах. Семантика частичного обновления. v13.3+"
         },
         "height": {
-            "type": ["number", "null"],
+            "type": [
+                "number",
+                "null"
+            ],
             "minimum": 0,
             "description": "Высота упаковки в метрах. Семантика частичного обновления. v13.3+"
         },
         "depth": {
-            "type": ["number", "null"],
+            "type": [
+                "number",
+                "null"
+            ],
             "minimum": 0,
             "description": "Глубина упаковки в метрах. Семантика частичного обновления. v13.3+"
         },
         "hs_code": {
-            "type": ["string", "null"],
+            "type": [
+                "string",
+                "null"
+            ],
             "maxLength": 20,
             "description": "Код ТН ВЭД. Семантика частичного обновления. v13.3+"
         },
         "abc_xyz": {
-            "type": ["string", "null"],
+            "type": [
+                "string",
+                "null"
+            ],
             "maxLength": 5,
             "description": "ABC/XYZ-классификация (AX, BZ, CY и т.п.). Семантика частичного обновления. v13.3+"
         },
         "turnover": {
-            "type": ["number", "null"],
+            "type": [
+                "number",
+                "null"
+            ],
             "minimum": 0,
             "description": "Коэффициент оборачиваемости товара. Семантика частичного обновления. v13.3+"
         },
         "erp_created_at": {
-            "type": ["string", "null"],
+            "type": [
+                "string",
+                "null"
+            ],
             "format": "date-time",
             "description": "Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с TZ). Семантика частичного обновления. Опционально, добавлено в v13.10."
         },
         "erp_updated_at": {
-            "type": ["string", "null"],
+            "type": [
+                "string",
+                "null"
+            ],
             "format": "date-time",
             "description": "Аудит-метка: дата-время последнего изменения номенклатуры в 1С (ISO-8601 с TZ). Семантика частичного обновления. Опционально, добавлено в v13.10."
         },
@@ -154,7 +189,13 @@
                     },
                     "value_type": {
                         "type": "string",
-                        "enum": ["string", "number", "boolean", "reference", "date-time"],
+                        "enum": [
+                            "string",
+                            "number",
+                            "boolean",
+                            "reference",
+                            "date-time"
+                        ],
                         "description": "Тип значения: string, number, boolean или reference (справочник)"
                     },
                     "value_uuid": {

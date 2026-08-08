@@ -3,12 +3,11 @@
 namespace App\Services\Erp\Handlers;
 
 use App\Models\Order;
-use App\Models\Product;
 use App\Services\Erp\ErpHandlerOutcome;
 use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
+use App\Services\Erp\Support\LinksPrepaymentToOrder;
+use App\Services\Erp\Support\OrderItemsSynchronizer;
 use App\Services\Erp\Support\OrderStatusMapper;
-use App\Services\Erp\Support\PreservesDefectItemLinks;
-use App\Services\Erp\Support\PreservesPromoItemLinks;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
 use App\Services\Order\OrderChangeLogger;
 use Illuminate\Support\Facades\Log;
@@ -24,14 +23,14 @@ use Illuminate\Support\Facades\Log;
  */
 class HandleOrderUpdated
 {
-    use PreservesDefectItemLinks;
-    use PreservesPromoItemLinks;
+    use LinksPrepaymentToOrder;
     use ResolvesDocumentOrganization;
 
     public function __construct(
         private readonly OrderChangeLogger $changeLogger,
         private readonly HandleOrderCreated $orderCreated,
         private readonly ErpHandlerOutcome $outcome,
+        private readonly OrderItemsSynchronizer $itemsSynchronizer,
     ) {}
 
     public function handle(array $payload): void
@@ -135,6 +134,11 @@ class HandleOrderUpdated
         if (isset($payload['items']) && is_array($payload['items'])) {
             $this->syncItemsWithHistory($order, $payload['items']);
         }
+
+        // v15.16.0: предоплата по заказу приходит расшифровкой платежа, своей
+        // очередью. Если платёж доехал раньше заказа, агрегат на заказе пуст —
+        // пересчитываем его от строк расшифровки.
+        $this->refreshOrderPrepayment($order);
 
         // Логируем атрибутные изменения (кроме статуса — он идёт в OrderStatusHistory)
         $order->refresh()->load(['company', 'user', 'organization']);
@@ -241,43 +245,19 @@ class HandleOrderUpdated
 
     /**
      * Синхронизация позиций с записью истории изменений.
+     *
+     * v15.16.0: разбор и сопоставление строк вынесены в OrderItemsSynchronizer,
+     * общий с order.created. До этого здесь была своя реализация, которая
+     * складывала позиции в массив с ключом product_uuid — из-за чего две строки
+     * на один товар (недобор) схлопывались в одну, и побеждала последняя.
      */
     private function syncItemsWithHistory(Order $order, array $newItems): void
     {
         $oldSnapshot = $this->changeLogger->snapshotItems($order);
         $oldTotal = (float) $order->total_amount;
 
-        $parsedItems = $this->parseNewItems($newItems);
+        $newTotal = $this->itemsSynchronizer->sync($order, $newItems);
 
-        // Складские привязки уценки (product_defect_id, defect_description)
-        // держит сайт — 1С их не присылает. Снимаем до удаления, чтобы
-        // перенести на пересозданные позиции и не потерять партию брака.
-        $defectLinks = $this->captureDefectLinks($order);
-        $promoLinks = $this->capturePromoLinks($order);
-
-        $order->items()->delete();
-
-        foreach ($parsedItems as $item) {
-            $link = $this->pullDefectLink($defectLinks, $item['product_id']);
-            $promo = $this->pullPromoLink($promoLinks, $item['product_id'], $item);
-
-            $order->items()->create([
-                'product_id' => $item['product_id'],
-                'name' => $item['name'],
-                'quantity' => $item['quantity'],
-                'price' => $item['final_price'],
-                'base_price' => $item['base_price'],
-                'discount_percent' => $item['discount_percent'],
-                'final_price' => $item['final_price'],
-                'subtotal' => $item['quantity'] * $item['final_price'],
-                'product_defect_id' => $link['product_defect_id'],
-                'defect_description' => $link['defect_description'],
-                'promotion_rule_id' => $promo['promotion_rule_id'],
-                'promo_kind' => $promo['promo_kind'],
-            ]);
-        }
-
-        $newTotal = $order->items()->sum('subtotal');
         $order->total_amount = $newTotal;
         $order->saveQuietly();
 
@@ -288,50 +268,8 @@ class HandleOrderUpdated
             $oldSnapshot,
             $newSnapshot,
             $oldTotal,
-            (float) $newTotal,
+            $newTotal,
             'erp',
         );
-    }
-
-    /**
-     * Парсинг новых позиций из payload.
-     * Возвращает массив с product_uuid как ключом.
-     */
-    private function parseNewItems(array $items): array
-    {
-        $parsed = [];
-
-        foreach ($items as $item) {
-            $productUuid = $item['product_uuid'] ?? '';
-            $product = Product::withoutGlobalScopes()->where('external_id', $productUuid)->first();
-
-            if (! $product) {
-                Log::info('HandleOrderUpdated: товар не найден, позиция пропущена', [
-                    'product_uuid' => $productUuid,
-                ]);
-
-                continue;
-            }
-
-            $quantity = $item['quantity'] ?? 0;
-            $basePrice = $item['base_price'] ?? $item['price'] ?? 0;
-            $discountPercent = $item['discount_percent'] ?? 0;
-            $finalPrice = $item['final_price'] ?? $item['price'] ?? $basePrice;
-
-            $parsed[$productUuid] = [
-                'product_id' => $product->id,
-                'name' => $product->name,
-                'quantity' => (int) $quantity,
-                'base_price' => (float) $basePrice,
-                'discount_percent' => (float) $discountPercent,
-                'final_price' => (float) $finalPrice,
-                // Признак промо 1С прислать может — например, у позиции,
-                // которую менеджер добавил в заказ вручную
-                'is_promo' => (bool) ($item['is_promo'] ?? false),
-                'promo_kind' => $item['promo_kind'] ?? null,
-            ];
-        }
-
-        return $parsed;
     }
 }

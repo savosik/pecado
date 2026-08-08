@@ -443,6 +443,8 @@ class DocumentController extends CrmController
             'company:id,name,tax_id',
             'organization:id,name,is_stub',
             'allocations.shipment:id,number,erp_number,date,total_amount,paid_amount,payment_status,currency_code',
+            // v15.16.0: расшифровка вмещает и заказы (предоплата), и прочие документы 1С
+            'allocations.order:id,uuid,number,erp_number,total_amount,currency_code',
         ]);
 
         $currency = $model->currency_code;
@@ -454,21 +456,23 @@ class DocumentController extends CrmController
             ->values()
             ->map(fn (PaymentAllocation $allocation): array => [
                 'id' => (int) $allocation->getKey(),
-                'name' => $allocation->shipment
-                    ? 'Реализация №'.($allocation->shipment->erp_number ?: $allocation->shipment->number ?: $allocation->shipment->getKey())
-                    : 'Реализация ещё не пришла из 1С',
-                'sku' => $allocation->shipment ? null : $allocation->shipment_uuid,
-                'brand' => null,
+                // documentLabel() сам разбирает три типа: реализация, заказ
+                // (предоплата) и прочий документ, которого на сайте нет вовсе
+                'name' => $allocation->documentLabel(),
+                'sku' => $allocation->shipment_uuid ?: $allocation->order_uuid ?: $allocation->target_uuid,
+                'brand' => PaymentAllocation::TARGET_LABELS[$allocation->target_type] ?? null,
                 'quantity' => 1,
-                'price_label' => $allocation->shipment
-                    ? $this->money((float) $allocation->shipment->total_amount, $currency)
-                    : '—',
+                'price_label' => match (true) {
+                    $allocation->shipment !== null => $this->money((float) $allocation->shipment->total_amount, $currency),
+                    $allocation->order !== null => $this->money((float) $allocation->order->total_amount, $currency),
+                    default => '—',
+                },
                 'total_label' => $this->money((float) $allocation->amount, $currency),
             ])->all();
 
-        // Связанные документы — те же реализации, но ссылками: из карточки
-        // платежа менеджер чаще всего идёт именно в отгрузку.
-        $related = $model->allocations
+        // Связанные документы — реализации и заказы ссылками: из карточки платежа
+        // менеджер идёт в тот документ, за который заплатили.
+        $relatedShipments = $model->allocations
             ->filter(fn (PaymentAllocation $allocation): bool => $allocation->shipment !== null)
             ->unique(fn (PaymentAllocation $allocation) => $allocation->shipment_id)
             ->values()
@@ -480,6 +484,21 @@ class DocumentController extends CrmController
                 'total_label' => $this->money((float) $allocation->shipment->total_amount, $allocation->shipment->currency_code),
                 'url' => route('crm.shipments.show', $allocation->shipment->getKey()),
             ])->all();
+
+        $relatedOrders = $model->allocations
+            ->filter(fn (PaymentAllocation $allocation): bool => $allocation->order !== null)
+            ->unique(fn (PaymentAllocation $allocation) => $allocation->order_uuid)
+            ->values()
+            ->map(fn (PaymentAllocation $allocation): array => [
+                'type' => CrmEntityMap::ORDER,
+                'id' => (int) $allocation->order->getKey(),
+                'title' => 'Заказ №'.($allocation->order->erp_number ?: $allocation->order->number ?: $allocation->order->getKey()),
+                'date_label' => null,
+                'total_label' => $this->money((float) $allocation->order->total_amount, $allocation->order->currency_code),
+                'url' => route('crm.orders.show', $allocation->order->getKey()),
+            ])->all();
+
+        $related = array_merge($relatedShipments, $relatedOrders);
 
         return Inertia::render('Crm/Pages/Documents/Show', [
             'document' => [
@@ -1505,6 +1524,12 @@ class DocumentController extends CrmController
                 'date_label' => ($model->erp_created_at ?? $model->created_at)?->format('d.m.Y H:i'),
                 'created_at_label' => $model->created_at?->format('d.m.Y H:i'),
                 'total_label' => $this->money((float) $model->total_amount, $model->currency_code),
+                // v15.16.0: предоплата по заказу из расшифровки платежей 1С.
+                // Реализации по такому заказу может ещё не быть — накладную
+                // эта сумма не гасит, но менеджер должен её видеть
+                'prepaid_label' => (float) $model->prepaid_amount > 0
+                    ? $this->money((float) $model->prepaid_amount, $model->currency_code)
+                    : null,
                 'comment' => $model->comment,
                 'manager_comment' => $model->manager_comment,
                 'delivery_address' => $model->delivery_address,
@@ -1520,6 +1545,10 @@ class DocumentController extends CrmController
                     'quantity' => (int) $item->quantity,
                     'price_label' => $this->money((float) $item->final_price, $model->currency_code),
                     'total_label' => $this->money((float) $item->subtotal, $model->currency_code),
+                    // v15.16.0: недобор — строка отменена в 1С и в сумму заказа
+                    // не входит. Менеджер должен видеть это в карточке, иначе
+                    // сумма позиций не сойдётся с итогом документа
+                    'cancelled' => (bool) $item->cancelled,
                 ])->all(),
                 'related' => $model->shipments->map(fn (Shipment $shipment): array => [
                     'type' => CrmEntityMap::SHIPMENT,
@@ -1582,6 +1611,10 @@ class DocumentController extends CrmController
                 'date_label' => ($model->erp_created_at ?? $model->date)?->format('d.m.Y H:i'),
                 'created_at_label' => $model->created_at?->format('d.m.Y H:i'),
                 'total_label' => $this->money((float) $model->total_amount, $model->currency_code),
+                // v15.16.0: счёт-фактура из 1С — справка для менеджера и бухгалтерии клиента
+                'invoice_label' => $model->invoice_number
+                    ? trim($model->invoice_number.' от '.($model->invoice_date?->format('d.m.Y') ?? '—'))
+                    : null,
                 'comment' => null,
                 'manager_comment' => null,
                 'delivery_address' => null,

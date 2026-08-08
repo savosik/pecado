@@ -71,6 +71,7 @@ nav:
     - Клиентские сегменты: rules/client-segments.md
     - Промо-флаги товаров: rules/promotions.md
     - Нормализация данных: rules/data-normalization.md
+    - Порядок доставки и свежесть: rules/message-ordering.md
   - Тест-план:
     - "Фаза 0: Подготовка": tests/phase-0-setup.md
     - "Фаза 1: 1С → Сайт": tests/phase-1-inbound.md

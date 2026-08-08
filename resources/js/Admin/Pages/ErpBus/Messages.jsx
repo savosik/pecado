@@ -23,6 +23,7 @@ import {
     LuCircleCheck,
     LuCircleX,
     LuWrench,
+    LuClockAlert,
 } from 'react-icons/lu';
 import { useState, useCallback } from 'react';
 import { toaster } from '@/components/ui/toaster';
@@ -30,10 +31,13 @@ import { toaster } from '@/components/ui/toaster';
 /**
  * Оформление статуса обработки сообщения.
  * recovered (v15.4) — сущность достроена сайтом, потому что 1С потеряла событие создания.
+ * stale (v15.16.0) — сообщение отброшено: его ревизия не новее уже применённой
+ * к документу. Не ошибка, но и не тишина — 1С должна видеть, что данные не приняты.
  */
 const STATUS_META = {
     success: { palette: 'green', label: 'Успешно', icon: LuCircleCheck },
     recovered: { palette: 'purple', label: 'Восстановлено', icon: LuWrench },
+    stale: { palette: 'orange', label: 'Устаревшее', icon: LuClockAlert },
     failed: { palette: 'red', label: 'Ошибка', icon: LuCircleX },
 };
 
@@ -252,6 +256,7 @@ export default function Messages({ messages, eventTypes, filters }) {
                     <option value="">Все статусы</option>
                     <option value="success">Успешно</option>
                     <option value="recovered">Восстановлено</option>
+                    <option value="stale">Устаревшее</option>
                     <option value="failed">Ошибка</option>
                 </Box>
                 <Input

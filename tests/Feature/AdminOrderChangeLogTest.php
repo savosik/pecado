@@ -144,6 +144,47 @@ class AdminOrderChangeLogTest extends TestCase
                 ->where('order.change_logs.0.type', 'attributes_updated')
                 ->where('order.change_logs.0.source', 'admin')
                 ->where('order.change_logs.0.user_name', $this->admin->name)
+                // Машинная дата с секундами — по ней фронт сортирует timeline;
+                // человекочитаемого d.m.Y H:i для этого не хватает.
+                ->where('order.change_logs.0.created_at_iso', $order->changeLogs->first()->created_at->toIso8601String())
+            );
+    }
+
+    #[Test]
+    public function order_timeline_entries_expose_sortable_timestamps(): void
+    {
+        $order = $this->createOrderWithItem();
+
+        // Статус и лог изменения в одной минуте — различить их можно только по секундам.
+        // Заведомо позже автозаписи «Создан со статусом», которую пишет модель.
+        $base = now()->addDay()->startOfDay()->setTime(14, 6, 0);
+
+        $this->travelTo($base->copy()->addSeconds(10));
+        $order->statusHistories()->create([
+            'old_status' => 'pending_approval',
+            'new_status' => 'ready_to_ship',
+            'user_id' => $this->admin->id,
+        ]);
+
+        $this->travelTo($base->copy()->addSeconds(40));
+        OrderChangeLog::create([
+            'order_id' => $order->id,
+            'type' => 'attributes_updated',
+            'summary' => 'Организация: → ООО «Пекадо»',
+            'changes' => ['attributes' => []],
+            'source' => 'erp',
+        ]);
+
+        $this->travelBack();
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.orders.show', $order))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Admin/Pages/Orders/Show', false)
+                ->where('order.status_histories.0.created_at_iso', $base->copy()->addSeconds(10)->toIso8601String())
+                ->where('order.change_logs.0.created_at_iso', $base->copy()->addSeconds(40)->toIso8601String())
+                ->etc()
             );
     }
 

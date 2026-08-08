@@ -756,6 +756,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#line_number-v15160" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Строки заказа: line_number и отмена (v15.16.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Строки заказа: line_number и отмена (v15.16.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Строка идентифицируется номером, а не товаром
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Отмена строки при недоборе
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#orderupdated-1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -790,7 +829,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
+  <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         Маппинг статусов
@@ -851,7 +890,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
+  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -1193,6 +1232,34 @@
     
   
     Нормализация данных
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../message-ordering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Порядок доставки и свежесть
   
 
     
@@ -2030,6 +2097,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#line_number-v15160" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Строки заказа: line_number и отмена (v15.16.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Строки заказа: line_number и отмена (v15.16.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Строка идентифицируется номером, а не товаром
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Отмена строки при недоборе
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#orderupdated-1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2064,7 +2170,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
+  <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         Маппинг статусов
@@ -2125,7 +2231,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
+  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -2362,6 +2468,7 @@
 <li><strong>(v13.7)</strong> Опциональные аудит-метки <code>erp_created_at</code> / <code>erp_updated_at</code> (ISO-8601 datetime с TZ) — момент создания/изменения документа на стороне 1С. Сохраняются на сайте в одноимённые колонки <code>orders.erp_created_at</code> / <code>orders.erp_updated_at</code>, отображаются в админке. Поля <strong>не required</strong>: payload без них принимается, существующие значения колонок не перезаписываются. Подробнее: <a href="../../guides/erp-timestamps-for-1c/">«Аудит-метки 1С: erp_created_at / erp_updated_at»</a></li>
 <li><strong>(v13.8)</strong> При upsert уже существующего заказа (заказ создан пользователем на сайте, затем 1С прислал <code>order.created</code> с тем же <code>uuid</code>) поле <code>comment</code> из payload <strong>не перезаписывает</strong> комментарий, оставленный пользователем при оформлении. Для нового заказа <code>comment</code> сохраняется как обычно</li>
 <li><strong>(v15.3)</strong> Поле <code>delivery_method</code> (<code>delivery</code> | <code>pickup</code>) сохраняется в <code>orders.delivery_method</code>. Для нового заказа отсутствие поля или <code>null</code> = <code>delivery</code>. При upsert существующего заказа отсутствие поля <strong>не сбрасывает</strong> ранее сохранённый способ доставки</li>
+<li><strong>(v15.16.0)</strong> Позиции идентифицируются по <code>line_number</code>, повтор <code>product_uuid</code> разрешён, строка с <code>cancelled: true</code> не входит в сумму заказа — см. раздел «Строки заказа: <code>line_number</code> и отмена» ниже</li>
 </ul>
 <h3 id="1-v159">Предзаказы из 1С → резерв у поставщика (v15.9)<a class="headerlink" href="#1-v159" title="Permanent link">&para;</a></h3>
 <p>У 1С нет канала к поставщику, поэтому резерв по предзаказам ставит <strong>сайт</strong> —
@@ -2392,11 +2499,78 @@
   может идти в тестовом режиме — тогда поставщик проверяет заказ и откатывает его.</li>
 </ul>
 <hr />
+<h2 id="line_number-v15160">Строки заказа: <code>line_number</code> и отмена (v15.16.0)<a class="headerlink" href="#line_number-v15160" title="Permanent link">&para;</a></h2>
+<p>Правило общее для <code>order.created</code> и <code>order.updated</code> в обе стороны.</p>
+<h3 id="_3">Строка идентифицируется номером, а не товаром<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<p><strong>Повтор одного <code>product_uuid</code> в разных строках разрешён и агрегации не подлежит.</strong>
+Каждый элемент <code>items[]</code> — отдельная строка заказа. Сайт не складывает строки
+с одинаковым товаром, не считает это ошибкой и не выбирает «главную».
+<code>uniqueItems</code> в схеме намеренно не задан.</p>
+<p>Строки различаются по <code>line_number</code> — номеру строки в табличной части «Товары»
+документа 1С. Номер обязан быть <strong>постоянным для строки</strong> на всём жизненном цикле
+документа.</p>
+<p>Поле формально необязательное, фактически нужно всегда:</p>
+<ul>
+<li>это единственный способ различить две строки на один товар;</li>
+<li>это ключ, по которому сайт <strong>обновляет</strong> позицию, а не пересоздаёт её.</li>
+</ul>
+<p>Без <code>line_number</code> сайт подставляет порядковый номер элемента в массиве. Это
+деградация, а не штатный режим: при перестановке строк в 1С складские привязки
+позиций (партия некондиции, промо-правило) разъедутся по строкам.</p>
+<h3 id="_4">Отмена строки при недоборе<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<p>Товара не хватило на складе — упаковщик дробит строку в 1С: часть остаётся,
+часть отменяется. В сообщении появляются <strong>две строки на один товар</strong>, у которых
+совпадает всё, кроме <code>quantity</code> и признака <code>cancelled</code>.</p>
+<p>Так выглядит живой случай (заказ 29УТ-012045, гель, базовая 5090, скидка 25%,
+конечная 3817,50):</p>
+<table>
+<thead>
+<tr>
+<th><code>line_number</code></th>
+<th><code>quantity</code></th>
+<th><code>cancelled</code></th>
+<th>Сумма строки</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>2</td>
+<td><code>false</code></td>
+<td>7 635,00</td>
+</tr>
+<tr>
+<td>2</td>
+<td>3</td>
+<td><code>true</code></td>
+<td>11 452,50</td>
+</tr>
+</tbody>
+</table>
+<p>Поведение сайта:</p>
+<ul>
+<li>отменённая строка <strong>сохраняется</strong>, а не выбрасывается: клиент должен видеть,
+  что именно не доехало и в каком количестве;</li>
+<li>показывается отдельным видом — зачёркнутой, с пометкой «Отменена в 1С»;</li>
+<li><strong>не входит в сумму заказа</strong>: <code>total_amount</code> по примеру выше равен 7 635,00.</li>
+</ul>
+<p>Отсутствие поля и <code>null</code> означают «строка не отменена».</p>
+<div class="admonition warning">
+<p class="admonition-title">Что было до v15.16.0</p>
+<p>Признак <code>cancelled</code> 1С присылала, но сайт его <strong>не читал</strong>, а строки
+с одинаковым <code>product_uuid</code> при обновлении схлопывались в одну — побеждала
+последняя. Из-за этого одна и та же пара строк давала в интерфейсе три разных
+числа: 7 635 (активная), 11 452,50 (схлопнутая до отменённой) и 19 087,50
+(сумма обеих в <code>total_amount</code>). Обе причины устранены в v15.16.0.</p>
+</div>
+<hr />
 <h2 id="orderupdated-1">order.updated (1С → Сайт)<a class="headerlink" href="#orderupdated-1" title="Permanent link">&para;</a></h2>
 <h3 id="-_2">Бизнес-правила<a class="headerlink" href="#-_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Если передан <code>items</code> — он <strong>полностью заменяет</strong> текущие позиции</li>
 <li>Не передавайте <code>items</code>, если обновляете только статус</li>
+<li><strong>(v15.16.0)</strong> Позиции сопоставляются по <code>line_number</code>: строка с тем же номером <strong>обновляется</strong>, а не пересоздаётся. Складские привязки сайта (партия некондиции <code>product_defect_id</code>, промо-правило <code>promotion_rule_id</code>) при этом сохраняются автоматически — раньше они переносились эвристикой по товару и при дроблении строк могли уехать не туда</li>
+<li><strong>(v15.16.0)</strong> Строка с <code>cancelled: true</code> сохраняется, но не входит в <code>total_amount</code> (см. раздел «Строки заказа»)</li>
 <li><strong>(v11)</strong> При изменении позиций сайт фиксирует diff в <code>order_change_logs</code></li>
 <li><strong>(v12.1)</strong> Если передан <code>delivery_address</code> — сайт сохраняет значение напрямую в текстовое поле <code>orders.delivery_address</code></li>
 <li><strong>(v12.3)</strong> Если передан <code>number</code> — сайт сохраняет его как <code>erp_number</code>. Это номер заказа из 1С, который отображается пользователю для коммуникации с менеджером</li>
@@ -2445,7 +2619,7 @@
 <li>Восстановленный заказ <strong>не публикуется обратно</strong> в 1С — событий в <code>erp_out.orders</code> не возникает</li>
 <li>Самовосстановление — это страховка, а не штатный путь. <strong>1С обязана присылать <code>order.created</code></strong> на каждый новый заказ. Записи <code>recovered</code> в админке означают, что на стороне 1С событие потерялось, и это повод разбираться</li>
 </ul>
-<h3 id="_3">Маппинг статусов<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<h3 id="_5">Маппинг статусов<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -2534,7 +2708,7 @@
 <li>Заказ перестаёт отображаться в активных заказах ЛК и админки, но остаётся доступным в админке через фильтр «Удалённые»</li>
 </ul>
 <hr />
-<h2 id="_4">Критерии приёмки<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<h2 id="_6">Критерии приёмки<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[ ] <strong>(v15)</strong> <code>manager_comment</code> и <code>warehouse_comment</code> включаются в payload <code>order.created</code> / <code>order.updated</code></li>
 <li>[ ] <strong>(v15)</strong> Оба поля хранятся в <code>orders.manager_comment</code> / <code>orders.warehouse_comment</code></li>

@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Shipment;
 use App\Services\Erp\Support\LinksOverdueDetailsToShipment;
 use App\Services\Erp\Support\LinksPaymentAllocationsToShipment;
+use App\Services\Erp\Support\ReadsShipmentInvoice;
 use App\Services\Erp\Support\ResolvesContractorParty;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
 use App\Services\Erp\Support\SyncsShipmentPaymentSchedule;
@@ -15,6 +16,7 @@ class HandleShipmentUpdated
 {
     use LinksOverdueDetailsToShipment;
     use LinksPaymentAllocationsToShipment;
+    use ReadsShipmentInvoice;
     use ResolvesContractorParty;
     use ResolvesDocumentOrganization;
     use SyncsShipmentPaymentSchedule;
@@ -64,6 +66,12 @@ class HandleShipmentUpdated
         if (isset($payload['number'])) {
             $shipment->number = $payload['number'];
             $shipment->erp_number = $payload['number'];
+        }
+
+        // v15.16.0: счёт-фактура. Отсутствие ключа не сбрасывает сохранённое —
+        // 1С может присылать реквизит не по всем документам.
+        foreach ($this->invoiceFields($payload) as $field => $value) {
+            $shipment->{$field} = $value;
         }
 
         // v13.7: аудит-метки 1С. array_key_exists, чтобы передача null

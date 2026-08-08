@@ -36,27 +36,55 @@
                             "items": {
                                 "type": "object",
                                 "properties": {
-                                    "warehouse_uid": {"type": "string"},
-                                    "quantity": {"type": "number"},
-                                    "reserve": {"type": "number"},
-                                    "total": {"type": "number"},
-                                    "expected": {"type": "number"},
-                                    "nds": {"type": "boolean"},
-                                    "updated_at": {"type": "string"}
+                                    "warehouse_uid": {
+                                        "type": "string"
+                                    },
+                                    "quantity": {
+                                        "type": "number"
+                                    },
+                                    "reserve": {
+                                        "type": "number"
+                                    },
+                                    "total": {
+                                        "type": "number"
+                                    },
+                                    "expected": {
+                                        "type": "number"
+                                    },
+                                    "nds": {
+                                        "type": "boolean"
+                                    },
+                                    "updated_at": {
+                                        "type": "string"
+                                    }
                                 },
-                                "required": ["warehouse_uid", "quantity", "reserve"],
+                                "required": [
+                                    "warehouse_uid",
+                                    "quantity",
+                                    "reserve"
+                                ],
                                 "additionalProperties": true
                             }
                         }
                     },
-                    "required": ["uid", "remains"],
+                    "required": [
+                        "uid",
+                        "remains"
+                    ],
                     "additionalProperties": true
                 }
             },
-            "required": ["name", "payload"],
-            "additionalProperties": true
+            "required": [
+                "name",
+                "payload"
+            ],
+            "additionalProperties": true,
+            "const": "external.product_quantity_updated",
+            "description": "Тип события. Всегда «external.product_quantity_updated». Ограничено константой в v15.16.0: до этого поле принимало любую строку, и сообщение с чужим event прошло бы валидацию своей схемы."
         }
     },
-    "required": ["event"],
+    "required": [
+        "event"
+    ],
     "additionalProperties": true
 }

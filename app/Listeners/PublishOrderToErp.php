@@ -112,8 +112,13 @@ class PublishOrderToErp
         $payload['rate_coefficient'] = (float) ($order->rate_coefficient ?? 1.0);
 
         // Позиции заказа (v7: base_price, discount_percent, final_price)
-        $payload['items'] = $order->items->map(function ($item) {
+        $payload['items'] = $order->items->values()->map(function ($item, $index) {
             $line = [
+                // v15.16.0: номер строки уезжает вместе с позицией — 1С заводит
+                // документ с теми же номерами, и roundtrip не теряет привязку
+                // строк. Фолбэк на порядковый номер нужен для заказов, созданных
+                // до появления колонки.
+                'line_number' => $item->line_number ?? $index + 1,
                 'product_uuid' => $item->product?->external_id,
                 'quantity' => $item->quantity,
                 'base_price' => (float) ($item->base_price ?? $item->price),

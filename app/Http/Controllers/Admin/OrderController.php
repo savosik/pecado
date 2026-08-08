@@ -371,6 +371,9 @@ class OrderController extends AdminController
                         'final_price' => $item->final_price,
                         'quantity' => $item->quantity,
                         'subtotal' => $item->subtotal,
+                        // v15.16.0: строка отменена в 1С при недоборе
+                        'cancelled' => (bool) $item->cancelled,
+                        'line_number' => $item->line_number,
                         'product' => $item->product ? [
                             'id' => $item->product->id,
                             'name' => $item->product->name,
@@ -387,6 +390,7 @@ class OrderController extends AdminController
                         'user_name' => $history->user ? $history->user->name : 'Система',
                         'comment' => $history->comment,
                         'created_at' => $history->created_at->format('d.m.Y H:i'),
+                        'created_at_iso' => $history->created_at->toIso8601String(),
                         'created_at_human' => $history->created_at->locale('ru')->diffForHumans(),
                     ];
                 }),
@@ -401,6 +405,7 @@ class OrderController extends AdminController
                         'old_total' => $log->old_total,
                         'new_total' => $log->new_total,
                         'created_at' => $log->created_at->format('d.m.Y H:i'),
+                        'created_at_iso' => $log->created_at->toIso8601String(),
                         'created_at_human' => $log->created_at->locale('ru')->diffForHumans(),
                     ];
                 }),
@@ -547,6 +552,9 @@ class OrderController extends AdminController
                         'final_price' => $item->final_price,
                         'quantity' => $item->quantity,
                         'subtotal' => $item->subtotal,
+                        // v15.16.0: строка отменена в 1С при недоборе
+                        'cancelled' => (bool) $item->cancelled,
+                        'line_number' => $item->line_number,
                         'sku' => $item->product ? $item->product->sku : null,
                         'image_url' => $item->product ? $item->product->getFirstMediaUrl('main') : null,
                         'brand_name' => $item->product && $item->product->brand ? $item->product->brand->name : null,
@@ -562,6 +570,7 @@ class OrderController extends AdminController
                         'user_name' => $history->user ? $history->user->name : 'Система',
                         'comment' => $history->comment,
                         'created_at' => $history->created_at->format('d.m.Y H:i'),
+                        'created_at_iso' => $history->created_at->toIso8601String(),
                         'created_at_human' => $history->created_at->locale('ru')->diffForHumans(),
                     ];
                 }),
@@ -576,6 +585,7 @@ class OrderController extends AdminController
                         'old_total' => $log->old_total,
                         'new_total' => $log->new_total,
                         'created_at' => $log->created_at->format('d.m.Y H:i'),
+                        'created_at_iso' => $log->created_at->toIso8601String(),
                         'created_at_human' => $log->created_at->locale('ru')->diffForHumans(),
                     ];
                 }),
@@ -610,6 +620,10 @@ class OrderController extends AdminController
             'items.*.discount_percent' => 'nullable|numeric|max:100',
             'items.*.final_price' => 'nullable|numeric|min:0',
             'items.*.quantity' => 'required|integer|min:1',
+            // v15.16.0: признак отмены строки в 1С. Менеджер его не выставляет —
+            // поле едет туда-обратно, чтобы сохранение заказа в админке не сняло
+            // отметку и не вернуло отменённый недобор в сумму заказа
+            'items.*.cancelled' => 'nullable|boolean',
         ]);
 
         DB::beginTransaction();
@@ -620,12 +634,15 @@ class OrderController extends AdminController
             $oldItems = $this->changeLogger->snapshotItems($order);
             $oldTotal = (float) $order->total_amount;
 
-            // Подсчёт total_amount
-            $totalAmount = collect($validated['items'])->sum(function ($item) {
-                $effectivePrice = $item['final_price'] ?? $item['price'];
+            // Подсчёт total_amount. Отменённые в 1С строки (недобор) в сумму
+            // не входят — иначе сохранение заказа в админке вернуло бы их обратно
+            $totalAmount = collect($validated['items'])
+                ->reject(fn ($item) => (bool) ($item['cancelled'] ?? false))
+                ->sum(function ($item) {
+                    $effectivePrice = $item['final_price'] ?? $item['price'];
 
-                return $effectivePrice * $item['quantity'];
-            });
+                    return $effectivePrice * $item['quantity'];
+                });
 
             // Обновление заказа
             $order->update([
@@ -656,6 +673,7 @@ class OrderController extends AdminController
                             'final_price' => $effectivePrice,
                             'quantity' => $item['quantity'],
                             'subtotal' => $effectivePrice * $item['quantity'],
+                            'cancelled' => (bool) ($item['cancelled'] ?? false),
                         ]);
                         $existingItemIds[] = $item['id'];
                     }

@@ -4,12 +4,31 @@
     "title": "cost.updated (1С → Сайт)",
     "type": "object",
     "properties": {
-        "event": { "type": "string" },
-        "message_id": { "type": "string", "minLength": 1 },
-        "product_uuid": { "type": "string", "format": "uuid" },
-        "cost": { "type": "number", "minimum": 0 },
-        "currency_code": { "type": "string" }
+        "event": {
+            "type": "string",
+            "description": "Тип события. Всегда «cost.updated». Ограничено константой в v15.16.0: до этого поле принимало любую строку, и сообщение с чужим event проходило бы валидацию этой схемы.",
+            "const": "cost.updated"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "product_uuid": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "cost": {
+            "type": "number",
+            "minimum": 0
+        },
+        "currency_code": {
+            "type": "string"
+        }
     },
     "additionalProperties": true,
-    "required": ["event", "product_uuid", "cost"]
+    "required": [
+        "event",
+        "product_uuid",
+        "cost"
+    ]
 }

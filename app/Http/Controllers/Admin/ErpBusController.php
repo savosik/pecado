@@ -134,6 +134,11 @@ class ErpBusController extends AdminController
         //    создания. Не ошибка сайта, но повод разбираться на стороне 1С.
         $recoveredCount = ErpBusMessage::where('status', 'recovered')->count();
 
+        // 10. v15.16.0: отброшенные устаревшие сообщения — доехали после более
+        //     свежего по тому же документу. Не ошибка, но постоянный рост счётчика
+        //     означает, что 1С шлёт лишние сообщения либо порядок систематически рвётся.
+        $staleCount = ErpBusMessage::where('status', 'stale')->count();
+
         return Inertia::render('Admin/Pages/ErpBus/Index', [
             'queues' => Inertia::defer(fn () => $this->fetchQueuesFromApi()),
             'processed' => $processed,
@@ -145,6 +150,7 @@ class ErpBusController extends AdminController
             'processingErrors' => $processingErrors,
             'processingErrorsCount' => $processingErrorsCount,
             'recoveredCount' => $recoveredCount,
+            'staleCount' => $staleCount,
             'busMessagesCount' => $busMessagesCount,
             'busLoggingEnabled' => $busLoggingEnabled,
             'filters' => [

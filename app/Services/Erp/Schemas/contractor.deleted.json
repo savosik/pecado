@@ -7,7 +7,8 @@
     "properties": {
         "event": {
             "type": "string",
-            "const": "contractor.deleted"
+            "const": "contractor.deleted",
+            "description": "Тип события. Всегда «contractor.deleted». Ограничено константой в v15.16.0: до этого поле принимало любую строку, и сообщение с чужим event проходило бы валидацию этой схемы."
         },
         "message_id": {
             "type": "string",
@@ -33,7 +34,15 @@
         "event"
     ],
     "anyOf": [
-        {"required": ["uuid"]},
-        {"required": ["tax_id"]}
+        {
+            "required": [
+                "uuid"
+            ]
+        },
+        {
+            "required": [
+                "tax_id"
+            ]
+        }
     ]
 }

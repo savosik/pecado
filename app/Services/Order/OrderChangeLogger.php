@@ -52,20 +52,45 @@ class OrderChangeLogger
     }
 
     /**
-     * Снимок позиций заказа. Ключ — external_id товара (UUID из 1С),
-     * либо фолбэк 'item_{id}' для позиций без связанного товара.
+     * Снимок позиций заказа.
+     *
+     * Ключ — external_id товара (UUID из 1С), либо фолбэк 'item_{id}' для позиций
+     * без связанного товара.
+     *
+     * v15.16.0: если товар в заказе встречается не один раз, второй и последующие
+     * ключи получают суффикс с номером строки. Просто ключевать по номеру нельзя:
+     * у позиций, заведённых до появления колонки, его нет, и первое же обновление
+     * такого заказа дало бы в журнале ложную пару «позиция удалена + добавлена».
+     * С суффиксом дробление строки при недоборе читается так, как оно и произошло:
+     * у исходной строки изменилось количество, рядом добавилась отменённая.
+     *
+     * Порядок фиксирован по номеру строки: без него суффиксы разъезжались бы
+     * между двумя снимками одного заказа.
      */
     public function snapshotItems(Order $order): array
     {
         $snapshot = [];
 
-        foreach ($order->items()->with('product')->get() as $item) {
+        /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\OrderItem> $items */
+        $items = $order->items()->with('product')
+            ->orderByRaw('line_number is null')
+            ->orderBy('line_number')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($items as $item) {
             $key = $item->product?->external_id ?? 'item_'.$item->id;
+
+            if (isset($snapshot[$key])) {
+                $key .= '#'.($item->line_number ?? $item->id);
+            }
+
             $snapshot[$key] = [
                 'product_id' => $item->product_id,
                 'slug' => $item->product?->slug,
                 'name' => $item->product?->name ?? $item->name,
                 'quantity' => (int) $item->quantity,
+                'cancelled' => (bool) $item->cancelled,
                 'base_price' => (float) $item->base_price,
                 'discount_percent' => (float) $item->discount_percent,
                 'final_price' => (float) $item->final_price,
@@ -242,6 +267,9 @@ class OrderChangeLogger
                     'product_name' => $item['name'],
                     'quantity' => $item['quantity'],
                     'price' => $item['final_price'],
+                    // v15.16.0: строка могла появиться уже отменённой — так
+                    // выглядит недобор, когда 1С дробит исходную строку надвое
+                    'cancelled' => (bool) ($item['cancelled'] ?? false),
                 ];
             }
         }
@@ -277,6 +305,15 @@ class OrderChangeLogger
             }
             if (abs($oldItem['base_price'] - $newItem['base_price']) > 0.01) {
                 $changes['base_price'] = ['old' => $oldItem['base_price'], 'new' => $newItem['base_price']];
+            }
+            // v15.16.0: отмена строки при недоборе — самое заметное для клиента
+            // изменение состава, и без этой ветки оно попадало бы в журнал только
+            // косвенно, через изменившуюся сумму заказа.
+            if ((bool) ($oldItem['cancelled'] ?? false) !== (bool) ($newItem['cancelled'] ?? false)) {
+                $changes['cancelled'] = [
+                    'old' => (bool) ($oldItem['cancelled'] ?? false),
+                    'new' => (bool) ($newItem['cancelled'] ?? false),
+                ];
             }
 
             if (! empty($changes)) {
@@ -334,6 +371,14 @@ class OrderChangeLogger
         $lines = [];
 
         foreach ($diff['added'] as $item) {
+            // Отменённая строка приходит из 1С уже отменённой — для клиента это
+            // не «добавили товар», а «часть заказа не собрали»
+            if (! empty($item['cancelled'])) {
+                $lines[] = "Отменено при сборке: «{$item['product_name']}» — {$item['quantity']} шт., позиция отменена в 1С (нет в наличии)";
+
+                continue;
+            }
+
             $lines[] = "Добавлен: «{$item['product_name']}» (кол-во: {$item['quantity']}, цена: {$item['price']} ₽)";
         }
 
@@ -353,6 +398,11 @@ class OrderChangeLogger
             }
             if (isset($ch['final_price'])) {
                 $parts[] = "цена: {$ch['final_price']['old']} → {$ch['final_price']['new']} ₽";
+            }
+            if (isset($ch['cancelled'])) {
+                $parts[] = $ch['cancelled']['new']
+                    ? 'позиция отменена в 1С (нет в наличии)'
+                    : 'отмена позиции снята';
             }
 
             $changesStr = implode(', ', $parts);

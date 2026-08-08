@@ -173,7 +173,7 @@ const Pagination = ({ data, paramName = 'page' }) => {
     );
 };
 
-export default function Index({ queues, processed, failedJobs, eventStats, eventTypes, filters, validationErrors, validationErrorsCount, processingErrors, processingErrorsCount, recoveredCount, busMessagesCount, busLoggingEnabled }) {
+export default function Index({ queues, processed, failedJobs, eventStats, eventTypes, filters, validationErrors, validationErrorsCount, processingErrors, processingErrorsCount, recoveredCount, staleCount, busMessagesCount, busLoggingEnabled }) {
     const [search, setSearch] = useState(filters.search || '');
     const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
     const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
@@ -524,6 +524,16 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
                         <Link href={route('admin.erp-bus.messages', { status: 'recovered' })}>
                             <Badge colorPalette="purple" variant="subtle" size="sm" cursor="pointer">
                                 Восстановлено сущностей: {recoveredCount}
+                            </Badge>
+                        </Link>
+                    )}
+                    {/* v15.16.0: сообщения, отброшенные как устаревшие по ревизии документа.
+                        Не ошибка, но растущий счётчик означает лишние отправки из 1С
+                        либо систематически рвущийся порядок доставки */}
+                    {staleCount > 0 && (
+                        <Link href={route('admin.erp-bus.messages', { status: 'stale' })}>
+                            <Badge colorPalette="orange" variant="subtle" size="sm" cursor="pointer">
+                                Устаревших сообщений: {staleCount}
                             </Badge>
                         </Link>
                     )}

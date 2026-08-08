@@ -156,6 +156,9 @@ class PaymentController extends Controller
                 'uip' => $payment->uip,
                 'purpose' => $payment->purpose,
                 'comment' => $payment->comment,
+                // v15.16.0: комментарий из 1С — отдельно от заметки сотрудника выше,
+                // редактированию не подлежит (мастер данных — 1С)
+                'erp_comment' => $payment->erp_comment,
                 'erp_created_at' => $payment->erp_created_at?->format('d.m.Y H:i'),
                 'erp_updated_at' => $payment->erp_updated_at?->format('d.m.Y H:i'),
                 'allocations' => $payment->allocations
@@ -165,9 +168,17 @@ class PaymentController extends Controller
                         'id' => $allocation->id,
                         'line_number' => $allocation->line_number,
                         'amount' => (float) $allocation->amount,
+                        // v15.16.0: расшифровка вмещает три типа документов —
+                        // реализацию, заказ (предоплата) и прочий документ 1С
+                        'target_type' => $allocation->target_type,
+                        'target_type_label' => \App\Models\PaymentAllocation::TARGET_LABELS[$allocation->target_type] ?? 'Документ',
+                        'document_label' => $allocation->documentLabel(),
+                        'target_uuid' => $allocation->target_uuid,
+                        'target_name' => $allocation->target_name,
                         'shipment_uuid' => $allocation->shipment_uuid,
                         'order_uuid' => $allocation->order_uuid,
-                        'order_number' => $allocation->order?->number,
+                        'order_number' => $allocation->order?->erp_number ?? $allocation->order?->number,
+                        'order_id' => $allocation->order?->id,
                         'shipment' => $allocation->shipment ? [
                             'id' => $allocation->shipment->id,
                             'number' => $allocation->shipment->number ?? $allocation->shipment->erp_number,
