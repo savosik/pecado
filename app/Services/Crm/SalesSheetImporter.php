@@ -5,6 +5,7 @@ namespace App\Services\Crm;
 use App\Enums\Crm\PlanTarget;
 use App\Models\PersonalManager;
 use App\Models\User;
+use App\Support\Crm\ClientNameIndex;
 use App\Support\Crm\SalesSheet;
 use App\Support\Crm\SalesSheetImportReport;
 use App\Support\Crm\SalesSheetRow;
@@ -14,10 +15,11 @@ use Illuminate\Support\Facades\DB;
 /**
  * Перенос управленческой таблицы продаж в CRM: планы и паспорта клиентов.
  *
- * Клиенты ищутся по имени только на точное совпадение. Похожесть здесь опаснее
- * пропуска: неверно угаданный однофамилец получит чужой план на миллионы, и
- * заметят это не раньше конца месяца, тогда как ненайденный клиент честно
- * попадает в отчёт и доводится руками.
+ * Клиенты ищутся через {@see ClientNameIndex}: таблица и 1С называют одного и
+ * того же клиента по-разному, и сравнение строк как есть находит пятерых из
+ * двухсот. Совпадение засчитывается, только когда кандидат ровно один — иначе
+ * строка уходит в отчёт: ненайденного клиента доводят руками, а вот неверно
+ * угаданный однофамилец получил бы чужой план на миллионы.
  */
 class SalesSheetImporter
 {
@@ -43,18 +45,18 @@ class SalesSheetImporter
         $report->warnings = $sheet->warnings;
 
         $groups = $this->groupByName($sheet->clients(), $report);
-        $index = $this->clientIndex();
+        [$index, $clients] = $this->clientIndex();
 
         // План менеджера собирается из планов его клиентов, поэтому сначала
         // раскладываем клиентов, а уже потом сводим итоги по менеджерам.
         /** @var array<int, array<string, float>> $byManager */
         $byManager = [];
 
-        $apply = function () use ($sheet, $groups, $index, $author, $overwrite, $report, &$byManager): void {
+        $apply = function () use ($sheet, $groups, $index, $clients, $author, $overwrite, $report, &$byManager): void {
             foreach ($groups as $group) {
                 $row = $group['row'];
                 $amount = array_sum($row->plans);
-                $matches = $index[$group['key']] ?? [];
+                $matches = $index->find($row->name);
 
                 if ($matches === []) {
                     $report->addUnmatched($row->name, $row->line, $amount);
@@ -68,7 +70,7 @@ class SalesSheetImporter
                     continue;
                 }
 
-                $client = $matches[0];
+                $client = $clients[$matches[0]];
                 $report->clientsMatched++;
 
                 $this->applyPlans($row, $client, $author, $report);
@@ -108,41 +110,26 @@ class SalesSheetImporter
     }
 
     /**
-     * Клиенты по нормализованному имени: и по названию из 1С, и по имени на сайте.
+     * Клиенты, разложенные по именам, и они же по идентификаторам.
      *
-     * @return array<string, list<User>>
+     * @return array{0: ClientNameIndex, 1: array<int, User>}
      */
     private function clientIndex(): array
     {
-        $index = [];
+        $index = new ClientNameIndex;
+        $clients = [];
 
         User::query()
             ->clients()
             ->select('id', 'name', 'erp_name', 'personal_manager_id')
-            ->each(function (User $client) use (&$index): void {
-                foreach ([$client->erp_name, $client->name] as $candidate) {
-                    $key = $this->normalizeName((string) $candidate);
+            ->each(function (User $client) use ($index, &$clients): void {
+                $id = (int) $client->getKey();
+                $clients[$id] = $client;
 
-                    if ($key === '') {
-                        continue;
-                    }
-
-                    // Один и тот же клиент не должен попасть в список дважды
-                    // (erp_name и name часто совпадают) — иначе он выглядел бы
-                    // неоднозначным и был бы пропущен.
-                    if (! isset($index[$key])) {
-                        $index[$key] = [];
-                    }
-
-                    $ids = array_map(fn (User $found): int => (int) $found->getKey(), $index[$key]);
-
-                    if (! in_array((int) $client->getKey(), $ids, true)) {
-                        $index[$key][] = $client;
-                    }
-                }
+                $index->add($id, (string) $client->erp_name, (string) $client->name);
             });
 
-        return $index;
+        return [$index, $clients];
     }
 
     private function applyPlans(SalesSheetRow $row, User $client, User $author, SalesSheetImportReport $report): void

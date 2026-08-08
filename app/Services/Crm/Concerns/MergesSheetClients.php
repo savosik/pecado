@@ -2,6 +2,7 @@
 
 namespace App\Services\Crm\Concerns;
 
+use App\Support\Crm\ClientNameIndex;
 use App\Support\Crm\SalesSheetImportReport;
 use App\Support\Crm\SalesSheetRow;
 
@@ -82,19 +83,15 @@ trait MergesSheetClients
     }
 
     /**
-     * Имя для сравнения: регистр, «ё», лишние пробелы и хвостовая точка не считаются.
+     * Имя для сравнения строк таблицы между собой.
      *
-     * Пробелы вокруг запятых убираются тоже — «ИП, г.Москва» и «ИП,г. Москва»
-     * в таблице и в 1С пишут по-разному, а клиент за ними один и тот же.
+     * Здесь именно точное сравнение, а не «ядро» из {@see ClientNameIndex}: две
+     * строки таблицы описывают одного клиента, когда названы одинаково, и
+     * складывать планы разным клиентам из-за общей фамилии недопустимо.
      */
     protected function normalizeName(string $name): string
     {
-        $text = mb_strtolower(trim($name));
-        $text = str_replace(["\u{00A0}", 'ё', '«', '»', '"'], [' ', 'е', '', '', ''], $text);
-        $text = (string) preg_replace('/\s*([,.])\s*/u', '$1', $text);
-        $text = (string) preg_replace('/\s+/u', ' ', $text);
-
-        return trim($text, " \t\n\r\0\x0B.,");
+        return ClientNameIndex::normalize($name);
     }
 
     /**

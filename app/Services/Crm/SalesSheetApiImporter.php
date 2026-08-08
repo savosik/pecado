@@ -3,6 +3,7 @@
 namespace App\Services\Crm;
 
 use App\Enums\Crm\PlanTarget;
+use App\Support\Crm\ClientNameIndex;
 use App\Support\Crm\SalesSheet;
 use App\Support\Crm\SalesSheetImportReport;
 use App\Support\Crm\SalesSheetRow;
@@ -46,7 +47,7 @@ class SalesSheetApiImporter
         foreach ($groups as $group) {
             $row = $group['row'];
             $amount = array_sum($row->plans);
-            $matches = $index[$group['key']] ?? [];
+            $matches = $index->find($row->name);
 
             if ($matches === []) {
                 $report->addUnmatched($row->name, $row->line, $amount);
@@ -125,11 +126,11 @@ class SalesSheetApiImporter
     /**
      * Клиенты боевой CRM: индекс по имени, менеджер каждого клиента и список менеджеров.
      *
-     * @return array{0: array<string, list<int>>, 1: array<int, int>, 2: array<int, string>}
+     * @return array{0: ClientNameIndex, 1: array<int, int>, 2: array<int, string>}
      */
     private function fetchClients(): array
     {
-        $index = [];
+        $index = new ClientNameIndex;
         $managerOfClient = [];
         $managers = [];
 
@@ -146,19 +147,14 @@ class SalesSheetApiImporter
 
             foreach ($rows as $row) {
                 $id = (int) ($row['id'] ?? 0);
-                $key = $this->normalizeName((string) ($row['name'] ?? ''));
 
-                if ($id === 0 || $key === '') {
+                if ($id === 0) {
                     continue;
                 }
 
-                if (! isset($index[$key])) {
-                    $index[$key] = [];
-                }
-
-                if (! in_array($id, $index[$key], true)) {
-                    $index[$key][] = $id;
-                }
+                // Список отдаёт подпись клиента (рабочее наименование из 1С,
+                // а без него — имя с сайта) и личное имя, если они разошлись.
+                $index->add($id, (string) ($row['name'] ?? ''), (string) ($row['personal_name'] ?? ''));
 
                 $manager = $row['manager'] ?? null;
 
