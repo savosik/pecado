@@ -26,8 +26,10 @@ class CrmImportSalesSheet extends Command
         {--sheet=ОПТ действующие : Лист с клиентами}
         {--author= : E-mail сотрудника, от имени которого пишутся планы и статусы (для локальной базы)}
         {--api= : Адрес сайта для записи через агентское API, например https://pecado.ru}
-        {--token= : Токен CRM-агента; сотрудник определяется им (для режима --api)}
+        {--token= : Токен CRM-агента; надёжнее задать переменной PECADO_CRM_TOKEN}
+        {--token-file= : Файл с токеном: строка или JSON рабочего места менеджера (.claude/settings.local.json)}
         {--dry-run : Только показать результат, ничего не записывая}
+        {--force : Не спрашивать подтверждение перед записью в боевую CRM}
         {--overwrite : Перезаписывать заполненные поля паспорта и статусы, выставленные вручную}';
 
     protected $description = 'Перенести планы («корректировка») и паспорта клиентов из таблицы продаж в CRM';
@@ -86,21 +88,42 @@ class CrmImportSalesSheet extends Command
      */
     private function importThroughApi(string $baseUrl, \App\Support\Crm\SalesSheet $sheet, bool $dryRun, bool $overwrite): ?SalesSheetImportReport
     {
-        $token = trim((string) $this->option('token'));
+        $token = $this->resolveToken();
 
-        if ($token === '') {
-            $this->error('Для режима --api нужен --token — токен CRM-агента, выданный сотруднику.');
-
+        if ($token === null) {
             return null;
         }
 
         $client = new CrmApiClient($baseUrl, $token);
         $me = $client->me();
 
-        $name = $me['name'] ?? $me['data']['name'] ?? 'неизвестно';
-        $this->info("Записи пойдут от имени: {$name} ({$baseUrl}).");
+        $actor = $me['data']['actor'] ?? [];
+        $scope = $me['data']['scope'] ?? [];
+        $seesAll = (bool) ($scope['sees_all'] ?? false);
 
-        if (! $dryRun && ! $this->confirm('Записать данные в эту CRM?', false)) {
+        $this->info(sprintf(
+            'Записи пойдут от имени: %s <%s> на %s.',
+            $actor['name'] ?? 'неизвестно',
+            $actor['email'] ?? '—',
+            $baseUrl,
+        ));
+
+        $this->line(sprintf(
+            'Видит клиентов: %s. Планы менеджеров и отдела: %s.',
+            $scope['clients_visible'] ?? '?',
+            $seesAll ? 'доступны' : 'НЕДОСТУПНЫ — сервер их пропустит',
+        ));
+
+        // Без права видеть весь отдел сервер молча отбросит планы чужих клиентов,
+        // менеджеров и отдела. Молча — это и есть проблема: отчёт покажет успех,
+        // а в CRM не появится почти ничего.
+        if (! $seesAll) {
+            $this->warn('У сотрудника нет права «видеть всех клиентов»: запишутся только планы его собственных клиентов.');
+        }
+
+        // Подтверждение спрашивается всегда, кроме явного --force: записи необратимы,
+        // и «случайно запустил не тот файл» здесь стоит дороже одного вопроса.
+        if (! $dryRun && ! $this->option('force') && ! $this->confirm('Записать данные в эту CRM?', false)) {
             $this->comment('Отменено.');
 
             return null;
@@ -130,6 +153,71 @@ class CrmImportSalesSheet extends Command
         }
 
         return $author;
+    }
+
+    /**
+     * Токен CRM-агента: из файла, из окружения или из аргумента.
+     *
+     * Файл и переменная окружения предпочтительнее аргумента: значение, переданное
+     * командной строкой, видно в списке процессов и оседает в истории оболочки, а
+     * этим токеном пишут в боевую CRM от имени живого сотрудника.
+     */
+    private function resolveToken(): ?string
+    {
+        $path = trim((string) $this->option('token-file'));
+
+        if ($path !== '') {
+            $token = $this->tokenFromFile($path);
+
+            if ($token === null) {
+                $this->error("Не удалось прочитать токен из файла «{$path}».");
+            }
+
+            return $token;
+        }
+
+        // getenv, а не env(): токен приходит из окружения запуска, а не из
+        // конфигурации приложения, и при закешированном конфиге env() вернул бы null.
+        $token = trim((string) ($this->option('token') ?: getenv('PECADO_CRM_TOKEN')));
+
+        if ($token === '') {
+            $this->error('Нужен токен CRM-агента: передайте --token-file, переменную PECADO_CRM_TOKEN или --token.');
+
+            return null;
+        }
+
+        return $token;
+    }
+
+    /**
+     * Токен из файла: либо строкой, либо из рабочего места менеджера, где он лежит
+     * в блоке `env` файла `.claude/settings.local.json`.
+     */
+    private function tokenFromFile(string $path): ?string
+    {
+        if (! is_readable($path)) {
+            return null;
+        }
+
+        $contents = trim((string) file_get_contents($path));
+
+        if ($contents === '') {
+            return null;
+        }
+
+        if (! str_starts_with($contents, '{')) {
+            return $contents;
+        }
+
+        $json = json_decode($contents, true);
+
+        if (! is_array($json)) {
+            return null;
+        }
+
+        $token = $json['env']['PECADO_CRM_TOKEN'] ?? $json['PECADO_CRM_TOKEN'] ?? null;
+
+        return is_string($token) && trim($token) !== '' ? trim($token) : null;
     }
 
     private function printReport(SalesSheetImportReport $report, bool $dryRun): void

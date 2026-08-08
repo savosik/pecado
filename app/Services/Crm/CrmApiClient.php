@@ -19,6 +19,22 @@ use RuntimeException;
  */
 class CrmApiClient
 {
+    /**
+     * Запросов в минуту, которые мы позволяем себе сами.
+     *
+     * Сервер разрешает 120 (`throttle:crm-api`), и упереться в его лимит на
+     * середине импорта — значит оставить половину клиентов без планов. Дешевле
+     * идти чуть медленнее потолка, чем ловить 429 и разбираться, что записалось.
+     */
+    private const REQUESTS_PER_MINUTE = 100;
+
+    /**
+     * Время последних запросов (unixtime с долями) — окно для собственного темпа.
+     *
+     * @var list<float>
+     */
+    private array $recentRequests = [];
+
     public function __construct(
         private readonly string $baseUrl,
         private readonly string $token,
@@ -68,9 +84,25 @@ class CrmApiClient
      */
     private function send(string $method, string $uri, array $data): array
     {
-        $response = $this->request()->send($method, $uri, [
-            $method === 'GET' ? 'query' : 'json' => $data,
-        ]);
+        $attempt = 0;
+
+        do {
+            $this->pace();
+
+            $response = $this->request()->send($method, $uri, [
+                $method === 'GET' ? 'query' : 'json' => $data,
+            ]);
+
+            if ($response->status() !== 429) {
+                break;
+            }
+
+            // Сервер сам говорит, сколько ждать. Своя догадка тут хуже: окно
+            // считается на его стороне и делится с другими агентами сотрудника.
+            $wait = max(1, (int) ($response->header('Retry-After') ?: 10));
+            sleep($wait);
+            $attempt++;
+        } while ($attempt < 5);
 
         if ($response->failed()) {
             // Тело ответа в сообщении не роскошь: 422 от CRM объясняет, какое
@@ -85,6 +117,35 @@ class CrmApiClient
         }
 
         return (array) $response->json();
+    }
+
+    /**
+     * Придержать темп, если за последнюю минуту запросов уже слишком много.
+     */
+    private function pace(): void
+    {
+        $now = microtime(true);
+
+        $this->recentRequests = array_values(array_filter(
+            $this->recentRequests,
+            fn (float $moment): bool => $now - $moment < 60.0,
+        ));
+
+        if (count($this->recentRequests) >= self::REQUESTS_PER_MINUTE) {
+            $sleep = 60.0 - ($now - $this->recentRequests[0]) + 0.5;
+
+            if ($sleep > 0) {
+                usleep((int) ($sleep * 1_000_000));
+            }
+
+            $now = microtime(true);
+            $this->recentRequests = array_values(array_filter(
+                $this->recentRequests,
+                fn (float $moment): bool => $now - $moment < 60.0,
+            ));
+        }
+
+        $this->recentRequests[] = $now;
     }
 
     private function request(): PendingRequest
