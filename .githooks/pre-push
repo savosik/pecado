@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+#
+# Тесты по затронутым классам перед push.
+#
+# Смысл: поймать падение за секунды здесь, а не через 8 минут на CI — и тем
+# более не через 15 минут на прод-деплое, который при падении оставляет
+# pecado.ru под maintenance.
+#
+# Хук НЕ гоняет весь suite: это делает `make verify` (запускайте перед
+# релизом на прод) и CI.
+#
+# Обойти:  git push --no-verify
+
+set -uo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+RED=$'\033[1;31m'; GRN=$'\033[1;32m'; YEL=$'\033[1;33m'; DIM=$'\033[2m'; RST=$'\033[0m'
+
+docker ps --format '{{.Names}}' 2>/dev/null | grep -qx pecado-app || {
+  printf '%s·%s pecado-app не запущен — тесты пропущены\n' "$YEL" "$RST"
+  exit 0
+}
+
+# База сравнения: upstream ветки, иначе origin/dev, иначе последний коммит.
+BASE=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "origin/dev")
+git rev-parse --verify "$BASE" >/dev/null 2>&1 || BASE="HEAD~1"
+
+CHANGED=$(git diff --name-only "$BASE"...HEAD -- '*.php' 2>/dev/null || true)
+
+if [[ -z "$CHANGED" ]]; then
+  printf '%s·%s PHP-файлы не менялись — тесты пропущены\n' "$DIM" "$RST"
+  exit 0
+fi
+
+# Тронуты миграции, composer.lock или сам TestCase — точечным прогоном не
+# отделаться, слишком широкий радиус поражения.
+if grep -qE '^(database/migrations/|composer\.lock$|tests/TestCase\.php$|config/)' <<<"$CHANGED"; then
+  printf '%s▶%s Затронуты миграции/конфиг/зависимости — нужен полный прогон.\n' "$YEL" "$RST"
+  printf '  Запустите %smake verify%s перед push, либо push --no-verify под свою ответственность.\n' "$DIM" "$RST"
+  exit 1
+fi
+
+# Ищем тесты: по имени класса (Foo.php → FooTest.php) и изменённые тесты сами.
+TESTS=""
+while read -r f; do
+  [[ -z "$f" ]] && continue
+  if [[ "$f" == tests/* ]]; then
+    [[ -f "$f" ]] && TESTS+="$f"$'\n'
+    continue
+  fi
+  base=$(basename "$f" .php)
+  found=$(find tests -name "${base}Test.php" -o -name "${base}*Test.php" 2>/dev/null || true)
+  [[ -n "$found" ]] && TESTS+="$found"$'\n'
+done <<<"$CHANGED"
+
+TESTS=$(echo "$TESTS" | grep -v '^$' | sort -u || true)
+
+if [[ -z "$TESTS" ]]; then
+  printf '%s·%s Тестов для изменённых файлов не нашлось — прогон пропущен.\n' "$YEL" "$RST"
+  printf '  %sИзменено: %s%s\n' "$DIM" "$(wc -l <<<"$CHANGED") файл(ов)" "$RST"
+  exit 0
+fi
+
+COUNT=$(wc -l <<<"$TESTS")
+printf '%s▶%s Прогоняю %d тестовых файл(ов) по изменениям…\n' "$GRN" "$RST" "$COUNT"
+
+# shellcheck disable=SC2086
+if docker exec pecado-app php artisan test $(echo "$TESTS" | paste -sd' ' -); then
+  printf '%s✓%s Тесты прошли\n' "$GRN" "$RST"
+  exit 0
+fi
+
+printf '\n%sPush остановлен — тесты упали.%s\n' "$RED" "$RST"
+printf '  Обойти: %sgit push --no-verify%s\n' "$DIM" "$RST"
+exit 1

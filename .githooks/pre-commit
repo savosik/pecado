@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+#
+# Быстрые проверки перед коммитом: стиль PHP и синтаксис JSX по изменённым файлам.
+# Цель — доли секунды, а не полный прогон: полный линт остаётся на CI.
+#
+# Обойти:  git commit --no-verify
+
+set -uo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+RED=$'\033[1;31m'; GRN=$'\033[1;32m'; DIM=$'\033[2m'; RST=$'\033[0m'
+FAILED=0
+
+staged() { git diff --cached --name-only --diff-filter=ACM -- "$@"; }
+
+# Контейнеры могут быть подняты не всегда — тогда молча пропускаем.
+running() { docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "$1"; }
+
+# ─────────────────────────────────────────────────────────────
+# Pint по изменённым PHP-файлам
+# ─────────────────────────────────────────────────────────────
+PHP_FILES=$(staged '*.php')
+if [[ -n "$PHP_FILES" ]] && running pecado-app; then
+  # shellcheck disable=SC2086
+  if docker exec pecado-app vendor/bin/pint --quiet $PHP_FILES 2>/dev/null; then
+    # Pint правит файлы на месте — возвращаем исправления в индекс,
+    # иначе закоммитится неотформатированная версия.
+    echo "$PHP_FILES" | xargs -r git add
+    printf '%s✓%s Pint: %d файл(ов)\n' "$GRN" "$RST" "$(wc -l <<<"$PHP_FILES")"
+  else
+    printf '%s✗%s Pint не смог обработать файлы\n' "$RED" "$RST"
+    FAILED=1
+  fi
+fi
+
+# ─────────────────────────────────────────────────────────────
+# ESLint по изменённым JS/JSX
+# ─────────────────────────────────────────────────────────────
+JS_FILES=$(staged '*.js' '*.jsx')
+if [[ -n "$JS_FILES" ]] && running pecado-node; then
+  # shellcheck disable=SC2086
+  if docker exec pecado-node npx eslint --no-warn-ignored $JS_FILES 2>&1 | grep -qE "error|problem"; then
+    printf '%s✗%s ESLint нашёл ошибки:\n' "$RED" "$RST"
+    # shellcheck disable=SC2086
+    docker exec pecado-node npx eslint --no-warn-ignored $JS_FILES 2>&1 | head -30
+    FAILED=1
+  else
+    printf '%s✓%s ESLint: %d файл(ов)\n' "$GRN" "$RST" "$(wc -l <<<"$JS_FILES")"
+  fi
+fi
+
+if [[ "$FAILED" -eq 1 ]]; then
+  printf '\n%sКоммит остановлен.%s Обойти: %sgit commit --no-verify%s\n' "$RED" "$RST" "$DIM" "$RST"
+  exit 1
+fi
+
+exit 0
