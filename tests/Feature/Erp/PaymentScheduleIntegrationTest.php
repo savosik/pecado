@@ -29,6 +29,10 @@ class PaymentScheduleIntegrationTest extends TestCase
 
     private const CONTRACTOR_UUID = '550e8400-e29b-41d4-a716-4466554400a3';
 
+    private const ORDER_UUID = '550e8400-e29b-41d4-a716-4466554400a5';
+
+    private const PREPAYMENT_UUID = '550e8400-e29b-41d4-a716-4466554400a6';
+
     /**
      * Прогон сообщения тем же путём, каким его получает воркер очереди:
      * через AMQP-конверт и `fire()`, а не вызовом обработчика напрямую.
@@ -87,6 +91,34 @@ class PaymentScheduleIntegrationTest extends TestCase
     }
 
     /**
+     * Платёж, разнесённый 1С на ЗАКАЗ, а не на реализацию.
+     *
+     * На проде так пришла почти половина денег (39,7 из 82,8 млн ₽ на 2026-08-09),
+     * и до июня это была основная практика.
+     *
+     * @return array<string, mixed>
+     */
+    private function prepaymentMessage(float $amount, string $orderUuid = self::ORDER_UUID): array
+    {
+        return [
+            'event' => 'payment.created',
+            'message_id' => 'msg-prepay-'.uniqid(),
+            'uuid' => self::PREPAYMENT_UUID,
+            'number' => '29УТ-002489',
+            'date' => '2026-08-20T10:00:00+03:00',
+            'direction' => 'in',
+            'contractor_uuid' => self::CONTRACTOR_UUID,
+            'amount' => $amount,
+            'currency_code' => 'RUB',
+            'allocations' => [[
+                'target_type' => 'order',
+                'order_uuid' => $orderUuid,
+                'amount' => $amount,
+            ]],
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function paymentMessage(float $amount): array
@@ -136,6 +168,19 @@ class PaymentScheduleIntegrationTest extends TestCase
                 'stage_name' => 'Оплата после отгрузки',
             ],
         ];
+    }
+
+    /**
+     * Тот же график, но строки знают, из какого заказа выросли, — как присылает 1С.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function scheduleWithOrder(): array
+    {
+        return array_map(
+            static fn (array $line): array => $line + ['order_uuid' => self::ORDER_UUID],
+            $this->schedule(),
+        );
     }
 
     private function shipment(): Shipment
@@ -210,5 +255,102 @@ class PaymentScheduleIntegrationTest extends TestCase
         $this->dispatch($message);
 
         $this->assertSame(2, $this->shipment()->paymentSchedules()->count());
+    }
+
+    /**
+     * Предоплата по заказу закрывает график, хотя `shipments.paid_amount` не растёт.
+     *
+     * Без зачёта такая строка висела бы просроченной вечно: 1С разносит поступление
+     * на заказ, а не на реализацию, и до июня 2026 так шла почти половина денег.
+     */
+    #[Test]
+    public function order_prepayment_closes_schedule_without_touching_shipment_paid_amount(): void
+    {
+        $this->dispatch($this->shipmentMessage($this->scheduleWithOrder()));
+        $this->dispatch($this->prepaymentMessage(3000.00), 'erp_in.payments');
+
+        $lines = $this->shipment()->paymentSchedules()->inFifoOrder()->get();
+
+        $this->assertEquals(3000.00, (float) $lines[0]->prepaid_amount);
+        $this->assertEquals(0.00, (float) $lines[0]->paid_amount, 'Разнесения на реализацию не было.');
+        $this->assertEquals(0.00, (float) $lines[0]->unpaid_amount);
+        $this->assertEquals(0.00, (float) $lines[1]->prepaid_amount);
+
+        // Проекция расшифровки платежа по реализациям остаётся нетронутой.
+        $this->assertEquals(0.00, (float) $this->shipment()->paid_amount);
+        // А план переехал на вторую строку: деньги по первой в учёте есть.
+        $this->assertSame('2026-09-27', $this->shipment()->payment_due_date->toDateString());
+    }
+
+    /**
+     * Прямое разнесение имеет приоритет: аванс закрывает только то, что осталось,
+     * иначе один и тот же долг был бы погашен дважды.
+     */
+    #[Test]
+    public function direct_allocation_wins_over_prepayment(): void
+    {
+        $this->dispatch($this->shipmentMessage($this->scheduleWithOrder()));
+        $this->dispatch($this->paymentMessage(3000.00), 'erp_in.payments');
+        $this->dispatch($this->prepaymentMessage(10000.00), 'erp_in.payments');
+
+        $lines = $this->shipment()->paymentSchedules()->inFifoOrder()->get();
+
+        // Первая строка закрыта деньгами, аванс на неё не тратится.
+        $this->assertEquals(3000.00, (float) $lines[0]->paid_amount);
+        $this->assertEquals(0.00, (float) $lines[0]->prepaid_amount);
+        // Вторая закрыта авансом целиком — но не больше своей суммы.
+        $this->assertEquals(7000.00, (float) $lines[1]->prepaid_amount);
+        $this->assertEquals(0.00, (float) $lines[1]->unpaid_amount);
+
+        $this->assertNull($this->shipment()->payment_due_date, 'Долга по графику не осталось.');
+    }
+
+    /**
+     * Аванс заказа делится между его реализациями, а не зачитывается каждой целиком.
+     */
+    #[Test]
+    public function order_prepayment_is_shared_between_shipments_of_the_same_order(): void
+    {
+        $second = '550e8400-e29b-41d4-a716-4466554400b1';
+
+        $this->dispatch($this->shipmentMessage($this->scheduleWithOrder()));
+
+        $secondMessage = $this->shipmentMessage($this->scheduleWithOrder());
+        $secondMessage['uuid'] = $second;
+        $secondMessage['number'] = '29УТ-006916';
+        $this->dispatch($secondMessage);
+
+        // Аванса хватает на первую реализацию целиком и на кусок второй.
+        $this->dispatch($this->prepaymentMessage(12000.00), 'erp_in.payments');
+
+        $first = $this->shipment()->paymentSchedules()->inFifoOrder()->get();
+        $other = Shipment::where('uuid', $second)->firstOrFail()
+            ->paymentSchedules()->inFifoOrder()->get();
+
+        $covered = $first->sum(fn ($line) => (float) $line->prepaid_amount)
+            + $other->sum(fn ($line) => (float) $line->prepaid_amount);
+
+        // Ровно сумма аванса: ни рубля сверх того, что заплатил клиент.
+        $this->assertEquals(12000.00, $covered);
+    }
+
+    /**
+     * Повторный пересчёт не меняет результат — тот же контракт, что у остальных
+     * денежных агрегатов: полная функция от состояния БД, а не инкремент.
+     */
+    #[Test]
+    public function prepayment_offset_is_idempotent(): void
+    {
+        $this->dispatch($this->shipmentMessage($this->scheduleWithOrder()));
+        $this->dispatch($this->prepaymentMessage(5000.00), 'erp_in.payments');
+
+        $service = app(\App\Services\Payments\PaymentScheduleService::class);
+        $service->applyOrderPrepayments([self::ORDER_UUID]);
+        $service->applyOrderPrepayments([self::ORDER_UUID]);
+
+        $lines = $this->shipment()->paymentSchedules()->inFifoOrder()->get();
+
+        $this->assertEquals(3000.00, (float) $lines[0]->prepaid_amount);
+        $this->assertEquals(2000.00, (float) $lines[1]->prepaid_amount);
     }
 }

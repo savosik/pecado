@@ -5,7 +5,9 @@ namespace App\Console\Commands;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use App\Models\Shipment;
+use App\Models\ShipmentPaymentSchedule;
 use App\Services\Payments\PaymentAllocationService;
+use App\Services\Payments\PaymentScheduleService;
 use Illuminate\Console\Command;
 
 /**
@@ -31,6 +33,11 @@ use Illuminate\Console\Command;
  * v15.12.0: заодно пересчитывается и график оплаты — `recalculateShipments()`
  * дёргает PaymentScheduleService, поэтому FIFO-раскладка по строкам «Правил оплаты»
  * и `shipments.payment_due_date` восстанавливаются той же командой.
+ *
+ * 2026-08-09: последним проходом зачитываются авансы по заказам
+ * (`shipment_payment_schedules.prepaid_amount`). Именно он чинит историю: до июня
+ * 1С разносила почти все поступления на заказы, и без зачёта такие строки графика
+ * оставались просроченными навсегда.
  */
 class RecalculatePayments extends Command
 {
@@ -62,7 +69,36 @@ class RecalculatePayments extends Command
         });
         $this->info("Пересчитано реализаций (оплата и график): {$shipments}");
 
+        $this->info("Зачтено авансов по заказам: {$this->applyPrepayments($chunk)} заказов");
+
         return self::SUCCESS;
+    }
+
+    /**
+     * Зачесть авансы по заказам в строки графика.
+     *
+     * Отдельным проходом по ЗАКАЗАМ, а не по реализациям: аванс раскладывается
+     * между всеми реализациями заказа сразу, и обход по документам сделал бы одну
+     * и ту же работу столько раз, сколько у заказа отгрузок.
+     *
+     * Идём от строк графика: заказов с авансом на порядки меньше, чем всех заказов.
+     */
+    private function applyPrepayments(int $chunk): int
+    {
+        $service = app(PaymentScheduleService::class);
+        $processed = 0;
+
+        ShipmentPaymentSchedule::query()
+            ->whereNotNull('order_uuid')
+            ->distinct()
+            ->pluck('order_uuid')
+            ->chunk($chunk)
+            ->each(function ($batch) use ($service, &$processed) {
+                $service->applyOrderPrepayments($batch->all());
+                $processed += $batch->count();
+            });
+
+        return $processed;
     }
 
     /**

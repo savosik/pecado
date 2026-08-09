@@ -61,15 +61,17 @@ class PaymentForecastService
             ->whereNull('s.deleted_at')
             ->whereIn('s.user_id', (clone $clients))
             // Закрытые строки в план не идут: деньги по ним уже пришли, и показывать
-            // их как ожидаемые значило бы задвоить выручку. Константа в SQL, а не
-            // биндингом — см. ShipmentPaymentSchedule::scopeOutstanding.
-            ->whereRaw('sch.amount - sch.paid_amount > '.ShipmentPaymentSchedule::EPSILON)
+            // их как ожидаемые значило бы задвоить выручку. Аванс по заказу закрывает
+            // строку наравне с прямым разнесением — см. scopeOutstanding. Константа
+            // в SQL, а не биндингом (там же объяснение почему).
+            ->whereRaw('sch.amount - sch.paid_amount - sch.prepaid_amount > '.ShipmentPaymentSchedule::EPSILON)
             ->select([
                 'sch.id',
                 'sch.shipment_id',
                 'sch.due_date',
                 'sch.amount',
                 'sch.paid_amount',
+                'sch.prepaid_amount',
                 'sch.stage_name',
                 'sch.line_number',
                 's.number as shipment_number',
@@ -117,6 +119,9 @@ class PaymentForecastService
                 DB::raw('NULL as due_date'),
                 's.total_amount as amount',
                 's.paid_amount',
+                // У реализации без графика зачитывать нечего: аванс раскладывается
+                // по строкам, а строк тут нет. Колонка нужна ради единой формы строки.
+                DB::raw('0 as prepaid_amount'),
                 DB::raw('NULL as stage_name'),
                 DB::raw('NULL as line_number'),
                 's.number as shipment_number',
@@ -151,7 +156,7 @@ class PaymentForecastService
         $query = $this->plannedQuery($clients, $filters)
             ->whereBetween('sch.due_date', [$filters->dateFrom->toDateString(), $filters->dateTo->toDateString()]);
 
-        return $this->sumByDay($query, 'sch.due_date', 'sch.amount - sch.paid_amount');
+        return $this->sumByDay($query, 'sch.due_date', 'sch.amount - sch.paid_amount - sch.prepaid_amount');
     }
 
     /**
@@ -372,7 +377,7 @@ class PaymentForecastService
         $horizon = fn (int $days): float => round($this->sumRub(
             $this->plannedQuery($clients, $filters)
                 ->whereBetween('sch.due_date', [$today->toDateString(), $today->addDays($days)->toDateString()]),
-            'sch.amount - sch.paid_amount',
+            'sch.amount - sch.paid_amount - sch.prepaid_amount',
         ), 2);
 
         $noSchedule = $filters->includeNoSchedule
@@ -394,7 +399,7 @@ class PaymentForecastService
             'expected_period' => round($this->sumRub(
                 $this->plannedQuery($clients, $filters)
                     ->whereBetween('sch.due_date', [$filters->dateFrom->toDateString(), $filters->dateTo->toDateString()]),
-                'sch.amount - sch.paid_amount',
+                'sch.amount - sch.paid_amount - sch.prepaid_amount',
             ), 2),
             'expected_7' => $horizon(7),
             'expected_14' => $horizon(14),
@@ -402,7 +407,7 @@ class PaymentForecastService
             'expected_month' => round($this->sumRub(
                 $this->plannedQuery($clients, $filters)
                     ->whereBetween('sch.due_date', [$today->startOfMonth()->toDateString(), $today->endOfMonth()->toDateString()]),
-                'sch.amount - sch.paid_amount',
+                'sch.amount - sch.paid_amount - sch.prepaid_amount',
             ), 2),
             'overdue_amount' => $aging['total'],
             'overdue_count' => $aging['count'],
@@ -543,7 +548,9 @@ class PaymentForecastService
      */
     public function unpaidOf(object $row): float
     {
-        return round(max(0.0, (float) $row->amount - (float) $row->paid_amount), 2);
+        $prepaid = (float) ($row->prepaid_amount ?? 0);
+
+        return round(max(0.0, (float) $row->amount - (float) $row->paid_amount - $prepaid), 2);
     }
 
     /**

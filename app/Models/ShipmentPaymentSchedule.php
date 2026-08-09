@@ -25,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property \Illuminate\Support\Carbon|null $due_date В БД колонка NOT NULL, но у несохранённой модели атрибута ещё нет
  * @property numeric $amount
  * @property numeric $paid_amount
+ * @property numeric $prepaid_amount
  * @property numeric|null $percent
  * @property int|null $term_days
  * @property string|null $basis
@@ -75,6 +76,7 @@ class ShipmentPaymentSchedule extends Model
         'due_date',
         'amount',
         'paid_amount',
+        'prepaid_amount',
         'percent',
         'term_days',
         'basis',
@@ -90,6 +92,7 @@ class ShipmentPaymentSchedule extends Model
             'due_date' => 'date',
             'amount' => 'decimal:2',
             'paid_amount' => 'decimal:2',
+            'prepaid_amount' => 'decimal:2',
             'percent' => 'decimal:4',
         ];
     }
@@ -131,15 +134,21 @@ class ShipmentPaymentSchedule extends Model
         // `amount - paid_amount` нет аффинности типа, и SQLite сравнил бы число
         // с привязанной строкой '0.01' — а текст там всегда больше числа,
         // из-за чего условие не находило бы ни одной строки.
-        $query->whereRaw('amount - paid_amount > '.self::EPSILON);
+        $query->whereRaw('amount - paid_amount - prepaid_amount > '.self::EPSILON);
     }
 
     /**
      * Остаток к оплате по строке. Переплата остатка не создаёт — отсюда max(0, …).
+     *
+     * Аванс по заказу закрывает долг наравне с прямым разнесением: клиенту без
+     * разницы, каким документом 1С зачла деньги.
      */
     public function getUnpaidAmountAttribute(): float
     {
-        return max(0.0, round((float) $this->amount - (float) $this->paid_amount, 2));
+        return max(0.0, round(
+            (float) $this->amount - (float) $this->paid_amount - (float) $this->prepaid_amount,
+            2,
+        ));
     }
 
     /**
@@ -147,7 +156,7 @@ class ShipmentPaymentSchedule extends Model
      */
     public function getStatusAttribute(): string
     {
-        $paid = (float) $this->paid_amount;
+        $paid = (float) $this->paid_amount + (float) $this->prepaid_amount;
         $amount = (float) $this->amount;
 
         if ($paid >= $amount - self::EPSILON) {

@@ -265,6 +265,33 @@ class FinanceScopeTest extends TestCase
         $this->assertArrayHasKey('overdue_amount', $props['summary']);
     }
 
+    /**
+     * Строка, закрытая авансом по заказу, из просрочки уходит.
+     *
+     * До зачёта раздел показывал такие строки как долг: 1С разносит почти половину
+     * денег на заказы, а `shipments.paid_amount` от этого не растёт.
+     */
+    #[Test]
+    public function schedule_line_covered_by_order_prepayment_is_not_overdue(): void
+    {
+        [$actor, $card] = $this->makeManagerActor();
+        $client = $this->makeClient($card);
+
+        ShipmentPaymentSchedule::factory()->create([
+            'shipment_id' => $this->makeShipment($client)->id,
+            'due_date' => Carbon::today()->subDays(30)->toDateString(),
+            'amount' => 1000,
+            'paid_amount' => 0,
+            'prepaid_amount' => 1000,
+        ]);
+
+        $props = $this->actingAs($actor)->get('/crm/finance')->viewData('page')['props'];
+
+        $this->assertSame(0.0, $props['summary']['overdue_amount']);
+        $this->assertSame(0, $props['summary']['overdue_count']);
+        $this->assertSame([], $props['overdueRows']);
+    }
+
     #[Test]
     public function overdue_page_ignores_period_filter(): void
     {

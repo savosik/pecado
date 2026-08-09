@@ -2,6 +2,7 @@
 
 namespace App\Services\Payments;
 
+use App\Models\PaymentAllocation;
 use App\Models\Shipment;
 use App\Models\ShipmentPaymentSchedule;
 use Illuminate\Support\Carbon;
@@ -103,7 +104,6 @@ class PaymentScheduleService
             }
 
             $remaining = round((float) $locked->paid_amount, 2);
-            $nextDueDate = null;
 
             $lines = ShipmentPaymentSchedule::query()
                 ->where('shipment_id', $locked->id)
@@ -120,19 +120,151 @@ class PaymentScheduleService
                 if (round((float) $line->paid_amount, 2) !== $paid) {
                     $line->forceFill(['paid_amount' => $paid])->saveQuietly();
                 }
-
-                if ($nextDueDate === null && $amount - $paid > ShipmentPaymentSchedule::EPSILON) {
-                    $nextDueDate = $line->due_date;
-                }
             }
 
-            $this->applyDueDate($locked, $nextDueDate);
+            // Авансы по заказам этой реализации — вторым проходом: прямое разнесение
+            // имеет приоритет, и зачитывать аванс поверх него нельзя.
+            $this->applyOrderPrepayments($lines->pluck('order_uuid')->all());
+
+            $this->refreshDueDate($locked);
 
             // Переданный экземпляр держим в актуальном состоянии: обработчик
             // продолжает работать именно с ним, а запись ушла в $locked.
             $shipment->setAttribute('payment_due_date', $locked->payment_due_date);
             $shipment->syncOriginalAttribute('payment_due_date');
         });
+    }
+
+    /**
+     * Зачесть авансы по заказам в строки графика.
+     *
+     * 1С разносит поступление либо на реализацию, либо на ЗАКАЗ. Второй случай —
+     * почти половина денег, и без этого зачёта строка графика висела бы просроченной
+     * навсегда: `shipments.paid_amount` от предоплаты по заказу не растёт и расти
+     * не должен (это строгая проекция расшифровки платежа по реализациям).
+     *
+     * Считается в разрезе ЗАКАЗА, а не реализации: один заказ отгружают частями,
+     * и зачесть его аванс каждой реализации целиком значило бы погасить долг дважды.
+     * Аванс раскладывается по строкам всех реализаций заказа в порядке FIFO —
+     * том же, в котором строки гасятся деньгами.
+     *
+     * Полная функция от состояния БД, как и остальные пересчёты сервиса:
+     * повторный вызов даёт тот же результат.
+     *
+     * @param  array<int, string|null>  $orderUuids
+     */
+    public function applyOrderPrepayments(array $orderUuids): void
+    {
+        $orderUuids = array_values(array_unique(array_filter($orderUuids)));
+
+        if ($orderUuids === []) {
+            return;
+        }
+
+        // Пакетно, а не по заказу за раз: на проде 5592 заказа со графиком, и обход
+        // поштучно дал бы 11 тыс. запросов на один пересчёт.
+        foreach (array_chunk($orderUuids, 500) as $chunk) {
+            $prepaidByOrder = $this->prepaidOf($chunk);
+
+            $lines = ShipmentPaymentSchedule::query()
+                ->whereIn('order_uuid', $chunk)
+                ->inFifoOrder()
+                ->get()
+                ->groupBy('order_uuid');
+
+            $touched = [];
+
+            foreach ($lines as $orderUuid => $orderLines) {
+                $prepaid = $prepaidByOrder[$orderUuid] ?? 0.0;
+
+                foreach ($orderLines as $line) {
+                    // Свободный остаток строки: то, что не закрыто прямым разнесением.
+                    $free = round(max(0.0, (float) $line->amount - (float) $line->paid_amount), 2);
+                    $offset = round(min($free, $prepaid), 2);
+                    $prepaid = round(max(0.0, $prepaid - $offset), 2);
+
+                    if (round((float) $line->prepaid_amount, 2) !== $offset) {
+                        $line->forceFill(['prepaid_amount' => $offset])->saveQuietly();
+                        $touched[] = $line->shipment_id;
+                    }
+                }
+            }
+
+            $this->refreshDueDates(array_unique($touched));
+        }
+    }
+
+    /**
+     * Суммы авансов по заказам — строки расшифровки с target_type = order.
+     *
+     * Берём из `payment_allocations`, а не из `orders.prepaid_amount`: заказа может
+     * не быть на сайте (1С прислала платёж раньше документа), а деньги при этом
+     * реальны. Возврат уменьшает аванс — та же логика, что у реализаций.
+     *
+     * @param  array<int, string>  $orderUuids
+     * @return array<string, float>
+     */
+    private function prepaidOf(array $orderUuids): array
+    {
+        return DB::table('payment_allocations as pa')
+            ->join('payments as p', 'p.id', '=', 'pa.payment_id')
+            ->whereIn('pa.order_uuid', $orderUuids)
+            ->where('pa.target_type', PaymentAllocation::TARGET_ORDER)
+            ->whereNull('p.deleted_at')
+            ->groupBy('pa.order_uuid')
+            ->selectRaw('pa.order_uuid as order_uuid')
+            ->selectRaw("SUM(CASE WHEN p.direction = 'out' THEN -pa.amount ELSE pa.amount END) as prepaid")
+            ->get()
+            ->mapWithKeys(fn (object $row): array => [
+                (string) $row->order_uuid => round(max(0.0, (float) $row->prepaid), 2),
+            ])
+            ->all();
+    }
+
+    /**
+     * Пересчитать ближайшую плановую дату по нескольким реализациям.
+     *
+     * @param  array<int, int|null>  $shipmentIds
+     */
+    private function refreshDueDates(array $shipmentIds): void
+    {
+        $shipmentIds = array_values(array_unique(array_filter($shipmentIds)));
+
+        if ($shipmentIds === []) {
+            return;
+        }
+
+        Shipment::withoutGlobalScopes()->withTrashed()
+            ->whereIn('id', $shipmentIds)
+            ->get(['id', 'payment_due_date'])
+            ->each(fn (Shipment $shipment) => $this->refreshDueDate($shipment));
+    }
+
+    /**
+     * Ближайшая непогашенная плановая дата реализации.
+     *
+     * Строка считается закрытой, когда её сумма покрыта деньгами и авансом вместе:
+     * клиенту без разницы, каким документом 1С закрыла долг.
+     */
+    private function refreshDueDate(Shipment $shipment): void
+    {
+        $nextDueDate = null;
+
+        $lines = ShipmentPaymentSchedule::query()
+            ->where('shipment_id', $shipment->id)
+            ->inFifoOrder()
+            ->get();
+
+        foreach ($lines as $line) {
+            $unpaid = (float) $line->amount - (float) $line->paid_amount - (float) $line->prepaid_amount;
+
+            if ($unpaid > ShipmentPaymentSchedule::EPSILON) {
+                $nextDueDate = $line->due_date;
+                break;
+            }
+        }
+
+        $this->applyDueDate($shipment, $nextDueDate);
     }
 
     /**
