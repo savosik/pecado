@@ -571,10 +571,14 @@ class PaymentForecastService
     {
         $rows = (clone $query)
             ->reorder()
-            ->groupBy(DB::raw('DATE('.$dateColumn.')'), 's.currency_code')
-            ->selectRaw('DATE('.$dateColumn.') as day')
+            // select(), а не selectRaw(): агрегату нужен СВОЙ список колонок.
+            // selectRaw только добавляет к тем, что уже выбрал plannedQuery,
+            // и MySQL с only_full_group_by отвергает такой запрос целиком
+            // (SQLite его молча выполняет — на нём эта ошибка не ловится).
+            ->select(DB::raw('DATE('.$dateColumn.') as day'))
             ->selectRaw('s.currency_code as currency_code')
             ->selectRaw('SUM('.$unpaidExpression.') as unpaid')
+            ->groupBy(DB::raw('DATE('.$dateColumn.')'), 's.currency_code')
             ->get();
 
         $byDay = [];
@@ -594,9 +598,10 @@ class PaymentForecastService
     {
         $rows = (clone $query)
             ->reorder()
-            ->groupBy('s.currency_code')
-            ->selectRaw('s.currency_code as currency_code')
+            // Свой список колонок — см. комментарий в sumByDay().
+            ->select(DB::raw('s.currency_code as currency_code'))
             ->selectRaw('SUM('.$expression.') as unpaid')
+            ->groupBy('s.currency_code')
             ->get();
 
         $total = 0.0;

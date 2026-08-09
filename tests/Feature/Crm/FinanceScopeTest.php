@@ -10,6 +10,7 @@ use App\Models\ShipmentPaymentSchedule;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
@@ -274,6 +275,53 @@ class FinanceScopeTest extends TestCase
         $this->assertSame(1, $props['rows']['total']);
         $this->assertSame(750.0, $props['rows']['data'][0]['unpaid_rub']);
         $this->assertTrue($props['rows']['data'][0]['is_overdue']);
+    }
+
+    /**
+     * Агрегаты обязаны собирать свой список колонок.
+     *
+     * `selectRaw` только добавляет к тем, что выбрал plannedQuery, — и MySQL с
+     * only_full_group_by отвергает такой запрос (ошибка 1055), а SQLite молча
+     * выполняет. Из-за этого раздел падал на проде при зелёных тестах; проверяем
+     * форму SQL, раз поведение движков расходится.
+     */
+    #[Test]
+    public function aggregate_queries_do_not_carry_row_columns(): void
+    {
+        [$actor, $card] = $this->makeManagerActor();
+        $client = $this->makeClient($card);
+
+        ShipmentPaymentSchedule::factory()->create([
+            'shipment_id' => $this->makeShipment($client)->id,
+            'due_date' => Carbon::today()->addDays(3)->toDateString(),
+            'amount' => 500,
+        ]);
+
+        $queries = [];
+        DB::listen(function ($query) use (&$queries): void {
+            $queries[] = $query->sql;
+        });
+
+        $this->actingAs($actor)->get('/crm/finance')->assertOk();
+
+        $grouped = array_values(array_filter(
+            $queries,
+            static fn (string $sql): bool => str_contains($sql, 'group by'),
+        ));
+
+        $this->assertNotEmpty($grouped, 'Ожидались запросы с группировкой — иначе проверка бессмысленна.');
+
+        foreach ($grouped as $sql) {
+            $select = substr($sql, 0, (int) strpos($sql, ' from '));
+
+            foreach (['shipment_number', 'client_name', 'manager_name'] as $rowColumn) {
+                $this->assertStringNotContainsString(
+                    $rowColumn,
+                    $select,
+                    "Агрегирующий запрос тянет построчную колонку «{$rowColumn}» — MySQL отвергнет его по only_full_group_by: {$sql}",
+                );
+            }
+        }
     }
 
     #[Test]
