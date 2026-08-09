@@ -278,20 +278,24 @@ class PaymentForecastService
     }
 
     /**
-     * Балансы взаиморасчётов из 1С по клиентам скоупа.
+     * Балансы взаиморасчётов из 1С, сгруппированные по клиенту.
+     *
+     * 1С ведёт расчёты по КОНТРАГЕНТАМ, а у клиента их бывает несколько (на проде
+     * 234 контрагента на 144 партнёра). Поэтому строка нижнего уровня — контрагент,
+     * а верхний нужен лишь чтобы имя клиента не повторялось подряд без видимой
+     * причины: суммы клиента — это сумма его контрагентов, не отдельная величина.
      *
      * `current_balance` приходит от 1С без указания валюты и подписан как рубли —
      * конвертацию здесь не делаем, иначе исказили бы то, что прислала учётная система.
      *
      * @param  EloquentBuilder<\App\Models\User>  $clients
-     * @return Collection<int, array<string, mixed>>
+     * @return list<array<string, mixed>>
      */
-    public function balances(EloquentBuilder $clients, FinanceFilters $filters): Collection
+    public function balances(EloquentBuilder $clients): array
     {
-        $overdueByClient = $this->overdueByClient($clients, $filters);
+        $grouped = [];
 
-        /** @var Collection<int, array<string, mixed>> $rows */
-        $rows = ContractorBalance::query()
+        ContractorBalance::query()
             ->whereIn('user_id', (clone $clients))
             ->with([
                 'user:id,name,erp_name,personal_manager_id',
@@ -300,30 +304,56 @@ class PaymentForecastService
             ])
             ->orderByDesc('overdue_debt')
             ->get()
-            ->map(function (ContractorBalance $balance) use ($overdueByClient): array {
-                $ourOverdue = round($overdueByClient[(int) $balance->user_id] ?? 0.0, 2);
-                $erpOverdue = round((float) $balance->overdue_debt, 2);
+            ->each(function (ContractorBalance $balance) use (&$grouped): void {
+                $userId = (int) $balance->user_id;
 
-                return [
-                    'id' => (int) $balance->getKey(),
+                $grouped[$userId] ??= [
+                    'id' => $userId,
                     'client' => [
-                        'id' => (int) $balance->user_id,
+                        'id' => $userId,
                         'name' => $balance->user->erp_name ?: $balance->user->name,
-                        'url' => route('crm.clients.show', $balance->user_id),
+                        'url' => route('crm.clients.show', $userId),
                     ],
+                    'manager_name' => $balance->user->personalManager?->name,
+                    'current_balance' => 0.0,
+                    'overdue_debt' => 0.0,
+                    'erp_updated_at' => null,
+                    'contractors' => [],
+                ];
+
+                $updatedAt = $balance->balance_erp_updated_at;
+
+                $grouped[$userId]['current_balance'] += (float) $balance->current_balance;
+                $grouped[$userId]['overdue_debt'] += (float) $balance->overdue_debt;
+                // У клиента показываем самую свежую дату из его контрагентов: 1С
+                // обновляет их по отдельности, и старая дата означала бы, что устарел
+                // весь баланс клиента, — а это не так.
+                $grouped[$userId]['erp_updated_at'] = max(
+                    $grouped[$userId]['erp_updated_at'],
+                    $updatedAt?->format('Y-m-d H:i:s'),
+                );
+
+                $grouped[$userId]['contractors'][] = [
+                    'id' => (int) $balance->getKey(),
                     'company_name' => $balance->company?->name,
                     'tax_id' => $balance->tax_id,
-                    'manager_name' => $balance->user->personalManager?->name,
                     'current_balance' => round((float) $balance->current_balance, 2),
-                    'overdue_debt' => $erpOverdue,
-                    'overdue_by_schedule' => $ourOverdue,
-                    // Расхождение — не ошибка сайта: 1С считает просрочку по своим
-                    // правилам и может учитывать документы, которых на сайте нет.
-                    // Показываем как повод свериться, а не как поломку.
-                    'overdue_diff' => round($erpOverdue - $ourOverdue, 2),
-                    'erp_updated_at' => $balance->balance_erp_updated_at?->format('d.m.Y H:i'),
+                    'overdue_debt' => round((float) $balance->overdue_debt, 2),
+                    'erp_updated_at' => $updatedAt?->format('d.m.Y H:i'),
                 ];
             });
+
+        $rows = array_map(static function (array $row): array {
+            $row['current_balance'] = round($row['current_balance'], 2);
+            $row['overdue_debt'] = round($row['overdue_debt'], 2);
+            $row['erp_updated_at'] = $row['erp_updated_at'] !== null
+                ? CarbonImmutable::parse($row['erp_updated_at'])->format('d.m.Y H:i')
+                : null;
+
+            return $row;
+        }, array_values($grouped));
+
+        usort($rows, static fn (array $a, array $b): int => $b['overdue_debt'] <=> $a['overdue_debt']);
 
         return $rows;
     }
@@ -611,28 +641,6 @@ class PaymentForecastService
         }
 
         return $total;
-    }
-
-    /**
-     * Просрочка по графику в разрезе клиентов — для сверки с тем, что прислала 1С.
-     *
-     * @param  EloquentBuilder<\App\Models\User>  $clients
-     * @return array<int, float>
-     */
-    private function overdueByClient(EloquentBuilder $clients, FinanceFilters $filters): array
-    {
-        $rows = $this->plannedQuery($clients, $filters)
-            ->whereDate('sch.due_date', '<', CarbonImmutable::today()->toDateString())
-            ->get();
-
-        $byClient = [];
-
-        foreach ($rows as $row) {
-            $id = (int) $row->user_id;
-            $byClient[$id] = ($byClient[$id] ?? 0.0) + $this->toRub($this->unpaidOf($row), $row->currency_code);
-        }
-
-        return $byClient;
     }
 
     /**

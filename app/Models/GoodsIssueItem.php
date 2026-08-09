@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property \Illuminate\Support\Carbon|null $order_date
  * @property numeric $quantity
  * @property string|null $unit
+ * @property string|null $cell
  * @property int|null $package_number
  * @property-read string $product_label
  * @property-read \App\Models\GoodsIssue $goodsIssue
@@ -51,6 +52,7 @@ class GoodsIssueItem extends Model
         'order_date',
         'quantity',
         'unit',
+        'cell',
         'package_number',
     ];
 

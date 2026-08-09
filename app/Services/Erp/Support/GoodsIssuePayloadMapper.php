@@ -183,6 +183,7 @@ class GoodsIssuePayloadMapper
                 'order_date' => $item['order_date'] ?? null,
                 'quantity' => $quantity,
                 'unit' => $item['unit'] ?? null,
+                'cell' => $this->normalizeCell($item['cell'] ?? null),
                 'package_number' => $item['package_number'] ?? null,
             ]);
 
@@ -203,6 +204,23 @@ class GoodsIssuePayloadMapper
                 'total' => $itemsCount,
             ]);
         }
+    }
+
+    /**
+     * Ячейка хранения строки: строка как есть, пустая — то же, что отсутствие поля.
+     *
+     * Справочника ячеек на сайте нет и не планируется — адресное хранение ведётся
+     * в 1С, сайт значение только показывает кладовщику.
+     */
+    private function normalizeCell(mixed $cell): ?string
+    {
+        if (! is_string($cell)) {
+            return null;
+        }
+
+        $cell = trim($cell);
+
+        return $cell === '' ? null : $cell;
     }
 
     /**

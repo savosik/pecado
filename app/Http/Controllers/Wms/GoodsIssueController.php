@@ -138,6 +138,7 @@ class GoodsIssueController extends WmsController
                         $item->order_number,
                         (float) $item->quantity,
                         $item->unit,
+                        $item->cell,
                         $item->package_number,
                     ];
                 }
@@ -158,7 +159,7 @@ class GoodsIssueController extends WmsController
                 'title' => 'Позиции',
                 'headers' => [
                     'Ордер', 'N', 'Номенклатура', 'Артикул', 'Заказ',
-                    'Количество', 'Ед. изм.', 'Место',
+                    'Количество', 'Ед. изм.', 'Ячейка', 'Место',
                 ],
                 'rows' => $itemRows,
             ],
@@ -330,6 +331,7 @@ class GoodsIssueController extends WmsController
                     'is_unresolved' => $item->product_id === null,
                     'quantity' => (float) $item->quantity,
                     'unit' => $item->unit,
+                    'cell' => $item->cell,
                     'package_number' => $item->package_number,
                 ])->values()->all(),
             ])

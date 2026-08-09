@@ -227,32 +227,42 @@ class FinanceScopeTest extends TestCase
         $this->assertSame([], $props['upcomingRows']);
     }
 
+    /**
+     * У клиента бывает несколько контрагентов — 1С ведёт расчёты по ним, а не по
+     * партнёру. Строка клиента должна быть суммой его контрагентов; раньше сюда
+     * подставлялась просрочка всего партнёра, из-за чего одно и то же число
+     * дублировалось в каждой строке его ИНН.
+     */
     #[Test]
-    public function balances_show_erp_and_schedule_overdue_side_by_side(): void
+    public function balances_group_contractors_under_client(): void
     {
         [$actor, $card] = $this->makeManagerActor();
         $client = $this->makeClient($card);
 
-        ShipmentPaymentSchedule::factory()->create([
-            'shipment_id' => $this->makeShipment($client)->id,
-            'due_date' => Carbon::today()->subDays(3)->toDateString(),
-            'amount' => 400,
-        ]);
-
-        ContractorBalance::create([
-            'user_id' => $client->id,
-            'tax_id' => '7701234567',
-            'current_balance' => -1500,
-            'overdue_debt' => 600,
-            'balance_erp_updated_at' => Carbon::now(),
-        ]);
+        foreach ([['7701234567', -1500, 600], ['7739999999', -500, 150]] as [$taxId, $balance, $overdue]) {
+            ContractorBalance::create([
+                'user_id' => $client->id,
+                'tax_id' => $taxId,
+                'current_balance' => $balance,
+                'overdue_debt' => $overdue,
+                'balance_erp_updated_at' => Carbon::now(),
+            ]);
+        }
 
         $props = $this->actingAs($actor)->get('/crm/finance/balances')->viewData('page')['props'];
 
-        $this->assertCount(1, $props['balances']);
-        $this->assertSame(600.0, $props['balances'][0]['overdue_debt']);
-        $this->assertSame(400.0, $props['balances'][0]['overdue_by_schedule']);
-        $this->assertSame(200.0, $props['balances'][0]['overdue_diff']);
+        $this->assertCount(1, $props['balances'], 'Два контрагента одного клиента — одна строка верхнего уровня.');
+
+        $row = $props['balances'][0];
+
+        $this->assertCount(2, $row['contractors']);
+        $this->assertSame(-2000.0, $row['current_balance']);
+        $this->assertSame(750.0, $row['overdue_debt']);
+        $this->assertSame(['7701234567', '7739999999'], array_column($row['contractors'], 'tax_id'));
+
+        // Сверка живёт в шапке одной строкой, а не в колонке у каждого контрагента.
+        $this->assertArrayNotHasKey('overdue_by_schedule', $row);
+        $this->assertArrayHasKey('overdue_amount', $props['summary']);
     }
 
     #[Test]

@@ -33,8 +33,11 @@ function Field({ label, value }) {
  *
  * Группировка по заказам не косметика: ордер собирают именно по распоряжениям,
  * и плоский список заставлял бы кладовщика сортировать строки глазами.
+ *
+ * `showCell` приходит снаружи, а не считается по своим строкам: колонка ячейки нужна
+ * одинаковая во всех группах ордера, иначе таблицы разъезжаются по ширине.
  */
-function OrderGroup({ group }) {
+function OrderGroup({ group, showCell }) {
     return (
         <Card.Root>
             <Card.Body>
@@ -64,6 +67,7 @@ function OrderGroup({ group }) {
                                     <Table.ColumnHeader>Артикул</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="end">Кол-во</Table.ColumnHeader>
                                     <Table.ColumnHeader>Ед. изм.</Table.ColumnHeader>
+                                    {showCell && <Table.ColumnHeader>Ячейка</Table.ColumnHeader>}
                                     <Table.ColumnHeader textAlign="end">Место</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
@@ -92,6 +96,11 @@ function OrderGroup({ group }) {
                                             {item.quantity}
                                         </Table.Cell>
                                         <Table.Cell fontSize="sm" color="fg.muted">{item.unit || '—'}</Table.Cell>
+                                        {showCell && (
+                                            <Table.Cell fontSize="sm" whiteSpace="nowrap">
+                                                {item.cell || '—'}
+                                            </Table.Cell>
+                                        )}
                                         <Table.Cell textAlign="end" fontSize="sm" color="fg.muted">
                                             {item.package_number ?? '—'}
                                         </Table.Cell>
@@ -108,6 +117,10 @@ function OrderGroup({ group }) {
 
 export default function GoodsIssueShow() {
     const { order } = usePage().props;
+
+    // Колонку ячейки показываем, только если 1С их прислала: на складах без адресного
+    // хранения она была бы столбцом прочерков.
+    const showCell = order.groups.some((group) => group.items.some((item) => item.cell));
 
     return (
         <>
@@ -182,7 +195,11 @@ export default function GoodsIssueShow() {
                 </Card.Root>
 
                 {order.groups.map((group, index) => (
-                    <OrderGroup key={group.order_uuid || `no-order-${index}`} group={group} />
+                    <OrderGroup
+                        key={group.order_uuid || `no-order-${index}`}
+                        group={group}
+                        showCell={showCell}
+                    />
                 ))}
 
                 <SimpleGrid columns={{ base: 1, lg: 2 }} gap={4}>

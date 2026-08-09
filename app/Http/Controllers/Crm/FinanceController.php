@@ -80,7 +80,12 @@ class FinanceController extends CrmController
         $clients = $this->visibleClients($request, $filters);
 
         return Inertia::render('Crm/Pages/Finance/Balances', [
-            'balances' => $this->forecast->balances($clients, $filters)->values()->all(),
+            'balances' => $this->forecast->balances($clients),
+            // Сводка нужна ради одной строки сверки в шапке: просрочка по данным 1С
+            // против нашего расчёта по графику. Построчно её больше не показываем —
+            // это разные разрезы (1С считает по контрагенту, график по документу),
+            // и рядом в таблице они читались как ошибка.
+            'summary' => $this->forecast->summary($clients, $filters),
             ...$this->sharedOptions($request, $filters),
         ]);
     }
@@ -119,21 +124,42 @@ class FinanceController extends CrmController
             [
                 'title' => 'Балансы',
                 'headers' => [
-                    'Клиент', 'ИНН', 'Менеджер', 'Сальдо, ₽', 'Просрочено по 1С, ₽',
-                    'Просрочено по графику, ₽', 'Расхождение, ₽', 'Данные 1С от',
+                    'Клиент', 'Менеджер', 'Контрагент', 'ИНН',
+                    'Сальдо, ₽', 'Просрочено, ₽', 'Данные 1С от',
                 ],
-                'rows' => $this->forecast->balances($clients, $filters)->map(fn (array $row): array => [
-                    $row['client']['name'],
-                    $row['tax_id'],
-                    $row['manager_name'],
-                    $row['current_balance'],
-                    $row['overdue_debt'],
-                    $row['overdue_by_schedule'],
-                    $row['overdue_diff'],
-                    $row['erp_updated_at'],
-                ])->all(),
+                // Построчно по контрагентам: 1С ведёт расчёты именно по ним, и
+                // свёрнутый до клиента лист нельзя было бы сверить с учётной системой.
+                'rows' => $this->balancesSheet($clients),
             ],
         ]);
+    }
+
+    /**
+     * Лист «Балансы»: строка на контрагента, имя клиента дублируется в каждой —
+     * так лист фильтруется и сводится в самом Excel.
+     *
+     * @param  Builder<User>  $clients
+     * @return list<array<int, scalar|null>>
+     */
+    private function balancesSheet(Builder $clients): array
+    {
+        $rows = [];
+
+        foreach ($this->forecast->balances($clients) as $client) {
+            foreach ($client['contractors'] as $contractor) {
+                $rows[] = [
+                    $client['client']['name'],
+                    $client['manager_name'],
+                    $contractor['company_name'],
+                    $contractor['tax_id'],
+                    $contractor['current_balance'],
+                    $contractor['overdue_debt'],
+                    $contractor['erp_updated_at'],
+                ];
+            }
+        }
+
+        return $rows;
     }
 
     /**
