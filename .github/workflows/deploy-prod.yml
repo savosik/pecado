@@ -12,10 +12,94 @@ concurrency:
 
 jobs:
   # ─────────────────────────────────────────────────────────────
-  # JOB 1: Линтинг и тесты (БЕЗ fast-lane! на проде гоняем всегда)
+  # JOB 0: Уже прогоняли эти тесты на dev?
   # ─────────────────────────────────────────────────────────────
+  # Релиз идёт через `git push origin dev:main`, то есть на прод приезжает
+  # РОВНО тот же коммит, который перед этим позеленел на dev. Гонять на нём
+  # тот же test suite второй раз — семь лишних минут простоя релиза.
+  #
+  # Пропускаем тесты, только если по этому же SHA выполнены ВСЕ условия:
+  #   1. Есть завершённый прогон deploy-dev, и он успешен.
+  #   2. В нём job «Lint & Tests» именно SUCCESS, а не skipped. Это ключевое:
+  #      на dev действует fast-lane, и при правках только в md/css тесты там
+  #      пропускаются — зелёный workflow тогда ничего не доказывает.
+  #   3. В нём job «Deploy to Dev» тоже SUCCESS — то есть код не просто
+  #      собрался, а реально доехал и поднялся на dev-сервере.
+  #
+  # Любое сомнение → тесты гоняются. Молчаливого пропуска быть не должно:
+  # упавший прод-деплой оставляет pecado.ru под maintenance.
+  check-dev:
+    name: "🔍 Проверка dev-прогона"
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      actions: read
+    outputs:
+      skip_tests: ${{ steps.decide.outputs.skip_tests }}
+      reason: ${{ steps.decide.outputs.reason }}
+    steps:
+      - name: "🔎 Ищем успешный deploy-dev для этого коммита"
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          emit() {
+            echo "skip_tests=$1" >> "$GITHUB_OUTPUT"
+            echo "reason=$2"     >> "$GITHUB_OUTPUT"
+            if [ "$1" = "true" ]; then
+              echo "::notice title=Тесты пропущены::$2"
+            else
+              echo "::notice title=Тесты будут прогнаны::$2"
+            fi
+            exit 0
+          }
+
+          RUN_ID=$(gh api \
+            "repos/$REPO/actions/workflows/deploy-dev.yml/runs?head_sha=$SHA&status=completed&per_page=1" \
+            --jq '.workflow_runs[0].id // empty' 2>/dev/null || echo "")
+
+          if [ -z "$RUN_ID" ]; then
+            emit false "Завершённого deploy-dev для ${SHA:0:7} нет — прогоняем всё с нуля."
+          fi
+
+          RUN_CONCLUSION=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq '.conclusion // "unknown"')
+          if [ "$RUN_CONCLUSION" != "success" ]; then
+            emit false "deploy-dev #$RUN_ID завершился как '$RUN_CONCLUSION'."
+          fi
+
+          JOBS=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
+            --jq '.jobs[] | "\(.name)\t\(.conclusion)"')
+
+          job_result() { printf '%s\n' "$JOBS" | grep -F "$1" | head -1 | cut -f2; }
+
+          TESTS_RESULT=$(job_result "Lint & Tests")
+          DEPLOY_RESULT=$(job_result "Deploy to Dev")
+
+          echo "dev run #$RUN_ID: tests='${TESTS_RESULT:-нет}', deploy='${DEPLOY_RESULT:-нет}'"
+
+          if [ "$TESTS_RESULT" != "success" ]; then
+            emit false "На dev тесты не прогонялись (job: '${TESTS_RESULT:-отсутствует}') — вероятно, сработал fast-lane."
+          fi
+
+          if [ "$DEPLOY_RESULT" != "success" ]; then
+            emit false "Деплой на dev не завершился успехом (job: '${DEPLOY_RESULT:-отсутствует}')."
+          fi
+
+          emit true "Коммит ${SHA:0:7} уже проверен и задеплоен на dev (прогон #$RUN_ID) — тесты не повторяем."
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 1: Линтинг и тесты
+  # ─────────────────────────────────────────────────────────────
+  # Гоняются всегда, КРОМЕ случая, когда этот же коммит уже прошёл тесты и
+  # успешно задеплоился на dev (см. check-dev выше).
   test:
     name: "🧪 Lint & Tests"
+    needs: check-dev
+    if: needs.check-dev.outputs.skip_tests != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -200,7 +284,16 @@ jobs:
   deploy:
     name: "🚀 Deploy to Production"
     runs-on: [self-hosted, prod-server]
-    needs: [test, build-frontend]
+    needs: [check-dev, test, build-frontend]
+    # test может быть намеренно пропущен (коммит уже проверен на dev), а
+    # пропущенная зависимость по умолчанию отменяет job. Поэтому условие
+    # разбирается вручную: сборка обязана быть успешной, тесты — успешны
+    # ЛИБО пропущены осознанно. Любой другой исход (failure, cancelled)
+    # прод не выкатывает.
+    if: |
+      !cancelled() &&
+      needs.build-frontend.result == 'success' &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped')
     timeout-minutes: 30
     environment:
       name: production
