@@ -511,8 +511,12 @@ class OrderController extends Controller
                 'total_converted' => $this->convertAmount((float) $order->total_amount, $order->currency_code, $this->getUserCurrency($request)),
                 // v15.16.0: предоплата по заказу из расшифровки платежей 1С.
                 // Накладную не гасит — по ней ещё нет реализации
-                'prepaid_amount' => (float) $order->prepaid_amount,
-                'prepaid_converted' => $this->convertAmount((float) $order->prepaid_amount, $order->currency_code, $this->getUserCurrency($request)),
+                // Предоплата закрыта флагом cabinet.finance_enabled вместе с остальными
+                // денежными данными кабинета: остаток «к доплате» считается от неё.
+                ...(config('cabinet.finance_enabled') ? [
+                    'prepaid_amount' => (float) $order->prepaid_amount,
+                    'prepaid_converted' => $this->convertAmount((float) $order->prepaid_amount, $order->currency_code, $this->getUserCurrency($request)),
+                ] : []),
                 'currency_code' => $order->currency_code,
                 'created_at_formatted' => ($order->erp_created_at ?? $order->created_at)?->format('d.m.Y H:i'),
                 'company' => $order->company ? [

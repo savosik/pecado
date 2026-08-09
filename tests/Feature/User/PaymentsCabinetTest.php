@@ -29,6 +29,11 @@ class PaymentsCabinetTest extends TestCase
     {
         parent::setUp();
         $this->client = User::factory()->create();
+
+        // Раздел закрыт флагом по умолчанию (цифры долга не сверены с 1С).
+        // Тесты самого раздела включают его явно; выключенное состояние
+        // проверяется отдельно — см. finance_flag_*.
+        config(['cabinet.finance_enabled' => true]);
     }
 
     private function paymentFor(User $user, array $attributes = []): Payment
@@ -320,5 +325,76 @@ class PaymentsCabinetTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('shipment.payment_schedule', null));
+    }
+
+    /**
+     * Выключенный флаг закрывает раздел целиком: 404, а не пустой список.
+     */
+    #[Test]
+    public function finance_flag_hides_payments_section(): void
+    {
+        config(['cabinet.finance_enabled' => false]);
+
+        $payment = $this->paymentFor($this->client);
+
+        $this->actingAs($this->client)->get(route('cabinet.payments.index'))->assertNotFound();
+        $this->actingAs($this->client)->get(route('cabinet.payments.calendar'))->assertNotFound();
+        $this->actingAs($this->client)->get(route('cabinet.payments.show', $payment->id))->assertNotFound();
+        $this->actingAs($this->client)->get(route('cabinet.payments.export', ['format' => 'csv']))->assertNotFound();
+    }
+
+    /**
+     * Выключенный флаг убирает деньги и из карточки реализации: клиент не должен
+     * видеть остаток, который мы сами ещё не сверили.
+     */
+    #[Test]
+    public function finance_flag_hides_payment_data_in_shipment_card(): void
+    {
+        config(['cabinet.finance_enabled' => false]);
+
+        $shipment = Shipment::factory()->create([
+            'user_id' => $this->client->id,
+            'total_amount' => 5000,
+            'paid_amount' => 1000,
+            'payment_status' => Shipment::PAYMENT_PARTIAL,
+        ]);
+
+        ShipmentPaymentSchedule::factory()->forShipment($shipment)->create([
+            'due_date' => now()->subDays(5)->toDateString(),
+            'amount' => 5000,
+        ]);
+
+        $this->actingAs($this->client)
+            ->get(route('cabinet.shipments.show', $shipment->id))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->missing('shipment.payment_status')
+                ->missing('shipment.paid_amount')
+                ->missing('shipment.payments')
+                ->missing('shipment.payment_schedule')
+                ->where('overdue_detail', null)
+            );
+    }
+
+    /**
+     * Список реализаций тоже не показывает оплату — ни колонкой, ни фильтром.
+     */
+    #[Test]
+    public function finance_flag_hides_payment_status_in_shipment_list(): void
+    {
+        config(['cabinet.finance_enabled' => false]);
+
+        Shipment::factory()->create([
+            'user_id' => $this->client->id,
+            'payment_status' => Shipment::PAYMENT_UNPAID,
+        ]);
+
+        $this->actingAs($this->client)
+            ->get(route('cabinet.shipments.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('paymentStatuses', [])
+                ->missing('shipments.data.0.payment_status')
+            );
     }
 }

@@ -27,7 +27,8 @@ const menuGroups = [
             { href: '/cabinet/orders', label: 'Мои заказы', icon: LuShoppingBag },
             { href: '/cabinet/order-changes', label: 'Изменения заказов', icon: LuArrowRightLeft },
             { href: '/cabinet/shipments', label: 'Отгрузки', icon: LuTruck },
-            { href: '/cabinet/payments', label: 'Оплаты', icon: LuReceipt },
+            // Раздел скрыт, пока цифры долга не сверены с 1С (config.cabinet_finance_enabled).
+            { href: '/cabinet/payments', label: 'Оплаты', icon: LuReceipt, feature: 'finance' },
             { href: '/cabinet/returns', label: 'Возвраты', icon: LuRotateCcw },
             { href: '/cabinet/carts', label: 'Мои корзины', icon: LuShoppingCart },
         ],
@@ -96,14 +97,24 @@ function MenuItemRow({ item, isActive }) {
 }
 
 function SidebarContent({ currentPath }) {
+    const { config } = usePage().props;
+    const financeEnabled = !!config?.cabinet_finance_enabled;
+
+    const visibleGroups = menuGroups
+        .map((group) => ({
+            ...group,
+            items: group.items.filter((item) => item.feature !== 'finance' || financeEnabled),
+        }))
+        .filter((group) => group.items.length > 0);
+
     return (
         <Flex direction="column" gap="2">
-            {menuGroups.map((group, gi) => {
+            {visibleGroups.map((group, gi) => {
                 return (
                     <CollapsibleFilterCard
                         key={gi}
                         title={group.title}
-                        storageKey={`cabinet_menu_group_${gi}_open`}
+                        storageKey={`cabinet_menu_group_${group.title}_open`}
                         defaultOpen
                         bodyPx="2"
                         bodyPy="2"

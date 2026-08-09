@@ -23,13 +23,19 @@ class CabinetController extends Controller
         $favoritesCount = $user->favorites()->count();
         $cartsCount = $user->carts()->count();
 
+        // Баланс закрыт флагом, пока цифры долга не сверены с 1С: показать клиенту
+        // завышенную задолженность хуже, чем не показать никакой.
+        $financeEnabled = (bool) config('cabinet.finance_enabled');
+
         // Агрегируем баланс по всем контрагентам пользователя
-        $balances = ContractorBalance::where('user_id', $user->id)->get();
+        $balances = $financeEnabled
+            ? ContractorBalance::where('user_id', $user->id)->get()
+            : collect();
         $totalBalance = $balances->sum('current_balance');
         $totalOverdue = $balances->sum('overdue_debt');
         $hasBalance = $balances->count() > 0;
 
-        $balanceByOrganization = $this->balanceByOrganization($user);
+        $balanceByOrganization = $financeEnabled ? $this->balanceByOrganization($user) : [];
 
         $recentOrders = Order::where('user_id', $user->id)
             ->withCount('items')

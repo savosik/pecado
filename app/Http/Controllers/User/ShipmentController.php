@@ -48,8 +48,9 @@ class ShipmentController extends Controller
 
         $shipments = $query->paginate($perPage)->withQueryString();
         $currency = $this->getUserCurrency($request);
+        $financeEnabled = (bool) config('cabinet.finance_enabled');
 
-        $shipments->getCollection()->transform(function ($shipment) use ($currency, $search) {
+        $shipments->getCollection()->transform(function ($shipment) use ($currency, $search, $financeEnabled) {
             $totalConverted = $this->convertAmount((float) $shipment->total_amount, $shipment->currency_code, $currency);
 
             $match = MatchSourceResolver::resolve(
@@ -83,11 +84,13 @@ class ShipmentController extends Controller
                 'total_converted' => $totalConverted,
                 // Оплата — денормализованные поля, их ведёт PaymentAllocationService.
                 // Считать на лету нельзя: экспорт идёт cursor()-ом, а фильтр —
-                // по колонке.
-                'payment_status' => $shipment->payment_status,
-                'payment_status_label' => $shipment->payment_status_label,
-                'paid_amount' => (float) $shipment->paid_amount,
-                'unpaid_amount' => $shipment->unpaid_amount,
+                // по колонке. Закрыты флагом: цифры долга не сверены с 1С.
+                ...($financeEnabled ? [
+                    'payment_status' => $shipment->payment_status,
+                    'payment_status_label' => $shipment->payment_status_label,
+                    'paid_amount' => (float) $shipment->paid_amount,
+                    'unpaid_amount' => $shipment->unpaid_amount,
+                ] : []),
                 'items_count' => $shipment->items->count(),
                 'company' => $shipment->company ? [
                     'id' => $shipment->company->id,
@@ -123,12 +126,13 @@ class ShipmentController extends Controller
                 array_keys(self::STATUS_LABELS),
                 self::STATUS_LABELS
             ),
-            'paymentStatuses' => [
+            // Пустой справочник — фильтр «Оплата» на странице не рисуется вовсе.
+            'paymentStatuses' => $financeEnabled ? [
                 ['value' => Shipment::PAYMENT_UNPAID, 'label' => 'Не оплачена'],
                 ['value' => Shipment::PAYMENT_PARTIAL, 'label' => 'Оплачена частично'],
                 ['value' => Shipment::PAYMENT_PAID, 'label' => 'Оплачена'],
                 ['value' => Shipment::PAYMENT_OVERPAID, 'label' => 'Переплата'],
-            ],
+            ] : [],
             'exportEnabled' => (bool) config('search-cabinet.export'),
             'suggestion' => $suggestion,
         ]);
@@ -178,16 +182,19 @@ class ShipmentController extends Controller
         // v15.8.0: колонка «Продавец». Пустое значение выводим словами: пустая ячейка
         // в Excel читается как потеря данных, а не как «организации нет».
         $withSeller = (bool) config('erp.organizations.enabled');
+        // Колонки оплаты — под тем же флагом, что и экран: выгрузка не должна быть
+        // обходным путём к цифрам, которые мы решили клиенту не показывать.
+        $financeEnabled = (bool) config('cabinet.finance_enabled');
 
         $headers = array_merge(
             ['Номер', 'Статус', 'Дата отгрузки', 'Контрагент'],
             $withSeller ? ['Продавец'] : [],
-            ['Позиций', 'Сумма', 'Валюта', 'Сумма в валюте кабинета',
-                'Статус оплаты', 'Оплачено', 'Остаток к оплате'],
+            ['Позиций', 'Сумма', 'Валюта', 'Сумма в валюте кабинета'],
+            $financeEnabled ? ['Статус оплаты', 'Оплачено', 'Остаток к оплате'] : [],
         );
 
         // with('organization') в buildIndexQuery — иначе колонка даст N+1 на выгрузке
-        $rows = (function () use ($query, $currency, $withSeller) {
+        $rows = (function () use ($query, $currency, $withSeller, $financeEnabled) {
             foreach ($query->cursor() as $shipment) {
                 $totalConverted = $this->convertAmount((float) $shipment->total_amount, $shipment->currency_code, $currency);
                 yield array_merge(
@@ -203,10 +210,12 @@ class ShipmentController extends Controller
                         round((float) $shipment->total_amount, 2),
                         $shipment->currency_code ?? 'RUB',
                         round((float) $totalConverted, 2),
+                    ],
+                    $financeEnabled ? [
                         $shipment->payment_status_label,
                         round((float) $shipment->paid_amount, 2),
                         round($shipment->unpaid_amount, 2),
-                    ],
+                    ] : [],
                 );
             }
         })();
@@ -375,6 +384,7 @@ class ShipmentController extends Controller
         ]);
 
         $currency = $this->getUserCurrency($request);
+        $financeEnabled = (bool) config('cabinet.finance_enabled');
 
         $orderUuids = $shipment->items()
             ->whereNotNull('order_uuid')
@@ -433,31 +443,36 @@ class ShipmentController extends Controller
                 'currency_code' => $shipment->currency_code,
                 'total_amount' => $shipment->total_amount,
                 'total_converted' => $totalConverted,
-                'payment_status' => $shipment->payment_status,
-                'payment_status_label' => $shipment->payment_status_label,
-                'paid_amount' => (float) $shipment->paid_amount,
-                'unpaid_amount' => $shipment->unpaid_amount,
-                'payments' => $shipment->paymentAllocations
-                    ->filter(fn ($allocation) => $allocation->payment !== null)
-                    ->sortByDesc(fn ($allocation) => $allocation->payment->date)
-                    ->values()
-                    ->map(fn ($allocation) => [
-                        'id' => $allocation->payment->id,
-                        'number' => $allocation->payment->number,
-                        'date' => $allocation->payment->date?->format('d.m.Y'),
-                        'direction' => $allocation->payment->direction,
-                        'direction_label' => $allocation->payment->direction === 'out' ? 'Возврат' : 'Поступление',
-                        'amount' => (float) $allocation->amount,
-                        'amount_converted' => $this->convertAmount(
-                            (float) $allocation->amount,
-                            $allocation->payment->currency_code,
-                            $currency,
-                        ),
-                    ])->all(),
-                'payment_schedule' => \App\Support\Payments\PaymentSchedulePresenter::forShipment(
-                    $shipment,
-                    fn (float $amount): float => $this->convertAmount($amount, $shipment->currency_code, $currency),
-                ),
+                // Оплата, разнесение и график закрыты флагом cabinet.finance_enabled:
+                // остаток по документу систематически больше реального долга, пока
+                // цифры не сверены с 1С — клиенту такое показывать нельзя.
+                ...($financeEnabled ? [
+                    'payment_status' => $shipment->payment_status,
+                    'payment_status_label' => $shipment->payment_status_label,
+                    'paid_amount' => (float) $shipment->paid_amount,
+                    'unpaid_amount' => $shipment->unpaid_amount,
+                    'payments' => $shipment->paymentAllocations
+                        ->filter(fn ($allocation) => $allocation->payment !== null)
+                        ->sortByDesc(fn ($allocation) => $allocation->payment->date)
+                        ->values()
+                        ->map(fn ($allocation) => [
+                            'id' => $allocation->payment->id,
+                            'number' => $allocation->payment->number,
+                            'date' => $allocation->payment->date?->format('d.m.Y'),
+                            'direction' => $allocation->payment->direction,
+                            'direction_label' => $allocation->payment->direction === 'out' ? 'Возврат' : 'Поступление',
+                            'amount' => (float) $allocation->amount,
+                            'amount_converted' => $this->convertAmount(
+                                (float) $allocation->amount,
+                                $allocation->payment->currency_code,
+                                $currency,
+                            ),
+                        ])->all(),
+                    'payment_schedule' => \App\Support\Payments\PaymentSchedulePresenter::forShipment(
+                        $shipment,
+                        fn (float $amount): float => $this->convertAmount($amount, $shipment->currency_code, $currency),
+                    ),
+                ] : []),
                 'company' => $shipment->company ? [
                     'id' => $shipment->company->id,
                     'name' => $shipment->company->name,
@@ -517,7 +532,8 @@ class ShipmentController extends Controller
                     'erp_updated_at' => ($order->erp_updated_at ?? $order->updated_at)?->format('d.m.Y H:i'),
                 ];
             }),
-            'overdue_detail' => $overdueDetail ? [
+            // Просрочка из 1С — тоже под флагом: это про долг клиента.
+            'overdue_detail' => $financeEnabled && $overdueDetail ? [
                 'shipment_uuid' => $overdueDetail->shipment_uuid,
                 'amount' => $overdueDetail->amount,
                 'due_date' => $overdueDetail->due_date?->format('Y-m-d'),

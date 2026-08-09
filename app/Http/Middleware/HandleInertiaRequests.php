@@ -83,6 +83,9 @@ class HandleInertiaRequests extends Middleware
             'bugReportMode' => (bool) config('app.bug_report_mode'),
             'config' => [
                 'yandex_maps_api_key' => (string) config('services.yandex_maps.api_key', ''),
+                // Показывать ли клиенту его долги. Флаг нужен и на фронте: пункт меню
+                // и денежные блоки прячутся здесь, а данные — в контроллерах.
+                'cabinet_finance_enabled' => (bool) config('cabinet.finance_enabled'),
             ],
         ];
     }

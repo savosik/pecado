@@ -285,6 +285,9 @@ export default function ShipmentsIndex({ filters, statuses, paymentStatuses = []
                                     </Select.Root>
                                 </Field>
 
+                                {/* Фильтр по оплате скрыт вместе с самими цифрами:
+                                    пустой справочник приходит с бэка, когда раздел закрыт. */}
+                                {paymentStatuses?.length > 0 && (
                                 <Field label="Оплата" flex="1">
                                     <Select.Root
                                         multiple
@@ -304,6 +307,7 @@ export default function ShipmentsIndex({ filters, statuses, paymentStatuses = []
                                         </Select.Content>
                                     </Select.Root>
                                 </Field>
+                                )}
 
                                 <Field label="Дата от" flex="1">
                                     <Input

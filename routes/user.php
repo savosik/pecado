@@ -235,12 +235,16 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/shipments/{shipment}', [ShipmentController::class, 'show'])->name('shipments.show');
 
     // Оплаты (платёжные документы из 1С). Только чтение: платёж заводит 1С.
+    // Раздел закрыт флагом cabinet.finance_enabled, пока цифры долга не сверены
+    // с 1С: остаток по документам систематически больше реальной задолженности.
     // export строго до /{payment}, иначе «export» уйдёт в биндинг модели.
-    Route::get('/payments', [\App\Http\Controllers\User\PaymentController::class, 'index'])->name('payments.index');
-    Route::get('/payments/export', [\App\Http\Controllers\User\PaymentController::class, 'export'])->name('payments.export');
-    // Календарь оплат (v15.12.0) — план по графику из 1С. Тоже до /{payment}.
-    Route::get('/payments/calendar', [\App\Http\Controllers\User\PaymentController::class, 'calendar'])->name('payments.calendar');
-    Route::get('/payments/{payment}', [\App\Http\Controllers\User\PaymentController::class, 'show'])->name('payments.show')->whereNumber('payment');
+    Route::middleware(\App\Http\Middleware\EnsureCabinetFinanceEnabled::class)->group(function () {
+        Route::get('/payments', [\App\Http\Controllers\User\PaymentController::class, 'index'])->name('payments.index');
+        Route::get('/payments/export', [\App\Http\Controllers\User\PaymentController::class, 'export'])->name('payments.export');
+        // Календарь оплат (v15.12.0) — план по графику из 1С. Тоже до /{payment}.
+        Route::get('/payments/calendar', [\App\Http\Controllers\User\PaymentController::class, 'calendar'])->name('payments.calendar');
+        Route::get('/payments/{payment}', [\App\Http\Controllers\User\PaymentController::class, 'show'])->name('payments.show')->whereNumber('payment');
+    });
 
     // Мои вопросы (FAQ)
     Route::get('/questions', [CabinetQuestionsController::class, 'index'])->name('questions.index');
