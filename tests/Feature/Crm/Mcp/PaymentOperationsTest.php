@@ -5,6 +5,7 @@ namespace Tests\Feature\Crm\Mcp;
 use App\Mcp\Servers\CrmServer;
 use App\Mcp\Tools\Crm\CrmCall;
 use App\Mcp\Tools\Crm\CrmCatalog;
+use App\Models\ContractorBalance;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use App\Models\PersonalManager;
@@ -69,6 +70,7 @@ class PaymentOperationsTest extends TestCase
         $response->assertOk();
         $response->assertSee('payment.list');
         $response->assertSee('payment.unpaid-shipments');
+        $response->assertSee('payment.balances');
     }
 
     #[Test]
@@ -271,5 +273,64 @@ class PaymentOperationsTest extends TestCase
         $response->assertOk();
         $response->assertSee('В-ПЕРИОДЕ');
         $response->assertDontSee('ВНЕ-ПЕРИОДА');
+    }
+
+    #[Test]
+    #[TestDox('Балансы 1С ограничены клиентами актора')]
+    public function balances_are_limited_to_actor_scope(): void
+    {
+        ContractorBalance::create([
+            'user_id' => $this->clientA->id,
+            'tax_id' => '7701111111',
+            'current_balance' => -1500,
+            'overdue_debt' => 600,
+        ]);
+
+        ContractorBalance::create([
+            'user_id' => $this->clientB->id,
+            'tax_id' => '7702222222',
+            'current_balance' => -9999,
+            'overdue_debt' => 9999,
+        ]);
+
+        $response = CrmServer::actingAs($this->managerA)
+            ->tool(CrmCall::class, ['operation' => 'payment.balances', 'arguments' => []]);
+
+        $response->assertOk();
+        $response->assertSee('7701111111');
+        $response->assertDontSee('7702222222');
+    }
+
+    /**
+     * Агент читает ответ, а не описание инструмента: подсказка про источник долга
+     * должна ехать вместе с данными, иначе остаток по документам примут за долг.
+     */
+    #[Test]
+    #[TestDox('Ответы по деньгам несут пояснение об источнике данных')]
+    public function money_responses_carry_source_notes(): void
+    {
+        Shipment::factory()->create([
+            'user_id' => $this->clientA->id,
+            'payment_status' => Shipment::PAYMENT_UNPAID,
+            'total_amount' => 1000,
+            'paid_amount' => 0,
+        ]);
+
+        CrmServer::actingAs($this->managerA)
+            ->tool(CrmCall::class, ['operation' => 'payment.unpaid-shipments', 'arguments' => []])
+            ->assertOk()
+            ->assertSee('payment.balances');
+
+        ContractorBalance::create([
+            'user_id' => $this->clientA->id,
+            'tax_id' => '7701111111',
+            'current_balance' => -1500,
+            'overdue_debt' => 600,
+        ]);
+
+        CrmServer::actingAs($this->managerA)
+            ->tool(CrmCall::class, ['operation' => 'payment.balances', 'arguments' => []])
+            ->assertOk()
+            ->assertSee('Мастер-данные');
     }
 }

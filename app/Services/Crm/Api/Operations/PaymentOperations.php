@@ -2,6 +2,7 @@
 
 namespace App\Services\Crm\Api\Operations;
 
+use App\Models\ContractorBalance;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use App\Models\Shipment;
@@ -167,6 +168,12 @@ class PaymentOperations
                 'per_page' => $page->perPage(),
                 'total' => $page->total(),
                 'last_page' => $page->lastPage(),
+                'notes' => [
+                    'Это остаток по документам, а НЕ долг клиента. 1С закрывает долг не только '
+                        .'платежами по накладным (авансы по заказам, зачёты, корректировки), поэтому '
+                        .'сумма здесь бывает существенно больше реальной задолженности.',
+                    'На вопрос «сколько клиент должен» отвечайте по `payment.balances` — это данные 1С.',
+                ],
             ],
         ];
     }
@@ -236,6 +243,69 @@ class PaymentOperations
                 'per_page' => $page->perPage(),
                 'total' => $page->total(),
                 'last_page' => $page->lastPage(),
+            ],
+        ];
+    }
+
+    /**
+     * Сальдо взаиморасчётов и просроченная задолженность — как их посчитала 1С.
+     *
+     * ЭТО МАСТЕР-ДАННЫЕ. На вопрос «сколько клиент должен» отвечать нужно отсюда,
+     * а не суммированием остатков по документам: 1С закрывает долг не только
+     * платежами по накладным (авансы по заказам, зачёты, корректировки), и сумма
+     * по документам систематически оказывается больше реального долга.
+     *
+     * Строка — контрагент, а не клиент: 1С ведёт расчёты по юрлицам, и у одного
+     * клиента их бывает несколько. Итог по клиенту — сумма его контрагентов.
+     *
+     * @return array<string, mixed>
+     */
+    public function balances(User $actor, OperationInput $input): array
+    {
+        $clients = User::query()->visibleInCrm($actor)->select('users.id');
+
+        $query = ContractorBalance::query()
+            ->whereIn('user_id', $clients)
+            ->with(['user:id,name,erp_name', 'company:id,name']);
+
+        if ($input->int('client_id')) {
+            $query->where('user_id', $this->client($actor, $input, 'client_id')->getKey());
+        }
+
+        if ($input->bool('only_overdue')) {
+            $query->where('overdue_debt', '>', 0);
+        }
+
+        $perPage = min(max((int) ($input->int('per_page') ?: 25), 1), 100);
+
+        $page = $query->orderByDesc('overdue_debt')
+            ->paginate($perPage, ['*'], 'page', max(1, (int) ($input->int('page') ?: 1)));
+
+        return [
+            'data' => collect($page->items())->map(fn (ContractorBalance $balance): array => [
+                'id' => (int) $balance->getKey(),
+                'client' => $balance->user->display_name,
+                'client_id' => $balance->user_id,
+                'contractor' => $balance->company?->name,
+                'tax_id' => $balance->tax_id,
+                // Отрицательное сальдо — долг клиента. Знак повторяет 1С, чтобы
+                // число можно было сверить с учётной системой не задумываясь.
+                'current_balance' => (float) $balance->current_balance,
+                'overdue_debt' => (float) $balance->overdue_debt,
+                'currency_code' => 'RUB',
+                'erp_updated_at' => $balance->balance_erp_updated_at?->format('Y-m-d H:i'),
+            ])->all(),
+            'meta' => [
+                'page' => $page->currentPage(),
+                'per_page' => $page->perPage(),
+                'total' => $page->total(),
+                'last_page' => $page->lastPage(),
+                'notes' => [
+                    'Мастер-данные: так долг видит 1С. Это ответ на «сколько клиент должен».',
+                    'Отрицательное сальдо — долг клиента, положительное — переплата или аванс.',
+                    'Строка — контрагент (юрлицо). У клиента их может быть несколько, итог по клиенту — их сумма.',
+                    'Валюта в 1С не передаётся: суммы подписаны как рубли. Для мультивалютного контрагента итог будет неточным.',
+                ],
             ],
         ];
     }
