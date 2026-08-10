@@ -734,41 +734,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#v15120" class="md-nav__link">
+  <a href="#v1600" class="md-nav__link">
     <span class="md-ellipsis">
       
-        График оплаты (v15.12.0)
+        График оплаты — переехал в v16.0.0
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="График оплаты (v15.12.0)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#-_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Бизнес-правила
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Первичное заполнение
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -784,7 +756,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
+  <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -846,6 +818,90 @@
     
   
     Платежи
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../settlements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Регистр взаиморасчётов
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../payment-schedule/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    График оплаты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agreements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Соглашения с клиентами
   
 
     
@@ -1885,41 +1941,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#v15120" class="md-nav__link">
+  <a href="#v1600" class="md-nav__link">
     <span class="md-ellipsis">
       
-        График оплаты (v15.12.0)
+        График оплаты — переехал в v16.0.0
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="График оплаты (v15.12.0)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#-_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Бизнес-правила
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Первичное заполнение
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1935,7 +1963,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
+  <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -2009,87 +2037,17 @@
 <li><strong>(v15.5) Списание уценки.</strong> Если реализация относится к заказу уценки (<code>type: "defect"</code>), сайт списывает соответствующую партию некондиции: количество партии уменьшается на отгруженное, при достижении нуля партия закрывается (перестаёт продаваться). Списание <strong>идемпотентно по <code>uuid</code> реализации</strong> — повторная доставка того же документа не списывает партию дважды. Структура payload не меняется: связь заказ↔партия сайт держит у себя, 1С передаёт обычную реализацию с <code>order_uuid</code> заказа уценки</li>
 <li><strong>(v15.9.2) Отмена реализации возвращает партию уценки в продажу.</strong> Сайт распознаёт <strong>три</strong> способа отмены и по любому из них пересчитывает партию: <code>shipment.deleted</code> (снятие проведения), <code>shipment.updated</code> со <code>status: "cancelled"</code> (документ остаётся, отгрузки по нему нет) и <code>order.deleted</code> по самому заказу уценки. Пересчёт работает и когда заказ уценки уже помечен удалённым — типичный случай, когда в 1С отменяют разом и заказ, и реализацию. Партия, <strong>списанная кладовщиком вручную</strong> (утилизация, пересорт), автоматикой не открывается никогда</li>
 </ul>
-<h2 id="v15120">График оплаты (v15.12.0)<a class="headerlink" href="#v15120" title="Permanent link">&para;</a></h2>
-<p>Табличная часть <strong>«Правила оплаты»</strong> реализации приезжает массивом <code>payment_schedule</code>
-внутри <code>shipment.created</code> / <code>shipment.updated</code>. Отдельного события и отдельной очереди нет:
-график — часть документа, и присылать его отдельно значило бы создать гонку
-«график приехал раньше реализации».</p>
-<p>Из формы 1С сайт берёт только значимое для календаря оплат. <strong>Не передаются и не нужны:</strong>
-«Расчёты», «Форма оплаты», «Касса», «Банковский счёт» и УИП (УИП уже приходит в платеже),
-а «Сумма к оплате» — это сумма самого документа, она у сайта уже есть.</p>
-<table>
-<thead>
-<tr>
-<th>Поле</th>
-<th>Соответствие в 1С</th>
-<th>Обязательность</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>due_date</code></td>
-<td>Дата платежа</td>
-<td><strong>да</strong></td>
-</tr>
-<tr>
-<td><code>amount</code></td>
-<td>Сумма платежа</td>
-<td><strong>да</strong></td>
-</tr>
-<tr>
-<td><code>percent</code></td>
-<td>% платежа</td>
-<td>нет</td>
-</tr>
-<tr>
-<td><code>line_number</code></td>
-<td>N</td>
-<td>нет</td>
-</tr>
-<tr>
-<td><code>term_days</code></td>
-<td>Срок (дни)</td>
-<td>нет</td>
-</tr>
-<tr>
-<td><code>basis</code> / <code>basis_name</code></td>
-<td>Вариант отсчёта</td>
-<td>нет</td>
-</tr>
-<tr>
-<td><code>stage</code> / <code>stage_name</code></td>
-<td>Контроль</td>
-<td>нет</td>
-</tr>
-<tr>
-<td><code>order_uuid</code></td>
-<td>Заказ</td>
-<td>нет</td>
-</tr>
-</tbody>
-</table>
-<h3 id="-_1">Бизнес-правила<a class="headerlink" href="#-_1" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>(v15.12.0) Отсутствие ключа <code>payment_schedule</code> и пустой массив означают разное.</strong> Ключа нет — сайт <strong>не трогает</strong> сохранённый график (используйте, когда меняются только позиции документа). Пустой массив <code>[]</code> — сайт <strong>очищает</strong> график полностью. Различие критично: если 1С опустит ключ, подразумевая «графика больше нет», старые плановые даты останутся в календаре клиента</li>
-<li><strong>(v15.12.0) График присылается целиком</strong>, а не досылается изменившимися строками: сайт не умеет отличить «строки не изменились» от «строк больше нет». Замена выполняется delete-and-recreate, как у позиций документа</li>
-<li><strong>(v15.12.0) Строка без <code>due_date</code> пропускается.</strong> Плановая дата — единственное, ради чего график забирается: без неё строка не попадает ни в календарь, ни в расчёт ближайшего платежа. Факт пропуска записывается в лог</li>
-<li><strong>(v15.12.0) Пары «код + наименование» разведены намеренно.</strong> Логика сайта (что считать предоплатой, от чего считать просрочку) опирается <strong>только</strong> на латинские <code>basis</code> и <code>stage</code>; <code>basis_name</code> и <code>stage_name</code> показываются сотруднику и клиенту как есть. Причина та же, что у <code>operation_code</code> в платежах: русское наименование в 1С меняется вместе с настройками учёта</li>
-<li><strong>(v15.12.0) Строки графика гасятся фактическими платежами по FIFO.</strong> 1С разносит платёж по <strong>реализациям</strong>, а не по строкам графика, поэтому связку «какая строка оплачена» строит сайт: оплаченная сумма реализации (<code>shipments.paid_amount</code>, см. <a href="../payments/">Платежи</a>) распределяется по строкам в порядке <code>due_date</code>, затем <code>line_number</code>. Первая непокрытая строка становится ближайшей датой платежа реализации</li>
-<li><strong>(v15.12.0) Пересчёт идемпотентен.</strong> Раскладка — полная функция от суммы оплаты и состава графика, а не инкремент: повторная доставка того же сообщения даёт тот же результат. Пересчёт запускается и при изменении графика, и при изменении оплаты (<code>payment.*</code>)</li>
-<li><strong>(v15.12.0) Статус строки не хранится.</strong> «Ожидается / частично / оплачена» и признак просрочки вычисляются на лету из погашенной суммы и текущей даты — хранимый статус пришлось бы обновлять ночным заданием, и он врал бы до следующего запуска</li>
-<li><strong>(v15.12.0) Сумма строк должна сходиться с суммой реализации.</strong> Расхождение сайт показывает сотруднику, но не исправляет: арифметику документа ведёт 1С</li>
-<li><strong>(v15.12.0) График — план, а не факт просрочки.</strong> Не путать с <code>overdue_details</code> в <a href="../balances/">Балансах</a>: там 1С сообщает уже случившуюся просроченную задолженность, здесь — плановые даты. Календари строятся по графику, баланс остаётся независимой сверкой</li>
-<li><strong>(v15.12.0)</strong> График по <strong>заказам</strong> (предоплата по неотгруженному) в этой версии не передаётся — только по реализациям</li>
-</ul>
-<blockquote>
-<p><strong>Разработчику 1С:</strong> пошаговое задание с форматом, кодами и критериями приёмки —
-<a href="../../guides/payment-schedule-for-1c/">«График оплат: что сделать в 1С»</a>.</p>
-</blockquote>
-<h3 id="_3">Первичное заполнение<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
-<p>По документам, проведённым до v15.12.0, график приедет при <strong>следующем перепроведении</strong>
-реализации в 1С. Чтобы календарь заполнился сразу, 1С делает повторную выгрузку
-<code>shipment.updated</code> по актуальным реализациям. До неё календарь пуст — это ожидаемо,
-ошибкой не является.</p>
+<h2 id="v1600">График оплаты — переехал в v16.0.0<a class="headerlink" href="#v1600" title="Permanent link">&para;</a></h2>
+<p>Массив <code>payment_schedule</code> <strong>удалён из контракта реализации</strong> и переехал в собственное событие
+<a href="../payment-schedule/"><code>payment_schedule.updated</code></a> (очередь <code>erp_in.settlements</code>).</p>
+<p>Причина не в структуре, а в одном поле. Раньше 1С присылала только план, а факт сайт
+сопоставлял с планом сам, методом FIFO по плановой дате. Это не работало: 1С гасит долг
+авансами по заказам и зачётами, и самодельная раскладка ошибалась в разы — <strong>у одного клиента
+5,53 млн ₽ просрочки против 478 тыс ₽ по данным учёта</strong>.</p>
+<p>В новом событии у каждой строки есть <code>settled_amount</code> — сколько закрыто <strong>по данным 1С</strong>,
+с учётом авансов и зачётов. Сайт больше не раскладывает платежи ни FIFO, ни как-либо ещё.</p>
+<p>Поле <code>payment_schedule</code>, присланное в реализации по инерции, <strong>игнорируется</strong>: сообщение
+обрабатывается целиком и в очередь недоставленных не уходит.</p>
 <h2 id="-v15160">Счёт-фактура (v15.16.0)<a class="headerlink" href="#-v15160" title="Permanent link">&para;</a></h2>
 <p>Реализация может нести реквизиты счёта-фактуры:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">&quot;invoice&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;29УТ-004417&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-08-08&quot;</span><span class="w"> </span><span class="p">}</span>
@@ -2104,7 +2062,7 @@
   совпадение имён было единственным упоминанием слова <code>invoice</code> в контракте,
   из-за чего казалось, что место под счёт-фактуру уже есть.</li>
 </ul>
-<h2 id="_4">Критерии приёмки<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<h2 id="_3">Критерии приёмки<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[ ] Сайт принимает <code>shipment.created</code>, <code>shipment.updated</code>, <code>shipment.deleted</code></li>
 <li>[ ] <strong>(v13.2)</strong> Company находится сначала по <code>contractor_uuid</code>, затем fallback по <code>tax_id + user_id</code> (резолв через <code>partner_uuid</code>). Поиск без <code>partner_uuid</code> / <code>user_id</code> не выполняется — иначе можно найти чужую Company с тем же ИНН</li>
@@ -2114,8 +2072,7 @@
 <li>[ ] <strong>(v12.11)</strong> <code>shipment.created</code> / <code>shipment.updated</code> без поля <code>number</code> или с пустой строкой отклоняются на стадии валидации и не создают/не обновляют реализацию</li>
 <li>[ ] <strong>(v15.5)</strong> Реализация по заказу уценки списывает партию некондиции; повторная доставка того же <code>uuid</code> не списывает повторно; при нулевом остатке партия закрывается</li>
 <li>[ ] <strong>(v15.9.2)</strong> Партия уценки возвращается в продажу после <code>shipment.deleted</code>, после <code>shipment.updated</code> со <code>status: "cancelled"</code> и после <code>order.deleted</code> по заказу уценки — в том числе когда заказ удалён раньше реализации; партия со статусом «Списана» при этом не открывается</li>
-<li>[x] <strong>(v15.12.0)</strong> Массив <code>payment_schedule</code> сохраняется в график оплаты реализации; повторная доставка того же <code>uuid</code> не задваивает строки</li>
-<li>[x] <strong>(v15.12.0)</strong> Сообщение <strong>без ключа</strong> <code>payment_schedule</code> оставляет сохранённый график нетронутым; с пустым массивом — очищает</li>
+<li>[ ] <strong>(v16.0.0)</strong> Сообщение с присланным по инерции <code>payment_schedule</code> обрабатывается без ошибки, поле игнорируется</li>
 <li>[x] <strong>(v15.12.0)</strong> Строка без <code>due_date</code> пропускается, остальные строки сохраняются</li>
 <li>[x] <strong>(v15.12.0)</strong> Оплата реализации гасит строки графика по FIFO: частичная закрывает первые строки и делит очередную, полная закрывает все и обнуляет ближайшую дату платежа</li>
 <li>[x] <strong>(v15.12.0)</strong> Возврат (<code>direction: "out"</code>) уменьшает оплату и снова открывает погашенные строки</li>

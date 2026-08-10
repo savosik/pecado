@@ -3,6 +3,7 @@
 **Приоритет:** высокий
 **Создано:** 2026-08-09
 **Эпик:** [fin-00](2026-08-09_fin-00-epic.md)
+**Статус:** ✅ выполнена 10.08.2026
 **Зависимости:** `fin-01` — **строго после** ответа стороны 1С
 **Блокирует:** волну 1 целиком
 
@@ -106,15 +107,42 @@ mkdocs build --strict
 
 ## Критерии готовности
 
-- [ ] Восемь новых файлов схем созданы, `enum` типов движений закрыт
-- [ ] Из `payment.*` и `shipment.*` удалены снятые поля; `additionalProperties: true` сохранён
-- [ ] `balance.updated.json` не содержит `overdue_details[]`, новых уровней не появилось
-- [ ] `npm run asyncapi:validate` и `asyncapi:build` проходят
-- [ ] `mkdocs build --strict` = 0 предупреждений
-- [ ] `info.version: 16.0.0`, `info.description` не ссылается на несуществующие документы
-- [ ] Три новые страницы правил написаны, три существующие переписаны
-- [ ] `changelog.md` содержит запись 16.0.0 с разделом «Удалено» и порядком миграции
-- [ ] `index.md` и `asyncapi/README.md` больше не врут о версии
-- [ ] Тест валидатора: каждое новое событие проходит; сообщение со снятым `allocations`
-      проходит; движение с неизвестным `type` **не** проходит
-- [ ] Ни одна схема `*.to_erp.json` не изменена
+- [x] Восемь новых файлов схем созданы, `enum` типов движений закрыт
+- [x] Из `payment.*` и `shipment.*` удалены снятые поля; `additionalProperties: true` сохранён
+- [x] `balance.updated.json` не содержит `overdue_details[]`, новых уровней не появилось
+- [x] `npm run asyncapi:validate` и `asyncapi:build` проходят (0 ошибок)
+- [x] `mkdocs build --strict` проходит
+- [x] `info.version: 16.0.0`, `info.description` не ссылается на несуществующие документы
+- [x] Три новые страницы правил написаны, три существующие переписаны
+- [x] `changelog.md` содержит запись 16.0.0 с разделом «Удалено» и порядком миграции
+- [x] `index.md` и `asyncapi/README.md` больше не врут о версии
+- [x] Тест валидатора `ErpSettlementSchemaTest` — 31 кейс, все зелёные
+- [x] Ни одна схема `*.to_erp.json` не изменена
+
+## Что сделано (2026-08-10)
+
+**Схемы** — восемь новых: `settlement.{posted,reverted,opening_balance,checkpoint}.json`,
+`payment_schedule.updated.json`, `agreement.{created,updated,deleted}.json`.
+Правки пяти существующих: снят `allocations` из платежей, `payment_schedule` из реализаций,
+`overdue_details` из баланса. `additionalProperties: true` сохранён везде — присланное
+по инерции поле игнорируется, а не роняет документ в DLQ.
+
+**AsyncAPI** 15.17.0 → **16.0.0**: канал `erpInSettlements`, 8 операций, 9 схем payload
+(`SettlementEntry` и `PaymentScheduleLine` переиспользуемые). `agreement.*` добавлен в
+существующий канал `erpInContractors`. Починен `info.description`, ссылавшийся на
+несуществующий ACCEPTANCE_CRITERIA.
+
+**MkDocs** — новые `rules/settlements.md`, `rules/agreements.md`, `rules/payment-schedule.md`;
+переписаны `rules/payments.md` и `rules/balances.md`, заменена секция графика в
+`rules/shipments.md`. Запись `[16.0.0]` в changelog с разделами «Удалено», «Добавлено»,
+«Изменено», «Требуется от 1С», «Порядок миграции», «Не меняется».
+
+**Регистрация** — восемь событий в `ErpMessageValidator::SCHEMA_MAP`. `ErpRevisionGuard`
+намеренно **не трогали**: ему нужна модель документа, которой ещё нет, — это `fin-04`.
+
+**Тесты** — `ErpSettlementSchemaTest`, 31 кейс: минимальные и полные payload-ы, закрытый
+`type` против открытого `settlement_object_kind`, переплата по строке, график заказа без
+построчного остатка, и отдельно — что снятые поля больше не описаны схемой, но сообщения
+с ними проходят.
+
+Прогон `Erp|Payment|Shipment|Balance` — 1040 тестов зелёные, регрессий нет.

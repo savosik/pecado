@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 15.17.0
+  version: 16.0.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -42,7 +42,11 @@ info:
 
     ## Версионирование
 
-    Версия спецификации соответствует ACCEPTANCE_CRITERIA v12.0.
+    Версия спецификации ведётся по Semantic Versioning. Мажорная цифра меняется,
+
+    когда из контракта УДАЛЯЮТСЯ поля, которые 1С присылает сегодня.
+
+    Актуальные бизнес-правила: https://pecado.ru/docs/erp-guide/
   contact:
     name: Pecado Dev Team
   license:
@@ -392,7 +396,7 @@ channels:
     title: Контрагенты (1С → Сайт)
     description: |
       Очередь для событий контрагентов (юрлиц/Company пользователей сайта).
-      Routing keys: `contractor.*`
+      Routing keys: `contractor.*`, `agreement.*`
     messages:
       contractorCreated:
         name: contractor.created
@@ -706,6 +710,321 @@ channels:
                 - uuid
             - required:
                 - tax_id
+      agreementCreated:
+        name: agreement.created
+        title: Соглашение создано
+        summary: Соглашение с клиентом — условия продаж и группировка взаиморасчётов
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - uuid
+          description: >
+            Соглашение с клиентом. Заменило договоры: в базе 1С 75 договоров при
+            97,8 %
+
+            реализаций без них, соглашений 5 102 при 100 % покрытии.
+
+
+            Соглашение НЕ является измерением регистра взаиморасчётов — 1С берёт
+            его
+
+            из документа-регистратора. При изменении задним числом группировка
+            исторических
+
+            движений может разъехаться, поэтому осью акта сверки служит
+
+            контрагент × организация × валюта, а соглашение — фильтром.
+          properties:
+            event:
+              type: string
+              enum:
+                - agreement.created
+                - agreement.updated
+            message_id:
+              type: string
+            spec_version:
+              type:
+                - string
+                - 'null'
+              description: Версия спецификации обмена («16.0»). Только для журнала шины.
+            revision:
+              type:
+                - integer
+                - 'null'
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            partner_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            contractor_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            tax_id:
+              type:
+                - string
+                - 'null'
+            organization_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            number:
+              type:
+                - string
+                - 'null'
+            date:
+              type:
+                - string
+                - 'null'
+              format: date
+            name:
+              type:
+                - string
+                - 'null'
+            currency_code:
+              type:
+                - string
+                - 'null'
+            settlement_procedure:
+              type:
+                - string
+                - 'null'
+              enum:
+                - orders
+                - advance_orders_debt_invoices
+                - settlement_documents
+                - 'null'
+              description: >
+                Порядок расчётов. Реальный состав в базе: `orders` — по заказам
+                (3 972),
+
+                `advance_orders_debt_invoices` — аванс по заказам, долг по
+                накладным (962),
+
+                `settlement_documents` — по расчётным документам (1), не
+                заполнено (167).
+
+                Пустое значение — допустимое состояние, а не ошибка. Варианта
+                «по договору» нет.
+            credit_limit:
+              type:
+                - number
+                - 'null'
+            deferral_days:
+              type:
+                - integer
+                - 'null'
+            status:
+              type:
+                - string
+                - 'null'
+              enum:
+                - active
+                - closed
+                - 'null'
+          examples:
+            - event: agreement.created
+              message_id: msg-agreement-a1b2c3
+              uuid: 5c8a2f4d-7e1b-4903-a6c5-8f2d4b7e1a39
+              contractor_uuid: b4d8e2f1-6c5a-4917-8e3b-2f9a7d4c1508
+              number: СГ-0042
+              name: Соглашение об условиях продаж №СГ-0042
+              settlement_procedure: orders
+              deferral_days: 30
+      agreementUpdated:
+        name: agreement.updated
+        title: Соглашение изменено
+        summary: Полная структура соглашения, как при создании
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - uuid
+          description: >
+            Соглашение с клиентом. Заменило договоры: в базе 1С 75 договоров при
+            97,8 %
+
+            реализаций без них, соглашений 5 102 при 100 % покрытии.
+
+
+            Соглашение НЕ является измерением регистра взаиморасчётов — 1С берёт
+            его
+
+            из документа-регистратора. При изменении задним числом группировка
+            исторических
+
+            движений может разъехаться, поэтому осью акта сверки служит
+
+            контрагент × организация × валюта, а соглашение — фильтром.
+          properties:
+            event:
+              type: string
+              enum:
+                - agreement.created
+                - agreement.updated
+            message_id:
+              type: string
+            spec_version:
+              type:
+                - string
+                - 'null'
+              description: Версия спецификации обмена («16.0»). Только для журнала шины.
+            revision:
+              type:
+                - integer
+                - 'null'
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            partner_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            contractor_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            tax_id:
+              type:
+                - string
+                - 'null'
+            organization_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            number:
+              type:
+                - string
+                - 'null'
+            date:
+              type:
+                - string
+                - 'null'
+              format: date
+            name:
+              type:
+                - string
+                - 'null'
+            currency_code:
+              type:
+                - string
+                - 'null'
+            settlement_procedure:
+              type:
+                - string
+                - 'null'
+              enum:
+                - orders
+                - advance_orders_debt_invoices
+                - settlement_documents
+                - 'null'
+              description: >
+                Порядок расчётов. Реальный состав в базе: `orders` — по заказам
+                (3 972),
+
+                `advance_orders_debt_invoices` — аванс по заказам, долг по
+                накладным (962),
+
+                `settlement_documents` — по расчётным документам (1), не
+                заполнено (167).
+
+                Пустое значение — допустимое состояние, а не ошибка. Варианта
+                «по договору» нет.
+            credit_limit:
+              type:
+                - number
+                - 'null'
+            deferral_days:
+              type:
+                - integer
+                - 'null'
+            status:
+              type:
+                - string
+                - 'null'
+              enum:
+                - active
+                - closed
+                - 'null'
+          examples:
+            - event: agreement.created
+              message_id: msg-agreement-a1b2c3
+              uuid: 5c8a2f4d-7e1b-4903-a6c5-8f2d4b7e1a39
+              contractor_uuid: b4d8e2f1-6c5a-4917-8e3b-2f9a7d4c1508
+              number: СГ-0042
+              name: Соглашение об условиях продаж №СГ-0042
+              settlement_procedure: orders
+              deferral_days: 30
+      agreementDeleted:
+        name: agreement.deleted
+        title: Соглашение помечено на удаление
+        summary: Мягкое удаление, движения сохраняются
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - uuid
+          properties:
+            event:
+              type: string
+              const: agreement.deleted
+            message_id:
+              type: string
+            revision:
+              type:
+                - integer
+                - 'null'
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
     servers:
       - $ref: '#/servers/rabbitmq'
     bindings:
@@ -6059,6 +6378,698 @@ channels:
           durable: true
           autoDelete: false
         bindingVersion: 0.3.0
+  erpInSettlements:
+    address: erp_in.settlements
+    title: Регистр взаиморасчётов (1С → Сайт)
+    description: >
+      Движения регистра взаиморасчётов, сальдо, контрольные точки и график
+      оплаты.
+
+      Добавлено в v16.0.0: сайт перестаёт выводить долг из документов и
+      становится
+
+      витриной регистра 1С.
+
+      Routing keys: `settlement.*`, `payment_schedule.*`
+    messages:
+      settlementPosted:
+        name: settlement.posted
+        title: Движения документа
+        summary: Все движения регистра взаиморасчётов по одному документу
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - document_uuid
+            - entries
+          description: >
+            Движения регистра, порождённые проведением одного документа.
+            Сообщение заменяет
+
+            ВСЕ движения этого `document_uuid` целиком — дельту досылать нельзя.
+
+            Пустой `entries` означает, что движений у документа больше нет.
+          properties:
+            event:
+              type: string
+              const: settlement.posted
+            message_id:
+              type: string
+            spec_version:
+              type:
+                - string
+                - 'null'
+            revision:
+              type:
+                - integer
+                - 'null'
+            document_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            document_kind:
+              type:
+                - string
+                - 'null'
+              description: >
+                Вид регистратора: `shipment`, `service_sale`, `payment`,
+                `goods_return`,
+
+                `netting`, `debt_adjustment`, `sale_adjustment`,
+                `commission_report`,
+
+                `commission_writeoff`, `other`. Перечень открытый.
+            document_number:
+              type:
+                - string
+                - 'null'
+              description: >-
+                Дублируется в сообщение намеренно — движение обязано читаться,
+                даже если документа на сайте нет.
+            document_date:
+              type:
+                - string
+                - 'null'
+              format: date
+            erp_created_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+            erp_updated_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+            entries:
+              type: array
+              items:
+                type: object
+                required:
+                  - uuid
+                  - type
+                  - amount
+                description: >
+                  Одно движение регистра взаиморасчётов. Все измерения регистра
+                  живут здесь,
+
+                  а не в шапке сообщения: 33 % документов двигают несколько
+                  объектов расчётов,
+
+                  у 27 документов расходится и ключ аналитики. Правило: всё, что
+                  берётся
+
+                  из ключа аналитики, живёт в строке.
+                properties:
+                  uuid:
+                    type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                  type:
+                    type: string
+                    enum:
+                      - shipment
+                      - payment_in
+                      - payment_out
+                      - goods_return
+                      - commission_sale
+                      - adjustment
+                    description: >
+                      Тип движения, определяет знак `amount`. Перечень ЗАКРЫТЫЙ:
+                      неизвестный тип
+
+                      отбрасывает всё сообщение в очередь недоставленных — молча
+                      пропустить строку
+
+                      нельзя, баланс разъедется незаметно.
+                  date:
+                    type:
+                      - string
+                      - 'null'
+                    format: date
+                  amount:
+                    type: number
+                    description: >
+                      Сумма СО ЗНАКОМ: «+» увеличивает баланс в пользу клиента
+                      (оплата, возврат
+
+                      товара), «−» в нашу (реализация, возврат денег). Сумма
+                      всех движений равна
+
+                      балансу контрагента. В 1С знак ОБРАТНЫЙ — их «Приход» это
+                      наш минус;
+
+                      инверсию применяет сторона 1С.
+                  amount_rub:
+                    type:
+                      - number
+                      - 'null'
+                    description: >-
+                      Рублёвый эквивалент со знаком — ресурс СуммаРегл,
+                      зафиксированный учётом на дату операции.
+                  currency_code:
+                    type:
+                      - string
+                      - 'null'
+                  movement_kind:
+                    type:
+                      - string
+                      - 'null'
+                    enum:
+                      - income
+                      - expense
+                      - 'null'
+                    description: >-
+                      Вид движения в терминах 1С (Приход/Расход).
+                      Диагностическое поле, в арифметике не участвует.
+                  partner_uuid:
+                    type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                  contractor_uuid:
+                    type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                  organization_uuid:
+                    type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                  agreement_uuid:
+                    type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                  agreement_name:
+                    type:
+                      - string
+                      - 'null'
+                  contract_uuid:
+                    type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                  contract_name:
+                    type:
+                      - string
+                      - 'null'
+                  settlement_object_kind:
+                    type:
+                      - string
+                      - 'null'
+                    description: >
+                      Вид объекта расчётов (`ОбъектРасчетов`): `order`,
+                      `shipment`,
+
+                      `commission_report`, `commission_contract`, `other`.
+                      Перечень ОТКРЫТЫЙ —
+
+                      незнакомый вид сохраняется как `other`, а не
+                      отбрасывается.
+                  settlement_object_uuid:
+                    type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                  settlement_object_name:
+                    type:
+                      - string
+                      - 'null'
+                  comment:
+                    type:
+                      - string
+                      - 'null'
+          examples:
+            - event: settlement.posted
+              message_id: msg-settlement-a1b2c3
+              spec_version: '16.0'
+              revision: 3
+              document_uuid: 8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34
+              document_kind: shipment
+              document_number: 29УТ-006915
+              document_date: '2026-07-15'
+              entries:
+                - uuid: c7f2e9a4-3b1d-4857-9e6c-2a8f4d7b1035
+                  type: shipment
+                  date: '2026-07-15'
+                  amount: -120000
+                  amount_rub: -120000
+                  currency_code: RUB
+                  movement_kind: income
+                  contractor_uuid: b4d8e2f1-6c5a-4917-8e3b-2f9a7d4c1508
+                  organization_uuid: e1a7c3d9-2b8f-4056-9c14-7d3e8b5a2f61
+                  agreement_uuid: 5c8a2f4d-7e1b-4903-a6c5-8f2d4b7e1a39
+                  settlement_object_kind: order
+                  settlement_object_name: Заказ клиента A2УТ-000417 от 01.07.2026
+      settlementReverted:
+        name: settlement.reverted
+        title: Отмена проведения
+        summary: Движения документа аннулируются
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - document_uuid
+          properties:
+            event:
+              type: string
+              const: settlement.reverted
+            message_id:
+              type: string
+            spec_version:
+              type:
+                - string
+                - 'null'
+            revision:
+              type:
+                - integer
+                - 'null'
+            document_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            document_kind:
+              type:
+                - string
+                - 'null'
+            document_number:
+              type:
+                - string
+                - 'null'
+      settlementOpeningBalance:
+        name: settlement.opening_balance
+        title: Начальное сальдо
+        summary: Сальдо взаиморасчётов на дату отсечки
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - uuid
+            - as_of_date
+            - amount
+          description: >
+            Начальное сальдо на дату отсечки — первая строка ленты движений.
+
+            Дата отсечки 2026-01-01; период на неё в 1С НЕ закрыт (даты запрета
+            31.03,
+
+            30.04, 30.06.2026), поэтому `is_verified: false`, а достоверность
+            первого
+
+            полугодия проверяется через `settlement.checkpoint` на 01.07.2026.
+          properties:
+            event:
+              type: string
+              const: settlement.opening_balance
+            message_id:
+              type: string
+            spec_version:
+              type:
+                - string
+                - 'null'
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            as_of_date:
+              type: string
+              format: date
+            is_verified:
+              type:
+                - boolean
+                - 'null'
+            amount:
+              type: number
+              description: Сальдо СО ЗНАКОМ. «−» — клиент должен, «+» — переплата.
+            amount_rub:
+              type:
+                - number
+                - 'null'
+            currency_code:
+              type:
+                - string
+                - 'null'
+            partner_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            contractor_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            tax_id:
+              type:
+                - string
+                - 'null'
+            organization_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            agreement_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+      settlementCheckpoint:
+        name: settlement.checkpoint
+        title: Сверенное сальдо
+        summary: Контрольная точка на дату закрытия периода
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - as_of_date
+            - amount
+          description: >
+            Сверенное сальдо на дату закрытия периода. В ленту движений не
+            попадает и
+
+            в баланс не входит — служит проверкой инварианта «сальдо на начало +
+            движения
+
+            за период = checkpoint». Первая точка 2026-07-01, далее при каждом
+            закрытии.
+          properties:
+            event:
+              type: string
+              const: settlement.checkpoint
+            message_id:
+              type: string
+            spec_version:
+              type:
+                - string
+                - 'null'
+            as_of_date:
+              type: string
+              format: date
+            is_verified:
+              type:
+                - boolean
+                - 'null'
+            amount:
+              type: number
+            amount_rub:
+              type:
+                - number
+                - 'null'
+            currency_code:
+              type:
+                - string
+                - 'null'
+              description: >-
+                Часть ключа контрольной точки — сверка идёт в валюте движений,
+                чтобы курсовое расхождение не выдавалось за учётное.
+            partner_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            contractor_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            tax_id:
+              type:
+                - string
+                - 'null'
+            organization_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+      paymentScheduleUpdated:
+        name: payment_schedule.updated
+        title: График оплаты с остатками
+        summary: Плановые платежи документа и закрытая часть по данным 1С
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - document_uuid
+            - document_kind
+            - lines
+          description: >
+            График оплаты документа с остатками. Заменил массив
+            `payment_schedule` внутри
+
+            реализаций: там не было закрытой части, и сайт раскладывал платежи
+            методом FIFO,
+
+            ошибаясь в разы (5,53 млн ₽ просрочки против 478 тыс ₽ по учёту).
+          properties:
+            event:
+              type: string
+              const: payment_schedule.updated
+            message_id:
+              type: string
+            spec_version:
+              type:
+                - string
+                - 'null'
+            revision:
+              type:
+                - integer
+                - 'null'
+            document_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            document_kind:
+              type: string
+              enum:
+                - shipment
+                - order
+            document_number:
+              type:
+                - string
+                - 'null'
+            document_date:
+              type:
+                - string
+                - 'null'
+              format: date
+            document_settled_amount:
+              type:
+                - number
+                - 'null'
+              minimum: 0
+              description: >
+                Оплачено по документу ЦЕЛИКОМ. Для заказов это ЕДИНСТВЕННЫЙ
+                источник факта
+
+                оплаты: регистр `РасчетыСКлиентамиПоСрокам` заказы не ведёт,
+                построчного
+
+                остатка по этапам не существует. Источник — ресурс
+                «Оплачивается» регистра
+
+                `РасчетыСКлиентами` по объекту расчётов «заказ».
+
+
+                Величина авторитетна и сайтом НИКОГДА не вычисляется. Её
+                разнесение по этапам
+
+                выполняется только для отображения календаря, помечается
+                производной и не
+
+                участвует ни в балансе, ни в сверке.
+            contractor_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            partner_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            organization_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            agreement_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            currency_code:
+              type:
+                - string
+                - 'null'
+            lines:
+              type: array
+              items:
+                type: object
+                required:
+                  - uuid
+                  - due_date
+                  - amount
+                properties:
+                  uuid:
+                    type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                  due_date:
+                    type: string
+                    format: date
+                  amount:
+                    type: number
+                    minimum: 0
+                    description: >-
+                      Плановая сумма, ПОЛОЖИТЕЛЬНАЯ. Знак для реестра движений
+                      сайт разворачивает сам.
+                  settled_amount:
+                    type:
+                      - number
+                      - 'null'
+                    minimum: 0
+                    description: >
+                      Сколько закрыто по данным 1С, с учётом авансов и зачётов.
+
+                      Заполняется ТОЛЬКО для `document_kind: shipment` — регистр
+                      по срокам заказы
+
+                      не ведёт. Значение больше `amount` легитимно: это
+                      переплата по строке.
+                  line_number:
+                    type:
+                      - integer
+                      - 'null'
+                  percent:
+                    type:
+                      - number
+                      - 'null'
+                  term_days:
+                    type:
+                      - integer
+                      - 'null'
+                  basis:
+                    type:
+                      - string
+                      - 'null'
+                    enum:
+                      - shipment_date
+                      - order_date
+                      - invoice_date
+                      - 'null'
+                  basis_name:
+                    type:
+                      - string
+                      - 'null'
+                  stage:
+                    type:
+                      - string
+                      - 'null'
+                    enum:
+                      - prepayment
+                      - advance
+                      - credit
+                      - 'null'
+                  stage_name:
+                    type:
+                      - string
+                      - 'null'
+          examples:
+            - event: payment_schedule.updated
+              message_id: msg-schedule-a1b2c3
+              document_uuid: 8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34
+              document_kind: shipment
+              document_number: 29УТ-006915
+              currency_code: RUB
+              lines:
+                - uuid: f4a8c2e7-9d3b-4165-8c7a-1e5f9b3d6208
+                  due_date: '2026-08-14'
+                  amount: 120000
+                  settled_amount: 100000
+                  line_number: 1
+                  stage: credit
+                  stage_name: Оплата после отгрузки
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.settlements
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
   erpInCatalog:
     address: erp_in.catalog
     title: Каталог товаров (1С → Сайт)
@@ -9026,6 +10037,204 @@ operations:
     tags:
       - name: US-11
       - name: balance
+  receiveAgreementCreated:
+    title: Соглашение создано
+    summary: 1С передаёт соглашение с клиентом
+    description: >
+      Обработчик: `HandleAgreementCreated`
+
+
+      Соглашения заменили договоры: договоров в базе 75 при 97,8 % реализаций
+      без них,
+
+      соглашений 5 102 при 100 % покрытии. Соглашение НЕ является измерением
+      регистра —
+
+      служит фильтром и группировкой, а не осью сальдо.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInContractors'
+    messages:
+      - $ref: '#/channels/erpInContractors/messages/agreementCreated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: FIN
+      - name: settlements
+  receiveAgreementUpdated:
+    title: Соглашение изменено
+    summary: 1С обновляет условия соглашения
+    description: >
+      Обработчик: `HandleAgreementUpdated`. Структура полная, как у
+      `agreement.created`.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInContractors'
+    messages:
+      - $ref: '#/channels/erpInContractors/messages/agreementUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: FIN
+      - name: settlements
+  receiveAgreementDeleted:
+    title: Соглашение помечено на удаление
+    summary: 1С помечает соглашение на удаление
+    description: >
+      Обработчик: `HandleAgreementDeleted`. Мягкое удаление: движения регистра,
+
+      ссылающиеся на соглашение, сохраняются и попадают в группу «Без
+      соглашения».
+    action: receive
+    channel:
+      $ref: '#/channels/erpInContractors'
+    messages:
+      - $ref: '#/channels/erpInContractors/messages/agreementDeleted'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: FIN
+      - name: settlements
+  receiveSettlementPosted:
+    title: Движения документа
+    summary: 1С передаёт движения регистра, порождённые проведением документа
+    description: >
+      Обработчик: `HandleSettlementPosted`
+
+
+      Единица сообщения — документ-регистратор. Все движения этого
+      `document_uuid`
+
+      заменяются целиком; дельту досылать нельзя.
+
+
+      **Знак `amount` содержательный:** «+» увеличивает баланс в пользу клиента,
+
+      «−» в нашу. В 1С знак обратный (их «Приход» = наш минус) — инверсию
+      применяет
+
+      сторона 1С. Валидацией схемы такая ошибка не ловится, только сверкой.
+
+
+      Все измерения регистра живут в строке `entries[]`, не в шапке: 33 %
+      документов
+
+      двигают несколько объектов расчётов.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInSettlements'
+    messages:
+      - $ref: '#/channels/erpInSettlements/messages/settlementPosted'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: FIN
+      - name: settlements
+  receiveSettlementReverted:
+    title: Отмена проведения
+    summary: 1С сообщает об отмене проведения документа
+    description: >
+      Обработчик: `HandleSettlementReverted`. Движения документа и строки его
+      графика
+
+      оплаты удаляются.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInSettlements'
+    messages:
+      - $ref: '#/channels/erpInSettlements/messages/settlementReverted'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: FIN
+      - name: settlements
+  receiveSettlementOpeningBalance:
+    title: Начальное сальдо
+    summary: 1С передаёт сальдо взаиморасчётов на дату отсечки
+    description: >
+      Обработчик: `HandleSettlementOpeningBalance`
+
+
+      Дата отсечки — 2026-01-01. Период на эту дату в 1С не закрыт (даты запрета
+      —
+
+      31.03, 30.04, 30.06.2026), поэтому сальдо помечается несверенным, а
+      достоверность
+
+      первого полугодия проверяется инвариантом «сальдо 01.01 + движения =
+      checkpoint 01.07».
+    action: receive
+    channel:
+      $ref: '#/channels/erpInSettlements'
+    messages:
+      - $ref: '#/channels/erpInSettlements/messages/settlementOpeningBalance'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: FIN
+      - name: settlements
+  receiveSettlementCheckpoint:
+    title: Сверенное сальдо
+    summary: 1С передаёт контрольную точку сальдо на дату закрытия периода
+    description: >
+      Обработчик: `HandleSettlementCheckpoint`
+
+
+      В ленту движений не попадает и в баланс не входит: служит проверкой
+      инварианта.
+
+      Первая точка — 2026-07-01, далее при каждом закрытии периода.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInSettlements'
+    messages:
+      - $ref: '#/channels/erpInSettlements/messages/settlementCheckpoint'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: FIN
+      - name: settlements
+  receivePaymentScheduleUpdated:
+    title: График оплаты с остатками
+    summary: 1С передаёт график оплаты документа вместе с закрытой частью
+    description: >
+      Обработчик: `HandlePaymentScheduleUpdated`
+
+
+      Заменяет массив `payment_schedule` внутри реализаций. По реализациям
+      приезжает
+
+      `settled_amount` — сколько закрыто по данным 1С с учётом авансов и
+      зачётов;
+
+      сайт больше не раскладывает платежи методом FIFO.
+
+
+      По заказам построчного остатка не существует: регистр
+      `РасчетыСКлиентамиПоСрокам`
+
+      заказы не ведёт. Вместо него — `document_settled_amount` в шапке, сумма по
+      заказу
+
+      целиком, авторитетная и никогда не вычисляемая сайтом.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInSettlements'
+    messages:
+      - $ref: '#/channels/erpInSettlements/messages/paymentScheduleUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: FIN
+      - name: settlements
   receiveIndividualPricesReady:
     title: Уведомление об индивидуальных ценах
     summary: 1С уведомляет о готовности CSV-файла с индивидуальными ценами
@@ -16019,6 +17228,988 @@ components:
                               description: Дата в формате yyyy-MM-dd
                               examples:
                                 - '2026-03-17'
+    AgreementCreated:
+      name: agreement.created
+      title: Соглашение создано
+      summary: Соглашение с клиентом — условия продаж и группировка взаиморасчётов
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - uuid
+        description: >
+          Соглашение с клиентом. Заменило договоры: в базе 1С 75 договоров при
+          97,8 %
+
+          реализаций без них, соглашений 5 102 при 100 % покрытии.
+
+
+          Соглашение НЕ является измерением регистра взаиморасчётов — 1С берёт
+          его
+
+          из документа-регистратора. При изменении задним числом группировка
+          исторических
+
+          движений может разъехаться, поэтому осью акта сверки служит
+
+          контрагент × организация × валюта, а соглашение — фильтром.
+        properties:
+          event:
+            type: string
+            enum:
+              - agreement.created
+              - agreement.updated
+          message_id:
+            type: string
+          spec_version:
+            type:
+              - string
+              - 'null'
+            description: Версия спецификации обмена («16.0»). Только для журнала шины.
+          revision:
+            type:
+              - integer
+              - 'null'
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          partner_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          contractor_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          tax_id:
+            type:
+              - string
+              - 'null'
+          organization_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          number:
+            type:
+              - string
+              - 'null'
+          date:
+            type:
+              - string
+              - 'null'
+            format: date
+          name:
+            type:
+              - string
+              - 'null'
+          currency_code:
+            type:
+              - string
+              - 'null'
+          settlement_procedure:
+            type:
+              - string
+              - 'null'
+            enum:
+              - orders
+              - advance_orders_debt_invoices
+              - settlement_documents
+              - 'null'
+            description: >
+              Порядок расчётов. Реальный состав в базе: `orders` — по заказам (3
+              972),
+
+              `advance_orders_debt_invoices` — аванс по заказам, долг по
+              накладным (962),
+
+              `settlement_documents` — по расчётным документам (1), не заполнено
+              (167).
+
+              Пустое значение — допустимое состояние, а не ошибка. Варианта «по
+              договору» нет.
+          credit_limit:
+            type:
+              - number
+              - 'null'
+          deferral_days:
+            type:
+              - integer
+              - 'null'
+          status:
+            type:
+              - string
+              - 'null'
+            enum:
+              - active
+              - closed
+              - 'null'
+        examples:
+          - event: agreement.created
+            message_id: msg-agreement-a1b2c3
+            uuid: 5c8a2f4d-7e1b-4903-a6c5-8f2d4b7e1a39
+            contractor_uuid: b4d8e2f1-6c5a-4917-8e3b-2f9a7d4c1508
+            number: СГ-0042
+            name: Соглашение об условиях продаж №СГ-0042
+            settlement_procedure: orders
+            deferral_days: 30
+    AgreementUpdated:
+      name: agreement.updated
+      title: Соглашение изменено
+      summary: Полная структура соглашения, как при создании
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - uuid
+        description: >
+          Соглашение с клиентом. Заменило договоры: в базе 1С 75 договоров при
+          97,8 %
+
+          реализаций без них, соглашений 5 102 при 100 % покрытии.
+
+
+          Соглашение НЕ является измерением регистра взаиморасчётов — 1С берёт
+          его
+
+          из документа-регистратора. При изменении задним числом группировка
+          исторических
+
+          движений может разъехаться, поэтому осью акта сверки служит
+
+          контрагент × организация × валюта, а соглашение — фильтром.
+        properties:
+          event:
+            type: string
+            enum:
+              - agreement.created
+              - agreement.updated
+          message_id:
+            type: string
+          spec_version:
+            type:
+              - string
+              - 'null'
+            description: Версия спецификации обмена («16.0»). Только для журнала шины.
+          revision:
+            type:
+              - integer
+              - 'null'
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          partner_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          contractor_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          tax_id:
+            type:
+              - string
+              - 'null'
+          organization_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          number:
+            type:
+              - string
+              - 'null'
+          date:
+            type:
+              - string
+              - 'null'
+            format: date
+          name:
+            type:
+              - string
+              - 'null'
+          currency_code:
+            type:
+              - string
+              - 'null'
+          settlement_procedure:
+            type:
+              - string
+              - 'null'
+            enum:
+              - orders
+              - advance_orders_debt_invoices
+              - settlement_documents
+              - 'null'
+            description: >
+              Порядок расчётов. Реальный состав в базе: `orders` — по заказам (3
+              972),
+
+              `advance_orders_debt_invoices` — аванс по заказам, долг по
+              накладным (962),
+
+              `settlement_documents` — по расчётным документам (1), не заполнено
+              (167).
+
+              Пустое значение — допустимое состояние, а не ошибка. Варианта «по
+              договору» нет.
+          credit_limit:
+            type:
+              - number
+              - 'null'
+          deferral_days:
+            type:
+              - integer
+              - 'null'
+          status:
+            type:
+              - string
+              - 'null'
+            enum:
+              - active
+              - closed
+              - 'null'
+        examples:
+          - event: agreement.created
+            message_id: msg-agreement-a1b2c3
+            uuid: 5c8a2f4d-7e1b-4903-a6c5-8f2d4b7e1a39
+            contractor_uuid: b4d8e2f1-6c5a-4917-8e3b-2f9a7d4c1508
+            number: СГ-0042
+            name: Соглашение об условиях продаж №СГ-0042
+            settlement_procedure: orders
+            deferral_days: 30
+    AgreementDeleted:
+      name: agreement.deleted
+      title: Соглашение помечено на удаление
+      summary: Мягкое удаление, движения сохраняются
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - uuid
+        properties:
+          event:
+            type: string
+            const: agreement.deleted
+          message_id:
+            type: string
+          revision:
+            type:
+              - integer
+              - 'null'
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+    SettlementPosted:
+      name: settlement.posted
+      title: Движения документа
+      summary: Все движения регистра взаиморасчётов по одному документу
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - document_uuid
+          - entries
+        description: >
+          Движения регистра, порождённые проведением одного документа. Сообщение
+          заменяет
+
+          ВСЕ движения этого `document_uuid` целиком — дельту досылать нельзя.
+
+          Пустой `entries` означает, что движений у документа больше нет.
+        properties:
+          event:
+            type: string
+            const: settlement.posted
+          message_id:
+            type: string
+          spec_version:
+            type:
+              - string
+              - 'null'
+          revision:
+            type:
+              - integer
+              - 'null'
+          document_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          document_kind:
+            type:
+              - string
+              - 'null'
+            description: >
+              Вид регистратора: `shipment`, `service_sale`, `payment`,
+              `goods_return`,
+
+              `netting`, `debt_adjustment`, `sale_adjustment`,
+              `commission_report`,
+
+              `commission_writeoff`, `other`. Перечень открытый.
+          document_number:
+            type:
+              - string
+              - 'null'
+            description: >-
+              Дублируется в сообщение намеренно — движение обязано читаться,
+              даже если документа на сайте нет.
+          document_date:
+            type:
+              - string
+              - 'null'
+            format: date
+          erp_created_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+          erp_updated_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+          entries:
+            type: array
+            items:
+              type: object
+              required:
+                - uuid
+                - type
+                - amount
+              description: >
+                Одно движение регистра взаиморасчётов. Все измерения регистра
+                живут здесь,
+
+                а не в шапке сообщения: 33 % документов двигают несколько
+                объектов расчётов,
+
+                у 27 документов расходится и ключ аналитики. Правило: всё, что
+                берётся
+
+                из ключа аналитики, живёт в строке.
+              properties:
+                uuid:
+                  type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                type:
+                  type: string
+                  enum:
+                    - shipment
+                    - payment_in
+                    - payment_out
+                    - goods_return
+                    - commission_sale
+                    - adjustment
+                  description: >
+                    Тип движения, определяет знак `amount`. Перечень ЗАКРЫТЫЙ:
+                    неизвестный тип
+
+                    отбрасывает всё сообщение в очередь недоставленных — молча
+                    пропустить строку
+
+                    нельзя, баланс разъедется незаметно.
+                date:
+                  type:
+                    - string
+                    - 'null'
+                  format: date
+                amount:
+                  type: number
+                  description: >
+                    Сумма СО ЗНАКОМ: «+» увеличивает баланс в пользу клиента
+                    (оплата, возврат
+
+                    товара), «−» в нашу (реализация, возврат денег). Сумма всех
+                    движений равна
+
+                    балансу контрагента. В 1С знак ОБРАТНЫЙ — их «Приход» это
+                    наш минус;
+
+                    инверсию применяет сторона 1С.
+                amount_rub:
+                  type:
+                    - number
+                    - 'null'
+                  description: >-
+                    Рублёвый эквивалент со знаком — ресурс СуммаРегл,
+                    зафиксированный учётом на дату операции.
+                currency_code:
+                  type:
+                    - string
+                    - 'null'
+                movement_kind:
+                  type:
+                    - string
+                    - 'null'
+                  enum:
+                    - income
+                    - expense
+                    - 'null'
+                  description: >-
+                    Вид движения в терминах 1С (Приход/Расход). Диагностическое
+                    поле, в арифметике не участвует.
+                partner_uuid:
+                  type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                contractor_uuid:
+                  type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                organization_uuid:
+                  type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                agreement_uuid:
+                  type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                agreement_name:
+                  type:
+                    - string
+                    - 'null'
+                contract_uuid:
+                  type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                contract_name:
+                  type:
+                    - string
+                    - 'null'
+                settlement_object_kind:
+                  type:
+                    - string
+                    - 'null'
+                  description: >
+                    Вид объекта расчётов (`ОбъектРасчетов`): `order`,
+                    `shipment`,
+
+                    `commission_report`, `commission_contract`, `other`.
+                    Перечень ОТКРЫТЫЙ —
+
+                    незнакомый вид сохраняется как `other`, а не отбрасывается.
+                settlement_object_uuid:
+                  type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                settlement_object_name:
+                  type:
+                    - string
+                    - 'null'
+                comment:
+                  type:
+                    - string
+                    - 'null'
+        examples:
+          - event: settlement.posted
+            message_id: msg-settlement-a1b2c3
+            spec_version: '16.0'
+            revision: 3
+            document_uuid: 8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34
+            document_kind: shipment
+            document_number: 29УТ-006915
+            document_date: '2026-07-15'
+            entries:
+              - uuid: c7f2e9a4-3b1d-4857-9e6c-2a8f4d7b1035
+                type: shipment
+                date: '2026-07-15'
+                amount: -120000
+                amount_rub: -120000
+                currency_code: RUB
+                movement_kind: income
+                contractor_uuid: b4d8e2f1-6c5a-4917-8e3b-2f9a7d4c1508
+                organization_uuid: e1a7c3d9-2b8f-4056-9c14-7d3e8b5a2f61
+                agreement_uuid: 5c8a2f4d-7e1b-4903-a6c5-8f2d4b7e1a39
+                settlement_object_kind: order
+                settlement_object_name: Заказ клиента A2УТ-000417 от 01.07.2026
+    SettlementReverted:
+      name: settlement.reverted
+      title: Отмена проведения
+      summary: Движения документа аннулируются
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - document_uuid
+        properties:
+          event:
+            type: string
+            const: settlement.reverted
+          message_id:
+            type: string
+          spec_version:
+            type:
+              - string
+              - 'null'
+          revision:
+            type:
+              - integer
+              - 'null'
+          document_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          document_kind:
+            type:
+              - string
+              - 'null'
+          document_number:
+            type:
+              - string
+              - 'null'
+    SettlementOpeningBalance:
+      name: settlement.opening_balance
+      title: Начальное сальдо
+      summary: Сальдо взаиморасчётов на дату отсечки
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - uuid
+          - as_of_date
+          - amount
+        description: >
+          Начальное сальдо на дату отсечки — первая строка ленты движений.
+
+          Дата отсечки 2026-01-01; период на неё в 1С НЕ закрыт (даты запрета
+          31.03,
+
+          30.04, 30.06.2026), поэтому `is_verified: false`, а достоверность
+          первого
+
+          полугодия проверяется через `settlement.checkpoint` на 01.07.2026.
+        properties:
+          event:
+            type: string
+            const: settlement.opening_balance
+          message_id:
+            type: string
+          spec_version:
+            type:
+              - string
+              - 'null'
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          as_of_date:
+            type: string
+            format: date
+          is_verified:
+            type:
+              - boolean
+              - 'null'
+          amount:
+            type: number
+            description: Сальдо СО ЗНАКОМ. «−» — клиент должен, «+» — переплата.
+          amount_rub:
+            type:
+              - number
+              - 'null'
+          currency_code:
+            type:
+              - string
+              - 'null'
+          partner_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          contractor_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          tax_id:
+            type:
+              - string
+              - 'null'
+          organization_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          agreement_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+    SettlementCheckpoint:
+      name: settlement.checkpoint
+      title: Сверенное сальдо
+      summary: Контрольная точка на дату закрытия периода
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - as_of_date
+          - amount
+        description: >
+          Сверенное сальдо на дату закрытия периода. В ленту движений не
+          попадает и
+
+          в баланс не входит — служит проверкой инварианта «сальдо на начало +
+          движения
+
+          за период = checkpoint». Первая точка 2026-07-01, далее при каждом
+          закрытии.
+        properties:
+          event:
+            type: string
+            const: settlement.checkpoint
+          message_id:
+            type: string
+          spec_version:
+            type:
+              - string
+              - 'null'
+          as_of_date:
+            type: string
+            format: date
+          is_verified:
+            type:
+              - boolean
+              - 'null'
+          amount:
+            type: number
+          amount_rub:
+            type:
+              - number
+              - 'null'
+          currency_code:
+            type:
+              - string
+              - 'null'
+            description: >-
+              Часть ключа контрольной точки — сверка идёт в валюте движений,
+              чтобы курсовое расхождение не выдавалось за учётное.
+          partner_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          contractor_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          tax_id:
+            type:
+              - string
+              - 'null'
+          organization_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+    PaymentScheduleUpdated:
+      name: payment_schedule.updated
+      title: График оплаты с остатками
+      summary: Плановые платежи документа и закрытая часть по данным 1С
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - document_uuid
+          - document_kind
+          - lines
+        description: >
+          График оплаты документа с остатками. Заменил массив `payment_schedule`
+          внутри
+
+          реализаций: там не было закрытой части, и сайт раскладывал платежи
+          методом FIFO,
+
+          ошибаясь в разы (5,53 млн ₽ просрочки против 478 тыс ₽ по учёту).
+        properties:
+          event:
+            type: string
+            const: payment_schedule.updated
+          message_id:
+            type: string
+          spec_version:
+            type:
+              - string
+              - 'null'
+          revision:
+            type:
+              - integer
+              - 'null'
+          document_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          document_kind:
+            type: string
+            enum:
+              - shipment
+              - order
+          document_number:
+            type:
+              - string
+              - 'null'
+          document_date:
+            type:
+              - string
+              - 'null'
+            format: date
+          document_settled_amount:
+            type:
+              - number
+              - 'null'
+            minimum: 0
+            description: >
+              Оплачено по документу ЦЕЛИКОМ. Для заказов это ЕДИНСТВЕННЫЙ
+              источник факта
+
+              оплаты: регистр `РасчетыСКлиентамиПоСрокам` заказы не ведёт,
+              построчного
+
+              остатка по этапам не существует. Источник — ресурс «Оплачивается»
+              регистра
+
+              `РасчетыСКлиентами` по объекту расчётов «заказ».
+
+
+              Величина авторитетна и сайтом НИКОГДА не вычисляется. Её
+              разнесение по этапам
+
+              выполняется только для отображения календаря, помечается
+              производной и не
+
+              участвует ни в балансе, ни в сверке.
+          contractor_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          partner_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          organization_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          agreement_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          currency_code:
+            type:
+              - string
+              - 'null'
+          lines:
+            type: array
+            items:
+              type: object
+              required:
+                - uuid
+                - due_date
+                - amount
+              properties:
+                uuid:
+                  type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                due_date:
+                  type: string
+                  format: date
+                amount:
+                  type: number
+                  minimum: 0
+                  description: >-
+                    Плановая сумма, ПОЛОЖИТЕЛЬНАЯ. Знак для реестра движений
+                    сайт разворачивает сам.
+                settled_amount:
+                  type:
+                    - number
+                    - 'null'
+                  minimum: 0
+                  description: >
+                    Сколько закрыто по данным 1С, с учётом авансов и зачётов.
+
+                    Заполняется ТОЛЬКО для `document_kind: shipment` — регистр
+                    по срокам заказы
+
+                    не ведёт. Значение больше `amount` легитимно: это переплата
+                    по строке.
+                line_number:
+                  type:
+                    - integer
+                    - 'null'
+                percent:
+                  type:
+                    - number
+                    - 'null'
+                term_days:
+                  type:
+                    - integer
+                    - 'null'
+                basis:
+                  type:
+                    - string
+                    - 'null'
+                  enum:
+                    - shipment_date
+                    - order_date
+                    - invoice_date
+                    - 'null'
+                basis_name:
+                  type:
+                    - string
+                    - 'null'
+                stage:
+                  type:
+                    - string
+                    - 'null'
+                  enum:
+                    - prepayment
+                    - advance
+                    - credit
+                    - 'null'
+                stage_name:
+                  type:
+                    - string
+                    - 'null'
+        examples:
+          - event: payment_schedule.updated
+            message_id: msg-schedule-a1b2c3
+            document_uuid: 8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34
+            document_kind: shipment
+            document_number: 29УТ-006915
+            currency_code: RUB
+            lines:
+              - uuid: f4a8c2e7-9d3b-4165-8c7a-1e5f9b3d6208
+                due_date: '2026-08-14'
+                amount: 120000
+                settled_amount: 100000
+                line_number: 1
+                stage: credit
+                stage_name: Оплата после отгрузки
     IndividualPricesReady:
       name: individual_prices.ready
       title: Индивидуальные цены готовы
@@ -23731,6 +25922,976 @@ components:
                 description: Дата в формате yyyy-MM-dd
                 examples:
                   - '2026-03-17'
+    AgreementPayload:
+      type: object
+      required:
+        - event
+        - uuid
+      description: >
+        Соглашение с клиентом. Заменило договоры: в базе 1С 75 договоров при
+        97,8 %
+
+        реализаций без них, соглашений 5 102 при 100 % покрытии.
+
+
+        Соглашение НЕ является измерением регистра взаиморасчётов — 1С берёт его
+
+        из документа-регистратора. При изменении задним числом группировка
+        исторических
+
+        движений может разъехаться, поэтому осью акта сверки служит
+
+        контрагент × организация × валюта, а соглашение — фильтром.
+      properties:
+        event:
+          type: string
+          enum:
+            - agreement.created
+            - agreement.updated
+        message_id:
+          type: string
+        spec_version:
+          type:
+            - string
+            - 'null'
+          description: Версия спецификации обмена («16.0»). Только для журнала шины.
+        revision:
+          type:
+            - integer
+            - 'null'
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        partner_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        contractor_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        tax_id:
+          type:
+            - string
+            - 'null'
+        organization_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        number:
+          type:
+            - string
+            - 'null'
+        date:
+          type:
+            - string
+            - 'null'
+          format: date
+        name:
+          type:
+            - string
+            - 'null'
+        currency_code:
+          type:
+            - string
+            - 'null'
+        settlement_procedure:
+          type:
+            - string
+            - 'null'
+          enum:
+            - orders
+            - advance_orders_debt_invoices
+            - settlement_documents
+            - 'null'
+          description: >
+            Порядок расчётов. Реальный состав в базе: `orders` — по заказам (3
+            972),
+
+            `advance_orders_debt_invoices` — аванс по заказам, долг по накладным
+            (962),
+
+            `settlement_documents` — по расчётным документам (1), не заполнено
+            (167).
+
+            Пустое значение — допустимое состояние, а не ошибка. Варианта «по
+            договору» нет.
+        credit_limit:
+          type:
+            - number
+            - 'null'
+        deferral_days:
+          type:
+            - integer
+            - 'null'
+        status:
+          type:
+            - string
+            - 'null'
+          enum:
+            - active
+            - closed
+            - 'null'
+      examples:
+        - event: agreement.created
+          message_id: msg-agreement-a1b2c3
+          uuid: 5c8a2f4d-7e1b-4903-a6c5-8f2d4b7e1a39
+          contractor_uuid: b4d8e2f1-6c5a-4917-8e3b-2f9a7d4c1508
+          number: СГ-0042
+          name: Соглашение об условиях продаж №СГ-0042
+          settlement_procedure: orders
+          deferral_days: 30
+    AgreementDeletedPayload:
+      type: object
+      required:
+        - event
+        - uuid
+      properties:
+        event:
+          type: string
+          const: agreement.deleted
+        message_id:
+          type: string
+        revision:
+          type:
+            - integer
+            - 'null'
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+    SettlementEntry:
+      type: object
+      required:
+        - uuid
+        - type
+        - amount
+      description: >
+        Одно движение регистра взаиморасчётов. Все измерения регистра живут
+        здесь,
+
+        а не в шапке сообщения: 33 % документов двигают несколько объектов
+        расчётов,
+
+        у 27 документов расходится и ключ аналитики. Правило: всё, что берётся
+
+        из ключа аналитики, живёт в строке.
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        type:
+          type: string
+          enum:
+            - shipment
+            - payment_in
+            - payment_out
+            - goods_return
+            - commission_sale
+            - adjustment
+          description: >
+            Тип движения, определяет знак `amount`. Перечень ЗАКРЫТЫЙ:
+            неизвестный тип
+
+            отбрасывает всё сообщение в очередь недоставленных — молча
+            пропустить строку
+
+            нельзя, баланс разъедется незаметно.
+        date:
+          type:
+            - string
+            - 'null'
+          format: date
+        amount:
+          type: number
+          description: >
+            Сумма СО ЗНАКОМ: «+» увеличивает баланс в пользу клиента (оплата,
+            возврат
+
+            товара), «−» в нашу (реализация, возврат денег). Сумма всех движений
+            равна
+
+            балансу контрагента. В 1С знак ОБРАТНЫЙ — их «Приход» это наш минус;
+
+            инверсию применяет сторона 1С.
+        amount_rub:
+          type:
+            - number
+            - 'null'
+          description: >-
+            Рублёвый эквивалент со знаком — ресурс СуммаРегл, зафиксированный
+            учётом на дату операции.
+        currency_code:
+          type:
+            - string
+            - 'null'
+        movement_kind:
+          type:
+            - string
+            - 'null'
+          enum:
+            - income
+            - expense
+            - 'null'
+          description: >-
+            Вид движения в терминах 1С (Приход/Расход). Диагностическое поле, в
+            арифметике не участвует.
+        partner_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        contractor_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        organization_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        agreement_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        agreement_name:
+          type:
+            - string
+            - 'null'
+        contract_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        contract_name:
+          type:
+            - string
+            - 'null'
+        settlement_object_kind:
+          type:
+            - string
+            - 'null'
+          description: >
+            Вид объекта расчётов (`ОбъектРасчетов`): `order`, `shipment`,
+
+            `commission_report`, `commission_contract`, `other`. Перечень
+            ОТКРЫТЫЙ —
+
+            незнакомый вид сохраняется как `other`, а не отбрасывается.
+        settlement_object_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        settlement_object_name:
+          type:
+            - string
+            - 'null'
+        comment:
+          type:
+            - string
+            - 'null'
+    SettlementPostedPayload:
+      type: object
+      required:
+        - event
+        - document_uuid
+        - entries
+      description: >
+        Движения регистра, порождённые проведением одного документа. Сообщение
+        заменяет
+
+        ВСЕ движения этого `document_uuid` целиком — дельту досылать нельзя.
+
+        Пустой `entries` означает, что движений у документа больше нет.
+      properties:
+        event:
+          type: string
+          const: settlement.posted
+        message_id:
+          type: string
+        spec_version:
+          type:
+            - string
+            - 'null'
+        revision:
+          type:
+            - integer
+            - 'null'
+        document_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        document_kind:
+          type:
+            - string
+            - 'null'
+          description: >
+            Вид регистратора: `shipment`, `service_sale`, `payment`,
+            `goods_return`,
+
+            `netting`, `debt_adjustment`, `sale_adjustment`,
+            `commission_report`,
+
+            `commission_writeoff`, `other`. Перечень открытый.
+        document_number:
+          type:
+            - string
+            - 'null'
+          description: >-
+            Дублируется в сообщение намеренно — движение обязано читаться, даже
+            если документа на сайте нет.
+        document_date:
+          type:
+            - string
+            - 'null'
+          format: date
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        entries:
+          type: array
+          items:
+            type: object
+            required:
+              - uuid
+              - type
+              - amount
+            description: >
+              Одно движение регистра взаиморасчётов. Все измерения регистра
+              живут здесь,
+
+              а не в шапке сообщения: 33 % документов двигают несколько объектов
+              расчётов,
+
+              у 27 документов расходится и ключ аналитики. Правило: всё, что
+              берётся
+
+              из ключа аналитики, живёт в строке.
+            properties:
+              uuid:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              type:
+                type: string
+                enum:
+                  - shipment
+                  - payment_in
+                  - payment_out
+                  - goods_return
+                  - commission_sale
+                  - adjustment
+                description: >
+                  Тип движения, определяет знак `amount`. Перечень ЗАКРЫТЫЙ:
+                  неизвестный тип
+
+                  отбрасывает всё сообщение в очередь недоставленных — молча
+                  пропустить строку
+
+                  нельзя, баланс разъедется незаметно.
+              date:
+                type:
+                  - string
+                  - 'null'
+                format: date
+              amount:
+                type: number
+                description: >
+                  Сумма СО ЗНАКОМ: «+» увеличивает баланс в пользу клиента
+                  (оплата, возврат
+
+                  товара), «−» в нашу (реализация, возврат денег). Сумма всех
+                  движений равна
+
+                  балансу контрагента. В 1С знак ОБРАТНЫЙ — их «Приход» это наш
+                  минус;
+
+                  инверсию применяет сторона 1С.
+              amount_rub:
+                type:
+                  - number
+                  - 'null'
+                description: >-
+                  Рублёвый эквивалент со знаком — ресурс СуммаРегл,
+                  зафиксированный учётом на дату операции.
+              currency_code:
+                type:
+                  - string
+                  - 'null'
+              movement_kind:
+                type:
+                  - string
+                  - 'null'
+                enum:
+                  - income
+                  - expense
+                  - 'null'
+                description: >-
+                  Вид движения в терминах 1С (Приход/Расход). Диагностическое
+                  поле, в арифметике не участвует.
+              partner_uuid:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              contractor_uuid:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              organization_uuid:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              agreement_uuid:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              agreement_name:
+                type:
+                  - string
+                  - 'null'
+              contract_uuid:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              contract_name:
+                type:
+                  - string
+                  - 'null'
+              settlement_object_kind:
+                type:
+                  - string
+                  - 'null'
+                description: >
+                  Вид объекта расчётов (`ОбъектРасчетов`): `order`, `shipment`,
+
+                  `commission_report`, `commission_contract`, `other`. Перечень
+                  ОТКРЫТЫЙ —
+
+                  незнакомый вид сохраняется как `other`, а не отбрасывается.
+              settlement_object_uuid:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              settlement_object_name:
+                type:
+                  - string
+                  - 'null'
+              comment:
+                type:
+                  - string
+                  - 'null'
+      examples:
+        - event: settlement.posted
+          message_id: msg-settlement-a1b2c3
+          spec_version: '16.0'
+          revision: 3
+          document_uuid: 8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34
+          document_kind: shipment
+          document_number: 29УТ-006915
+          document_date: '2026-07-15'
+          entries:
+            - uuid: c7f2e9a4-3b1d-4857-9e6c-2a8f4d7b1035
+              type: shipment
+              date: '2026-07-15'
+              amount: -120000
+              amount_rub: -120000
+              currency_code: RUB
+              movement_kind: income
+              contractor_uuid: b4d8e2f1-6c5a-4917-8e3b-2f9a7d4c1508
+              organization_uuid: e1a7c3d9-2b8f-4056-9c14-7d3e8b5a2f61
+              agreement_uuid: 5c8a2f4d-7e1b-4903-a6c5-8f2d4b7e1a39
+              settlement_object_kind: order
+              settlement_object_name: Заказ клиента A2УТ-000417 от 01.07.2026
+    SettlementRevertedPayload:
+      type: object
+      required:
+        - event
+        - document_uuid
+      properties:
+        event:
+          type: string
+          const: settlement.reverted
+        message_id:
+          type: string
+        spec_version:
+          type:
+            - string
+            - 'null'
+        revision:
+          type:
+            - integer
+            - 'null'
+        document_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        document_kind:
+          type:
+            - string
+            - 'null'
+        document_number:
+          type:
+            - string
+            - 'null'
+    SettlementOpeningBalancePayload:
+      type: object
+      required:
+        - event
+        - uuid
+        - as_of_date
+        - amount
+      description: >
+        Начальное сальдо на дату отсечки — первая строка ленты движений.
+
+        Дата отсечки 2026-01-01; период на неё в 1С НЕ закрыт (даты запрета
+        31.03,
+
+        30.04, 30.06.2026), поэтому `is_verified: false`, а достоверность
+        первого
+
+        полугодия проверяется через `settlement.checkpoint` на 01.07.2026.
+      properties:
+        event:
+          type: string
+          const: settlement.opening_balance
+        message_id:
+          type: string
+        spec_version:
+          type:
+            - string
+            - 'null'
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        as_of_date:
+          type: string
+          format: date
+        is_verified:
+          type:
+            - boolean
+            - 'null'
+        amount:
+          type: number
+          description: Сальдо СО ЗНАКОМ. «−» — клиент должен, «+» — переплата.
+        amount_rub:
+          type:
+            - number
+            - 'null'
+        currency_code:
+          type:
+            - string
+            - 'null'
+        partner_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        contractor_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        tax_id:
+          type:
+            - string
+            - 'null'
+        organization_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        agreement_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+    SettlementCheckpointPayload:
+      type: object
+      required:
+        - event
+        - as_of_date
+        - amount
+      description: >
+        Сверенное сальдо на дату закрытия периода. В ленту движений не попадает
+        и
+
+        в баланс не входит — служит проверкой инварианта «сальдо на начало +
+        движения
+
+        за период = checkpoint». Первая точка 2026-07-01, далее при каждом
+        закрытии.
+      properties:
+        event:
+          type: string
+          const: settlement.checkpoint
+        message_id:
+          type: string
+        spec_version:
+          type:
+            - string
+            - 'null'
+        as_of_date:
+          type: string
+          format: date
+        is_verified:
+          type:
+            - boolean
+            - 'null'
+        amount:
+          type: number
+        amount_rub:
+          type:
+            - number
+            - 'null'
+        currency_code:
+          type:
+            - string
+            - 'null'
+          description: >-
+            Часть ключа контрольной точки — сверка идёт в валюте движений, чтобы
+            курсовое расхождение не выдавалось за учётное.
+        partner_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        contractor_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        tax_id:
+          type:
+            - string
+            - 'null'
+        organization_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+    PaymentScheduleLine:
+      type: object
+      required:
+        - uuid
+        - due_date
+        - amount
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        due_date:
+          type: string
+          format: date
+        amount:
+          type: number
+          minimum: 0
+          description: >-
+            Плановая сумма, ПОЛОЖИТЕЛЬНАЯ. Знак для реестра движений сайт
+            разворачивает сам.
+        settled_amount:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: >
+            Сколько закрыто по данным 1С, с учётом авансов и зачётов.
+
+            Заполняется ТОЛЬКО для `document_kind: shipment` — регистр по срокам
+            заказы
+
+            не ведёт. Значение больше `amount` легитимно: это переплата по
+            строке.
+        line_number:
+          type:
+            - integer
+            - 'null'
+        percent:
+          type:
+            - number
+            - 'null'
+        term_days:
+          type:
+            - integer
+            - 'null'
+        basis:
+          type:
+            - string
+            - 'null'
+          enum:
+            - shipment_date
+            - order_date
+            - invoice_date
+            - 'null'
+        basis_name:
+          type:
+            - string
+            - 'null'
+        stage:
+          type:
+            - string
+            - 'null'
+          enum:
+            - prepayment
+            - advance
+            - credit
+            - 'null'
+        stage_name:
+          type:
+            - string
+            - 'null'
+    PaymentScheduleUpdatedPayload:
+      type: object
+      required:
+        - event
+        - document_uuid
+        - document_kind
+        - lines
+      description: >
+        График оплаты документа с остатками. Заменил массив `payment_schedule`
+        внутри
+
+        реализаций: там не было закрытой части, и сайт раскладывал платежи
+        методом FIFO,
+
+        ошибаясь в разы (5,53 млн ₽ просрочки против 478 тыс ₽ по учёту).
+      properties:
+        event:
+          type: string
+          const: payment_schedule.updated
+        message_id:
+          type: string
+        spec_version:
+          type:
+            - string
+            - 'null'
+        revision:
+          type:
+            - integer
+            - 'null'
+        document_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        document_kind:
+          type: string
+          enum:
+            - shipment
+            - order
+        document_number:
+          type:
+            - string
+            - 'null'
+        document_date:
+          type:
+            - string
+            - 'null'
+          format: date
+        document_settled_amount:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: >
+            Оплачено по документу ЦЕЛИКОМ. Для заказов это ЕДИНСТВЕННЫЙ источник
+            факта
+
+            оплаты: регистр `РасчетыСКлиентамиПоСрокам` заказы не ведёт,
+            построчного
+
+            остатка по этапам не существует. Источник — ресурс «Оплачивается»
+            регистра
+
+            `РасчетыСКлиентами` по объекту расчётов «заказ».
+
+
+            Величина авторитетна и сайтом НИКОГДА не вычисляется. Её разнесение
+            по этапам
+
+            выполняется только для отображения календаря, помечается производной
+            и не
+
+            участвует ни в балансе, ни в сверке.
+        contractor_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        partner_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        organization_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        agreement_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        currency_code:
+          type:
+            - string
+            - 'null'
+        lines:
+          type: array
+          items:
+            type: object
+            required:
+              - uuid
+              - due_date
+              - amount
+            properties:
+              uuid:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              due_date:
+                type: string
+                format: date
+              amount:
+                type: number
+                minimum: 0
+                description: >-
+                  Плановая сумма, ПОЛОЖИТЕЛЬНАЯ. Знак для реестра движений сайт
+                  разворачивает сам.
+              settled_amount:
+                type:
+                  - number
+                  - 'null'
+                minimum: 0
+                description: >
+                  Сколько закрыто по данным 1С, с учётом авансов и зачётов.
+
+                  Заполняется ТОЛЬКО для `document_kind: shipment` — регистр по
+                  срокам заказы
+
+                  не ведёт. Значение больше `amount` легитимно: это переплата по
+                  строке.
+              line_number:
+                type:
+                  - integer
+                  - 'null'
+              percent:
+                type:
+                  - number
+                  - 'null'
+              term_days:
+                type:
+                  - integer
+                  - 'null'
+              basis:
+                type:
+                  - string
+                  - 'null'
+                enum:
+                  - shipment_date
+                  - order_date
+                  - invoice_date
+                  - 'null'
+              basis_name:
+                type:
+                  - string
+                  - 'null'
+              stage:
+                type:
+                  - string
+                  - 'null'
+                enum:
+                  - prepayment
+                  - advance
+                  - credit
+                  - 'null'
+              stage_name:
+                type:
+                  - string
+                  - 'null'
+      examples:
+        - event: payment_schedule.updated
+          message_id: msg-schedule-a1b2c3
+          document_uuid: 8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34
+          document_kind: shipment
+          document_number: 29УТ-006915
+          currency_code: RUB
+          lines:
+            - uuid: f4a8c2e7-9d3b-4165-8c7a-1e5f9b3d6208
+              due_date: '2026-08-14'
+              amount: 120000
+              settled_amount: 100000
+              line_number: 1
+              stage: credit
+              stage_name: Оплата после отгрузки
     BalanceUpdatedPayload:
       type: object
       required:

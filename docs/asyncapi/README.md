@@ -69,17 +69,27 @@ JSON Schema файлы расположены в `app/Services/Erp/Schemas/` и 
 
 ## Версионирование
 
-Версия спецификации (поле `info.version`) соответствует версии `ACCEPTANCE_CRITERIA`.
+Версия спецификации (поле `info.version`) ведётся по Semantic Versioning.
+Актуальная версия — **16.0.0**, история — в [changelog](/docs/erp-guide/changelog/).
 
-| Версия спецификации | ACCEPTANCE_CRITERIA |
+| Цифра | Когда меняется |
 |---|---|
-| 11.0.0 | v11.0 |
+| **Мажорная** | Из контракта **удаляются** поля, которые 1С присылает сегодня, либо меняется смысл существующих |
+| **Минорная** | Добавляются новые события или опциональные поля; обратная совместимость полная |
+| **Патч** | Правки описаний и примеров без изменения структуры |
 
-При обновлении контракта обмена:
-1. Обновить `pecado-erp-integration.yaml`
-2. Обновить JSON Schema в `app/Services/Erp/Schemas/`
-3. Перегенерировать HTML-документацию
-4. Обновить `ACCEPTANCE_CRITERIA`
+Ссылка на `ACCEPTANCE_CRITERIA` из этой таблицы убрана: такого документа в репозитории нет,
+источник правды по бизнес-правилам — [MkDocs](/docs/erp-guide/).
+
+Порядок изменения контракта (правило проекта, нарушать нельзя):
+
+1. JSON Schema в `app/Services/Erp/Schemas/`
+2. `pecado-erp-integration.yaml`
+3. Бизнес-правила в `docs-erp/content/rules/`
+4. Запись в `docs-erp/content/changelog.md`
+5. Сборка: `docker exec pecado-node npm run asyncapi:build` + `mkdocs build --strict`
+
+Только после этого — код обработчиков.
 
 ## Структура спецификации
 
@@ -88,6 +98,7 @@ JSON Schema файлы расположены в `app/Services/Erp/Schemas/` и 
 | Канал | Exchange | Очередь | Направление |
 |---|---|---|---|
 | erpInPartners | erp.events | erp_in.partners | 1С → Сайт |
+| erpInSettlements | erp.events | erp_in.settlements | 1С → Сайт |
 | erpInPrices | erp.events | erp_in.prices | 1С → Сайт |
 | erpInStock | erp.events | erp_in.stock | 1С → Сайт |
 | erpInOrders | erp.events | erp_in.orders | 1С → Сайт |

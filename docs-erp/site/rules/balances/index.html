@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/rules/balances/">
       
       
-        <link rel="prev" href="../payments/">
+        <link rel="prev" href="../agreements/">
       
       
         <link rel="next" href="../organizations/">
@@ -733,6 +733,90 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../settlements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Регистр взаиморасчётов
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../payment-schedule/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    График оплаты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agreements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Соглашения с клиентами
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -796,6 +880,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v1600" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠️ Что изменилось в v16.0.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#-" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -808,6 +903,28 @@
       
         <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Сверка регистра с балансом
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Осиротевшие балансы
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -1802,6 +1919,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#v1600" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠️ Что изменилось в v16.0.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#-" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1814,6 +1942,28 @@
       
         <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Сверка регистра с балансом
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Осиротевшие балансы
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -1846,32 +1996,73 @@
 <strong>AsyncAPI:</strong> <a href="/docs/erp/spec.yaml">Полная спецификация</a></p>
 </blockquote>
 <p><strong>Направление:</strong> 1С → Сайт | <strong>Очередь:</strong> <code>erp_in.balance</code></p>
+<h2 id="v1600">⚠️ Что изменилось в v16.0.0<a class="headerlink" href="#v1600" title="Permanent link">&para;</a></h2>
+<p><strong>Роль сообщения поменялась: баланс стал контрольной суммой, а не источником данных.</strong></p>
+<p>До v16.0.0 <code>balance.updated</code> был единственным местом, где долг был посчитан правильно —
+настолько, что в документации MCP-агентам приходилось писать «не верьте цифре долга из API,
+отвечайте по <code>payment.balances</code>». Теперь долг приезжает движениями регистра
+(<a href="../settlements/">Регистр взаиморасчётов</a>), а баланс служит их проверкой.</p>
+<p><strong><code>overdue_details</code> удалён из контракта</strong> на обоих уровнях. Просрочка выводится из плановых
+строк графика оплаты: непогашенные строки с датой раньше сегодняшней. Дублировать её незачем.
+Поле, присланное по инерции, игнорируется.</p>
+<p><strong>Новых уровней разреза не добавляется.</strong> Ось акта сверки — контрагент × организация × валюта,
+и этот разрез существует с v15.8.0. Четвёртый уровень (по договорам или соглашениям)
+рассматривался и <strong>отклонён</strong>: соглашение не является измерением регистра, а договор заполнен
+у 2,2 % документов.</p>
 <h2 id="-">Бизнес-правила<a class="headerlink" href="#-" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Баланс передаётся в разрезе контрагентов (<code>contractors[]</code>)</li>
-<li>Просроченная задолженность детализируется по реализациям (<code>overdue_details[]</code>)</li>
-<li>Каждая запись в <code>overdue_details</code> ссылается на реализацию через <code>shipment_uuid</code></li>
-<li><strong>(v13.2)</strong> Идентификация контрагента:<ul>
-<li>Приоритет — по <code>contractors[].uuid</code> (опциональное, <code>Company.erp_id</code> на сайте). Если передан — Company матчится по UUID, <code>ContractorBalance.contractor_uuid</code> заполняется ленивым backfill</li>
-<li>Fallback — по <code>tax_id</code> (ИНН) + <code>partner_uuid</code> для резолва <code>user_id</code></li>
-<li>Ключ <code>ContractorBalance</code> в БД остаётся <code>[user_id, tax_id]</code> (unique); <code>contractor_uuid</code> хранится как вспомогательный идентификатор для ускорения матчинга в других сообщениях</li>
+<li><strong>(v13.2) Идентификация контрагента:</strong><ul>
+<li>приоритет — по <code>contractors[].uuid</code> (<code>Company.erp_id</code> на сайте). Если передан, Company
+  матчится по UUID, <code>ContractorBalance.contractor_uuid</code> заполняется ленивым backfill;</li>
+<li>fallback — по <code>tax_id</code> + <code>partner_uuid</code> для резолва <code>user_id</code>;</li>
+<li>ключ <code>ContractorBalance</code> в БД остаётся <code>[user_id, tax_id]</code> (unique)</li>
 </ul>
 </li>
-<li><strong>(v15.8.0)</strong> Разрез по <strong>нашим организациям</strong> — <code>contractors[].organizations[]</code>, опционально:<ul>
-<li>клиент видит долг перед каждым нашим юрлицом и реквизиты, по которым платить (реквизиты 1С не присылает — их вводит администратор сайта);</li>
-<li>уровень контрагента сохраняется как <strong>агрегат</strong>: <code>SUM(organizations[].current_balance)</code> обязана совпадать с <code>current_balance</code> контрагента. При расхождении сайт берёт значение контрагента и пишет предупреждение в лог;</li>
+<li><strong>(v15.8.0) Разрез по нашим организациям</strong> — <code>contractors[].organizations[]</code>:<ul>
+<li>клиент видит долг перед каждым нашим юрлицом и реквизиты, по которым платить;</li>
+<li>уровень контрагента сохраняется как <strong>агрегат</strong>: <code>SUM(organizations[].current_balance)</code>
+  обязана совпадать с <code>current_balance</code> контрагента. При расхождении сайт берёт значение
+  контрагента и пишет предупреждение в лог;</li>
 <li>организация, исчезнувшая из массива, <strong>обнуляется, а не удаляется</strong>;</li>
 <li>переплата одной организации <strong>не гасит</strong> долг перед другой — взаимозачёт делает 1С;</li>
 <li>подробности — <a href="../organizations/">Организации</a></li>
 </ul>
 </li>
+<li><strong>(v16.0.0) Знак совпадает с регистром.</strong> Отрицательный <code>current_balance</code> означает, что
+  клиент должен. То же соглашение, что у <code>amount</code> в движениях — переворачивать ничего
+  не потребовалось.</li>
+<li><strong>(v16.0.0) Отбор контрагентов общий с движениями.</strong> Приезжает баланс — обязаны приезжать
+  и движения; исключён контрагент — исключён везде. Без этого акт сверки не сможет объяснить
+  баланс, а команда сверки покажет красное.</li>
 </ul>
-<h2 id="_2">Критерии приёмки<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<h2 id="_2">Сверка регистра с балансом<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>Инвариант: <code>SUM(движения)</code> по контрагенту и организации <strong>равна</strong> <code>current_balance</code>.
+Расхождение больше копейки — сигнал, что интеграция не досылает движения. Приоритет у 1С:
+сайт пишет предупреждение и показывает баннер в CRM, но <strong>не пересчитывает по-своему</strong>.</p>
+<p>Вторая точка контроля — <a href="../settlements/"><code>settlement.checkpoint</code></a>: сверенное сальдо на дату
+закрытия периода.</p>
+<h2 id="_3">Осиротевшие балансы<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<p>При внедрении обмена балансы залили раньше документов, а контрагентов отфильтровали
+постфактум. В результате на сайте осталось <strong>67 контрагентов с балансом и без единого
+документа</strong> на сумму −3 303 630,96 ₽, включая юрлица маркетплейсов.</p>
+<p>Своим критерием такие записи не вычистить: «баланс есть, документов нет» ошибочен — документы
+могут отсутствовать из-за контурных фильтров 1С у совершенно нормального клиента. Признак
+«выведен из обмена» знает только 1С, поэтому чистка выполняется разово по списку исключённых
+контрагентов.</p>
+<p>На будущее: когда клиента будут выводить из обмена штатно, потребуется событие отзыва баланса.
+В v16.0.0 оно не заводилось — случай разовый.</p>
+<h2 id="_4">Критерии приёмки<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
 <ul>
-<li>[ ] Сайт принимает <code>balance.updated</code> и обновляет баланс партнёра</li>
-<li>[ ] Баланс отображается в ЛК в разрезе контрагентов</li>
-<li>[ ] Просроченная задолженность детализируется по реализациям</li>
-<li>[ ] <strong>(v13.2)</strong> Company находится сначала по <code>contractors[].uuid</code>, затем fallback по <code>tax_id + user_id</code>. Если в payload пришёл UUID, а ранее <code>ContractorBalance.contractor_uuid</code> был пуст — поле проставляется ленивым backfill-ом</li>
+<li>[x] Сайт принимает <code>balance.updated</code> и обновляет баланс партнёра</li>
+<li>[x] Баланс отображается в ЛК в разрезе контрагентов и наших организаций</li>
+<li>[x] <strong>(v13.2)</strong> Company находится сначала по <code>contractors[].uuid</code>, затем fallback
+      по <code>tax_id + partner_uuid</code></li>
+<li>[ ] <strong>(v16.0.0)</strong> Сообщение с присланным по инерции <code>overdue_details</code> обрабатывается
+      без ошибки, поле игнорируется</li>
+<li>[ ] <strong>(v16.0.0)</strong> <code>SUM(движения)</code> по контрагенту и организации совпадает с <code>current_balance</code></li>
+<li>[ ] <strong>(v16.0.0)</strong> Расхождение больше копейки даёт предупреждение в лог и баннер в CRM</li>
+<li>[ ] <strong>(v16.0.0)</strong> Осиротевшие балансы вычищены по списку от 1С</li>
 </ul>
 
 
