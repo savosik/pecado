@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { LuMail, LuUserX } from 'react-icons/lu';
+import { LuEye, LuMail, LuUserX } from 'react-icons/lu';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Badge, Box, Card, HStack, SimpleGrid, Tabs, Text, VStack } from '@chakra-ui/react';
@@ -42,6 +43,7 @@ export default function Show() {
     const canViewTasks = can('crm-tasks.view');
     const [composeOpen, setComposeOpen] = useState(false);
     const [kindOpen, setKindOpen] = useState(false);
+    const [impersonateOpen, setImpersonateOpen] = useState(false);
     // Состав клиентской базы отдела — дело того, кто за отдел отвечает.
     const canManageKind = can('crm-clients-all.edit');
 
@@ -59,6 +61,11 @@ export default function Show() {
                     : 'Карточка клиента'}
                 actions={(
                     <HStack gap={2}>
+                        {can('crm-impersonate.use') && (
+                            <Button size="sm" variant="outline" onClick={() => setImpersonateOpen(true)}>
+                                <LuEye /> Войти под клиентом
+                            </Button>
+                        )}
                         {can('crm-emails.create') && (
                             <Button size="sm" variant="outline" onClick={() => setComposeOpen(true)}>
                                 <LuMail /> Написать письмо
@@ -252,6 +259,19 @@ export default function Show() {
                 open={kindOpen}
                 client={client}
                 onClose={() => setKindOpen(false)}
+            />
+
+            {/* Режим занимает всю сессию браузера: пока идёт просмотр, вкладки CRM
+                отвечают редиректом на главную. Об этом честно предупреждаем здесь,
+                чтобы менеджер не решил, что CRM сломалась. */}
+            <ConfirmDialog
+                open={impersonateOpen}
+                onClose={() => setImpersonateOpen(false)}
+                onConfirm={() => router.post(route('crm.impersonation.start', client.id))}
+                title="Войти под клиентом"
+                description={`Вы увидите сайт глазами клиента «${client.name}»: его цены, корзину и кабинет. Оформлять заказы и возвраты за клиента нельзя. Пока идёт просмотр, CRM в этом браузере будет недоступна — вернуться можно кнопкой на плашке внизу экрана.`}
+                confirmLabel="Войти под клиентом"
+                colorPalette="orange"
             />
         </>
     );

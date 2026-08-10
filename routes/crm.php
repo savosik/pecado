@@ -12,6 +12,7 @@ use App\Http\Controllers\Crm\DashboardController;
 use App\Http\Controllers\Crm\DocumentController;
 use App\Http\Controllers\Crm\EmailController;
 use App\Http\Controllers\Crm\FinanceController;
+use App\Http\Controllers\Crm\ImpersonationController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\TaskController;
@@ -81,6 +82,16 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/shipments/{shipment}', [DocumentController::class, 'shipment'])
             ->name('shipments.show')
             ->whereNumber('shipment');
+    });
+
+    // Просмотр сайта от имени клиента. Право отдельное: режим переключает
+    // сессию, а не показывает данные, и выдаётся не всем, кто видит карточку.
+    // Выход из режима — POST /impersonation/stop в routes/web.php: в тот момент
+    // сессия принадлежит клиенту, и в CRM-группу он уже не попадает.
+    Route::middleware('permission:crm-impersonate.use')->group(function () {
+        Route::post('/clients/{client}/impersonate', [ImpersonationController::class, 'start'])
+            ->name('impersonation.start')
+            ->whereNumber('client');
     });
 
     // Профиль клиента — то, что знает менеджер, но не знает 1С.

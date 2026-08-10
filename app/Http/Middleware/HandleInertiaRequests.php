@@ -4,6 +4,8 @@ namespace App\Http\Middleware;
 
 use App\Models\Category;
 use App\Models\MenuItem;
+use App\Models\User;
+use App\Support\Impersonation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
@@ -40,6 +42,10 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user()?->loadMissing(['roles', 'clientStatus']);
 
+        // Менеджер смотрит сайт от имени клиента: нужна плашка на всех страницах.
+        $impersonating = Impersonation::active();
+        $impersonator = $impersonating ? User::find(Impersonation::managerId()) : null;
+
         return [
             ...parent::share($request),
             'appName' => config('app.name'),
@@ -56,11 +62,20 @@ class HandleInertiaRequests extends Middleware
                     'is_admin' => $user->hasAdminAccess(),
                     'is_crm' => $user->hasCrmAccess(),
                     'is_wms' => $user->hasWmsAccess(),
-                    'must_change_password' => (bool) $user->must_change_password,
+                    // В режиме просмотра флаг гасим: у клиентов из 1С он взведён,
+                    // и ChangePasswordDialog закрыл бы менеджеру экран диалогом,
+                    // который нельзя ни закрыть, ни отправить (пароль он не знает).
+                    'must_change_password' => ! $impersonating && (bool) $user->must_change_password,
                     'client_status_color' => $user->clientStatus?->color,
                     'client_status_name' => $user->clientStatus?->name,
                 ] : null,
             ],
+            // Плашка «просмотр от имени клиента». null — обычная сессия.
+            'impersonation' => $impersonating && $user ? [
+                'client_name' => $user->display_name,
+                'manager_name' => $impersonator?->name,
+                'stop_url' => route('impersonation.stop'),
+            ] : null,
             'currency' => $request->user() ? fn () => [
                 'code' => $request->user()->region?->currency?->code ?? 'RUB',
                 'name' => $request->user()->region?->currency?->name ?? 'Российский рубль',

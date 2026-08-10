@@ -20,7 +20,7 @@ class RoleController extends Controller
         'Каталог' => ['products', 'product-costs', 'categories', 'brands', 'product-models', 'attributes', 'attribute-groups', 'size-charts', 'product-barcodes', 'certificates', 'product-exports'],
         'Склады' => ['warehouses', 'regions'],
         'Продажи' => ['orders', 'carts', 'returns', 'shipments', 'supplier-preorders', 'favorites', 'wishlist', 'defects', 'defect-types'],
-        'CRM' => ['crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-analytics', 'crm-profile', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-agent-tokens'],
+        'CRM' => ['crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-analytics', 'crm-profile', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-agent-tokens', 'crm-impersonate'],
         'Склад (WMS)' => ['wms-dashboard', 'wms-defects', 'wms-defect-types', 'wms-goods-issues', 'wms-deliveries', 'wms-delivery-settings'],
         'Маркетинг' => ['promotions', 'promotion-rules', 'product-selections'],
         'Пользователи' => ['users', 'user-questionnaires', 'client-statuses', 'personal-managers', 'companies', 'company-bank-accounts', 'delivery-addresses'],
@@ -44,7 +44,7 @@ class RoleController extends Controller
         'crm-dashboard' => 'CRM: Рабочий стол', 'crm-clients' => 'CRM: Мои клиенты',
         'crm-clients-all' => 'CRM: Клиенты всего отдела', 'crm-team' => 'CRM: Команда',
         'crm-analytics' => 'CRM: Отчёты продаж', 'crm-profile' => 'CRM: Профиль клиента', 'crm-comments' => 'CRM: Комментарии', 'crm-attachments' => 'CRM: Вложения',
-        'crm-tasks' => 'CRM: Задачи', 'crm-calls' => 'CRM: Звонки', 'crm-emails' => 'CRM: Письма', 'crm-plans' => 'CRM: Планы продаж', 'crm-opportunities' => 'CRM: Возможности', 'crm-beds' => 'CRM: Грядки', 'crm-finance' => 'CRM: Финансы', 'crm-agent-tokens' => 'CRM: Токены ИИ-агентов',
+        'crm-tasks' => 'CRM: Задачи', 'crm-calls' => 'CRM: Звонки', 'crm-emails' => 'CRM: Письма', 'crm-plans' => 'CRM: Планы продаж', 'crm-opportunities' => 'CRM: Возможности', 'crm-beds' => 'CRM: Грядки', 'crm-finance' => 'CRM: Финансы', 'crm-agent-tokens' => 'CRM: Токены ИИ-агентов', 'crm-impersonate' => 'CRM: Вход под клиентом',
         'wms-dashboard' => 'Склад: Рабочий стол', 'wms-defects' => 'Склад: Некондиция',
         'wms-defect-types' => 'Склад: Справочник дефектов',
         'wms-goods-issues' => 'Склад: Расходные ордера',
@@ -72,6 +72,7 @@ class RoleController extends Controller
         'price' => 'Установка цены', 'publish' => 'Публикация',
         'send' => 'Отправка', 'export' => 'Выгрузка',
         'submit' => 'Передача в ТК', 'cancel' => 'Отмена заявки',
+        'use' => 'Использование',
     ];
 
     public function index(Request $request)

@@ -7,11 +7,13 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { Provider } from '@/components/ui/provider';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import ChangePasswordDialog from '@/components/common/ChangePasswordDialog';
+import ImpersonationBanner from '@/components/common/ImpersonationBanner';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Pecado';
 
 /**
- * Обёртка-layout, которая добавляет глобальный диалог смены пароля.
+ * Обёртка-layout, которая добавляет глобальный диалог смены пароля
+ * и плашку режима «просмотр от имени клиента».
  * Рендерится ВНУТРИ Inertia-контекста, поэтому usePage() работает корректно.
  */
 function GlobalLayout({ children }) {
@@ -19,6 +21,7 @@ function GlobalLayout({ children }) {
         <>
             {children}
             <ChangePasswordDialog />
+            <ImpersonationBanner />
         </>
     );
 }

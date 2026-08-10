@@ -122,6 +122,10 @@ class RolesAndPermissionsSeeder extends Seeder
         // Токены ИИ-агентов: выдача и отзыв. Только РОП — токен даёт запись
         // в CRM от имени сотрудника, и раздавать их самим сотрудникам нельзя.
         'crm-agent-tokens' => ['view', 'create', 'delete'],
+        // Просмотр сайта от имени клиента. Действие одно и не раскладывается
+        // на view/edit: это не раздел, а переключатель сессии. Границы задаёт
+        // скоуп клиентов — менеджер входит только под своими.
+        'crm-impersonate' => ['use'],
 
         // WMS — права домена /wms/ (кабинет склада). Префикс `wms-` значим:
         // он в User::PANEL_PERMISSION_PREFIXES, поэтому не даёт входа в /admin.
@@ -219,6 +223,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-beds' => 'CRM: Грядки',
         'crm-attachments' => 'CRM: Вложения',
         'crm-agent-tokens' => 'CRM: Токены ИИ-агентов',
+        'crm-impersonate' => 'CRM: Вход под клиентом',
         'wms-dashboard' => 'Склад: Рабочий стол',
         'wms-defects' => 'Склад: Некондиция',
         'wms-defect-types' => 'Склад: Справочник дефектов',
@@ -258,7 +263,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 // Финансовые документы менеджер только смотрит
                 'payments' => ['view'],
                 // CRM: свои клиенты (те, что закреплены за его карточкой менеджера)
-                'crm-dashboard', 'crm-clients', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance',
+                'crm-dashboard', 'crm-clients', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-impersonate',
             ],
         ],
         'sales-manager-crm' => [
@@ -266,14 +271,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
                 // Для менеджеров, которым нужны свои клиенты, но не нужна админка.
-                'crm-dashboard', 'crm-clients', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance',
+                'crm-dashboard', 'crm-clients', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-impersonate',
             ],
         ],
         'sales-head' => [
             'label' => 'Руководитель отдела продаж',
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
-                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-agent-tokens',
+                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-agent-tokens', 'crm-impersonate',
                 // Себестоимость руководителю отдела появится вместе с отчётом по марже
                 // и только под `crm-`-префиксом: `product-costs` — админский ресурс,
                 // и выдача его этой роли открыла бы ей вход в /admin (PermissionNamingTest).

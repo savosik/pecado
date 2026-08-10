@@ -36,6 +36,12 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+    // Выход из режима «просмотр от имени клиента». Не в routes/crm.php: сессия
+    // сейчас клиентская, и EnsureUserIsCrm увёл бы менеджера на главную вместо
+    // возврата в свою учётку. Сам режим включается в /crm/clients/{id}/impersonate.
+    Route::post('/impersonation/stop', [\App\Http\Controllers\Crm\ImpersonationController::class, 'stop'])
+        ->name('impersonation.stop');
+
     // Onboarding
     Route::get('/onboarding', [\App\Http\Controllers\User\OnboardingController::class, 'show'])->name('onboarding');
     Route::post('/onboarding', [\App\Http\Controllers\User\OnboardingController::class, 'store'])->name('onboarding.store');

@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\SearchHistory;
 use App\Services\Product\ProductQueryService;
 use App\Services\Search\ExactProductMatcher;
+use App\Support\Impersonation;
 use App\Support\Search\HybridSearchOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -86,7 +87,10 @@ class SearchController extends Controller
 
             // Сохранение запроса в историю для авторизованных пользователей
             // Удаляем предыдущие дубликаты, чтобы запрос не повторялся в списке
-            if ($request->user() && $page === 1) {
+            //
+            // В режиме просмотра от имени клиента историю не пишем: искал менеджер,
+            // а клиент увидел бы чужие запросы в своих подсказках.
+            if ($request->user() && $page === 1 && ! Impersonation::active()) {
                 SearchHistory::where('user_id', $request->user()->id)
                     ->where('query', $query)
                     ->delete();

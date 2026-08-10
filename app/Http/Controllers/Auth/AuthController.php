@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Crm\ImpersonationController;
 use App\Models\User;
+use App\Support\Impersonation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -116,6 +118,13 @@ class AuthController extends Controller
      */
     public function logout(Request $request): RedirectResponse
     {
+        // «Выйти» в шапке сайта во время просмотра от имени клиента означает
+        // «закончить просмотр», а не «выйти из системы»: иначе менеджер одним
+        // кликом терял бы и свою CRM-сессию.
+        if (Impersonation::active()) {
+            return app(ImpersonationController::class)->stop($request);
+        }
+
         Auth::logout();
 
         $request->session()->invalidate();

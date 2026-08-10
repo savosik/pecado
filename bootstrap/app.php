@@ -43,6 +43,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \App\Http\Middleware\EnsureUserIsNotBlocked::class,
+            // Просмотр сайта от имени клиента: запрет документов и смены доступов.
+            // Глобально, а не на отдельных группах: закрытых маршрутов немного,
+            // но появиться новый может в любом файле маршрутов.
+            \App\Http\Middleware\RestrictImpersonatedActions::class,
         ]);
 
         $middleware->alias([
