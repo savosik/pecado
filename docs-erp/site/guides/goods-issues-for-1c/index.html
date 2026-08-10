@@ -16,7 +16,7 @@
         <link rel="prev" href="../cost-price-for-1c/">
       
       
-        <link rel="next" href="../../initial-load/">
+        <link rel="next" href="../settlements-for-1c/">
       
       
         
@@ -1529,6 +1529,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../settlements-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Регистр взаиморасчётов: черновик v16.0.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2126,6 +2154,7 @@
 <span class="w">      </span><span class="nt">&quot;order_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-07-08T13:25:33+03:00&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;quantity&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;шт&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;cell&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;А-01-02-03&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;package_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">],</span>
@@ -2308,6 +2337,10 @@
 <td><code>to_check</code></td>
 </tr>
 <tr>
+<td>В процессе проверки</td>
+<td><code>checking</code></td>
+</tr>
+<tr>
 <td>Проверен</td>
 <td><code>checked</code></td>
 </tr>
@@ -2381,6 +2414,12 @@
 <td>строка</td>
 <td>нет</td>
 <td>Единица измерения</td>
+</tr>
+<tr>
+<td><code>cell</code></td>
+<td>строка</td>
+<td>нет</td>
+<td>Ячейка хранения по строке, например <code>А-01-02-03</code> (до 255 символов). Пустая строка = не заполнено. <strong>v15.17.0</strong></td>
 </tr>
 <tr>
 <td><code>package_number</code></td>
@@ -2471,6 +2510,13 @@
 <p><strong>Цены, суммы, серии и штрихкоды маркировки присылать не нужно.</strong> Ордер — складской
    документ; денежные данные сайт берёт из реализации. Лишние поля сообщение не ломают
    (сайт их игнорирует), но и смысла в них нет.</p>
+</li>
+<li>
+<p><strong>Ячейку (<code>items[].cell</code>) присылать, если склад адресный (v15.17.0).</strong> Реквизит
+   «Ячейка» строки табличной части передаётся строкой как есть — сайт её не разбирает
+   и со справочниками не сверяет, а показывает кладовщику в карточке ордера и в выгрузке.
+   Поле необязательное: на складах без адресного хранения его можно не заполнять
+   или прислать пустую строку — это равносильно. Ограничение — 255 символов.</p>
 </li>
 <li>
 <p><strong>Первоначальная выгрузка.</strong> Разово выгрузить <strong>незакрытые</strong> ордера (все, кроме давно

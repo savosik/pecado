@@ -83,6 +83,7 @@ nav:
     - "График оплат: что сделать в 1С (v15.12.0)": guides/payment-schedule-for-1c.md
     - "Себестоимость: что сделать в 1С (v15.13.0)": guides/cost-price-for-1c.md
     - "Расходные ордера: что сделать в 1С (v15.15.0)": guides/goods-issues-for-1c.md
+    - "Регистр взаиморасчётов: черновик v16.0.0": guides/settlements-for-1c.md
   - Первоначальная выгрузка: initial-load.md
   - Миграции:
     - "v13.2 — UUID для контрагентов": migrations/v13.2-contractor-uuid.md

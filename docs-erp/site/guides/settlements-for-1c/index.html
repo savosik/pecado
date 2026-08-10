@@ -1,0 +1,2822 @@
+
+<!doctype html>
+<html lang="ru" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Документация по интеграции 1С:КА2 и сайта Pecado через RabbitMQ">
+      
+      
+      
+        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/guides/settlements-for-1c/">
+      
+      
+        <link rel="prev" href="../goods-issues-for-1c/">
+      
+      
+        <link rel="next" href="../../initial-load/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Регистр взаиморасчётов: черновик v16.0.0 - Pecado ERP — Интеграция 1С ↔ Сайт</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#2-v1600" class="md-skip">
+          Перейти к содержанию
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Верхний колонтитул">
+    <a href="../.." title="Pecado ERP — Интеграция 1С ↔ Сайт" class="md-header__button md-logo" aria-label="Pecado ERP — Интеграция 1С ↔ Сайт" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Pecado ERP — Интеграция 1С ↔ Сайт
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Регистр взаиморасчётов: черновик v16.0.0
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Светлая тема"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Светлая тема" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Тёмная тема"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Тёмная тема" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Поиск" placeholder="Поиск" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Поиск">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Очистить" aria-label="Очистить" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Инициализация поиска
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Навигация" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Pecado ERP — Интеграция 1С ↔ Сайт" class="md-nav__button md-logo" aria-label="Pecado ERP — Интеграция 1С ↔ Сайт" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Pecado ERP — Интеграция 1С ↔ Сайт
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Обзор
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Настройки обмена
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Инфраструктура
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Бизнес-правила
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Бизнес-правила
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/partners/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Партнёры
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/catalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Каталог
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/prices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Цены
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/cost-prices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Себестоимость
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/stocks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Остатки
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/external-remains/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Внешние остатки (ESB)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/contractors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Контрагенты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/orders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Заказы
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/returns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Возвраты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/shipments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Реализации
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/goods-issues/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Расходные ордера
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/payments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Платежи
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/balances/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Баланс
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/organizations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Организации (наши юрлица)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/individual-prices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Индивидуальные цены
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/pricing-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ценообразование
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/product-attributes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Атрибуты товаров
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/client-segments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Клиентские сегменты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/promotions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Промо-флаги товаров
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/data-normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Нормализация данных
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/message-ordering/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Порядок доставки и свежесть
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Тест-план
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Тест-план
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-0-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 0: Подготовка
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-1-inbound/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 1: 1С → Сайт
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-2-outbound/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 2: Сайт → 1С
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-3-e2e/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 3: Сквозные сценарии
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-4-edge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 4: Edge-кейсы
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Гайды для 1С
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Гайды для 1С
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../erp-timestamps-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Аудит-метки 1С (erp_created_at / erp_updated_at)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../payment-schedule-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    График оплат: что сделать в 1С (v15.12.0)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cost-price-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Себестоимость: что сделать в 1С (v15.13.0)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../goods-issues-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Расходные ордера: что сделать в 1С (v15.15.0)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Регистр взаиморасчётов: черновик v16.0.0
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Регистр взаиморасчётов: черновик v16.0.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Содержание">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Коротко: что изменилось после вашего ответа
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ответы на ваши встречные вопросы
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Ответы на ваши встречные вопросы">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-settlement_object" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Составной settlement_object или плоский?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Соглашение вместо договора — переименовывать?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-01072026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Точка отсчёта 01.07.2026 — устраивает?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Движения заказов клиента — готовы принимать?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠️ Новый вопрос — блокирующий
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Уточнённый контракт
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Уточнённый контракт">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Пять событий (+ одно новое)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Знаковое соглашение — без изменений
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settlementposted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        settlement.posted
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settlementcheckpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        settlement.checkpoint — новое
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#payment_scheduleupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        payment_schedule.updated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agreementcreated-updated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        agreement.created / .updated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Документы-регистраторы
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Правила, которые не изменились
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Порядок первичной выгрузки
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Критерии приёмки
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что нужно от вас, чтобы зафиксировать схемы
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../initial-load/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Первоначальная выгрузка
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Миграции
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Миграции
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/v13.2-contractor-uuid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v13.2 — UUID для контрагентов
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/v13.6-uniq-companies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v13.6 — UNIQUE на (ИНН, КПП)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../open-questions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Открытые вопросы
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ссылки
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Ссылки
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://dev.pecado.ru/docs/erp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AsyncAPI (интерактивная)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://dev.pecado.ru/docs/erp/spec.yaml" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AsyncAPI (YAML)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://dev.pecado.ru/docs/erp/schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JSON Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Содержание">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Коротко: что изменилось после вашего ответа
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ответы на ваши встречные вопросы
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Ответы на ваши встречные вопросы">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-settlement_object" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Составной settlement_object или плоский?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Соглашение вместо договора — переименовывать?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-01072026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Точка отсчёта 01.07.2026 — устраивает?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Движения заказов клиента — готовы принимать?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠️ Новый вопрос — блокирующий
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Уточнённый контракт
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Уточнённый контракт">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Пять событий (+ одно новое)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Знаковое соглашение — без изменений
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settlementposted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        settlement.posted
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settlementcheckpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        settlement.checkpoint — новое
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#payment_scheduleupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        payment_schedule.updated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agreementcreated-updated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        agreement.created / .updated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#-" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Документы-регистраторы
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Правила, которые не изменились
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Порядок первичной выгрузки
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Критерии приёмки
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что нужно от вас, чтобы зафиксировать схемы
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="2-v1600">Регистр взаиморасчётов — редакция 2 (черновик протокола v16.0.0)<a class="headerlink" href="#2-v1600" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Что это.</strong> Второй круг согласования. Первая редакция ушла 09.08.2026, сторона 1С ответила
+замерами боевой базы и четырьмя встречными вопросами. Здесь: наши ответы, уточнённый контракт
+и <strong>один новый вопрос</strong>, без которого нельзя фиксировать схемы.</p>
+<p>JSON Schema и AsyncAPI по-прежнему <strong>не опубликованы</strong> — они будут зафиксированы после
+закрытия последнего вопроса.</p>
+</blockquote>
+<hr />
+<h2 id="_1">Коротко: что изменилось после вашего ответа<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>Ваш ответ поменял контракт в четырёх местах и <strong>подтвердил диагноз</strong> в одном.</p>
+<p><strong>Подтвердил.</strong> <code>ЗаказКлиента</code> — 85 249 строк движений, 38 % объёма, и в нашем списке его не было.
+Это ровно те предоплаты по заказам, из-за которых у нас не сходилось на 111,9 млн ₽. Причина
+расхождения теперь названа точно.</p>
+<p><strong>Поменял:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Было в редакции 1</th>
+<th>Стало</th>
+<th>Почему</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>contract_uuid</code>, справочник договоров</td>
+<td><code>agreement_uuid</code> + <code>agreement_name</code></td>
+<td>97,8 % реализаций без договора; соглашений — 100 %</td>
+</tr>
+<tr>
+<td>Акт сверки в разрезе договора</td>
+<td>Акт сверки по <strong>контрагент × организация × валюта</strong></td>
+<td>Единственный срез, который гарантированно сходится</td>
+</tr>
+<tr>
+<td><code>settlement_kind</code> в договоре</td>
+<td>Убрано</td>
+<td>Порядок расчётов задаётся соглашением</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>settlement_object_*</code></td>
+<td><code>ОбъектРасчетов</code> — измерение регистра, мы его не учли</td>
+</tr>
+<tr>
+<td><code>exchange_rate</code> в движении</td>
+<td><code>amount_rub</code> (<code>СуммаРегл</code>)</td>
+<td>Ваш вариант лучше: уже посчитано учётом</td>
+</tr>
+<tr>
+<td>Отсечка 01.01.2026</td>
+<td>01.01.2026 <strong>+ контрольная точка 01.07.2026</strong></td>
+<td>Компромисс, объяснение ниже</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_2">Ответы на ваши встречные вопросы<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<h3 id="1-settlement_object">1. Составной <code>settlement_object</code> или плоский?<a class="headerlink" href="#1-settlement_object" title="Permanent link">&para;</a></h3>
+<p><strong>Плоский</strong>, три отдельных поля:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&quot;settlement_object_kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;order&quot;</span><span class="p">,</span>
+<span class="nt">&quot;settlement_object_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a2c4e6f8-...&quot;</span><span class="p">,</span>
+<span class="nt">&quot;settlement_object_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Заказ клиента A2УТ-000417 от 01.07.2026&quot;</span>
+</code></pre></div>
+<p>Причина: это ровно тот паттерн, которым у нас уже описан документ-регистратор
+(<code>document_kind</code> / <code>document_uuid</code> / <code>document_number</code>). Плоские колонки индексируются в БД
+и читаются прямыми SQL-запросами; вложенный объект пришлось бы разбирать в каждом запросе.</p>
+<p>Значения <code>settlement_object_kind</code>: <code>order</code> (заказ клиента), <code>commission_report</code> (отчёт
+комиссионера), <code>commission_contract</code> (договор комиссии), <code>shipment</code>, <code>other</code>.
+<strong>Незнакомый вид не отбрасываем</strong> — сохраняем как <code>other</code> с заполненным <code>_name</code>. Присылайте
+всё, что реально встречается, подгонять под список не нужно.</p>
+<h3 id="2">2. Соглашение вместо договора — переименовывать?<a class="headerlink" href="#2" title="Permanent link">&para;</a></h3>
+<p><strong>Переименовываем.</strong> Поле называется <code>agreement_uuid</code>, рядом <code>agreement_name</code>.</p>
+<p>Класть соглашение в поле с именем <code>contract_uuid</code> дешевле на неделю, но именно такие тихие
+несоответствия модели и привели к текущей переделке. Имя должно говорить правду.</p>
+<p>Договор при этом <strong>тоже принимаем</strong> — отдельными полями <code>contract_uuid</code> и <code>contract_name</code>,
+необязательными. Он входит в <code>АналитикаУчетаПоПартнерам</code>, то есть является настоящим
+измерением, и у тех 2,2 %, где он есть, мы его покажем. Справочник договоров заводить не будем:
+75 записей не стоят отдельной сущности, достаточно полей в движении.</p>
+<p><strong>Вашу оговорку про соглашение принимаем и записываем в контракт честно.</strong> Соглашение —
+не измерение регистра, при изменении задним числом группировка разъедется. Поэтому:</p>
+<ul>
+<li><strong>ось акта сверки</strong> — контрагент × организация × валюта (регистровый срез, сходится всегда);</li>
+<li><strong>соглашение</strong> — фильтр и группировка внутри акта, с оговоркой в интерфейсе.</li>
+</ul>
+<p>Следствие для нас приятное: четвёртый уровень балансов не нужен, у нас уже есть разрез
+контрагент × организация из версии 15.8.0.</p>
+<h3 id="3-01072026">3. Точка отсчёта 01.07.2026 — устраивает?<a class="headerlink" href="#3-01072026" title="Permanent link">&para;</a></h3>
+<p><strong>Ваш аргумент принят, но нужен компромисс.</strong> Просим прислать <strong>и то, и другое</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Что</th>
+<th>Дата</th>
+<th>Назначение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>settlement.opening_balance</code></td>
+<td><strong>01.01.2026</strong></td>
+<td>Начало ленты движений. Помечается несверенным</td>
+</tr>
+<tr>
+<td><code>settlement.checkpoint</code></td>
+<td><strong>01.07.2026</strong></td>
+<td>Сверенное сальдо. Контрольная точка</td>
+</tr>
+<tr>
+<td>Движения</td>
+<td>с 01.01.2026</td>
+<td>Как обычно</td>
+</tr>
+</tbody>
+</table>
+<p>Зачем так. Отказ от истории первого полугодия ощутимо бьёт по кабинету и CRM — там пропадает
+половина года. Но и зафиксировать несверенную точку молча нельзя, вы правы.</p>
+<p>Компромисс делает расхождение <strong>измеримым</strong>: сумма «сальдо на 01.01 + движения за первое
+полугодие» обязана сойтись с вашей сверенной цифрой на 01.07. Сойдётся — история первого
+полугодия достоверна, и мы это знаем. Не сойдётся — увидим точную величину и решим, показывать
+ли первое полугодие. В обоих случаях это лучше, чем догадываться.</p>
+<p><code>settlement.checkpoint</code> — новое небольшое событие, формат ниже. Присылайте его же при каждом
+последующем закрытии периода: это даст постоянный контроль качества обмена.</p>
+<h3 id="4">4. Движения заказов клиента — готовы принимать?<a class="headerlink" href="#4" title="Permanent link">&para;</a></h3>
+<p><strong>Да, обязательно.</strong> Это не «лишние» строки — без них баланс не сойдётся ровно на ту сумму,
+ради которой всё затевается.</p>
+<p>Но именно по ним у нас возник вопрос, см. следующий раздел.</p>
+<hr />
+<h2 id="_3">⚠️ Новый вопрос — блокирующий<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<p>Вы перечислили ресурсы регистра <code>РасчетыСКлиентами</code>: <code>Сумма</code>, <code>КОплате</code>, <code>Оплачивается</code>,
+<code>КОтгрузке</code>, <code>Отгружается</code>. <strong>Не сказано, какой из них соответствует нашему <code>amount</code>.</strong></p>
+<p>Для нас это не деталь: от ответа зависит, чем являются 85 тысяч движений заказа.</p>
+<p><strong>Вопрос А. Какой ресурс — задолженность?</strong>
+Мы исходим из того, что баланс контрагента строится по <code>Сумма</code>. Подтвердите или поправьте.</p>
+<p><strong>Вопрос Б. Движения <code>ЗаказКлиента</code> — это факт или план?</strong></p>
+<p>Два принципиально разных варианта:</p>
+<table>
+<thead>
+<tr>
+<th>Если движения заказа идут в…</th>
+<th>То для нас это</th>
+<th>Что делает сайт</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Сумма</code></td>
+<td><strong>факт</strong> — заказ увеличивает задолженность до отгрузки</td>
+<td>Учитывает в балансе наравне с реализацией</td>
+</tr>
+<tr>
+<td><code>КОплате</code></td>
+<td><strong>план</strong> — обязательство оплатить по графику</td>
+<td>Показывает в календаре оплат, в баланс не берёт</td>
+</tr>
+</tbody>
+</table>
+<p>Ошибка здесь даёт систематическое расхождение на 38 % объёма движений и, что хуже, покажет
+клиенту долг за ещё не отгруженный товар. Просим ответить точно, лучше — примером движений
+одного заказа с указанием, какие ресурсы и на какие суммы он двинул.</p>
+<p><strong>Вопрос В. <code>СуммаРегл</code> или <code>СуммаУпр</code></strong> в качестве рублёвого эквивалента? Мы склоняемся к
+<code>СуммаРегл</code> — акт сверки уходит клиенту и должен биться с регламентированным учётом.</p>
+<hr />
+<h2 id="_4">Уточнённый контракт<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<h3 id="_5">Пять событий (+ одно новое)<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Событие</th>
+<th>Очередь</th>
+<th>Единица</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>agreement.created</code> / <code>.updated</code> / <code>.deleted</code></td>
+<td><code>erp_in.contractors</code></td>
+<td>Соглашение с клиентом</td>
+</tr>
+<tr>
+<td><code>settlement.opening_balance</code></td>
+<td><code>erp_in.settlements</code></td>
+<td>Сальдо на 01.01.2026</td>
+</tr>
+<tr>
+<td><code>settlement.checkpoint</code></td>
+<td><code>erp_in.settlements</code></td>
+<td><strong>Новое.</strong> Сверенное сальдо на дату закрытия</td>
+</tr>
+<tr>
+<td><code>settlement.posted</code></td>
+<td><code>erp_in.settlements</code></td>
+<td>Все движения одного документа</td>
+</tr>
+<tr>
+<td><code>settlement.reverted</code></td>
+<td><code>erp_in.settlements</code></td>
+<td>Отмена проведения</td>
+</tr>
+<tr>
+<td><code>payment_schedule.updated</code></td>
+<td><code>erp_in.settlements</code></td>
+<td>График оплат с остатками</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_6">Знаковое соглашение — без изменений<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<p><strong><code>amount</code> со знаком, «<code>+</code>» означает «в пользу клиента».</strong> Сумма всех движений = баланс
+контрагента; отрицательный баланс = клиент должен нам. Это тот же знак, что в
+<code>balance.updated</code> → <code>current_balance</code>.</p>
+<table>
+<thead>
+<tr>
+<th><code>type</code></th>
+<th>Знак</th>
+<th>Смысл</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>shipment</code></td>
+<td><strong>минус</strong></td>
+<td>Реализация: клиент стал должен больше</td>
+</tr>
+<tr>
+<td><code>payment_in</code></td>
+<td><strong>плюс</strong></td>
+<td>Поступление от клиента</td>
+</tr>
+<tr>
+<td><code>goods_return</code></td>
+<td><strong>плюс</strong></td>
+<td>Возврат товара от клиента</td>
+</tr>
+<tr>
+<td><code>payment_out</code></td>
+<td><strong>минус</strong></td>
+<td>Возврат денег клиенту</td>
+</tr>
+<tr>
+<td><code>opening_balance</code></td>
+<td><strong>±</strong></td>
+<td>Минус = долг, плюс = переплата</td>
+</tr>
+<tr>
+<td><code>adjustment</code></td>
+<td><strong>±</strong></td>
+<td>Взаимозачёт, корректировка, отчёт комиссионера</td>
+</tr>
+<tr>
+<td><code>payment_due</code></td>
+<td>план</td>
+<td>Строка графика оплаты</td>
+</tr>
+</tbody>
+</table>
+<p>Тип для движений заказа добавим после ответа на вопрос Б.</p>
+<p>Числовой пример для самопроверки: сальдо −50 000, реализация −120 000, оплата +100 000,
+возврат товара +20 000, возврат денег −5 000. Итог <strong>−55 000</strong>, то есть клиент должен 55 000 ₽.
+Через дебет/кредит: дебет 175 000, кредит 120 000, сальдо −55 000. ✓</p>
+<h3 id="settlementposted"><code>settlement.posted</code><a class="headerlink" href="#settlementposted" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;settlement.posted&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;msg-settlement-a1b2c3&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;spec_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;16.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;revision&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+
+<span class="w">  </span><span class="nt">&quot;document_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;document_kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;shipment&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;document_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;29УТ-006915&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;document_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-07-15&quot;</span><span class="p">,</span>
+
+<span class="w">  </span><span class="nt">&quot;partner_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7c9e6b21-4a3d-4e8f-b512-9d7c3e1a6f04&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;contractor_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;b4d8e2f1-6c5a-4917-8e3b-2f9a7d4c1508&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;organization_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;e1a7c3d9-2b8f-4056-9c14-7d3e8b5a2f61&quot;</span><span class="p">,</span>
+
+<span class="w">  </span><span class="nt">&quot;agreement_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;5c8a2f4d-7e1b-4903-a6c5-8f2d4b7e1a39&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;agreement_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Соглашение об условиях продаж №СГ-0042&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;contract_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;contract_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;activity_direction_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+
+<span class="w">  </span><span class="nt">&quot;settlement_object_kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;order&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;settlement_object_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a2c4e6f8-1b3d-4507-9e2a-6c8f4d1b7e35&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;settlement_object_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Заказ клиента A2УТ-000417 от 01.07.2026&quot;</span><span class="p">,</span>
+
+<span class="w">  </span><span class="nt">&quot;entries&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;c7f2e9a4-3b1d-4857-9e6c-2a8f4d7b1035&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;shipment&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-07-15&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;amount&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-120000.00</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;currency_code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RUB&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;amount_rub&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-120000.00</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;comment&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Реквизиты аналитики — в шапке, а не в каждой строке: у всех движений одного документа они
+совпадают. Если у вас это не так, скажите — перенесём в строку.</p>
+<p><code>document_kind</code>: <code>shipment</code>, <code>order</code>, <code>payment</code>, <code>goods_return</code>, <code>adjustment</code>,
+<code>commission_report</code>, <code>other</code>.</p>
+<h3 id="settlementcheckpoint"><code>settlement.checkpoint</code> — новое<a class="headerlink" href="#settlementcheckpoint" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;settlement.checkpoint&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;msg-checkpoint-a1b2c3&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;spec_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;16.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;as_of_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-07-01&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;is_verified&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;contractor_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;b4d8e2f1-6c5a-4917-8e3b-2f9a7d4c1508&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;organization_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;e1a7c3d9-2b8f-4056-9c14-7d3e8b5a2f61&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;currency_code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RUB&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;amount&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-55000.00</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;amount_rub&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-55000.00</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Разрез — контрагент × организация × валюта, то есть та самая ось акта сверки.
+В ленту движений не попадает, участвует только в сверке.</p>
+<h3 id="payment_scheduleupdated"><code>payment_schedule.updated</code><a class="headerlink" href="#payment_scheduleupdated" title="Permanent link">&para;</a></h3>
+<p>Источник — <code>РегистрНакопления.РасчетыСКлиентамиПоСрокам</code>, как вы и предложили. Ресурсы
+<code>Долг</code> и <code>Предоплата</code> дают ровно то, чего нам не хватало.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;payment_schedule.updated&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;msg-schedule-a1b2c3&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;spec_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;16.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;revision&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;document_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;document_kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;shipment&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;document_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;29УТ-006915&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;contractor_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;b4d8e2f1-6c5a-4917-8e3b-2f9a7d4c1508&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;organization_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;e1a7c3d9-2b8f-4056-9c14-7d3e8b5a2f61&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;agreement_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;5c8a2f4d-7e1b-4903-a6c5-8f2d4b7e1a39&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;currency_code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RUB&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;lines&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;f4a8c2e7-9d3b-4165-8c7a-1e5f9b3d6208&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;due_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-08-14&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;amount&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">120000.00</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;settled_amount&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">100000.00</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;line_number&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>Ключ строки — ваш вариант принят.</strong> <code>uuid</code>, собранный из пары «расчётный документ + дата
+планового погашения». <code>line_number</code> присылайте справочно, логику на нём строить не будем.</p>
+<p><code>amount</code> = <code>Долг</code> на момент возникновения, <code>settled_amount</code> = закрытая часть с учётом
+<code>Предоплата</code>. Суммы <strong>положительные</strong> — сайт сам развернёт знак.</p>
+<h3 id="agreementcreated-updated"><code>agreement.created</code> / <code>.updated</code><a class="headerlink" href="#agreementcreated-updated" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;agreement.created&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;msg-agreement-a1b2c3&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;spec_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;16.0&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;5c8a2f4d-7e1b-4903-a6c5-8f2d4b7e1a39&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;revision&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;partner_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7c9e6b21-4a3d-4e8f-b512-9d7c3e1a6f04&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;contractor_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;b4d8e2f1-6c5a-4917-8e3b-2f9a7d4c1508&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;organization_uuid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;e1a7c3d9-2b8f-4056-9c14-7d3e8b5a2f61&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;СГ-0042&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-03-14&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Соглашение об условиях продаж №СГ-0042&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;currency_code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RUB&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;settlement_procedure&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;orders&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;credit_limit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">500000.00</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;deferral_days&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;active&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><code>settlement_procedure</code> — порядок расчётов из соглашения. Пришлите ваш реальный перечень
+значений, мы подстроим коды под него; в примере условное <code>orders</code>.</p>
+<p><code>credit_limit</code> и <code>deferral_days</code> — если в соглашении их нет, пришлите <code>null</code>, поле необязательное.</p>
+<h3 id="-">Документы-регистраторы<a class="headerlink" href="#-" title="Permanent link">&para;</a></h3>
+<p>Список переписан под вашу конфигурацию:</p>
+<table>
+<thead>
+<tr>
+<th>Документ</th>
+<th>Строк 2026</th>
+<th><code>document_kind</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>РеализацияТоваровУслуг</td>
+<td>106 140</td>
+<td><code>shipment</code></td>
+</tr>
+<tr>
+<td><strong>ЗаказКлиента</strong></td>
+<td><strong>85 249</strong></td>
+<td><code>order</code></td>
+</tr>
+<tr>
+<td>ПоступлениеБезналичныхДенежныхСредств</td>
+<td>29 926</td>
+<td><code>payment</code></td>
+</tr>
+<tr>
+<td>ВозвратТоваровОтКлиента</td>
+<td>13</td>
+<td><code>goods_return</code></td>
+</tr>
+<tr>
+<td>КорректировкаРеализации</td>
+<td>4</td>
+<td><code>adjustment</code></td>
+</tr>
+<tr>
+<td>СписаниеБезналичныхДенежныхСредств</td>
+<td>4</td>
+<td><code>payment</code></td>
+</tr>
+<tr>
+<td>ВзаимозачетЗадолженности</td>
+<td>—</td>
+<td><code>adjustment</code></td>
+</tr>
+<tr>
+<td>ОтчетКомиссионера</td>
+<td>—</td>
+<td><code>commission_report</code></td>
+</tr>
+<tr>
+<td>ОтчетКомиссионераОСписании</td>
+<td>—</td>
+<td><code>commission_report</code></td>
+</tr>
+</tbody>
+</table>
+<p>Приходный и расходный кассовые ордера в 2026 не встречались — оставляем в перечне на будущее,
+<code>document_kind: "payment"</code>.</p>
+<p>Если какой-то вид документа даёт движения, но в таблице его нет, — присылайте. <strong>Полнота важнее
+соответствия списку</strong>: пропущенный вид документа даёт постоянное расхождение баланса, которое
+потом трудно найти.</p>
+<hr />
+<h2 id="_7">Правила, которые не изменились<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Движения документа заменяются целиком.</strong> <code>settlement.posted</code> вытесняет все ранее
+   сохранённые движения этого <code>document_uuid</code>. Дельту досылать нельзя.</li>
+<li><strong><code>revision</code> растёт при каждом изменении документа.</strong> Сообщение с меньшей ревизией
+   отбрасывается — защита от обгона в очереди.</li>
+<li><strong><code>entries: []</code></strong> — движений у документа больше нет, сайт их удалит.</li>
+<li><strong>Идемпотентность по <code>uuid</code>.</strong> Повторная доставка не создаёт вторую строку.</li>
+<li><strong>Сумма движений обязана сходиться с <code>balance.updated</code>.</strong> Сайт сверяет автоматически.</li>
+<li><strong>Коды — латиница</strong>, русские наименования дополнительно в полях <code>*_name</code>.</li>
+</ol>
+<h2 id="_8">Порядок первичной выгрузки<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Шаг</th>
+<th>Что</th>
+<th>Объём</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Соглашения (<code>agreement.created</code>)</td>
+<td>5 102</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Сальдо на 01.01.2026</td>
+<td>по контрагентам</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Движения с 01.01.2026</td>
+<td><strong>224 632 строки / 17 607 документов</strong></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Графики оплат по незакрытым документам</td>
+<td>—</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>settlement.checkpoint</code> на 01.07.2026</td>
+<td>по контрагентам</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>balance.updated</code> по всем контрагентам</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>Шаги 3–4 пачками с паузой. 224 тысячи строк — объём умеренный, отдельная очередь
+<code>erp_in.settlements</code> его переварит, прод-обмен по заказам и остаткам не встанет.</p>
+<h2 id="_9">Критерии приёмки<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] Соглашение из 1С появляется на сайте с номером, датой и условиями</li>
+<li>[ ] Реализация даёт движение <code>shipment</code> с <strong>отрицательной</strong> суммой</li>
+<li>[ ] Поступление ДС даёт <code>payment_in</code> с <strong>положительной</strong> суммой</li>
+<li>[ ] Возврат товара — <code>goods_return</code> (плюс), возврат денег — <code>payment_out</code> (минус)</li>
+<li>[ ] Взаимозачёт и корректировка реализации дают <code>adjustment</code></li>
+<li>[ ] Движения заказа приходят и трактуются согласно ответу на вопрос Б</li>
+<li>[ ] <code>settlement_object_*</code> заполнен, составные объекты (отчёт комиссионера, договор комиссии)
+      приезжают без потерь</li>
+<li>[ ] Перепроведение заменяет движения, не задваивает</li>
+<li>[ ] Отмена проведения убирает движения документа</li>
+<li>[ ] График приходит с <code>settled_amount</code>, значение меняется по мере оплаты</li>
+<li>[ ] <code>settlement.checkpoint</code> на 01.07.2026 сходится с суммой «сальдо 01.01 + движения H1»</li>
+<li>[ ] Сумма движений по контрагенту × организации совпадает с <code>balance.updated</code></li>
+<li>[ ] Ни одно сообщение не ушло в DLQ по ошибке валидации</li>
+</ul>
+<h2 id="_10">Что нужно от вас, чтобы зафиксировать схемы<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Ответ на <strong>вопросы А, Б, В</strong> выше — блокирующий.</li>
+<li>Реальный перечень значений «порядка расчётов» из соглашения.</li>
+<li>Подтверждение, что реквизиты аналитики одинаковы у всех движений документа
+   (иначе перенесём их из шапки в строку).</li>
+<li>Готовность прислать <code>settlement.checkpoint</code> на 01.07.2026.</li>
+</ol>
+<p>После этого публикуем JSON Schema и AsyncAPI 16.0.0 на
+<code>https://pecado.ru/docs/erp/spec.yaml</code>, и спецификация получает приоритет над этим документом.</p>
+<p>Оценку сроков ждём после закрытия вопросов — понимаем, что она зависит от них.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  К началу
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u0421\u043a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u0432 \u0431\u0443\u0444\u0435\u0440", "clipboard.copy": "\u041a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0432 \u0431\u0443\u0444\u0435\u0440", "search.result.more.one": "\u0415\u0449\u0451 1 \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.more.other": "\u0415\u0449\u0451 # \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.none": "\u0421\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e", "search.result.one": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e 1 \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0435", "search.result.other": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439: #", "search.result.placeholder": "\u041d\u0430\u0447\u043d\u0438\u0442\u0435 \u043f\u0435\u0447\u0430\u0442\u0430\u0442\u044c \u0434\u043b\u044f \u043f\u043e\u0438\u0441\u043a\u0430", "search.result.term.missing": "\u041e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442", "select.version": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0435\u0440\u0441\u0438\u044e"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

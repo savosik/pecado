@@ -824,6 +824,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#2026-08-09" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что закрывает график оплаты (2026-08-09)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#other" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1496,6 +1507,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/settlements-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Регистр взаиморасчётов: черновик v16.0.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1902,6 +1941,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#2026-08-09" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что закрывает график оплаты (2026-08-09)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#other" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2077,7 +2127,7 @@
 <tr>
 <td><code>order</code></td>
 <td><code>order_uuid</code></td>
-<td>Показывает предоплату в карточке заказа</td>
+<td>Показывает предоплату в карточке заказа и закрывает ею график оплаты его реализаций</td>
 </tr>
 <tr>
 <td><code>other</code></td>
@@ -2094,14 +2144,36 @@
 <li>Тип вне перечисления пропускается так же.</li>
 </ul>
 <h3 id="_4">Что закрывает накладную<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
-<p><strong>Оплату реализации закрывают только строки <code>shipment</code>.</strong> Предоплата по заказу
-накладную не гасит: пока реализации нет, гасить нечего.</p>
+<p><strong>Оплату реализации (<code>shipments.paid_amount</code>) закрывают только строки <code>shipment</code>.</strong>
+Это поле — строгая проекция расшифровки платежа, и предоплата по заказу его не меняет:
+пока реализации нет, гасить нечего.</p>
 <p>Когда реализация появляется, 1С переразносит платёж и присылает его <strong>целиком
 заново</strong> — правило «разнесение заменяется целиком» не меняется. Досылать
 изменившиеся строки по-прежнему нельзя.</p>
 <p>Вариант «1С сама развернёт заказ в реализации» отвергнут обеими сторонами:
 на момент платежа реализации может не быть, а при её появлении пришлось бы
 досылать обновления по всем ранее отправленным платежам заказа.</p>
+<h3 id="2026-08-09">Что закрывает график оплаты (2026-08-09)<a class="headerlink" href="#2026-08-09" title="Permanent link">&para;</a></h3>
+<p><strong>График оплаты предоплата по заказу закрывает</strong> — в отличие от <code>paid_amount</code>.
+Строка графика со ссылкой <code>order_uuid</code> гасится авансом того же заказа.</p>
+<p>Так пришлось сделать, потому что на практике 1С разносит на заказы почти половину
+денег: на 2026-08-09 это 39,7 млн ₽ из 82,8 млн ₽ поступлений, а до июня 2026 —
+подавляющее большинство платежей. Без зачёта строка графика оставалась просроченной
+навсегда, и отчёт «когда придут деньги» показывал долг, которого в учёте нет:
+у одного клиента 5,53 млн ₽ против 478 тыс ₽ по данным самой 1С.</p>
+<p>Правила зачёта:</p>
+<ul>
+<li>аванс раскладывается по строкам <strong>всех</strong> реализаций заказа в порядке FIFO
+  (плановая дата, затем номер строки) — заказ отгружают частями, и зачесть его
+  каждой реализации целиком значило бы погасить долг дважды;</li>
+<li><strong>прямое разнесение имеет приоритет</strong>: аванс закрывает лишь то, что не закрыто
+  строками <code>shipment</code>;</li>
+<li>зачтённая сумма хранится отдельно (<code>shipment_payment_schedules.prepaid_amount</code>),
+  а не примешивается к <code>paid_amount</code>: у них разные источники и разные инварианты;</li>
+<li>пересчёт идемпотентен — полная функция от состояния БД, как и остальные
+  денежные агрегаты.</li>
+</ul>
+<p>Со стороны 1С ничего делать не нужно: контракт обмена не изменился.</p>
 <h3 id="other"><code>other</code> — что увидит клиент<a class="headerlink" href="#other" title="Permanent link">&para;</a></h3>
 <p>Строки <code>other</code> сайт ни с чем не связывает. В расшифровке показывается
 <code>target_name</code> — представление документа строкой, как в 1С
@@ -2131,11 +2203,16 @@
 <li>[x] <strong>(v15.16.0)</strong> Строка <code>target_type: "other"</code> сохраняется и показывается по <code>target_name</code></li>
 <li>[x] <strong>(v15.16.0)</strong> Строка <code>order</code> без <code>order_uuid</code> и строка <code>shipment</code> без <code>shipment_uuid</code> пропускаются с записью в лог</li>
 <li>[x] <strong>(v15.16.0)</strong> Строка по заказу, приехавшая раньше самого заказа, доклеивается при его получении</li>
+<li>[x] <strong>(2026-08-09)</strong> Предоплата по заказу закрывает строки графика оплаты его реализаций, не меняя <code>shipments.paid_amount</code></li>
+<li>[x] <strong>(2026-08-09)</strong> Аванс заказа делится между его реализациями и не засчитывается каждой целиком</li>
+<li>[x] <strong>(2026-08-09)</strong> Прямое разнесение на реализацию имеет приоритет над зачётом аванса</li>
+<li>[x] <strong>(2026-08-09)</strong> Повторный зачёт не меняет результат</li>
 </ul>
 <blockquote>
 <p>Отмеченное подтверждено автотестами: <code>HandlePayment*Test</code>, <code>PaymentAllocationServiceTest</code>,
 <code>PaymentTopologyIntegrationTest</code>, <code>PaymentAllocationLinkTest</code>, <code>ErpIncomingJobTest</code>,
-<code>PaymentJournalTest</code>, <code>PaymentAdminTest</code>, <code>PaymentsCabinetTest</code>, <code>PaymentOperationsTest</code>.
+<code>PaymentJournalTest</code>, <code>PaymentAdminTest</code>, <code>PaymentsCabinetTest</code>, <code>PaymentOperationsTest</code>,
+<code>PaymentScheduleIntegrationTest</code>.
 Приёмка на реальных сообщениях 1С проводится отдельно на dev.</p>
 </blockquote>
 
