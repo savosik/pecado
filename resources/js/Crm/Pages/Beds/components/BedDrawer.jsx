@@ -64,11 +64,11 @@ function Breakdown({ title, rows }) {
 }
 
 /**
- * Провал в клиента: тренд, разрезы и последние документы.
+ * Провал в партнёра: тренд, разрезы и последние документы.
  *
  * Панель, а не отдельная страница: грядка отвечает на вопрос «что здесь не так»,
  * и ответ должен приходить, не теряя полотно из виду — иначе после каждого
- * клиента приходилось бы возвращаться и заново искать глазами, где остановился.
+ * партнёра приходилось бы возвращаться и заново искать глазами, где остановился.
  */
 export default function BedDrawer({ tile, month, scope, scopeId, onClose }) {
     const { colorMode } = useColorMode();
@@ -85,9 +85,9 @@ export default function BedDrawer({ tile, month, scope, scopeId, onClose }) {
             return;
         }
 
-        // Чистим ответ предыдущего клиента до запроса: иначе при переходе
+        // Чистим ответ предыдущего партнёра до запроса: иначе при переходе
         // с грядки на грядку панель успевает показать чужие цифры под новым
-        // именем — а это не «мигнуло», а неверные данные о клиенте.
+        // именем — а это не «мигнуло», а неверные данные о партнёре.
         setData(null);
         setError(null);
 
@@ -101,7 +101,7 @@ export default function BedDrawer({ tile, month, scope, scopeId, onClose }) {
         axios.get(route('crm.beds.details', tile.id), { params })
             .then(({ data: payload }) => { if (!cancelled) setData(payload); })
             .catch((e) => {
-                if (!cancelled) setError(e?.response?.data?.message || 'Не удалось загрузить карточку клиента.');
+                if (!cancelled) setError(e?.response?.data?.message || 'Не удалось загрузить карточку партнёра.');
             });
 
         return () => { cancelled = true; };
@@ -232,7 +232,7 @@ export default function BedDrawer({ tile, month, scope, scopeId, onClose }) {
                             <HStack>
                                 <Button size="sm" variant="outline" asChild>
                                     <a href={route('crm.clients.show', tile.id)}>
-                                        Открыть карточку клиента <LuExternalLink />
+                                        Открыть карточку партнёра <LuExternalLink />
                                     </a>
                                 </Button>
                             </HStack>

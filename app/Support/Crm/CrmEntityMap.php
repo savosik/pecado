@@ -2,6 +2,7 @@
 
 namespace App\Support\Crm;
 
+use App\Models\Company;
 use App\Models\CrmCall;
 use App\Models\CrmComment;
 use App\Models\CrmEmail;
@@ -25,7 +26,21 @@ use InvalidArgumentException;
  */
 final class CrmEntityMap
 {
+    /**
+     * Партнёр — то, что в 1С называется партнёром, а в коде исторически `client`.
+     *
+     * Строковый тип менять нельзя: он лежит в `related_type`/`commentable_type`
+     * уже созданных записей и приезжает от ИИ-агентов через REST.
+     */
     public const CLIENT = 'client';
+
+    /**
+     * Контрагент — юрлицо партнёра (`companies`), от имени которого идут документы.
+     *
+     * У партнёра их может быть несколько: план и его выполнение считаются по
+     * партнёру, а переписка о реквизитах, доверенностях и сверках — по контрагенту.
+     */
+    public const CONTRACTOR = 'contractor';
 
     public const ORDER = 'order';
 
@@ -48,6 +63,7 @@ final class CrmEntityMap
      */
     private const MODELS = [
         self::CLIENT => User::class,
+        self::CONTRACTOR => Company::class,
         self::ORDER => Order::class,
         self::SHIPMENT => Shipment::class,
         self::PAYMENT => Payment::class,
@@ -63,7 +79,8 @@ final class CrmEntityMap
      * @var array<string, string>
      */
     private const LABELS = [
-        self::CLIENT => 'Клиент',
+        self::CLIENT => 'Партнёр',
+        self::CONTRACTOR => 'Контрагент',
         self::ORDER => 'Заказ',
         self::SHIPMENT => 'Реализация',
         self::PAYMENT => 'Платёж',
@@ -140,7 +157,7 @@ final class CrmEntityMap
      * Найти сущность по типу и ID. NULL, если её нет.
      *
      * Проверка доступа здесь НЕ делается — она зависит от актора и живёт в политике
-     * вызывающего (комментарии, вложения, задачи проверяют видимость клиента сами).
+     * вызывающего (комментарии, вложения, задачи проверяют видимость партнёра сами).
      */
     public static function resolve(string $type, int $id): ?Model
     {
@@ -150,17 +167,20 @@ final class CrmEntityMap
     }
 
     /**
-     * Клиент, в чью ленту попадёт запись, привязанная к этой сущности.
+     * Партнёр, в чью ленту попадёт запись, привязанная к этой сущности.
      *
-     * NULL означает «сущность к клиенту не сводится»: заказ без user_id (партнёрские
+     * NULL означает «сущность к партнёру не сводится»: заказ без user_id (партнёрские
      * из 1С) комментируется нормально, но в ленту не идёт.
      */
     public static function clientIdFor(Model $entity): ?int
     {
         $clientId = match (self::typeOf($entity)) {
             self::CLIENT => $entity->getKey(),
-            self::ORDER, self::SHIPMENT, self::PAYMENT => $entity->getAttribute('user_id'),
-            // Комментарий и задача уже знают своего клиента — денормализация из crm-01.
+            // Контрагент без партнёра встречается: 1С присылает юрлицо раньше,
+            // чем оно привязано к партнёру. Такой контрагент комментируется, но
+            // в ленту партнёра не идёт — попадать ей некуда.
+            self::CONTRACTOR, self::ORDER, self::SHIPMENT, self::PAYMENT => $entity->getAttribute('user_id'),
+            // Комментарий и задача уже знают своего партнёра — денормализация из crm-01.
             self::COMMENT, self::TASK, self::EMAIL, self::CALL => $entity->getAttribute('client_user_id'),
             default => null,
         };
@@ -179,7 +199,7 @@ final class CrmEntityMap
      * Все ссылки ведут внутрь CRM, включая заказы и реализации: раньше они уходили
      * в /admin, куда роли `sales-head` и `sales-manager-crm` намеренно не пускают,
      * и менеджер упирался в 403. `$viewer` остаётся в сигнатуре — он понадобится,
-     * когда у ссылок появятся правила видимости сложнее скоупа клиента.
+     * когда у ссылок появятся правила видимости сложнее скоупа партнёра.
      *
      * @return array{type: string, id: int, label: string, title: string, url: string|null}
      */
@@ -203,7 +223,12 @@ final class CrmEntityMap
     private static function titleFor(Model $entity, string $type): string
     {
         return match ($type) {
-            self::CLIENT => (string) ($entity->getAttribute('name') ?: 'Клиент №'.$entity->getKey()),
+            self::CLIENT => (string) ($entity->getAttribute('name') ?: 'Партнёр №'.$entity->getKey()),
+            self::CONTRACTOR => (string) (
+                $entity->getAttribute('name')
+                ?: $entity->getAttribute('legal_name')
+                ?: 'Контрагент №'.$entity->getKey()
+            ),
             self::ORDER => 'Заказ №'.($entity->getAttribute('number') ?: $entity->getKey()),
             self::SHIPMENT => 'Реализация №'.($entity->getAttribute('number') ?: $entity->getKey()),
             self::PAYMENT => 'Платёж №'.($entity->getAttribute('number') ?: $entity->getKey()),
@@ -221,6 +246,10 @@ final class CrmEntityMap
             return route('crm.clients.show', $entity->getKey());
         }
 
+        if ($type === self::CONTRACTOR) {
+            return route('crm.contractors.show', $entity->getKey());
+        }
+
         // Раздел задач живёт в CRM, куда ходят все роли продаж — гейт по админке
         // ниже к нему неприменим.
         if ($type === self::TASK) {
@@ -231,7 +260,7 @@ final class CrmEntityMap
             return route('crm.emails.index', ['email' => $entity->getKey()]);
         }
 
-        // Отдельного раздела звонков нет — звонок живёт в ленте своего клиента.
+        // Отдельного раздела звонков нет — звонок живёт в ленте своего партнёра.
         if ($type === self::CALL) {
             $clientId = $entity->getAttribute('client_user_id');
 

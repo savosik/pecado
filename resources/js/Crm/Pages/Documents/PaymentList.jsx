@@ -64,7 +64,7 @@ export default function PaymentList({
         },
         {
             key: 'client',
-            label: 'Клиент',
+            label: 'Партнёр',
             render: (_, row) => (row.client
                 ? (
                     <Box
@@ -182,7 +182,7 @@ export default function PaymentList({
                         <SearchInput
                             value={searchQuery}
                             onChange={handleSearch}
-                            placeholder="Номер, номер по банку, УИП или клиент..."
+                            placeholder="Номер, номер по банку, УИП или партнёр..."
                         />
                     </Box>
                 </HStack>

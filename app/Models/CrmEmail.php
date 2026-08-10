@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Spatie\MediaLibrary\HasMedia;
 
 /**
- * Письмо, отправленное менеджером клиенту из CRM.
+ * Письмо, отправленное менеджером партнёру из CRM.
  *
  * @property int $id
  * @property int $user_id
@@ -73,9 +73,9 @@ class CrmEmail extends Model implements HasMedia
     ];
 
     /**
-     * Клиент письма выводится из привязки — единой точкой на все пути создания,
+     * Партнёр письма выводится из привязки — единой точкой на все пути создания,
      * как у комментариев и задач. Иначе письмо, отправленное по заказу, не попало бы
-     * в ленту клиента этого заказа.
+     * в ленту партнёра этого заказа.
      */
     protected static function booted(): void
     {

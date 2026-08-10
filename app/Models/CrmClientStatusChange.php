@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Запись журнала смен статусов клиента.
+ * Запись журнала смен статусов партнёра.
  *
  * @property int $id
  * @property int $client_user_id
@@ -22,14 +22,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class CrmClientStatusChange extends Model
 {
-    /** Жизненный статус клиента: лид / активен / закрылся. */
+    /** Жизненный статус партнёра: лид / активен / закрылся. */
     public const FIELD_LIFECYCLE = 'lifecycle';
 
     /**
-     * Тип аккаунта (users.user_kind): клиент / сотрудник / служебный.
+     * Тип аккаунта (users.user_kind): партнёр / сотрудник / служебный.
      *
      * Живёт в том же журнале, что и жизненный статус: «этот аккаунт больше
-     * не клиент» — решение того же порядка, что «клиент закрылся», и через
+     * не партнёр» — решение того же порядка, что «партнёр закрылся», и через
      * полгода вопрос «кто убрал его из базы» задают ровно так же.
      */
     public const FIELD_KIND = 'user_kind';

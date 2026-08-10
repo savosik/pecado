@@ -20,7 +20,7 @@ export default function Index({ month: initialMonth, canSeeAll = false }) {
             <Head title="CRM — Возможности" />
             <PageHeader
                 title="Возможности"
-                description="Кому продать сегодня: недобор плана, просроченный цикл закупок, падение и спящие клиенты."
+                description="Кому продать сегодня: недобор плана, просроченный цикл закупок, падение и спящие партнёры."
             />
 
             <VStack gap={4} align="stretch">

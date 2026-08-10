@@ -23,7 +23,7 @@ import { toastError, toastSuccess } from '@/utils/toast';
 const EMPTY = { to: '', cc: '', subject: '', body_html: '' };
 
 /**
- * Составление письма клиенту.
+ * Составление письма партнёру.
  *
  * Письмо сохраняется черновиком до отправки — иначе к нему нельзя приложить файл:
  * MediaService не умеет загрузку «в никуда», вложение нужно вешать на сохранённую запись.
@@ -239,7 +239,7 @@ export default function EmailComposeDialog({ open, onClose, email = null, entity
 
                                         <HStack justify="space-between" flexWrap="wrap" gap={2}>
                                             <Text fontSize="xs" color="fg.muted">
-                                                Ответ клиента придёт на {options?.reply_to || 'вашу почту'}.
+                                                Ответ партнёра придёт на {options?.reply_to || 'вашу почту'}.
                                             </Text>
                                             <Button size="xs" variant="ghost" onClick={() => setPreview((v) => !v)}>
                                                 {preview ? 'Вернуться к редактированию' : 'Предпросмотр'}

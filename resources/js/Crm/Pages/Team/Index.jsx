@@ -47,7 +47,7 @@ export default function Index() {
         },
         {
             key: 'clients_count',
-            label: 'Клиентов',
+            label: 'Партнёров',
             render: (_, row) => <Text fontSize="sm">{row.clients_count}</Text>,
         },
         {
@@ -122,7 +122,7 @@ export default function Index() {
                 onConfirm={() => setActive(hideFor, false)}
                 title={`Скрыть карточку «${hideFor?.name}»?`}
                 description={hideFor?.clients_count > 0
-                    ? `Карточка пропадёт из сеток и выборов CRM. За ней числятся клиенты (${hideFor.clients_count}) — их выручка останется в отчётах, но менеджера у них нужно переназначить в 1С.`
+                    ? `Карточка пропадёт из сеток и выборов CRM. За ней числятся партнёры (${hideFor.clients_count}) — их выручка останется в отчётах, но менеджера у них нужно переназначить в 1С.`
                     : 'Карточка пропадёт из сеток и выборов CRM. Сама карточка, её история и привязки останутся — вернуть в работу можно здесь же.'}
                 confirmLabel="Скрыть"
                 cancelLabel="Отмена"

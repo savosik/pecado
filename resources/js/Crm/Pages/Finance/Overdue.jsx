@@ -44,7 +44,7 @@ export default function FinanceOverdue({
             <SimpleGrid columns={{ base: 1, md: 3 }} gap={3} mb={4}>
                 <Tile label="Просрочено всего" value={formatRub(summary.overdue_amount)} tone="red" />
                 <Tile label="Документов" value={String(summary.overdue_count || 0)} />
-                <Tile label="Клиентов" value={String(summary.overdue_clients || 0)} />
+                <Tile label="Партнёров" value={String(summary.overdue_clients || 0)} />
             </SimpleGrid>
 
             {aging && (

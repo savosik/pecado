@@ -25,7 +25,7 @@ use RuntimeException;
  * Письма менеджеров: журнал и составление.
  *
  * Журнал — Inertia-страница, всё остальное JSON: тот же диалог написания открывается
- * из карточки клиента и из админских карточек заказа и реализации.
+ * из карточки партнёра и из админских карточек заказа и реализации.
  */
 class EmailController extends CrmController
 {
@@ -75,7 +75,7 @@ class EmailController extends CrmController
             'statuses' => EmailStatus::optionsWithColor(),
             'templates' => $this->templates(),
             'outboundEnabled' => $this->emails->outboundEnabled(),
-            // Ссылка из ленты клиента ведёт сюда с ?email=ID — журнал откроет письмо.
+            // Ссылка из ленты партнёра ведёт сюда с ?email=ID — журнал откроет письмо.
             'openEmailId' => $request->integer('email') ?: null,
         ]);
     }
@@ -163,7 +163,7 @@ class EmailController extends CrmController
         $actor = $this->crmActor($request);
 
         // Доступ к сущности проверяется до создания: письмо не должно становиться
-        // способом узнать о существовании чужого клиента и его документов.
+        // способом узнать о существовании чужого партнёра и его документов.
         $related = $request->filled('entity_type')
             ? $this->resolver->resolveForActor(
                 $actor,

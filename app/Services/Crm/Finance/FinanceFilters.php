@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 /**
  * Иммутабельный набор фильтров финансового раздела CRM.
  *
- * Изоляцию данных фильтры не обеспечивают — её задаёт скоуп клиентов
+ * Изоляцию данных фильтры не обеспечивают — её задаёт скоуп партнёров
  * (User::visibleInCrm) на стороне контроллера. Здесь только отбор внутри скоупа,
  * поэтому id не пересекаются ни с какими списками доступного: чужой id просто
  * не даст строк.
@@ -26,7 +26,7 @@ class FinanceFilters
 
     /**
      * @param  array<int, int>  $managerIds  разрез по менеджерам (только РОПу)
-     * @param  array<int, int>  $clientIds  конкретные клиенты (users.id)
+     * @param  array<int, int>  $clientIds  конкретные партнёры (users.id)
      * @param  array<int, int>  $organizationIds  наши юрлица (shipments.organization_id)
      * @param  bool  $onlyOverdue  только строки с прошедшей плановой датой
      * @param  bool  $includeNoSchedule  включать долг реализаций без графика от 1С

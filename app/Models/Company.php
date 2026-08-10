@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Country;
 use App\Models\Scopes\CompanyScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -180,5 +181,47 @@ class Company extends Model
     public function contractorBalance(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(ContractorBalance::class);
+    }
+
+    /**
+     * Задачи CRM, поставленные по этому контрагенту.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\MorphMany<CrmTask, $this>
+     */
+    public function crmTasks(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(CrmTask::class, 'related');
+    }
+
+    /**
+     * Комментарии CRM, оставленные на карточке контрагента.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\MorphMany<CrmComment, $this>
+     */
+    public function crmComments(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(CrmComment::class, 'commentable');
+    }
+
+    /**
+     * Контрагенты, видимые сотруднику в CRM.
+     *
+     * Правило то же, что у документов: менеджер видит юрлица только своих партнёров,
+     * а контрагент без партнёра (1С прислала юрлицо раньше привязки) доступен лишь
+     * тем, кто видит отдел целиком. Иначе карточка юрлица стала бы обходом скоупа.
+     *
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeVisibleInCrm(Builder $query, User $actor): Builder
+    {
+        if ($actor->can('crm-clients-all.view')) {
+            return $query;
+        }
+
+        return $query->whereIn(
+            'companies.user_id',
+            User::query()->visibleInCrm($actor)->select('users.id'),
+        );
     }
 }

@@ -34,7 +34,7 @@ export default function Index({ emails, filters, statuses, outboundEnabled, open
     const [pendingDelete, setPendingDelete] = useState(null);
     const [busy, setBusy] = useState(false);
 
-    // Ссылка из ленты клиента ведёт сюда с ?email=ID — открываем письмо сразу.
+    // Ссылка из ленты партнёра ведёт сюда с ?email=ID — открываем письмо сразу.
     useEffect(() => {
         if (!openEmailId) {
             return;
@@ -180,7 +180,7 @@ export default function Index({ emails, filters, statuses, outboundEnabled, open
             <Head title="CRM — Письма" />
             <PageHeader
                 title="Письма"
-                description="Что отправляли клиентам и чем это закончилось"
+                description="Что отправляли партнёрам и чем это закончилось"
                 actions={can('crm-emails.create')
                     ? <Button size="sm" onClick={() => openDialog(null)}><LuMail /> Написать письмо</Button>
                     : null}

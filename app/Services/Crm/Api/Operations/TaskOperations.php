@@ -91,7 +91,7 @@ class TaskOperations
         Gate::forUser($actor)->authorize('create', CrmTask::class);
 
         // Привязку резолвим до создания: иначе задача стала бы способом узнать
-        // о существовании чужого клиента и его документов.
+        // о существовании чужого партнёра и его документов.
         $related = $input->has('entity_type')
             ? $this->resolver->resolveForActor(
                 $actor,
@@ -157,7 +157,7 @@ class TaskOperations
     }
 
     /**
-     * Задача из скоупа актора. Чужая — 404, как и клиент вне скоупа.
+     * Задача из скоупа актора. Чужая — 404, как и партнёр вне скоупа.
      */
     private function task(User $actor, OperationInput $input): CrmTask
     {

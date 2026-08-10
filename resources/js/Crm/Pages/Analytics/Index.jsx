@@ -220,7 +220,7 @@ export default function CrmAnalyticsIndex() {
                 truncation={truncationOf('by_manager')}
                 currency={currency}
                 extraColumns={[
-                    { key: 'clients', label: 'Клиентов', render: (r) => r.clients_count },
+                    { key: 'clients', label: 'Партнёров', render: (r) => r.clients_count },
                     { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
                     { key: 'contractors', label: 'Контрагентов', render: (r) => r.contractors_count },
                 ]}
@@ -421,7 +421,7 @@ export default function CrmAnalyticsIndex() {
                 <Box flex="1" minW="0" w={{ base: '100%', md: 'auto' }}>
                     <PageHeader
                         title="Отчёты продаж"
-                        description={seesAll ? 'Продажи всего отдела по данным отгрузок 1С' : 'Продажи ваших клиентов по данным отгрузок 1С'}
+                        description={seesAll ? 'Продажи всего отдела по данным отгрузок 1С' : 'Продажи ваших партнёров по данным отгрузок 1С'}
                     />
 
                     <PresetsBar

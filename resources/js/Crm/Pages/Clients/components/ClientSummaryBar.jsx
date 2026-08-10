@@ -4,7 +4,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import LifecycleCell from './LifecycleCell';
 
 /**
- * Один факт о клиенте: подпись мелко, значение рядом.
+ * Один факт о партнёре: подпись мелко, значение рядом.
  */
 function Fact({ icon: Icon, label, children }) {
     if (!children) return null;
@@ -20,7 +20,7 @@ function Fact({ icon: Icon, label, children }) {
 }
 
 /**
- * Компактная шапка карточки клиента.
+ * Компактная шапка карточки партнёра.
  *
  * Раньше здесь были две карточки на пол-экрана — «Основная информация» и «Статусы».
  * Между ними и лентой оставалось столько прокрутки, что до работы менеджер

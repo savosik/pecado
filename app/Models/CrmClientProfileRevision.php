@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Предыдущая версия свободных заметок о клиенте.
+ * Предыдущая версия свободных заметок о партнёре.
  *
  * @property int $id
  * @property int $crm_client_profile_id

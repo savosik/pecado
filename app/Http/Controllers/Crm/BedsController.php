@@ -49,8 +49,8 @@ class BedsController extends CrmController
      * Плитки полотна. GET /crm/beds/data
      *
      * Руководитель по умолчанию смотрит отдел плитками менеджеров: «где просело»
-     * на уровне отдела — вопрос про людей, а не про восемьсот клиентов сразу.
-     * Выбрав менеджера, он попадает в те же грядки клиентов, что видит менеджер.
+     * на уровне отдела — вопрос про людей, а не про восемьсот партнёров сразу.
+     * Выбрав менеджера, он попадает в те же грядки партнёров, что видит менеджер.
      */
     public function data(Request $request): JsonResponse
     {
@@ -76,7 +76,7 @@ class BedsController extends CrmController
     }
 
     /**
-     * Провал в клиента. GET /crm/beds/{client}/details
+     * Провал в партнёра. GET /crm/beds/{client}/details
      *
      * Класс ABC и признак «спит» берутся из сигналов возможностей, а не считаются
      * заново: одна и та же буква на плитке и в карточке — это требование, а не
@@ -90,7 +90,7 @@ class BedsController extends CrmController
     ): JsonResponse {
         $actor = $this->crmActor($request);
 
-        // Тот же скоуп, что и в списке: чужой клиент — 404, а не 403.
+        // Тот же скоуп, что и в списке: чужой партнёр — 404, а не 403.
         $model = User::query()->visibleInCrm($actor)->findOrFail($client);
 
         $month = $this->plans->parseMonth($request->string('month')->value());

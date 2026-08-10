@@ -42,8 +42,8 @@ class OperationRegistry
 {
     /** @var array<string, string> */
     private const SECTIONS = [
-        'clients' => 'Клиенты',
-        'profile' => 'Профиль клиента',
+        'clients' => 'Партнёры',
+        'profile' => 'Профиль партнёра',
         'comments' => 'Комментарии и лента',
         'tasks' => 'Задачи',
         'calls' => 'Звонки',
@@ -139,16 +139,16 @@ class OperationRegistry
                 method: 'GET',
                 uri: 'payments/balances',
                 permission: 'crm-clients.view',
-                summary: 'Сальдо и просроченная задолженность клиентов по данным 1С',
+                summary: 'Сальдо и просроченная задолженность партнёров по данным 1С',
                 description: 'МАСТЕР-ДАННЫЕ по долгам: так их видит учётная система. '
-                    .'Именно отсюда отвечайте на «сколько клиент должен» и «какая у него просрочка». '
+                    .'Именно отсюда отвечайте на «сколько партнёр должен» и «какая у него просрочка». '
                     .'Не считайте долг суммированием остатков по документам (`payment.unpaid-shipments`): '
                     .'1С закрывает долг не только платежами по накладным — есть авансы по заказам, '
                     .'зачёты и корректировки, — и сумма по документам систематически больше реального долга. '
-                    .'Отрицательное сальдо — долг клиента, положительное — переплата. '
-                    .'Строка — контрагент (юрлицо), у клиента их может быть несколько.',
+                    .'Отрицательное сальдо — долг партнёра, положительное — переплата. '
+                    .'Строка — контрагент (юрлицо), у партнёра их может быть несколько.',
                 params: [
-                    Param::integer('client_id', 'Клиент — балансы только по нему', rules: ['min:1']),
+                    Param::integer('client_id', 'Партнёр — балансы только по нему', rules: ['min:1']),
                     Param::boolean('only_overdue', 'Только контрагенты с просроченной задолженностью'),
                     Param::integer('per_page', 'Строк на странице (до 100)', rules: ['min:1', 'max:100']),
                     Param::integer('page', 'Номер страницы', rules: ['min:1']),
@@ -161,13 +161,13 @@ class OperationRegistry
                 method: 'GET',
                 uri: 'payments',
                 permission: 'crm-clients.view',
-                summary: 'Платежи клиентов: поступления и возвраты с разнесением по отгрузкам',
+                summary: 'Платежи партнёров: поступления и возвраты с разнесением по отгрузкам',
                 description: 'Состав ограничен скоупом актора. Направление передавайте явно: '
-                    .'`in` — поступление от клиента, `out` — возврат клиенту, и суммировать их '
+                    .'`in` — поступление от партнёра, `out` — возврат партнёру, и суммировать их '
                     .'вместе нельзя. `only_unallocated` отбирает висящие авансы — деньги, '
-                    .'которые клиент заплатил, но которые не привязаны ни к одной отгрузке.',
+                    .'которые партнёр заплатил, но которые не привязаны ни к одной отгрузке.',
                 params: [
-                    Param::integer('client_id', 'Клиент — платежи только по нему', rules: ['min:1']),
+                    Param::integer('client_id', 'Партнёр — платежи только по нему', rules: ['min:1']),
                     Param::string('direction', 'Направление платежа', enum: ['in', 'out']),
                     Param::string('date_from', 'Дата платежа с (Y-m-d)', rules: ['date_format:Y-m-d']),
                     Param::string('date_to', 'Дата платежа по (Y-m-d)', rules: ['date_format:Y-m-d']),
@@ -184,7 +184,7 @@ class OperationRegistry
                 uri: 'payments/unpaid-shipments',
                 permission: 'crm-clients.view',
                 summary: 'Неоплаченные и частично оплаченные отгрузки (остаток по документам)',
-                description: 'Отвечает на «какие документы не закрыты», а НЕ на «сколько клиент должен». '
+                description: 'Отвечает на «какие документы не закрыты», а НЕ на «сколько партнёр должен». '
                     .'Разница существенная: `paid_amount` растёт только от разнесения платежа на саму '
                     .'накладную, а 1С закрывает долг и авансами по заказам, и зачётами, и корректировками. '
                     .'Поэтому сумма остатков здесь бывает в разы больше реальной задолженности — '
@@ -192,7 +192,7 @@ class OperationRegistry
                     .'Суммы взяты из посчитанных полей, а не собраны запросом по разнесению, '
                     .'поэтому возвраты не попадают в приход.',
                 params: [
-                    Param::integer('client_id', 'Клиент — отгрузки только по нему', rules: ['min:1']),
+                    Param::integer('client_id', 'Партнёр — отгрузки только по нему', rules: ['min:1']),
                     Param::string('date_from', 'Дата отгрузки с (Y-m-d)', rules: ['date_format:Y-m-d']),
                     Param::integer('per_page', 'Отгрузок на странице (до 100)', rules: ['min:1', 'max:100']),
                     Param::integer('page', 'Номер страницы', rules: ['min:1']),
@@ -215,7 +215,7 @@ class OperationRegistry
                     .'Строка считается закрытой, если её покрыли деньгами по накладной ИЛИ авансом '
                     .'по заказу — оба варианта означают, что деньги получены.',
                 params: [
-                    Param::integer('client_id', 'Клиент — график только по нему', rules: ['min:1']),
+                    Param::integer('client_id', 'Партнёр — график только по нему', rules: ['min:1']),
                     Param::string('date_from', 'Плановая дата платежа с (Y-m-d)', rules: ['date_format:Y-m-d']),
                     Param::string('date_to', 'Плановая дата платежа по (Y-m-d)', rules: ['date_format:Y-m-d']),
                     Param::boolean('only_overdue', 'Только строки с прошедшей плановой датой'),
@@ -250,20 +250,20 @@ class OperationRegistry
                 method: 'GET',
                 uri: 'clients',
                 permission: 'crm-clients.view',
-                summary: 'Список клиентов с фильтрами и сортировкой',
-                description: 'Рабочий список клиентов актора. Состав всегда ограничен его скоупом: '
+                summary: 'Список партнёров с фильтрами и сортировкой',
+                description: 'Рабочий список партнёров актора. Состав всегда ограничен его скоупом: '
                     .'менеджер видит своих, руководитель отдела — весь отдел. Фильтр по менеджеру '
                     .'у менеджера игнорируется и видимость не расширяет.',
                 params: [
                     Param::string('search', 'Поиск по имени, e-mail, телефону или ИНН'),
                     Param::integer('manager_id', 'Менеджер — только для руководителя отдела'),
                     Param::string('lifecycle', 'Жизненный статус', enum: array_column(ClientLifecycleStatus::cases(), 'value')),
-                    Param::string('task_state', 'Состояние задач по клиенту', enum: ClientListFilters::TASK_STATES),
+                    Param::string('task_state', 'Состояние задач по партнёру', enum: ClientListFilters::TASK_STATES),
                     Param::string('plan_state', 'Состояние выполнения плана', enum: ClientListFilters::PLAN_STATES),
                     Param::integer('inactive_days', 'Нет активности дольше скольких дней', rules: ['in:30,60,90']),
                     Param::string('sort_by', 'Поле сортировки', enum: ClientListFilters::SORTS),
                     Param::string('sort_order', 'Направление сортировки', enum: ['asc', 'desc']),
-                    Param::integer('per_page', 'Клиентов на странице (до 100)', rules: ['min:1', 'max:100']),
+                    Param::integer('per_page', 'Партнёров на странице (до 100)', rules: ['min:1', 'max:100']),
                     Param::integer('page', 'Номер страницы', rules: ['min:1']),
                 ],
                 handler: [ClientOperations::class, 'list'],
@@ -274,11 +274,11 @@ class OperationRegistry
                 method: 'GET',
                 uri: 'clients/{client}',
                 permission: 'crm-clients.view',
-                summary: 'Карточка клиента: контакты, менеджер, план и факт месяца',
+                summary: 'Карточка партнёра: контакты, менеджер, план и факт месяца',
                 description: 'Профиль возвращается только при праве crm-profile.view. '
-                    .'Клиент вне скоупа даёт 404, а не 403: существование записи не подтверждается.',
+                    .'Партнёр вне скоупа даёт 404, а не 403: существование записи не подтверждается.',
                 params: [
-                    Param::integer('client', 'Идентификатор клиента', required: true, rules: ['min:1']),
+                    Param::integer('client', 'Идентификатор партнёра', required: true, rules: ['min:1']),
                 ],
                 handler: [ClientOperations::class, 'show'],
             ),
@@ -288,12 +288,12 @@ class OperationRegistry
                 method: 'GET',
                 uri: 'clients/{client}/sales',
                 permission: 'crm-analytics.view',
-                summary: 'Сводка продаж клиента: деньги, динамика, бренды, категории, товары',
+                summary: 'Сводка продаж партнёра: деньги, динамика, бренды, категории, товары',
                 description: 'Факт продаж — отгрузки по дате документа в 1С (erp_created_at), '
                     .'а не по created_at: историю импортировали в мае 2026, и отчёт по created_at '
                     .'будет неверным и выглядеть правдоподобно.',
                 params: [
-                    Param::integer('client', 'Идентификатор клиента', required: true, rules: ['min:1']),
+                    Param::integer('client', 'Идентификатор партнёра', required: true, rules: ['min:1']),
                     Param::integer('months', 'Глубина периода в месяцах (по умолчанию 12)', rules: ['min:1', 'max:60']),
                 ],
                 handler: [ClientOperations::class, 'sales'],
@@ -313,11 +313,11 @@ class OperationRegistry
                 method: 'GET',
                 uri: 'clients/{client}/profile',
                 permission: 'crm-profile.view',
-                summary: 'Профиль клиента: ЛПР, паспорт бизнеса, условия, ограничения, заметки',
+                summary: 'Профиль партнёра: ЛПР, паспорт бизнеса, условия, ограничения, заметки',
                 description: 'То, что знает менеджер и не знает 1С. В ответе есть passport_completeness — '
                     .'сколько полей паспорта заполнено: по нему видно, кого стоит расспросить.',
                 params: [
-                    Param::integer('client', 'Идентификатор клиента', required: true, rules: ['min:1']),
+                    Param::integer('client', 'Идентификатор партнёра', required: true, rules: ['min:1']),
                 ],
                 handler: [ProfileOperations::class, 'show'],
             ),
@@ -327,14 +327,14 @@ class OperationRegistry
                 method: 'PATCH',
                 uri: 'clients/{client}/profile',
                 permission: 'crm-profile.edit',
-                summary: 'Обновить поля профиля, паспорт клиента и заметки менеджера',
+                summary: 'Обновить поля профиля, паспорт партнёра и заметки менеджера',
                 description: 'Передавайте только те поля, которые меняете: непереданное остаётся как было, '
-                    .'а переданное пустым — очищается. Лояльность клиента (client_status) здесь не меняется: '
+                    .'а переданное пустым — очищается. Лояльность партнёра (client_status) здесь не меняется: '
                     .'ею владеет 1С и перезапишет её следующим обменом. Поля паспорта (вид бизнеса, сегмент, '
                     .'логистика, условия, табу, контакты по ролям) собираются интервью с менеджером и заполняются '
                     .'по мере разговора — сохраняйте после каждого блока, а не в конце.',
                 params: array_merge([
-                    Param::integer('client', 'Идентификатор клиента', required: true, rules: ['min:1']),
+                    Param::integer('client', 'Идентификатор партнёра', required: true, rules: ['min:1']),
                     Param::string('decision_maker_name', 'Имя ЛПР', rules: ['max:255'], nullable: true),
                     Param::string('decision_maker_role', 'Должность ЛПР', rules: ['max:255'], nullable: true),
                     Param::string('decision_maker_contact', 'Контакт ЛПР', rules: ['max:255'], nullable: true),
@@ -343,9 +343,9 @@ class OperationRegistry
                     Param::string('payment_terms', 'Условия оплаты', rules: ['max:255'], nullable: true),
                     Param::integer('order_cycle_days', 'Обычная периодичность закупок, дней', rules: ['min:1', 'max:1095'], nullable: true),
                     Param::string('preferred_channel', 'Предпочитаемый канал связи', enum: array_column(PreferredChannel::cases(), 'value'), nullable: true),
-                    Param::string('sentiment', 'Настроение клиента', enum: array_column(ClientSentiment::cases(), 'value'), nullable: true),
+                    Param::string('sentiment', 'Настроение партнёра', enum: array_column(ClientSentiment::cases(), 'value'), nullable: true),
                     Param::string('notes_md', 'Заметки менеджера (Markdown) — всё, что не уложилось в поля', rules: ['max:65535'], nullable: true),
-                    Param::list('interests', 'Интересы клиента — список названий', required: false),
+                    Param::list('interests', 'Интересы партнёра — список названий', required: false),
                 ], ClientPassport::apiParams()),
                 handler: [ProfileOperations::class, 'update'],
                 mutating: true,
@@ -356,11 +356,11 @@ class OperationRegistry
                 method: 'POST',
                 uri: 'clients/{client}/lifecycle',
                 permission: 'crm-profile.edit',
-                summary: 'Сменить жизненный статус клиента с указанием причины',
+                summary: 'Сменить жизненный статус партнёра с указанием причины',
                 description: 'Жизненный статус — поле сайта, его ведёт отдел продаж. '
                     .'Это не лояльность из 1С и не блокировка аккаунта.',
                 params: [
-                    Param::integer('client', 'Идентификатор клиента', required: true, rules: ['min:1']),
+                    Param::integer('client', 'Идентификатор партнёра', required: true, rules: ['min:1']),
                     Param::string('lifecycle_status', 'Новый жизненный статус', required: true, enum: array_column(ClientLifecycleStatus::cases(), 'value')),
                     Param::string('reason', 'Причина смены статуса', rules: ['max:500'], nullable: true),
                 ],
@@ -376,7 +376,7 @@ class OperationRegistry
                 summary: 'История смен жизненного статуса',
                 description: 'Кто, когда и почему менял статус.',
                 params: [
-                    Param::integer('client', 'Идентификатор клиента', required: true, rules: ['min:1']),
+                    Param::integer('client', 'Идентификатор партнёра', required: true, rules: ['min:1']),
                     Param::integer('limit', 'Сколько записей вернуть', rules: ['min:1', 'max:100']),
                 ],
                 handler: [ProfileOperations::class, 'lifecycleHistory'],
@@ -387,7 +387,7 @@ class OperationRegistry
                 method: 'GET',
                 uri: 'interests',
                 permission: 'crm-profile.view',
-                summary: 'Справочник интересов клиентов',
+                summary: 'Справочник интересов партнёров',
                 description: 'Подсказки для поля «Интересы»: только теги своего типа, товарные сюда не попадают.',
                 params: [
                     Param::string('query', 'Часть названия интереса', rules: ['max:100']),
@@ -409,10 +409,10 @@ class OperationRegistry
                 method: 'GET',
                 uri: 'clients/{client}/timeline',
                 permission: 'crm-comments.view',
-                summary: 'Сквозная лента клиента: записи менеджеров и его документы',
+                summary: 'Сквозная лента партнёра: записи менеджеров и его документы',
                 description: 'Комментарии, задачи, письма, звонки, заказы и реализации в одной хронологии.',
                 params: [
-                    Param::integer('client', 'Идентификатор клиента', required: true, rules: ['min:1']),
+                    Param::integer('client', 'Идентификатор партнёра', required: true, rules: ['min:1']),
                     Param::list('types', 'Оставить только эти типы записей'),
                     Param::integer('per_page', 'Записей на странице (до 100)', rules: ['min:1', 'max:100']),
                 ],
@@ -425,7 +425,7 @@ class OperationRegistry
                 uri: 'comments',
                 permission: 'crm-comments.view',
                 summary: 'Комментарии одной записи',
-                description: 'Лента конкретного клиента, заказа, реализации или задачи.',
+                description: 'Лента конкретного партнёра, заказа, реализации или задачи.',
                 params: [
                     Param::string('entity_type', 'Тип записи', required: true, enum: CrmEntityMap::commentableTypes()),
                     Param::integer('entity_id', 'Идентификатор записи', required: true, rules: ['min:1']),
@@ -439,7 +439,7 @@ class OperationRegistry
                 method: 'POST',
                 uri: 'comments',
                 permission: 'crm-comments.create',
-                summary: 'Оставить комментарий по клиенту, заказу, реализации или задаче',
+                summary: 'Оставить комментарий по партнёру, заказу, реализации или задаче',
                 description: 'Автором станет менеджер, от имени которого работает агент. '
                     .'В ленте запись помечается как сделанная агентом.',
                 params: [
@@ -458,7 +458,7 @@ class OperationRegistry
                 uri: 'comments/{comment}',
                 permission: 'crm-comments.edit',
                 summary: 'Изменить текст своего комментария',
-                description: 'Чужой комментарий недоступен, даже если клиент виден.',
+                description: 'Чужой комментарий недоступен, даже если партнёр виден.',
                 params: [
                     Param::integer('comment', 'Идентификатор комментария', required: true, rules: ['min:1']),
                     Param::string('body', 'Новый текст', required: true, rules: ['min:1', 'max:5000']),
@@ -502,7 +502,7 @@ class OperationRegistry
                 params: [
                     Param::string('status', 'Статус задачи', enum: array_column(TaskStatus::cases(), 'value')),
                     Param::integer('assignee_id', 'Исполнитель', rules: ['min:1']),
-                    Param::integer('client_id', 'Задачи по конкретному клиенту', rules: ['min:1']),
+                    Param::integer('client_id', 'Задачи по конкретному партнёру', rules: ['min:1']),
                     Param::boolean('overdue', 'Только просроченные'),
                     Param::integer('per_page', 'Задач на странице (до 100)', rules: ['min:1', 'max:100']),
                 ],
@@ -527,7 +527,7 @@ class OperationRegistry
                 method: 'POST',
                 uri: 'tasks',
                 permission: 'crm-tasks.create',
-                summary: 'Поставить задачу, при необходимости привязав к клиенту или документу',
+                summary: 'Поставить задачу, при необходимости привязав к партнёру или документу',
                 description: 'Без указания исполнителя задача остаётся на менеджере, от имени которого '
                     .'работает агент. Исполнителем можно назначить только сотрудника с доступом в CRM: '
                     .'задача, поручённая кладовщику, не появилась бы ни в одном интерфейсе.',
@@ -574,7 +574,7 @@ class OperationRegistry
                 summary: 'Закрыть задачу с отчётом и следующим шагом',
                 description: 'Отметка, комментарий и следующая задача ложатся одной транзакцией: '
                     .'закрытие с потерянным отчётом — тот самый разрыв, из-за которого работа '
-                    .'с клиентом рассыпается на разовые дёрганья.',
+                    .'с партнёром рассыпается на разовые дёрганья.',
                 params: [
                     Param::integer('task', 'Идентификатор задачи', required: true, rules: ['min:1']),
                     Param::string('comment', 'Что сделано', rules: ['max:5000'], nullable: true),
@@ -621,7 +621,7 @@ class OperationRegistry
                 summary: 'Журнал звонков',
                 description: 'Телефония не подключена: записи заводятся вручную.',
                 params: [
-                    Param::integer('client_id', 'Звонки по конкретному клиенту', rules: ['min:1']),
+                    Param::integer('client_id', 'Звонки по конкретному партнёру', rules: ['min:1']),
                     Param::string('result', 'Итог разговора', enum: array_column(CallResult::cases(), 'value')),
                     Param::integer('per_page', 'Записей на странице (до 100)', rules: ['min:1', 'max:100']),
                 ],
@@ -669,7 +669,7 @@ class OperationRegistry
                 description: 'Поле outbound_enabled показывает, включена ли отправка вообще.',
                 params: [
                     Param::string('status', 'Статус письма', enum: ['draft', 'queued', 'sent', 'failed']),
-                    Param::integer('client_id', 'Письма по конкретному клиенту', rules: ['min:1']),
+                    Param::integer('client_id', 'Письма по конкретному партнёру', rules: ['min:1']),
                     Param::integer('per_page', 'Писем на странице (до 100)', rules: ['min:1', 'max:100']),
                 ],
                 handler: [EmailOperations::class, 'list'],
@@ -739,7 +739,7 @@ class OperationRegistry
                 uri: 'plans',
                 permission: 'crm-plans.view',
                 summary: 'Планы периода, разложенные по целям',
-                description: 'Цели: отдел, менеджер, клиент. Видны только те, что доступны актору.',
+                description: 'Цели: отдел, менеджер, партнёр. Видны только те, что доступны актору.',
                 params: [
                     Param::string('month', 'Месяц в формате ГГГГ-ММ; по умолчанию текущий', rules: ['max:7']),
                 ],
@@ -768,13 +768,13 @@ class OperationRegistry
                 method: 'GET',
                 uri: 'plans/progress',
                 permission: 'crm-plans.view',
-                summary: 'Выполнение плана: план, факт, отставание и разбивка по клиентам',
+                summary: 'Выполнение плана: план, факт, отставание и разбивка по партнёрам',
                 description: 'Факт — отгрузки по дате документа в 1С.',
                 params: [
                     Param::string('month', 'Месяц в формате ГГГГ-ММ', rules: ['max:7']),
                     Param::string('scope', 'Разрез: department или manager', enum: ['department', 'manager']),
                     Param::integer('scope_id', 'Менеджер для разреза manager', rules: ['min:1']),
-                    Param::integer('limit', 'Сколько клиентов вернуть (до 200)', rules: ['min:1', 'max:200']),
+                    Param::integer('limit', 'Сколько партнёров вернуть (до 200)', rules: ['min:1', 'max:200']),
                 ],
                 handler: [PlanOperations::class, 'progress'],
             ),

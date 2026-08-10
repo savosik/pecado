@@ -37,7 +37,7 @@ function dueLabel(next) {
  * что её нет, а не после двух переходов в карточку.
  *
  * @param {{active_count: number, next: object|null}|null} tasks
- * @param {Function} onCreate — открыть диалог новой задачи по этому клиенту
+ * @param {Function} onCreate — открыть диалог новой задачи по этому партнёру
  */
 export default function TasksCell({ tasks, onCreate }) {
     if (!tasks) return null;
@@ -49,7 +49,7 @@ export default function TasksCell({ tasks, onCreate }) {
         <Tooltip
             content={next
                 ? `${next.title}${next.due_at_full ? ` — до ${next.due_at_full}` : ''}${next.assignee_name ? `, ${next.assignee_name}` : ''}`
-                : 'По клиенту нет следующего шага — нажмите, чтобы поставить задачу'}
+                : 'По партнёру нет следующего шага — нажмите, чтобы поставить задачу'}
             openDelay={300}
         >
             <Box

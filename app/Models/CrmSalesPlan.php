@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Месячный план продаж: отделу, менеджеру или клиенту.
+ * Месячный план продаж: отделу, менеджеру или партнёру.
  *
  * @property int $id
  * @property \Illuminate\Support\Carbon $period_month

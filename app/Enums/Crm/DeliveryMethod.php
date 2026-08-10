@@ -5,7 +5,7 @@ namespace App\Enums\Crm;
 use App\Enums\Crm\Concerns\HasLabeledOptions;
 
 /**
- * Как клиент получает товар.
+ * Как партнёр получает товар.
  */
 enum DeliveryMethod: string
 {

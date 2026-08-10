@@ -13,7 +13,7 @@ import PaymentCalendarGrid, { formatMoney } from '@/components/payments/PaymentC
  *
  * План — остатки по графику оплаты реализаций («Правила оплаты» 1С),
  * факт — проведённые платежи по их бизнес-дате. Разрез по менеджерам работает
- * тем же скоупом клиентов, что и журналы, поэтому фильтр здесь только один.
+ * тем же скоупом партнёров, что и журналы, поэтому фильтр здесь только один.
  */
 export default function PaymentCalendar({
     month,
@@ -225,7 +225,7 @@ function EntryRow({ entry, showDate = false }) {
                     Реализация
                 </Button>
                 <Button size="xs" variant="ghost" onClick={() => router.visit(entry.client.url)}>
-                    Клиент
+                    Партнёр
                 </Button>
             </HStack>
         </Flex>

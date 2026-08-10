@@ -38,7 +38,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * `sales-head` и `sales-manager-crm` намеренно не пускают. Менеджер видел
  * ссылку и упирался в 403, а РОП не мог посмотреть состав заказа вообще.
  *
- * Отдельного права нет: документ клиента — часть его карточки, и «вижу клиента,
+ * Отдельного права нет: документ партнёра — часть его карточки, и «вижу партнёра,
  * но не вижу его заказы» — состояние, которого быть не должно. Доступ решает
  * тот же скоуп, что и везде, через CrmEntityResolver: чужой документ даёт 404.
  *
@@ -64,7 +64,7 @@ class DocumentController extends CrmController
      */
     private const PAYMENT_DIRECTIONS = [
         ['value' => 'in', 'label' => 'Поступление', 'color' => 'green'],
-        ['value' => 'out', 'label' => 'Возврат клиенту', 'color' => 'red'],
+        ['value' => 'out', 'label' => 'Возврат партнёру', 'color' => 'red'],
     ];
 
     /**
@@ -108,10 +108,10 @@ class DocumentController extends CrmController
     public function __construct(private readonly CrmEntityResolver $resolver) {}
 
     /**
-     * Список заказов клиентов актора.
+     * Список заказов партнёров актора.
      *
-     * Скоуп тот же, что у списка клиентов: менеджер видит документы только своих
-     * клиентов, РОП — всего отдела. Реализовано подзапросом по user_id, а не
+     * Скоуп тот же, что у списка партнёров: менеджер видит документы только своих
+     * партнёров, РОП — всего отдела. Реализовано подзапросом по user_id, а не
      * фильтром на фронте — иначе первый же `per_page=100` показал бы чужое.
      */
     public function orders(Request $request): Response
@@ -168,7 +168,7 @@ class DocumentController extends CrmController
     }
 
     /**
-     * Список реализаций клиентов актора.
+     * Список реализаций партнёров актора.
      */
     public function shipments(Request $request): Response
     {
@@ -218,8 +218,8 @@ class DocumentController extends CrmController
      * Журнал платежей. GET /crm/payments
      *
      * Реквизиты и разнесение ведёт 1С — здесь только чтение, как и в остальных
-     * журналах. Права отдельного нет по той же причине: оплаты клиента — часть
-     * его карточки, и «вижу клиента, но не вижу, платил ли он» — состояние,
+     * журналах. Права отдельного нет по той же причине: оплаты партнёра — часть
+     * его карточки, и «вижу партнёра, но не вижу, платил ли он» — состояние,
      * которого быть не должно.
      */
     public function payments(Request $request): Response
@@ -255,7 +255,7 @@ class DocumentController extends CrmController
      *
      * План и факт вместе: план — остатки по графику оплаты реализаций
      * («Правила оплаты» 1С), факт — проведённые платежи по их бизнес-дате `date`.
-     * Разрез по менеджерам работает через тот же скоуп клиентов, что и журналы,
+     * Разрез по менеджерам работает через тот же скоуп партнёров, что и журналы,
      * поэтому отдельного фильтра здесь нет.
      *
      * Расчёт берётся из PaymentForecastService — того же, на котором стоит раздел
@@ -274,7 +274,7 @@ class DocumentController extends CrmController
         $today = Carbon::today();
         $todayImmutable = CarbonImmutable::today();
 
-        // Календарю нужен только период: отбор по менеджерам уже сведён в скоуп клиентов.
+        // Календарю нужен только период: отбор по менеджерам уже сведён в скоуп партнёров.
         $filters = new FinanceFilters(
             dateFrom: CarbonImmutable::parse($monthStart),
             dateTo: CarbonImmutable::parse($monthEnd),
@@ -502,7 +502,7 @@ class DocumentController extends CrmController
                 'Номер',
                 'Дата',
                 'Направление',
-                'Клиент',
+                'Партнёр',
                 'Email',
                 'Менеджер',
                 'Контрагент',
@@ -606,7 +606,7 @@ class DocumentController extends CrmController
         if ($items !== []) {
             $sheets[] = [
                 'title' => 'Позиции',
-                'headers' => ['Документ', 'Дата', 'Клиент', 'Товар', 'Артикул', 'Бренд', 'Количество', 'Цена', 'Сумма'],
+                'headers' => ['Документ', 'Дата', 'Партнёр', 'Товар', 'Артикул', 'Бренд', 'Количество', 'Цена', 'Сумма'],
                 'rows' => $items,
             ];
         }
@@ -688,7 +688,7 @@ class DocumentController extends CrmController
             'Номер на сайте',
             'Дата',
             'Статус',
-            'Клиент',
+            'Партнёр',
             'Email',
             'Менеджер',
             'Контрагент',
@@ -997,7 +997,7 @@ class DocumentController extends CrmController
     }
 
     /**
-     * Строка поиска: номер документа, клиент или товар в позициях.
+     * Строка поиска: номер документа, партнёр или товар в позициях.
      *
      * @template TModel of \Illuminate\Database\Eloquent\Model
      *
@@ -1038,9 +1038,9 @@ class DocumentController extends CrmController
      * Фильтры, одинаковые у обоих списков: статусы, партнёры, контрагенты,
      * организации, склады, товар в позициях, даты, суммы.
      *
-     * Менеджер сюда не попал намеренно: он сужает набор клиентов, а не
+     * Менеджер сюда не попал намеренно: он сужает набор партнёров, а не
      * документов, и применяется раньше — в visibleClients(). Партнёр же —
-     * обычная колонка user_id, и чужой id безопасен: скоуп клиентов уже сузил
+     * обычная колонка user_id, и чужой id безопасен: скоуп партнёров уже сузил
      * выборку, пересечение с ним ничего не открывает.
      *
      * Шаблонный параметр, а не объединение Order|Shipment: дженерик Builder
@@ -1124,7 +1124,7 @@ class DocumentController extends CrmController
      * Общие пропсы списков: справочники фильтров и снимок текущего отбора.
      *
      * @param  'orders'|'shipments'  $table
-     * @param  Builder<User>  $clients  скоуп клиентов актора (уже с фильтром по менеджеру)
+     * @param  Builder<User>  $clients  скоуп партнёров актора (уже с фильтром по менеджеру)
      * @return array<string, mixed>
      */
     private function listOptions(Request $request, string $table, Builder $clients, string $sortBy, string $sortOrder, int $perPage, ?string $search): array
@@ -1142,7 +1142,7 @@ class DocumentController extends CrmController
             'partners' => $this->partnerOptions($table, $clients),
             'companies' => $this->companyOptions($table, $clients),
             // Менеджер — только РОПу: у рядового менеджера в скоупе и так
-            // только свои клиенты, фильтр был бы кнопкой без эффекта.
+            // только свои партнёры, фильтр был бы кнопкой без эффекта.
             'managers' => $seesAll ? $this->managerOptions() : [],
             'seesAll' => $seesAll,
             // Выбранные товары приезжают целиком: в URL только id, а рисовать
@@ -1169,9 +1169,9 @@ class DocumentController extends CrmController
     }
 
     /**
-     * Скоуп клиентов актора с учётом фильтра по менеджеру.
+     * Скоуп партнёров актора с учётом фильтра по менеджеру.
      *
-     * Менеджер сужает не документ, а набор клиентов, поэтому живёт здесь, а не
+     * Менеджер сужает не документ, а набор партнёров, поэтому живёт здесь, а не
      * в applyCommonFilters: тем же скоупом собираются справочники фильтров, и
      * выбор менеджера заодно сужает список его партнёров и контрагентов.
      *
@@ -1185,7 +1185,7 @@ class DocumentController extends CrmController
         $query = User::query()->visibleInCrm($actor)->select('users.id');
 
         // Менеджера подставляет только РОП: у рядового менеджера скоуп и так
-        // сведён к своим клиентам, а чужой id в запросе не должен ничего давать.
+        // сведён к своим партнёрам, а чужой id в запросе не должен ничего давать.
         if ($this->seesAllClients($request)) {
             $managerIds = $this->ids($request, 'manager_ids');
 
@@ -1268,9 +1268,9 @@ class DocumentController extends CrmController
     }
 
     /**
-     * Партнёры — клиенты, у которых в этом журнале есть хотя бы один документ.
+     * Партнёры — партнёры, у которых в этом журнале есть хотя бы один документ.
      *
-     * Берём из самих документов, а не из списка клиентов: у РОПа клиентов
+     * Берём из самих документов, а не из списка партнёров: у РОПа партнёров
      * восемь сотен, и большинство в конкретном журнале не встречается ни разу.
      *
      * @param  'orders'|'shipments'  $table
@@ -1533,9 +1533,9 @@ class DocumentController extends CrmController
                 'date_label' => ($model->erp_created_at ?? $model->date)?->format('d.m.Y H:i'),
                 'created_at_label' => $model->created_at?->format('d.m.Y H:i'),
                 'total_label' => $this->money((float) $model->total_amount, $model->currency_code),
-                // v15.16.0: счёт-фактура из 1С — справка для менеджера и бухгалтерии клиента
+                // v15.16.0: счёт-фактура из 1С — справка для менеджера и бухгалтерии партнёра
                 // v15.16.1: печатный номер приоритетнее внутреннего — менеджер
-                // и клиент говорят про одну и ту же бумагу
+                // и партнёр говорят про одну и ту же бумагу
                 'invoice_label' => ($model->invoice_number_display ?: $model->invoice_number)
                     ? trim(($model->invoice_number_display ?: $model->invoice_number)
                         .' от '.($model->invoice_date?->format('d.m.Y') ?? '—'))
@@ -1635,7 +1635,7 @@ class DocumentController extends CrmController
     }
 
     /**
-     * Клиент документа — шапка карточки и ссылка обратно в его ленту.
+     * Партнёр документа — шапка карточки и ссылка обратно в его ленту.
      *
      * @return array<string, mixed>|null
      */

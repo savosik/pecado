@@ -2,6 +2,7 @@
 
 namespace App\Services\Crm;
 
+use App\Models\Company;
 use App\Models\CrmComment;
 use App\Models\CrmTask;
 use App\Models\User;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
  * забыть, превратив загрузку файла в обход скоупа карточки.
  *
  * Отказ — всегда ModelNotFoundException (404), а не 403: 403 подтвердил бы менеджеру
- * существование чужого клиента, заказа или отгрузки.
+ * существование чужого партнёра, заказа или отгрузки.
  */
 class CrmEntityResolver
 {
@@ -49,15 +50,15 @@ class CrmEntityResolver
     /**
      * Вправе ли актор работать с сущностью.
      *
-     * Сущность без клиента (заказ, пришедший из 1С без user_id) доступна только тем,
+     * Сущность без партнёра (заказ, пришедший из 1С без user_id) доступна только тем,
      * кто видит весь отдел: иначе любой менеджер комментировал бы чужие партнёрские
      * документы, к которым его скоуп отношения не имеет.
      */
     public function canAccess(User $actor, Model $entity): bool
     {
-        // У задачи собственная модель доступа — участие в ней. Скоуп клиентов
+        // У задачи собственная модель доступа — участие в ней. Скоуп партнёров
         // к задаче неприменим: задача без привязки принадлежит автору и исполнителю,
-        // и правило «клиента нет — значит, только РОП» отобрало бы у менеджера
+        // и правило «партнёра нет — значит, только РОП» отобрало бы у менеджера
         // его же собственную задачу.
         if ($entity instanceof CrmTask) {
             return $actor->can('view', $entity);
@@ -68,13 +69,19 @@ class CrmEntityResolver
             return $this->canAccessAttached($actor, $entity->client_user_id, $entity->commentable);
         }
 
+        // Контрагент — отдельный раздел со своим правом. Без него скоуп партнёра
+        // разрешал бы писать в карточку юрлица тому, кому раздел закрыт вовсе.
+        if ($entity instanceof Company && ! $actor->can('crm-contractors.view')) {
+            return false;
+        }
+
         return $this->canAccessAttached($actor, CrmEntityMap::clientIdFor($entity), null);
     }
 
     /**
      * Доступ к записи, привязанной к сущности (комментарий, задача, вложение).
      *
-     * Клиент есть — решает скоуп клиентов. Клиента нет — решает сущность, на которой
+     * Партнёр есть — решает скоуп партнёров. Партнёра нет — решает сущность, на которой
      * запись висит; если и её нет, остаётся право видеть весь отдел.
      */
     public function canAccessAttached(User $actor, ?int $clientId, ?Model $entity): bool
@@ -89,7 +96,7 @@ class CrmEntityResolver
     }
 
     /**
-     * Попадает ли клиент в скоуп актора — тот же scope, что и в списке клиентов.
+     * Попадает ли партнёр в скоуп актора — тот же scope, что и в списке партнёров.
      */
     public function clientVisible(User $actor, int $clientId): bool
     {

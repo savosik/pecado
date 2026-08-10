@@ -6,7 +6,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { toastSuccess } from '@/utils/toast';
 
 /**
- * Стадия клиента прямо в таблице.
+ * Стадия партнёра прямо в таблице.
  *
  * Меняется тем же эндпоинтом, что и в карточке (`crm.clients.lifecycle.update`),
  * поэтому журнал смен ведётся одинаково независимо от того, откуда нажали.

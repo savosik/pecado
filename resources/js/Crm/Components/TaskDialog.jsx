@@ -36,7 +36,7 @@ const EMPTY = {
 /**
  * Создание и правка задачи.
  *
- * Живёт в Components, а не в Pages/Tasks: тот же диалог открывается из карточки клиента
+ * Живёт в Components, а не в Pages/Tasks: тот же диалог открывается из карточки партнёра
  * и из админских карточек заказа и реализации, где страницы задач нет вовсе.
  *
  * Комментарии и файлы показываются только у сохранённой задачи — `MediaService` не умеет
@@ -156,7 +156,7 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
 
     return (
         // Клик мимо диалог не закрывает: выпадашка поиска записи рисуется порталом
-        // в body, то есть формально «снаружи», и выбор клиента закрывал бы всю форму
+        // в body, то есть формально «снаружи», и выбор партнёра закрывал бы всю форму
         // вместе с набранным текстом. Escape и кнопка «Закрыть» работают как обычно.
         <Dialog.Root
             open={open}
@@ -230,7 +230,7 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
                                                     searchUrl={route('crm.tasks.entities')}
                                                     searchParams={{ type: linkType }}
                                                     placeholder={linkType === 'client'
-                                                        ? 'Имя, email или телефон клиента'
+                                                        ? 'Имя, email или телефон партнёра'
                                                         : 'Номер документа'}
                                                     renderItem={(item) => (
                                                         <Box>

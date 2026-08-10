@@ -22,7 +22,7 @@ const selectStyle = {
 
 /**
  * Цвет выполнения — те же грубые пороги, что в колонке «План / факт» списка
- * клиентов: экран отвечает на вопрос «успеваем или нет».
+ * партнёров: экран отвечает на вопрос «успеваем или нет».
  */
 function palette(percent) {
     if (percent === null || percent === undefined) return 'gray';
@@ -54,12 +54,12 @@ function KpiTile({ title, value, hint, accent = 'gray' }) {
  * Вкладка «Выполнение»: план против факта, прогноз при текущем темпе и burndown.
  *
  * Факт приходит с сервера из ShipmentAnalyticsService — той же цифрой, что
- * показывает /crm/analytics. Ничего не пересчитываем на клиенте: расхождение
+ * показывает /crm/analytics. Ничего не пересчитываем на партнёре: расхождение
  * этих экранов в цифрах было бы багом, а не «разными методиками».
  *
- * Два уровня скоупа. Верхний (отдел или менеджер) задаёт список клиентов и не
- * меняется при провале в клиента — иначе, кликнув по строке таблицы, менеджер
- * терял бы сам список и не мог перейти к следующему. Нижний (выбранный клиент)
+ * Два уровня скоупа. Верхний (отдел или менеджер) задаёт список партнёров и не
+ * меняется при провале в партнёра — иначе, кликнув по строке таблицы, менеджер
+ * терял бы сам список и не мог перейти к следующему. Нижний (выбранный партнёр)
  * меняет только сводку и burndown.
  */
 export default function ProgressPanel({ month, canSeeAll = false }) {
@@ -83,7 +83,7 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
         ? scopeParams
         : { month, scope: 'client', scope_id: clientId }), [clientId, month, scopeParams]);
 
-    // Верхний уровень: сводка скоупа, список клиентов и разрез по менеджерам.
+    // Верхний уровень: сводка скоупа, список партнёров и разрез по менеджерам.
     const loadScope = useCallback(async () => {
         setLoadingScope(true);
         setError(null);
@@ -107,7 +107,7 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
     }, [scopeParams, canSeeAll, month]);
 
     // Нижний уровень: burndown всегда по выбранному объекту, сводка — только
-    // когда выбран клиент (для скоупа она уже приехала верхним запросом).
+    // когда выбран партнёр (для скоупа она уже приехала верхним запросом).
     const loadDetail = useCallback(async () => {
         setLoadingDetail(true);
 
@@ -157,7 +157,7 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
     const clients = parentData.clients ?? [];
     const scopeOptions = parentData.scopeOptions ?? [];
 
-    // Пока сводка по выбранному клиенту не приехала, показываем скоуп — иначе
+    // Пока сводка по выбранному партнёру не приехала, показываем скоуп — иначе
     // плитки на мгновение опустели бы.
     const shown = detail ?? parentData;
     const summary = shown.summary;
@@ -167,7 +167,7 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
 
     const selectScope = (value) => {
         setScope(value);
-        // Клиент принадлежал прежнему скоупу — при смене менеджера он бессмыслен.
+        // Партнёр принадлежал прежнему скоупу — при смене менеджера он бессмыслен.
         setClientId(null);
         setClientDetail(null);
     };
@@ -200,7 +200,7 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
                             value={clientId ?? ''}
                             onChange={(e) => selectClient(e.target.value ? Number(e.target.value) : null)}
                         >
-                            <option value="">Все клиенты скоупа</option>
+                            <option value="">Все партнёры скоупа</option>
                             {clients.map((client) => (
                                 <option key={client.id} value={client.id}>{client.name}</option>
                             ))}
@@ -221,7 +221,7 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
                 <Text fontSize="sm" fontWeight="600">{shown.scope.label}</Text>
                 <Text fontSize="sm" color="fg.muted">
                     · {shown.monthLabel}
-                    {clientId === null && ` · клиентов в расчёте: ${shown.scope.clients_count}`}
+                    {clientId === null && ` · партнёров в расчёте: ${shown.scope.clients_count}`}
                 </Text>
                 {clientId !== null && (
                     <Button size="xs" variant="ghost" onClick={() => selectClient(null)}>
@@ -298,7 +298,7 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
                                     <Table.ColumnHeader textAlign="right">Факт</Table.ColumnHeader>
                                     <Table.ColumnHeader minW="160px">Выполнение</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Прогноз при текущем темпе</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Активных клиентов</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Активных партнёров</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
@@ -339,10 +339,10 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
             )}
 
             <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4}>
-                <Text fontWeight="600" mb={1}>По клиентам</Text>
+                <Text fontWeight="600" mb={1}>По партнёрам</Text>
                 <Text fontSize="xs" color="fg.muted" mb={3}>
                     Сверху — кто сильнее отстаёт от своего плана. Клик по строке строит график
-                    по этому клиенту; клиенты без плана идут в конце списка.
+                    по этому партнёру; партнёры без плана идут в конце списка.
                 </Text>
 
                 {clients.length === 0 ? (
@@ -354,7 +354,7 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
                         <Table.Root size="sm">
                             <Table.Header>
                                 <Table.Row>
-                                    <Table.ColumnHeader>Клиент</Table.ColumnHeader>
+                                    <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">План</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Факт</Table.ColumnHeader>
                                     <Table.ColumnHeader minW="160px">Выполнение</Table.ColumnHeader>

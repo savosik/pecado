@@ -2,6 +2,7 @@ import {
     LuLayoutDashboard,
     LuUsers,
     LuUsersRound,
+    LuBuilding2,
     LuChartLine,
     LuListChecks,
     LuMail,
@@ -44,7 +45,10 @@ export const menuConfig: MenuGroup[] = [
         title: "Продажи",
         icon: LuUsers,
         items: [
-            { label: "Мои клиенты", icon: LuUsers, path: "/crm/clients", permission: "crm-clients.view" },
+            { label: "Мои партнёры", icon: LuUsers, path: "/crm/partners", permission: "crm-clients.view" },
+            // Контрагенты — юрлица партнёров. Отдельный пункт, потому что переписка
+            // о реквизитах и сверках идёт по юрлицу, а у партнёра их может быть несколько.
+            { label: "Контрагенты", icon: LuBuilding2, path: "/crm/contractors", permission: "crm-contractors.view" },
             { label: "Задачи", icon: LuListChecks, path: "/crm/tasks", permission: "crm-tasks.view" },
             { label: "Письма", icon: LuMail, path: "/crm/emails", permission: "crm-emails.view" },
             { label: "Планы продаж", icon: LuTarget, path: "/crm/plans", permission: "crm-plans.view" },
@@ -58,14 +62,14 @@ export const menuConfig: MenuGroup[] = [
     {
         // Финансы: деньги, которые уже пришли или должны прийти. Отдельно от
         // «Документов», потому что это не журнал первички, а работа с долгом:
-        // план поступлений, просрочка и балансы клиентов.
+        // план поступлений, просрочка и балансы партнёров.
         title: "Финансы",
         icon: LuWallet,
         items: [
             { label: "Пульт платежей", icon: LuGauge, path: "/crm/finance", permission: "crm-finance.view" },
             { label: "План поступлений", icon: LuWallet, path: "/crm/finance/plan", permission: "crm-finance.view" },
             { label: "Просрочка", icon: LuTriangleAlert, path: "/crm/finance/overdue", permission: "crm-finance.view" },
-            { label: "Балансы клиентов", icon: LuScale, path: "/crm/finance/balances", permission: "crm-finance.view" },
+            { label: "Балансы партнёров", icon: LuScale, path: "/crm/finance/balances", permission: "crm-finance.view" },
             // Календарь живёт под правом документов: он появился раньше раздела
             // и остаётся доступен тем, у кого есть журналы, но нет финансов.
             { label: "Календарь платежей", icon: LuCalendarClock, path: "/crm/payments/calendar", permission: "crm-clients.view" },
@@ -73,7 +77,7 @@ export const menuConfig: MenuGroup[] = [
     },
     {
         // Документы 1С: читаются, но не редактируются. Живут отдельной группой,
-        // потому что это не работа с клиентом, а её результат.
+        // потому что это не работа с партнёром, а её результат.
         title: "Документы",
         icon: LuFileText,
         items: [

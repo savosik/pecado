@@ -61,7 +61,7 @@ class UpdateClientProfileRequest extends FormRequest
             'preferred_channel.enum' => 'Выберите канал связи из списка.',
             'sentiment.enum' => 'Выберите настроение из списка.',
             'notes_md.max' => 'Заметки слишком длинные — сократите или вынесите часть во вложение.',
-            'interests.max' => 'Не больше 30 интересов на клиента.',
+            'interests.max' => 'Не больше 30 интересов на партнёра.',
             'interests.*.max' => 'Название интереса длиннее 50 символов.',
         ];
     }

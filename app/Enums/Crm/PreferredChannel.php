@@ -5,7 +5,7 @@ namespace App\Enums\Crm;
 use App\Enums\Crm\Concerns\HasLabeledOptions;
 
 /**
- * Как клиенту удобнее общаться. Нужно и менеджеру, и ИИ-агенту:
+ * Как партнёру удобнее общаться. Нужно и менеджеру, и ИИ-агенту:
  * письмо тому, кто читает только Telegram, останется без ответа.
  */
 enum PreferredChannel: string

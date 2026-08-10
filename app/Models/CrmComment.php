@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 
 /**
- * Комментарий менеджера к клиенту, заказу или реализации.
+ * Комментарий менеджера к партнёру, заказу или реализации.
  *
  * @property int $id
  * @property string $commentable_type
@@ -53,11 +53,11 @@ class CrmComment extends Model implements HasMedia
     }
 
     /**
-     * Резолв клиента — в одном месте на все пути создания.
+     * Резолв партнёра — в одном месте на все пути создания.
      *
      * Комментарий приходит из интерфейса, из REST и (позже) от ИИ-агента. Если бы
      * client_user_id заполнял контроллер, каждый новый путь создания мог бы его забыть,
-     * и комментарий молча выпал бы из ленты клиента.
+     * и комментарий молча выпал бы из ленты партнёра.
      */
     protected static function booted(): void
     {
@@ -90,7 +90,7 @@ class CrmComment extends Model implements HasMedia
     }
 
     /**
-     * Сквозная лента клиента: всё, что оставлено на нём самом, его заказах и отгрузках.
+     * Сквозная лента партнёра: всё, что оставлено на нём самом, его заказах и отгрузках.
      *
      * @param  Builder<self>  $query
      * @return Builder<self>

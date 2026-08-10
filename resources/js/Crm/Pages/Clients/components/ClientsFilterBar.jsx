@@ -27,7 +27,7 @@ function FilterSelect({ value, onChange, placeholder, options, minW = '180px' })
 }
 
 /**
- * Строка поиска и отборов списка клиентов.
+ * Строка поиска и отборов списка партнёров.
  *
  * @param {object} filters
  * @param {string} searchQuery

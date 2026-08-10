@@ -22,6 +22,7 @@ import ClientLifecyclePanel from '@/Crm/Components/ClientLifecyclePanel';
 import TaskPanel from '@/Crm/Components/TaskPanel';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import ClientKindDialog from '@/Crm/Components/ClientKindDialog';
+import PartnerContractors from '@/Crm/Components/PartnerContractors';
 import ClientSummaryBar from './components/ClientSummaryBar';
 
 function InfoRow({ label, value }) {
@@ -34,7 +35,17 @@ function InfoRow({ label, value }) {
 }
 
 export default function Show() {
-    const { client, profile, profileOptions, passportSections, lifecycle, organizations, organizationsEnabled } = usePage().props;
+    const {
+        client,
+        profile,
+        profileOptions,
+        passportSections,
+        lifecycle,
+        organizations,
+        organizationsEnabled,
+        contractors = [],
+        canSeeContractors = false,
+    } = usePage().props;
     const { can } = usePermission();
 
     const canViewProfile = can('crm-profile.view') && !!profile;
@@ -44,7 +55,7 @@ export default function Show() {
     const [composeOpen, setComposeOpen] = useState(false);
     const [kindOpen, setKindOpen] = useState(false);
     const [impersonateOpen, setImpersonateOpen] = useState(false);
-    // Состав клиентской базы отдела — дело того, кто за отдел отвечает.
+    // Состав базы партнёров отдела — дело того, кто за отдел отвечает.
     const canManageKind = can('crm-clients-all.edit');
 
     // Лента — единственная главная вкладка: карточка отвечает на вопрос «что известно»,
@@ -57,13 +68,13 @@ export default function Show() {
             <PageHeader
                 title={client.name}
                 description={client.personal_name
-                    ? `Карточка клиента · на сайте назвался «${client.personal_name}»`
-                    : 'Карточка клиента'}
+                    ? `Карточка партнёра · на сайте назвался «${client.personal_name}»`
+                    : 'Карточка партнёра'}
                 actions={(
                     <HStack gap={2}>
                         {can('crm-impersonate.use') && (
                             <Button size="sm" variant="outline" onClick={() => setImpersonateOpen(true)}>
-                                <LuEye /> Войти под клиентом
+                                <LuEye /> Войти под партнёром
                             </Button>
                         )}
                         {can('crm-emails.create') && (
@@ -78,7 +89,7 @@ export default function Show() {
                                 colorPalette="red"
                                 onClick={() => setKindOpen(true)}
                             >
-                                <LuUserX /> Это не клиент
+                                <LuUserX /> Это не партнёр
                             </Button>
                         )}
                     </HStack>
@@ -93,8 +104,8 @@ export default function Show() {
                     canEditLifecycle={can('crm-profile.edit')}
                 />
 
-                {/* Данные о клиенте живут над вкладками, а не среди них: они описывают
-                    клиента, а вкладки — работу с ним. Спойлеры закрыты по умолчанию,
+                {/* Данные о партнёре живут над вкладками, а не среди них: они описывают
+                    партнёра, а вкладки — работу с ним. Спойлеры закрыты по умолчанию,
                     чтобы лента начиналась сразу под шапкой. */}
                 <AccordionRoot collapsible size="sm" variant="outline">
                     <AccordionItem value="details">
@@ -105,7 +116,7 @@ export default function Show() {
                             <SimpleGrid columns={{ base: 2, md: 4 }} gap={4} pb={2}>
                                 <InfoRow label="ID" value={client.id?.toString()} />
                                 {/* Заголовок карточки — рабочее наименование из 1С,
-                                    здесь показываем имя, которое клиент задал сам. */}
+                                    здесь показываем имя, которое партнёр задал сам. */}
                                 {client.personal_name && (
                                     <InfoRow label="Имя на сайте" value={client.personal_name} />
                                 )}
@@ -118,7 +129,7 @@ export default function Show() {
                                 <InfoRow label="Зарегистрирован" value={client.created_at} />
                                 {!canViewProfile && (
                                     <Box>
-                                        <Text fontSize="xs" color="gray.500" mb="0.5">Статус клиента</Text>
+                                        <Text fontSize="xs" color="gray.500" mb="0.5">Статус партнёра</Text>
                                         {client.client_status
                                             ? <Badge colorPalette="gray" variant="subtle">{client.client_status.name}</Badge>
                                             : <Text fontSize="sm" fontWeight="500">—</Text>}
@@ -144,7 +155,7 @@ export default function Show() {
                         <AccordionItem value="profile">
                             <AccordionItemTrigger>
                                 <Text fontSize="sm" fontWeight="600">
-                                    Профиль клиента — ЛПР, оплата, интересы, заметки
+                                    Профиль партнёра — ЛПР, оплата, интересы, заметки
                                 </Text>
                             </AccordionItemTrigger>
                             <AccordionItemContent>
@@ -162,7 +173,7 @@ export default function Show() {
                     )}
                 </AccordionRoot>
 
-                {(canViewComments || canViewFiles || canViewTasks) && (
+                {(canViewComments || canViewFiles || canViewTasks || canSeeContractors) && (
                     <Card.Root>
                         <Card.Body>
                             {/* lazyMount без unmountOnExit: лента держит позицию скролла
@@ -173,6 +184,12 @@ export default function Show() {
                                     {canViewComments && <Tabs.Trigger value="timeline">Лента</Tabs.Trigger>}
                                     {canViewComments && <Tabs.Trigger value="comments">Комментарии</Tabs.Trigger>}
                                     {canViewTasks && <Tabs.Trigger value="tasks">Задачи</Tabs.Trigger>}
+                                    {canSeeContractors && (
+                                        <Tabs.Trigger value="contractors">
+                                            Контрагенты
+                                            {contractors.length > 0 && ` (${contractors.length})`}
+                                        </Tabs.Trigger>
+                                    )}
                                     {canViewComments && <Tabs.Trigger value="orders">Заказы</Tabs.Trigger>}
                                     {canViewComments && <Tabs.Trigger value="shipments">Реализации</Tabs.Trigger>}
                                     {canViewFiles && <Tabs.Trigger value="files">Файлы</Tabs.Trigger>}
@@ -207,6 +224,18 @@ export default function Show() {
                                     </Tabs.Content>
                                 )}
 
+                                {/* Юрлица партнёра. Документы 1С проведены именно на них,
+                                    поэтому вкладка стоит перед «Заказами» и «Реализациями». */}
+                                {canSeeContractors && (
+                                    <Tabs.Content value="contractors">
+                                        <Text fontSize="xs" color="fg.muted" mb={3}>
+                                            Юрлица партнёра. План и его выполнение считаются по партнёру целиком,
+                                            а не по каждому юрлицу отдельно.
+                                        </Text>
+                                        <PartnerContractors contractors={contractors} />
+                                    </Tabs.Content>
+                                )}
+
                                 {/* Документы берутся из эндпоинта ленты, поэтому гейтятся
                                     её правом: отдельного источника для них нет и заводить
                                     второй, со своими правилами видимости, незачем. */}
@@ -238,7 +267,7 @@ export default function Show() {
                                             entityType="client"
                                             entityId={client.id}
                                             canUpload={can('crm-attachments.create')}
-                                            label="Файлы по клиенту"
+                                            label="Файлы по партнёру"
                                         />
                                     </Tabs.Content>
                                 )}
@@ -268,9 +297,9 @@ export default function Show() {
                 open={impersonateOpen}
                 onClose={() => setImpersonateOpen(false)}
                 onConfirm={() => router.post(route('crm.impersonation.start', client.id))}
-                title="Войти под клиентом"
-                description={`Вы увидите сайт глазами клиента «${client.name}»: его цены, корзину и кабинет. Оформлять заказы и возвраты за клиента нельзя. Пока идёт просмотр, CRM в этом браузере будет недоступна — вернуться можно кнопкой на плашке внизу экрана.`}
-                confirmLabel="Войти под клиентом"
+                title="Войти под партнёром"
+                description={`Вы увидите сайт глазами партнёра «${client.name}»: его цены, корзину и кабинет. Оформлять заказы и возвраты за партнёра нельзя. Пока идёт просмотр, CRM в этом браузере будет недоступна — вернуться можно кнопкой на плашке внизу экрана.`}
+                confirmLabel="Войти под партнёром"
                 colorPalette="orange"
             />
         </>

@@ -40,7 +40,7 @@ function TodayTasks({ tasks }) {
     const [closingTask, setClosingTask] = useState(null);
     const [busy, setBusy] = useState(false);
 
-    // Закрытие задачи меняет и покрытие клиентов — перечитываем оба блока.
+    // Закрытие задачи меняет и покрытие партнёров — перечитываем оба блока.
     const refresh = () => router.reload({ only: ['tasks', 'coverage'] });
 
     // Закрытие идёт через диалог: там спрашивают, что сделано и что дальше.
@@ -83,7 +83,7 @@ function TodayTasks({ tasks }) {
             <Card.Body>
                 {tasks.items.length === 0 ? (
                     <Text fontSize="sm" color="fg.muted">
-                        На сегодня задач нет и просроченных тоже — можно заняться клиентами.
+                        На сегодня задач нет и просроченных тоже — можно заняться партнёрами.
                     </Text>
                 ) : (
                     <VStack align="stretch" gap={2}>
@@ -118,9 +118,9 @@ function TodayTasks({ tasks }) {
 }
 
 /**
- * Покрытие клиентов задачами.
+ * Покрытие партнёров задачами.
  *
- * Клиент без следующего шага — это клиент, о котором вспомнят, только когда он сам
+ * Партнёр без следующего шага — это партнёр, о котором вспомнят, только когда он сам
  * позвонит. Поэтому блок не ограничивается процентом: он сразу называет первых
  * из непокрытых и даёт поставить задачу, не уходя со страницы.
  */
@@ -138,7 +138,7 @@ function ClientCoverage({ coverage }) {
             <Card.Header>
                 <HStack justify="space-between" flexWrap="wrap" gap={2}>
                     <HStack gap={2}>
-                        <Text fontWeight="semibold">Покрытие клиентов задачами</Text>
+                        <Text fontWeight="semibold">Покрытие партнёров задачами</Text>
                         <Badge colorPalette={allCovered ? 'green' : 'orange'} variant="subtle">
                             {coverage.covered_percent}% из {coverage.clients_total}
                         </Badge>
@@ -157,12 +157,12 @@ function ClientCoverage({ coverage }) {
             <Card.Body>
                 {allCovered ? (
                     <Text fontSize="sm" color="fg.muted">
-                        По каждому клиенту есть следующий шаг. Так и держать.
+                        По каждому партнёру есть следующий шаг. Так и держать.
                     </Text>
                 ) : (
                     <VStack align="stretch" gap={2}>
                         <Text fontSize="sm" color="fg.muted">
-                            По этим клиентам не поставлено ни одной незакрытой задачи:
+                            По этим партнёрам не поставлено ни одной незакрытой задачи:
                         </Text>
                         {coverage.examples.map((client) => (
                             <HStack key={client.id} justify="space-between" gap={2}>
@@ -248,7 +248,7 @@ export default function Dashboard() {
             <Head title="CRM — Рабочий стол" />
             <PageHeader
                 title={`Здравствуйте, ${auth?.user?.name || 'коллега'}`}
-                description={seesAll ? 'Обзор по отделу продаж' : 'Обзор по вашим клиентам'}
+                description={seesAll ? 'Обзор по отделу продаж' : 'Обзор по вашим партнёрам'}
             />
 
             <VStack gap={4} align="stretch">
@@ -257,20 +257,20 @@ export default function Dashboard() {
                         status="warning"
                         title="Аккаунт не связан с карточкой менеджера"
                     >
-                        Ваш аккаунт не связан с карточкой персонального менеджера, поэтому клиенты не отображаются.
+                        Ваш аккаунт не связан с карточкой персонального менеджера, поэтому партнёры не отображаются.
                         Обратитесь к администратору — привязка настраивается в разделе «Персональные менеджеры».
                     </Alert>
                 )}
 
                 <SimpleGrid columns={{ base: 1, md: seesAll ? 3 : 1 }} gap={4}>
                     <StatCard
-                        label={seesAll ? 'Клиентов вам видно' : 'Моих клиентов'}
+                        label={seesAll ? 'Партнёров вам видно' : 'Моих партнёров'}
                         value={stats.visible_clients}
                         icon={LuUsers}
                     />
                     {seesAll && (
                         <>
-                            <StatCard label="Клиентов в отделе" value={stats.department_clients} icon={LuBriefcase} />
+                            <StatCard label="Партнёров в отделе" value={stats.department_clients} icon={LuBriefcase} />
                             <StatCard label="Менеджеров" value={stats.managers} icon={LuUsersRound} />
                         </>
                     )}

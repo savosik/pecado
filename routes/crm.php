@@ -8,6 +8,7 @@ use App\Http\Controllers\Crm\CallController;
 use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientProfileController;
 use App\Http\Controllers\Crm\CommentController;
+use App\Http\Controllers\Crm\ContractorController;
 use App\Http\Controllers\Crm\DashboardController;
 use App\Http\Controllers\Crm\DocumentController;
 use App\Http\Controllers\Crm\EmailController;
@@ -27,7 +28,14 @@ use Illuminate\Support\Facades\Route;
 | Домен отдела продаж. Защищён middleware 'crm' (наличие CRM-права)
 | + явный 'permission:crm-*.action' на каждой группе.
 |
-| Видимость клиентов ограничивает scope User::visibleInCrm() — см. ClientController.
+| Видимость партнёров ограничивает scope User::visibleInCrm() — см. ClientController,
+| видимость их юрлиц — Company::visibleInCrm() (см. ContractorController).
+|
+| Про расхождение имён: в интерфейсе и в адресах покупатель называется партнёром —
+| так его зовут в 1С, и так его отличают от контрагента (юрлица). В коде, правах
+| (`crm-clients.*`), именах маршрутов (`crm.clients.*`) и колонках БД осталось
+| историческое «client»: права уже розданы ролям на проде, а `client_user_id` лежит
+| в миллионах строк — переименование ради слова не стоит миграции такого размера.
 |
 */
 
@@ -36,25 +44,36 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     });
 
+    // Старые адреса раздела партнёров. Менеджеры держат карточки в закладках
+    // и присылают ссылки друг другу — без редиректа переезд означал бы 404
+    // в чужой переписке. Только GET: POST/PUT/DELETE ходят из интерфейса,
+    // который уже знает новые адреса.
+    // Имена обязательны: без них оба редиректа получили бы имя группы («crm.»)
+    // и второй затёр бы первый в таблице маршрутов.
+    Route::permanentRedirect('/clients', '/crm/partners')->name('clients.index.legacy');
+    Route::permanentRedirect('/clients/{client}', '/crm/partners/{client}')
+        ->name('clients.show.legacy')
+        ->whereNumber('client');
+
     Route::middleware('permission:crm-clients.view')->group(function () {
-        Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
-        // Личные отборы списка — до /clients/{client}, иначе «presets» ушло бы
+        Route::get('/partners', [ClientController::class, 'index'])->name('clients.index');
+        // Личные отборы списка — до /partners/{client}, иначе «presets» ушло бы
         // в маршрут карточки. Отдельного права нет: отбор личный и живёт под тем
         // же crm-clients.view, что и сам список.
-        Route::post('/clients/presets', [ClientController::class, 'storePreset'])
+        Route::post('/partners/presets', [ClientController::class, 'storePreset'])
             ->name('clients.presets.store');
-        Route::delete('/clients/presets/{preset}', [ClientController::class, 'destroyPreset'])
+        Route::delete('/partners/presets/{preset}', [ClientController::class, 'destroyPreset'])
             ->name('clients.presets.destroy')
             ->whereNumber('preset');
-        // Без implicit binding: клиента резолвим через scope, иначе чужой
+        // Без implicit binding: партнёра резолвим через scope, иначе чужой
         // вернул бы 403 вместо 404 и подтвердил факт существования.
-        Route::get('/clients/{client}', [ClientController::class, 'show'])
+        Route::get('/partners/{client}', [ClientController::class, 'show'])
             ->name('clients.show')
             ->whereNumber('client');
 
-        // Документы внутри CRM. Отдельного права нет: «вижу клиента, но не вижу
+        // Документы внутри CRM. Отдельного права нет: «вижу партнёра, но не вижу
         // его заказы» — состояние, которого быть не должно. Списки ограничены тем же
-        // скоупом клиентов, карточка резолвится через CrmEntityResolver (чужая — 404).
+        // скоупом партнёров, карточка резолвится через CrmEntityResolver (чужая — 404).
         //
         // Списки объявлены до /{order} и /{shipment} — иначе «orders» ушло бы
         // в биндинг модели.
@@ -84,44 +103,57 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
             ->whereNumber('shipment');
     });
 
-    // Просмотр сайта от имени клиента. Право отдельное: режим переключает
+    // Контрагенты — юрлица партнёров. Только чтение: реквизиты ведёт 1С, а работа
+    // с контрагентом идёт задачами, комментариями и файлами через общие эндпоинты
+    // (тип `contractor` в CrmEntityMap). Планов по контрагентам нет принципиально —
+    // они считаются по партнёру.
+    Route::middleware('permission:crm-contractors.view')->group(function () {
+        Route::get('/contractors', [ContractorController::class, 'index'])->name('contractors.index');
+        // Без implicit binding: контрагента резолвим через scope, иначе чужой
+        // вернул бы 403 вместо 404 и подтвердил факт существования.
+        Route::get('/contractors/{contractor}', [ContractorController::class, 'show'])
+            ->name('contractors.show')
+            ->whereNumber('contractor');
+    });
+
+    // Просмотр сайта от имени партнёра. Право отдельное: режим переключает
     // сессию, а не показывает данные, и выдаётся не всем, кто видит карточку.
     // Выход из режима — POST /impersonation/stop в routes/web.php: в тот момент
-    // сессия принадлежит клиенту, и в CRM-группу он уже не попадает.
+    // сессия принадлежит партнёру, и в CRM-группу он уже не попадает.
     Route::middleware('permission:crm-impersonate.use')->group(function () {
-        Route::post('/clients/{client}/impersonate', [ImpersonationController::class, 'start'])
+        Route::post('/partners/{client}/impersonate', [ImpersonationController::class, 'start'])
             ->name('impersonation.start')
             ->whereNumber('client');
     });
 
-    // Профиль клиента — то, что знает менеджер, но не знает 1С.
+    // Профиль партнёра — то, что знает менеджер, но не знает 1С.
     Route::middleware('permission:crm-profile.view')->group(function () {
         Route::get('/interests', [ClientProfileController::class, 'interests'])->name('interests.search');
     });
 
     Route::middleware('permission:crm-profile.edit')->group(function () {
-        Route::put('/clients/{client}/profile', [ClientProfileController::class, 'update'])
+        Route::put('/partners/{client}/profile', [ClientProfileController::class, 'update'])
             ->name('clients.profile.update')
             ->whereNumber('client');
         // Жизненный статус живёт в том же профиле, поэтому отдельного ресурса прав
         // не заводим: их в матрице ролей и так много.
-        Route::put('/clients/{client}/lifecycle', [ClientProfileController::class, 'lifecycle'])
+        Route::put('/partners/{client}/lifecycle', [ClientProfileController::class, 'lifecycle'])
             ->name('clients.lifecycle.update')
             ->whereNumber('client');
     });
 
-    // Тип аккаунта — состав клиентской базы отдела, а не работа с клиентом,
+    // Тип аккаунта — состав базы партнёров отдела, а не работа с партнёром,
     // поэтому право отдельное и менеджеру не выдано.
     Route::middleware('permission:crm-clients-all.edit')->group(function () {
-        Route::put('/clients/{client}/kind', [ClientProfileController::class, 'kind'])
+        Route::put('/partners/{client}/kind', [ClientProfileController::class, 'kind'])
             ->name('clients.kind.update')
             ->whereNumber('client');
     });
 
     // Комментарии. Отдают JSON: тот же компонент ленты встраивается и в карточку
-    // клиента, и в админские карточки заказа и реализации.
+    // партнёра, и в админские карточки заказа и реализации.
     Route::middleware('permission:crm-comments.view')->group(function () {
-        Route::get('/clients/{client}/timeline', [CommentController::class, 'timeline'])
+        Route::get('/partners/{client}/timeline', [CommentController::class, 'timeline'])
             ->name('clients.timeline')
             ->whereNumber('client');
         Route::get('/comments', [CommentController::class, 'index'])->name('comments.index');
@@ -135,7 +167,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     });
 
     // Задачи. Раздел — Inertia-страница, остальное JSON: диалог и врезка встраиваются
-    // в карточки клиента, заказа и реализации, где редирект увёл бы со страницы.
+    // в карточки партнёра, заказа и реализации, где редирект увёл бы со страницы.
     Route::middleware('permission:crm-tasks.view')->group(function () {
         Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
         // До /tasks/{task}: иначе «list» и «options» ушли бы в биндинг модели.
@@ -231,7 +263,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     Route::middleware('permission:crm-attachments.view')->group(function () {
         Route::get('/attachments', [AttachmentController::class, 'index'])->name('attachments.index');
         // Файл отдаём через приложение, а не прямой ссылкой на диск: публичный URL
-        // раздал бы документы клиента в обход скоупа.
+        // раздал бы документы партнёра в обход скоупа.
         Route::get('/attachments/{media}/download', [AttachmentController::class, 'download'])
             ->name('attachments.download')
             ->whereNumber('media');
@@ -275,7 +307,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     // «Возможностях», но одной картинкой. Своих расчётов раздел не добавляет.
     Route::middleware('permission:crm-beds.view')->group(function () {
         Route::get('/beds', [BedsController::class, 'index'])->name('beds.index');
-        // До /beds/{client}: иначе «data» ушло бы в биндинг клиента.
+        // До /beds/{client}: иначе «data» ушло бы в биндинг партнёра.
         Route::get('/beds/data', [BedsController::class, 'data'])->name('beds.data');
         Route::get('/beds/{client}/details', [BedsController::class, 'details'])
             ->name('beds.details')
@@ -299,7 +331,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     });
 
     // Скрыть нерабочую карточку менеджера. Не удаление: карточку с erp_uuid
-    // следующий обмен создаст заново, а её клиенты остались бы без менеджера.
+    // следующий обмен создаст заново, а её партнёры остались бы без менеджера.
     Route::middleware('permission:crm-team.edit')->group(function () {
         Route::put('/team/{manager}/active', [TeamController::class, 'setActive'])
             ->name('team.active')
@@ -336,7 +368,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     });
 
     // Финансы: план поступлений, просрочка, балансы. Раздел только читает деньги,
-    // прилетевшие из 1С, поэтому право одно — view. Скоуп клиентов тот же, что
+    // прилетевшие из 1С, поэтому право одно — view. Скоуп партнёров тот же, что
     // у журналов документов: менеджер видит деньги только своих.
     Route::middleware('permission:crm-finance.view')->group(function () {
         Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');

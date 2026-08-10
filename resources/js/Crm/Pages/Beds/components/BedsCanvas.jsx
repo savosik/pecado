@@ -100,7 +100,7 @@ function BedTooltip({ active, payload, mode }) {
             <Box bg="bg" borderWidth="1px" borderColor="border" borderRadius="md" p={2} boxShadow="md" maxW="260px">
                 <Text fontSize="sm" fontWeight="600">Не распределено</Text>
                 <Text fontSize="xs" color="fg.muted">
-                    {money(tile.area)} плана периода не разложено по {mode === 'managers' ? 'менеджерам' : 'клиентам'}.
+                    {money(tile.area)} плана периода не разложено по {mode === 'managers' ? 'менеджерам' : 'партнёрам'}.
                 </Text>
             </Box>
         );
@@ -123,7 +123,7 @@ function BedTooltip({ active, payload, mode }) {
                 </Text>
             )}
             {mode === 'managers' && (
-                <Text fontSize="xs" color="fg.muted">Клиентов с отгрузками: {tile.clients_count}</Text>
+                <Text fontSize="xs" color="fg.muted">Партнёров с отгрузками: {tile.clients_count}</Text>
             )}
             <Text fontSize="xs" color="fg.subtle" mt={1}>Нажмите, чтобы открыть</Text>
         </Box>

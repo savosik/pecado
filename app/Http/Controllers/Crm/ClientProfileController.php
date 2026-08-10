@@ -21,15 +21,15 @@ class ClientProfileController extends CrmController
 
     public function update(UpdateClientProfileRequest $request, int $client): RedirectResponse
     {
-        // Тот же scope, что и в ClientController::show(): чужой клиент — 404,
-        // иначе 403 подтвердил бы, что такой клиент существует.
+        // Тот же scope, что и в ClientController::show(): чужой партнёр — 404,
+        // иначе 403 подтвердил бы, что такой партнёр существует.
         $user = User::query()
             ->visibleInCrm($this->crmActor($request))
             ->findOrFail($client);
 
         $this->profiles->update($user, $request->validated(), $this->crmActor($request));
 
-        return back()->with('success', 'Профиль клиента сохранён');
+        return back()->with('success', 'Профиль партнёра сохранён');
     }
 
     /**
@@ -49,16 +49,16 @@ class ClientProfileController extends CrmController
 
         $lifecycle->change($user, $status, $this->crmActor($request), $request->validated('reason'));
 
-        return back()->with('success', "Жизненный статус клиента: {$status->label()}");
+        return back()->with('success', "Жизненный статус партнёра: {$status->label()}");
     }
 
     /**
-     * Тип аккаунта: убрать из клиентской базы отдела или вернуть обратно.
+     * Тип аккаунта: убрать из базы партнёров отдела или вернуть обратно.
      *
      * Скоуп поиска — не `visibleInCrm()`, а вся закреплённая за отделом база:
      * помеченный сотрудником аккаунт из CRM-выборки сразу выпадает, и по ней
      * его было бы уже не найти, чтобы отменить ошибочную пометку. Пользователи
-     * без менеджера сюда не попадают вовсе — это не клиентская база отдела,
+     * без менеджера сюда не попадают вовсе — это не база партнёров отдела,
      * а лиды и служебные учётки, ими занимается админка.
      */
     public function kind(
@@ -75,14 +75,14 @@ class ClientProfileController extends CrmController
         $lifecycle->changeKind($user, $kind, $this->crmActor($request), $request->validated('reason'));
 
         if ($kind->belongsInCrm()) {
-            return back()->with('success', "{$user->display_name} снова в клиентской базе отдела");
+            return back()->with('success', "{$user->display_name} снова в базе партнёров отдела");
         }
 
-        // Возвращаться некуда: карточка клиента, с которой пришёл запрос, для
-        // не-клиента отдаёт 404.
+        // Возвращаться некуда: карточка партнёра, с которой пришёл запрос, для
+        // не-партнёра отдаёт 404.
         return redirect()
             ->route('crm.clients.index')
-            ->with('success', "{$user->display_name}: тип аккаунта — {$kind->label()}. Аккаунт убран из клиентской базы отдела.");
+            ->with('success', "{$user->display_name}: тип аккаунта — {$kind->label()}. Аккаунт убран из базы партнёров отдела.");
     }
 
     /**

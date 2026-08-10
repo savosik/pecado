@@ -23,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Профиль клиента в CRM — то, что менеджер знает о клиенте помимо данных 1С.
+ * Профиль партнёра в CRM — то, что менеджер знает о партнёре помимо данных 1С.
  *
  * @property int $id
  * @property int $user_id
@@ -102,7 +102,7 @@ class CrmClientProfile extends Model
         'order_cycle_days',
         'preferred_channel',
         'sentiment',
-        // Паспорт клиента: бизнес, логистика, условия, ограничения, контакты по ролям.
+        // Паспорт партнёра: бизнес, логистика, условия, ограничения, контакты по ролям.
         'business_type',
         'points_count',
         'has_offline_points',
@@ -182,7 +182,7 @@ class CrmClientProfile extends Model
     /**
      * Значения по умолчанию для незаписанного профиля.
      *
-     * Карточка клиента открывается и до первого сохранения, и статус там должен
+     * Карточка партнёра открывается и до первого сохранения, и статус там должен
      * читаться так же, как у сохранённого — иначе фронт получал бы null вместо enum.
      *
      * @var array<string, mixed>

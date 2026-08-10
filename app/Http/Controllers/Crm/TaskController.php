@@ -7,6 +7,7 @@ use App\Enums\Crm\TaskStatus;
 use App\Http\Requests\Crm\CloseCrmTaskRequest;
 use App\Http\Requests\Crm\StoreCrmTaskRequest;
 use App\Http\Requests\Crm\UpdateCrmTaskRequest;
+use App\Models\Company;
 use App\Models\CrmTask;
 use App\Models\Order;
 use App\Models\Shipment;
@@ -28,7 +29,7 @@ use Inertia\Response;
  * Задачи менеджеров.
  *
  * Раздел «Задачи» отдаётся Inertia-страницей, всё остальное — JSON: тот же диалог
- * и та же врезка встраиваются в карточку клиента и в админские карточки заказа
+ * и та же врезка встраиваются в карточку партнёра и в админские карточки заказа
  * и реализации, где Inertia-редирект увёл бы пользователя со страницы.
  */
 class TaskController extends CrmController
@@ -68,8 +69,8 @@ class TaskController extends CrmController
             'tasks' => $paginator->through(fn (CrmTask $task) => $this->tasks->payload($task, $actor)),
             'filters' => $filters,
             'counters' => $this->counters($actor),
-            'options' => $this->optionsPayload(),
-            // Ссылка из ленты клиента ведёт сюда с ?task=ID — список откроет карточку.
+            'options' => $this->optionsPayload($actor),
+            // Ссылка из ленты партнёра ведёт сюда с ?task=ID — список откроет карточку.
             'openTaskId' => $request->integer('task') ?: null,
         ]);
     }
@@ -117,16 +118,16 @@ class TaskController extends CrmController
      * Отдельным эндпоинтом, потому что диалог открывается и на страницах админки,
      * где Inertia-пропсов CRM нет.
      */
-    public function options(): JsonResponse
+    public function options(Request $request): JsonResponse
     {
-        return response()->json($this->optionsPayload());
+        return response()->json($this->optionsPayload($this->crmActor($request)));
     }
 
     /**
-     * Поиск сущности для привязки задачи — клиенты, заказы, реализации.
+     * Поиск сущности для привязки задачи — партнёры, заказы, реализации.
      *
      * Выдача ограничена скоупом актора тем же способом, что и всё остальное в CRM:
-     * иначе подсказка в диалоге стала бы способом перечислить чужих клиентов.
+     * иначе подсказка в диалоге стала бы способом перечислить чужих партнёров.
      */
     public function entities(Request $request): JsonResponse
     {
@@ -142,6 +143,9 @@ class TaskController extends CrmController
 
         return response()->json(match ($validated['type']) {
             CrmEntityMap::CLIENT => $this->searchClients($actor, $search),
+            CrmEntityMap::CONTRACTOR => $actor->can('crm-contractors.view')
+                ? $this->searchContractors($actor, $search)
+                : [],
             CrmEntityMap::ORDER => $this->searchDocuments($actor, Order::class, $search, 'Заказ'),
             CrmEntityMap::SHIPMENT => $this->searchDocuments($actor, Shipment::class, $search, 'Реализация'),
             default => [],
@@ -173,6 +177,36 @@ class TaskController extends CrmController
     }
 
     /**
+     * Контрагенты — по наименованию, юрнаименованию и ИНН.
+     *
+     * @return list<array{id: int, label: string, sublabel: string|null}>
+     */
+    private function searchContractors(User $actor, string $search): array
+    {
+        return Company::query()
+            ->visibleInCrm($actor)
+            ->select('id', 'user_id', 'name', 'legal_name', 'tax_id')
+            ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $inner) => $inner
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('legal_name', 'like', "%{$search}%")
+                ->orWhere('tax_id', 'like', "%{$search}%")))
+            ->with('user:id,name,erp_name')
+            ->orderBy('name')
+            ->take(20)
+            ->get()
+            ->map(fn (Company $company): array => [
+                'id' => (int) $company->getKey(),
+                'label' => (string) ($company->name ?: $company->legal_name ?: 'Контрагент №'.$company->getKey()),
+                // Партнёр в подписи важнее ИНН: одноимённые юрлица у разных
+                // партнёров в выдаче иначе неразличимы.
+                'sublabel' => $company->user instanceof User
+                    ? (string) $company->user->display_name
+                    : ($company->tax_id === null ? null : 'ИНН '.$company->tax_id),
+            ])
+            ->all();
+    }
+
+    /**
      * Заказы и реализации ищутся одинаково — по номеру, местному и из 1С.
      *
      * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelClass
@@ -181,7 +215,7 @@ class TaskController extends CrmController
     private function searchDocuments(User $actor, string $modelClass, string $search, string $label): array
     {
         return $modelClass::query()
-            // Документ без клиента (партнёрский из 1С) доступен только тем, кто видит
+            // Документ без партнёра (партнёрский из 1С) доступен только тем, кто видит
             // весь отдел, — то же правило, что в CrmEntityResolver::canAccess().
             ->when(
                 ! $actor->can('crm-clients-all.view'),
@@ -214,7 +248,7 @@ class TaskController extends CrmController
     /**
      * @return array<string, mixed>
      */
-    private function optionsPayload(): array
+    private function optionsPayload(User $actor): array
     {
         return [
             'assignees' => $this->tasks->assignableUsers(),
@@ -222,9 +256,28 @@ class TaskController extends CrmController
             'priorities' => TaskPriority::optionsWithColor(),
             'entity_types' => array_map(
                 fn (string $type): array => ['value' => $type, 'label' => CrmEntityMap::labelFor($type)],
-                CrmEntityMap::taskableTypes(),
+                $this->taskableTypesFor($actor),
             ),
         ];
+    }
+
+    /**
+     * Типы привязки, доступные актору.
+     *
+     * Контрагенты — отдельный раздел со своим правом: без него тип в диалоге
+     * не показываем, иначе выбор молча упирался бы в 404 от резолвера.
+     *
+     * @return list<string>
+     */
+    private function taskableTypesFor(User $actor): array
+    {
+        $types = CrmEntityMap::taskableTypes();
+
+        if ($actor->can('crm-contractors.view')) {
+            return $types;
+        }
+
+        return array_values(array_diff($types, [CrmEntityMap::CONTRACTOR]));
     }
 
     public function show(Request $request, CrmTask $task): JsonResponse
@@ -242,7 +295,7 @@ class TaskController extends CrmController
         $actor = $this->crmActor($request);
 
         // Доступ к сущности проверяется до создания: иначе задача стала бы способом
-        // узнать о существовании чужого клиента и его документов.
+        // узнать о существовании чужого партнёра и его документов.
         $related = $request->filled('entity_type')
             ? $this->resolver->resolveForActor(
                 $actor,

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Личный отбор списка клиентов.
+ * Личный отбор списка партнёров.
  *
  * Хранит снимок фильтров рабочего списка ({@see \App\Support\Crm\ClientListFilters}),
  * чтобы менеджер возвращался к своей выборке одним кликом, а не пересобирал её

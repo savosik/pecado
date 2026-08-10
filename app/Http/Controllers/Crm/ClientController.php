@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\Crm\ClientLifecycleService;
 use App\Services\Crm\ClientListService;
 use App\Services\Crm\ClientProfileService;
+use App\Services\Crm\ContractorListService;
 use App\Services\Crm\CrmTaskService;
 use App\Support\Crm\ClientListFilters;
 use App\Support\Crm\ClientPassport;
@@ -122,16 +123,22 @@ class ClientController extends CrmController
         int $client,
         ClientProfileService $profiles,
         ClientLifecycleService $lifecycle,
+        ContractorListService $contractors,
     ): Response {
-        // Резолвим через тот же scope: чужой клиент — 404, а не 403.
+        // Резолвим через тот же scope: чужой партнёр — 404, а не 403.
         $user = User::query()
             ->visibleInCrm($this->crmActor($request))
             ->with(['personalManager:id,name', 'clientStatus:id,name,color'])
             ->findOrFail($client);
 
         $canSeeProfile = $this->crmActor($request)->can('crm-profile.view');
+        // Юрлица партнёра — отдельное право: у раздела «Контрагенты» оно своё,
+        // и вкладка в карточке не должна открывать то, что раздел закрывает.
+        $canSeeContractors = $this->crmActor($request)->can('crm-contractors.view');
 
         return Inertia::render('Crm/Pages/Clients/Show', [
+            'contractors' => $canSeeContractors ? $contractors->forPartner($user) : [],
+            'canSeeContractors' => $canSeeContractors,
             'profile' => $canSeeProfile ? $this->profilePayload($user, $profiles) : null,
             'profileOptions' => $canSeeProfile ? ClientPassport::options() + [
                 'payment_behavior' => PaymentBehavior::options(),
@@ -147,7 +154,7 @@ class ClientController extends CrmController
             'client' => [
                 'id' => $user->id,
                 // Заголовок карточки — рабочее наименование из 1С; имя из кабинета
-                // показываем рядом, только если клиент назвал себя иначе.
+                // показываем рядом, только если партнёр назвал себя иначе.
                 'name' => $user->display_name,
                 'personal_name' => $user->personal_name_if_differs,
                 'email' => $user->email,
@@ -214,7 +221,7 @@ class ClientController extends CrmController
     }
 
     /**
-     * Профиль + история заметок для карточки клиента.
+     * Профиль + история заметок для карточки партнёра.
      *
      * @return array<string, mixed>
      */

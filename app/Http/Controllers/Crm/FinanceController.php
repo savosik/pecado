@@ -20,8 +20,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * Финансовый раздел CRM: сколько денег придёт, когда и от кого.
  *
- * Изоляция данных — скоуп клиентов User::visibleInCrm(): менеджер видит деньги
- * только своих клиентов, весь отдел и разрез по менеджерам — у РОПа
+ * Изоляция данных — скоуп партнёров User::visibleInCrm(): менеджер видит деньги
+ * только своих партнёров, весь отдел и разрез по менеджерам — у РОПа
  * (crm-clients-all.view). Тот же приём, что в журналах документов и аналитике.
  *
  * Расчёт живёт в PaymentForecastService: пульт, таблицы, календарь и выгрузка
@@ -72,7 +72,7 @@ class FinanceController extends CrmController
     }
 
     /**
-     * Балансы клиентов из 1С. GET /crm/finance/balances
+     * Балансы партнёров из 1С. GET /crm/finance/balances
      */
     public function balances(Request $request): InertiaResponse
     {
@@ -114,7 +114,7 @@ class FinanceController extends CrmController
             [
                 'title' => 'Детализация',
                 'headers' => [
-                    'Плановая дата', 'Дней до срока', 'Дней просрочки', 'Клиент', 'Менеджер',
+                    'Плановая дата', 'Дней до срока', 'Дней просрочки', 'Партнёр', 'Менеджер',
                     'Организация', 'Реализация', 'Дата реализации', 'Счёт-фактура',
                     'Сумма документа', 'Сумма платежа', 'Оплачено', 'Остаток, ₽',
                     'Валюта', 'Остаток в валюте', 'Этап оплаты',
@@ -124,18 +124,18 @@ class FinanceController extends CrmController
             [
                 'title' => 'Балансы',
                 'headers' => [
-                    'Клиент', 'Менеджер', 'Контрагент', 'ИНН',
+                    'Партнёр', 'Менеджер', 'Контрагент', 'ИНН',
                     'Сальдо, ₽', 'Просрочено, ₽', 'Данные 1С от',
                 ],
                 // Построчно по контрагентам: 1С ведёт расчёты именно по ним, и
-                // свёрнутый до клиента лист нельзя было бы сверить с учётной системой.
+                // свёрнутый до партнёра лист нельзя было бы сверить с учётной системой.
                 'rows' => $this->balancesSheet($clients),
             ],
         ]);
     }
 
     /**
-     * Лист «Балансы»: строка на контрагента, имя клиента дублируется в каждой —
+     * Лист «Балансы»: строка на контрагента, имя партнёра дублируется в каждой —
      * так лист фильтруется и сводится в самом Excel.
      *
      * @param  Builder<User>  $clients
@@ -290,9 +290,9 @@ class FinanceController extends CrmController
             ['Ожидается в ближайшие 14 дней', $summary['expected_14'], null],
             ['Ожидается в ближайшие 30 дней', $summary['expected_30'], null],
             ['Ожидается в текущем месяце', $summary['expected_month'], null],
-            ['Просрочено', $summary['overdue_amount'], 'Строк: '.$summary['overdue_count'].', клиентов: '.$summary['overdue_clients']],
+            ['Просрочено', $summary['overdue_amount'], 'Строк: '.$summary['overdue_count'].', партнёров: '.$summary['overdue_clients']],
             ['Долг без графика оплаты', $summary['no_schedule_amount'], '1С не прислала «Правила оплаты» по этим реализациям'],
-            ['Сальдо клиентов по 1С', $summary['debt_total'], 'Отрицательное значение — долг клиента'],
+            ['Сальдо партнёров по 1С', $summary['debt_total'], 'Отрицательное значение — долг партнёра'],
             ['Просрочка по данным 1С', $summary['erp_overdue_total'], 'Для сверки с расчётом по графику'],
             ['Авансы (нераспределённые платежи)', $summary['advances'], 'Деньги пришли, но не разнесены на документы'],
             [null, null, null],
@@ -398,7 +398,7 @@ class FinanceController extends CrmController
     }
 
     /**
-     * Скоуп клиентов раздела.
+     * Скоуп партнёров раздела.
      *
      * @return Builder<User>
      */
@@ -408,7 +408,7 @@ class FinanceController extends CrmController
         $query = User::query()->visibleInCrm($actor)->select('users.id');
 
         // Менеджера подставляет только РОП: у рядового менеджера скоуп и так сведён
-        // к своим клиентам, а чужой id в запросе не должен ничего давать.
+        // к своим партнёрам, а чужой id в запросе не должен ничего давать.
         if ($this->seesAllClients($request) && $filters->managerIds !== []) {
             $query->whereIn('users.personal_manager_id', $filters->managerIds);
         }

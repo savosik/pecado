@@ -47,7 +47,7 @@ export default function FinanceDashboard({
 
             <PageHeader
                 title="Пульт платежей"
-                description="План поступлений, просрочка и балансы клиентов по данным 1С"
+                description="План поступлений, просрочка и балансы партнёров по данным 1С"
             />
 
             <FinanceTabs active="index" />
@@ -75,11 +75,11 @@ export default function FinanceDashboard({
                 <Tile
                     label="Просрочено"
                     value={formatRub(summary.overdue_amount)}
-                    hint={`Строк: ${summary.overdue_count || 0} · клиентов: ${summary.overdue_clients || 0}`}
+                    hint={`Строк: ${summary.overdue_count || 0} · партнёров: ${summary.overdue_clients || 0}`}
                     tone={hasOverdue ? 'red' : undefined}
                 />
                 <Tile
-                    label="Долг клиентов по 1С"
+                    label="Долг партнёров по 1С"
                     value={formatRub(summary.debt_total)}
                     hint={`Просрочка по 1С: ${formatCompact(summary.erp_overdue_total)} · авансы: ${formatCompact(summary.advances)}`}
                 />

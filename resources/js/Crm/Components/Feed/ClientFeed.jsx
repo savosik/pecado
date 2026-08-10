@@ -46,7 +46,7 @@ function dayLabel(dayKey) {
 }
 
 /**
- * Стена клиента: всё, что с ним происходило, и поле ввода снизу.
+ * Стена партнёра: всё, что с ним происходило, и поле ввода снизу.
  *
  * Сервер отдаёт записи от новых к старым — так работает пагинация по ключам,
  * и переворачивать её ради вида чата означало бы либо грузить всю историю,
@@ -61,7 +61,7 @@ function dayLabel(dayKey) {
  * а в чате «важное» должно быть на виду постоянно.
  *
  * @param {number} clientId
- * @param {object|null} client — карточка клиента, нужна диалогу звонка (номер)
+ * @param {object|null} client — карточка партнёра, нужна диалогу звонка (номер)
  * @param {string|null} clientEmail — подставляется в письмо
  */
 export default function ClientFeed({ clientId, client = null, clientEmail = null }) {
@@ -195,7 +195,7 @@ export default function ClientFeed({ clientId, client = null, clientEmail = null
                             <Text fontSize="sm" color="fg.muted">
                                 {feed.failed
                                     ? 'Лента недоступна.'
-                                    : 'В ленте пока пусто. Напишите первую заметку или поставьте задачу — здесь же появятся заказы и реализации клиента.'}
+                                    : 'В ленте пока пусто. Напишите первую заметку или поставьте задачу — здесь же появятся заказы и реализации партнёра.'}
                             </Text>
                         </Box>
                     )}
@@ -276,7 +276,7 @@ export default function ClientFeed({ clientId, client = null, clientEmail = null
                 onClose={() => setPendingDelete(null)}
                 onConfirm={() => feed.remove(pendingDelete)}
                 title="Удалить комментарий?"
-                description="Комментарий пропадёт из ленты клиента. Восстановить его сможет только администратор."
+                description="Комментарий пропадёт из ленты партнёра. Восстановить его сможет только администратор."
                 confirmLabel="Удалить"
                 cancelLabel="Отмена"
                 isLoading={feed.busy}

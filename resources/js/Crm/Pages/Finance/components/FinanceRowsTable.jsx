@@ -11,9 +11,9 @@ import { dueHint, formatRub } from './format';
  * Таблица строк ожидаемых поступлений — общая для «Плана» и «Просрочки».
  *
  * Задача ставится прямо отсюда: разговор про деньги начинается со строки графика,
- * и заставлять менеджера открывать карточку клиента ради поручения — лишний шаг.
+ * и заставлять менеджера открывать карточку партнёра ради поручения — лишний шаг.
  * Привязка идёт к реализации (CrmEntityMap разрешает `shipment`), поэтому задача
- * попадёт и в ленту клиента: client_user_id проставляет сама модель CrmTask.
+ * попадёт и в ленту партнёра: client_user_id проставляет сама модель CrmTask.
  */
 export default function FinanceRowsTable({ rows, onSort, sortColumn, sortDirection, emptyMessage }) {
     const { can } = usePermission();
@@ -36,7 +36,7 @@ export default function FinanceRowsTable({ rows, onSort, sortColumn, sortDirecti
         },
         {
             key: 'client',
-            label: 'Клиент',
+            label: 'Партнёр',
             render: (_, row) => (
                 <VStack align="start" gap={0}>
                     <Box
@@ -144,7 +144,7 @@ export default function FinanceRowsTable({ rows, onSort, sortColumn, sortDirecti
 
 /**
  * Заголовок задачи по умолчанию: менеджеру остаётся только выбрать исполнителя
- * и срок, а в ленте клиента видно, о каких деньгах речь.
+ * и срок, а в ленте партнёра видно, о каких деньгах речь.
  */
 const taskTitle = (row) => {
     const base = `Оплата по реализации ${row.shipment.number} — ${formatRub(row.unpaid_rub)}`;

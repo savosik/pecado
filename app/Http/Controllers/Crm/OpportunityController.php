@@ -121,7 +121,7 @@ class OpportunityController extends CrmController
         $result = $this->opportunities->rank($month, $scope, $preset, $this->presetParams($request));
 
         $headers = [
-            'Клиент', 'Менеджер', 'Причина', 'Оценка',
+            'Партнёр', 'Менеджер', 'Причина', 'Оценка',
             'План, ₽', 'Факт, ₽', 'Недобор, ₽', 'Прошлый месяц, ₽',
             'Последняя отгрузка', 'Дней без покупок', 'Средний чек, ₽', 'Класс',
         ];
@@ -176,7 +176,7 @@ class OpportunityController extends CrmController
      * Параметры пресета «не берут X»: измерение, его значение и подпись.
      *
      * Подпись резолвится по справочнику, а не берётся из запроса: в объяснение
-     * строки должно попасть название из базы, а не то, что прислал клиент.
+     * строки должно попасть название из базы, а не то, что прислал партнёр.
      *
      * @return array{dimension: string|null, value: int|null, label: string|null}
      */

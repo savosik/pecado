@@ -22,7 +22,7 @@ class DashboardController extends CrmController
         $actor = $this->crmActor($request);
         $seesAll = $this->seesAllClients($request);
 
-        // Тот же scope, что и в списке клиентов, — цифры не разъедутся с выдачей.
+        // Тот же scope, что и в списке партнёров, — цифры не разъедутся с выдачей.
         $visibleClients = User::query()->visibleInCrm($actor)->count();
 
         return Inertia::render('Crm/Pages/Dashboard', [
@@ -48,7 +48,7 @@ class DashboardController extends CrmController
     }
 
     /**
-     * Покрытие клиентов задачами: по кому не поставлено ни одного следующего шага.
+     * Покрытие партнёров задачами: по кому не поставлено ни одного следующего шага.
      *
      * Показываем не только цифру, но и первых из списка с кнопкой «поставить задачу»:
      * отчёт, из которого нельзя ничего сделать, читают один раз.

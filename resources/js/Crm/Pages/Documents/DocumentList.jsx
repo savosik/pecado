@@ -17,8 +17,8 @@ import { useDocumentFilters } from '@/Crm/hooks/useDocumentFilters';
  * заголовок, набор статусов и маршрут. Две копии разошлись бы на первой же
  * правке фильтров.
  *
- * Видимость обеспечивает сервер (скоуп клиентов актора), фронт ничего не прячет:
- * фильтрация на клиенте означала бы, что чужой документ приезжает в браузер
+ * Видимость обеспечивает сервер (скоуп партнёров актора), фронт ничего не прячет:
+ * фильтрация на партнёре означала бы, что чужой документ приезжает в браузер
  * и просто не рисуется.
  *
  * @param {string} routeName — 'crm.orders' | 'crm.shipments'
@@ -76,7 +76,7 @@ export default function DocumentList({
         },
         {
             key: 'client',
-            label: 'Клиент',
+            label: 'Партнёр',
             render: (_, row) => (row.client
                 ? (
                     <Box
@@ -162,7 +162,7 @@ export default function DocumentList({
                         <SearchInput
                             value={searchQuery}
                             onChange={handleSearch}
-                            placeholder="Номер, клиент или товар..."
+                            placeholder="Номер, партнёр или товар..."
                         />
                     </Box>
                 </HStack>

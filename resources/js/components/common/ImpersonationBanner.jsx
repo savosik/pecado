@@ -5,7 +5,7 @@ import { LuEye } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 
 /**
- * Плашка режима «менеджер смотрит сайт от имени клиента».
+ * Плашка режима «менеджер смотрит сайт от имени партнёра».
  *
  * Рендерится в GlobalLayout (app.jsx), поэтому видна на всех страницах —
  * и на витрине, и в кабинете, независимо от лэйаута страницы.
@@ -50,7 +50,7 @@ export default function ImpersonationBanner() {
                     <LuEye />
                 </Box>
                 <Text fontSize="sm" color="orange.900" _dark={{ color: 'orange.100' }}>
-                    Просмотр от имени клиента:{' '}
+                    Просмотр от имени партнёра:{' '}
                     <Text as="span" fontWeight="bold">{impersonation.client_name}</Text>
                     {' '}· оформлять заказы нельзя
                 </Text>

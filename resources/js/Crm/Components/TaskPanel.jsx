@@ -14,7 +14,7 @@ import { toastError, toastSuccess } from '@/utils/toast';
  * Врезка «Задачи по этой сущности».
  *
  * Тип и ID передаются пропсами, всё остальное компонент делает сам — так же, как
- * `CommentThread`. Встраивается в карточку клиента, заказа и реализации и дальше
+ * `CommentThread`. Встраивается в карточку партнёра, заказа и реализации и дальше
  * везде, где появится привязка из `CrmEntityMap`.
  *
  * @param {string} entityType — 'client' | 'order' | 'shipment'
@@ -158,7 +158,7 @@ export default function TaskPanel({ entityType, entityId }) {
                 onClose={() => setPendingDelete(null)}
                 onConfirm={() => remove(pendingDelete)}
                 title="Удалить задачу?"
-                description="Задача пропадёт из списков и из ленты клиента. Восстановить её сможет только администратор."
+                description="Задача пропадёт из списков и из ленты партнёра. Восстановить её сможет только администратор."
                 confirmLabel="Удалить"
                 cancelLabel="Отмена"
                 isLoading={busy}

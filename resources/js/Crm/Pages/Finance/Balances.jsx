@@ -24,9 +24,9 @@ const contractorsLabel = (count) => {
 /**
  * Балансы взаиморасчётов — проекция из 1С.
  *
- * 1С ведёт расчёты по контрагентам, а у клиента их бывает несколько. Поэтому
- * верхняя строка — клиент с итогом, внутри неё раскрываются его контрагенты
- * с ИНН: долг остаётся «по контрагентам», но имя клиента не повторяется подряд.
+ * 1С ведёт расчёты по контрагентам, а у партнёра их бывает несколько. Поэтому
+ * верхняя строка — партнёр с итогом, внутри неё раскрываются его контрагенты
+ * с ИНН: долг остаётся «по контрагентам», но имя партнёра не повторяется подряд.
  *
  * Своей просрочки по графику здесь намеренно нет: 1С считает её по контрагенту,
  * а сайт — по документу, и рядом в таблице два разреза читались как ошибка.
@@ -53,11 +53,11 @@ export default function FinanceBalances({
     }), { balance: 0, overdue: 0, contractors: 0 });
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Финансы', href: '/crm/finance' }, { label: 'Балансы клиентов' }]}>
-            <Head title="Балансы клиентов — CRM" />
+        <CrmLayout breadcrumbs={[{ label: 'Финансы', href: '/crm/finance' }, { label: 'Балансы партнёров' }]}>
+            <Head title="Балансы партнёров — CRM" />
 
             <PageHeader
-                title="Балансы клиентов"
+                title="Балансы партнёров"
                 description="Сальдо взаиморасчётов и просроченная задолженность по данным 1С"
             />
 
@@ -89,7 +89,7 @@ export default function FinanceBalances({
                         <Table.Header>
                             <Table.Row>
                                 <Table.ColumnHeader width="40px" />
-                                <Table.ColumnHeader>Клиент</Table.ColumnHeader>
+                                <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="end">Сальдо</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="end">Просрочено</Table.ColumnHeader>
                                 <Table.ColumnHeader>Данные 1С от</Table.ColumnHeader>
@@ -102,7 +102,7 @@ export default function FinanceBalances({
                                 <Table.Row>
                                     <Table.Cell colSpan={6}>
                                         <Text py={8} textAlign="center" color="fg.muted">
-                                            Балансы по вашим клиентам ещё не приходили из 1С
+                                            Балансы по вашим партнёрам ещё не приходили из 1С
                                         </Text>
                                     </Table.Cell>
                                 </Table.Row>
@@ -113,7 +113,7 @@ export default function FinanceBalances({
                                 const many = row.contractors.length > 1;
 
                                 return (
-                                    // Fragment с ключом, а не <>: строка клиента и
+                                    // Fragment с ключом, а не <>: строка партнёра и
                                     // строки его контрагентов — соседи одного уровня.
                                     <Fragment key={row.id}>
                                         <Table.Row _hover={{ bg: 'bg.muted' }}>
@@ -228,8 +228,8 @@ export default function FinanceBalances({
 
             <Flex justify="space-between" mt={3} px={1}>
                 <Text fontSize="xs" color="fg.muted">
-                    Клиентов: {balances.length} · контрагентов: {totals.contractors} ·
-                    суммарное сальдо {formatRub(totals.balance)}. Отрицательное сальдо — долг клиента.
+                    Партнёров: {balances.length} · контрагентов: {totals.contractors} ·
+                    суммарное сальдо {formatRub(totals.balance)}. Отрицательное сальдо — долг партнёра.
                 </Text>
                 <Text fontSize="xs" color="fg.muted">
                     Суммы приходят из 1С и подписаны как рубли: для мультивалютного

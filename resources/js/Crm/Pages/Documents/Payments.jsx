@@ -2,7 +2,7 @@ import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import PaymentList from './PaymentList';
 
 /**
- * Платежи клиентов менеджера.
+ * Платежи партнёров менеджера.
  */
 export default function Payments(props) {
     return <PaymentList {...props} />;

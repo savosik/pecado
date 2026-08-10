@@ -45,8 +45,8 @@ export default function Show() {
     const palette = isPayment ? 'purple' : (isOrder ? 'blue' : 'green');
     const Icon = isPayment ? LuReceipt : (isOrder ? LuFileText : LuTruck);
     const typeLabel = isPayment
-        ? 'Платёж клиента'
-        : (isOrder ? 'Заказ клиента' : 'Реализация клиента');
+        ? 'Платёж партнёра'
+        : (isOrder ? 'Заказ партнёра' : 'Реализация партнёра');
 
     return (
         <>
@@ -63,7 +63,7 @@ export default function Show() {
                                 variant="outline"
                                 onClick={() => router.visit(client.url)}
                             >
-                                <LuArrowLeft /> К клиенту
+                                <LuArrowLeft /> К партнёру
                             </Button>
                         )}
                         {document.admin_url && (
@@ -101,7 +101,7 @@ export default function Show() {
 
                         {client && (
                             <Text fontSize="sm">
-                                Клиент:{' '}
+                                Партнёр:{' '}
                                 <Box as="a" href={client.url} color="blue.fg" textDecoration="underline">
                                     {client.name}
                                 </Box>
@@ -152,7 +152,7 @@ export default function Show() {
                                 </Box>
                             )}
                             <InfoRow label="Склад отгрузки" value={document.warehouse} />
-                            <InfoRow label="Юрлицо клиента" value={document.company} />
+                            <InfoRow label="Юрлицо партнёра" value={document.company} />
                             <InfoRow label="Создан на сайте" value={document.created_at_label} />
                             <InfoRow label="Адрес доставки" value={document.delivery_address} />
                             {/* v15.16.0: счёт-фактура из 1С, приходит не по всем реализациям */}
@@ -163,7 +163,7 @@ export default function Show() {
                             <VStack align="stretch" gap={2} mt={4} pt={3} borderTopWidth="1px">
                                 {document.comment && (
                                     <Box>
-                                        <Text fontSize="xs" color="fg.muted">Комментарий клиента</Text>
+                                        <Text fontSize="xs" color="fg.muted">Комментарий партнёра</Text>
                                         <Text fontSize="sm" whiteSpace="pre-wrap">{document.comment}</Text>
                                     </Box>
                                 )}

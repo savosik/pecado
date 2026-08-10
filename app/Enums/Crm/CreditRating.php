@@ -5,7 +5,7 @@ namespace App\Enums\Crm;
 use App\Enums\Crm\Concerns\HasLabeledOptions;
 
 /**
- * Кредитный рейтинг клиента — накопленный опыт оплаты.
+ * Кредитный рейтинг партнёра — накопленный опыт оплаты.
  */
 enum CreditRating: string
 {

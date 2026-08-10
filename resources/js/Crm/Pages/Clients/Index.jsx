@@ -37,10 +37,10 @@ export default function Index({
     lifecycleOptions = [],
 }) {
     const { can } = usePermission();
-    // Раздел не даёт удалять клиентов (они принадлежат 1С): из хука берём
+    // Раздел не даёт удалять партнёров (они принадлежат 1С): из хука берём
     // только поиск и сортировку.
     const { searchQuery, handleSearch, handleSort } = useResourceIndex('crm.clients', filters, {
-        entityLabel: 'Клиент',
+        entityLabel: 'Партнёр',
     });
 
     // Диалоги монтируются по одному на страницу, а не на строку: пятнадцать
@@ -55,7 +55,7 @@ export default function Index({
     const canWriteEmail = can('crm-emails.create');
     const canCreateTask = can('crm-tasks.create');
     const canLogCall = can('crm-calls.create');
-    // Состав клиентской базы отдела — дело того, кто за отдел отвечает.
+    // Состав базы партнёров отдела — дело того, кто за отдел отвечает.
     const canManageKind = can('crm-clients-all.edit');
 
     const applyFilters = useCallback((patch) => {
@@ -104,7 +104,7 @@ export default function Index({
     const columns = [
         {
             key: 'name',
-            label: 'Клиент',
+            label: 'Партнёр',
             sortable: true,
             render: (_, row) => (
                 <VStack align="start" gap={0}>
@@ -112,7 +112,7 @@ export default function Index({
                         <Text fontWeight="semibold">{row.name}</Text>
                         <Text fontFamily="mono" fontSize="10px" color="fg.muted">#{row.id}</Text>
                     </HStack>
-                    {/* Имя из кабинета — только когда клиент назвал себя иначе,
+                    {/* Имя из кабинета — только когда партнёр назвал себя иначе,
                         чем записано в карточке 1С. */}
                     {row.personal_name && (
                         <Text fontSize="xs" color="fg.muted">
@@ -198,7 +198,7 @@ export default function Index({
                         size="xs"
                         variant="ghost"
                         onClick={() => router.visit(route('crm.clients.show', row.id))}
-                        aria-label="Открыть карточку клиента"
+                        aria-label="Открыть карточку партнёра"
                     >
                         <LuEye />
                     </Button>
@@ -208,8 +208,8 @@ export default function Index({
                             variant="ghost"
                             colorPalette="red"
                             onClick={() => setKindFor(row)}
-                            aria-label="Это не клиент — убрать из базы отдела"
-                            title="Это не клиент"
+                            aria-label="Это не партнёр — убрать из базы отдела"
+                            title="Это не партнёр"
                         >
                             <LuUserX />
                         </Button>
@@ -221,12 +221,12 @@ export default function Index({
 
     return (
         <>
-            <Head title="CRM — Клиенты" />
+            <Head title="CRM — Партнёры" />
             <PageHeader
-                title={canSeeAll ? 'Клиенты отдела' : 'Мои клиенты'}
+                title={canSeeAll ? 'Партнёры отдела' : 'Мои партнёры'}
                 description={canSeeAll
-                    ? 'Все клиенты с закреплённым менеджером'
-                    : 'Клиенты, закреплённые за вами в 1С'}
+                    ? 'Все партнёры с закреплённым менеджером'
+                    : 'Партнёры, закреплённые за вами в 1С'}
             />
 
             {!managerProfileLinked && (
@@ -277,7 +277,7 @@ export default function Index({
                 onSort={handleSort}
                 perPage={filters.per_page}
                 onPerPageChange={(perPage) => applyFilters({ per_page: perPage })}
-                emptyMessage="Клиенты не найдены"
+                emptyMessage="Партнёры не найдены"
             />
 
             <TaskDialog

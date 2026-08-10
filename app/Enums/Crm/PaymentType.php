@@ -8,7 +8,7 @@ use App\Enums\Crm\Concerns\HasLabeledOptions;
  * Договорный тип оплаты.
  *
  * Это условие сделки, в отличие от {@see PaymentBehavior} — наблюдения
- * менеджера о том, как клиент платит на самом деле.
+ * менеджера о том, как партнёр платит на самом деле.
  */
 enum PaymentType: string
 {

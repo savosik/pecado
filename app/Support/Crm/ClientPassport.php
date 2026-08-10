@@ -18,7 +18,7 @@ use App\Services\Crm\Api\Param;
 use Illuminate\Validation\Rule;
 
 /**
- * Паспорт клиента — единственное описание полей, которые отдел собирает интервью.
+ * Паспорт партнёра — единственное описание полей, которые отдел собирает интервью.
  *
  * Одно поле живёт минимум в четырёх местах: колонка в базе, правило проверки формы,
  * аргумент операции агентского API и подпись в карточке. Расписанные по разным
@@ -34,7 +34,7 @@ final class ClientPassport
 {
     /** Секции карточки — порядок задаёт и порядок вопросов интервью. */
     public const SECTIONS = [
-        'business' => 'Бизнес клиента',
+        'business' => 'Бизнес партнёра',
         'logistics' => 'География и логистика',
         'commercial' => 'Коммерческие условия',
         'limits' => 'Ограничения и конкуренты',
@@ -60,13 +60,13 @@ final class ClientPassport
             ],
             'points_count' => [
                 'type' => 'integer', 'section' => 'business', 'min' => 0, 'max' => 5000,
-                'label' => 'Количество точек', 'hint' => 'Сколько торговых точек у клиента',
+                'label' => 'Количество точек', 'hint' => 'Сколько торговых точек у партнёра',
             ],
-            // Три канала — независимые «да/нет», а не одно значение: клиент
+            // Три канала — независимые «да/нет», а не одно значение: партнёр
             // регулярно держит и точки, и свой сайт, и продажи на маркетплейсах.
             'has_offline_points' => [
                 'type' => 'boolean', 'section' => 'business',
-                'label' => 'Есть офлайн-точки', 'hint' => 'Торгует ли клиент в собственных розничных точках',
+                'label' => 'Есть офлайн-точки', 'hint' => 'Торгует ли партнёр в собственных розничных точках',
             ],
             'has_online_store' => [
                 'type' => 'boolean', 'section' => 'business',
@@ -78,11 +78,11 @@ final class ClientPassport
             ],
             'specialization' => [
                 'type' => 'enum', 'enum' => ClientSpecialization::class, 'section' => 'business',
-                'label' => 'Специализация', 'hint' => 'Какую матрицу держит клиент',
+                'label' => 'Специализация', 'hint' => 'Какую матрицу держит партнёр',
             ],
             'primary_channel' => [
                 'type' => 'enum', 'enum' => SalesChannel::class, 'section' => 'business',
-                'label' => 'Основной канал', 'hint' => 'Где клиент делает основной оборот',
+                'label' => 'Основной канал', 'hint' => 'Где партнёр делает основной оборот',
             ],
             'secondary_channel' => [
                 'type' => 'enum', 'enum' => SalesChannel::class, 'section' => 'business',
@@ -116,7 +116,7 @@ final class ClientPassport
             ],
             'receiving_hours' => [
                 'type' => 'string', 'section' => 'logistics', 'max' => 255,
-                'label' => 'График приёмки', 'hint' => 'Дни и часы, когда клиент принимает товар',
+                'label' => 'График приёмки', 'hint' => 'Дни и часы, когда партнёр принимает товар',
             ],
             'packaging_notes' => [
                 'type' => 'text', 'section' => 'logistics', 'max' => 2000,
@@ -134,7 +134,7 @@ final class ClientPassport
             ],
             'credit_rating' => [
                 'type' => 'enum', 'enum' => CreditRating::class, 'section' => 'commercial',
-                'label' => 'Опыт оплаты', 'hint' => 'Как клиент платит по факту',
+                'label' => 'Опыт оплаты', 'hint' => 'Как партнёр платит по факту',
             ],
             'commercial_terms' => [
                 'type' => 'text', 'section' => 'commercial', 'max' => 2000,
@@ -148,7 +148,7 @@ final class ClientPassport
             // --- Ограничения и конкуренты ---
             'taboo_categories' => [
                 'type' => 'text', 'section' => 'limits', 'max' => 2000,
-                'label' => 'Табу-категории', 'hint' => 'Что клиент принципиально не берёт — исключается из допродаж',
+                'label' => 'Табу-категории', 'hint' => 'Что партнёр принципиально не берёт — исключается из допродаж',
             ],
             'taboo_brands' => [
                 'type' => 'text', 'section' => 'limits', 'max' => 2000,
@@ -404,7 +404,7 @@ final class ClientPassport
      * Насколько паспорт заполнен: сколько полей из скольких.
      *
      * Нужна и агенту (кого расспрашивать первым), и карточке — показать менеджеру,
-     * что клиент описан наполовину.
+     * что партнёр описан наполовину.
      *
      * @return array{filled: int, total: int, percent: int}
      */

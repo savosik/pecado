@@ -214,7 +214,7 @@ export default function FeedComposer({
 
     const placeholder = mode === 'task'
         ? 'Что нужно сделать? Enter — поставить задачу'
-        : 'Написать в ленту клиента… Ctrl+Enter — отправить';
+        : 'Написать в ленту партнёра… Ctrl+Enter — отправить';
 
     const submit = mode === 'task' ? submitTask : submitComment;
 

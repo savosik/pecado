@@ -20,7 +20,7 @@ use Illuminate\Validation\Rule;
 /**
  * Журнал звонков.
  *
- * Только JSON: звонок записывается из диалога в таблице клиентов и из ленты —
+ * Только JSON: звонок записывается из диалога в таблице партнёров и из ленты —
  * в обоих местах Inertia-редирект увёл бы менеджера со страницы посреди работы.
  */
 class CallController extends CrmController
@@ -59,8 +59,8 @@ class CallController extends CrmController
                 CrmAttachments::COLLECTION,
             )]);
 
-        // По клиенту показываем все его звонки, по документу — только его собственные:
-        // в карточке заказа история всех разговоров с клиентом была бы шумом.
+        // По партнёру показываем все его звонки, по документу — только его собственные:
+        // в карточке заказа история всех разговоров с партнёром была бы шумом.
         $validated['entity_type'] === CrmEntityMap::CLIENT && $clientId !== null
             ? $query->forClient($clientId)
             : $query->where('related_type', $entity::class)->where('related_id', $entity->getKey());

@@ -10,7 +10,7 @@ import { useCommentFeed } from '@/Crm/Components/useCommentFeed';
 /**
  * Комментарии одной сущности: форма + лента.
  *
- * Встраивается в карточку клиента, заказа и реализации — тип и ID сущности передаются
+ * Встраивается в карточку партнёра, заказа и реализации — тип и ID сущности передаются
  * пропсами, всё остальное компонент делает сам.
  *
  * @param {string} entityType — 'client' | 'order' | 'shipment' (App\Support\Crm\CrmEntityMap)
@@ -97,7 +97,7 @@ export default function CommentThread({ entityType, entityId, canCreate = true }
                 onClose={() => setPendingDelete(null)}
                 onConfirm={() => feed.remove(pendingDelete)}
                 title="Удалить комментарий?"
-                description="Комментарий пропадёт из ленты клиента. Восстановить его сможет только администратор."
+                description="Комментарий пропадёт из ленты партнёра. Восстановить его сможет только администратор."
                 confirmLabel="Удалить"
                 cancelLabel="Отмена"
                 isLoading={feed.busy}

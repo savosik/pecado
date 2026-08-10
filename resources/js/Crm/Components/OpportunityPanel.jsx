@@ -196,7 +196,7 @@ export default function OpportunityPanel({ month, canSeeAll = false }) {
             <HStack gap={2} flexWrap="wrap" align="baseline">
                 <Text fontSize="sm" color="fg.muted">{current?.description}</Text>
                 <Text fontSize="xs" color="fg.muted">
-                    · {data.scope?.label} · {data.monthLabel} · подходит клиентов: {data.summary?.matched ?? 0}
+                    · {data.scope?.label} · {data.monthLabel} · подходит партнёров: {data.summary?.matched ?? 0}
                     {(data.summary?.gap_total ?? 0) > 0 && ` · недобор ${money(data.summary.gap_total)}`}
                 </Text>
             </HStack>
@@ -217,7 +217,7 @@ export default function OpportunityPanel({ month, canSeeAll = false }) {
                     <Table.Root size="sm">
                         <Table.Header>
                             <Table.Row>
-                                <Table.ColumnHeader>Клиент</Table.ColumnHeader>
+                                <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
                                 <Table.ColumnHeader>Почему в списке</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="right">Недобор</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="right">План / факт</Table.ColumnHeader>

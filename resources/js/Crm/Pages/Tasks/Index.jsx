@@ -55,7 +55,7 @@ export default function Index({ tasks, filters, counters, options, openTaskId })
     // Справочники уже приехали пропсами — диалог не должен запрашивать их повторно.
     primeTaskOptions(options);
 
-    // Ссылка из ленты клиента ведёт сюда с ?task=ID: открываем карточку сразу.
+    // Ссылка из ленты партнёра ведёт сюда с ?task=ID: открываем карточку сразу.
     useEffect(() => {
         if (!openTaskId) {
             return;
@@ -341,7 +341,7 @@ export default function Index({ tasks, filters, counters, options, openTaskId })
                 onClose={() => setPendingDelete(null)}
                 onConfirm={() => remove(pendingDelete)}
                 title="Удалить задачу?"
-                description="Задача пропадёт из списков и из ленты клиента. Восстановить её сможет только администратор."
+                description="Задача пропадёт из списков и из ленты партнёра. Восстановить её сможет только администратор."
                 confirmLabel="Удалить"
                 cancelLabel="Отмена"
                 isLoading={busy}

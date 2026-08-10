@@ -20,7 +20,7 @@ use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Планы продаж: сколько отдел, менеджер и клиент должны дать выручки за месяц,
+ * Планы продаж: сколько отдел, менеджер и партнёр должны дать выручки за месяц,
  * и сколько дали на самом деле.
  *
  * Ввод и хранение — `SalesPlanService`; выполнение, прогноз и burndown —
@@ -150,7 +150,7 @@ class PlanController extends CrmController
     }
 
     /**
-     * XLSX выполнения планов: сводка, менеджеры (если доступны), клиенты.
+     * XLSX выполнения планов: сводка, менеджеры (если доступны), партнёры.
      * GET /crm/plans/export
      */
     public function export(Request $request, SimpleXlsxExporter $exporter): StreamedResponse
@@ -188,7 +188,7 @@ class PlanController extends CrmController
 
         foreach ($this->progress->clients($month, $scope, $actor) as $row) {
             $rows[] = [
-                'Клиенты',
+                'Партнёры',
                 $row['name'],
                 $row['plan'] ?? 0,
                 $row['fact'],
@@ -232,7 +232,7 @@ class PlanController extends CrmController
     }
 
     /**
-     * Сетка планов на месяц: отдел, менеджеры, клиенты.
+     * Сетка планов на месяц: отдел, менеджеры, партнёры.
      *
      * @return array<string, mixed>
      */

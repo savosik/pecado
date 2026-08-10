@@ -7,7 +7,7 @@ const TABS = [
     { key: 'index', label: 'Пульт', icon: LuGauge, href: '/crm/finance' },
     { key: 'plan', label: 'План поступлений', icon: LuWallet, href: '/crm/finance/plan' },
     { key: 'overdue', label: 'Просрочка', icon: LuTriangleAlert, href: '/crm/finance/overdue' },
-    { key: 'balances', label: 'Балансы клиентов', icon: LuScale, href: '/crm/finance/balances' },
+    { key: 'balances', label: 'Балансы партнёров', icon: LuScale, href: '/crm/finance/balances' },
     { key: 'calendar', label: 'Календарь', icon: LuCalendarClock, href: '/crm/payments/calendar' },
 ];
 

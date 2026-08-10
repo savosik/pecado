@@ -50,7 +50,7 @@ function PlanCell({ value, onChange, disabled }) {
 }
 
 /**
- * Планы продаж на месяц: отдел, менеджеры, клиенты.
+ * Планы продаж на месяц: отдел, менеджеры, партнёры.
  *
  * Сетка сохраняется целиком одной кнопкой, а не по каждой ячейке: план расставляют
  * пачкой на месяц вперёд, и запрос на каждый ввод был бы и медленнее, и шумнее.
@@ -145,7 +145,7 @@ export default function Index({
         }
     };
 
-    // Сумма планов клиентов у менеджера считается на сервере по сохранённым данным:
+    // Сумма планов партнёров у менеджера считается на сервере по сохранённым данным:
     // подсказка о расхождении показывает факт, а не незасохранённый черновик.
     const mismatched = useMemo(
         () => managers.filter((row) => row.amount !== null && row.clients_sum > Number(row.amount) + 0.01),
@@ -263,7 +263,7 @@ export default function Index({
                                                     <Table.ColumnHeader>Менеджер</Table.ColumnHeader>
                                                     <Table.ColumnHeader>{previousMonthLabel}</Table.ColumnHeader>
                                                     <Table.ColumnHeader>План на {monthLabel}</Table.ColumnHeader>
-                                                    <Table.ColumnHeader>Расписано по клиентам</Table.ColumnHeader>
+                                                    <Table.ColumnHeader>Расписано по партнёрам</Table.ColumnHeader>
                                                 </Table.Row>
                                             </Table.Header>
                                             <Table.Body>
@@ -298,7 +298,7 @@ export default function Index({
                                         </Table.Root>
 
                                         {mismatched.length > 0 && (
-                                            <Alert status="info" mt={4} title="Сумма планов клиентов больше плана менеджера">
+                                            <Alert status="info" mt={4} title="Сумма планов партнёров больше плана менеджера">
                                                 {mismatched.map((row) => `${row.name}: расписано ${fmtMoney(row.clients_sum)} из ${fmtMoney(row.amount)}`).join('; ')}.
                                                 Это подсказка, а не запрет.
                                             </Alert>
@@ -309,7 +309,7 @@ export default function Index({
 
                             <Card.Root>
                                 <Card.Header>
-                                    <Text fontWeight="semibold" fontSize="lg">Клиенты</Text>
+                                    <Text fontWeight="semibold" fontSize="lg">Партнёры</Text>
                                 </Card.Header>
                                 <Card.Body>
                                     <HStack gap={3} mb={4} flexWrap="wrap" align="center">
@@ -347,13 +347,13 @@ export default function Index({
                                     </HStack>
 
                                     {clients.data.length === 0 ? (
-                                        <Text fontSize="sm" color="fg.muted">Клиенты не найдены.</Text>
+                                        <Text fontSize="sm" color="fg.muted">Партнёры не найдены.</Text>
                                     ) : (
                                         <>
                                             <Table.Root size="sm">
                                                 <Table.Header>
                                                     <Table.Row>
-                                                        <Table.ColumnHeader>Клиент</Table.ColumnHeader>
+                                                        <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
                                                         {canSeeAll && <Table.ColumnHeader>Менеджер</Table.ColumnHeader>}
                                                         <Table.ColumnHeader>{previousMonthLabel}</Table.ColumnHeader>
                                                         <Table.ColumnHeader>План на {monthLabel}</Table.ColumnHeader>

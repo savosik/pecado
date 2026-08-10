@@ -6,7 +6,7 @@ import { Select } from '@/components/ui/select';
 import { useCommentFeed } from '@/Crm/Components/useCommentFeed';
 
 /**
- * Заказы или реализации клиента отдельной вкладкой.
+ * Заказы или реализации партнёра отдельной вкладкой.
  *
  * Источник тот же, что у ленты, — эндпоинт хронологии с фильтром по типу.
  * Второй список документов с собственным запросом означал бы вторую выборку
@@ -21,7 +21,7 @@ import { useCommentFeed } from '@/Crm/Components/useCommentFeed';
  * @param {boolean} organizationsEnabled — показ организаций включён флагом
  */
 export default function ClientDocuments({ clientId, type, organizations = [], organizationsEnabled = false }) {
-    // Фильтр по нашей организации: у клиента бывают документы на разные юрлица,
+    // Фильтр по нашей организации: у партнёра бывают документы на разные юрлица,
     // и сверять с ним конкретную накладную удобнее по одному из них.
     const [organizationId, setOrganizationId] = useState('');
 

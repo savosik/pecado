@@ -16,7 +16,7 @@ use Illuminate\Validation\Rule;
 
 /**
  * Комментарии CRM. Эндпоинты отдают JSON, а не Inertia-редиректы: один и тот же
- * компонент ленты встраивается и в карточку клиента, и в админские карточки заказа
+ * компонент ленты встраивается и в карточку партнёра, и в админские карточки заказа
  * и реализации — общая форма ответа избавляет от трёх вариантов интеграции.
  */
 class CommentController extends CrmController
@@ -27,14 +27,14 @@ class CommentController extends CrmController
     ) {}
 
     /**
-     * Сквозная лента клиента: записи менеджеров и документы клиента в одной хронологии.
+     * Сквозная лента партнёра: записи менеджеров и документы партнёра в одной хронологии.
      */
     public function timeline(Request $request, int $client): JsonResponse
     {
         $actor = $this->crmActor($request);
         Gate::authorize('viewAny', CrmComment::class);
 
-        // Резолвим через тот же scope, что и карточка: чужой клиент — 404.
+        // Резолвим через тот же scope, что и карточка: чужой партнёр — 404.
         $clientModel = User::query()
             ->visibleInCrm($actor)
             ->findOrFail($client);
@@ -95,7 +95,7 @@ class CommentController extends CrmController
         $actor = $this->crmActor($request);
 
         // Доступ к сущности проверяется до создания: без этого комментарий стал бы
-        // способом писать в карточку чужого клиента в обход скоупа.
+        // способом писать в карточку чужого партнёра в обход скоупа.
         $entity = $this->resolver->resolveForActor(
             $actor,
             $request->string('entity_type')->value(),
@@ -146,7 +146,7 @@ class CommentController extends CrmController
      * Комментарий вне скоупа актора — 404, а не 403.
      *
      * Разделение намеренное: 404 скрывает сам факт существования переписки по чужому
-     * клиенту, а 403 остаётся для понятного «клиент ваш, но комментарий не ваш».
+     * партнёру, а 403 остаётся для понятного «партнёр ваш, но комментарий не ваш».
      */
     private function assertInScope(User $actor, CrmComment $comment): void
     {

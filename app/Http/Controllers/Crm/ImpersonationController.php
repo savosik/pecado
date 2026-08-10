@@ -11,12 +11,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Просмотр сайта от имени клиента.
+ * Просмотр сайта от имени партнёра.
  *
- * Менеджер переключает свою сессию на клиента, ходит по витрине и кабинету
+ * Менеджер переключает свою сессию на партнёра, ходит по витрине и кабинету
  * его глазами и возвращается обратно в карточку. Что в этом режиме запрещено —
  * решает App\Http\Middleware\RestrictImpersonatedActions, а не скрытые кнопки:
- * гарантия «заказ за клиента не оформить» должна быть серверной.
+ * гарантия «заказ за партнёра не оформить» должна быть серверной.
  */
 class ImpersonationController extends CrmController
 {
@@ -28,10 +28,10 @@ class ImpersonationController extends CrmController
         // дорогу назад. Практически недостижимо (в режиме нет доступа в /crm),
         // но состояние сессии важнее удобства проверки.
         if (Impersonation::active()) {
-            return back()->with('error', 'Просмотр от имени клиента уже идёт.');
+            return back()->with('error', 'Просмотр от имени партнёра уже идёт.');
         }
 
-        // Резолвим через тот же скоуп, что и карточка: чужой клиент — 404,
+        // Резолвим через тот же скоуп, что и карточка: чужой партнёр — 404,
         // а не 403. Скоуп заодно отсекает сотрудников и служебные аккаунты.
         $target = User::query()
             ->visibleInCrm($manager)
@@ -40,7 +40,7 @@ class ImpersonationController extends CrmController
         // Заблокированного не пускаем осознанно: EnsureUserIsNotBlocked
         // разлогинил бы сессию на первом же запросе, и менеджер вылетел бы из CRM.
         if ($target->status === UserStatus::BLOCKED) {
-            return back()->with('error', 'Клиент заблокирован — войти под ним нельзя.');
+            return back()->with('error', 'Партнёр заблокирован — войти под ним нельзя.');
         }
 
         Auth::login($target);
@@ -56,14 +56,14 @@ class ImpersonationController extends CrmController
 
         return redirect()
             ->route('cabinet.dashboard')
-            ->with('info', "Вы смотрите сайт от имени клиента «{$target->display_name}».");
+            ->with('info', "Вы смотрите сайт от имени партнёра «{$target->display_name}».");
     }
 
     /**
      * Завершить просмотр и вернуть менеджера в его сессию.
      *
      * Маршрут живёт в routes/web.php под 'auth', а не в CRM-группе: в момент
-     * нажатия сессия принадлежит клиенту, и EnsureUserIsCrm его не пустил бы.
+     * нажатия сессия принадлежит партнёру, и EnsureUserIsCrm его не пустил бы.
      */
     public function stop(Request $request): RedirectResponse
     {
