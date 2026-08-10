@@ -72,6 +72,16 @@ class ErpMessageValidator
         'goods_issue.created' => 'goods_issue.created.json',
         'goods_issue.updated' => 'goods_issue.updated.json',
         'goods_issue.deleted' => 'goods_issue.deleted.json',
+        // FIN (v16.0.0): соглашения с клиентами
+        'agreement.created' => 'agreement.created.json',
+        'agreement.updated' => 'agreement.updated.json',
+        'agreement.deleted' => 'agreement.deleted.json',
+        // FIN (v16.0.0): регистр взаиморасчётов
+        'settlement.posted' => 'settlement.posted.json',
+        'settlement.reverted' => 'settlement.reverted.json',
+        'settlement.opening_balance' => 'settlement.opening_balance.json',
+        'settlement.checkpoint' => 'settlement.checkpoint.json',
+        'payment_schedule.updated' => 'payment_schedule.updated.json',
     ];
 
     /**

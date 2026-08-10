@@ -50,6 +50,62 @@ class DeliveryOperationsTest extends DeliveryTestCase
     }
 
     #[Test]
+    #[TestDox('Акт приёма-передачи отдаётся редиректом на PDF')]
+    public function waybill_redirects_to_pdf(): void
+    {
+        $this->fakeApiShip([
+            '*/orders/waybills' => Http::response([
+                'url' => 'https://storage.apiship.ru/file/get?file=7654321_act.pdf',
+                'failedOrders' => null,
+            ], 200),
+        ]);
+
+        $delivery = DeliveryShipment::factory()->submitted()->create();
+
+        $this->actingAs($this->userWithRole('storekeeper'))
+            ->get("/wms/deliveries/{$delivery->id}/waybill")
+            ->assertRedirect('https://storage.apiship.ru/file/get?file=7654321_act.pdf');
+
+        $sent = $this->sentPayload('/orders/waybills');
+        $this->assertSame([(int) $delivery->apiship_order_id], $sent['orderIds']);
+        $this->assertSame('pdf', $sent['format']);
+    }
+
+    #[Test]
+    #[TestDox('До передачи заявки акта нет')]
+    public function waybill_is_unavailable_before_submit(): void
+    {
+        $this->fakeApiShip();
+
+        $delivery = DeliveryShipment::factory()->calculated()->create();
+
+        $this->actingAs($this->userWithRole('storekeeper'))
+            ->get("/wms/deliveries/{$delivery->id}/waybill")
+            ->assertRedirect();
+
+        $this->assertNull($this->sentPayload('/orders/waybills'));
+    }
+
+    #[Test]
+    #[TestDox('Отказ перевозчика в документе доносится текстом, а не пустым редиректом')]
+    public function waybill_failure_reports_the_error(): void
+    {
+        $this->fakeApiShip([
+            '*/orders/waybills' => Http::response([
+                'code' => 400,
+                'message' => 'Bad Request',
+                'description' => 'Перевозчик не формирует акт по этому тарифу',
+            ], 400),
+        ]);
+
+        $delivery = DeliveryShipment::factory()->submitted()->create();
+
+        $this->actingAs($this->userWithRole('storekeeper'))
+            ->get("/wms/deliveries/{$delivery->id}/waybill")
+            ->assertSessionHas('error');
+    }
+
+    #[Test]
     #[TestDox('Список пунктов выдачи фильтруется по городу получателя и перевозчику')]
     public function points_are_filtered_by_city_and_provider(): void
     {

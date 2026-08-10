@@ -16,6 +16,7 @@ import {
     LuBan,
     LuCalculator,
     LuExternalLink,
+    LuFileText,
     LuPrinter,
     LuTruck,
     LuUserCheck,
@@ -172,6 +173,14 @@ export default function DeliveriesShow() {
                             <Button asChild size="sm" variant="outline">
                                 <a href={delivery.urls.label} target="_blank" rel="noopener noreferrer">
                                     <LuPrinter /> Этикетка
+                                </a>
+                            </Button>
+                        )}
+
+                        {delivery.apiship_order_id && (
+                            <Button asChild size="sm" variant="outline">
+                                <a href={delivery.urls.waybill} target="_blank" rel="noopener noreferrer">
+                                    <LuFileText /> Акт приёма-передачи
                                 </a>
                             </Button>
                         )}

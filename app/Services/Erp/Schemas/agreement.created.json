@@ -1,0 +1,161 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "agreement.created",
+    "title": "agreement.created (1С → Сайт)",
+    "type": "object",
+    "description": "Соглашение с клиентом — условия продаж и группировочный признак взаиморасчётов. Добавлено в v16.0.0.\n\nПочему соглашения, а не договоры: замер боевой базы 1С показал 75 договоров при 7 818 реализациях без договора (97,8 %), тогда как соглашений 5 102 и они покрывают 100 % реализаций. Строить контракт на договорах было нельзя.\n\nВАЖНО: соглашение НЕ является измерением регистра взаиморасчётов. 1С берёт его из документа-регистратора, поэтому при изменении соглашения задним числом группировка исторических движений может разъехаться. Осью акта сверки служит контрагент × организация × валюта — регистровый срез, который сходится всегда. Соглашение используется как фильтр и группировка внутри акта.",
+    "properties": {
+        "event": {
+            "type": "string",
+            "description": "Тип события. Всегда «agreement.created».",
+            "const": "agreement.created"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "spec_version": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Версия спецификации обмена («16.0»). Опционально, только для журнала шины."
+        },
+        "revision": {
+            "type": [
+                "integer",
+                "null"
+            ],
+            "minimum": 0,
+            "description": "Номер ревизии в 1С. Сообщение с устаревшей ревизией отбрасывается."
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID соглашения в 1С. Ключ идемпотентности: повторная доставка обновляет запись, а не создаёт вторую."
+        },
+        "partner_uuid": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "UUID партнёра-владельца соглашения. Нужен для резолва пользователя сайта."
+        },
+        "contractor_uuid": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "UUID контрагента. Приоритетный способ матчинга, fallback на tax_id работает только в паре с partner_uuid."
+        },
+        "tax_id": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Налоговый идентификатор контрагента. Опционально."
+        },
+        "organization_uuid": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "UUID нашей организации, с которой заключено соглашение. Опционально."
+        },
+        "number": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Номер соглашения («СГ-0042»). Опционально."
+        },
+        "date": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "date",
+            "description": "Дата соглашения. Опционально."
+        },
+        "name": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Наименование соглашения как в 1С. Показывается пользователю как есть."
+        },
+        "currency_code": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "Валюта расчётов по соглашению (ISO-4217). Опционально."
+        },
+        "settlement_procedure": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "enum": [
+                "orders",
+                "advance_orders_debt_invoices",
+                "settlement_documents",
+                null
+            ],
+            "description": "Порядок расчётов латиницей: 'orders' — по заказам (основной вариант, 3 972 соглашения), 'advance_orders_debt_invoices' — аванс по заказам, долг по накладным (962), 'settlement_documents' — по расчётным документам (1). Значение null — «не заполнено» — ДОПУСТИМОЕ состояние, а не ошибка: таких соглашений 167. Варианта «по договору» в базе нет вовсе."
+        },
+        "credit_limit": {
+            "type": [
+                "number",
+                "null"
+            ],
+            "description": "Кредитный лимит по соглашению. Опционально: если в соглашении не задан, присылайте null. Сайт его показывает, но автоблокировку по нему пока не делает."
+        },
+        "deferral_days": {
+            "type": [
+                "integer",
+                "null"
+            ],
+            "minimum": 0,
+            "description": "Число дней отсрочки платежа. Опционально, справочно."
+        },
+        "status": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "enum": [
+                "active",
+                "closed",
+                null
+            ],
+            "description": "Состояние соглашения. Опционально, при отсутствии считается активным."
+        },
+        "erp_created_at": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "date-time",
+            "description": "Аудит-метка: дата-время создания в 1С. Опционально."
+        },
+        "erp_updated_at": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "date-time",
+            "description": "Аудит-метка: дата-время последнего изменения в 1С. Опционально."
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "uuid"
+    ]
+}

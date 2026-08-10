@@ -1,0 +1,94 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "settlement.checkpoint",
+    "title": "settlement.checkpoint (1С → Сайт)",
+    "type": "object",
+    "description": "Сверенное сальдо на дату закрытия периода — контрольная точка. Добавлено в v16.0.0. В ленту движений НЕ попадает и в баланс не входит: служит исключительно проверкой инварианта «сальдо на начало + движения за период = checkpoint». Первая точка — 01.07.2026, сразу за последней закрытой датой в 1С. Присылается при каждом последующем закрытии периода: постоянный контроль качества обмена лучше разовой сверки.",
+    "properties": {
+        "event": {
+            "type": "string",
+            "description": "Тип события. Всегда «settlement.checkpoint».",
+            "const": "settlement.checkpoint"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "spec_version": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Версия спецификации обмена («16.0»). Опционально, только для журнала шины."
+        },
+        "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Дата, на которую сальдо сверено. Первая точка — 2026-07-01."
+        },
+        "is_verified": {
+            "type": [
+                "boolean",
+                "null"
+            ],
+            "description": "Признак сверенности. Для checkpoint ожидается true — иначе точка не выполняет своей роли и сайт покажет предупреждение при сверке."
+        },
+        "amount": {
+            "type": "number",
+            "description": "Сверенное сальдо СО ЗНАКОМ на указанную дату. «−» — клиент должен нам, «+» — переплата. То же соглашение, что во всех денежных сообщениях v16."
+        },
+        "amount_rub": {
+            "type": [
+                "number",
+                "null"
+            ],
+            "description": "Рублёвый эквивалент сальдо со знаком (СуммаРегл)."
+        },
+        "currency_code": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "Валюта взаиморасчётов (ISO-4217). Часть ключа контрольной точки: сверка идёт в валюте движений, а не в рублях, чтобы курсовое расхождение не выдавалось за учётное."
+        },
+        "partner_uuid": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "UUID партнёра. Нужен для резолва пользователя при матчинге контрагента по tax_id."
+        },
+        "contractor_uuid": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "UUID контрагента. Обязан совпадать с uuid, по которому приезжают движения: иначе контрольная точка сверится с пустотой."
+        },
+        "tax_id": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Налоговый идентификатор контрагента. Fallback-матчинг только в паре с partner_uuid."
+        },
+        "organization_uuid": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "UUID нашей организации. Разрез контрольной точки — контрагент × организация × валюта, то есть ось акта сверки."
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "as_of_date",
+        "amount"
+    ]
+}

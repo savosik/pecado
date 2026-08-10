@@ -1,0 +1,108 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "settlement.opening_balance",
+    "title": "settlement.opening_balance (1С → Сайт)",
+    "type": "object",
+    "description": "Начальное сальдо взаиморасчётов на дату отсечки — первая строка ленты движений. Добавлено в v16.0.0. Без него баланс занижен на всю историю до даты отсечки. Дата отсечки — 01.01.2026; период на эту дату в 1С НЕ закрыт (даты запрета — 31.03, 30.04, 30.06.2026), поэтому сальдо помечается несверенным, а проверяется через settlement.checkpoint на 01.07.2026.",
+    "properties": {
+        "event": {
+            "type": "string",
+            "description": "Тип события. Всегда «settlement.opening_balance».",
+            "const": "settlement.opening_balance"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "spec_version": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Версия спецификации обмена («16.0»). Опционально, только для журнала шины."
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Стабильный идентификатор строки сальдо. Ключ идемпотентности: повторная отправка с тем же uuid ЗАМЕНЯЕТ запись, а не добавляет вторую. Собирается на стороне 1С из пары «контрагент + дата отсечки» или иным устойчивым способом."
+        },
+        "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Дата, на которую зафиксировано сальдо. Для первичной выгрузки — 2026-01-01."
+        },
+        "is_verified": {
+            "type": [
+                "boolean",
+                "null"
+            ],
+            "description": "Признак сверенности периода. Для 01.01.2026 — false: период не закрыт. Сайт помечает такое сальдо и показывает оговорку в акте сверки, а достоверность первого полугодия проверяет инвариантом «сальдо 01.01 + движения = checkpoint 01.07»."
+        },
+        "amount": {
+            "type": "number",
+            "description": "Сумма сальдо СО ЗНАКОМ. «−» — клиент должен нам, «+» — переплата клиента. То же соглашение, что в settlement.posted и в current_balance из balance.updated."
+        },
+        "amount_rub": {
+            "type": [
+                "number",
+                "null"
+            ],
+            "description": "Рублёвый эквивалент сальдо со знаком (СуммаРегл). Для рублёвых расчётов равен amount."
+        },
+        "currency_code": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "Валюта взаиморасчётов (ISO-4217). Опционально, при отсутствии считается RUB."
+        },
+        "partner_uuid": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "UUID партнёра. Нужен для резолва пользователя сайта, если контрагент матчится по tax_id."
+        },
+        "contractor_uuid": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "UUID контрагента. Приоритетный способ матчинга. Обязан совпадать с uuid, по которому приезжают движения того же контрагента: иначе сальдо и движения не встретятся."
+        },
+        "tax_id": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Налоговый идентификатор контрагента. Fallback-матчинг работает только в паре с partner_uuid."
+        },
+        "organization_uuid": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "UUID нашей организации. Вместе с контрагентом и валютой образует ось акта сверки."
+        },
+        "agreement_uuid": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "UUID соглашения. Опционально: сальдо ведётся по оси контрагент × организация × валюта, соглашение только для группировки."
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "uuid",
+        "as_of_date",
+        "amount"
+    ]
+}

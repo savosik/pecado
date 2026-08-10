@@ -347,23 +347,60 @@ class DeliveryController extends WmsController
 
     /**
      * Этикетка (ярлык) от перевозчика. ApiShip отдаёт ссылку на PDF в своём хранилище.
+     *
+     * В файле по ярлыку на каждое место заявки — сколько коробов передали, столько
+     * и наклеек. Разрез «этикетка на конкретный короб» не поддерживает сам ApiShip.
      */
     public function label(Request $request, DeliveryShipment $delivery): RedirectResponse
     {
+        return $this->providerDocument(
+            $request,
+            $delivery,
+            fn (string $orderId, int $actorId) => $this->client->getLabels([$orderId], $delivery->id, $actorId),
+            'Этикетка',
+        );
+    }
+
+    /**
+     * Акт приёма-передачи по заявке — то, что подписывают при передаче груза курьеру.
+     */
+    public function waybill(Request $request, DeliveryShipment $delivery): RedirectResponse
+    {
+        return $this->providerDocument(
+            $request,
+            $delivery,
+            fn (string $orderId, int $actorId) => $this->client->getWaybills([$orderId], $delivery->id, $actorId),
+            'Акт приёма-передачи',
+        );
+    }
+
+    /**
+     * Общий путь для печатных форм: заявка должна быть у перевозчика, ответ — ссылка на PDF.
+     *
+     * Файл лежит в хранилище ApiShip и отдаётся по временной ссылке, поэтому проксировать
+     * его через себя незачем — уводим браузер напрямую.
+     *
+     * @param  \Closure(string, int): \App\Services\Delivery\ApiShip\ApiShipResult  $fetch
+     */
+    private function providerDocument(
+        Request $request,
+        DeliveryShipment $delivery,
+        \Closure $fetch,
+        string $documentName,
+    ): RedirectResponse {
         if (! $delivery->apiship_order_id) {
-            return back()->with('error', 'Этикетка появится после передачи заявки перевозчику.');
+            return back()->with('error', "{$documentName} появится после передачи заявки перевозчику.");
         }
 
-        $result = $this->client->getLabels(
-            [$delivery->apiship_order_id],
-            $delivery->id,
-            $this->wmsActor($request)->id,
-        );
+        $result = $fetch($delivery->apiship_order_id, $this->wmsActor($request)->id);
 
         $url = $result->data()['url'] ?? null;
 
         if (! $result->ok || ! is_string($url) || $url === '') {
-            return back()->with('error', 'Этикетку получить не удалось: '.($result->error ?? 'перевозчик не вернул файл'));
+            return back()->with(
+                'error',
+                "{$documentName}: получить не удалось — ".($result->error ?? 'перевозчик не вернул файл'),
+            );
         }
 
         return redirect()->away($url);
@@ -709,6 +746,7 @@ class DeliveryController extends WmsController
                 'submit' => route('wms.deliveries.submit', $delivery),
                 'cancel' => route('wms.deliveries.cancel', $delivery),
                 'label' => route('wms.deliveries.label', $delivery),
+                'waybill' => route('wms.deliveries.waybill', $delivery),
                 'courier' => route('wms.deliveries.courier', $delivery),
                 'destroy' => route('wms.deliveries.destroy', $delivery),
             ],

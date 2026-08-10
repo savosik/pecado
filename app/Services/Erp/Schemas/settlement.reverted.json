@@ -1,0 +1,57 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "settlement.reverted",
+    "title": "settlement.reverted (1С → Сайт)",
+    "type": "object",
+    "description": "Отмена проведения документа: движения регистра, порождённые этим документом, аннулируются. Добавлено в v16.0.0. Отличие от settlement.posted с пустым entries — смысловое: там документ проведён, но движений не даёт, здесь документ не проведён вовсе. Результат для баланса одинаков, различие видно в журнале и при разборе.",
+    "properties": {
+        "event": {
+            "type": "string",
+            "description": "Тип события. Всегда «settlement.reverted».",
+            "const": "settlement.reverted"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "spec_version": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Версия спецификации обмена («16.0»). Опционально, только для журнала шины."
+        },
+        "revision": {
+            "type": [
+                "integer",
+                "null"
+            ],
+            "minimum": 0,
+            "description": "Номер ревизии документа в 1С. Проверяется тем же правилом, что и в settlement.posted: сообщение с устаревшей ревизией отбрасывается. Без этого перепроведение, обогнавшее отмену, оставило бы движения удалёнными."
+        },
+        "document_uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID документа-регистратора, проведение которого отменено. Все движения с этим uuid удаляются, включая строки графика оплаты по нему."
+        },
+        "document_kind": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Вид документа. Опционально, только для журнала: удаление идёт по document_uuid."
+        },
+        "document_number": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Номер документа. Опционально, только для журнала и диагностики."
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "document_uuid"
+    ]
+}

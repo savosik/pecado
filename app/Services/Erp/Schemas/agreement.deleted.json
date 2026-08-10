@@ -1,0 +1,34 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "agreement.deleted",
+    "title": "agreement.deleted (1С → Сайт)",
+    "type": "object",
+    "description": "Пометка соглашения на удаление в 1С. Добавлено в v16.0.0. Сайт выполняет мягкое удаление: движения регистра, ссылающиеся на это соглашение, СОХРАНЯЮТСЯ — история взаиморасчётов не должна исчезать вслед за справочной записью. В акте сверки такие движения попадают в группу «Без соглашения».",
+    "properties": {
+        "event": {
+            "type": "string",
+            "description": "Тип события. Всегда «agreement.deleted».",
+            "const": "agreement.deleted"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "spec_version": {
+            "type": ["string", "null"],
+            "description": "Версия спецификации обмена («16.0»). Опционально, только для журнала шины."
+        },
+        "revision": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "description": "Номер ревизии в 1С. Сообщение с устаревшей ревизией отбрасывается."
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID соглашения в 1С. Единственный способ идентификации: по номеру соглашения удаление не выполняется."
+        }
+    },
+    "additionalProperties": true,
+    "required": ["event", "uuid"]
+}

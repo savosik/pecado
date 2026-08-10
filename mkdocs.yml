@@ -63,6 +63,9 @@ nav:
     - Реализации: rules/shipments.md
     - Расходные ордера: rules/goods-issues.md
     - Платежи: rules/payments.md
+    - Регистр взаиморасчётов: rules/settlements.md
+    - График оплаты: rules/payment-schedule.md
+    - Соглашения с клиентами: rules/agreements.md
     - Баланс: rules/balances.md
     - Организации (наши юрлица): rules/organizations.md
     - Индивидуальные цены: rules/individual-prices.md

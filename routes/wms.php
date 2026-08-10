@@ -111,6 +111,7 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
         Route::get('/deliveries/{delivery}', [DeliveryController::class, 'show'])->name('deliveries.show');
         Route::get('/deliveries/{delivery}/points', [DeliveryController::class, 'points'])->name('deliveries.points');
         Route::get('/deliveries/{delivery}/label', [DeliveryController::class, 'label'])->name('deliveries.label');
+        Route::get('/deliveries/{delivery}/waybill', [DeliveryController::class, 'waybill'])->name('deliveries.waybill');
 
         Route::middleware('permission:wms-deliveries.edit')->group(function () {
             Route::put('/deliveries/{delivery}', [DeliveryController::class, 'update'])->name('deliveries.update');
