@@ -72,6 +72,76 @@ return [
         ],
     ],
 
+    /*
+     * ApiShip — агрегатор служб доставки (СДЭК, ПЭК, Деловые Линии и др.).
+     * Через него склад считает стоимость, заводит заявку и получает трек-номер.
+     * См. docs/APISHIP.md.
+     */
+    'apiship' => [
+        // Мастер-выключатель: без него ни один запрос в ApiShip не уходит.
+        'enabled' => (bool) env('APISHIP_ENABLED', false),
+
+        /*
+         * Боевая среда — https://api.apiship.ru/v1, тестовая — http://api.dev.apiship.ru/v1
+         * (именно http, TLS там нет) с логином и паролем `test`. Базы у сред разные.
+         */
+        'base_url' => rtrim((string) env('APISHIP_BASE_URL', 'https://api.apiship.ru/v1'), '/'),
+
+        /*
+         * Готовый API-токен из личного кабинета ApiShip. Если он задан, логин
+         * и пароль не нужны вовсе: токен бессрочный, и лишний POST /login перед
+         * работой — это только повод получить 401 на ровном месте.
+         */
+        'token' => env('APISHIP_TOKEN'),
+        'login' => env('APISHIP_LOGIN'),
+        'password' => env('APISHIP_PASSWORD'),
+        'timeout' => (int) env('APISHIP_TIMEOUT', 30),
+        // Токен ApiShip бессрочный, но держать его в кэше сутки дешевле, чем
+        // логиниться перед каждым запросом. Протухший токен ловится по 401.
+        'token_ttl' => (int) env('APISHIP_TOKEN_TTL', 86400),
+        // Расчёт тарифов у ApiShip тарифицируется как транзакция — одинаковые
+        // запросы в пределах этого окна отдаём из кэша.
+        'calculator_cache_ttl' => (int) env('APISHIP_CALCULATOR_CACHE_TTL', 600),
+
+        'webhook' => [
+            'enabled' => (bool) env('APISHIP_WEBHOOK_ENABLED', false),
+            // Подписи у вебхуков ApiShip нет — секрет живёт сегментом URL.
+            'secret' => env('APISHIP_WEBHOOK_SECRET'),
+            // Необязательный список IP через запятую. Пусто — проверка по IP выключена.
+            'allowed_ips' => array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) env('APISHIP_WEBHOOK_ALLOWED_IPS', ''))
+            ))),
+        ],
+
+        // Отправитель по умолчанию — наш склад. Уезжает в блоке sender каждой заявки.
+        'sender' => [
+            'company_name' => env('APISHIP_SENDER_COMPANY', 'Pecado'),
+            'contact_name' => env('APISHIP_SENDER_CONTACT'),
+            'phone' => env('APISHIP_SENDER_PHONE'),
+            'email' => env('APISHIP_SENDER_EMAIL'),
+            'country_code' => env('APISHIP_SENDER_COUNTRY', 'RU'),
+            'region' => env('APISHIP_SENDER_REGION'),
+            'city' => env('APISHIP_SENDER_CITY'),
+            'street' => env('APISHIP_SENDER_STREET'),
+            'house' => env('APISHIP_SENDER_HOUSE'),
+            'index' => env('APISHIP_SENDER_INDEX'),
+        ],
+
+        'defaults' => [
+            /*
+             * Вес товаров без заполненных weight_gross/weight_net. Ноль слать нельзя:
+             * ошибки API не будет, но перевозчик посчитает тариф по объёмному весу
+             * и выставит счёт, отличный от нашей оценки.
+             */
+            'item_weight_grams' => (int) env('APISHIP_DEFAULT_WEIGHT_GRAMS', 500),
+            // Габариты типовой коробки, сантиметры — подставляются в форму мест.
+            'place_length' => (int) env('APISHIP_DEFAULT_PLACE_LENGTH', 40),
+            'place_width' => (int) env('APISHIP_DEFAULT_PLACE_WIDTH', 30),
+            'place_height' => (int) env('APISHIP_DEFAULT_PLACE_HEIGHT', 20),
+        ],
+    ],
+
     'dadata' => [
         'api_key' => env('DADATA_API_KEY'),
         'secret_key' => env('DADATA_SECRET_KEY'),

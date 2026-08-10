@@ -21,7 +21,7 @@ class RoleController extends Controller
         'Склады' => ['warehouses', 'regions'],
         'Продажи' => ['orders', 'carts', 'returns', 'shipments', 'supplier-preorders', 'favorites', 'wishlist', 'defects', 'defect-types'],
         'CRM' => ['crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-analytics', 'crm-profile', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-agent-tokens'],
-        'Склад (WMS)' => ['wms-dashboard', 'wms-defects', 'wms-defect-types', 'wms-goods-issues'],
+        'Склад (WMS)' => ['wms-dashboard', 'wms-defects', 'wms-defect-types', 'wms-goods-issues', 'wms-deliveries', 'wms-delivery-settings'],
         'Маркетинг' => ['promotions', 'promotion-rules', 'product-selections'],
         'Пользователи' => ['users', 'user-questionnaires', 'client-statuses', 'personal-managers', 'companies', 'company-bank-accounts', 'delivery-addresses'],
         'Финансы' => ['organizations', 'currencies', 'contractor-balances', 'payments', 'individual-prices'],
@@ -48,6 +48,8 @@ class RoleController extends Controller
         'wms-dashboard' => 'Склад: Рабочий стол', 'wms-defects' => 'Склад: Некондиция',
         'wms-defect-types' => 'Склад: Справочник дефектов',
         'wms-goods-issues' => 'Склад: Расходные ордера',
+        'wms-deliveries' => 'Склад: Отправки в ТК',
+        'wms-delivery-settings' => 'Склад: Настройки доставки',
         'defects' => 'Уценка', 'defect-types' => 'Справочник дефектов',
         'users' => 'Пользователи', 'user-questionnaires' => 'Анкеты',
         'client-statuses' => 'Статусы клиентов', 'personal-managers' => 'Персональные менеджеры',
@@ -68,7 +70,8 @@ class RoleController extends Controller
         'view' => 'Просмотр', 'create' => 'Создание',
         'edit' => 'Редактирование', 'delete' => 'Удаление',
         'price' => 'Установка цены', 'publish' => 'Публикация',
-        'send' => 'Отправка',
+        'send' => 'Отправка', 'export' => 'Выгрузка',
+        'submit' => 'Передача в ТК', 'cancel' => 'Отмена заявки',
     ];
 
     public function index(Request $request)

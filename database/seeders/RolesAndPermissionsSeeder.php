@@ -133,6 +133,12 @@ class RolesAndPermissionsSeeder extends Seeder
         // Расходные ордера из 1С: журнал только на чтение — статусами управляет 1С,
         // поэтому действий create/edit/delete у ресурса нет принципиально.
         'wms-goods-issues' => ['view', 'export'],
+        // Отправки транспортными компаниями (ApiShip). `submit` отдельно от `edit`:
+        // собрать груз и передать заявку перевозчику — разные по цене ошибки решения.
+        'wms-deliveries' => ['view', 'create', 'edit', 'submit', 'cancel'],
+        // Настройки ApiShip: токен боевого API и адрес отправителя. Только начальнику
+        // склада — сломать ими можно весь раздел разом.
+        'wms-delivery-settings' => ['view', 'edit'],
 
         // Уценка глазами закупщика — админский ресурс (без `wms-` префикса):
         // цену и публикацию задаёт buyer-manager в /admin, а не кладовщик.
@@ -281,15 +287,15 @@ class RolesAndPermissionsSeeder extends Seeder
                 'product-barcodes', 'certificates', 'product-exports',
             ],
         ],
-        // Склад. Обе роли пока с одинаковым набором прав — разводить нечем.
-        // Разграничение появится вместе с разделами (инвентаризация и списание —
-        // начальнику, отбор — кладовщику).
+        // Склад. Разграничение ролей пока точечное: справочник дефектов и отмена
+        // заявки в ТК — за начальником, остальное общее.
         'warehouse-head' => [
             'label' => 'Начальник склада',
             'resources' => [
                 // Только WMS: в /admin роль намеренно не пускает.
                 // Справочник дефектов ведёт начальник склада — у кладовщика его нет.
                 'wms-dashboard', 'wms-defects', 'wms-defect-types', 'wms-goods-issues',
+                'wms-deliveries', 'wms-delivery-settings',
             ],
         ],
         'storekeeper' => [
@@ -297,6 +303,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только WMS: в /admin роль намеренно не пускает.
                 'wms-dashboard', 'wms-defects', 'wms-goods-issues',
+                // Отправки собирает и передаёт в ТК кладовщик, но отменить
+                // уже принятую перевозчиком заявку может только начальник склада.
+                'wms-deliveries' => ['view', 'create', 'edit', 'submit'],
             ],
         ],
         // Роль buyer-manager (закупщик) намеренно не описана здесь: она заведена

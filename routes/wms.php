@@ -3,6 +3,9 @@
 use App\Http\Controllers\Wms\DashboardController;
 use App\Http\Controllers\Wms\DefectController;
 use App\Http\Controllers\Wms\DefectTypeController;
+use App\Http\Controllers\Wms\DeliveryCandidateController;
+use App\Http\Controllers\Wms\DeliveryController;
+use App\Http\Controllers\Wms\DeliverySettingsController;
 use App\Http\Controllers\Wms\GoodsIssueController;
 use Illuminate\Support\Facades\Route;
 
@@ -63,6 +66,66 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
 
         // Ниже export — иначе «export» попал бы в {goodsIssue} как id.
         Route::get('/goods-issues/{goodsIssue}', [GoodsIssueController::class, 'show'])->name('goods-issues.show');
+    });
+
+    // Реализации к доставке — рабочий стол склада перед созданием отправки:
+    // фильтры, группировки, скрытие. Отсюда выбранное уходит в мастер.
+    Route::middleware('permission:wms-deliveries.view')->group(function () {
+        Route::get('/delivery-candidates', [DeliveryCandidateController::class, 'index'])
+            ->name('delivery-candidates.index');
+        Route::post('/delivery-candidates/hide', [DeliveryCandidateController::class, 'toggleHidden'])
+            ->name('delivery-candidates.hide')->middleware('permission:wms-deliveries.create');
+        // Отметка «уже отправлено» — тоже создание отправки, только без ApiShip.
+        Route::post('/delivery-candidates/mark-shipped', [DeliveryCandidateController::class, 'markShipped'])
+            ->name('delivery-candidates.mark-shipped')->middleware('permission:wms-deliveries.create');
+    });
+
+    // Настройки интеграции с ApiShip: токен и адрес отправителя ведёт начальник
+    // склада — договор с перевозчиком перевыпускают без участия разработчика.
+    Route::middleware('permission:wms-delivery-settings.view')->group(function () {
+        Route::get('/delivery-settings', [DeliverySettingsController::class, 'edit'])
+            ->name('delivery-settings.edit');
+        Route::put('/delivery-settings', [DeliverySettingsController::class, 'update'])
+            ->name('delivery-settings.update')->middleware('permission:wms-delivery-settings.edit');
+        Route::post('/delivery-settings/test', [DeliverySettingsController::class, 'test'])
+            ->name('delivery-settings.test')->middleware('permission:wms-delivery-settings.edit');
+    });
+
+    // Отправки транспортными компаниями (ApiShip). В отличие от расходных ордеров
+    // это документ сайта: 1С про него ничего не знает и по шине он не ходит.
+    Route::middleware('permission:wms-deliveries.view')->group(function () {
+        Route::get('/deliveries', [DeliveryController::class, 'index'])->name('deliveries.index');
+
+        // Статичные сегменты — выше {delivery}, иначе «create» уедет в параметр.
+        Route::get('/deliveries/create', [DeliveryController::class, 'create'])
+            ->name('deliveries.create')->middleware('permission:wms-deliveries.create');
+        Route::get('/deliveries/search-shipments', [DeliveryController::class, 'searchShipments'])
+            ->name('deliveries.search-shipments')->middleware('permission:wms-deliveries.create');
+        Route::get('/deliveries/recipient-options', [DeliveryController::class, 'recipientOptions'])
+            ->name('deliveries.recipient-options')->middleware('permission:wms-deliveries.create');
+        Route::post('/deliveries/resolve-address', [DeliveryController::class, 'resolveAddress'])
+            ->name('deliveries.resolve-address')->middleware('permission:wms-deliveries.create');
+        Route::post('/deliveries', [DeliveryController::class, 'store'])
+            ->name('deliveries.store')->middleware('permission:wms-deliveries.create');
+
+        Route::get('/deliveries/{delivery}', [DeliveryController::class, 'show'])->name('deliveries.show');
+        Route::get('/deliveries/{delivery}/points', [DeliveryController::class, 'points'])->name('deliveries.points');
+        Route::get('/deliveries/{delivery}/label', [DeliveryController::class, 'label'])->name('deliveries.label');
+
+        Route::middleware('permission:wms-deliveries.edit')->group(function () {
+            Route::put('/deliveries/{delivery}', [DeliveryController::class, 'update'])->name('deliveries.update');
+            Route::post('/deliveries/{delivery}/calculate', [DeliveryController::class, 'calculate'])->name('deliveries.calculate');
+            Route::delete('/deliveries/{delivery}', [DeliveryController::class, 'destroy'])->name('deliveries.destroy');
+        });
+
+        Route::middleware('permission:wms-deliveries.submit')->group(function () {
+            Route::post('/deliveries/{delivery}/submit', [DeliveryController::class, 'submit'])->name('deliveries.submit');
+            Route::post('/deliveries/{delivery}/courier', [DeliveryController::class, 'courier'])->name('deliveries.courier');
+        });
+
+        // Отмена уже принятой заявки может стоить денег — только начальнику склада.
+        Route::post('/deliveries/{delivery}/cancel', [DeliveryController::class, 'cancel'])
+            ->name('deliveries.cancel')->middleware('permission:wms-deliveries.cancel');
     });
 
     // Справочник типовых дефектов: ведёт начальник склада (в /admin роль не пускает).

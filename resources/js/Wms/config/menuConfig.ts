@@ -5,6 +5,8 @@ import {
     LuTruck,
     LuScanBarcode,
     LuListOrdered,
+    LuPackageSearch,
+    LuSettings,
     LuTriangleAlert,
 } from "react-icons/lu";
 
@@ -46,6 +48,15 @@ export const menuConfig: MenuGroup[] = [
         icon: LuTruck,
         items: [
             { label: "Расходные ордера", icon: LuClipboardList, path: "/wms/goods-issues", permission: "wms-goods-issues.view" },
+        ],
+    },
+    {
+        title: "Доставка",
+        icon: LuTruck,
+        items: [
+            { label: "Реализации к доставке", icon: LuPackageSearch, path: "/wms/delivery-candidates", permission: "wms-deliveries.view" },
+            { label: "Отправки", icon: LuTruck, path: "/wms/deliveries", permission: "wms-deliveries.view" },
+            { label: "Настройки ApiShip", icon: LuSettings, path: "/wms/delivery-settings", permission: "wms-delivery-settings.view" },
         ],
     },
     // Разделы приёмки, отбора и инвентаризации добавятся сюда позже.

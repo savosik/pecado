@@ -35,6 +35,17 @@ Route::get('/products/{product:slug}/rich-content', [\App\Http\Controllers\Api\P
     ->name('api.products.rich-content');
 
 // ──────────────────────────────────────────────────────────────
+// Вебхук ApiShip — смена статуса отправления у перевозчика.
+//
+// Без auth: запрос приходит от чужого сервиса. Подписи ApiShip не даёт, поэтому
+// секрет живёт сегментом URL, а проверки собраны в middleware apiship.webhook.
+// Throttle высокий: событий по всем отправкам разом бывает много.
+// ──────────────────────────────────────────────────────────────
+Route::post('/delivery/apiship/webhook/{secret}', [\App\Http\Controllers\Api\ApiShipWebhookController::class, 'handle'])
+    ->middleware(['apiship.webhook', 'throttle:600,1'])
+    ->name('api.delivery.apiship.webhook');
+
+// ──────────────────────────────────────────────────────────────
 // Content API — для ИИ-агента контент-менеджера
 // ──────────────────────────────────────────────────────────────
 Route::prefix('content')
