@@ -86,6 +86,11 @@ class ClientLastVisitTest extends TestCase
     #[Test]
     public function список_партнёров_отдаёт_визит_и_признак_никогда(): void
     {
+        // Метка «сегодня» считается по календарным суткам, поэтому без фиксации
+        // времени тест падал при каждом прогоне между полуночью и 02:00:
+        // «два часа назад» приходилось уже на вчерашний день.
+        $this->travelTo(Carbon::today()->setHour(12));
+
         $never = $this->client(['last_seen_at' => null, 'erp_name' => 'Партнёр без входа']);
         $recent = $this->client(['last_seen_at' => now()->subHours(2), 'erp_name' => 'Партнёр со входом']);
 
