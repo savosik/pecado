@@ -40,6 +40,9 @@ export default function FinanceDashboard({
     seesAll = false,
 }) {
     const hasOverdue = (summary.overdue_amount || 0) > 0;
+    // null означает «старое счётное ядро»: показывать плитку нечем, а нулём
+    // подменять нельзя — ноль здесь читается как «клиент ничего не должен».
+    const hasFactBalance = summary.balance_fact !== null && summary.balance_fact !== undefined;
 
     return (
         <CrmLayout breadcrumbs={[{ label: 'Финансы' }]}>
@@ -61,7 +64,7 @@ export default function FinanceDashboard({
                 showGranularity
             />
 
-            <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} gap={3} mb={4}>
+            <SimpleGrid columns={{ base: 1, md: 2, xl: hasFactBalance ? 5 : 4 }} gap={3} mb={4}>
                 <Tile
                     label="Ожидается за период"
                     value={formatRub(summary.expected_period)}
@@ -83,6 +86,19 @@ export default function FinanceDashboard({
                     value={formatRub(summary.debt_total)}
                     hint={`Просрочка по 1С: ${formatCompact(summary.erp_overdue_total)} · авансы: ${formatCompact(summary.advances)}`}
                 />
+                {/*
+                    Фактическое сальдо появляется только на регистре взаиморасчётов:
+                    старая модель такого числа не знала, и до сих пор его путали
+                    с текущей задолженностью. Это разные величины — сальдо включает
+                    ещё не наступившие по сроку обязательства.
+                */}
+                {hasFactBalance && (
+                    <Tile
+                        label="Фактический баланс"
+                        value={formatRub(summary.balance_fact)}
+                        hint="Сумма движений регистра — то же, что в акте сверки"
+                    />
+                )}
             </SimpleGrid>
 
             {noScheduleCount > 0 && (

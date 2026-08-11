@@ -70,6 +70,7 @@ export const menuConfig: MenuGroup[] = [
             { label: "План поступлений", icon: LuWallet, path: "/crm/finance/plan", permission: "crm-finance.view" },
             { label: "Просрочка", icon: LuTriangleAlert, path: "/crm/finance/overdue", permission: "crm-finance.view" },
             { label: "Балансы партнёров", icon: LuScale, path: "/crm/finance/balances", permission: "crm-finance.view" },
+            { label: "Акт сверки", icon: LuFileText, path: "/crm/finance/reconciliation", permission: "crm-finance.view" },
             // Календарь живёт под правом документов: он появился раньше раздела
             // и остаётся доступен тем, у кого есть журналы, но нет финансов.
             { label: "Календарь платежей", icon: LuCalendarClock, path: "/crm/payments/calendar", permission: "crm-clients.view" },

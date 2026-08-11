@@ -7,6 +7,7 @@ use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Crm\Finance\FinanceFilters;
 use App\Services\Crm\Finance\PaymentForecast;
+use App\Services\Crm\Finance\ReconciliationService;
 use App\Services\SimpleXlsxExporter;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -87,6 +88,65 @@ class FinanceController extends CrmController
             // и рядом в таблице они читались как ошибка.
             'summary' => $this->forecast->summary($clients, $filters),
             ...$this->sharedOptions($request, $filters),
+        ]);
+    }
+
+    /**
+     * Акт сверки взаиморасчётов. GET /crm/finance/reconciliation
+     *
+     * Клиент выбирается явно, а не берётся из фильтров раздела: акт — документ
+     * по одному контрагенту, и «акт по всем клиентам менеджера» не имеет смысла.
+     * Пока клиент не выбран, страница показывает только форму.
+     */
+    public function reconciliation(Request $request, ReconciliationService $service): InertiaResponse
+    {
+        $clientId = $request->integer('client_id') ?: null;
+        $period = $service->defaultPeriod();
+        $from = (string) $request->string('date_from', $period['from']);
+        $to = (string) $request->string('date_to', $period['to']);
+
+        $client = $clientId !== null
+            // visibleInCrm, а не findOrFail: чужой клиент обязан давать 404,
+            // а не показывать акт по деньгам другого менеджера.
+            ? User::query()->visibleInCrm($this->crmActor($request))->find($clientId)
+            : null;
+
+        if ($clientId !== null && $client === null) {
+            abort(404);
+        }
+
+        return Inertia::render('Crm/Pages/Finance/Reconciliation', [
+            'client' => $client !== null ? [
+                'id' => (int) $client->getKey(),
+                'name' => $client->erp_name ?: $client->name,
+                'url' => route('crm.clients.show', $client->getKey()),
+            ] : null,
+            'act' => $client !== null ? $service->act(
+                client: $client,
+                organizationId: $request->integer('organization_id') ?: null,
+                from: $from,
+                to: $to,
+                agreementId: $request->integer('agreement_id') ?: null,
+                withoutAgreement: $request->boolean('without_agreement'),
+                currency: (string) $request->string('currency', 'RUB'),
+            ) : null,
+            'options' => [
+                // Список партнёров нужен всегда: без него не с чего начать.
+                // Уже ограничен скоупом менеджера, поэтому чужих в нём нет.
+                'clients' => $this->clientOptions($request),
+                'organizations' => $client !== null ? $service->organizationsOf($client) : [],
+                'agreements' => $client !== null ? $service->agreementsOf($client) : [],
+                'currencies' => $client !== null ? $service->currenciesOf($client) : ['RUB'],
+            ],
+            'form' => [
+                'client_id' => $clientId,
+                'organization_id' => $request->integer('organization_id') ?: null,
+                'agreement_id' => $request->integer('agreement_id') ?: null,
+                'without_agreement' => $request->boolean('without_agreement'),
+                'currency' => (string) $request->string('currency', 'RUB'),
+                'date_from' => $from,
+                'date_to' => $to,
+            ],
         ]);
     }
 
@@ -417,6 +477,24 @@ class FinanceController extends CrmController
         }
 
         return $query;
+    }
+
+    /**
+     * Партнёры для выбора в акте сверки — в пределах скоупа менеджера.
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    private function clientOptions(Request $request): array
+    {
+        return User::query()
+            ->visibleInCrm($this->crmActor($request))
+            ->orderByRaw('COALESCE(NULLIF(users.erp_name, ?), users.name)', [''])
+            ->get(['users.id', 'users.name', 'users.erp_name'])
+            ->map(static fn (User $user): array => [
+                'id' => (int) $user->getKey(),
+                'name' => $user->erp_name ?: $user->name,
+            ])
+            ->all();
     }
 
     /**

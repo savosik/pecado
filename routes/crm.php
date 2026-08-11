@@ -379,5 +379,6 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/finance/plan', [FinanceController::class, 'plan'])->name('finance.plan');
         Route::get('/finance/overdue', [FinanceController::class, 'overdue'])->name('finance.overdue');
         Route::get('/finance/balances', [FinanceController::class, 'balances'])->name('finance.balances');
+        Route::get('/finance/reconciliation', [FinanceController::class, 'reconciliation'])->name('finance.reconciliation');
     });
 });

@@ -360,6 +360,10 @@ class PaymentForecastService implements PaymentForecast
             'debt_total' => round((float) ($balanceTotals->balance ?? 0), 2),
             'erp_overdue_total' => round((float) ($balanceTotals->overdue ?? 0), 2),
             'advances' => round($advances, 2),
+            // Старая модель фактического сальдо не знает: она считает долг
+            // по неоплаченным документам, а не по ленте операций. null, а не 0 —
+            // ноль на пульте прочитался бы как «клиент ничего не должен».
+            'balance_fact' => null,
         ];
     }
 

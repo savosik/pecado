@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { HStack } from '@chakra-ui/react';
-import { LuCalendarClock, LuGauge, LuScale, LuTriangleAlert, LuWallet } from 'react-icons/lu';
+import { LuCalendarClock, LuFileText, LuGauge, LuScale, LuTriangleAlert, LuWallet } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 
 const TABS = [
@@ -8,6 +8,7 @@ const TABS = [
     { key: 'plan', label: 'План поступлений', icon: LuWallet, href: '/crm/finance/plan' },
     { key: 'overdue', label: 'Просрочка', icon: LuTriangleAlert, href: '/crm/finance/overdue' },
     { key: 'balances', label: 'Балансы партнёров', icon: LuScale, href: '/crm/finance/balances' },
+    { key: 'reconciliation', label: 'Акт сверки', icon: LuFileText, href: '/crm/finance/reconciliation' },
     { key: 'calendar', label: 'Календарь', icon: LuCalendarClock, href: '/crm/payments/calendar' },
 ];
 

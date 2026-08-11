@@ -1,0 +1,332 @@
+<?php
+
+namespace Tests\Feature\Crm;
+
+use App\Models\Company;
+use App\Models\ContractorOrganizationBalance;
+use App\Models\Currency;
+use App\Models\Organization;
+use App\Models\PersonalManager;
+use App\Models\SettlementEntry;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
+use Tests\TestCase;
+
+/**
+ * Акт сверки взаиморасчётов (v16.0.0, карточка fin-08).
+ *
+ * Экран отдаёт документ, который менеджер отправляет клиенту, поэтому проверок
+ * две группы: арифметика сальдо и то, что неверный акт нельзя отправить молча.
+ */
+class FinanceReconciliationTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $actor;
+
+    private User $client;
+
+    private Company $company;
+
+    private Organization $organization;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        foreach (['crm-finance.view', 'crm-clients-all.view'] as $name) {
+            Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
+        }
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        Currency::factory()->create(['code' => 'RUB', 'is_base' => true, 'exchange_rate' => 1]);
+
+        $this->actor = User::factory()->create();
+        $this->actor->givePermissionTo('crm-finance.view');
+        $card = PersonalManager::create(['name' => 'Менеджер', 'user_id' => $this->actor->id]);
+
+        $this->client = User::factory()->create(['personal_manager_id' => $card->id]);
+        $this->company = Company::factory()->create(['user_id' => $this->client->id]);
+        $this->organization = Organization::factory()->create();
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function entry(array $attributes): SettlementEntry
+    {
+        return SettlementEntry::factory()->create($attributes + [
+            'user_id' => $this->client->id,
+            'company_id' => $this->company->id,
+            'organization_id' => $this->organization->id,
+            'currency_code' => 'RUB',
+            'nature' => SettlementEntry::NATURE_FACT,
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $query
+     * @return array<string, mixed>
+     */
+    private function open(array $query = []): array
+    {
+        $response = $this->actingAs($this->actor)
+            ->get('/crm/finance/reconciliation?'.http_build_query($query));
+
+        $response->assertOk();
+
+        return $response->viewData('page')['props'];
+    }
+
+    /**
+     * Сотруднику CRM без права на финансы — 403.
+     *
+     * Актору выдаётся другое право раздела намеренно: без единого CRM-права
+     * его выбрасывает из кабинета редиректом, и проверка гейта не состоялась бы.
+     */
+    #[Test]
+    public function без_права_раздел_закрыт(): void
+    {
+        $stranger = User::factory()->create();
+        $stranger->givePermissionTo(Permission::firstOrCreate(['name' => 'crm-clients.view', 'guard_name' => 'web']));
+
+        $this->actingAs($stranger->fresh())->get('/crm/finance/reconciliation')->assertForbidden();
+    }
+
+    #[Test]
+    public function без_выбранного_клиента_показывается_только_форма(): void
+    {
+        $props = $this->open();
+
+        $this->assertNull($props['client']);
+        $this->assertNull($props['act']);
+        $this->assertNotEmpty($props['options']['clients']);
+    }
+
+    /**
+     * Чужой клиент обязан давать 404, а не акт по деньгам другого менеджера.
+     */
+    #[Test]
+    public function клиент_вне_скоупа_недоступен(): void
+    {
+        $foreign = User::factory()->create([
+            'personal_manager_id' => PersonalManager::create([
+                'name' => 'Другой',
+                'user_id' => User::factory()->create()->id,
+            ])->id,
+        ]);
+
+        $this->actingAs($this->actor)
+            ->get('/crm/finance/reconciliation?client_id='.$foreign->id)
+            ->assertNotFound();
+    }
+
+    /**
+     * Формула заказчика целиком: сальдо на начало + оплаты + возвраты товара
+     * − реализации − возврат денег.
+     */
+    #[Test]
+    public function сальдо_считается_нарастающим_итогом(): void
+    {
+        // До периода — формирует сальдо на начало.
+        $this->entry(['type' => SettlementEntry::TYPE_OPENING_BALANCE, 'amount' => -50000, 'date' => '2026-01-01']);
+
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -120000, 'date' => '2026-02-10']);
+        $this->entry(['type' => SettlementEntry::TYPE_PAYMENT_IN, 'amount' => 100000, 'date' => '2026-02-15']);
+        $this->entry(['type' => SettlementEntry::TYPE_GOODS_RETURN, 'amount' => 20000, 'date' => '2026-02-20']);
+        $this->entry(['type' => SettlementEntry::TYPE_PAYMENT_OUT, 'amount' => -5000, 'date' => '2026-02-25']);
+
+        $act = $this->open([
+            'client_id' => $this->client->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ])['act'];
+
+        $this->assertEqualsWithDelta(-50000.0, $act['opening_balance'], 0.01);
+        $this->assertEqualsWithDelta(-55000.0, $act['closing_balance'], 0.01);
+        $this->assertEqualsWithDelta(125000.0, $act['turnover_debit'], 0.01);
+        $this->assertEqualsWithDelta(120000.0, $act['turnover_credit'], 0.01);
+        $this->assertCount(4, $act['rows']);
+
+        // Сальдо нарастающим: последняя строка совпадает с итогом.
+        $this->assertEqualsWithDelta(-55000.0, end($act['rows'])['balance'], 0.01);
+    }
+
+    /**
+     * Движения вне периода в обороты не попадают, но в сальдо на начало — да.
+     */
+    #[Test]
+    public function движения_после_периода_в_акт_не_входят(): void
+    {
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -10000, 'date' => '2026-02-10']);
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -99000, 'date' => '2026-03-10']);
+
+        $act = $this->open([
+            'client_id' => $this->client->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ])['act'];
+
+        $this->assertCount(1, $act['rows']);
+        $this->assertEqualsWithDelta(-10000.0, $act['closing_balance'], 0.01);
+    }
+
+    /**
+     * Граница периода включительно: движение ровно в последний день обязано
+     * попасть в акт. Каст даты хранит время, и наивное сравнение его теряло бы.
+     */
+    #[Test]
+    public function движение_в_последний_день_периода_попадает_в_акт(): void
+    {
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -10000, 'date' => '2026-02-28']);
+
+        $act = $this->open([
+            'client_id' => $this->client->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ])['act'];
+
+        $this->assertCount(1, $act['rows']);
+    }
+
+    /**
+     * Акт уходит клиенту. Молча отправить цифру, не сходящуюся с учётной
+     * системой, нельзя — поэтому расхождение отдаётся отдельным полем.
+     */
+    #[Test]
+    public function расхождение_с_балансом_1с_попадает_в_ответ(): void
+    {
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -120000, 'date' => '2026-02-10']);
+
+        ContractorOrganizationBalance::query()->create([
+            'user_id' => $this->client->id,
+            'company_id' => $this->company->id,
+            'organization_id' => $this->organization->id,
+            'current_balance' => -100000,
+            'overdue_debt' => 0,
+        ]);
+
+        $act = $this->open([
+            'client_id' => $this->client->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ])['act'];
+
+        $this->assertNotNull($act['discrepancy']);
+        $this->assertEqualsWithDelta(-20000.0, $act['discrepancy']['delta'], 0.01);
+    }
+
+    #[Test]
+    public function сошедшийся_баланс_баннера_не_показывает(): void
+    {
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -120000, 'date' => '2026-02-10']);
+
+        ContractorOrganizationBalance::query()->create([
+            'user_id' => $this->client->id,
+            'company_id' => $this->company->id,
+            'organization_id' => $this->organization->id,
+            'current_balance' => -120000,
+            'overdue_debt' => 0,
+        ]);
+
+        $act = $this->open([
+            'client_id' => $this->client->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ])['act'];
+
+        $this->assertNull($act['discrepancy']);
+    }
+
+    /**
+     * Период раньше начала ленты — это отсутствие истории, а не пустой акт.
+     * Разница важная: пустой акт менеджер отправит клиенту.
+     */
+    #[Test]
+    public function период_до_начала_ленты_помечается(): void
+    {
+        $act = $this->open([
+            'client_id' => $this->client->id,
+            'date_from' => '2025-01-01',
+            'date_to' => '2025-12-31',
+        ])['act'];
+
+        $this->assertTrue($act['before_ledger']);
+        $this->assertSame([], $act['rows']);
+    }
+
+    #[Test]
+    public function фильтр_по_организации_сужает_акт(): void
+    {
+        $other = Organization::factory()->create();
+
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -10000, 'date' => '2026-02-10']);
+        $this->entry([
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -70000,
+            'date' => '2026-02-11',
+            'organization_id' => $other->id,
+        ]);
+
+        $act = $this->open([
+            'client_id' => $this->client->id,
+            'organization_id' => $this->organization->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ])['act'];
+
+        $this->assertCount(1, $act['rows']);
+        $this->assertEqualsWithDelta(-10000.0, $act['closing_balance'], 0.01);
+    }
+
+    /**
+     * Плановые строки в акт не входят: акт отражает свершившиеся операции,
+     * а не обещания заплатить.
+     */
+    #[Test]
+    public function плановые_строки_в_акт_не_входят(): void
+    {
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -10000, 'date' => '2026-02-10']);
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'amount' => 10000,
+            'date' => '2026-02-20',
+        ]);
+
+        $act = $this->open([
+            'client_id' => $this->client->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ])['act'];
+
+        $this->assertCount(1, $act['rows']);
+    }
+
+    #[Test]
+    public function строка_акта_читается_без_документа_на_сайте(): void
+    {
+        $this->entry([
+            'type' => SettlementEntry::TYPE_COMMISSION_SALE,
+            'amount' => -15000,
+            'date' => '2026-02-10',
+            'document_type' => null,
+            'document_id' => null,
+            'document_kind' => 'commission_report',
+            'document_number' => 'КМ-000123',
+        ]);
+
+        $row = $this->open([
+            'client_id' => $this->client->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ])['act']['rows'][0];
+
+        $this->assertSame('Отчёт комиссионера КМ-000123', $row['document']);
+        $this->assertNull($row['document_url']);
+        $this->assertSame('Продажа через комиссионера', $row['type_label']);
+    }
+}
