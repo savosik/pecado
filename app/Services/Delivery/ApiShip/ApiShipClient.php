@@ -151,11 +151,16 @@ class ApiShipClient
 
     // ─────────────────────────── Вебхуки ───────────────────────────
 
+    /**
+     * Подписка на событие. Поле называется `type`, а не `eventType`: последнее
+     * ApiShip молча отвергает («Атрибут `type` обязателен»), хотя в теле события
+     * тип приезжает обратно именно как `eventType`.
+     */
     public function subscribeWebhook(string $url, string $eventType = 'ORDER_STATUS'): ApiShipResult
     {
         return $this->call(ApiShipRequest::OPERATION_WEBHOOK, 'POST', '/webhooks', [
             'url' => $url,
-            'eventType' => $eventType,
+            'type' => $eventType,
         ]);
     }
 

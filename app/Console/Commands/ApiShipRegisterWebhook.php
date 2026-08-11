@@ -107,7 +107,7 @@ class ApiShipRegisterWebhook extends Command
             collect($rows)
                 ->map(static fn ($row): array => [
                     $row['uuid'] ?? $row['id'] ?? '—',
-                    $row['eventType'] ?? '—',
+                    $row['type'] ?? $row['eventType'] ?? '—',
                     // Секрет — последний сегмент пути, в консоль его выводить незачем.
                     preg_replace('/[^\/]+$/', '***', (string) ($row['url'] ?? '')),
                 ])
