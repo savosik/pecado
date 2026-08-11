@@ -47,7 +47,7 @@ class BiSyncGrants extends Command
 
     /**
      * Ложные срабатывания шаблона: под него подходят, но секретами не являются.
-     * Остальные совпадения (pulse_*.key_hash, telescope_entries.family_hash,
+     * Остальные совпадения (telescope_entries.family_hash,
      * attribute_values.value_hash, product_exports.hash) сознательно не исключаем —
      * для отчётов они бесполезны, и прятать их бесплатно.
      */
@@ -76,11 +76,10 @@ class BiSyncGrants extends Command
     ];
 
     /**
-     * Инфраструктура фреймворка: очереди, кэш, метрики, история миграций.
-     * Не секреты — но и не бизнес-данные: отчёт по выручке из pulse_entries не построить.
-     * При этом их 12 из 95 таблиц, и в схеме, которую агент перечитывает перед каждым
-     * запросом, они только разбавляют внимание. Если понадобится анализировать
-     * производительность — убрать отсюда осознанно.
+     * Инфраструктура фреймворка: очереди, кэш, история миграций, отладочные записи.
+     * Не секреты — но и не бизнес-данные: отчёт по выручке из telescope_entries не построить.
+     * При этом их 9 из 92 таблиц, и в схеме, которую агент перечитывает перед каждым
+     * запросом, они только разбавляют внимание.
      */
     private const OPERATIONAL_TABLES = [
         'cache',
@@ -89,9 +88,6 @@ class BiSyncGrants extends Command
         'job_batches',
         'jobs',
         'migrations',
-        'pulse_aggregates',
-        'pulse_entries',
-        'pulse_values',
         'telescope_entries',
         'telescope_entries_tags',
         'telescope_monitoring',

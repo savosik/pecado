@@ -124,10 +124,6 @@ class AppServiceProvider extends ServiceProvider
                 ($request->user() && $request->user()->hasRole('super-admin'));
         });
 
-        \Illuminate\Support\Facades\Gate::define('viewPulse', function ($user) {
-            return app()->environment('local') || $user->hasRole('super-admin');
-        });
-
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\UserCreated::class,
             \App\Listeners\PublishUserToErp::class,
