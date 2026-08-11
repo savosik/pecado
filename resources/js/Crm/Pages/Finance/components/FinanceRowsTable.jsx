@@ -55,16 +55,21 @@ export default function FinanceRowsTable({ rows, onSort, sortColumn, sortDirecti
         },
         {
             key: 'shipment',
-            label: 'Реализация',
+            label: 'Документ',
             render: (_, row) => (
                 <VStack align="start" gap={0}>
+                    {/*
+                        Ссылки может не быть: предоплата по заказу приходит из регистра,
+                        и карточки реализации у неё нет. Мёртвый <a> без href выглядел бы
+                        кликабельным и никуда не вёл.
+                    */}
                     <Box
-                        as="a"
-                        href={row.shipment.url}
+                        as={row.shipment.url ? 'a' : 'span'}
+                        href={row.shipment.url ?? undefined}
                         fontSize="sm"
-                        _hover={{ color: 'blue.fg', textDecoration: 'underline' }}
+                        _hover={row.shipment.url ? { color: 'blue.fg', textDecoration: 'underline' } : undefined}
                     >
-                        {row.shipment.number}
+                        {row.shipment.kind_label ?? 'Реализация'} {row.shipment.number}
                     </Box>
                     <Text fontSize="10px" color="fg.muted">
                         {row.shipment.date || '—'}
@@ -147,7 +152,7 @@ export default function FinanceRowsTable({ rows, onSort, sortColumn, sortDirecti
  * и срок, а в ленте партнёра видно, о каких деньгах речь.
  */
 const taskTitle = (row) => {
-    const base = `Оплата по реализации ${row.shipment.number} — ${formatRub(row.unpaid_rub)}`;
+    const base = `Оплата: ${(row.shipment.kind_label ?? 'реализация').toLowerCase()} ${row.shipment.number} — ${formatRub(row.unpaid_rub)}`;
 
     return row.days_overdue > 0 ? `${base}, просрочка ${row.days_overdue} дн.` : base;
 };

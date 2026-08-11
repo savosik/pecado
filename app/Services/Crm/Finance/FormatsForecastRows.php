@@ -18,6 +18,21 @@ use Illuminate\Support\Collection;
  */
 trait FormatsForecastRows
 {
+    /**
+     * Подписи видов документа для строки плана.
+     *
+     * Раньше в интерфейсе было зашито слово «Реализация»: график приходил только
+     * по ним. Регистр знает и предоплаты по заказам, и подписать их реализацией
+     * значило бы соврать в документе, который смотрит менеджер.
+     *
+     * @var array<string, string>
+     */
+    public const DOCUMENT_KIND_LABELS = [
+        'shipment' => 'Реализация',
+        'order' => 'Заказ',
+        'service_sale' => 'Реализация услуг',
+    ];
+
     /** Корзины просрочки в днях: до какого дня включительно попадает строка. */
     public const AGING_BUCKETS = [
         ['key' => '1_7', 'label' => '1–7 дней', 'to' => 7],
@@ -91,6 +106,8 @@ trait FormatsForecastRows
         $dueDate = $raw->due_date !== null ? CarbonImmutable::parse($raw->due_date) : null;
         $isOverdue = $dueDate !== null && $dueDate->lessThan($today);
         $key = ($dueDate !== null ? 'sch-' : 'shp-').$raw->id;
+        // isset() уже отсекает null, поэтому отдельная проверка на него избыточна.
+        $documentId = isset($raw->shipment_id) ? (int) $raw->shipment_id : null;
 
         return [
             // Ключ таблицы: строки графика и реализации без графика живут в одном
@@ -118,13 +135,20 @@ trait FormatsForecastRows
                 'name' => $raw->client_erp_name ?: $raw->client_name,
                 'url' => route('crm.clients.show', $raw->user_id),
             ],
+            // Ключ остался `shipment` ради совместимости с фронтендом, но документ
+            // здесь уже не обязательно реализация: регистр знает и плановые платежи
+            // по заказам. Отсюда nullable id и url — у заказа своей карточки
+            // реализации нет, и ссылка на неё вела бы в никуда.
             'shipment' => [
-                'id' => (int) $raw->shipment_id,
-                'number' => $raw->shipment_erp_number ?: $raw->shipment_number ?: ('#'.$raw->shipment_id),
+                'id' => $documentId,
+                'kind' => $raw->document_kind ?? 'shipment',
+                'kind_label' => self::DOCUMENT_KIND_LABELS[$raw->document_kind ?? 'shipment'] ?? 'Документ',
+                'number' => $raw->shipment_erp_number ?: $raw->shipment_number
+                    ?: ($documentId !== null ? '#'.$documentId : '—'),
                 'date' => $raw->shipment_date !== null ? CarbonImmutable::parse($raw->shipment_date)->format('d.m.Y') : null,
                 'invoice_number' => $raw->invoice_number_display,
                 'total' => round((float) $raw->shipment_total, 2),
-                'url' => route('crm.shipments.show', $raw->shipment_id),
+                'url' => $documentId !== null ? route('crm.shipments.show', $documentId) : null,
             ],
         ];
     }

@@ -140,6 +140,56 @@ class FinanceLedgerTest extends TestCase
     }
 
     /**
+     * Предоплата по заказу — 38 % движений регистра. Старая модель их не знала,
+     * и спрятать их значило бы занизить ожидаемые деньги ровно на ту сумму,
+     * ради которой эпик затевался.
+     */
+    #[Test]
+    public function предоплата_по_заказу_попадает_в_план(): void
+    {
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'amount' => 40000,
+            'settled_amount' => 0,
+            'date' => CarbonImmutable::today()->addDays(5)->toDateString(),
+            'document_uuid' => 'a2c4e6f8-1b3d-4507-9e2a-6c8f4d1b7e35',
+            'document_kind' => 'order',
+            'document_number' => 'A2УТ-000417',
+        ]);
+
+        $rows = $this->forecast()->plannedQuery($this->clients(), $this->filters())->get();
+
+        $this->assertCount(1, $rows);
+
+        $row = $this->forecast()->row($rows->first());
+
+        $this->assertEqualsWithDelta(40000.0, $row['unpaid_amount'], 0.01);
+        $this->assertSame('Заказ', $row['shipment']['kind_label']);
+        $this->assertSame('A2УТ-000417', $row['shipment']['number']);
+        // Карточки реализации у заказа нет — ссылка обязана быть пустой,
+        // иначе интерфейс предложит перейти в никуда.
+        $this->assertNull($row['shipment']['url']);
+    }
+
+    /**
+     * Строка по реализации сохраняет ссылку на её карточку.
+     */
+    #[Test]
+    public function строка_по_реализации_ведёт_на_карточку(): void
+    {
+        $this->plan(120000, 0, CarbonImmutable::today()->addDays(5)->toDateString());
+
+        $row = $this->forecast()->row(
+            $this->forecast()->plannedQuery($this->clients(), $this->filters())->first(),
+        );
+
+        $this->assertSame('Реализация', $row['shipment']['kind_label']);
+        $this->assertSame($this->shipment->id, $row['shipment']['id']);
+        $this->assertNotNull($row['shipment']['url']);
+    }
+
+    /**
      * Закрытая строка — это уже пришедшие деньги. Показав её как ожидаемую,
      * отчёт задвоил бы выручку.
      */

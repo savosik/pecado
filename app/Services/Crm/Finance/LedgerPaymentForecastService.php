@@ -25,16 +25,17 @@ use Illuminate\Support\Facades\DB;
  * | Сведение валют по текущему курсу | `amount_rub`, зафиксированный учётом на дату операции |
  * | Джойн четырёх таблиц ради разрезов | Разрезы лежат в самой строке |
  *
- * ## Область: паритет, а не расширение
+ * ## План включает и предоплаты по заказам
  *
- * Плановые строки берутся только по документам вида `shipment`. Регистр знает и
- * плановые платежи по заказам, но сегодняшний интерфейс сплошь «реализация»:
- * строка таблицы ведёт на карточку реализации, а подпись календаря начинается
- * со слова «Реализация». Показать там заказ значило бы дать неработающую ссылку.
+ * Старая реализация показывала только график реализаций — других данных у неё
+ * не было. Регистр знает и плановые платежи по заказам, а это 38 % движений,
+ * и прятать их значило бы занизить ожидаемые деньги ровно на ту сумму, ради
+ * которой эпик затевался.
  *
- * Это ровно тот состав, что показывает старая реализация, — переключение флага
- * не должно менять набор строк. Предоплаты по заказам добавляются вместе
- * с интерфейсом в `fin-08`.
+ * Поэтому соединение с реализацией — LEFT: у предоплаты по заказу карточки
+ * реализации нет, ссылка на неё вела бы в никуда. Номер и дата берутся из самой
+ * строки регистра, вид документа приезжает отдельным полем, и интерфейс
+ * подписывает строку «Заказ», а не «Реализация».
  */
 class LedgerPaymentForecastService implements PaymentForecast
 {
@@ -51,13 +52,13 @@ class LedgerPaymentForecastService implements PaymentForecast
             ->join('users as u', 'u.id', '=', 'sch.user_id')
             ->leftJoin('personal_managers as pm', 'pm.id', '=', 'u.personal_manager_id')
             ->leftJoin('organizations as org', 'org.id', '=', 'sch.organization_id')
-            // Реализация нужна ради реквизитов и ссылки: строка регистра
-            // самодостаточна, но карточка документа живёт в своей таблице.
-            ->join('shipments as s', function ($join): void {
+            // LEFT JOIN, а не INNER: у предоплаты по заказу карточки реализации нет
+            // вовсе, и внутреннее соединение вырезало бы её из плана молча.
+            // Строка регистра самодостаточна — номер и дата в ней продублированы.
+            ->leftJoin('shipments as s', function ($join): void {
                 $join->on('s.uuid', '=', 'sch.document_uuid')->whereNull('s.deleted_at');
             })
             ->where('sch.nature', SettlementEntry::NATURE_PLAN)
-            ->where('sch.document_kind', 'shipment')
             ->whereIn('sch.user_id', (clone $clients))
             // Константа в SQL, а не биндингом: у выражения `amount - settled_amount`
             // нет аффинности типа, и SQLite сравнил бы число с привязанной строкой.
@@ -65,6 +66,7 @@ class LedgerPaymentForecastService implements PaymentForecast
             ->select([
                 'sch.id',
                 's.id as shipment_id',
+                'sch.document_kind',
                 'sch.date as due_date',
                 'sch.amount',
                 'sch.settled_amount as paid_amount',
@@ -74,11 +76,13 @@ class LedgerPaymentForecastService implements PaymentForecast
                 DB::raw('0 as prepaid_amount'),
                 DB::raw($this->stageNameExpression().' as stage_name'),
                 'sch.line_number',
-                's.number as shipment_number',
+                // Реквизиты берутся из реализации, а при её отсутствии — из самой
+                // строки регистра: 1С дублирует их туда именно ради этого случая.
+                DB::raw('COALESCE(s.number, sch.document_number) as shipment_number'),
                 's.erp_number as shipment_erp_number',
-                's.date as shipment_date',
+                DB::raw('COALESCE(s.date, sch.document_date) as shipment_date'),
                 's.invoice_number_display',
-                's.total_amount as shipment_total',
+                DB::raw('COALESCE(s.total_amount, sch.document_settled_amount + sch.amount) as shipment_total'),
                 'sch.currency_code',
                 'sch.user_id',
                 'u.name as client_name',

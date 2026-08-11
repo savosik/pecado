@@ -214,16 +214,19 @@ function EntryRow({ entry, showDate = false }) {
                 </HStack>
                 <Text fontSize="xs" color="fg.muted">
                     {showDate && `Срок ${entry.due_date_label} · `}
-                    Реализация {entry.shipment.number}
+                    {entry.shipment.kind_label ?? 'Реализация'} {entry.shipment.number}
                     {entry.stage_name && ` · ${entry.stage_name}`}
                 </Text>
             </VStack>
 
             <HStack gap={3}>
                 <Text fontWeight="semibold" whiteSpace="nowrap">{entry.unpaid_label}</Text>
-                <Button size="xs" variant="ghost" onClick={() => router.visit(entry.shipment.url)}>
-                    Реализация
-                </Button>
+                {/* Кнопка только при наличии карточки: у предоплаты по заказу её нет */}
+                {entry.shipment.url && (
+                    <Button size="xs" variant="ghost" onClick={() => router.visit(entry.shipment.url)}>
+                        {entry.shipment.kind_label ?? 'Реализация'}
+                    </Button>
+                )}
                 <Button size="xs" variant="ghost" onClick={() => router.visit(entry.client.url)}>
                     Партнёр
                 </Button>
