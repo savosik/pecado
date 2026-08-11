@@ -68,13 +68,7 @@ class SeedSettlementDemo extends Command
             $this->purge();
         }
 
-        $organizations = Organization::query()->where('is_stub', false)->take(2)->get();
-
-        if ($organizations->isEmpty()) {
-            $this->error('Нет ни одной организации. Заведите юрлица в админке — демо строится вокруг них.');
-
-            return self::FAILURE;
-        }
+        $organizations = $this->organizations();
 
         $clients = $this->clients((int) $this->option('clients'));
 
@@ -95,6 +89,38 @@ class SeedSettlementDemo extends Command
         $this->line('  SETTLEMENTS_LEDGER_ENABLED=true  — чтобы CRM начала читать регистр');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Наши юрлица. На пустом стенде их нет вовсе — организации заводятся
+     * в админке руками, и на dev этого никто не делал.
+     *
+     * Требовать ручной подготовки от команды, которая существует ради «запустил
+     * и посмотрел», значило бы обессмыслить её: первый же запуск упирался бы
+     * в инструкцию. Поэтому недостающие создаём сами и помечаем в названии.
+     *
+     * @return \Illuminate\Support\Collection<int, Organization>
+     */
+    private function organizations(): \Illuminate\Support\Collection
+    {
+        $existing = Organization::query()->where('is_stub', false)->take(2)->get();
+
+        if ($existing->isNotEmpty()) {
+            return $existing;
+        }
+
+        $this->line('Юрлиц на стенде нет — создаю два демонстрационных.');
+
+        return collect(['ООО «Пекадо» (демо)', 'ИП Демидов (демо)'])
+            ->map(fn (string $name): Organization => Organization::query()->create([
+                'external_id' => (string) Str::uuid(),
+                'name' => $name,
+                'legal_name' => $name,
+                'tax_id' => (string) random_int(1000000000, 9999999999),
+                'tax_code' => (string) random_int(100000000, 999999999),
+                'is_active' => true,
+                'is_stub' => false,
+            ]));
     }
 
     /**
@@ -336,6 +362,8 @@ class SeedSettlementDemo extends Command
         Shipment::query()->where('number', 'like', 'ДЕМО-%')->forceDelete();
         Agreement::query()->where('name', 'like', '%(демо)')->forceDelete();
         SettlementCheckpoint::query()->whereDate('as_of_date', self::CHECKPOINT_DATE)->delete();
+        // Организации — последними: на них ссылаются удалённые выше документы.
+        Organization::query()->where('name', 'like', '%(демо)')->forceDelete();
 
         $this->line(sprintf('Удалено ранее сгенерированных движений: %d', $removed));
     }
