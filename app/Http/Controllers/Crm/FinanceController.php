@@ -151,6 +151,103 @@ class FinanceController extends CrmController
     }
 
     /**
+     * Выгрузка акта сверки. GET /crm/finance/reconciliation/export
+     *
+     * Отдельной кнопкой, а не листом общей выгрузки раздела: у той свои фильтры —
+     * период, менеджеры, организации, — и она отвечает на вопрос «сколько денег
+     * ждём по отделу». Акт же строится по одному клиенту и одному нашему юрлицу,
+     * и подмешать его туда значило бы получить лист, который меняется от фильтров,
+     * к нему не относящихся.
+     */
+    public function reconciliationExport(
+        Request $request,
+        ReconciliationService $service,
+        SimpleXlsxExporter $exporter,
+    ): StreamedResponse {
+        $client = User::query()
+            ->visibleInCrm($this->crmActor($request))
+            ->findOrFail($request->integer('client_id'));
+
+        $period = $service->defaultPeriod();
+        $act = $service->act(
+            client: $client,
+            organizationId: $request->integer('organization_id') ?: null,
+            from: (string) $request->string('date_from', $period['from']),
+            to: (string) $request->string('date_to', $period['to']),
+            agreementId: $request->integer('agreement_id') ?: null,
+            withoutAgreement: $request->boolean('without_agreement'),
+            currency: (string) $request->string('currency', 'RUB'),
+        );
+
+        return $exporter->streamSheets(
+            'akt-sverki-'.$client->getKey().'-'.$act['period']['from'].'-'.$act['period']['to'],
+            [[
+                'title' => 'Акт сверки',
+                'headers' => ['Дата', 'Документ', 'Операция', 'Дебет', 'Кредит', 'Сальдо'],
+                'rows' => $this->reconciliationSheet($client, $act),
+            ]],
+        );
+    }
+
+    /**
+     * Лист акта: шапка с сальдо на начало, движения, обороты и сальдо на конец.
+     *
+     * Итоги строками того же листа, а не отдельной вкладкой: акт печатают
+     * и отправляют клиенту одним куском, и сальдо, оторванное от движений,
+     * пришлось бы сводить вручную.
+     *
+     * @param  array<string, mixed>  $act
+     * @return list<array<int, scalar|null>>
+     */
+    private function reconciliationSheet(User $client, array $act): array
+    {
+        $rows = [
+            ['Клиент', $client->erp_name ?: $client->name, null, null, null, null],
+            ['Период', $act['period']['from'].' — '.$act['period']['to'], null, null, null, null],
+            ['Валюта', $act['currency'], null, null, null, null],
+            ['Сальдо на начало', null, null, null, null, $act['opening_balance']],
+            [null, null, null, null, null, null],
+        ];
+
+        if ($act['discrepancy'] !== null) {
+            // Предупреждение в самом файле, а не только на экране: выгрузку
+            // отправляют клиенту, и расхождение обязано ехать вместе с ней.
+            $rows[] = [
+                'ВНИМАНИЕ',
+                'Сумма движений не сходится с балансом 1С на '.$act['discrepancy']['delta']
+                    .' — акт неполный, отправлять клиенту нельзя',
+                null, null, null, null,
+            ];
+            $rows[] = [null, null, null, null, null, null];
+        }
+
+        foreach ($act['rows'] as $row) {
+            $rows[] = [
+                $row['date_label'],
+                $row['document'],
+                $row['type_label'],
+                $row['debit'] ?: null,
+                $row['credit'] ?: null,
+                $row['balance'],
+            ];
+        }
+
+        $rows[] = [null, null, null, null, null, null];
+        $rows[] = ['Обороты за период', null, null, $act['turnover_debit'], $act['turnover_credit'], null];
+        $rows[] = ['Сальдо на конец', null, null, null, null, $act['closing_balance']];
+
+        if ($act['truncated']) {
+            $rows[] = [
+                'ВНИМАНИЕ',
+                'Показаны первые '.$act['rows_count'].' движений — сальдо на конец неполное. Сузьте период',
+                null, null, null, null,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
      * Выгрузка «сколько денег и когда»: сводка + детализация + балансы.
      * GET /crm/finance/export
      */

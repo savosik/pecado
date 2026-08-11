@@ -379,6 +379,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/finance/plan', [FinanceController::class, 'plan'])->name('finance.plan');
         Route::get('/finance/overdue', [FinanceController::class, 'overdue'])->name('finance.overdue');
         Route::get('/finance/balances', [FinanceController::class, 'balances'])->name('finance.balances');
+        // Выгрузка объявлена до самой страницы: иначе `/reconciliation/export`
+        // рискует быть съеденной параметром, если у страницы появится сегмент.
+        Route::get('/finance/reconciliation/export', [FinanceController::class, 'reconciliationExport'])->name('finance.reconciliation.export');
         Route::get('/finance/reconciliation', [FinanceController::class, 'reconciliation'])->name('finance.reconciliation');
     });
 });

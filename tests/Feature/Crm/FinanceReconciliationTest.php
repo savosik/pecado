@@ -306,6 +306,57 @@ class FinanceReconciliationTest extends TestCase
         $this->assertCount(1, $act['rows']);
     }
 
+    /**
+     * Акт печатают и отправляют клиенту, поэтому выгрузка обязана нести и итоги,
+     * и предупреждение о расхождении — на экране оно останется, а в файле нет.
+     */
+    #[Test]
+    public function акт_выгружается_в_xlsx(): void
+    {
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -10000, 'date' => '2026-02-10']);
+
+        $response = $this->actingAs($this->actor)->get('/crm/finance/reconciliation/export?'.http_build_query([
+            'client_id' => $this->client->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ]));
+
+        $response->assertOk();
+        $this->assertStringContainsString(
+            'spreadsheet',
+            (string) $response->headers->get('content-type'),
+        );
+    }
+
+    #[Test]
+    public function выгрузка_чужого_клиента_недоступна(): void
+    {
+        $foreign = User::factory()->create([
+            'personal_manager_id' => PersonalManager::create([
+                'name' => 'Другой',
+                'user_id' => User::factory()->create()->id,
+            ])->id,
+        ]);
+
+        $this->actingAs($this->actor)
+            ->get('/crm/finance/reconciliation/export?client_id='.$foreign->id)
+            ->assertNotFound();
+    }
+
+    /**
+     * Маршрут выгрузки не должен перехватываться страницей акта.
+     */
+    #[Test]
+    public function маршрут_выгрузки_не_съеден_страницей(): void
+    {
+        $this->assertSame(
+            'crm.finance.reconciliation.export',
+            app('router')->getRoutes()->match(
+                \Illuminate\Http\Request::create('/crm/finance/reconciliation/export', 'GET')
+            )->getName(),
+        );
+    }
+
     #[Test]
     public function строка_акта_читается_без_документа_на_сайте(): void
     {

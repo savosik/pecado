@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { Badge, Box, HStack, Input, Table, Text, VStack } from '@chakra-ui/react';
-import { LuTriangleAlert } from 'react-icons/lu';
+import { LuDownload, LuTriangleAlert } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -35,13 +35,14 @@ export default function FinanceReconciliation({ client = null, act = null, optio
 
     const set = (patch) => setState((prev) => ({ ...prev, ...patch }));
 
-    const apply = () => {
-        const query = Object.fromEntries(
-            Object.entries(state).filter(([, value]) => value !== null && value !== '' && value !== false),
-        );
+    const query = () => Object.fromEntries(
+        Object.entries(state).filter(([, value]) => value !== null && value !== '' && value !== false),
+    );
 
-        router.get('/crm/finance/reconciliation', query, { preserveState: false });
-    };
+    const apply = () => router.get('/crm/finance/reconciliation', query(), { preserveState: false });
+
+    // Ссылкой, а не router.get: это файл, и Inertia на него не рассчитан.
+    const exportUrl = `/crm/finance/reconciliation/export?${new URLSearchParams(query())}`;
 
     // Выбор из длинного справочника — тем же контролом, что и остальные фильтры
     // раздела. Значение одно, поэтому из набора берётся последнее добавленное:
@@ -110,6 +111,10 @@ export default function FinanceReconciliation({ client = null, act = null, optio
 
                     <Button size="sm" onClick={apply} disabled={!state.client_id}>
                         Сформировать
+                    </Button>
+
+                    <Button size="sm" variant="outline" asChild disabled={!client}>
+                        <a href={exportUrl}><LuDownload /> Выгрузить в XLSX</a>
                     </Button>
                 </HStack>
 
