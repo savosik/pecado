@@ -2,11 +2,14 @@
 
 namespace App\Services\Erp;
 
+use App\Models\Agreement;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\ProductReturn;
+use App\Models\SettlementDocument;
 use App\Models\Shipment;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Отбрасывание устаревших сообщений 1С по номеру ревизии документа (v15.16.0).
@@ -38,6 +41,13 @@ use Illuminate\Database\Eloquent\Model;
  *   документа с жизненным циклом, последнее пришедшее значение и есть правильное.
  * - Расходные ордера исключены намеренно — у документа в 1С отключена история
  *   данных, номера ревизии не существует.
+ * - (v16.0.0) Движения регистра адресуются документом-регистратором, а не строкой,
+ *   поэтому идентификатор берётся из `document_uuid`, а отметка живёт в служебной
+ *   таблице `settlement_documents`. Хранить её в самих движениях нельзя:
+ *   `settlement.reverted` их удаляет, и сравнивать стало бы не с чем.
+ * - (v16.0.0) `settlement.opening_balance` и `settlement.checkpoint` в карте
+ *   отсутствуют: это срезы на дату, а не документы с жизненным циклом —
+ *   последнее пришедшее значение и есть правильное.
  */
 class ErpRevisionGuard
 {
@@ -58,6 +68,41 @@ class ErpRevisionGuard
         'payment.deleted' => Payment::class,
         'return.updated' => ProductReturn::class,
         'return.deleted' => ProductReturn::class,
+        // v16.0.0 — соглашения и регистр взаиморасчётов
+        'agreement.created' => Agreement::class,
+        'agreement.updated' => Agreement::class,
+        'agreement.deleted' => Agreement::class,
+        'settlement.posted' => SettlementDocument::class,
+        'settlement.reverted' => SettlementDocument::class,
+        'payment_schedule.updated' => SettlementDocument::class,
+    ];
+
+    /**
+     * События, у которых идентификатор документа лежит не в `uuid`.
+     *
+     * Движения адресуются документом-регистратором: `uuid` в этих сообщениях либо
+     * отсутствует, либо принадлежит строке движения, а не документу.
+     *
+     * @var array<string, string>
+     */
+    private const PAYLOAD_UUID_KEYS = [
+        'settlement.posted' => 'document_uuid',
+        'settlement.reverted' => 'document_uuid',
+        'payment_schedule.updated' => 'document_uuid',
+    ];
+
+    /**
+     * События, отметка которых хранится не в `applied_revision`.
+     *
+     * График оплаты и движения — два независимых потока сообщений об одном
+     * документе, но `revision` у них общая, документа. С одной колонкой график
+     * с той же ревизией, что уже применённое проведение, отбрасывался бы
+     * как устаревший — и клиент остался бы без календаря платежей.
+     *
+     * @var array<string, string>
+     */
+    private const REVISION_COLUMNS = [
+        'payment_schedule.updated' => 'applied_schedule_revision',
     ];
 
     /**
@@ -115,9 +160,11 @@ class ErpRevisionGuard
         // Условие по applied_revision защищает от гонки: два воркера могли взять
         // сообщения по одному документу одновременно, и более старое не должно
         // откатить отметку назад.
-        $query->where(function ($inner) use ($revision) {
-            $inner->whereNull('applied_revision')->orWhere('applied_revision', '<', $revision);
-        })->update(['applied_revision' => $revision]);
+        $column = self::REVISION_COLUMNS[$event] ?? 'applied_revision';
+
+        $query->where(function ($inner) use ($column, $revision) {
+            $inner->whereNull($column)->orWhere($column, '<', $revision);
+        })->update([$column => $revision]);
     }
 
     /**
@@ -153,7 +200,7 @@ class ErpRevisionGuard
             return null;
         }
 
-        $applied = $query->value('applied_revision');
+        $applied = $query->value(self::REVISION_COLUMNS[$event] ?? 'applied_revision');
 
         return $applied === null ? null : (int) $applied;
     }
@@ -171,15 +218,19 @@ class ErpRevisionGuard
     private function documentQuery(string $event, array $payload): ?\Illuminate\Database\Eloquent\Builder
     {
         $model = self::DOCUMENTS[$event] ?? null;
-        $uuid = $payload['uuid'] ?? null;
+        $uuid = $payload[self::PAYLOAD_UUID_KEYS[$event] ?? 'uuid'] ?? null;
 
         if ($model === null || ! is_string($uuid) || $uuid === '') {
             return null;
         }
 
+        // withTrashed есть не у всех: служебная запись документа-регистратора
+        // мягкого удаления не знает, отмена проведения помечается is_reverted.
         /** @var \Illuminate\Database\Eloquent\Builder<Model> $query */
-        $query = $model::query()->withoutGlobalScopes()->withTrashed()->where('uuid', $uuid);
+        $query = in_array(SoftDeletes::class, class_uses_recursive($model), true)
+            ? $model::query()->withoutGlobalScopes()->withTrashed()
+            : $model::query()->withoutGlobalScopes();
 
-        return $query;
+        return $query->where('uuid', $uuid);
     }
 }

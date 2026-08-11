@@ -8,6 +8,9 @@ use App\Services\Erp\ErpHandlerOutcome;
 use App\Services\Erp\ErpMessageValidator;
 use App\Services\Erp\ErpRevisionGuard;
 use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
+use App\Services\Erp\Handlers\HandleAgreementCreated;
+use App\Services\Erp\Handlers\HandleAgreementDeleted;
+use App\Services\Erp\Handlers\HandleAgreementUpdated;
 use App\Services\Erp\Handlers\HandleBalanceUpdated;
 use App\Services\Erp\Handlers\HandleCategoryCreated;
 use App\Services\Erp\Handlers\HandleCategoryUpdated;
@@ -28,6 +31,7 @@ use App\Services\Erp\Handlers\HandlePartnerDeleted;
 use App\Services\Erp\Handlers\HandlePartnerUpdated;
 use App\Services\Erp\Handlers\HandlePaymentCreated;
 use App\Services\Erp\Handlers\HandlePaymentDeleted;
+use App\Services\Erp\Handlers\HandlePaymentScheduleUpdated;
 use App\Services\Erp\Handlers\HandlePaymentUpdated;
 use App\Services\Erp\Handlers\HandlePriceUpdated;
 use App\Services\Erp\Handlers\HandleProductCreated;
@@ -37,6 +41,10 @@ use App\Services\Erp\Handlers\HandlePromotionDeleted;
 use App\Services\Erp\Handlers\HandlePromotionUpdated;
 use App\Services\Erp\Handlers\HandleReturnDeleted;
 use App\Services\Erp\Handlers\HandleReturnUpdated;
+use App\Services\Erp\Handlers\HandleSettlementCheckpoint;
+use App\Services\Erp\Handlers\HandleSettlementOpeningBalance;
+use App\Services\Erp\Handlers\HandleSettlementPosted;
+use App\Services\Erp\Handlers\HandleSettlementReverted;
 use App\Services\Erp\Handlers\HandleShipmentCreated;
 use App\Services\Erp\Handlers\HandleShipmentDeleted;
 use App\Services\Erp\Handlers\HandleShipmentUpdated;
@@ -107,6 +115,16 @@ class ErpIncomingJob extends BaseJob
         'goods_issue.created' => HandleGoodsIssueCreated::class,
         'goods_issue.updated' => HandleGoodsIssueUpdated::class,
         'goods_issue.deleted' => HandleGoodsIssueDeleted::class,
+        // FIN v16.0.0: соглашения с клиентами
+        'agreement.created' => HandleAgreementCreated::class,
+        'agreement.updated' => HandleAgreementUpdated::class,
+        'agreement.deleted' => HandleAgreementDeleted::class,
+        // FIN v16.0.0: регистр взаиморасчётов
+        'settlement.posted' => HandleSettlementPosted::class,
+        'settlement.reverted' => HandleSettlementReverted::class,
+        'settlement.opening_balance' => HandleSettlementOpeningBalance::class,
+        'settlement.checkpoint' => HandleSettlementCheckpoint::class,
+        'payment_schedule.updated' => HandlePaymentScheduleUpdated::class,
     ];
 
     /**

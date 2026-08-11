@@ -61,7 +61,9 @@ class SetupRabbitMQTopology extends Command
      */
     private const INCOMING_QUEUES = [
         'erp_in.partners' => ['partner.*'],
-        'erp_in.contractors' => ['contractor.*'],
+        // v16.0.0: соглашения с клиентами едут вместе с контрагентами — это
+        // мастер-данные того же справочника, 5 102 записи, своей очереди не стоят.
+        'erp_in.contractors' => ['contractor.*', 'agreement.*'],
         'erp_in.prices' => ['price.*', 'cost.*', 'exchange_rate.*', 'individual_prices.*'],
         'erp_in.stock' => ['stock.*'],
         'erp_in.orders' => ['order.*'],
@@ -73,6 +75,10 @@ class SetupRabbitMQTopology extends Command
         // заблокировала бы приём реализаций, платежей и балансов.
         'erp_in.warehouse' => ['goods_issue.*'],
         'erp_in.balance' => ['balance.*'],
+        // v16.0.0: регистр взаиморасчётов. Отдельно от erp_in.payments намеренно:
+        // первичная выгрузка — 224 632 движения за год, и она не должна
+        // заблокировать приём платежей, балансов и реализаций.
+        'erp_in.settlements' => ['settlement.*', 'payment_schedule.*'],
         'erp_in.catalog' => ['category.*', 'product.*'],
         'erp_in.promotions' => ['promotion.*'],
     ];

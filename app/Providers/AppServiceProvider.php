@@ -159,6 +159,13 @@ class AppServiceProvider extends ServiceProvider
         // Материализация участников правил акций (promotion_rule_product)
         \App\Models\PromotionRule::observe(\App\Observers\PromotionRuleObserver::class);
 
+        // v16.0.0: доклейка движений регистра взаиморасчётов к документу, который
+        // приехал позже них. Очереди движений и документов независимы, порядок
+        // не гарантирован ни в какую сторону.
+        \App\Models\Shipment::observe(\App\Observers\SettlementLinkObserver::class);
+        \App\Models\Order::observe(\App\Observers\SettlementLinkObserver::class);
+        \App\Models\Payment::observe(\App\Observers\SettlementLinkObserver::class);
+
         // Инвалидация кеша версий выгрузок: после save/delete товара любая
         // выгрузка, сгенерированная ранее, считается устаревшей.
         // См. App\Services\ProductExport\ProductExportDataVersion.
