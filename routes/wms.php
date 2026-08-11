@@ -114,6 +114,7 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
         Route::get('/deliveries/{delivery}/waybill', [DeliveryController::class, 'waybill'])->name('deliveries.waybill');
 
         Route::middleware('permission:wms-deliveries.edit')->group(function () {
+            Route::get('/deliveries/{delivery}/edit', [DeliveryController::class, 'edit'])->name('deliveries.edit');
             Route::put('/deliveries/{delivery}', [DeliveryController::class, 'update'])->name('deliveries.update');
             Route::post('/deliveries/{delivery}/calculate', [DeliveryController::class, 'calculate'])->name('deliveries.calculate');
             Route::delete('/deliveries/{delivery}', [DeliveryController::class, 'destroy'])->name('deliveries.destroy');

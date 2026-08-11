@@ -38,8 +38,12 @@ const makePlace = (defaults) => ({
 });
 
 export default function DeliveriesCreate() {
-    const { defaults, integrationEnabled, preselected } = usePage().props;
+    const { defaults, integrationEnabled, preselected, delivery } = usePage().props;
     useFlashToast();
+
+    // Одна форма на два режима: у отправки состав, места и получатель те же самые,
+    // и вторая копия карточки разъехалась бы с первой на первой же правке.
+    const isEdit = Boolean(delivery);
 
     // ─── Шаг 1: реализации ───
     // Приезжают предвыбранными из раздела «Реализации к доставке»; здесь состав
@@ -47,15 +51,18 @@ export default function DeliveriesCreate() {
     const [selected, setSelected] = useState(preselected || []);
 
     // ─── Шаг 2: груз ───
-    const [deliveryType, setDeliveryType] = useState(defaults.deliveryType);
-    const [pickupType, setPickupType] = useState(defaults.pickupType);
-    const [pickupDate, setPickupDate] = useState('');
-    const [comment, setComment] = useState('');
-    const [places, setPlaces] = useState([makePlace(defaults.place)]);
+    const [deliveryType, setDeliveryType] = useState(delivery?.delivery_type ?? defaults.deliveryType);
+    const [pickupType, setPickupType] = useState(delivery?.pickup_type ?? defaults.pickupType);
+    const [pickupDate, setPickupDate] = useState(delivery?.pickup_date ?? '');
+    const [comment, setComment] = useState(delivery?.comment ?? '');
+    const [places, setPlaces] = useState(
+        delivery?.places?.length ? delivery.places : [makePlace(defaults.place)],
+    );
     // Пока кладовщик не тронул вес руками, единственное место держим равным
     // расчётному весу груза: система его уже посчитала и показала выше, и
-    // заставлять переписывать то же число в соседнее поле незачем.
-    const [weightTouched, setWeightTouched] = useState(false);
+    // заставлять переписывать то же число в соседнее поле незачем. При правке
+    // вес уже задан — его подменять нельзя.
+    const [weightTouched, setWeightTouched] = useState(isEdit);
 
     // ─── Шаг 3: получатель ───
     const [addressSource, setAddressSource] = useState('manual');
@@ -66,9 +73,14 @@ export default function DeliveriesCreate() {
     });
     const [selectedAddressId, setSelectedAddressId] = useState('');
     const [manualAddress, setManualAddress] = useState('');
-    const [resolvedAddress, setResolvedAddress] = useState(null);
+    const [resolvedAddress, setResolvedAddress] = useState(delivery?.recipient ?? null);
     const [resolving, setResolving] = useState(false);
-    const [contact, setContact] = useState({ contactName: '', phone: '', email: '', companyName: '' });
+    const [contact, setContact] = useState({
+        contactName: delivery?.recipient?.contactName ?? '',
+        phone: delivery?.recipient?.phone ?? '',
+        email: delivery?.recipient?.email ?? '',
+        companyName: delivery?.recipient?.companyName ?? '',
+    });
 
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
@@ -166,7 +178,7 @@ export default function DeliveriesCreate() {
         setSubmitting(true);
         setErrors({});
 
-        router.post('/wms/deliveries', {
+        const payload = {
             shipment_ids: selected.map((item) => item.id),
             delivery_type: deliveryType,
             pickup_type: pickupType,
@@ -179,10 +191,20 @@ export default function DeliveriesCreate() {
                 height: Number(place.height) || null,
             })),
             recipient: { ...(resolvedAddress || {}), ...contact },
-        }, {
+        };
+
+        const options = {
             onError: (formErrors) => setErrors(formErrors),
             onFinish: () => setSubmitting(false),
-        });
+        };
+
+        if (isEdit) {
+            router.put(delivery.urls.update, payload, options);
+
+            return;
+        }
+
+        router.post('/wms/deliveries', payload, options);
     };
 
     // Заблокированная кнопка без объяснения — худший вид формы: кладовщик видит
@@ -199,10 +221,12 @@ export default function DeliveriesCreate() {
 
     return (
         <>
-            <Head title="Новая отправка — Склад" />
+            <Head title={isEdit ? `Правка отправки ${delivery.number} — Склад` : 'Новая отправка — Склад'} />
             <PageHeader
-                title="Новая отправка"
-                description="Соберите груз из реализаций, задайте места и укажите получателя. Тариф выберете на следующем шаге."
+                title={isEdit ? `Правка отправки ${delivery.number}` : 'Новая отправка'}
+                description={isEdit
+                    ? 'Пока заявка не передана перевозчику, состав, места и получателя можно менять. После сохранения пересчитайте тариф.'
+                    : 'Соберите груз из реализаций, задайте места и укажите получателя. Тариф выберете на следующем шаге.'}
             />
 
             <VStack gap={4} align="stretch">
@@ -578,11 +602,14 @@ export default function DeliveriesCreate() {
                             Чтобы создать отправку: {missing.join(', ')}.
                         </Text>
                     )}
-                    <Button variant="outline" onClick={() => router.get('/wms/deliveries')}>
+                    <Button
+                        variant="outline"
+                        onClick={() => router.get(isEdit ? `/wms/deliveries/${delivery.id}` : '/wms/deliveries')}
+                    >
                         Отмена
                     </Button>
                     <Button onClick={submit} disabled={!canSubmit} loading={submitting}>
-                        Создать отправку
+                        {isEdit ? 'Сохранить' : 'Создать отправку'}
                     </Button>
                 </HStack>
             </VStack>

@@ -98,17 +98,28 @@ class DeliveryController extends WmsController
 
         return Inertia::render('Wms/Pages/Deliveries/Create', [
             'preselected' => $preselected,
-            'defaults' => [
-                'place' => [
-                    'length' => $this->settings->int('default_place_length', 40),
-                    'width' => $this->settings->int('default_place_width', 30),
-                    'height' => $this->settings->int('default_place_height', 20),
-                ],
-                'deliveryType' => DeliveryShipment::DELIVERY_TYPE_DOOR,
-                'pickupType' => DeliveryShipment::PICKUP_TYPE_COURIER,
-            ],
+            'defaults' => $this->formDefaults(),
             'integrationEnabled' => $this->client->enabled(),
+            'delivery' => null,
         ]);
+    }
+
+    /**
+     * Значения по умолчанию для формы отправки — общие у создания и правки.
+     *
+     * @return array<string, mixed>
+     */
+    private function formDefaults(): array
+    {
+        return [
+            'place' => [
+                'length' => $this->settings->int('default_place_length', 40),
+                'width' => $this->settings->int('default_place_width', 30),
+                'height' => $this->settings->int('default_place_height', 20),
+            ],
+            'deliveryType' => DeliveryShipment::DELIVERY_TYPE_DOOR,
+            'pickupType' => DeliveryShipment::PICKUP_TYPE_COURIER,
+        ];
     }
 
     /**
@@ -214,6 +225,60 @@ class DeliveryController extends WmsController
             : $this->addresses->fromString($validated['address_string']);
 
         return response()->json($result);
+    }
+
+    /**
+     * Правка черновика — той же формой, что и создание.
+     *
+     * Отдельной формы нет намеренно: состав, места и получатель у отправки те же
+     * самые, и две расходящиеся копии одной карточки — гарантированный источник
+     * расхождений (в правилах валидации это уже учтено наследованием Request-а).
+     */
+    public function edit(Request $request, DeliveryShipment $delivery, AvailableShipmentsPresenter $presenter): Response|RedirectResponse
+    {
+        if (! $delivery->status->isEditable()) {
+            return redirect()
+                ->route('wms.deliveries.show', $delivery)
+                ->with('error', 'Отправку уже передали перевозчику — её состав больше не редактируется.');
+        }
+
+        $delivery->load(['places', 'shipments']);
+
+        $preselected = $presenter->flat(
+            $this->candidates
+                // Второй аргумент обязателен: без него собственные реализации
+                // отправки считаются занятыми и форма открывается с пустым составом.
+                ->withRelations($this->candidates->build(
+                    ['shipment_ids' => $delivery->shipments->pluck('id')->all()],
+                    $delivery->id,
+                ))
+                ->orderByDesc('date')
+                ->get(),
+        );
+
+        return Inertia::render('Wms/Pages/Deliveries/Create', [
+            'preselected' => $preselected,
+            'defaults' => $this->formDefaults(),
+            'integrationEnabled' => $this->client->enabled(),
+            'delivery' => [
+                'id' => $delivery->id,
+                'number' => $delivery->number,
+                'delivery_type' => $delivery->delivery_type,
+                'pickup_type' => $delivery->pickup_type,
+                'pickup_date' => $delivery->pickup_date?->format('Y-m-d'),
+                'comment' => $delivery->comment,
+                'recipient' => $delivery->recipient,
+                'places' => $delivery->places
+                    ->map(static fn ($place): array => [
+                        'weight' => (string) $place->weight,
+                        'length' => (string) $place->length,
+                        'width' => (string) $place->width,
+                        'height' => (string) $place->height,
+                    ])
+                    ->values(),
+                'urls' => ['update' => route('wms.deliveries.update', $delivery)],
+            ],
+        ]);
     }
 
     public function store(StoreDeliveryShipmentRequest $request): RedirectResponse

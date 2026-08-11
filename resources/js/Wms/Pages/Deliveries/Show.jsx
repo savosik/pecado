@@ -17,7 +17,9 @@ import {
     LuCalculator,
     LuExternalLink,
     LuFileText,
+    LuPencil,
     LuPrinter,
+    LuTrash2,
     LuTruck,
     LuUserCheck,
 } from 'react-icons/lu';
@@ -58,6 +60,7 @@ export default function DeliveriesShow() {
     const [loadingPoints, setLoadingPoints] = useState(false);
     const [selectedPointId, setSelectedPointId] = useState(delivery.point_id || '');
     const [confirmCancel, setConfirmCancel] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
     const [courierForm, setCourierForm] = useState({ date: '', time_start: '10:00', time_end: '18:00' });
     const [showCourier, setShowCourier] = useState(false);
 
@@ -188,6 +191,22 @@ export default function DeliveriesShow() {
                         {delivery.apiship_order_id && can('wms-deliveries.submit') && (
                             <Button size="sm" variant="outline" onClick={() => setShowCourier((prev) => !prev)}>
                                 <LuUserCheck /> Вызвать курьера
+                            </Button>
+                        )}
+
+                        {/* Пока заявки у перевозчика нет, отправка — черновик:
+                            её можно и править, и удалить без последствий. */}
+                        {isEditable && can('wms-deliveries.edit') && (
+                            <Button asChild size="sm" variant="outline">
+                                <Link href={`/wms/deliveries/${delivery.id}/edit`}>
+                                    <LuPencil /> Изменить
+                                </Link>
+                            </Button>
+                        )}
+
+                        {!delivery.apiship_order_id && can('wms-deliveries.edit') && (
+                            <Button size="sm" variant="outline" colorPalette="red" onClick={() => setConfirmDelete(true)}>
+                                <LuTrash2 /> Удалить
                             </Button>
                         )}
 
@@ -613,6 +632,16 @@ export default function DeliveriesShow() {
                 description="Заявка будет отменена и у перевозчика. Напечатанные этикетки станут недействительны, а груз придётся оформлять заново."
                 confirmLabel="Отменить заявку"
                 cancelLabel="Не отменять"
+            />
+
+            <ConfirmDialog
+                open={confirmDelete}
+                onClose={() => setConfirmDelete(false)}
+                onConfirm={() => router.delete(delivery.urls.destroy)}
+                title={`Удалить отправку ${delivery.number}?`}
+                description="Заявку перевозчику не передавали, поэтому удаление ни на что не влияет. Реализации вернутся в список к доставке."
+                confirmLabel="Удалить"
+                cancelLabel="Оставить"
             />
         </>
     );
