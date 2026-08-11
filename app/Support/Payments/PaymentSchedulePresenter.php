@@ -32,7 +32,13 @@ class PaymentSchedulePresenter
         $convert ??= static fn (float $amount): float => $amount;
 
         $total = round((float) $lines->sum('amount'), 2);
-        $paid = round((float) $lines->sum('paid_amount'), 2);
+        // Аванс по заказу закрывает строку наравне с прямым разнесением — ровно так
+        // считает ShipmentPaymentSchedule::unpaid_amount. Забыв про prepaid_amount
+        // здесь, шапка показывала бы долг больше, чем даёт сумма строк под ней.
+        $paid = round((float) $lines->sum('paid_amount') + (float) $lines->sum('prepaid_amount'), 2);
+        // Итог собирается из строк, а не из разницы сумм: остаток строки клампится
+        // в ноль, и переплата по одной строке не должна гасить долг по другой.
+        $unpaid = round((float) $lines->sum(static fn (ShipmentPaymentSchedule $line): float => $line->unpaid_amount), 2);
         $documentTotal = round((float) $shipment->total_amount, 2);
 
         return [
@@ -54,7 +60,7 @@ class PaymentSchedulePresenter
             ])->values()->all(),
             'total_amount' => $convert($total),
             'paid_amount' => $convert($paid),
-            'unpaid_amount' => $convert(round(max(0.0, $total - $paid), 2)),
+            'unpaid_amount' => $convert($unpaid),
             'next_due_date_label' => $shipment->payment_due_date?->format('d.m.Y'),
             'is_overdue' => $shipment->is_payment_overdue,
             // Арифметику документа ведёт 1С: расхождение показываем, но не «чиним».
