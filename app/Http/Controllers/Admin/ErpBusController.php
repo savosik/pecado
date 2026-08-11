@@ -153,6 +153,10 @@ class ErpBusController extends AdminController
             'staleCount' => $staleCount,
             'busMessagesCount' => $busMessagesCount,
             'busLoggingEnabled' => $busLoggingEnabled,
+            // Счётчики выше считаются по таблице, а её глубина ограничена
+            // ретенцией — без этой подписи цифры читались бы как «за всё время».
+            'busRetentionDays' => (int) config('erp.bus_retention_days', 14),
+            'busArchiveEnabled' => (bool) config('erp.bus_archive.enabled', false),
             'filters' => [
                 'event' => $request->get('event', ''),
                 'search' => $request->get('search', ''),
@@ -219,11 +223,28 @@ class ErpBusController extends AdminController
 
     /**
      * Просмотр отдельного сообщения.
+     *
+     * Без implicit binding намеренно: сообщения старше ретенции уезжают в
+     * холодное хранилище, и ссылка из старого письма или заметки дала бы голый
+     * 404 — непонятно, потеряно сообщение или его никогда не было. Вместо этого
+     * возвращаем внятное объяснение, где его теперь искать.
      */
-    public function showMessage(ErpBusMessage $message): Response
+    public function showMessage(int $message): Response|\Illuminate\Http\RedirectResponse
     {
+        $found = ErpBusMessage::find($message);
+
+        if (! $found) {
+            $days = (int) config('erp.bus_retention_days', 14);
+
+            return redirect()
+                ->route('admin.erp-bus.messages')
+                ->with('error', config('erp.bus_archive.enabled')
+                    ? "Сообщение №{$message} не найдено: лог хранится {$days} дн., более старые выгружены в архив холодного хранилища."
+                    : "Сообщение №{$message} не найдено: лог хранится {$days} дн., более старые удалены.");
+        }
+
         return Inertia::render('Admin/Pages/ErpBus/ShowMessage', [
-            'message' => $message,
+            'message' => $found,
         ]);
     }
 

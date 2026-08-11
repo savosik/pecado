@@ -71,6 +71,24 @@ return [
             'throw' => true,
         ],
 
+        // Холодное хранилище архива лога шины ERP (Yandex Object Storage,
+        // ледяной класс — там же, куда ночной скрипт кладёт бэкапы БД).
+        // throw => true обязателен: команда удаляет строки из БД сразу после
+        // заливки, и молчаливый провал записи означал бы потерю лога.
+        // Отдельный диск, а не prices-exchange: у того свой клинер
+        // app:clean-price-dumps, который снёс бы архивы старше трёх суток.
+        'erp-archive' => [
+            'driver' => 's3',
+            'key' => env('ERP_ARCHIVE_S3_ACCESS_KEY'),
+            'secret' => env('ERP_ARCHIVE_S3_SECRET_KEY'),
+            'region' => env('ERP_ARCHIVE_S3_REGION', 'ru-central1'),
+            'bucket' => env('ERP_ARCHIVE_S3_BUCKET'),
+            'endpoint' => env('ERP_ARCHIVE_S3_ENDPOINT', 'https://storage.yandexcloud.net'),
+            'use_path_style_endpoint' => false,
+            'throw' => true,
+            'report' => false,
+        ],
+
         // Read-only диск, указывающий на dev MinIO.
         // Используется локальной разработкой (MEDIA_DISK=s3_dev_readonly),
         // чтобы видеть те же товарные изображения, что и dev-сервер,

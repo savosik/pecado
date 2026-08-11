@@ -173,7 +173,7 @@ const Pagination = ({ data, paramName = 'page' }) => {
     );
 };
 
-export default function Index({ queues, processed, failedJobs, eventStats, eventTypes, filters, validationErrors, validationErrorsCount, processingErrors, processingErrorsCount, recoveredCount, staleCount, busMessagesCount, busLoggingEnabled }) {
+export default function Index({ queues, processed, failedJobs, eventStats, eventTypes, filters, validationErrors, validationErrorsCount, processingErrors, processingErrorsCount, recoveredCount, staleCount, busMessagesCount, busLoggingEnabled, busRetentionDays = 0, busArchiveEnabled = false }) {
     const [search, setSearch] = useState(filters.search || '');
     const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
     const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
@@ -383,6 +383,14 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
                                         ? 'Логирование включено — все сообщения записываются'
                                         : 'Логирование выключено (ERP_BUS_LOGGING_ENABLED=false)'}
                                 </Text>
+                                {busRetentionDays > 0 && (
+                                    <Text fontSize="sm" color="fg.muted">
+                                        Счётчики — за последние {busRetentionDays} дн.
+                                        {busArchiveEnabled
+                                            ? ' Более старые сообщения выгружены в холодное хранилище.'
+                                            : ' Более старые сообщения удалены.'}
+                                    </Text>
+                                )}
                             </Box>
                         </HStack>
                         <HStack gap={2}>

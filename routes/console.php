@@ -16,7 +16,8 @@ Schedule::command('search:repair-embeddings --reindex-missing')->dailyAt('03:20'
 Schedule::command('media:clean-temp')->hourly();
 Schedule::command('exports:warm')->everyFifteenMinutes()->withoutOverlapping(); // прогрев кэша стандартных пресетных выгрузок
 Schedule::command('exports:cleanup')->dailyAt('04:30')->withoutOverlapping(); // удаление orphaned/stale файлов кеша выгрузок
-Schedule::command('erp:cleanup-messages')->dailyAt('05:00'); // очистка лога шины ERP старше 30 дней
+Schedule::command('erp:cleanup-messages')->dailyAt('05:00')->withoutOverlapping(); // лог шины ERP: архив в холодное хранилище + удаление старше ERP_BUS_RETENTION_DAYS
+Schedule::command('erp:cleanup-processed')->dailyAt('05:20')->withoutOverlapping(); // журнал дедупликации входящих: ретенция ERP_PROCESSED_RETENTION_DAYS
 Schedule::command('model:prune', ['--model' => [\App\Models\SentEmail::class]])->dailyAt('05:10'); // журнал исходящих писем: ретенция MAIL_JOURNAL_RETENTION_DAYS
 Schedule::command('sitemap:generate')->dailyAt('03:30'); // после search:sync
 Schedule::command('feed:build-yandex')->hourly()->withoutOverlapping(); // публичный YML-фид Яндекс.Маркета
