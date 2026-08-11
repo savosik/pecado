@@ -251,6 +251,13 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\SendEntitySubscriptionNotifications::class,
         );
 
+        // Журнал исходящих писем — на фактическую отправку, поэтому ловит и
+        // уведомления, и письма менеджеров из CRM, и всё, что появится дальше
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Mail\Events\MessageSent::class,
+            \App\Listeners\LogSentEmail::class,
+        );
+
         // Rate limiter для Content API (ИИ-агент)
         RateLimiter::for('content-api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());

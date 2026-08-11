@@ -26,6 +26,37 @@ return [
         ))),
 
         /*
+        | Резервные получатели письма о новом заказе — используются, только
+        | когда у клиента нет персонального менеджера (или у карточки менеджера
+        | пустой email). Список через запятую. Пусто = письмо не отправляется.
+        | Основной адресат всегда персональный менеджер клиента, см.
+        | App\Support\Notifications\OrderManagerRouting.
+        */
+        'order_fallback_recipients' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('MAIL_ORDER_FALLBACK_RECIPIENTS', ''))
+        ))),
+
+        /*
+        | Журнал исходящих писем (`sent_emails`): что и кому фактически ушло.
+        | Питает ленту карточки партнёра и отвечает на вопрос об адресации.
+        | Ретенция в днях — 0 или меньше означает «не чистить».
+        */
+        'journal_enabled' => filter_var(env('MAIL_JOURNAL_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+        'journal_retention_days' => (int) env('MAIL_JOURNAL_RETENTION_DAYS', 180),
+
+        /*
+        | Получатели уведомления о новом вопросе клиента с сайта. Список через
+        | запятую. Пусто = письма не отправляются, вопрос всё равно виден
+        | в админке — адресация по ролям здесь была бы тем же антипаттерном,
+        | что и в заказах.
+        */
+        'user_question_recipients' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('MAIL_USER_QUESTION_RECIPIENTS', ''))
+        ))),
+
+        /*
         | Whitelist статусов заказа, при переходе в которые клиент получает
         | уведомление о смене статуса. Управляется кодом, не через ENV —
         | редактируется при изменении бизнес-процесса. Соответствует

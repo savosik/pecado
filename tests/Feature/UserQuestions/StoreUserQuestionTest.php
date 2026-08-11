@@ -28,8 +28,14 @@ class StoreUserQuestionTest extends TestCase
     public function test_guest_can_submit_question(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
+
+        // Роль сотрудника больше не делает его получателем — адресаты заданы
+        // списком. Сам сотрудник в тесте остаётся: он проверяет, что наличие
+        // роли на письмо не влияет (подробнее — UserQuestionRecipientsTest).
         $manager = User::factory()->create();
         $manager->assignRole('content-manager');
+
+        config(['notifications.mail.user_question_recipients' => ['support@pecado.ru']]);
 
         $response = $this->post('/faq/questions', [
             'email' => 'guest@example.com',
@@ -50,7 +56,13 @@ class StoreUserQuestionTest extends TestCase
         ]);
 
         Notification::assertSentOnDemand(QuestionReceivedNotification::class);
-        Notification::assertSentTo($manager, NewQuestionAdminNotification::class);
+
+        Notification::assertNotSentTo($manager, NewQuestionAdminNotification::class);
+        Notification::assertSentTo(
+            new \Illuminate\Notifications\AnonymousNotifiable,
+            NewQuestionAdminNotification::class,
+            fn ($n, $channels, $notifiable) => ($notifiable->routes['mail'] ?? null) === 'support@pecado.ru',
+        );
     }
 
     public function test_authenticated_user_email_is_taken_from_account(): void

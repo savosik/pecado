@@ -3,6 +3,7 @@
 namespace App\Notifications\Orders;
 
 use App\Models\Order;
+use App\Support\Notifications\MailClientTag;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -37,7 +38,7 @@ class NewOrderForManagerNotification extends Notification implements ShouldQueue
         $clientName = $this->order->user?->name ?: $this->order->user?->email ?: '—';
         $company = $this->order->company?->name;
 
-        return (new MailMessage)
+        $mail = (new MailMessage)
             ->subject(sprintf('Новый заказ %s — Pecado.ru', $number))
             ->markdown('mail.orders.manager-new', [
                 'order' => $this->order,
@@ -46,5 +47,9 @@ class NewOrderForManagerNotification extends Notification implements ShouldQueue
                 'company' => $company,
                 'adminUrl' => url(route('admin.orders.show', $this->order, false)),
             ]);
+
+        // Получатель — менеджер, а событие принадлежит клиенту: без пометки
+        // журнал записал бы письмо на карточку менеджера, где ему не место.
+        return MailClientTag::tag($mail, $this->order->user_id);
     }
 }

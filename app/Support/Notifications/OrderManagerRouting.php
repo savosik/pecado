@@ -3,36 +3,34 @@
 namespace App\Support\Notifications;
 
 use App\Models\Order;
-use App\Models\User;
 
 class OrderManagerRouting
 {
     /**
      * Список email-получателей менеджерского уведомления о заказе.
      *
-     * Собирается из двух источников:
-     *  1) Все пользователи с ролью `sales-manager` (Spatie Permission), у которых заполнен email.
-     *  2) Персональный менеджер клиента (`$order->user->personalManager->email`), если у клиента
-     *     назначен `personal_manager_id` и у менеджера есть email.
+     * Получатель ровно один — **персональный менеджер клиента**
+     * (`users.personal_manager_id` → `personal_managers.email`). Заказ это
+     * работа с конкретным клиентом, а не новость для отдела: рассылка «всем,
+     * у кого есть роль» показывала состав и суммы чужих заказов тем, кто этих
+     * клиентов не ведёт, и тонула в почте у остальных.
      *
-     * Дубликаты убираются.
+     * Если менеджер не назначен или у его карточки пустой email, письмо уходит
+     * на резервный адрес из `notifications.mail.order_fallback_recipients` —
+     * иначе заказ «ничьего» клиента не увидит никто. Пустой список = не слать.
      *
      * @return array<int, string>
      */
     public static function recipients(Order $order): array
     {
-        $emails = User::role('sales-manager')
-            ->whereNotNull('email')
-            ->where('email', '!=', '')
-            ->pluck('email')
-            ->all();
-
         $personalEmail = $order->user?->personalManager?->email;
 
         if (filled($personalEmail)) {
-            $emails[] = $personalEmail;
+            return [$personalEmail];
         }
 
-        return array_values(array_unique($emails));
+        return array_values(array_unique(
+            config('notifications.mail.order_fallback_recipients', [])
+        ));
     }
 }

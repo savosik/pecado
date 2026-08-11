@@ -37,8 +37,12 @@ class NotifyManagersAboutNewOrder
             return;
         }
 
-        Notification::route('mail', $recipients)
-            ->notify(new NewOrderForManagerNotification($primary));
+        // Каждому — своё письмо: список в одном `to` показал бы получателям
+        // адреса друг друга, а резервных адресов может быть несколько.
+        foreach ($recipients as $recipient) {
+            Notification::route('mail', $recipient)
+                ->notify(new NewOrderForManagerNotification($primary));
+        }
     }
 
     /**

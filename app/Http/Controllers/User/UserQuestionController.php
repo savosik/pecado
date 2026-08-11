@@ -5,7 +5,6 @@ namespace App\Http\Controllers\User;
 use App\Enums\UserQuestionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreUserQuestionRequest;
-use App\Models\User;
 use App\Models\UserQuestion;
 use App\Notifications\UserQuestions\NewQuestionAdminNotification;
 use App\Notifications\UserQuestions\QuestionReceivedNotification;
@@ -44,9 +43,13 @@ class UserQuestionController extends Controller
                 ->notify(new QuestionReceivedNotification($question));
         }
 
-        $managers = User::role(['content-manager', 'super-admin'])->get();
-        if ($managers->isNotEmpty()) {
-            Notification::send($managers, new NewQuestionAdminNotification($question));
+        // Адресаты заданы явным списком, а не выборкой по ролям: роль раздаёт
+        // права, а не почту, и любая новая роль у сотрудника молча подписывала бы
+        // его на переписку с клиентами. Пустой список — письма не уходят, вопрос
+        // всё равно виден в админке.
+        foreach (config('notifications.mail.user_question_recipients', []) as $recipient) {
+            Notification::route('mail', $recipient)
+                ->notify(new NewQuestionAdminNotification($question));
         }
 
         return back()

@@ -5,6 +5,7 @@ import {
     LuMessageSquare,
     LuPhoneIncoming,
     LuPhoneOutgoing,
+    LuSend,
     LuTarget,
     LuTruck,
 } from 'react-icons/lu';
@@ -21,6 +22,7 @@ export const ENTRY_STYLE = {
     comment: { palette: 'gray', label: 'Комментарий', icon: LuMessageSquare },
     task: { palette: 'purple', label: 'Задача', icon: LuTarget },
     email: { palette: 'teal', label: 'Письмо', icon: LuMail },
+    system_email: { palette: 'orange', label: 'Письмо от сайта', icon: LuSend },
     call: { palette: 'cyan', label: 'Звонок', icon: LuPhoneOutgoing },
     order: { palette: 'blue', label: 'Заказ', icon: LuFileText },
     shipment: { palette: 'green', label: 'Реализация', icon: LuTruck },

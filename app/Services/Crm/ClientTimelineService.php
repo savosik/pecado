@@ -2,11 +2,13 @@
 
 namespace App\Services\Crm;
 
+use App\Mail\CrmManagerMail;
 use App\Models\CrmCall;
 use App\Models\CrmComment;
 use App\Models\CrmEmail;
 use App\Models\CrmTask;
 use App\Models\Order;
+use App\Models\SentEmail;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Support\Crm\CrmAttachments;
@@ -19,10 +21,11 @@ use Illuminate\Support\Str;
 /**
  * Сквозная лента партнёра: всё, что происходило с ним и вокруг него.
  *
- * Источников пять: что менеджеры написали (комментарии, задачи, письма) и что
- * партнёр сделал (заказы, реализации). Все сводятся к одной форме записи, а не
- * заводят по вкладке: карточка партнёра должна показывать одну хронологию,
- * а не пять лент с разным поведением.
+ * Источники трёх родов: что менеджеры написали (комментарии, задачи, письма,
+ * звонки), что партнёр сделал (заказы, реализации) и что сайт ему отправил
+ * (системные письма). Все сводятся к одной форме записи, а не заводят по
+ * вкладке: карточка партнёра должна показывать одну хронологию, а не семь
+ * лент с разным поведением.
  *
  * Документы отличаются от записей менеджеров только флагом `system`: у них нет
  * автора и их нельзя править. Отдельной формой они не заводятся — иначе фронт
@@ -48,6 +51,13 @@ class ClientTimelineService
     private const TYPE_CALL = 'call';
 
     /**
+     * Письмо, отправленное клиенту сайтом, а не менеджером: подтверждение
+     * заказа, смена статуса, приветствие. Отдельный тип от `email`, потому что
+     * автора у него нет и открыть в журнале переписки его нельзя.
+     */
+    private const TYPE_SYSTEM_EMAIL = 'system_email';
+
+    /**
      * Все типы записей ленты — для валидации фильтра `types[]`.
      *
      * @return list<string>
@@ -58,6 +68,7 @@ class ClientTimelineService
             self::TYPE_COMMENT,
             self::TYPE_TASK,
             self::TYPE_EMAIL,
+            self::TYPE_SYSTEM_EMAIL,
             self::TYPE_CALL,
             self::TYPE_ORDER,
             self::TYPE_SHIPMENT,
@@ -138,6 +149,21 @@ class ClientTimelineService
                 ->selectRaw("'".self::TYPE_EMAIL."' as source, id, created_at as happened_at, 0 as is_pinned")
                 ->where('client_user_id', $clientId)
                 ->whereIn('status', ['queued', 'sent', 'failed']);
+        }
+
+        if (in_array(self::TYPE_SYSTEM_EMAIL, $wanted, true)) {
+            // Письма, ушедшие по этому клиенту, — включая те, что адресованы его
+            // менеджеру: в ленте важно событие в жизни клиента, а не почтовый ящик.
+            //
+            // Письма менеджеров журнал тоже пишет (аудит отправки полный), но в
+            // ленту они приходят из `crm_emails` — записью с автором и ссылкой на
+            // текст. Без этого исключения одно письмо стояло бы в ленте дважды.
+            $sources[] = DB::table('sent_emails')
+                ->selectRaw("'".self::TYPE_SYSTEM_EMAIL."' as source, id, sent_at as happened_at, 0 as is_pinned")
+                ->where('client_user_id', $clientId)
+                ->where(fn ($query) => $query
+                    ->whereNull('source')
+                    ->orWhere('source', '!=', CrmManagerMail::class));
         }
 
         if (in_array(self::TYPE_CALL, $wanted, true)) {
@@ -253,6 +279,12 @@ class ClientTimelineService
             ->get()
             ->keyBy('id');
 
+        $systemEmails = SentEmail::query()
+            ->whereIn('id', $rows->where('source', self::TYPE_SYSTEM_EMAIL)->pluck('id')->all())
+            ->with('recipientUser:id,name')
+            ->get()
+            ->keyBy('id');
+
         $calls = CrmCall::query()
             ->whereIn('id', $rows->where('source', self::TYPE_CALL)->pluck('id')->all())
             ->with(['author:id,name', 'related'])
@@ -277,7 +309,7 @@ class ClientTimelineService
             ->keyBy('id');
 
         /** @var LengthAwarePaginator<int, array<string, mixed>> $hydrated */
-        $hydrated = $paginator->through(function (object $row) use ($comments, $tasks, $emails, $calls, $orders, $shipments, $viewer): array {
+        $hydrated = $paginator->through(function (object $row) use ($comments, $tasks, $emails, $systemEmails, $calls, $orders, $shipments, $viewer): array {
             $id = (int) $row->id;
 
             // Неизвестный источник уходит в заглушку, а не роняет ленту: между
@@ -292,6 +324,9 @@ class ClientTimelineService
                 self::TYPE_EMAIL => ($email = $emails->get($id)) instanceof CrmEmail
                     ? $this->emailEntry($email, $viewer)
                     : $this->missingEntry(self::TYPE_EMAIL, $id),
+                self::TYPE_SYSTEM_EMAIL => ($systemEmail = $systemEmails->get($id)) instanceof SentEmail
+                    ? $this->systemEmailEntry($systemEmail)
+                    : $this->missingEntry(self::TYPE_SYSTEM_EMAIL, $id),
                 self::TYPE_CALL => ($call = $calls->get($id)) instanceof CrmCall
                     ? $this->callEntry($call, $viewer)
                     : $this->missingEntry(self::TYPE_CALL, $id),
@@ -521,6 +556,37 @@ class ClientTimelineService
                 'update' => $viewer->can('update', $email),
                 'delete' => $viewer->can('delete', $email),
             ],
+        ];
+    }
+
+    /**
+     * Системное письмо в общей форме записи ленты.
+     *
+     * Автора нет и правки нет — письмо отправил сайт, как заказ приходит из 1С.
+     * Получателя показываем явно: письмо о заказе уходит менеджеру, и менеджер,
+     * открывший карточку, должен видеть, дошло ли оно до него или ушло на
+     * резервный адрес.
+     *
+     * @return array<string, mixed>
+     */
+    public function systemEmailEntry(SentEmail $email): array
+    {
+        $recipientName = $email->recipientUser?->name;
+
+        return [
+            'type' => self::TYPE_SYSTEM_EMAIL,
+            'id' => (int) $email->getKey(),
+            'system' => true,
+            'happened_at' => $email->sent_at?->toIso8601String(),
+            'happened_at_label' => $email->sent_at?->format('d.m.Y H:i'),
+            'author' => null,
+            'title' => $email->subject ?: 'Письмо без темы',
+            'excerpt' => 'Кому: '.($recipientName === null
+                ? $email->recipient
+                : $recipientName.' ('.$email->recipient.')'),
+            'entity' => null,
+            'attachments_count' => 0,
+            'can' => ['update' => false, 'delete' => false],
         ];
     }
 

@@ -15,6 +15,7 @@ import CommentFeedEntry from './entries/CommentFeedEntry';
 import DocumentFeedEntry from './entries/DocumentFeedEntry';
 import TaskFeedEntry from './entries/TaskFeedEntry';
 import EmailFeedEntry from './entries/EmailFeedEntry';
+import SystemEmailFeedEntry from './entries/SystemEmailFeedEntry';
 import CallFeedEntry from './entries/CallFeedEntry';
 import { entryFromCall, entryFromEmail, entryFromTask } from './timelineEntry';
 
@@ -23,7 +24,7 @@ import { entryFromCall, entryFromEmail, entryFromTask } from './timelineEntry';
  *
  * Порядок — от того, что менеджер пишет сам, к тому, что происходит без него.
  */
-const TYPES = ['comment', 'task', 'call', 'email', 'order', 'shipment'];
+const TYPES = ['comment', 'task', 'call', 'email', 'system_email', 'order', 'shipment'];
 
 /**
  * Заголовок дня в хронологии.
@@ -116,6 +117,10 @@ export default function ClientFeed({ clientId, client = null, clientEmail = null
 
         if (entry.type === 'email') {
             return <EmailFeedEntry key={key} entry={entry} />;
+        }
+
+        if (entry.type === 'system_email') {
+            return <SystemEmailFeedEntry key={key} entry={entry} />;
         }
 
         if (entry.type === 'call') {
