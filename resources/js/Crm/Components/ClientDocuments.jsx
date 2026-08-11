@@ -30,7 +30,7 @@ export default function ClientDocuments({ clientId, type, organizations = [], or
         [type, organizationId],
     );
 
-    const feed = useCommentFeed(`/crm/clients/${clientId}/timeline`, params);
+    const feed = useCommentFeed(`/crm/partners/${clientId}/timeline`, params);
 
     const isOrder = type === 'order';
 

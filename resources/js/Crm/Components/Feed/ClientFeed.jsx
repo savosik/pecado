@@ -72,7 +72,7 @@ export default function ClientFeed({ clientId, client = null, clientEmail = null
     const [callOpen, setCallOpen] = useState(false);
     const [pendingDelete, setPendingDelete] = useState(null);
 
-    const feed = useCommentFeed(`/crm/clients/${clientId}/timeline`, { types });
+    const feed = useCommentFeed(`/crm/partners/${clientId}/timeline`, { types });
 
     const pinned = useMemo(
         () => feed.entries.filter((entry) => entry.is_pinned),
