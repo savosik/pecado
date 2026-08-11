@@ -52,6 +52,10 @@ export default function DeliveriesCreate() {
     const [pickupDate, setPickupDate] = useState('');
     const [comment, setComment] = useState('');
     const [places, setPlaces] = useState([makePlace(defaults.place)]);
+    // Пока кладовщик не тронул вес руками, единственное место держим равным
+    // расчётному весу груза: система его уже посчитала и показала выше, и
+    // заставлять переписывать то же число в соседнее поле незачем.
+    const [weightTouched, setWeightTouched] = useState(false);
 
     // ─── Шаг 3: получатель ───
     const [addressSource, setAddressSource] = useState('manual');
@@ -78,6 +82,19 @@ export default function DeliveriesCreate() {
     }), [selected]);
 
     const placesWeight = places.reduce((sum, place) => sum + (Number(place.weight) || 0), 0);
+
+    // Расчётный вес → в единственное место, пока его не правили руками.
+    useEffect(() => {
+        if (weightTouched || places.length !== 1) {
+            return;
+        }
+
+        setPlaces((prev) => (
+            prev.length === 1 && Number(prev[0].weight) !== totals.weight
+                ? [{ ...prev[0], weight: totals.weight ? String(totals.weight) : '' }]
+                : prev
+        ));
+    }, [totals.weight, weightTouched, places.length]);
 
     // Клиент определяется первой выбранной реализацией — вместе с ним подтягиваем
     // его адреса и контакты, чтобы кладовщик не перепечатывал их руками.
@@ -168,12 +185,17 @@ export default function DeliveriesCreate() {
         });
     };
 
-    const canSubmit = selected.length > 0
-        && placesWeight > 0
-        && resolvedAddress?.city
-        && contact.contactName
-        && contact.phone
-        && !submitting;
+    // Заблокированная кнопка без объяснения — худший вид формы: кладовщик видит
+    // заполненный экран и не понимает, что мешает. Перечисляем недостающее.
+    const missing = [
+        selected.length === 0 && 'выберите реализации',
+        placesWeight <= 0 && 'укажите вес мест',
+        !resolvedAddress?.city && 'нужен город получателя',
+        !contact.contactName && 'нужно контактное лицо',
+        !contact.phone && 'нужен телефон получателя',
+    ].filter(Boolean);
+
+    const canSubmit = missing.length === 0 && !submitting;
 
     return (
         <>
@@ -312,7 +334,10 @@ export default function DeliveriesCreate() {
                                                 type="number"
                                                 min={1}
                                                 value={place.weight}
-                                                onChange={(event) => updatePlace(index, 'weight', event.target.value)}
+                                                onChange={(event) => {
+                                                    setWeightTouched(true);
+                                                    updatePlace(index, 'weight', event.target.value);
+                                                }}
                                             />
                                         </Field>
                                         <Field label="Длина, см" width="110px">
@@ -547,7 +572,12 @@ export default function DeliveriesCreate() {
                     </Card.Body>
                 </Card.Root>
 
-                <HStack justify="end" gap={2}>
+                <HStack justify="end" gap={2} flexWrap="wrap">
+                    {missing.length > 0 && (
+                        <Text fontSize="sm" color="fg.muted" mr="auto">
+                            Чтобы создать отправку: {missing.join(', ')}.
+                        </Text>
+                    )}
                     <Button variant="outline" onClick={() => router.get('/wms/deliveries')}>
                         Отмена
                     </Button>
