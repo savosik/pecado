@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Delivery\ApiShip\ApiShipClient;
+use App\Services\Delivery\ApiShipSettings;
 use Illuminate\Console\Command;
 
 /**
@@ -21,7 +22,7 @@ class ApiShipRegisterWebhook extends Command
 
     protected $description = 'Зарегистрировать (или посмотреть) подписку на вебхук ORDER_STATUS в ApiShip';
 
-    public function handle(ApiShipClient $client): int
+    public function handle(ApiShipClient $client, ApiShipSettings $settings): int
     {
         if (! $client->enabled()) {
             $this->error('Интеграция с ApiShip выключена: задайте APISHIP_ENABLED, APISHIP_LOGIN и APISHIP_PASSWORD.');
@@ -47,12 +48,18 @@ class ApiShipRegisterWebhook extends Command
             return self::SUCCESS;
         }
 
-        $secret = (string) config('services.apiship.webhook.secret');
+        // Секрет ведёт начальник склада на /wms/delivery-settings, поэтому берём его
+        // через настройки: значение из базы перекрывает .env.
+        $secret = $settings->string('webhook_secret');
 
         if ($secret === '') {
-            $this->error('Не задан APISHIP_WEBHOOK_SECRET — без него эндпоинт вебхука не принимает запросы.');
+            $this->error('Секрет вебхука не задан — укажите его на /wms/delivery-settings, иначе эндпоинт не принимает запросы.');
 
             return self::FAILURE;
+        }
+
+        if (! $settings->bool('webhook_enabled')) {
+            $this->warn('Вебхук выключен в настройках: подписка создастся, но эндпоинт будет отвечать 503.');
         }
 
         $url = route('api.delivery.apiship.webhook', ['secret' => $secret]);

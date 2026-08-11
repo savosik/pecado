@@ -3,6 +3,7 @@
 namespace Tests\Feature\Wms\Delivery;
 
 use App\Models\Delivery\DeliveryShipment;
+use App\Services\Delivery\ApiShipSettings;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestDox;
 
@@ -160,6 +161,29 @@ class ApiShipWebhookTest extends DeliveryTestCase
         config()->set('services.apiship.webhook.secret', '');
 
         $this->sendWebhook($this->payload('DS-000001'), 'anything')->assertStatus(503);
+    }
+
+    #[Test]
+    #[TestDox('Секрет из настроек в базе перекрывает пустой .env')]
+    public function secret_from_settings_overrides_empty_env(): void
+    {
+        // Боевая ситуация: завскладом задал секрет через интерфейс, в .env его нет.
+        // Гейт, читающий только конфиг, отвечал бы 503 на каждый вебхук.
+        config()->set('services.apiship.webhook.enabled', false);
+        config()->set('services.apiship.webhook.secret', '');
+
+        app(ApiShipSettings::class)->save([
+            'webhook_enabled' => true,
+            'webhook_secret' => 'secret-from-the-settings-page',
+        ]);
+
+        $delivery = DeliveryShipment::factory()->submitted()->create();
+
+        $this->sendWebhook($this->payload($delivery->number), 'secret-from-the-settings-page')
+            ->assertOk();
+
+        $this->sendWebhook($this->payload($delivery->number), self::SECRET)
+            ->assertForbidden();
     }
 
     #[Test]
