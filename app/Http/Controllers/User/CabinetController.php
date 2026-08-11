@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\ContractorBalance;
 use App\Models\Order;
+use App\Services\Settlements\CabinetSettlementFinance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -27,15 +28,23 @@ class CabinetController extends Controller
         // завышенную задолженность хуже, чем не показать никакой.
         $financeEnabled = (bool) config('cabinet.finance_enabled');
 
+        // v16.0.0: на регистре главное число другое. Раньше показывали сальдо,
+        // но в него входят обязательства, срок которых ещё не наступил, и клиент
+        // читал их как «должен прямо сейчас». Теперь наверху — «к оплате сейчас»,
+        // а сальдо остаётся справочным.
+        $ledger = $financeEnabled && config('settlements.ledger_enabled')
+            ? app(CabinetSettlementFinance::class)->summary($user)
+            : null;
+
         // Агрегируем баланс по всем контрагентам пользователя
-        $balances = $financeEnabled
+        $balances = $financeEnabled && $ledger === null
             ? ContractorBalance::where('user_id', $user->id)->get()
             : collect();
         $totalBalance = $balances->sum('current_balance');
         $totalOverdue = $balances->sum('overdue_debt');
         $hasBalance = $balances->count() > 0;
 
-        $balanceByOrganization = $financeEnabled ? $this->balanceByOrganization($user) : [];
+        $balanceByOrganization = $financeEnabled && $ledger === null ? $this->balanceByOrganization($user) : [];
 
         $recentOrders = Order::where('user_id', $user->id)
             ->withCount('items')
@@ -56,14 +65,14 @@ class CabinetController extends Controller
             'ordersCount' => $ordersCount,
             'favoritesCount' => $favoritesCount,
             'cartsCount' => $cartsCount,
-            'balance' => $hasBalance ? [
+            'balance' => $ledger ?? ($hasBalance ? [
                 'current_balance' => $totalBalance,
                 'overdue_debt' => $totalOverdue,
                 'contractors_count' => $balances->count(),
                 // v15.8.0: разрез по нашим юрлицам. Пустой массив — блок не показываем
                 // вовсе: «одна организация: не указана» выглядит как поломка.
                 'organizations' => $balanceByOrganization,
-            ] : null,
+            ] : null),
             'recentOrders' => $recentOrders,
             'questionnaireCompleted' => $questionnaire && $questionnaire->isCompleted(),
             'clientStatus' => $user->clientStatus ? [

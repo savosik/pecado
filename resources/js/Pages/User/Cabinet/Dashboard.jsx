@@ -10,6 +10,16 @@ import PwaInstallBanner from '@/components/PwaInstallBanner';
 import { getOrderTypeShortLabel, getOrderTypeColor } from '@/constants/orderType';
 
 export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [], questionnaireCompleted = true, clientStatus = null, personalManager = null }) {
+    // Регистр отдаёт «к оплате сейчас», старая модель — сальдо. Различаем
+    // по наличию поля: подмешивать сюда ещё один пропс ради флага незачем.
+    const ledgerBalance = balance !== null && balance.due_now !== undefined;
+    const mainAmount = ledgerBalance
+        ? Number(balance.due_now || 0)
+        : Math.abs(parseFloat(balance?.current_balance ?? 0));
+    const mainIsDebt = ledgerBalance
+        ? Number(balance.due_now || 0) > 0
+        : parseFloat(balance?.current_balance ?? 0) < 0;
+
     const { auth } = usePage().props;
     const user = auth?.user;
     const name = user?.name || user?.name || 'Пользователь';
@@ -330,9 +340,11 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                 <Flex direction="column" gap="3" h="100%">
                                     <Flex align="center" justify="space-between" gap="3">
                                         <Text fontSize="sm" fontWeight="500" color="gray.500" lineHeight="1.2" truncate>
-                                            {balance.contractors_count > 1
-                                                ? `Баланс по ${balance.contractors_count} контрагентам`
-                                                : 'Баланс'}
+                                            {ledgerBalance
+                                                ? (balance.due_now > 0 ? 'К оплате сейчас' : 'Задолженности нет')
+                                                : (balance.contractors_count > 1
+                                                    ? `Баланс по ${balance.contractors_count} контрагентам`
+                                                    : 'Баланс')}
                                         </Text>
                                         <Flex
                                             align="center"
@@ -352,19 +364,35 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                         </Flex>
                                     </Flex>
                                     <Box minW="0" mt="auto">
+                                        {/*
+                                            На регистре наверху стоит «к оплате сейчас», а не сальдо:
+                                            в сальдо входят обязательства, срок которых ещё не наступил,
+                                            и клиент читал их как долг. Знак не показываем — «−55 000»
+                                            выглядит как ошибка сайта.
+                                        */}
                                         <Text
                                             fontSize={{ base: '2xl', md: '3xl' }}
                                             fontWeight="800"
                                             lineHeight="1"
                                             whiteSpace="nowrap"
-                                            color={parseFloat(balance.current_balance) < 0 ? 'red.600' : 'green.600'}
-                                            _dark={{ color: parseFloat(balance.current_balance) < 0 ? 'red.400' : 'green.400' }}
+                                            color={mainIsDebt ? 'red.600' : 'green.600'}
+                                            _dark={{ color: mainIsDebt ? 'red.400' : 'green.400' }}
                                         >
-                                            {parseFloat(balance.current_balance).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
+                                            {mainAmount.toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
                                         </Text>
-                                        {parseFloat(balance.overdue_debt) > 0 && (
+                                        {parseFloat(balance.overdue_debt || 0) > 0 && (
                                             <Text fontSize="xs" color="red.500" mt="1.5" whiteSpace="nowrap">
                                                 Просрочка: {parseFloat(balance.overdue_debt).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
+                                            </Text>
+                                        )}
+                                        {ledgerBalance && balance.next_due_date && (
+                                            <Text fontSize="xs" color="gray.500" mt="1.5" whiteSpace="nowrap">
+                                                Следующий платёж: {balance.next_due_date}
+                                            </Text>
+                                        )}
+                                        {ledgerBalance && balance.advance > 0 && (
+                                            <Text fontSize="xs" color="green.600" mt="1.5" whiteSpace="nowrap">
+                                                Переплата: {balance.advance.toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
                                             </Text>
                                         )}
                                     </Box>

@@ -8,7 +8,9 @@ use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use App\Models\ShipmentPaymentSchedule;
 use App\Models\User;
+use App\Services\Crm\Finance\ReconciliationService;
 use App\Services\CurrencyService;
+use App\Services\Settlements\CabinetSettlementFinance;
 use App\Services\SimpleCsvExporter;
 use App\Services\SimpleXlsxExporter;
 use Illuminate\Http\Request;
@@ -170,6 +172,13 @@ class PaymentController extends Controller
         $month = $this->resolveMonth($request->input('month'));
         $today = Carbon::today();
 
+        // v16.0.0: на регистре план приходит из ленты, и раскладывать платежи
+        // самим больше не нужно. Ветвление здесь одно на весь календарь —
+        // ниже начинается старый расчёт, который снимается в fin-11.
+        if (config('settlements.ledger_enabled')) {
+            return $this->ledgerCalendar($user, $month, $today, $currency);
+        }
+
         $monthly = $this->scheduleQuery($user)
             ->whereBetween('sch.due_date', [$month->toDateString(), $month->copy()->endOfMonth()->toDateString()])
             ->get();
@@ -218,6 +227,64 @@ class PaymentController extends Controller
      * Джойном, а не через связь: календарю нужны только плоские поля, а грузить
      * реализации со связями ради номера документа — лишние запросы на каждый месяц.
      */
+    /**
+     * Акт сверки для клиента. GET /cabinet/payments/reconciliation
+     *
+     * Тот же документ, что менеджер видит в CRM, но по своим контрагентам
+     * и только за себя. Клиент сам видит, из чего сложился долг, — это снимает
+     * часть звонков менеджеру, а спорную строку он находит по номеру документа
+     * без переписки.
+     *
+     * Выбора клиента здесь нет и быть не может: скоуп задаёт сессия.
+     */
+    public function reconciliation(Request $request, ReconciliationService $service): InertiaResponse
+    {
+        $user = $request->user();
+        $period = $service->defaultPeriod();
+
+        return Inertia::render('User/Cabinet/Payments/Reconciliation', [
+            'act' => $service->act(
+                client: $user,
+                organizationId: $request->integer('organization_id') ?: null,
+                from: (string) $request->string('date_from', $period['from']),
+                to: (string) $request->string('date_to', $period['to']),
+            ),
+            'organizations' => $service->organizationsOf($user),
+            'form' => [
+                'organization_id' => $request->integer('organization_id') ?: null,
+                'date_from' => (string) $request->string('date_from', $period['from']),
+                'date_to' => (string) $request->string('date_to', $period['to']),
+            ],
+        ]);
+    }
+
+    /**
+     * Календарь на регистре взаиморасчётов.
+     *
+     * Форма ответа та же, что у старого расчёта: экран один, и переключение
+     * источника не должно менять его разметку — иначе при включении флага
+     * поедут не только цифры, но и вёрстка, и отличить одно от другого станет нельзя.
+     */
+    private function ledgerCalendar(User $user, Carbon $month, Carbon $today, ?Currency $currency): InertiaResponse
+    {
+        $data = app(CabinetSettlementFinance::class)->calendar(
+            $user,
+            \Carbon\CarbonImmutable::parse($month->toDateString()),
+        );
+
+        return Inertia::render('User/Cabinet/Payments/Calendar', [
+            'month' => $month->format('Y-m'),
+            'monthLabel' => $this->monthLabel($month),
+            'prevMonth' => $month->copy()->subMonth()->format('Y-m'),
+            'nextMonth' => $month->copy()->addMonth()->format('Y-m'),
+            'today' => $today->toDateString(),
+            'entries' => $data['entries'],
+            'overdueEntries' => $data['overdue'],
+            'summary' => $data['summary'],
+            'currencyCode' => $currency?->code ?? 'RUB',
+        ]);
+    }
+
     private function scheduleQuery(User $user): \Illuminate\Database\Query\Builder
     {
         return DB::table('shipment_payment_schedules as sch')
