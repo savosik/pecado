@@ -413,6 +413,21 @@ jobs:
             echo "SUPPLIER_PREORDER_ENABLED=false" >> /srv/pecado/.env
           fi
 
+          echo "==> [0.4/9] Адресаты писем, у которых нет владельца в данных..."
+          # Письмо о заказе уходит персональному менеджеру клиента; этот адрес —
+          # только для клиентов, у которых менеджера нет. Вопросы с /faq адресатов
+          # в данных не имеют вовсе, поэтому им нужен явный список.
+          # Значение здесь — источник правды: править на сервере руками нельзя,
+          # деплой всё равно перезапишет. Меняется в этом файле и уезжает через CI.
+          for pair in "MAIL_ORDER_FALLBACK_RECIPIENTS=sales@pecado.ru" "MAIL_USER_QUESTION_RECIPIENTS=sales@pecado.ru"; do
+            key="${pair%%=*}"
+            if grep -q "^${key}=" /srv/pecado/.env; then
+              sed -i "s|^${key}=.*|${pair}|" /srv/pecado/.env
+            else
+              echo "${pair}" >> /srv/pecado/.env
+            fi
+          done
+
           echo "==> [0/9] Maintenance mode ON..."
           sg docker -c "$DC exec -T app php artisan down --retry=30 --refresh=5" || true
 
