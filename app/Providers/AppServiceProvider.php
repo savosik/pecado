@@ -24,6 +24,16 @@ class AppServiceProvider extends ServiceProvider
             \App\Services\Pricing\PriceService::class
         );
 
+        // v16.0.0: единственная точка выбора счётного ядра CRM. Ветвление по флагу
+        // живёт здесь, а не внутри сервиса, — иначе `if` расползся бы по двадцати
+        // методам, и снять старую ветку в волне 4 стало бы невозможно.
+        $this->app->bind(
+            \App\Services\Crm\Finance\PaymentForecast::class,
+            static fn () => config('settlements.ledger_enabled')
+                ? app(\App\Services\Crm\Finance\LedgerPaymentForecastService::class)
+                : app(\App\Services\Crm\Finance\PaymentForecastService::class),
+        );
+
         $this->app->bind(
             \App\Contracts\Currency\CurrencyConversionServiceInterface::class,
             \App\Services\Currency\CurrencyConversionService::class

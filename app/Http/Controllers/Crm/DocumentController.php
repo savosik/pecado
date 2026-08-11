@@ -17,7 +17,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Crm\CrmEntityResolver;
 use App\Services\Crm\Finance\FinanceFilters;
-use App\Services\Crm\Finance\PaymentForecastService;
+use App\Services\Crm\Finance\PaymentForecast;
 use App\Services\SimpleXlsxExporter;
 use App\Support\Crm\CrmEntityMap;
 use App\Support\Payments\PaymentSchedulePresenter;
@@ -258,12 +258,12 @@ class DocumentController extends CrmController
      * Разрез по менеджерам работает через тот же скоуп партнёров, что и журналы,
      * поэтому отдельного фильтра здесь нет.
      *
-     * Расчёт берётся из PaymentForecastService — того же, на котором стоит раздел
+     * Расчёт берётся из реализации PaymentForecast — той же, на которой стоит раздел
      * «Финансы»: календарь и пульт обязаны показывать одно число, а два
      * независимых запроса неизбежно разъедутся. Оттуда же приходит сведение
      * валют в рубли — без него месяц с валютным документом складывал бы Br с ₽.
      */
-    public function paymentsCalendar(Request $request, PaymentForecastService $forecast): Response
+    public function paymentsCalendar(Request $request, PaymentForecast $forecast): Response
     {
         $actor = $this->crmActor($request);
         $clients = $this->visibleClients($request, $actor);
@@ -281,15 +281,13 @@ class DocumentController extends CrmController
         );
 
         $planned = $forecast->applyDefaultOrder(
-            $forecast->plannedQuery($clients, $filters)
-                ->whereBetween('sch.due_date', [$monthStart, $monthEnd])
+            $forecast->dueBetween($forecast->plannedQuery($clients, $filters), $monthStart, $monthEnd)
         )->get();
 
         // Просрочка не привязана к показываемому месяцу: менеджеру она нужна
         // всегда, в каком бы месяце он ни находился.
         $overdue = $forecast->applyDefaultOrder(
-            $forecast->plannedQuery($clients, $filters)
-                ->whereDate('sch.due_date', '<', $today->toDateString())
+            $forecast->overdueOnly($forecast->plannedQuery($clients, $filters), $todayImmutable)
         )->limit(self::CALENDAR_OVERDUE_LIMIT)->get();
 
         $facts = $forecast->factsByDay($clients, $monthStart, $monthEnd);

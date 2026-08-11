@@ -6,7 +6,7 @@ use App\Models\Organization;
 use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Crm\Finance\FinanceFilters;
-use App\Services\Crm\Finance\PaymentForecastService;
+use App\Services\Crm\Finance\PaymentForecast;
 use App\Services\SimpleXlsxExporter;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,7 +24,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * только своих партнёров, весь отдел и разрез по менеджерам — у РОПа
  * (crm-clients-all.view). Тот же приём, что в журналах документов и аналитике.
  *
- * Расчёт живёт в PaymentForecastService: пульт, таблицы, календарь и выгрузка
+ * Расчёт живёт в реализации PaymentForecast: пульт, таблицы, календарь и выгрузка
  * обязаны показывать одно и то же число.
  */
 class FinanceController extends CrmController
@@ -36,7 +36,7 @@ class FinanceController extends CrmController
     private const DASHBOARD_ROWS = 15;
 
     public function __construct(
-        private readonly PaymentForecastService $forecast,
+        private readonly PaymentForecast $forecast,
     ) {}
 
     /**
@@ -177,13 +177,15 @@ class FinanceController extends CrmController
         $facts = $this->forecast->factsByDay($clients, $filters->dateFrom->toDateString(), $filters->dateTo->toDateString());
 
         $overdueRows = $this->forecast->applyDefaultOrder(
-            $this->forecast->plannedQuery($clients, $filters)
-                ->whereDate('sch.due_date', '<', $today->toDateString())
+            $this->forecast->overdueOnly($this->forecast->plannedQuery($clients, $filters), $today)
         )->limit(self::DASHBOARD_ROWS)->get();
 
         $upcomingRows = $this->forecast->applyDefaultOrder(
-            $this->forecast->plannedQuery($clients, $filters)
-                ->whereBetween('sch.due_date', [$today->toDateString(), $filters->dateTo->toDateString()])
+            $this->forecast->dueBetween(
+                $this->forecast->plannedQuery($clients, $filters),
+                $today->toDateString(),
+                $filters->dateTo->toDateString(),
+            )
         )->limit(self::DASHBOARD_ROWS)->get();
 
         return [
@@ -215,12 +217,13 @@ class FinanceController extends CrmController
         $query = $this->forecast->plannedQuery($clients, $filters);
 
         if ($overdueOnly) {
-            $query->whereDate('sch.due_date', '<', $today->toDateString());
+            $this->forecast->overdueOnly($query, $today);
         } else {
-            $query->whereBetween('sch.due_date', [
+            $this->forecast->dueBetween(
+                $query,
                 $filters->dateFrom->toDateString(),
                 $filters->dateTo->toDateString(),
-            ]);
+            );
         }
 
         /** @var LengthAwarePaginator<int, object> $rows */

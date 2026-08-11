@@ -46,6 +46,12 @@ class SettlementLedgerIntegrationTest extends TestCase
     {
         parent::setUp();
 
+        // Журнал шины по умолчанию выключен и включается переменной окружения.
+        // Тест проверяет статусы в нём, поэтому включает его явно: полагаться
+        // на локальный .env нельзя — в CI флага нет, и проверка молча вырождалась
+        // бы в сравнение null с null.
+        config(['erp.bus_logging_enabled' => true]);
+
         $this->user = User::factory()->create(['erp_id' => self::PARTNER_UUID]);
         $this->company = Company::factory()->create([
             'user_id' => $this->user->id,
