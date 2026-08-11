@@ -7,6 +7,7 @@ use App\Services\Analytics\AnalyticsContext;
 use App\Services\Analytics\AnalyticsFilters;
 use App\Services\Analytics\GapAnalysisService;
 use App\Services\Analytics\ShipmentAnalyticsService;
+use App\Support\Crm\LastVisit;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Cache;
@@ -545,6 +546,7 @@ class OpportunityService
                 'users.email',
                 'users.phone',
                 'users.created_at',
+                'users.last_seen_at',
                 'pm.id as manager_id',
                 'pm.name as manager_name',
                 'cp.order_cycle_days',
@@ -562,6 +564,10 @@ class OpportunityService
                 'manager' => $row->manager_name ?: null,
                 'order_cycle_days' => $row->order_cycle_days !== null ? (int) $row->order_cycle_days : null,
                 'created_at' => $row->created_at,
+                // Строка из-под DB::raw-выборки, а не модель: приводим сами.
+                'last_visit' => LastVisit::payload(
+                    $row->last_seen_at === null ? null : CarbonImmutable::parse($row->last_seen_at),
+                ),
             ];
         }
 

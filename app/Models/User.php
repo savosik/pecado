@@ -22,6 +22,7 @@ use Spatie\Tags\HasTags;
  * @property string|null $name
  * @property string $email
  * @property \Illuminate\Support\Carbon|null $email_verified_at
+ * @property \Illuminate\Support\Carbon|null $last_seen_at
  * @property string $password
  * @property bool $must_change_password
  * @property string|null $remember_token
@@ -308,6 +309,7 @@ class User extends Authenticatable implements HasMedia
     {
         return [
             'email_verified_at' => 'datetime',
+            'last_seen_at' => 'datetime',
             'password' => 'hashed',
             'must_change_password' => 'boolean',
             'is_subscribed' => 'boolean',

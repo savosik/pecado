@@ -43,6 +43,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \App\Http\Middleware\EnsureUserIsNotBlocked::class,
+            // «Последний визит» в карточке партнёра: отметка активности, не входа.
+            \App\Http\Middleware\TrackUserLastSeen::class,
             // Просмотр сайта от имени клиента: запрет документов и смены доступов.
             // Глобально, а не на отдельных группах: закрытых маршрутов немного,
             // но появиться новый может в любом файле маршрутов.

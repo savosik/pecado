@@ -8,6 +8,7 @@ use App\Models\CrmComment;
 use App\Models\CrmTask;
 use App\Models\User;
 use App\Support\Crm\ClientListFilters;
+use App\Support\Crm\LastVisit;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -562,6 +563,9 @@ class ClientListService
                 'next' => $nextTask === null ? null : $this->nextTaskPayload($nextTask),
             ] : null,
             'activity' => $this->activityPayload($nextTask, $lastComment),
+            // Пользуется ли партнёр сайтом вообще: заказ мог приехать из 1С,
+            // а в кабинет он не заходил ни разу.
+            'last_visit' => LastVisit::payload($client->last_seen_at),
             'plan_fact' => $planFact,
             'created_at_label' => $client->created_at?->format('d.m.Y'),
         ];

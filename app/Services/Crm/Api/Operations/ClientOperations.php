@@ -77,6 +77,9 @@ class ClientOperations
             'manager' => $client->personalManager?->name,
             'status' => $client->clientStatus?->name,
             'registered_at' => $client->created_at?->toDateString(),
+            // Заходил ли партнёр в кабинет: агент по этому отличает «работает
+            // с сайтом» от «заказы заводит менеджер, а сайт партнёр не открывал».
+            'last_visit_at' => $client->last_seen_at?->toDateTimeString(),
             'month' => [
                 'period' => $month->format('Y-m'),
                 'plan' => $row['plan'] === null ? null : (float) $row['plan'],

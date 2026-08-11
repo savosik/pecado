@@ -21,6 +21,7 @@ import TasksCell from './components/TasksCell';
 import PlanFactCell from './components/PlanFactCell';
 import LifecycleCell from './components/LifecycleCell';
 import ActivityHint from './components/ActivityHint';
+import LastVisitHint from '@/Crm/Components/LastVisitHint';
 import { EmailCell, PhoneCell } from './components/ContactCells';
 import { toastError, toastSuccess } from '@/utils/toast';
 
@@ -119,6 +120,7 @@ export default function Index({
                             на сайте: {row.personal_name}
                         </Text>
                     )}
+                    <LastVisitHint visit={row.last_visit} />
                     <ActivityHint activity={row.activity} />
                 </VStack>
             ),

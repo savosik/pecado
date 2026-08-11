@@ -18,6 +18,7 @@ use App\Services\Crm\ContractorListService;
 use App\Services\Crm\CrmTaskService;
 use App\Support\Crm\ClientListFilters;
 use App\Support\Crm\ClientPassport;
+use App\Support\Crm\LastVisit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -177,6 +178,9 @@ class ClientController extends CrmController
                     'color' => $user->clientStatus->color,
                 ] : null,
                 'created_at' => $user->created_at?->format('d.m.Y H:i'),
+                // Пользуется ли партнёр кабинетом: заказы могут идти через 1С,
+                // а на сайт он при этом не заходил ни разу.
+                'last_visit' => LastVisit::payload($user->last_seen_at),
             ],
             // Наши юрлица — для колонки и фильтра во вкладках «Заказы» и «Реализации».
             // Заглушки в список фильтра не идут: выбирать «юрлицо-UUID» менеджеру

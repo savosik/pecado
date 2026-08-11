@@ -8,6 +8,7 @@ import { usePermission } from '@/shared/Panel/usePermission';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import CallDialog from '@/Crm/Components/CallDialog';
+import LastVisitHint from '@/Crm/Components/LastVisitHint';
 
 const money = (value) => (value === null || value === undefined
     ? '—'
@@ -240,6 +241,7 @@ export default function OpportunityPanel({ month, canSeeAll = false }) {
                                             {canSeeAll && row.manager && (
                                                 <Text fontSize="xs" color="fg.muted">{row.manager}</Text>
                                             )}
+                                            <LastVisitHint visit={row.last_visit} />
                                         </VStack>
                                     </Table.Cell>
                                     <Table.Cell maxW="360px">

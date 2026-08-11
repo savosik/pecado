@@ -127,6 +127,12 @@ export default function Show() {
                                 <InfoRow label="Статус" value={client.status_label} />
                                 <InfoRow label="Персональный менеджер" value={client.manager?.name} />
                                 <InfoRow label="Зарегистрирован" value={client.created_at} />
+                                <InfoRow
+                                    label="Последний визит на сайт"
+                                    value={client.last_visit?.state === 'never'
+                                        ? 'ни разу не заходил'
+                                        : client.last_visit?.at}
+                                />
                                 {!canViewProfile && (
                                     <Box>
                                         <Text fontSize="xs" color="gray.500" mb="0.5">Статус партнёра</Text>

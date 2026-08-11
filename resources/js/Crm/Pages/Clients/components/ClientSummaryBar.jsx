@@ -2,6 +2,7 @@ import { Badge, Box, HStack, Text, Wrap, WrapItem } from '@chakra-ui/react';
 import { LuBuilding, LuMail, LuPhone, LuUser } from 'react-icons/lu';
 import { Tooltip } from '@/components/ui/tooltip';
 import LifecycleCell from './LifecycleCell';
+import LastVisitHint from '@/Crm/Components/LastVisitHint';
 
 /**
  * Один факт о партнёре: подпись мелко, значение рядом.
@@ -79,6 +80,10 @@ export default function ClientSummaryBar({
                         )}
                     </Fact>
                 </WrapItem>
+                {/* Визит — в шапке, а не только в аккордеоне реквизитов: тот
+                    закрыт по умолчанию, а «партнёр не открывал сайт» нужно
+                    видеть до того, как менеджер снимет трубку. */}
+                <WrapItem><LastVisitHint visit={client.last_visit} /></WrapItem>
             </Wrap>
         </Box>
     );
