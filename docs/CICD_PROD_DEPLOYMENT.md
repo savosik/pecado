@@ -621,29 +621,10 @@ jobs:
           CURRENT_GID=$(id -g)
           sg docker -c "docker run --rm -v /srv/pecado/public/build:/build alpine chown -R ${CURRENT_UID}:${CURRENT_GID} /build" 2>/dev/null || true
 
-      - name: "💾 Backup БД (snapshot перед деплоем)"
-        run: |
-          set -euo pipefail
-          # Хранилище — на отдельном диске /dev/sdb (/media), чтобы не забивать системный sda2.
-          BACKUP_DIR="/media/backups/mysql/pre-deploy"
-          mkdir -p "$BACKUP_DIR"
-          DATE=$(date +%Y-%m-%d_%H%M%S)
-
-          # Основная БД
-          sg docker -c "docker compose -f /srv/pecado/docker-compose.yml -f /srv/pecado/docker-compose.prod.yml exec -T mysql \
-            sh -c 'exec mysqldump -uroot -p\$MYSQL_ROOT_PASSWORD pecado'" \
-            | gzip > "$BACKUP_DIR/pecado_${DATE}.sql.gz"
-
-          # Prices БД
-          sg docker -c "docker compose -f /srv/pecado/docker-compose.yml -f /srv/pecado/docker-compose.prod.yml exec -T mysql-prices \
-            sh -c 'exec mysqldump -uroot -p\$MYSQL_ROOT_PASSWORD pecado_prices'" \
-            | gzip > "$BACKUP_DIR/pecado_prices_${DATE}.sql.gz"
-
-          # Retention основной БД: оставляем 10 последних
-          ls -1t "$BACKUP_DIR"/pecado_*.sql.gz 2>/dev/null | grep -v '/pecado_prices_' | tail -n +11 | xargs -r rm -fv
-
-          # Retention БД цен: оставляем 5 последних — архивы большие, могут забить диск
-          ls -1t "$BACKUP_DIR"/pecado_prices_*.sql.gz 2>/dev/null | tail -n +6 | xargs -r rm -fv
+      # Шаги «🔎 Нужен ли pre-deploy бэкап» и «💾 Pre-deploy backup БД» здесь
+      # намеренно не дублируются: копия успела разойтись с реальностью.
+      # Источник правды — .github/workflows/deploy-prod.yml, суть описана
+      # в разделе «Шаг 5: Бэкапы базы данных» ниже.
 
       - name: "📤 Sync code"
         run: |
@@ -944,7 +925,7 @@ curl -k https://pecado.ru/up
 | Куда | Что | Retention |
 |---|---|---|
 | Локально `/media/backups/mysql/daily/` | обе БД, ежедневно в 03:00 | основная — 30 дней, цены — 5 архивов |
-| Локально `/media/backups/mysql/pre-deploy/` | обе БД, перед каждым деплоем ([deploy-prod.yml](../.github/workflows/deploy-prod.yml)) | основная — 10, цены — 5 |
+| Локально `/media/backups/mysql/pre-deploy/` | обе БД, перед деплоями с миграциями или изменёнными сидерами ([deploy-prod.yml](../.github/workflows/deploy-prod.yml)) | основная — 10, цены — 5 |
 | **Облако** `yandex:pecado-backup/daily/` | обе БД, ежедневно | 30 дней |
 | **Облако** `yandex:pecado-backup/monthly/` | обе БД, 1-го числа | 365 дней |
 
@@ -957,6 +938,8 @@ Offsite-копия льётся через `rclone` (бинарник `/srv/scri
 - **Retention в облаке чистится только при успешной загрузке** — иначе можно срезать историю, не получив взамен свежую копию.
 - **30 дней = минимальный срок хранения класса ICE.** Удалять раньше бессмысленно: оплата всё равно списывается за 30 суток.
 - **Pre-deploy бэкапы в облако не льются** — их по несколько в день, они нужны для быстрого отката на живом сервере; катастрофу закрывает daily.
+- **Pre-deploy бэкап снимается не на каждый релиз** (с 2026-08-12). Шаг `🔎 Нужен ли pre-deploy бэкап` сверяет файлы `database/migrations` с таблицей `migrations` в боевой БД и сравнивает `database/seeders` с задеплоенной версией; если ни миграций, ни правок сидеров нет — дамп пропускается, а в лог падает `::notice` с актуальной точкой отката. Форсировать снимок можно маркером `[backup]` в сообщении коммита. Причина: дамп занимал 8,5 минут из 13-минутного деплоя, и 96 % его объёма составлял мусор мониторинга.
+- **Дамп основной БД идёт в два прохода** (структура всех таблиц + данные без `telescope_*`, `cache*`, `jobs*`) в один gzip-поток, поэтому восстановление по-прежнему делается одной командой `gunzip < … | mysql pecado`. Флаги `--single-transaction --quick` теперь совпадают с ночным скриптом — до этого CI-дамп брал `LOCK TABLES` на живом проде вне maintenance-окна.
 
 ```bash
 # Cron: ежедневно в 3:00 от пользователя ladmin (отдельного deploy-пользователя не делали)

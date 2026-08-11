@@ -106,7 +106,7 @@ ask "Выкатываем на боевой сайт?" || { warn "Прод-ре�
 git push origin dev:main || die "Push в main не прошёл."
 ok "Отправлено в main"
 
-step "Жду deploy-prod (обычно 15 минут)"
+step "Жду deploy-prod (обычно 4-5 минут)"
 sleep 8
 PROD_RUN=$(gh run list --branch main --limit 1 --json databaseId --jq '.[0].databaseId')
 PROD_OK=1
@@ -139,7 +139,12 @@ cat <<TXT
 
   Скорее всего сайт остался под maintenance. Снять вручную:
 
-      ssh ladmin@93.94.150.16 'cd /var/www/pecado && php artisan up'
+      ssh ladmin@93.94.150.16 "cd /srv/pecado && docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T app php artisan up"
+
+  Из офиса (LAN) тот же адрес — 10.2.2.101.
+
+  503 с заголовком 'x-powered-by: PHP' — контейнеры живы, дело в artisan down.
+  503 без него — упал сам контейнер, смотреть 'docker compose ps' на сервере.
 
   Логи деплоя:  gh run view $PROD_RUN --log-failed
 TXT

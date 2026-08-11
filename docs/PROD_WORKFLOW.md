@@ -113,14 +113,14 @@ EOF
 2. Тесты + сборка фронтенда + сборка MkDocs.
 3. **Workflow останавливается** на этапе деплоя — ждёт твоего нажатия «Approve» в GitHub Environment `production`.
 4. Ты заходишь в **Actions → Deploy to Production → Review deployments** → жмёшь Approve.
-5. Делается **бэкап БД** (snapshot перед деплоем).
+5. Делается **бэкап БД**, если релиз содержит неприменённые миграции или изменённые сидеры (иначе шаг пропускается — в логе будет notice с точкой отката).
 6. Включается `php artisan down` (maintenance mode — пользователи видят страницу «обслуживание»).
 7. Композер, кеши, миграции, сидеры, RabbitMQ topology, перезапуск контейнеров.
 8. `php artisan up` → сайт снова доступен.
 9. **Health check**: `curl https://pecado.ru/up` должен вернуть 200.
 10. Готово.
 
-Время одного прод-деплоя: **5-10 минут** (зависит от количества миграций).
+Время одного прод-деплоя: **~4 минуты** без миграций, **~5 минут** с миграциями (добавляется pre-deploy бэкап).
 
 ### 3.4 Большая/рискованная фича
 
@@ -248,6 +248,9 @@ git push origin main
 
 1. **Сразу включить maintenance** на сервере: `ssh` → `php artisan down`.
 2. **Восстановить БД** из `/media/backups/mysql/pre-deploy/<timestamp>.sql.gz`.
+   Снимок снимается перед деплоями с миграциями или изменёнными сидерами — то есть
+   именно в тех случаях, к которым применим этот способ. Если релиз был без них,
+   бери `/media/backups/mysql/daily/` + бинлог (координаты для PITR лежат в шапке дампа).
 3. **Revert PR в main** (как Способ A).
 4. После деплоя revert'a — `php artisan up`.
 
@@ -374,7 +377,7 @@ docker exec pecado-app php artisan migrate
 | Доступы к dev-серверу | `docs/DEV_SERVER_CREDENTIALS.md` |
 | Логи на dev | SSH → `/srv/pecado` → `docker compose logs -f app/worker/nginx` |
 | Логи на prod | SSH → `/srv/pecado` → `docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f app` |
-| Бэкапы БД на prod | `/media/backups/mysql/daily/` (ежедневные, на отдельном диске `sdb`) и `/media/backups/mysql/pre-deploy/` (перед каждым деплоем). Retention: основная БД — 30 дней daily / 10 последних pre-deploy; БД цен — 5 последних в обоих случаях. |
+| Бэкапы БД на prod | `/media/backups/mysql/daily/` (ежедневные, на отдельном диске `sdb`) и `/media/backups/mysql/pre-deploy/` (перед деплоями с миграциями или изменёнными сидерами). Retention: основная БД — 30 дней daily / 10 последних pre-deploy; БД цен — 5 последних в обоих случаях. |
 | Health endpoint | `https://pecado.ru/up` |
 | RabbitMQ Management | `https://pecado.ru:15672` через SSH-туннель (наружу закрыт) |
 

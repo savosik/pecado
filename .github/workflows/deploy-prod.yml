@@ -323,7 +323,61 @@ jobs:
           CURRENT_GID=$(id -g)
           sg docker -c "docker run --rm -v /srv/pecado/public/build:/build alpine chown -R ${CURRENT_UID}:${CURRENT_GID} /build" 2>/dev/null || true
 
+      - name: "🔎 Нужен ли pre-deploy бэкап"
+        id: backup_needed
+        run: |
+          set -uo pipefail
+          cd /srv/pecado
+          DC="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+
+          emit() { echo "needed=$1" >> "$GITHUB_OUTPUT"; echo "==> $2"; }
+
+          # Первый деплой: контейнеров нет, дампить нечего.
+          if ! sg docker -c "$DC ps --status running --quiet mysql" | grep -q .; then
+            emit false "Контейнеры не запущены (первый деплой) — бэкап не нужен"
+            exit 0
+          fi
+
+          # Аварийный рычаг: [backup] в сообщении коммита форсирует снимок.
+          # Нужен, когда релиз сопровождается ручной правкой данных.
+          if git -C "$GITHUB_WORKSPACE" log -1 --pretty=%B | grep -qi '\[backup\]'; then
+            emit true "Форсировано маркером [backup] в коммите"
+            exit 0
+          fi
+
+          # Неприменённые миграции. Логика та же, что у `artisan migrate`:
+          # basename файла без .php сравнивается с колонкой migrations.migration.
+          # Читаем боевую таблицу, а не маркер с SHA: если прошлый деплой упал
+          # между rsync и migrate, маркер соврал бы именно в опасном случае.
+          APPLIED=$(sg docker -c "$DC exec -T mysql sh -c 'exec mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" -N -B -e \"SELECT migration FROM pecado.migrations\"'" 2>/dev/null | sort)
+          if [ -z "$APPLIED" ]; then
+            emit true "Не удалось прочитать таблицу migrations — бэкапим на всякий случай"
+            exit 0
+          fi
+
+          FILES=$(ls "$GITHUB_WORKSPACE"/database/migrations/*.php | xargs -n1 basename | sed 's/\.php$//' | sort)
+          PENDING=$(comm -23 <(printf '%s\n' "$FILES") <(printf '%s\n' "$APPLIED"))
+          if [ -n "$PENDING" ]; then
+            echo "Неприменённые миграции:"
+            printf '%s\n' "$PENDING" | sed 's/^/  - /'
+            emit true "Есть миграции — снимаем бэкап"
+            exit 0
+          fi
+
+          # Сидеры гоняются на каждом деплое (шаги [5/9] и [5.1/9]) и тоже пишут
+          # в БД, поэтому «нет миграций» ещё не значит «БД не изменится».
+          # /srv/pecado на этот момент содержит предыдущий релиз — шаг стоит до rsync.
+          if ! diff -qr "$GITHUB_WORKSPACE/database/seeders" /srv/pecado/database/seeders >/dev/null 2>&1; then
+            emit true "Изменились сидеры — снимаем бэкап"
+            exit 0
+          fi
+
+          LAST=$(ls -1t /media/backups/mysql/daily/pecado_*.sql.gz 2>/dev/null | head -1)
+          echo "::notice title=Pre-deploy бэкап пропущен::Неприменённых миграций и правок сидеров нет. Точка отката — ночной бэкап (${LAST:-/media/backups/mysql/daily}) плюс бинлог (PITR)."
+          emit false "Миграций нет — бэкап пропускаем"
+
       - name: "💾 Pre-deploy backup БД"
+        if: steps.backup_needed.outputs.needed == 'true'
         run: |
           set -euo pipefail
           # Хранилище — на отдельном диске /dev/sdb (/media), чтобы не забивать системный sda2.
@@ -333,30 +387,63 @@ jobs:
           cd /srv/pecado
           DC="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
 
-          # Если контейнеры ещё не запущены (первый деплой) — пропускаем backup
-          if sg docker -c "$DC ps --status running --quiet mysql" | grep -q .; then
-            echo "==> Backup main DB..."
-            sg docker -c "$DC exec -T mysql sh -c 'exec mysqldump -uroot -p\"\$MYSQL_ROOT_PASSWORD\" pecado'" \
-              | gzip > "$BACKUP_DIR/pecado_${DATE}.sql.gz"
+          # pigz ставится на хост руками (CI пакеты не ставит), поэтому мягкая деградация.
+          # -p 4, а не все ядра: раннер живёт на боевом сервере, который отдаёт трафик.
+          if command -v pigz >/dev/null 2>&1; then GZ="pigz -p 4"; else GZ="gzip"; fi
 
-            echo "==> Backup prices DB..."
-            sg docker -c "$DC exec -T mysql-prices sh -c 'exec mysqldump -uroot -p\"\$MYSQL_ROOT_PASSWORD\" pecado_prices'" \
-              | gzip > "$BACKUP_DIR/pecado_prices_${DATE}.sql.gz"
+          # Флаги держим в согласии со scripts/prod-backup-db.sh:
+          #   --single-transaction — консистентный снимок без LOCK TABLES. Без него
+          #     mysqldump блокировал запись на живом проде на всё время дампа,
+          #     а maintenance включается только ниже, на шаге Deploy.
+          #   --quick — не буферизовать таблицу целиком в память.
+          #   --no-tablespaces — не требовать привилегию PROCESS.
+          OPTS="--single-transaction --quick --no-tablespaces"
 
-            # Retention основной БД: оставляем 10 последних
-            echo "==> Rotation main DB (keep last 10)..."
-            ls -1t "$BACKUP_DIR"/pecado_*.sql.gz 2>/dev/null | grep -v '/pecado_prices_' | tail -n +11 | xargs -r rm -fv
+          # Таблицы, чьи ДАННЫЕ в снимке не нужны. Их DDL уезжает первым проходом,
+          # поэтому после восстановления приложение не падает на запросах к ним.
+          # erp_bus_messages и erp_processed_messages оставляем с данными осознанно:
+          # после restore они нужны, чтобы 1С не переобработала переотправленное.
+          IGNORE=""
+          for t in telescope_entries telescope_entries_tags telescope_monitoring cache cache_locks jobs job_batches; do
+            IGNORE="$IGNORE --ignore-table=pecado.$t"
+          done
 
-            # Retention БД цен: оставляем только 5 последних — таблицы цен большие,
-            # архивы могут забить диск даже сжатыми.
-            echo "==> Rotation prices DB (keep last 5)..."
-            ls -1t "$BACKUP_DIR"/pecado_prices_*.sql.gz 2>/dev/null | tail -n +6 | xargs -r rm -fv
+          echo "==> Backup main DB..."
+          # Два прохода в один gzip-поток (схема обкатана в scripts/db-pull.sh):
+          # структура всех таблиц + данные без мусора. Склейка остаётся валидным
+          # SQL-скриптом, поэтому восстановление по-прежнему делается одной командой:
+          #   gunzip < pecado_<дата>.sql.gz | mysql pecado
+          # --source-data=2 пишет координаты бинлога в шапку — снимок годится как
+          # точка отсчёта для PITR, как в ночном бэкапе.
+          {
+            sg docker -c "$DC exec -T mysql sh -c 'exec mysqldump -uroot -p\"\$MYSQL_ROOT_PASSWORD\" $OPTS --source-data=2 --no-data --routines --triggers pecado'"
+            sg docker -c "$DC exec -T mysql sh -c 'exec mysqldump -uroot -p\"\$MYSQL_ROOT_PASSWORD\" $OPTS --no-create-info $IGNORE pecado'"
+          } | $GZ > "$BACKUP_DIR/pecado_${DATE}.sql.gz"
 
-            echo "==> Pre-deploy backup OK: ${DATE}"
-            df -h /media | tail -1
-          else
-            echo "==> Контейнеры не запущены, backup пропускаем (первый деплой)"
-          fi
+          echo "==> Backup prices DB..."
+          # Целиком: individual_prices восстанавливается из 1С часами, экономить
+          # на ней точку отката нельзя. Бинлог у этой БД отключён (skip-log-bin),
+          # поэтому без --source-data.
+          sg docker -c "$DC exec -T mysql-prices sh -c 'exec mysqldump -uroot -p\"\$MYSQL_ROOT_PASSWORD\" $OPTS pecado_prices'" \
+            | $GZ > "$BACKUP_DIR/pecado_prices_${DATE}.sql.gz"
+
+          # Битый архив хуже отсутствующего — проверяем оба.
+          echo "==> Проверка целостности архивов..."
+          gzip -t "$BACKUP_DIR/pecado_${DATE}.sql.gz"
+          gzip -t "$BACKUP_DIR/pecado_prices_${DATE}.sql.gz"
+
+          # Retention основной БД: оставляем 10 последних
+          echo "==> Rotation main DB (keep last 10)..."
+          ls -1t "$BACKUP_DIR"/pecado_*.sql.gz 2>/dev/null | grep -v '/pecado_prices_' | tail -n +11 | xargs -r rm -fv
+
+          # Retention БД цен: оставляем только 5 последних — таблицы цен большие,
+          # архивы могут забить диск даже сжатыми.
+          echo "==> Rotation prices DB (keep last 5)..."
+          ls -1t "$BACKUP_DIR"/pecado_prices_*.sql.gz 2>/dev/null | tail -n +6 | xargs -r rm -fv
+
+          echo "==> Pre-deploy backup OK: ${DATE}"
+          ls -lh "$BACKUP_DIR/pecado_${DATE}.sql.gz" "$BACKUP_DIR/pecado_prices_${DATE}.sql.gz"
+          df -h /media | tail -1
 
       - name: "📤 Sync code to /srv/pecado"
         run: |
@@ -432,6 +519,12 @@ jobs:
           sg docker -c "$DC exec -T app php artisan down --retry=30 --refresh=5" || true
 
           echo "==> [1/9] Установка PHP зависимостей..."
+          # Кеш пакетов не попадает под rsync и остаётся от прошлого релиза. Если
+          # релиз удаляет пакет, `composer install` бутит приложение через
+          # package:discover и падает на провайдере, которого уже нет в vendor, —
+          # прод остаётся под maintenance. Сносим кеш заранее, он всё равно
+          # пересобирается ниже на config:cache.
+          rm -f /srv/pecado/bootstrap/cache/packages.php /srv/pecado/bootstrap/cache/services.php
           sg docker -c "$DC exec -T app composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --classmap-authoritative"
 
           echo "==> [1.5/9] Создание symlink public/storage (если ещё нет)..."

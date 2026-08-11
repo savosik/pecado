@@ -358,6 +358,9 @@ jobs:
           fi
 
           echo "==> [1/7] Установка PHP зависимостей..."
+          # См. комментарий в deploy-prod.yml: кеш пакетов от прошлого релиза
+          # роняет composer install, если релиз удаляет пакет.
+          rm -f /srv/pecado/bootstrap/cache/packages.php /srv/pecado/bootstrap/cache/services.php
           sg docker -c 'docker compose exec -T app composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader'
 
           echo "==> [1.5/7] Создание symlink public/storage (если ещё нет)..."

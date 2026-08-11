@@ -118,7 +118,7 @@ Conventional Commits — обязательно:
 | **GitHub Environment `production`** | Settings → Environments | Требует ручной approve перед каждым деплоем |
 | **Ruleset «main: block force-push & deletion»** | Settings → Rules | Запрещает `git push --force` в main, запрещает удаление ветки |
 | **CI test jobs** | `.github/workflows/deploy-prod.yml` | Деплой не идёт без зелёных Lint & Tests + Build Frontend |
-| **Pre-deploy backup БД** | в workflow | snapshot main + prices DBs в `/media/backups/mysql/pre-deploy/` (отдельный диск `sdb`) перед каждым деплоем; retention: основная БД — 10 последних, цены — 5 последних |
+| **Pre-deploy backup БД** | в workflow | snapshot main + prices DBs в `/media/backups/mysql/pre-deploy/` (отдельный диск `sdb`) — **когда релиз содержит неприменённые миграции или изменённые сидеры**; иначе точка отката это ночной бэкап 03:00 + бинлог (PITR). Форсировать снимок можно маркером `[backup]` в сообщении коммита. Retention: основная БД — 10 последних, цены — 5 последних |
 | **Maintenance mode** | в workflow | `php artisan down` перед миграциями, `up` после |
 | **Health check** | в workflow | `curl https://pecado.ru/up` через loopback (обход hairpin NAT). Если упало — workflow красный |
 
