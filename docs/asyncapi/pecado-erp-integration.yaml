@@ -5452,7 +5452,9 @@ components:
           description: |
             Вид объекта расчётов (`ОбъектРасчетов`): `order`, `shipment`,
             `commission_report`, `commission_contract`, `other`. Перечень ОТКРЫТЫЙ —
-            незнакомый вид сохраняется как `other`, а не отбрасывается.
+            незнакомый вид сохраняется **как есть** и не отбрасывается. Подменять его
+            на `other` значило бы потерять термин 1С без выгоды: колонка строковая,
+            а пользователю показывается `settlement_object_name`.
         settlement_object_uuid:
           $ref: '#/components/schemas/UUID'
         settlement_object_name:
