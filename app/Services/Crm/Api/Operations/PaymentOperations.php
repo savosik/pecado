@@ -127,6 +127,19 @@ class PaymentOperations
      */
     public function unpaidShipments(User $actor, OperationInput $input): array
     {
+        // v16.0.0: операция существовала только чтобы дать агенту хоть что-то,
+        // и порождала неверные ответы — остаток по документам не равен долгу.
+        // На регистре ответ есть, поэтому вместо цифр отдаём указание, чем её
+        // заменить. Совсем удалить нельзя: у существующих агентов вызов зашит
+        // в промптах, и молчаливое исчезновение они истолкуют как «долгов нет».
+        if (config('settlements.ledger_enabled')) {
+            throw new \RuntimeException(
+                'Операция снята: остаток по документам не равен долгу партнёра. '
+                .'Используйте `settlement.balance` — там сальдо, текущий долг и просрочка, '
+                .'или `settlement.schedule` для плановых платежей по документам.',
+            );
+        }
+
         $clients = User::query()->visibleInCrm($actor)->select('users.id');
 
         $query = Shipment::query()

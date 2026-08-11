@@ -178,6 +178,12 @@ class PaymentController extends Controller
         // всегда, в каком бы месяце календаря ни находился.
         $overdue = $this->scheduleQuery($user)
             ->whereDate('sch.due_date', '<', $today->toDateString())
+            // Закрытые строки в просрочку не идут. Без этого условия клиент видел
+            // бы «Просрочено: 5 документов» на нулевую сумму — счётчик считал все
+            // прошедшие строки, включая оплаченные. Константа подставляется в SQL,
+            // а не биндится: у выражения нет аффинности типа, и SQLite сравнил бы
+            // число с привязанной строкой.
+            ->whereRaw('sch.amount - sch.paid_amount - sch.prepaid_amount > '.ShipmentPaymentSchedule::EPSILON)
             ->orderBy('sch.due_date')
             ->limit(200)
             ->get();
@@ -226,6 +232,12 @@ class PaymentController extends Controller
                 'sch.due_date',
                 'sch.amount',
                 'sch.paid_amount',
+                // Аванс по заказу закрывает строку наравне с прямым разнесением —
+                // так считает ShipmentPaymentSchedule::unpaid_amount и весь остальной
+                // расчёт денег. Без этой колонки кабинет показывал бы клиенту
+                // просрочку, которой у него нет: 1С разносит на заказы почти
+                // половину денег.
+                'sch.prepaid_amount',
                 'sch.stage_name',
                 'sch.line_number',
                 's.number as shipment_number',
@@ -242,7 +254,7 @@ class PaymentController extends Controller
      */
     private function scheduleEntry(object $row, ?Currency $currency, Carbon $today): array
     {
-        $unpaid = max(0.0, round((float) $row->amount - (float) $row->paid_amount, 2));
+        $unpaid = $this->unpaidOf($row);
         $dueDate = Carbon::parse($row->due_date);
         $isPaid = $unpaid <= ShipmentPaymentSchedule::EPSILON;
 
@@ -272,10 +284,24 @@ class PaymentController extends Controller
     private function sumUnpaid(\Illuminate\Support\Collection $rows, ?Currency $currency): float
     {
         return round($rows->sum(function (object $row) use ($currency): float {
-            $unpaid = max(0.0, (float) $row->amount - (float) $row->paid_amount);
-
-            return $this->convertAmount(round($unpaid, 2), $row->currency_code, $currency);
+            return $this->convertAmount($this->unpaidOf($row), $row->currency_code, $currency);
         }), 2);
+    }
+
+    /**
+     * Остаток по строке графика.
+     *
+     * Обе колонки погашения вычитаются обязательно: `paid_amount` — закрытое
+     * разнесением платежа на накладную, `prepaid_amount` — закрытое авансом
+     * по заказу. Клиенту без разницы, каким документом 1С зачла деньги,
+     * а формула без второй колонки завышает его долг в разы.
+     */
+    private function unpaidOf(object $row): float
+    {
+        return max(0.0, round(
+            (float) $row->amount - (float) $row->paid_amount - (float) ($row->prepaid_amount ?? 0),
+            2,
+        ));
     }
 
     /**

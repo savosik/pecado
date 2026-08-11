@@ -21,6 +21,7 @@ use App\Services\Crm\Api\Operations\OpportunityOperations;
 use App\Services\Crm\Api\Operations\PaymentOperations;
 use App\Services\Crm\Api\Operations\PlanOperations;
 use App\Services\Crm\Api\Operations\ProfileOperations;
+use App\Services\Crm\Api\Operations\SettlementOperations;
 use App\Services\Crm\Api\Operations\TaskOperations;
 use App\Support\Crm\ClientListFilters;
 use App\Support\Crm\ClientPassport;
@@ -52,6 +53,7 @@ class OperationRegistry
         'opportunities' => 'Возможности',
         'attachments' => 'Вложения',
         'payments' => 'Платежи',
+        'settlements' => 'Взаиморасчёты',
     ];
 
     /** @var list<Operation>|null */
@@ -73,6 +75,7 @@ class OperationRegistry
             $this->opportunities(),
             $this->attachments(),
             $this->payments(),
+            $this->settlements(),
         );
     }
 
@@ -125,6 +128,98 @@ class OperationRegistry
     /**
      * @return list<Operation>
      */
+    /**
+     * Взаиморасчёты из регистра 1С (v16.0.0).
+     *
+     * Появляются только при включённом `settlements.ledger_enabled`. Пока флаг
+     * выключен, регистр пуст, и операции отвечали бы «никто ничего не должен» —
+     * агент принял бы это за факт и сообщил менеджеру с полной уверенностью.
+     *
+     * @return list<Operation>
+     */
+    private function settlements(): array
+    {
+        if (! config('settlements.ledger_enabled')) {
+            return [];
+        }
+
+        return [
+            new Operation(
+                id: 'settlement.balance',
+                section: 'settlements',
+                method: 'GET',
+                uri: 'settlements/balance',
+                permission: 'crm-clients.view',
+                summary: 'Сальдо, текущий долг и просрочка партнёра',
+                description: 'ОТВЕТ на «сколько партнёр должен». Три числа сразу, и подменять '
+                    .'их друг другом нельзя: `balance` — сальдо всех операций, `due_now` — '
+                    .'обязательства, срок которых наступил, `overdue` — из них просроченные. '
+                    .'Отрицательный баланс — партнёр должен нам, положительный — переплата. '
+                    .'Строка — контрагент (юрлицо), у партнёра их бывает несколько.',
+                params: [
+                    Param::integer('client_id', 'Партнёр — расчёты только по нему', rules: ['min:1']),
+                    Param::boolean('only_overdue', 'Только контрагенты с просрочкой'),
+                ],
+                handler: [SettlementOperations::class, 'balance'],
+            ),
+            new Operation(
+                id: 'settlement.schedule',
+                section: 'settlements',
+                method: 'GET',
+                uri: 'settlements/schedule',
+                permission: 'crm-clients.view',
+                summary: 'Плановые платежи с остатком: когда и сколько партнёр внесёт',
+                description: 'Погашенную часть присылает 1С — сайт платежи не раскладывает. '
+                    .'Суммы положительные: это «сколько должен заплатить», а не движение баланса. '
+                    .'`is_settled_derived: true` означает, что погашение разнесено по этапам '
+                    .'заказа ради календаря; в баланс и сверку такую величину не берите.',
+                params: [
+                    Param::integer('client_id', 'Партнёр — график только по нему', rules: ['min:1']),
+                    Param::boolean('only_overdue', 'Только просроченные строки'),
+                    Param::string('date_from', 'Плановая дата с (Y-m-d)', rules: ['date_format:Y-m-d']),
+                    Param::string('date_to', 'Плановая дата по (Y-m-d)', rules: ['date_format:Y-m-d']),
+                    Param::integer('per_page', 'Строк на странице (до 100)', rules: ['min:1', 'max:100']),
+                    Param::integer('page', 'Номер страницы', rules: ['min:1']),
+                ],
+                handler: [SettlementOperations::class, 'schedule'],
+            ),
+            new Operation(
+                id: 'settlement.reconciliation',
+                section: 'settlements',
+                method: 'GET',
+                uri: 'settlements/reconciliation',
+                permission: 'crm-clients.view',
+                summary: 'Акт сверки: сальдо на начало, движения за период, сальдо на конец',
+                description: 'Тот же документ, что менеджер отправляет партнёру. '
+                    .'Формула: сальдо на начало + оплаты + возвраты товара − реализации − возврат денег. '
+                    .'Если в ответе заполнено `discrepancy`, сумма движений не сходится с балансом 1С — '
+                    .'акт неполный, и сообщать его партнёру нельзя.',
+                params: [
+                    Param::integer('client_id', 'Партнёр', required: true, rules: ['min:1']),
+                    Param::integer('organization_id', 'Наше юрлицо — акт по одному', rules: ['min:1']),
+                    Param::string('date_from', 'Начало периода (Y-m-d)', rules: ['date_format:Y-m-d']),
+                    Param::string('date_to', 'Конец периода (Y-m-d)', rules: ['date_format:Y-m-d']),
+                    Param::string('currency', 'Валюта расчётов (ISO-4217)'),
+                ],
+                handler: [SettlementOperations::class, 'reconciliation'],
+            ),
+            new Operation(
+                id: 'settlement.debtors',
+                section: 'settlements',
+                method: 'GET',
+                uri: 'settlements/debtors',
+                permission: 'crm-clients.view',
+                summary: 'Кому звонить: партнёры с просрочкой по убыванию суммы',
+                description: 'Просрочка — непогашенные плановые платежи с датой раньше сегодняшней. '
+                    .'Партнёр с переплатой сюда не попадает.',
+                params: [
+                    Param::integer('limit', 'Сколько партнёров вернуть (до 100)', rules: ['min:1', 'max:100']),
+                ],
+                handler: [SettlementOperations::class, 'debtors'],
+            ),
+        ];
+    }
+
     /**
      * Платежи из 1С. Только чтение: реквизиты и разнесение ведёт учётная система.
      *

@@ -214,7 +214,7 @@ class PaymentsCabinetTest extends TestCase
     /**
      * Строка графика по реализации клиента.
      */
-    private function scheduleFor(User $user, string $dueDate, float $amount, float $paid = 0.0): ShipmentPaymentSchedule
+    private function scheduleFor(User $user, string $dueDate, float $amount, float $paid = 0.0, float $prepaid = 0.0): ShipmentPaymentSchedule
     {
         $shipment = Shipment::factory()->create([
             'user_id' => $user->id,
@@ -226,7 +226,51 @@ class PaymentsCabinetTest extends TestCase
             'due_date' => $dueDate,
             'amount' => $amount,
             'paid_amount' => $paid,
+            'prepaid_amount' => $prepaid,
         ]);
+    }
+
+    /**
+     * Аванс по заказу закрывает строку наравне с прямым разнесением.
+     *
+     * Клиенту без разницы, каким документом 1С зачла деньги, а расчёт без
+     * `prepaid_amount` показывал бы ему просрочку, которой нет: 1С разносит
+     * на заказы почти половину поступлений.
+     */
+    #[Test]
+    public function order_prepayment_closes_calendar_line(): void
+    {
+        $this->scheduleFor($this->client, now()->addDays(3)->toDateString(), 2000.00, prepaid: 2000.00);
+
+        $this->actingAs($this->client)
+            ->get(route('cabinet.payments.calendar'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('summary.week_amount', 0)
+                ->where('entries.0.is_paid', true)
+                ->where('entries.0.unpaid_amount', 0));
+    }
+
+    /**
+     * Закрытая строка с прошедшей датой — не просрочка.
+     *
+     * Счётчик считал все прошедшие строки подряд, включая оплаченные, и клиент
+     * видел «Просрочено: 5 документов» на нулевую сумму.
+     */
+    #[Test]
+    public function order_prepayment_is_not_counted_as_overdue(): void
+    {
+        $this->scheduleFor($this->client, now()->subMonth()->toDateString(), 5000.00, prepaid: 5000.00);
+        $this->scheduleFor($this->client, now()->subMonth()->toDateString(), 4000.00, paid: 4000.00);
+        $this->scheduleFor($this->client, now()->subMonth()->toDateString(), 3000.00);
+
+        $this->actingAs($this->client)
+            ->get(route('cabinet.payments.calendar'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('summary.overdue_amount', 3000)
+                ->where('summary.overdue_count', 1)
+                ->has('overdueEntries', 1));
     }
 
     #[Test]
