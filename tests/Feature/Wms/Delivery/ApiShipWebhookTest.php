@@ -77,6 +77,36 @@ class ApiShipWebhookTest extends DeliveryTestCase
     }
 
     #[Test]
+    #[TestDox('Ссылка отслеживания без протокола дополняется до абсолютной')]
+    public function tracking_url_without_scheme_is_absolute(): void
+    {
+        $delivery = DeliveryShipment::factory()->submitted()->create();
+
+        // Так отдаёт DPD. Без протокола браузер считает ссылку относительной
+        // и уводит на 404 внутри нашего же домена.
+        $payload = $this->payload($delivery->number);
+        $payload['orderInfo']['trackingUrl'] = 'dpd.ru/t?zktRfBGvUf';
+
+        $this->sendWebhook($payload)->assertOk();
+
+        $this->assertSame('https://dpd.ru/t?zktRfBGvUf', $delivery->refresh()->tracking_url);
+    }
+
+    #[Test]
+    #[TestDox('Пустая ссылка отслеживания не превращается в протокол без адреса')]
+    public function empty_tracking_url_stays_null(): void
+    {
+        $delivery = DeliveryShipment::factory()->submitted()->create();
+
+        $payload = $this->payload($delivery->number);
+        $payload['orderInfo']['trackingUrl'] = '';
+
+        $this->sendWebhook($payload)->assertOk();
+
+        $this->assertNull($delivery->refresh()->tracking_url);
+    }
+
+    #[Test]
     #[TestDox('Повторный вебхук с тем же статусом историю не удлиняет')]
     public function repeated_status_does_not_duplicate_history(): void
     {
