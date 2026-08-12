@@ -287,14 +287,17 @@
 - [x] `crm-13-tokens-ui` — в `review`, ждёт визуальной проверки на dev
 
 ### Волна 7 — Взаимозаменяемость и охват
-- [ ] `crm-21-manager-interchange` — в `backlog`, фундамент волны: расщепление права + галочка «только мои»
-- [ ] `crm-22-clients-last-order` — в `backlog`: последний заказ (дата + сумма), расширенные отборы
-- [ ] `crm-23-presence-bar` — в `backlog`: полоска присутствия без вебсокетов, опрос `last_seen_at`
-- [ ] `crm-24-plans-working-list` — в `backlog`: обогащение строки выносится в общий сервис на два экрана
-- [ ] `crm-25-voice-notes` — в `backlog`: аудиозапись вместо распознавания, микрофоны остаются
-- [ ] `crm-26-leads-entity` — в `backlog`: `crm_leads` вне `users`, минимум «имя + любой контакт»
-- [ ] `crm-27-leads-stages-kanban` — в `backlog`: стадии настраивает РОП, канбан на `@dnd-kit`
-- [ ] `crm-28-leads-funnel` — в `backlog`: воронка, дни на этапе, средняя длительность этапа
-- [ ] `crm-29-recurring-tasks` — в `backlog`: расписание, идемпотентная генерация, отмена цепочки
-- [ ] `crm-30-stock-availability-history` — в `backlog`: истории остатков в проекте нет, пишем переходы
-- [ ] `crm-31-back-in-stock-drafts` — в `backlog`: только черновики, отправка руками
+- [x] `crm-21-manager-interchange` — в `review`, ждёт визуальной проверки на dev; право расщеплено,
+      разрез с дефолтом «мои», право выдано менеджерам двумя откатываемыми миграциями
+- [x] `crm-22-clients-last-order` — в `review`; расчёт вынесен в `ClientLastOrderService`
+- [x] `crm-23-presence-bar` — в `review`; без вебсокетов, шаг трекинга визитов 900 → 60 с
+- [x] `crm-24-plans-working-list` — в `review`; обогащение строки вынесено в `ClientRowEnricher`
+      и питает оба экрана, совпадение колонок закреплено тестом
+- [x] `crm-25-voice-notes` — в `review`; коллекция `crm-voice`, распознавание речи не трогали
+- [x] `crm-26-leads-entity` — в `review`; `crm_leads` вне `users`
+- [x] `crm-27-leads-stages-kanban` — в `review`; стадии настраивает РОП, доска на `@dnd-kit`
+- [x] `crm-28-leads-funnel` — в `review`; метрика скрыта ниже порога наблюдений,
+      конверсия по флагам стадий
+- [x] `crm-29-recurring-tasks` — в `review`; идемпотентность уникальным ключом
+- [x] `crm-30-stock-availability-history` — в `review`; переходы, а не снимки; ретенция сразу
+- [x] `crm-31-back-in-stock-drafts` — в `review`; только черновики, отправка руками
