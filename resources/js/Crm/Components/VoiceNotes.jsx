@@ -33,6 +33,10 @@ export default function VoiceNotes({ entityType, entityId, canCreate = true, com
     const chunks = useRef([]);
     const ticker = useRef(null);
     const stream = useRef(null);
+    // Длительность — в ref, а не только в состоянии: обработчик onstop
+    // назначается один раз при старте и замыкает upload из того рендера,
+    // где seconds ещё равен нулю. Из состояния уходил бы всегда 0.
+    const secondsRef = useRef(0);
 
     const load = async () => {
         try {
@@ -81,18 +85,23 @@ export default function VoiceNotes({ entityType, entityId, canCreate = true, com
         recorder.current.onstop = () => upload(recorder.current?.mimeType);
         recorder.current.start();
 
+        secondsRef.current = 0;
         setSeconds(0);
         setRecording(true);
 
         ticker.current = window.setInterval(() => {
             setSeconds((prev) => {
-                if (prev + 1 >= MAX_SECONDS) {
+                const next = prev + 1;
+
+                secondsRef.current = Math.min(next, MAX_SECONDS);
+
+                if (next >= MAX_SECONDS) {
                     stop();
 
                     return MAX_SECONDS;
                 }
 
-                return prev + 1;
+                return next;
             });
         }, 1000);
     };
@@ -119,7 +128,7 @@ export default function VoiceNotes({ entityType, entityId, canCreate = true, com
         form.append('entity_type', entityType);
         form.append('entity_id', entityId);
         form.append('kind', 'voice');
-        form.append('duration_seconds', String(seconds));
+        form.append('duration_seconds', String(secondsRef.current));
         form.append('file', blob, `voice-${Date.now()}.${extension}`);
 
         setBusy(true);
@@ -174,8 +183,37 @@ export default function VoiceNotes({ entityType, entityId, canCreate = true, com
             {notes.map((note) => (
                 <HStack key={note.id} gap={2} align="center">
                     {/* Проигрывается тут же: скачивать заметку, чтобы её послушать,
-                        никто не будет. */}
-                    <Box as="audio" controls src={note.url} flex="1" maxW={compact ? '260px' : '420px'} h="32px" />
+                        никто не будет.
+
+                        MediaRecorder пишет WebM потоком и не проставляет в заголовок
+                        длительность — браузер показывает 0:00 и не даёт перемотку.
+                        Лечится принудительной перемоткой в заведомо недостижимую
+                        точку: браузер досчитывает длину сам и возвращает корректный
+                        duration. Приём применяем один раз на загрузку метаданных. */}
+                    <Box
+                        as="audio"
+                        controls
+                        preload="metadata"
+                        src={note.url}
+                        flex="1"
+                        maxW={compact ? '260px' : '420px'}
+                        h="32px"
+                        onLoadedMetadata={(event) => {
+                            const el = event.currentTarget;
+
+                            if (el.duration !== Infinity && ! Number.isNaN(el.duration)) {
+                                return;
+                            }
+
+                            const restore = () => {
+                                el.removeEventListener('timeupdate', restore);
+                                el.currentTime = 0;
+                            };
+
+                            el.addEventListener('timeupdate', restore);
+                            el.currentTime = 1e101;
+                        }}
+                    />
                     <VStack align="start" gap={0} minW="120px">
                         <Text fontSize="10px" color="fg.muted">
                             {note.uploaded_by} · {note.uploaded_at}

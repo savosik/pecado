@@ -107,7 +107,31 @@ class AttachmentController extends CrmController
     {
         $this->assertAccessible($this->crmActor($request), $media);
 
-        return $media->toInlineResponse($request);
+        $response = $media->toInlineResponse($request);
+
+        // WebM и MP4 — контейнеры, и finfo при загрузке определяет их как
+        // `video/*` даже на чистом аудио. Отдавать голосовую заметку в тег
+        // <audio> с видео-типом — напрашиваться на отказ проиграть, поэтому
+        // подменяем тип на аудио-эквивалент.
+        if ($media->collection_name === CrmAttachments::VOICE_COLLECTION) {
+            $response->headers->set('Content-Type', $this->audioContentType($media->mime_type));
+        }
+
+        return $response;
+    }
+
+    /**
+     * Аудио-эквивалент типа контейнера.
+     */
+    private function audioContentType(?string $mime): string
+    {
+        return match ($mime) {
+            'video/webm' => 'audio/webm',
+            'video/mp4' => 'audio/mp4',
+            'video/ogg' => 'audio/ogg',
+            null => 'application/octet-stream',
+            default => $mime,
+        };
     }
 
     public function destroy(Request $request, Media $media): JsonResponse
@@ -133,7 +157,13 @@ class AttachmentController extends CrmController
      */
     private function assertAccessible(User $actor, Media $media): void
     {
-        abort_unless($media->collection_name === CrmAttachments::COLLECTION, 404);
+        // Обе коллекции CRM, а не только документы: голосовые заметки живут
+        // в своей, и проверка на одну COLLECTION отдавала по ним 404 —
+        // плеер получал ошибку вместо звука и показывал 0:00.
+        abort_unless(in_array($media->collection_name, [
+            CrmAttachments::COLLECTION,
+            CrmAttachments::VOICE_COLLECTION,
+        ], true), 404);
 
         // Владелец может отсутствовать: строка media переживает жёсткое удаление
         // своей модели, и докблок пакета этого не отражает.
