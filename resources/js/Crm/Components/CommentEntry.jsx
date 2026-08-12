@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { LuPin, LuPinOff, LuPencil, LuTrash2, LuPaperclip } from 'react-icons/lu';
 import { usePermission } from '@/shared/Panel/usePermission';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
+import VoiceNotes from '@/Crm/Components/VoiceNotes';
 
 /**
  * Одна запись ленты. Вынесена отдельно, потому что используется и в сквозной
@@ -141,6 +142,21 @@ export default function CommentEntry({ entry, showEntity = false, onUpdate, onDe
                             canUpload={!!entry.can?.update && can('crm-attachments.create')}
                             label="Файлы комментария"
                             onCountChange={setFilesCount}
+                        />
+                    </Box>
+                )}
+
+                {/* Голос — под тем же раскрытием, что и файлы: держать его
+                    развёрнутым в каждой записи ленты значит грузить список
+                    вложений по двадцать раз ради обычно пустого результата. */}
+                {filesOpen && canSeeFiles && (
+                    <Box pt={2} borderTopWidth="1px">
+                        <Text fontSize="xs" color="fg.muted" mb={2}>Голосом</Text>
+                        <VoiceNotes
+                            entityType="comment"
+                            entityId={entry.id}
+                            canCreate={!!entry.can?.update && can('crm-attachments.create')}
+                            compact
                         />
                     </Box>
                 )}

@@ -214,6 +214,91 @@ class VoiceNotesTest extends TestCase
             ->assertCreated();
     }
 
+    /**
+     * Регрессия: проверка доступа пускала только коллекцию документов, поэтому
+     * КАЖДАЯ голосовая заметка отдавала 404. Плеер получал ошибку вместо звука
+     * и показывал 0:00 — запись выглядела сохранённой, но не воспроизводилась.
+     *
+     * Тестов на успешное скачивание не было вовсе: проверяли только отказ
+     * чужому, и «404 всем подряд» выглядел как исправная защита.
+     */
+    #[Test]
+    public function свою_голосовую_запись_можно_скачать(): void
+    {
+        $this->actingAs($this->manager)->postJson(route('crm.attachments.store'), [
+            'entity_type' => 'client',
+            'entity_id' => $this->client->id,
+            'kind' => 'voice',
+            'file' => $this->voice(),
+        ])->assertCreated();
+
+        $mediaId = \App\Models\Media::query()->value('id');
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.attachments.download', $mediaId))
+            ->assertOk();
+    }
+
+    /**
+     * WebM и MP4 — контейнеры, и finfo при загрузке зовёт их `video/*` даже
+     * на чистом аудио. Отдавать такое в тег <audio> — напрашиваться на отказ
+     * проиграть, поэтому тип подменяется на аудио-эквивалент.
+     */
+    #[Test]
+    public function голосовая_запись_отдаётся_с_аудио_типом(): void
+    {
+        $this->actingAs($this->manager)->postJson(route('crm.attachments.store'), [
+            'entity_type' => 'client',
+            'entity_id' => $this->client->id,
+            'kind' => 'voice',
+            'file' => $this->chromiumWebm(),
+        ])->assertCreated();
+
+        $media = \App\Models\Media::query()->firstOrFail();
+        $this->assertSame('video/webm', $media->mime_type, 'finfo определяет контейнер как видео');
+
+        $response = $this->actingAs($this->manager)
+            ->get(route('crm.attachments.download', $media->id))
+            ->assertOk();
+
+        $this->assertSame('audio/webm', $response->headers->get('content-type'));
+    }
+
+    #[Test]
+    public function голос_прикрепляется_к_задаче_и_комментарию(): void
+    {
+        $task = \App\Models\CrmTask::factory()->create([
+            'author_id' => $this->manager->id,
+            'assignee_id' => $this->manager->id,
+            'client_user_id' => $this->client->id,
+        ]);
+
+        $comment = \App\Models\CrmComment::create([
+            'commentable_type' => \App\Models\User::class,
+            'commentable_id' => $this->client->id,
+            'client_user_id' => $this->client->id,
+            'user_id' => $this->manager->id,
+            'body' => 'Разговор записан голосом',
+        ]);
+
+        foreach ([['task', $task->id], ['comment', $comment->id]] as [$type, $id]) {
+            $this->actingAs($this->manager)
+                ->postJson(route('crm.attachments.store'), [
+                    'entity_type' => $type,
+                    'entity_id' => $id,
+                    'kind' => 'voice',
+                    'duration_seconds' => 7,
+                    'file' => $this->voice("note-{$type}.wav"),
+                ])
+                ->assertCreated()
+                ->assertJsonPath('duration_label', '0:07');
+        }
+
+        $this->assertSame(2, \App\Models\Media::query()
+            ->where('collection_name', CrmAttachments::VOICE_COLLECTION)
+            ->count());
+    }
+
     #[Test]
     public function чужую_запись_без_доступа_к_клиенту_не_скачать(): void
     {
