@@ -18,6 +18,7 @@ import {
     LuTriangleAlert,
     LuScale,
     LuCalendarClock,
+    LuUserPlus,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -46,6 +47,7 @@ export const menuConfig: MenuGroup[] = [
         icon: LuUsers,
         items: [
             { label: "Мои партнёры", icon: LuUsers, path: "/crm/partners", permission: "crm-clients.view" },
+            { label: "Лиды", icon: LuUserPlus, path: "/crm/leads", permission: "crm-leads.view" },
             // Контрагенты — юрлица партнёров. Отдельный пункт, потому что переписка
             // о реквизитах и сверках идёт по юрлицу, а у партнёра их может быть несколько.
             { label: "Контрагенты", icon: LuBuilding2, path: "/crm/contractors", permission: "crm-contractors.view" },

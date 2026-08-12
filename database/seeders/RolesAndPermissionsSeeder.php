@@ -135,6 +135,13 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-finance' => ['view'],
         // Вложения: edit нет — заменить файл это удалить и загрузить заново.
         'crm-attachments' => ['view', 'create', 'delete'],
+        // Лиды: потенциальные клиенты до появления партнёра в 1С.
+        // delete есть: в отличие от партнёра, лида завёл менеджер, и удалить
+        // случайный дубль должен он же, а не администратор базы.
+        'crm-leads' => ['view', 'create', 'edit', 'delete'],
+        // Стадии воронки настраивает руководитель: менеджер двигает лида,
+        // но не переписывает воронку отдела.
+        'crm-lead-stages' => ['view', 'create', 'edit', 'delete'],
         // Токены ИИ-агентов: выдача и отзыв. Только РОП — токен даёт запись
         // в CRM от имени сотрудника, и раздавать их самим сотрудникам нельзя.
         'crm-agent-tokens' => ['view', 'create', 'delete'],
@@ -281,7 +288,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'payments' => ['view'],
                 // CRM: партнёры отдела. Менеджеры взаимозаменяемы — экран открывается
                 // сфокусированным на своих, расфокус остаётся осознанным действием.
-                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-impersonate',
+                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-impersonate',
             ],
         ],
         'sales-manager-crm' => [
@@ -289,14 +296,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
                 // Для менеджеров, которым нужны партнёры отдела, но не нужна админка.
-                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-impersonate',
+                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-impersonate',
             ],
         ],
         'sales-head' => [
             'label' => 'Руководитель отдела продаж',
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
-                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-department', 'crm-contractors', 'crm-team', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-agent-tokens', 'crm-impersonate',
+                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-department', 'crm-leads', 'crm-lead-stages', 'crm-contractors', 'crm-team', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-agent-tokens', 'crm-impersonate',
                 // Себестоимость руководителю отдела появится вместе с отчётом по марже
                 // и только под `crm-`-префиксом: `product-costs` — админский ресурс,
                 // и выдача его этой роли открыла бы ей вход в /admin (PermissionNamingTest).

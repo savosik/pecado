@@ -14,6 +14,8 @@ use App\Http\Controllers\Crm\DocumentController;
 use App\Http\Controllers\Crm\EmailController;
 use App\Http\Controllers\Crm\FinanceController;
 use App\Http\Controllers\Crm\ImpersonationController;
+use App\Http\Controllers\Crm\LeadController;
+use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
@@ -108,6 +110,44 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/shipments/{shipment}', [DocumentController::class, 'shipment'])
             ->name('shipments.show')
             ->whereNumber('shipment');
+    });
+
+    // Лиды: потенциальные клиенты до появления партнёра в 1С. Доска отдаётся
+    // Inertia, перемещение карточки — JSON: перетаскивание не должно
+    // перезагружать страницу.
+    Route::middleware('permission:crm-leads.view')->group(function () {
+        Route::get('/leads', [LeadController::class, 'index'])->name('leads.index');
+    });
+
+    Route::middleware('permission:crm-leads.create')->group(function () {
+        Route::post('/leads', [LeadController::class, 'store'])->name('leads.store');
+    });
+
+    Route::middleware('permission:crm-leads.edit')->group(function () {
+        Route::patch('/leads/{lead}', [LeadController::class, 'update'])
+            ->name('leads.update')->whereNumber('lead');
+        Route::post('/leads/{lead}/move', [LeadController::class, 'move'])
+            ->name('leads.move')->whereNumber('lead');
+        // Квалификация в клиента — привязка к партнёру, которого создала 1С.
+        Route::post('/leads/{lead}/convert', [LeadController::class, 'convert'])
+            ->name('leads.convert')->whereNumber('lead');
+    });
+
+    Route::middleware('permission:crm-leads.delete')->group(function () {
+        Route::delete('/leads/{lead}', [LeadController::class, 'destroy'])
+            ->name('leads.destroy')->whereNumber('lead');
+    });
+
+    // Состав воронки — дело руководителя отдела.
+    Route::middleware('permission:crm-lead-stages.edit')->group(function () {
+        Route::post('/lead-stages', [LeadStageController::class, 'store'])->name('lead-stages.store');
+        Route::patch('/lead-stages/{stage}', [LeadStageController::class, 'update'])
+            ->name('lead-stages.update')->whereNumber('stage');
+    });
+
+    Route::middleware('permission:crm-lead-stages.delete')->group(function () {
+        Route::delete('/lead-stages/{stage}', [LeadStageController::class, 'destroy'])
+            ->name('lead-stages.destroy')->whereNumber('stage');
     });
 
     // Контрагенты — юрлица партнёров. Только чтение: реквизиты ведёт 1С, а работа

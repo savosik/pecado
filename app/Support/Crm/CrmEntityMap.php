@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\CrmCall;
 use App\Models\CrmComment;
 use App\Models\CrmEmail;
+use App\Models\CrmLead;
 use App\Models\CrmTask;
 use App\Models\Order;
 use App\Models\Payment;
@@ -57,6 +58,14 @@ final class CrmEntityMap
     public const CALL = 'call';
 
     /**
+     * Лид — потенциальный клиент до появления партнёра в 1С (crm-26).
+     *
+     * Живёт вне `users`, поэтому в ленту партнёра его записи не сводятся:
+     * clientIdFor() возвращает по нему NULL, пока лид не привязан к партнёру.
+     */
+    public const LEAD = 'lead';
+
+    /**
      * Строковый тип для API → класс модели.
      *
      * @var array<string, class-string<Model>>
@@ -71,6 +80,7 @@ final class CrmEntityMap
         self::TASK => CrmTask::class,
         self::EMAIL => CrmEmail::class,
         self::CALL => CrmCall::class,
+        self::LEAD => CrmLead::class,
     ];
 
     /**
@@ -88,6 +98,7 @@ final class CrmEntityMap
         self::TASK => 'Задача',
         self::EMAIL => 'Письмо',
         self::CALL => 'Звонок',
+        self::LEAD => 'Лид',
     ];
 
     /**
@@ -182,6 +193,9 @@ final class CrmEntityMap
             self::CONTRACTOR, self::ORDER, self::SHIPMENT, self::PAYMENT => $entity->getAttribute('user_id'),
             // Комментарий и задача уже знают своего партнёра — денормализация из crm-01.
             self::COMMENT, self::TASK, self::EMAIL, self::CALL => $entity->getAttribute('client_user_id'),
+            // Лид сводится к партнёру только после конверсии: до неё
+            // партнёра, в чью ленту писать, попросту нет.
+            self::LEAD => $entity->getAttribute('converted_user_id'),
             default => null,
         };
 
