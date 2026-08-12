@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Crm;
 
+use App\Enums\Crm\CrmScope;
 use App\Enums\OrderStatus;
 use App\Models\Company;
 use App\Models\Order;
@@ -1180,10 +1181,12 @@ class DocumentController extends CrmController
      */
     private function visibleClients(Request $request, User $actor): Builder
     {
-        $query = User::query()->visibleInCrm($actor)->select('users.id');
+        $query = User::query()
+            ->inCrmScope($actor, CrmScope::fromRequest($request, $actor))
+            ->select('users.id');
 
-        // Менеджера подставляет только РОП: у рядового менеджера скоуп и так
-        // сведён к своим партнёрам, а чужой id в запросе не должен ничего давать.
+        // Отбор по менеджеру сужает уже видимое: тому, кто отдел не видит,
+        // чужой id в запросе всё равно ничего не даст.
         if ($this->seesDepartment($request)) {
             $managerIds = $this->ids($request, 'manager_ids');
 

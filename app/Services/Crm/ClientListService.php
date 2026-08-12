@@ -67,7 +67,7 @@ class ClientListService
         $canSeeTasks = $actor->can('crm-tasks.view');
 
         $query = User::query()
-            ->visibleInCrm($actor)
+            ->inCrmScope($actor, $filters->scope)
             ->with(['personalManager:id,name', 'clientStatus:id,name,color'])
             ->when($canSeeProfile, fn (Builder $q) => $q->with(
                 'crmProfile:id,user_id,lifecycle_status,lifecycle_hint'

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Country;
+use App\Enums\Crm\CrmScope;
 use App\Models\Scopes\CompanyScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -215,13 +216,30 @@ class Company extends Model
      */
     public function scopeVisibleInCrm(Builder $query, User $actor): Builder
     {
-        if ($actor->can('crm-department.view')) {
-            return $query;
+        return $query->scopedInCrm($actor, CrmScope::DEPARTMENT);
+    }
+
+    /**
+     * То же с учётом выбранного разреза «только мои / весь отдел».
+     *
+     * Контрагент без партнёра (1С прислала юрлицо раньше привязки) доступен
+     * лишь тому, кто видит отдел: иначе карточка юрлица стала бы обходом скоупа.
+     * Но «весь отдел» — это юрлица клиентов отдела плюс непривязанные,
+     * а не вообще все компании базы: юрлица лидов и сотрудников сюда не входят.
+     *
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeScopedInCrm(Builder $query, User $actor, CrmScope $scope): Builder
+    {
+        $clients = User::query()->inCrmScope($actor, $scope)->select('users.id');
+
+        if (! $actor->can('crm-department.view')) {
+            return $query->whereIn('companies.user_id', $clients);
         }
 
-        return $query->whereIn(
-            'companies.user_id',
-            User::query()->visibleInCrm($actor)->select('users.id'),
-        );
+        return $query->where(fn (Builder $inner) => $inner
+            ->whereIn('companies.user_id', $clients)
+            ->orWhereNull('companies.user_id'));
     }
 }

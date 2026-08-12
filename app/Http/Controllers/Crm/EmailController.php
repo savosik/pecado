@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Crm;
 
+use App\Enums\Crm\CrmScope;
 use App\Enums\Crm\EmailStatus;
 use App\Http\Requests\Crm\StoreCrmEmailRequest;
 use App\Http\Requests\Crm\UpdateCrmEmailRequest;
@@ -41,7 +42,7 @@ class EmailController extends CrmController
 
         $filters = $this->validateFilters($request);
 
-        $query = $this->emails->visibleTo($actor)
+        $query = $this->emails->visibleTo($actor, CrmScope::fromRequest($request, $actor))
             ->with(['author:id,name', 'related'])
             ->withCount(['media as attachments_count' => fn ($media) => $media->where(
                 'collection_name',

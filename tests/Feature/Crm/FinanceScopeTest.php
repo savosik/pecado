@@ -110,8 +110,12 @@ class FinanceScopeTest extends TestCase
         $this->assertSame(1000.0, $summary['expected_period']);
     }
 
+    /**
+     * Раздел открывается сфокусированным на своих даже у того, кто видит отдел:
+     * отсутствие `scope` означает «мои», а не «все». Расфокус — явное действие.
+     */
     #[Test]
-    public function manager_filter_works_only_for_head(): void
+    public function department_scope_is_opt_in_and_manager_filter_needs_it(): void
     {
         [$head, $headCard] = $this->makeManagerActor(head: true);
         $ownClient = $this->makeClient($headCard);
@@ -127,11 +131,15 @@ class FinanceScopeTest extends TestCase
             ]);
         }
 
-        // РОП видит обоих и может отобрать одного.
-        $all = $this->actingAs($head)->get('/crm/finance');
+        // По умолчанию — только свои, хотя права на отдел есть.
+        $default = $this->actingAs($head)->get('/crm/finance');
+        $this->assertSame(500.0, $default->viewData('page')['props']['summary']['expected_period']);
+
+        // Расфокус показывает отдел целиком.
+        $all = $this->actingAs($head)->get('/crm/finance?scope=department');
         $this->assertSame(800.0, $all->viewData('page')['props']['summary']['expected_period']);
 
-        $filtered = $this->actingAs($head)->get('/crm/finance?manager_ids[]='.$otherCard->id);
+        $filtered = $this->actingAs($head)->get('/crm/finance?scope=department&manager_ids[]='.$otherCard->id);
         $this->assertSame(300.0, $filtered->viewData('page')['props']['summary']['expected_period']);
 
         // Рядовой менеджер тем же параметром чужие деньги не достанет.

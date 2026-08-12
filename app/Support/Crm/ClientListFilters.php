@@ -3,6 +3,7 @@
 namespace App\Support\Crm;
 
 use App\Enums\Crm\ClientLifecycleStatus;
+use App\Enums\Crm\CrmScope;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -58,6 +59,7 @@ final class ClientListFilters
     public const INACTIVE_DAYS = [30, 60, 90];
 
     public function __construct(
+        public readonly CrmScope $scope,
         public readonly ?string $search,
         public readonly ?int $managerId,
         public readonly ?ClientLifecycleStatus $lifecycle,
@@ -99,6 +101,7 @@ final class ClientListFilters
         }
 
         return new self(
+            scope: CrmScope::fromRequest($request, $actor),
             search: $search,
             managerId: $seesAll ? self::sanitizeId($request->input('manager_id')) : null,
             lifecycle: $canSeeProfile
@@ -146,6 +149,7 @@ final class ClientListFilters
     public function toArray(): array
     {
         return [
+            'scope' => $this->scope->value,
             'search' => $this->search,
             'manager_id' => $this->managerId,
             'lifecycle' => $this->lifecycle?->value,

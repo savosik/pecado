@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\Country;
+use App\Enums\Crm\CrmScope;
 use App\Enums\UserKind;
 use App\Enums\UserStatus;
 use App\Models\Concerns\HasCrmAttachments;
@@ -736,5 +737,31 @@ class User extends Authenticatable implements HasMedia
         }
 
         return $query->where('personal_manager_id', $managerId);
+    }
+
+    /**
+     * Сузить видимых клиентов до выбранного разреза.
+     *
+     * Надстройка над {@see scopeVisibleInCrm()}, а не замена: право задаёт
+     * границу возможного, разрез — фокус внутри неё. Поэтому применяется
+     * поверх и только в списках; в show-роутах границу держит право.
+     *
+     * Разрез «мои» у сотрудника без карточки менеджера ничего не сужает:
+     * {@see CrmScope::resolve()} до этого места такой разрез не пропускает.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<self>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<self>
+     */
+    public function scopeInCrmScope(\Illuminate\Database\Eloquent\Builder $query, self $actor, CrmScope $scope): \Illuminate\Database\Eloquent\Builder
+    {
+        $query->visibleInCrm($actor);
+
+        $managerId = $actor->managerProfile?->id;
+
+        if ($scope->isMine() && $managerId !== null) {
+            $query->where('personal_manager_id', $managerId);
+        }
+
+        return $query;
     }
 }

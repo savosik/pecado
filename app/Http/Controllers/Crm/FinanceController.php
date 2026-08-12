@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Crm;
 
+use App\Enums\Crm\CrmScope;
 use App\Models\Organization;
 use App\Models\PersonalManager;
 use App\Models\User;
@@ -565,7 +566,9 @@ class FinanceController extends CrmController
     private function visibleClients(Request $request, FinanceFilters $filters): Builder
     {
         $actor = $this->crmActor($request);
-        $query = User::query()->visibleInCrm($actor)->select('users.id');
+        $query = User::query()
+            ->inCrmScope($actor, CrmScope::fromRequest($request, $actor))
+            ->select('users.id');
 
         // Отбор по менеджеру сужает уже видимое: тому, кто отдел не видит,
         // чужой id в запросе всё равно ничего не даст — скоуп отсечёт раньше.

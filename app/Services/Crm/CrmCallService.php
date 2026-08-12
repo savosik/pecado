@@ -2,6 +2,7 @@
 
 namespace App\Services\Crm;
 
+use App\Enums\Crm\CrmScope;
 use App\Models\CrmCall;
 use App\Models\CrmTask;
 use App\Models\User;
@@ -31,23 +32,15 @@ class CrmCallService
      *
      * @return Builder<CrmCall>
      */
-    public function visibleTo(User $actor): Builder
+    public function visibleTo(User $actor, CrmScope $scope = CrmScope::DEPARTMENT): Builder
     {
         $query = CrmCall::query();
 
-        if ($actor->can('crm-department.view')) {
-            return $query;
-        }
-
-        $managerId = $actor->managerProfile?->id;
-
-        // Менеджер без карточки партнёров не ведёт — но свои записи (звонок
-        // без привязки) остаются его.
+        // Звонок без партнёра — заметка автора, а не запись отдела: видимость
+        // отдела расширяет круг партнёров, а не вскрывает чужие черновики.
         return $query->where(fn (Builder $inner) => $inner
             ->where('user_id', $actor->getKey())
-            ->orWhereHas('client', fn (Builder $client) => $managerId === null
-                ? $client->whereRaw('1 = 0')
-                : $client->where('personal_manager_id', $managerId)));
+            ->orWhereHas('client', fn (Builder $client) => $client->inCrmScope($actor, $scope)));
     }
 
     /**

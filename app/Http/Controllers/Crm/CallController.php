@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Crm;
 
 use App\Enums\Crm\CallDirection;
 use App\Enums\Crm\CallResult;
+use App\Enums\Crm\CrmScope;
 use App\Http\Requests\Crm\StoreCrmCallRequest;
 use App\Http\Requests\Crm\UpdateCrmCallRequest;
 use App\Models\CrmCall;
@@ -52,7 +53,7 @@ class CallController extends CrmController
 
         $clientId = CrmEntityMap::clientIdFor($entity);
 
-        $query = $this->calls->visibleTo($actor)
+        $query = $this->calls->visibleTo($actor, CrmScope::fromRequest($request, $actor))
             ->with('author:id,name', 'related')
             ->withCount(['media as attachments_count' => fn ($media) => $media->where(
                 'collection_name',

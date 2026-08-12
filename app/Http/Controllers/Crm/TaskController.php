@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Crm;
 
+use App\Enums\Crm\CrmScope;
 use App\Enums\Crm\TaskPriority;
 use App\Enums\Crm\TaskStatus;
 use App\Http\Requests\Crm\CloseCrmTaskRequest;
@@ -52,8 +53,9 @@ class TaskController extends CrmController
         Gate::authorize('viewAny', CrmTask::class);
 
         $filters = $this->validateFilters($request);
+        $scope = CrmScope::fromRequest($request, $actor);
 
-        $query = $this->tasks->visibleTo($actor)
+        $query = $this->tasks->visibleTo($actor, $scope)
             ->with(['author:id,name', 'assignee:id,name', 'related'])
             ->withCount(['media as attachments_count' => fn ($media) => $media->where(
                 'collection_name',
@@ -67,7 +69,7 @@ class TaskController extends CrmController
 
         return Inertia::render('Crm/Pages/Tasks/Index', [
             'tasks' => $paginator->through(fn (CrmTask $task) => $this->tasks->payload($task, $actor)),
-            'filters' => $filters,
+            'filters' => [...$filters, 'scope' => $scope->value],
             'counters' => $this->counters($actor),
             'options' => $this->optionsPayload($actor),
             // Ссылка из ленты партнёра ведёт сюда с ?task=ID — список откроет карточку.

@@ -2,6 +2,7 @@
 
 namespace App\Services\Crm;
 
+use App\Enums\Crm\CrmScope;
 use App\Enums\Crm\TaskPriority;
 use App\Enums\Crm\TaskStatus;
 use App\Models\CrmComment;
@@ -27,17 +28,21 @@ class CrmTaskService
     /**
      * Задачи, доступные актору.
      *
-     * Рядовой менеджер видит те, в которых участвует; РОП — все задачи отдела.
-     * Ровно та же граница, что в `CrmTaskPolicy::view()`: список и политика обязаны
-     * говорить одно и то же, иначе задача из списка открывалась бы в 403.
+     * Кто не видит отдел — только те, в которых участвует. Ровно та же граница,
+     * что в `CrmTaskPolicy::view()`: список и политика обязаны говорить одно
+     * и то же, иначе задача из списка открывалась бы в 403.
+     *
+     * Разрез «только мои» сужает до участия и того, кто отдел видит: на экране
+     * задач «мои» — это про участие, а не про закреплённых партнёров. Так это
+     * слово понимает менеджер, когда спрашивает «что на мне».
      *
      * @return Builder<CrmTask>
      */
-    public function visibleTo(User $actor): Builder
+    public function visibleTo(User $actor, CrmScope $scope = CrmScope::DEPARTMENT): Builder
     {
         $query = CrmTask::query();
 
-        if (! $actor->can('crm-department.view')) {
+        if ($scope->isMine() || ! $actor->can('crm-department.view')) {
             $actorId = (int) $actor->getKey();
 
             $query->where(fn (Builder $inner) => $inner

@@ -2,6 +2,7 @@
 
 namespace App\Services\Crm;
 
+use App\Enums\Crm\CrmScope;
 use App\Enums\Crm\EmailStatus;
 use App\Jobs\SendCrmEmailJob;
 use App\Models\CrmEmail;
@@ -31,18 +32,16 @@ class CrmEmailService
      *
      * @return Builder<CrmEmail>
      */
-    public function visibleTo(User $actor): Builder
+    public function visibleTo(User $actor, CrmScope $scope = CrmScope::DEPARTMENT): Builder
     {
         $query = CrmEmail::query();
-
-        if ($actor->can('crm-department.view')) {
-            return $query;
-        }
-
         $actorId = (int) $actor->getKey();
 
+        // Письмо на свободный адрес видит только автор — даже тот, кто видит
+        // отдел. Иначе вместе с охватом отдела открылись бы чужие черновики,
+        // а черновик это не запись о клиенте, а недописанная мысль.
         return $query->where(fn (Builder $inner) => $inner
-            ->whereIn('client_user_id', User::query()->visibleInCrm($actor)->select('id'))
+            ->whereIn('client_user_id', User::query()->inCrmScope($actor, $scope)->select('id'))
             ->orWhere(fn (Builder $own) => $own
                 ->whereNull('client_user_id')
                 ->where('user_id', $actorId)));
