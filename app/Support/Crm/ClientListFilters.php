@@ -33,6 +33,7 @@ final class ClientListFilters
         'next_task_due',
         'active_tasks_count',
         'plan_percent',
+        'last_order_at',
     ];
 
     /**
@@ -58,6 +59,17 @@ final class ClientListFilters
      */
     public const INACTIVE_DAYS = [30, 60, 90];
 
+    /**
+     * Пороги «давно не заказывал», в днях.
+     *
+     * Тот же набор, что у активности по отгрузкам — второй набор порогов
+     * заставил бы менеджера гадать, чем «60 дней» здесь отличается от «60 дней»
+     * там. Разница только в источнике: заказ — намерение, отгрузка — факт.
+     *
+     * @var list<int>
+     */
+    public const NO_ORDER_DAYS = self::INACTIVE_DAYS;
+
     public function __construct(
         public readonly CrmScope $scope,
         public readonly ?string $search,
@@ -67,6 +79,9 @@ final class ClientListFilters
         public readonly ?string $taskState,
         public readonly ?string $planState,
         public readonly ?int $inactiveDays,
+        public readonly ?int $noOrderDays,
+        public readonly ?float $orderAmountFrom,
+        public readonly ?float $orderAmountTo,
         public readonly string $sortBy,
         public readonly string $sortOrder,
         public readonly int $perPage,
@@ -113,6 +128,9 @@ final class ClientListFilters
             taskState: $canSeeTasks ? self::pick($request->input('task_state'), self::TASK_STATES) : null,
             planState: $canSeePlans ? self::pick($request->input('plan_state'), self::PLAN_STATES) : null,
             inactiveDays: self::pickInt($request->input('inactive_days'), self::INACTIVE_DAYS),
+            noOrderDays: self::pickInt($request->input('no_order_days'), self::NO_ORDER_DAYS),
+            orderAmountFrom: self::sanitizeAmount($request->input('order_amount_from')),
+            orderAmountTo: self::sanitizeAmount($request->input('order_amount_to')),
             sortBy: $sortBy,
             sortOrder: $sortOrder,
             perPage: min(max((int) $request->input('per_page', 15), 5), 100),
@@ -157,10 +175,30 @@ final class ClientListFilters
             'task_state' => $this->taskState,
             'plan_state' => $this->planState,
             'inactive_days' => $this->inactiveDays,
+            'no_order_days' => $this->noOrderDays,
+            'order_amount_from' => $this->orderAmountFrom,
+            'order_amount_to' => $this->orderAmountTo,
             'sort_by' => $this->sortBy,
             'sort_order' => $this->sortOrder,
             'per_page' => $this->perPage,
         ];
+    }
+
+    /**
+     * Сумма отбора: неположительное и нечисловое означают «неважно».
+     *
+     * Ноль как границу не пропускаем намеренно — «от 0 ₽» это не фильтр,
+     * а способ оставить в адресе висячий параметр.
+     */
+    private static function sanitizeAmount(mixed $value): ?float
+    {
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        $amount = (float) $value;
+
+        return $amount > 0 ? $amount : null;
     }
 
     /**

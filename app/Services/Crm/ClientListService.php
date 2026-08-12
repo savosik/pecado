@@ -38,6 +38,7 @@ class ClientListService
     public function __construct(
         private readonly CrmTaskService $tasks,
         private readonly ClientPlanFactService $planFact,
+        private readonly ClientLastOrderService $lastOrders,
     ) {}
 
     /**
@@ -96,6 +97,14 @@ class ClientListService
 
         if ($filters->inactiveDays !== null) {
             $this->applyInactive($query, $filters->inactiveDays);
+        }
+
+        if ($filters->noOrderDays !== null) {
+            $this->applyNoOrder($query, $filters->noOrderDays);
+        }
+
+        if ($filters->orderAmountFrom !== null || $filters->orderAmountTo !== null) {
+            $this->applyLastOrderAmount($query, $filters->orderAmountFrom, $filters->orderAmountTo);
         }
 
         if ($filters->planState !== null) {
@@ -257,6 +266,57 @@ class ClientListService
     }
 
     /**
+     * «Не заказывал N дней» — по заказам, а не по отгрузкам.
+     *
+     * Отличается от {@see applyInactive()} источником: заказ это намерение
+     * клиента, отгрузка — факт продажи. Клиент мог заказать вчера, а отгрузку
+     * ещё не получить, и для менеджера это разные ситуации.
+     *
+     * @param  Builder<User>  $query
+     */
+    private function applyNoOrder(Builder $query, int $days): void
+    {
+        $since = CarbonImmutable::now()->subDays($days);
+
+        $query->whereDoesntHave('orders', fn (Builder $orders) => $orders
+            ->whereRaw('COALESCE(orders.erp_created_at, orders.created_at) >= ?', [$since]));
+    }
+
+    /**
+     * Сумма последнего заказа в рублях, от и до.
+     *
+     * Считается тем же выражением, что колонка ({@see ClientLastOrderService}):
+     * иначе отбор «от 100 000» показывал бы строки с суммой 90 000.
+     *
+     * @param  Builder<User>  $query
+     */
+    private function applyLastOrderAmount(Builder $query, ?float $from, ?float $to): void
+    {
+        // Скалярный подзапрос, а не whereHas: внутри whereHas алиас `orders`
+        // занят внешней связью, и join валют к нему уже не прицепить.
+        $amount = '(
+            select o.total_amount * COALESCE(c.exchange_rate, 1)
+            from orders o
+            left join currencies c on c.code = o.currency_code
+            where o.user_id = users.id and o.deleted_at is null
+            order by COALESCE(o.erp_created_at, o.created_at) desc, o.id desc
+            limit 1
+        )';
+
+        // CAST обязателен: Laravel биндит float как строку, а SQLite считает
+        // любое число меньше любого текста — отбор «от 100 000» молча возвращал
+        // бы пусто. MySQL типы привёл бы сам, и расхождение всплыло бы только
+        // на проде.
+        if ($from !== null) {
+            $query->whereRaw("{$amount} >= CAST(? AS DECIMAL(18,2))", [$from]);
+        }
+
+        if ($to !== null) {
+            $query->whereRaw("{$amount} <= CAST(? AS DECIMAL(18,2))", [$to]);
+        }
+    }
+
+    /**
      * Фильтр по состоянию плана.
      *
      * Наличие плана проверяется запросом к таблице планов — это дёшево.
@@ -332,6 +392,17 @@ class ClientListService
             // Порядок задаёт paginateByPlanPercent(); здесь фиксируем стабильный
             // вторичный ключ, чтобы выборка id была детерминированной.
             $query->orderBy('users.id', 'desc');
+
+            return;
+        }
+
+        if ($filters->sortBy === 'last_order_at') {
+            $query->addSelect(['last_order_at' => DB::table('orders')
+                ->selectRaw('MAX(COALESCE(orders.erp_created_at, orders.created_at))')
+                ->whereColumn('orders.user_id', 'users.id')
+                ->whereNull('orders.deleted_at')]);
+            // Партнёры без заказов — всегда в конце: это не «давно», а «никогда».
+            $query->orderByRaw('last_order_at is null')->orderBy('last_order_at', $direction);
 
             return;
         }
@@ -430,6 +501,7 @@ class ClientListService
         $nextTasks = $canSeeTasks ? $this->nextTasks($ids, $actor) : [];
         $lastComments = $this->lastComments($ids);
         $planFact = $canSeePlans ? $this->planFact->forClients($ids, CarbonImmutable::now()) : [];
+        $lastOrders = $this->lastOrders->forClients($ids);
 
         /** @var LengthAwarePaginator<int, array<string, mixed>> $hydrated */
         $hydrated = $paginator->through(fn (User $client): array => $this->row(
@@ -437,6 +509,7 @@ class ClientListService
             $nextTasks[(int) $client->getKey()] ?? null,
             $lastComments[(int) $client->getKey()] ?? null,
             $planFact[(int) $client->getKey()] ?? null,
+            $lastOrders[(int) $client->getKey()] ?? null,
             $canSeeTasks,
             $canSeeProfile,
         ));
@@ -518,6 +591,7 @@ class ClientListService
         ?CrmTask $nextTask,
         ?CrmComment $lastComment,
         ?array $planFact,
+        ?array $lastOrder,
         bool $canSeeTasks,
         bool $canSeeProfile,
     ): array {
@@ -567,6 +641,9 @@ class ClientListService
             // а в кабинет он не заходил ни разу.
             'last_visit' => LastVisit::payload($client->last_seen_at),
             'plan_fact' => $planFact,
+            // Заказ, а не отгрузка: намерение клиента. Факт продаж в плане
+            // и аналитике считается по отгрузкам — цифры не обязаны совпадать.
+            'last_order' => $lastOrder,
             'created_at_label' => $client->created_at?->format('d.m.Y'),
         ];
     }

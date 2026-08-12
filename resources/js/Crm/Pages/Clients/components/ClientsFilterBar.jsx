@@ -1,6 +1,42 @@
-import { Box, HStack } from '@chakra-ui/react';
+import { useEffect, useState } from 'react';
+import { Box, HStack, Input, Text } from '@chakra-ui/react';
 import { SearchInput } from '@/Admin/Components/SearchInput';
 import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
+
+/**
+ * Граница суммы отбора.
+ *
+ * Значение уходит на сервер по потере фокуса и по Enter, а не на каждое нажатие:
+ * иначе набор «100000» превратился бы в шесть запросов, каждый со своей выдачей.
+ */
+function AmountInput({ value, onCommit, placeholder }) {
+    const [draft, setDraft] = useState(value ?? '');
+
+    // Значение могло измениться извне — применили сохранённый отбор или сбросили.
+    useEffect(() => setDraft(value ?? ''), [value]);
+
+    const commit = () => {
+        const next = draft === '' ? undefined : draft;
+
+        if (String(next ?? '') !== String(value ?? '')) {
+            onCommit(next);
+        }
+    };
+
+    return (
+        <Input
+            size="sm"
+            type="number"
+            min={0}
+            maxW="90px"
+            value={draft}
+            placeholder={placeholder}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={commit}
+            onKeyDown={(event) => event.key === 'Enter' && commit()}
+        />
+    );
+}
 
 /**
  * Один селект отбора.
@@ -112,6 +148,34 @@ export default function ClientsFilterBar({
                     { value: '90', label: 'Не покупает 90 дней' },
                 ]}
             />
+
+            {/* Отдельно от «не покупает»: там отгрузки (факт), здесь заказы
+                (намерение). Клиент мог заказать вчера и ещё не получить товар. */}
+            <FilterSelect
+                value={filters.no_order_days}
+                onChange={(value) => onChange({ no_order_days: value })}
+                placeholder="Заказы: неважно"
+                minW="200px"
+                options={[
+                    { value: '30', label: 'Не заказывал 30 дней' },
+                    { value: '60', label: 'Не заказывал 60 дней' },
+                    { value: '90', label: 'Не заказывал 90 дней' },
+                ]}
+            />
+
+            <HStack gap={1} align="center">
+                <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">Заказ, ₽</Text>
+                <AmountInput
+                    value={filters.order_amount_from}
+                    onCommit={(value) => onChange({ order_amount_from: value })}
+                    placeholder="от"
+                />
+                <AmountInput
+                    value={filters.order_amount_to}
+                    onCommit={(value) => onChange({ order_amount_to: value })}
+                    placeholder="до"
+                />
+            </HStack>
 
             {canSeeAll && (
                 <FilterSelect

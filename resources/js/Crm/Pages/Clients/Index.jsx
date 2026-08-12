@@ -20,6 +20,7 @@ import ClientsFilterBar from './components/ClientsFilterBar';
 import QuickFilters from './components/QuickFilters';
 import TasksCell from './components/TasksCell';
 import PlanFactCell from './components/PlanFactCell';
+import LastOrderCell from './components/LastOrderCell';
 import LifecycleCell from './components/LifecycleCell';
 import ActivityHint from './components/ActivityHint';
 import LastVisitHint from '@/Crm/Components/LastVisitHint';
@@ -175,6 +176,12 @@ export default function Index({
                 />
             ),
         }] : []),
+        {
+            key: 'last_order_at',
+            label: 'Последний заказ',
+            sortable: true,
+            render: (_, row) => <LastOrderCell value={row.last_order} />,
+        },
         ...(canSeePlans ? [{
             key: 'plan_percent',
             label: 'План / факт',
