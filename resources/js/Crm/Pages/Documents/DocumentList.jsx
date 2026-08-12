@@ -7,6 +7,7 @@ import { SearchInput } from '@/Admin/Components/SearchInput';
 import { ProductSelector } from '@/Admin/Components/ProductSelector';
 import { Button } from '@/components/ui/button';
 import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
+import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { useDocumentFilters } from '@/Crm/hooks/useDocumentFilters';
 
@@ -196,6 +197,8 @@ export default function DocumentList({
                         onChange={(values) => apply({ company_ids: values })}
                         minW="220px"
                     />
+
+                    <ScopeToggle section="documents" scope={filters.scope} available={seesAll} />
 
                     {seesAll && (
                         <MultiSelectFilter

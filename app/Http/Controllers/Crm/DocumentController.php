@@ -1148,6 +1148,7 @@ class DocumentController extends CrmController
             // фильтр нужно с названиями.
             'selectedProducts' => $this->selectedProducts($productIds),
             'filters' => [
+                'scope' => CrmScope::fromRequest($request, $this->crmActor($request))->value,
                 'search' => $search,
                 'statuses' => $this->values($request, 'statuses', 'status'),
                 'partner_ids' => $this->ids($request, 'partner_ids'),

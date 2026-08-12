@@ -72,6 +72,7 @@ class TaskController extends CrmController
             'filters' => [...$filters, 'scope' => $scope->value],
             'counters' => $this->counters($actor),
             'options' => $this->optionsPayload($actor),
+            'canSeeDepartment' => $this->seesDepartment($request),
             // Ссылка из ленты партнёра ведёт сюда с ?task=ID — список откроет карточку.
             'openTaskId' => $request->integer('task') ?: null,
         ]);

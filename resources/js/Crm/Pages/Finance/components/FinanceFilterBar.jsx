@@ -5,6 +5,7 @@ import { LuDownload, LuRotateCcw } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
+import ScopeToggle from '@/Crm/Components/ScopeToggle';
 
 const GRANULARITIES = [
     { value: 'day', label: 'По дням' },
@@ -32,6 +33,9 @@ export default function FinanceFilterBar({
     const [dateTo, setDateTo] = useState(filters.date_to || '');
 
     const current = (extra = {}) => ({
+        // Разрез переезжает между отборами и попадает в выгрузку: иначе
+        // расфокусированный экран выгружал бы только своих.
+        scope: filters.scope === 'department' ? 'department' : undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
         manager_ids: filters.manager_ids?.length ? filters.manager_ids : undefined,
@@ -49,7 +53,7 @@ export default function FinanceFilterBar({
     const reset = () => {
         setDateFrom('');
         setDateTo('');
-        router.get(route(routeName), {}, { preserveState: true, replace: true });
+        router.get(route(routeName), { scope: filters.scope }, { preserveState: true, replace: true });
     };
 
     /**
@@ -93,6 +97,10 @@ export default function FinanceFilterBar({
                         onBlur={() => apply()}
                         maxW="160px"
                     />
+                </Box>
+
+                <Box pb={1}>
+                    <ScopeToggle section="finance" scope={filters.scope} available={seesAll} />
                 </Box>
 
                 {seesAll && managers.length > 0 && (

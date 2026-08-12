@@ -47,8 +47,9 @@ export function useDocumentFilters(routeName, filters) {
         window.location.href = `${route(`${routeName}.export`)}?${query.toString()}`;
     };
 
+    // Разрез «только мои» сбросу не подлежит: это режим работы, а не отбор.
     const reset = () => {
-        router.get(route(`${routeName}.index`), { per_page: filters.per_page }, {
+        router.get(route(`${routeName}.index`), { per_page: filters.per_page, scope: filters.scope }, {
             preserveState: false,
             replace: true,
         });

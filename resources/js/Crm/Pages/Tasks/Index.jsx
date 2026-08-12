@@ -9,6 +9,7 @@ import { SearchInput } from '@/Admin/Components/SearchInput';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import TaskDialog from '@/Crm/Components/TaskDialog';
+import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import TaskCloseDialog from '@/Crm/Components/TaskCloseDialog';
 import { primeTaskOptions } from '@/Crm/Components/useTaskOptions';
 import { usePermission } from '@/shared/Panel/usePermission';
@@ -44,7 +45,7 @@ const selectStyle = {
  * Пресеты переключают фильтр поверх общего списка, а не открывают отдельные его версии:
  * во вкладках задача без привязки или поставленная третьим лицом просто терялась бы.
  */
-export default function Index({ tasks, filters, counters, options, openTaskId }) {
+export default function Index({ tasks, filters, counters, options, openTaskId, canSeeDepartment = false }) {
     const { can } = usePermission();
     const [dialogTask, setDialogTask] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -247,6 +248,12 @@ export default function Index({ tasks, filters, counters, options, openTaskId })
                             )}
                         </Button>
                     ))}
+                    <ScopeToggle
+                        section="tasks"
+                        scope={filters.scope}
+                        available={canSeeDepartment}
+                        label="Только мои"
+                    />
                 </HStack>
 
                 <HStack gap={3} align="center" flexWrap="wrap">

@@ -548,6 +548,7 @@ class FinanceController extends CrmController
         return [
             'filters' => [
                 ...$filters->toArray(),
+                'scope' => CrmScope::fromRequest($request, $this->crmActor($request))->value,
                 // Разрез по менеджерам менеджеру не показываем и не возвращаем:
                 // иначе в интерфейсе появился бы фильтр, который ничего не делает.
                 'manager_ids' => $seesAll ? $filters->managerIds : [],

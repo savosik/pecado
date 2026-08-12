@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { usePermission } from '@/shared/Panel/usePermission';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import PresetsBar from '@/Crm/Components/PresetsBar';
+import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import CallDialog from '@/Crm/Components/CallDialog';
@@ -66,12 +67,13 @@ export default function Index({
         });
     }, [filters]);
 
+    // Разрез «только мои» сбросу не подлежит: это режим работы, а не отбор.
     const resetFilters = useCallback(() => {
-        router.get(route('crm.clients.index'), { per_page: filters.per_page }, {
+        router.get(route('crm.clients.index'), { per_page: filters.per_page, scope: filters.scope }, {
             preserveState: false,
             replace: true,
         });
-    }, [filters.per_page]);
+    }, [filters.per_page, filters.scope]);
 
     const savePreset = async (name) => {
         try {
@@ -260,14 +262,17 @@ export default function Index({
                     canSeePlans={canSeePlans}
                     uncoveredCount={uncoveredCount}
                 />
-                <QuickFilters
-                    filters={filters}
-                    onApply={applyFilters}
-                    onReset={resetFilters}
-                    canSeeTasks={canSeeTasks}
-                    canSeePlans={canSeePlans}
-                    uncoveredCount={uncoveredCount}
-                />
+                <HStack gap={4} wrap="wrap">
+                    <ScopeToggle section="clients" scope={filters.scope} available={canSeeAll} />
+                    <QuickFilters
+                        filters={filters}
+                        onApply={applyFilters}
+                        onReset={resetFilters}
+                        canSeeTasks={canSeeTasks}
+                        canSeePlans={canSeePlans}
+                        uncoveredCount={uncoveredCount}
+                    />
+                </HStack>
             </VStack>
 
             <DataTable
