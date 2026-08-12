@@ -285,17 +285,22 @@ class PlanProgressService
         /** @var list<int> $ids */
         $ids = array_map(static fn (array $row): int => (int) $row['id'], $rows);
 
-        $nextTasks = $actor->can('crm-tasks.view') ? $this->enricher->nextTasks($ids, $actor) : [];
+        $canSeeTasks = $actor->can('crm-tasks.view');
+        $nextTasks = $canSeeTasks ? $this->enricher->nextTasks($ids, $actor) : [];
+        $taskCounts = $canSeeTasks ? $this->enricher->activeTaskCounts($ids, $actor) : [];
         $lastOrders = $this->enricher->lastOrders($ids);
         $lastSeen = User::query()->whereIn('id', $ids)->pluck('last_seen_at', 'id');
 
-        return array_map(function (array $row) use ($nextTasks, $lastOrders, $lastSeen): array {
+        return array_map(function (array $row) use ($canSeeTasks, $nextTasks, $taskCounts, $lastOrders, $lastSeen): array {
             $id = (int) $row['id'];
-            $task = $nextTasks[$id] ?? null;
 
             return [
                 ...$row,
-                'next_task' => $task === null ? null : $this->enricher->nextTaskPayload($task),
+                // Та же форма, что в списке партнёров: ячейка задач общая,
+                // и «нет задач» обязано одинаково предлагать её поставить.
+                'tasks' => $canSeeTasks
+                    ? $this->enricher->tasksPayload($nextTasks[$id] ?? null, $taskCounts[$id] ?? 0)
+                    : null,
                 'last_order' => $lastOrders[$id] ?? null,
                 'last_visit' => $this->enricher->lastVisitPayload($lastSeen[$id] ?? null),
             ];

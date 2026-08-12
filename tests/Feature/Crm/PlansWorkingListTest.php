@@ -69,7 +69,7 @@ class PlansWorkingListTest extends TestCase
             ->viewData('page')['props']['clients']['data'][0];
 
         $this->assertSame($fromList['last_order'], $fromPlans['last_order']);
-        $this->assertSame($fromList['tasks']['next'], $fromPlans['next_task']);
+        $this->assertSame($fromList['tasks'], $fromPlans['tasks']);
         $this->assertSame($fromList['last_visit'], $fromPlans['last_visit']);
     }
 
@@ -89,7 +89,7 @@ class PlansWorkingListTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('clients.data.0.last_order.amount_rub', 90000)
                 ->has('clients.data.0.last_visit')
-                ->has('clients.data.0.next_task'));
+                ->has('clients.data.0.tasks'));
     }
 
     /**
@@ -131,11 +131,46 @@ class PlansWorkingListTest extends TestCase
 
         $this->assertNotNull($row, 'Партнёр с планом обязан быть в списке выполнения');
         $this->assertEqualsWithDelta(55000, $row['last_order']['amount_rub'], 0.01);
-        $this->assertSame('Позвонить до пятницы', $row['next_task']['title']);
+        $this->assertSame('Позвонить до пятницы', $row['tasks']['next']['title']);
         // Описание нужно подсказке при наведении: по заголовку не понять,
         // что именно обещали сделать.
-        $this->assertArrayHasKey('description', $row['next_task']);
+        $this->assertArrayHasKey('description', $row['tasks']['next']);
+        $this->assertSame(1, $row['tasks']['active_count']);
         $this->assertArrayHasKey('last_visit', $row);
+    }
+
+    /**
+     * Ячейка задач в планах и в партнёрах — один компонент, поэтому и данные
+     * приходят в одной форме. Пока у планов была своя, пустое значение там
+     * рисовалось прочерком без возможности поставить задачу, а в партнёрах —
+     * кликабельным «нет задач»: одни и те же данные вели себя по-разному.
+     */
+    #[Test]
+    public function партнёр_без_задач_отдаёт_ту_же_пустую_ячейку_в_обоих_списках(): void
+    {
+        \App\Models\CrmSalesPlan::create([
+            'target_type' => 'client',
+            'target_id' => $this->client->id,
+            'period_month' => now()->startOfMonth()->toDateString(),
+            'amount' => 100_000,
+        ]);
+
+        $fromList = $this->actingAs($this->manager)
+            ->get(route('crm.clients.index'))
+            ->viewData('page')['props']['clients']['data'][0];
+
+        $fromGrid = $this->actingAs($this->manager)
+            ->get(route('crm.plans.index'))
+            ->viewData('page')['props']['clients']['data'][0];
+
+        $fromProgress = collect($this->actingAs($this->manager)
+            ->getJson(route('crm.plans.progress', ['month' => now()->format('Y-m')]))
+            ->json('clients'))->firstWhere('id', $this->client->id);
+
+        foreach ([$fromList, $fromGrid, $fromProgress] as $row) {
+            $this->assertNull($row['tasks']['next'], 'пустая ячейка — это next=null, а не отсутствие ключа');
+            $this->assertSame(0, $row['tasks']['active_count']);
+        }
     }
 
     /**

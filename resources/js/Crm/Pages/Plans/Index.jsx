@@ -17,7 +17,7 @@ import TaskDialog from '@/Crm/Components/TaskDialog';
 import CommentThread from '@/Crm/Components/CommentThread';
 import LastVisitHint from '@/Crm/Components/LastVisitHint';
 import LastOrderCell from '@/Crm/Components/LastOrderCell';
-import NextTaskHint from '@/Crm/Components/NextTaskHint';
+import TasksCell from '@/Crm/Pages/Clients/components/TasksCell';
 import RowActions from '@/Crm/Components/RowActions';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import ProgressPanel from './components/ProgressPanel';
@@ -402,7 +402,11 @@ export default function Index({
                                                                 <LastOrderCell value={row.last_order} />
                                                             </Table.Cell>
                                                             <Table.Cell>
-                                                                <NextTaskHint task={row.next_task} />
+                                                                <TasksCell
+                                                                    tasks={row.tasks}
+                                                                    onCreate={canCreateTask ? () => setTaskFor(row) : undefined}
+                                                                    onOpen={(id) => setOpenTaskId(id)}
+                                                                />
                                                             </Table.Cell>
                                                             <Table.Cell>
                                                                 <Text fontSize="sm" color="fg.muted">{fmtMoney(row.previous_amount)}</Text>
@@ -416,7 +420,6 @@ export default function Index({
                                                             </Table.Cell>
                                                             <Table.Cell>
                                                                 <RowActions
-                                                                    onTask={canCreateTask ? () => setTaskFor(row) : undefined}
                                                                     onComment={canComment ? () => setCommentFor(row) : undefined}
                                                                 />
                                                             </Table.Cell>

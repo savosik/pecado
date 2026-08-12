@@ -67,6 +67,52 @@ class ClientRowEnricher
     }
 
     /**
+     * Сколько активных задач у каждого партнёра, одним запросом.
+     *
+     * Нужно там, где ячейка задач рисуется без основного запроса списка
+     * (сетка планов и брифинговый список): в списке партнёров то же число
+     * приезжает через withCount самого запроса.
+     *
+     * @param  list<int>  $clientIds
+     * @return array<int, int>
+     */
+    public function activeTaskCounts(array $clientIds, User $actor): array
+    {
+        if ($clientIds === []) {
+            return [];
+        }
+
+        /** @var array<int, int> $counts */
+        $counts = $this->tasks->visibleTo($actor)
+            ->whereIn('client_user_id', $clientIds)
+            ->whereIn('status', TaskStatus::activeValues())
+            ->selectRaw('client_user_id, COUNT(*) as aggregate')
+            ->groupBy('client_user_id')
+            ->pluck('aggregate', 'client_user_id')
+            ->map('intval')
+            ->all();
+
+        return $counts;
+    }
+
+    /**
+     * Ячейка «Задачи» в той же форме, что в списке партнёров.
+     *
+     * Форма общая намеренно: пока у планов был свой компонент, пустое значение
+     * там рисовалось прочерком без возможности поставить задачу, а в партнёрах —
+     * кликабельным «нет задач». Одни и те же данные вели себя по-разному.
+     *
+     * @return array{active_count: int, next: array<string, mixed>|null}
+     */
+    public function tasksPayload(?CrmTask $nextTask, int $activeCount): array
+    {
+        return [
+            'active_count' => $activeCount,
+            'next' => $nextTask === null ? null : $this->nextTaskPayload($nextTask),
+        ];
+    }
+
+    /**
      * Последний заказ по каждому партнёру.
      *
      * @param  list<int>  $clientIds

@@ -334,7 +334,9 @@ class SalesPlanService
         // Те же данные и тем же сервисом, что в списке партнёров: на брифинге
         // по плану колонки обязаны совпадать со списком, иначе разницу прочтут
         // как ошибку в цифрах.
-        $nextTasks = $actor->can('crm-tasks.view') ? $this->enricher->nextTasks($ids, $actor) : [];
+        $canSeeTasks = $actor->can('crm-tasks.view');
+        $nextTasks = $canSeeTasks ? $this->enricher->nextTasks($ids, $actor) : [];
+        $taskCounts = $canSeeTasks ? $this->enricher->activeTaskCounts($ids, $actor) : [];
         $lastOrders = $this->enricher->lastOrders($ids);
 
         return $paginator->through(
@@ -343,7 +345,12 @@ class SalesPlanService
                 $actor,
                 $plans,
                 $previous,
-                $nextTasks[(int) $client->getKey()] ?? null,
+                $canSeeTasks
+                    ? $this->enricher->tasksPayload(
+                        $nextTasks[(int) $client->getKey()] ?? null,
+                        $taskCounts[(int) $client->getKey()] ?? 0,
+                    )
+                    : null,
                 $lastOrders[(int) $client->getKey()] ?? null,
             ),
         );
@@ -364,7 +371,7 @@ class SalesPlanService
         User $actor,
         array $plans,
         array $previous,
-        ?\App\Models\CrmTask $nextTask = null,
+        ?array $tasks = null,
         ?array $lastOrder = null,
     ): array {
         $id = (int) $client->getKey();
@@ -379,7 +386,7 @@ class SalesPlanService
             'can_edit' => $this->canManage($actor, PlanTarget::CLIENT, $id),
             // Ради этих трёх полей раздел и переделывался: на брифинге видно,
             // когда клиент был, когда заказывал и что на него поставлено.
-            'next_task' => $nextTask === null ? null : $this->enricher->nextTaskPayload($nextTask),
+            'tasks' => $tasks,
             'last_order' => $lastOrder,
             'last_visit' => $this->enricher->lastVisitPayload($client->last_seen_at),
         ];

@@ -9,7 +9,7 @@ import { ProgressBar, ProgressRoot } from '@/components/ui/progress';
 import { LuDownload, LuX } from 'react-icons/lu';
 import LastOrderCell from '@/Crm/Components/LastOrderCell';
 import LastVisitHint from '@/Crm/Components/LastVisitHint';
-import NextTaskHint from '@/Crm/Components/NextTaskHint';
+import TasksCell from '@/Crm/Pages/Clients/components/TasksCell';
 import RowActions from '@/Crm/Components/RowActions';
 import BurndownChart from './BurndownChart';
 
@@ -395,7 +395,11 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                                             <LastOrderCell value={row.last_order} />
                                         </Table.Cell>
                                         <Table.Cell onClick={(e) => e.stopPropagation()}>
-                                            <NextTaskHint task={row.next_task} onOpen={onOpenTask} />
+                                            <TasksCell
+                                                tasks={row.tasks}
+                                                onCreate={onTask ? () => onTask(row) : undefined}
+                                                onOpen={onOpenTask}
+                                            />
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">{money(row.plan)}</Table.Cell>
                                         <Table.Cell textAlign="right">{money(row.fact)}</Table.Cell>
@@ -420,7 +424,6 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                                         </Table.Cell>
                                         <Table.Cell onClick={(e) => e.stopPropagation()}>
                                             <RowActions
-                                                onTask={onTask ? () => onTask(row) : undefined}
                                                 onComment={onComment ? () => onComment(row) : undefined}
                                             />
                                         </Table.Cell>
