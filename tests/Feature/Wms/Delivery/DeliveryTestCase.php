@@ -85,6 +85,9 @@ abstract class DeliveryTestCase extends TestCase
             'product_name_snapshot' => $product->name,
             'quantity' => $quantity,
             'price' => 6000,
+            // Со скидкой: опись строится по total, а не по цене до скидок.
+            'subtotal' => 6000 * $quantity,
+            'total' => 5800 * $quantity,
         ]);
 
         return $shipment->fresh();

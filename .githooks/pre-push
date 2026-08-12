@@ -46,7 +46,9 @@ TESTS=""
 while read -r f; do
   [[ -z "$f" ]] && continue
   if [[ "$f" == tests/* ]]; then
-    [[ -f "$f" ]] && TESTS+="$f"$'\n'
+    # Только сами тесты: базовые классы и хелперы под tests/ бывают абстрактными,
+    # и artisan test на таком файле падает с «declared abstract», хотя код цел.
+    [[ -f "$f" && "$f" == *Test.php ]] && TESTS+="$f"$'\n'
     continue
   fi
   base=$(basename "$f" .php)

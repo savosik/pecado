@@ -251,8 +251,11 @@ class DeliveryShipmentFlowTest extends DeliveryTestCase
         // сумму с codCost заявки, и расхождение отклоняет заявку целиком.
         $this->assertSame(0.0, array_sum(array_column($items, 'cost')));
         $this->assertSame((float) $sent['cost']['codCost'], array_sum(array_column($items, 'cost')));
-        // Объявленная ценность при этом сохраняется — она нужна для страховки.
-        $this->assertGreaterThan(0, array_sum(array_column($items, 'assessedCost')));
+
+        // Объявленная ценность — за единицу и со скидками: 5800 за штуку при двух
+        // штуках в строке. Перевозчик сам умножит на quantity.
+        $this->assertSame(5800.0, $items[0]['assessedCost']);
+        $this->assertSame(2, $items[0]['quantity']);
     }
 
     #[Test]

@@ -212,12 +212,18 @@ class DeliveryOrderSubmitter
     /**
      * Товарный состав для описи.
      *
-     * `assessedCost` — объявленная ценность позиции, `cost` — **сумма к получению
-     * с покупателя**, то есть наложенный платёж. Это разные вещи, и перевозчик
-     * сверяет сумму `cost` по позициям с `codCost` заявки: у нас наложенного
-     * платежа нет (клиент рассчитывается по документам 1С), поэтому здесь ноль.
-     * С ценой в этом поле DPD отклоняет заявку — «сумма к получению товарных
-     * позиций не совпадает с суммой к получению отправления».
+     * Обе денежные величины позиции — **за единицу**: перевозчик умножает их на
+     * `quantity` (проверено на боевом API — заявка с `cost` 50 × 2 сходится с
+     * `codCost` 100, а не 50).
+     *
+     * `assessedCost` — объявленная ценность, по ней считается страховка и она же
+     * видна в описи. Берём `total` строки, то есть сумму со всеми скидками, делённую
+     * на количество: сумма таких строк сходится с `assessed_cost` отправки копейка
+     * в копейку, а `price` — цена до скидок, и опись бы завысила.
+     *
+     * `cost` — **сумма к получению с покупателя**, то есть доля наложенного платежа.
+     * У нас его нет, клиент рассчитывается по документам 1С, поэтому ноль: перевозчик
+     * сверяет сумму `cost` по позициям с `codCost + deliveryCost` заявки.
      *
      * @return list<array<string, mixed>>
      */
@@ -228,10 +234,13 @@ class DeliveryOrderSubmitter
         foreach ($delivery->shipments as $shipment) {
             foreach ($shipment->items as $item) {
                 /** @var ShipmentItem $item */
+                $quantity = max(1, (int) $item->quantity);
+                $lineTotal = (float) ($item->total ?? 0);
+
                 $items[] = [
                     'description' => (string) ($item->product_name_snapshot ?: 'Товар'),
-                    'quantity' => max(1, (int) $item->quantity),
-                    'assessedCost' => (float) $item->price,
+                    'quantity' => $quantity,
+                    'assessedCost' => round(($lineTotal ?: (float) $item->price * $quantity) / $quantity, 2),
                     'cost' => 0.0,
                 ];
             }
