@@ -22,13 +22,35 @@ class StoreCrmAttachmentRequest extends FormRequest
         return [
             'entity_type' => ['required', 'string', Rule::in(CrmEntityMap::types())],
             'entity_id' => ['required', 'integer', 'min:1'],
+            // Голос — отдельная коллекция со своим списком типов: в общий
+            // список вложений аудио не попадает, а в голосовое досье не попадают
+            // счета и спецификации.
+            'kind' => ['sometimes', Rule::in(['file', 'voice'])],
             'file' => [
                 'required',
                 'file',
                 'max:'.(CrmAttachments::MAX_MB * 1024),
-                'mimetypes:'.implode(',', CrmAttachments::MIMES),
+                'mimetypes:'.implode(',', $this->isVoice() ? CrmAttachments::VOICE_MIMES : CrmAttachments::MIMES),
             ],
         ];
+    }
+
+    /**
+     * Голосовая запись или обычный файл.
+     */
+    public function isVoice(): bool
+    {
+        return $this->input('kind') === 'voice';
+    }
+
+    /**
+     * Коллекция MediaLibrary, в которую ляжет файл.
+     */
+    public function collection(): string
+    {
+        return $this->isVoice()
+            ? CrmAttachments::VOICE_COLLECTION
+            : CrmAttachments::COLLECTION;
     }
 
     /**
@@ -42,7 +64,9 @@ class StoreCrmAttachmentRequest extends FormRequest
             'entity_id.required' => 'Не указана запись, к которой прикрепляется файл.',
             'file.required' => 'Выберите файл.',
             'file.max' => 'Файл больше '.CrmAttachments::MAX_MB.' МБ — уменьшите его или отправьте ссылкой.',
-            'file.mimetypes' => 'Такой тип файла не поддерживается. Разрешены изображения, PDF, документы Word и Excel, CSV и текст.',
+            'file.mimetypes' => $this->isVoice()
+                ? 'Такой формат записи не поддерживается. Разрешены webm, ogg, mp3, mp4, wav.'
+                : 'Такой тип файла не поддерживается. Разрешены изображения, PDF, документы Word и Excel, CSV и текст.',
         ];
     }
 }

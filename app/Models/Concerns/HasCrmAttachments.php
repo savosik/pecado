@@ -29,6 +29,11 @@ trait HasCrmAttachments
     {
         $this->addMediaCollection(CrmAttachments::COLLECTION)
             ->acceptsMimeTypes(CrmAttachments::MIMES);
+
+        // Голос живёт в своей коллекции: у него другой жизненный цикл
+        // и другой способ просмотра, чем у счетов и спецификаций.
+        $this->addMediaCollection(CrmAttachments::VOICE_COLLECTION)
+            ->acceptsMimeTypes(CrmAttachments::VOICE_MIMES);
     }
 
     /**
@@ -37,5 +42,15 @@ trait HasCrmAttachments
     public function crmAttachments(): MediaCollection
     {
         return $this->getMedia(CrmAttachments::COLLECTION);
+    }
+
+    /**
+     * Голосовые записи — досье, надиктованное менеджером.
+     *
+     * @return MediaCollection<int, \Spatie\MediaLibrary\MediaCollections\Models\Media>
+     */
+    public function crmVoiceNotes(): MediaCollection
+    {
+        return $this->getMedia(CrmAttachments::VOICE_COLLECTION);
     }
 }

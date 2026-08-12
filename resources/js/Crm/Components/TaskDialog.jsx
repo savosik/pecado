@@ -21,6 +21,7 @@ import { EntitySelector } from '@/Admin/Components/EntitySelector';
 import { useTaskOptions } from '@/Crm/Components/useTaskOptions';
 import CommentThread from '@/Crm/Components/CommentThread';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
+import VoiceNotes from '@/Crm/Components/VoiceNotes';
 import { usePermission } from '@/shared/Panel/usePermission';
 import { toastError, toastSuccess } from '@/utils/toast';
 
@@ -337,6 +338,18 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
                                                     entityId={task.id}
                                                     canUpload={can('crm-attachments.create')}
                                                     label="Файлы задачи"
+                                                />
+                                            </Box>
+                                        )}
+
+                                        {can('crm-attachments.view') && (
+                                            <Box pt={2} borderTopWidth="1px">
+                                                <Text fontSize="xs" color="fg.muted" mb={2}>Голосом</Text>
+                                                <VoiceNotes
+                                                    entityType="task"
+                                                    entityId={task.id}
+                                                    canCreate={can('crm-attachments.create')}
+                                                    compact
                                                 />
                                             </Box>
                                         )}

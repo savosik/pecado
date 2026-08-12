@@ -38,6 +38,7 @@ class AttachmentController extends CrmController
         $validated = $request->validate([
             'entity_type' => ['required', 'string', Rule::in(CrmEntityMap::types())],
             'entity_id' => ['required', 'integer', 'min:1'],
+            'kind' => ['sometimes', Rule::in(['file', 'voice'])],
         ]);
 
         $entity = $this->resolver->resolveForActor(
@@ -49,7 +50,11 @@ class AttachmentController extends CrmController
         // Страховка на будущее: в карту сущностей может попасть модель без медиа.
         abort_unless($entity instanceof HasMedia, 404);
 
-        return response()->json(['data' => $this->present($entity, $actor)]);
+        $collection = ($validated['kind'] ?? 'file') === 'voice'
+            ? CrmAttachments::VOICE_COLLECTION
+            : CrmAttachments::COLLECTION;
+
+        return response()->json(['data' => $this->present($entity, $actor, $collection)]);
     }
 
     public function store(StoreCrmAttachmentRequest $request): JsonResponse
@@ -65,11 +70,17 @@ class AttachmentController extends CrmController
         try {
             $media = $this->media->upload(
                 $request->file('file'),
-                CrmAttachments::COLLECTION,
+                $request->collection(),
                 $entity,
                 // MediaLibrary не хранит автора загрузки, а он нужен для правила
                 // «удалить может автор или РОП» — кладём в custom properties.
-                ['uploaded_by' => $actor->getKey(), 'uploaded_by_name' => $actor->name],
+                [
+                    'uploaded_by' => $actor->getKey(),
+                    'uploaded_by_name' => $actor->name,
+                    // Длительность считает браузер: у сервера её взять неоткуда
+                    // без разбора контейнера, а в списке она нужна сразу.
+                    'duration_seconds' => $request->integer('duration_seconds') ?: null,
+                ],
             );
         } catch (FileUnacceptableForCollection $e) {
             // Валидация проверяет заявленный тип, MediaLibrary — фактическое содержимое.
@@ -135,10 +146,10 @@ class AttachmentController extends CrmController
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function present(HasMedia $entity, User $actor): array
+    private function present(HasMedia $entity, User $actor, string $collection = CrmAttachments::COLLECTION): array
     {
         /** @var \Illuminate\Support\Collection<int, Media> $items */
-        $items = $entity->getMedia(CrmAttachments::COLLECTION);
+        $items = $entity->getMedia($collection);
 
         return $items->map(fn (Media $media) => $this->presentOne($media, $actor))->values()->all();
     }
@@ -160,8 +171,26 @@ class AttachmentController extends CrmController
             'url' => route('crm.attachments.download', $media->getKey()),
             'uploaded_at' => $media->created_at?->format('d.m.Y H:i'),
             'uploaded_by' => $media->getCustomProperty('uploaded_by_name'),
+            // Длительность посчитал браузер при записи: у сервера её взять
+            // неоткуда без разбора контейнера.
+            'duration_seconds' => $media->getCustomProperty('duration_seconds'),
+            'duration_label' => $this->durationLabel($media->getCustomProperty('duration_seconds')),
             'can_delete' => $actor->can('crm-attachments.delete')
                 && ((int) $uploadedBy === (int) $actor->getKey() || $actor->can('crm-department.edit')),
         ];
+    }
+
+    /**
+     * «3:07» вместо 187 секунд — плеер показывает время, а не число.
+     */
+    private function durationLabel(mixed $seconds): ?string
+    {
+        $value = (int) $seconds;
+
+        if ($value <= 0) {
+            return null;
+        }
+
+        return sprintf('%d:%02d', intdiv($value, 60), $value % 60);
     }
 }

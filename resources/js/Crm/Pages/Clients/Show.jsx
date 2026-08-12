@@ -17,6 +17,7 @@ import ClientFeed from '@/Crm/Components/Feed/ClientFeed';
 import ClientDocuments from '@/Crm/Components/ClientDocuments';
 import CommentThread from '@/Crm/Components/CommentThread';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
+import VoiceNotes from '@/Crm/Components/VoiceNotes';
 import ClientProfileForm from '@/Crm/Components/ClientProfileForm';
 import ClientLifecyclePanel from '@/Crm/Components/ClientLifecyclePanel';
 import TaskPanel from '@/Crm/Components/TaskPanel';
@@ -103,6 +104,20 @@ export default function Show() {
                     lifecycleOptions={profileOptions?.lifecycle_status || []}
                     canEditLifecycle={can('crm-profile.edit')}
                 />
+
+                {/* Голосовое досье — прямо в шапке, а не в спойлере: надиктовать
+                    после разговора нужно за один клик, иначе не надиктуют вовсе.
+                    Распознавание речи здесь не участвует: на живой речи с товарными
+                    наименованиями оно даёт текст, который дольше править. */}
+                {canViewFiles && (
+                    <Box>
+                        <VoiceNotes
+                            entityType="client"
+                            entityId={client.id}
+                            canCreate={can('crm-attachments.create')}
+                        />
+                    </Box>
+                )}
 
                 {/* Данные о партнёре живут над вкладками, а не среди них: они описывают
                     партнёра, а вкладки — работу с ним. Спойлеры закрыты по умолчанию,
