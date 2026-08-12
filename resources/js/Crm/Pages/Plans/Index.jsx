@@ -217,7 +217,12 @@ export default function Index({
                     </Tabs.List>
 
                     <Tabs.Content value="progress" px={0} pt={4}>
-                        <ProgressPanel month={month} canSeeAll={canSeeAll} />
+                        <ProgressPanel
+                            month={month}
+                            canSeeAll={canSeeAll}
+                            onTask={canCreateTask ? (row) => setTaskFor(row) : null}
+                            onComment={canComment ? (row) => setCommentFor(row) : null}
+                        />
                     </Tabs.Content>
 
                     {/* Отставание рядом с ответом на вопрос «и что с ним делать»:

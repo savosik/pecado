@@ -7,6 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { ProgressBar, ProgressRoot } from '@/components/ui/progress';
 import { LuDownload, LuX } from 'react-icons/lu';
+import LastOrderCell from '@/Crm/Components/LastOrderCell';
+import LastVisitHint from '@/Crm/Components/LastVisitHint';
+import NextTaskHint from '@/Crm/Components/NextTaskHint';
+import RowActions from '@/Crm/Components/RowActions';
 import BurndownChart from './BurndownChart';
 
 const money = (value) => (value === null || value === undefined
@@ -62,7 +66,7 @@ function KpiTile({ title, value, hint, accent = 'gray' }) {
  * терял бы сам список и не мог перейти к следующему. Нижний (выбранный партнёр)
  * меняет только сводку и burndown.
  */
-export default function ProgressPanel({ month, canSeeAll = false }) {
+export default function ProgressPanel({ month, canSeeAll = false, onTask = null, onComment = null }) {
     const [scope, setScope] = useState('department');
     const [clientId, setClientId] = useState(null);
 
@@ -355,10 +359,13 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
                             <Table.Header>
                                 <Table.Row>
                                     <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
+                                    <Table.ColumnHeader>Последний заказ</Table.ColumnHeader>
+                                    <Table.ColumnHeader>Ближайшая задача</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">План</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Факт</Table.ColumnHeader>
                                     <Table.ColumnHeader minW="160px">Выполнение</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Отставание</Table.ColumnHeader>
+                                    <Table.ColumnHeader />
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
@@ -380,6 +387,15 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
                                                     {row.name}
                                                 </Text>
                                             </a>
+                                            <LastVisitHint visit={row.last_visit} />
+                                        </Table.Cell>
+                                        {/* Клик по ячейке с действиями не должен строить график:
+                                            это две разные задачи на одной строке. */}
+                                        <Table.Cell onClick={(e) => e.stopPropagation()}>
+                                            <LastOrderCell value={row.last_order} />
+                                        </Table.Cell>
+                                        <Table.Cell onClick={(e) => e.stopPropagation()}>
+                                            <NextTaskHint task={row.next_task} />
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">{money(row.plan)}</Table.Cell>
                                         <Table.Cell textAlign="right">{money(row.fact)}</Table.Cell>
@@ -401,6 +417,12 @@ export default function ProgressPanel({ month, canSeeAll = false }) {
                                             <Text fontSize="sm" color={row.lag > 0 ? 'red.fg' : 'fg.muted'}>
                                                 {row.lag === null ? '—' : money(row.lag)}
                                             </Text>
+                                        </Table.Cell>
+                                        <Table.Cell onClick={(e) => e.stopPropagation()}>
+                                            <RowActions
+                                                onTask={onTask ? () => onTask(row) : undefined}
+                                                onComment={onComment ? () => onComment(row) : undefined}
+                                            />
                                         </Table.Cell>
                                     </Table.Row>
                                 ))}

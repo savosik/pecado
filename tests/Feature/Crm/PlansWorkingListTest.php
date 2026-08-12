@@ -93,6 +93,49 @@ class PlansWorkingListTest extends TestCase
     }
 
     /**
+     * Брифинговый список — это вкладка «Выполнение», отсортированная
+     * по отставанию, а не алфавитная сетка ввода планов. Именно на неё
+     * смотрят вслух, и именно ей нужны визит, заказ и задача.
+     */
+    #[Test]
+    public function progress_list_carries_the_same_briefing_columns(): void
+    {
+        \App\Models\CrmSalesPlan::create([
+            'target_type' => 'client',
+            'target_id' => $this->client->id,
+            'period_month' => now()->startOfMonth()->toDateString(),
+            'amount' => 100_000,
+        ]);
+
+        Order::factory()->create([
+            'user_id' => $this->client->id,
+            'currency_code' => 'RUB',
+            'erp_created_at' => now()->subDays(3),
+            'total_amount' => 55_000,
+        ]);
+
+        CrmTask::factory()->create([
+            'author_id' => $this->manager->id,
+            'assignee_id' => $this->manager->id,
+            'client_user_id' => $this->client->id,
+            'title' => 'Позвонить до пятницы',
+            'due_at' => now()->addDays(2),
+        ]);
+
+        $rows = $this->actingAs($this->manager)
+            ->getJson(route('crm.plans.progress', ['month' => now()->format('Y-m')]))
+            ->assertOk()
+            ->json('clients');
+
+        $row = collect($rows)->firstWhere('id', $this->client->id);
+
+        $this->assertNotNull($row, 'Партнёр с планом обязан быть в списке выполнения');
+        $this->assertEqualsWithDelta(55000, $row['last_order']['amount_rub'], 0.01);
+        $this->assertSame('Позвонить до пятницы', $row['next_task']['title']);
+        $this->assertArrayHasKey('last_visit', $row);
+    }
+
+    /**
      * Сетка планов подчиняется тому же разрезу, что список партнёров: раздел
      * открывается сфокусированным на своих.
      */

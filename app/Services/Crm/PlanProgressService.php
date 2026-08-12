@@ -52,6 +52,7 @@ class PlanProgressService
     public function __construct(
         private readonly ShipmentAnalyticsService $analytics,
         private readonly ClientPlanFactService $clientPlanFact,
+        private readonly ClientRowEnricher $enricher,
     ) {}
 
     /**
@@ -256,7 +257,49 @@ class PlanProgressService
                 : $b['lag'] <=> $a['lag'];
         });
 
-        return array_slice($rows, 0, $limit);
+        $rows = array_slice($rows, 0, $limit);
+
+        return $this->enrich($rows, $actor);
+    }
+
+    /**
+     * Добавить в строки то, ради чего на этот список смотрят на брифинге:
+     * когда партнёр последний раз был, когда заказывал и что на него поставлено.
+     *
+     * Обогащение идёт после среза по лимиту: тянуть задачи и заказы по двум
+     * сотням партнёров, из которых на экран уедет два десятка, незачем.
+     *
+     * Данные те же и тем же сервисом, что в списке партнёров: разъехавшиеся
+     * колонки на двух экранах читаются как расхождение цифр, а не как две
+     * реализации одной колонки.
+     *
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<array<string, mixed>>
+     */
+    private function enrich(array $rows, User $actor): array
+    {
+        if ($rows === []) {
+            return [];
+        }
+
+        /** @var list<int> $ids */
+        $ids = array_map(static fn (array $row): int => (int) $row['id'], $rows);
+
+        $nextTasks = $actor->can('crm-tasks.view') ? $this->enricher->nextTasks($ids, $actor) : [];
+        $lastOrders = $this->enricher->lastOrders($ids);
+        $lastSeen = User::query()->whereIn('id', $ids)->pluck('last_seen_at', 'id');
+
+        return array_map(function (array $row) use ($nextTasks, $lastOrders, $lastSeen): array {
+            $id = (int) $row['id'];
+            $task = $nextTasks[$id] ?? null;
+
+            return [
+                ...$row,
+                'next_task' => $task === null ? null : $this->enricher->nextTaskPayload($task),
+                'last_order' => $lastOrders[$id] ?? null,
+                'last_visit' => $this->enricher->lastVisitPayload($lastSeen[$id] ?? null),
+            ];
+        }, $rows);
     }
 
     /**
