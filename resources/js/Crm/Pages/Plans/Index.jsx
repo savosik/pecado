@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import axios from 'axios';
-import { Box, Card, HStack, Input, SimpleGrid, Table, Tabs, Text, VStack } from '@chakra-ui/react';
+import { Box, Card, Dialog, HStack, Input, Portal, SimpleGrid, Table, Tabs, Text, VStack } from '@chakra-ui/react';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Pagination } from '@/Admin/Components/Pagination';
@@ -13,6 +13,13 @@ import { LuCopy, LuSave } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 import { usePermission } from '@/shared/Panel/usePermission';
 import OpportunityPanel from '@/Crm/Components/OpportunityPanel';
+import TaskDialog from '@/Crm/Components/TaskDialog';
+import CommentThread from '@/Crm/Components/CommentThread';
+import LastVisitHint from '@/Crm/Components/LastVisitHint';
+import LastOrderCell from '@/Crm/Components/LastOrderCell';
+import NextTaskHint from '@/Crm/Components/NextTaskHint';
+import RowActions from '@/Crm/Components/RowActions';
+import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import ProgressPanel from './components/ProgressPanel';
 
 const fmtMoney = (value) => (value === null || value === undefined
@@ -66,15 +73,22 @@ export default function Index({
     clients,
     managerOptions = [],
     canSeeAll = false,
+    canSeeDepartment = false,
     canEdit = false,
     filters = {},
 }) {
     const { can } = usePermission();
     const canSeeOpportunities = can('crm-opportunities.view');
+    const canCreateTask = can('crm-tasks.create');
+    const canComment = can('crm-comments.create');
 
     const [drafts, setDrafts] = useState({});
     const [busy, setBusy] = useState(false);
     const [copyOpen, setCopyOpen] = useState(false);
+    // Диалоги монтируются по одному на страницу, а не на строку: на брифинге
+    // в сетке бывает сотня партнёров, и сотня модалок в DOM положит таблицу.
+    const [taskFor, setTaskFor] = useState(null);
+    const [commentFor, setCommentFor] = useState(null);
     // Выполнение открыто по умолчанию: план расставляют раз в месяц, а смотрят
     // на него каждый день.
     const [tab, setTab] = useState('progress');
@@ -344,6 +358,7 @@ export default function Index({
                                         >
                                             Только с планом
                                         </Checkbox>
+                                        <ScopeToggle section="plans" scope={filters.scope} available={canSeeDepartment} />
                                     </HStack>
 
                                     {clients.data.length === 0 ? (
@@ -355,8 +370,11 @@ export default function Index({
                                                     <Table.Row>
                                                         <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
                                                         {canSeeAll && <Table.ColumnHeader>Менеджер</Table.ColumnHeader>}
+                                                        <Table.ColumnHeader>Последний заказ</Table.ColumnHeader>
+                                                        <Table.ColumnHeader>Ближайшая задача</Table.ColumnHeader>
                                                         <Table.ColumnHeader>{previousMonthLabel}</Table.ColumnHeader>
                                                         <Table.ColumnHeader>План на {monthLabel}</Table.ColumnHeader>
+                                                        <Table.ColumnHeader />
                                                     </Table.Row>
                                                 </Table.Header>
                                                 <Table.Body>
@@ -366,12 +384,19 @@ export default function Index({
                                                                 <a href={route('crm.clients.show', row.id)}>
                                                                     <Text fontSize="sm" fontWeight="500">{row.name}</Text>
                                                                 </a>
+                                                                <LastVisitHint visit={row.last_visit} />
                                                             </Table.Cell>
                                                             {canSeeAll && (
                                                                 <Table.Cell>
                                                                     <Text fontSize="sm" color="fg.muted">{row.manager || '—'}</Text>
                                                                 </Table.Cell>
                                                             )}
+                                                            <Table.Cell>
+                                                                <LastOrderCell value={row.last_order} />
+                                                            </Table.Cell>
+                                                            <Table.Cell>
+                                                                <NextTaskHint task={row.next_task} />
+                                                            </Table.Cell>
                                                             <Table.Cell>
                                                                 <Text fontSize="sm" color="fg.muted">{fmtMoney(row.previous_amount)}</Text>
                                                             </Table.Cell>
@@ -380,6 +405,12 @@ export default function Index({
                                                                     value={valueOf(`client:${row.id}`, row.amount)}
                                                                     disabled={!row.can_edit}
                                                                     onChange={(value) => setDraft(`client:${row.id}`, value)}
+                                                                />
+                                                            </Table.Cell>
+                                                            <Table.Cell>
+                                                                <RowActions
+                                                                    onTask={canCreateTask ? () => setTaskFor(row) : undefined}
+                                                                    onComment={canComment ? () => setCommentFor(row) : undefined}
                                                                 />
                                                             </Table.Cell>
                                                         </Table.Row>
@@ -411,6 +442,41 @@ export default function Index({
                     </Tabs.Content>
                 </Tabs.Root>
             </VStack>
+
+            <TaskDialog
+                open={taskFor !== null}
+                entity={taskFor ? { type: 'client', id: taskFor.id } : null}
+                onClose={() => setTaskFor(null)}
+                onSaved={() => {
+                    setTaskFor(null);
+                    // Перезагружаем только сетку партнёров: несохранённые суммы
+                    // плана живут в стейте и полный визит их потерял бы.
+                    router.reload({ only: ['clients'] });
+                }}
+            />
+
+            <Dialog.Root
+                open={commentFor !== null}
+                onOpenChange={({ open: isOpen }) => ! isOpen && setCommentFor(null)}
+                size="lg"
+                scrollBehavior="inside"
+            >
+                <Portal>
+                    <Dialog.Backdrop />
+                    <Dialog.Positioner>
+                        <Dialog.Content>
+                            <Dialog.Header>
+                                <Dialog.Title>{commentFor?.name}</Dialog.Title>
+                            </Dialog.Header>
+                            <Dialog.Body pb={6}>
+                                {commentFor && (
+                                    <CommentThread entityType="client" entityId={commentFor.id} />
+                                )}
+                            </Dialog.Body>
+                        </Dialog.Content>
+                    </Dialog.Positioner>
+                </Portal>
+            </Dialog.Root>
 
             <ConfirmDialog
                 open={copyOpen}

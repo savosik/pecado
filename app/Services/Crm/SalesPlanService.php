@@ -2,6 +2,7 @@
 
 namespace App\Services\Crm;
 
+use App\Enums\Crm\CrmScope;
 use App\Enums\Crm\PlanTarget;
 use App\Enums\UserKind;
 use App\Models\CrmSalesPlan;
@@ -35,6 +36,10 @@ class SalesPlanService
         'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
         'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
     ];
+
+    public function __construct(
+        private readonly ClientRowEnricher $enricher,
+    ) {}
 
     /**
      * Планы, доступные актору на чтение.
@@ -290,8 +295,8 @@ class SalesPlanService
         $previousMonth = $target->copy()->subMonthNoOverflow();
 
         $query = User::query()
-            ->visibleInCrm($actor)
-            ->select('id', 'name', 'erp_name', 'email', 'personal_manager_id')
+            ->inCrmScope($actor, CrmScope::resolve($filters['scope'] ?? null, $actor))
+            ->select('id', 'name', 'erp_name', 'email', 'personal_manager_id', 'last_seen_at')
             ->with('personalManager:id,name');
 
         if ($search = trim((string) ($filters['search'] ?? ''))) {
@@ -326,8 +331,21 @@ class SalesPlanService
         $plans = $this->clientPlansFor($ids, $target);
         $previous = $this->clientPlansFor($ids, $previousMonth);
 
+        // Те же данные и тем же сервисом, что в списке партнёров: на брифинге
+        // по плану колонки обязаны совпадать со списком, иначе разницу прочтут
+        // как ошибку в цифрах.
+        $nextTasks = $actor->can('crm-tasks.view') ? $this->enricher->nextTasks($ids, $actor) : [];
+        $lastOrders = $this->enricher->lastOrders($ids);
+
         return $paginator->through(
-            fn (User $client): array => $this->clientRow($client, $actor, $plans, $previous),
+            fn (User $client): array => $this->clientRow(
+                $client,
+                $actor,
+                $plans,
+                $previous,
+                $nextTasks[(int) $client->getKey()] ?? null,
+                $lastOrders[(int) $client->getKey()] ?? null,
+            ),
         );
     }
 
@@ -341,8 +359,14 @@ class SalesPlanService
      * @param  array<int, CrmSalesPlan>  $previous
      * @return array<string, mixed>
      */
-    private function clientRow(User $client, User $actor, array $plans, array $previous): array
-    {
+    private function clientRow(
+        User $client,
+        User $actor,
+        array $plans,
+        array $previous,
+        ?\App\Models\CrmTask $nextTask = null,
+        ?array $lastOrder = null,
+    ): array {
         $id = (int) $client->getKey();
 
         return [
@@ -353,6 +377,11 @@ class SalesPlanService
             'previous_amount' => isset($previous[$id]) ? $previous[$id]->amountValue() : null,
             'comment' => $plans[$id]->comment ?? null,
             'can_edit' => $this->canManage($actor, PlanTarget::CLIENT, $id),
+            // Ради этих трёх полей раздел и переделывался: на брифинге видно,
+            // когда клиент был, когда заказывал и что на него поставлено.
+            'next_task' => $nextTask === null ? null : $this->enricher->nextTaskPayload($nextTask),
+            'last_order' => $lastOrder,
+            'last_visit' => $this->enricher->lastVisitPayload($client->last_seen_at),
         ];
     }
 

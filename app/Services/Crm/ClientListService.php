@@ -38,7 +38,7 @@ class ClientListService
     public function __construct(
         private readonly CrmTaskService $tasks,
         private readonly ClientPlanFactService $planFact,
-        private readonly ClientLastOrderService $lastOrders,
+        private readonly ClientRowEnricher $enricher,
     ) {}
 
     /**
@@ -498,10 +498,10 @@ class ClientListService
         /** @var list<int> $ids */
         $ids = collect($paginator->items())->map(fn (User $client) => (int) $client->getKey())->all();
 
-        $nextTasks = $canSeeTasks ? $this->nextTasks($ids, $actor) : [];
+        $nextTasks = $canSeeTasks ? $this->enricher->nextTasks($ids, $actor) : [];
         $lastComments = $this->lastComments($ids);
         $planFact = $canSeePlans ? $this->planFact->forClients($ids, CarbonImmutable::now()) : [];
-        $lastOrders = $this->lastOrders->forClients($ids);
+        $lastOrders = $this->enricher->lastOrders($ids);
 
         /** @var LengthAwarePaginator<int, array<string, mixed>> $hydrated */
         $hydrated = $paginator->through(fn (User $client): array => $this->row(
@@ -515,41 +515,6 @@ class ClientListService
         ));
 
         return $hydrated;
-    }
-
-    /**
-     * Ближайшая незакрытая задача по каждому партнёру страницы.
-     *
-     * @param  list<int>  $clientIds
-     * @return array<int, CrmTask>
-     */
-    private function nextTasks(array $clientIds, User $actor): array
-    {
-        if ($clientIds === []) {
-            return [];
-        }
-
-        $tasks = $this->tasks->visibleTo($actor)
-            ->whereIn('client_user_id', $clientIds)
-            ->whereIn('status', TaskStatus::activeValues())
-            ->with('assignee:id,name')
-            ->orderByRaw('due_at is null')
-            ->orderBy('due_at')
-            ->orderBy('id')
-            ->get();
-
-        $byClient = [];
-
-        foreach ($tasks as $task) {
-            $clientId = (int) $task->client_user_id;
-
-            // Первая по порядку и есть ближайшая — сортировку задал запрос.
-            if (! isset($byClient[$clientId])) {
-                $byClient[$clientId] = $task;
-            }
-        }
-
-        return $byClient;
     }
 
     /**
@@ -634,7 +599,7 @@ class ClientListService
             ],
             'tasks' => $canSeeTasks ? [
                 'active_count' => (int) ($client->active_tasks_count ?? 0),
-                'next' => $nextTask === null ? null : $this->nextTaskPayload($nextTask),
+                'next' => $nextTask === null ? null : $this->enricher->nextTaskPayload($nextTask),
             ] : null,
             'activity' => $this->activityPayload($nextTask, $lastComment),
             // Пользуется ли партнёр сайтом вообще: заказ мог приехать из 1С,
@@ -645,45 +610,6 @@ class ClientListService
             // и аналитике считается по отгрузкам — цифры не обязаны совпадать.
             'last_order' => $lastOrder,
             'created_at_label' => $client->created_at?->format('d.m.Y'),
-        ];
-    }
-
-    /**
-     * Ближайшая задача в форме, готовой к показу.
-     *
-     * Состояние срока считает бэкенд: на фронте это означало бы разбор дат
-     * и часовой пояс сервера в JSX.
-     *
-     * @return array<string, mixed>
-     */
-    private function nextTaskPayload(CrmTask $task): array
-    {
-        $now = CarbonImmutable::now();
-        $due = $task->due_at;
-
-        $state = match (true) {
-            $due === null => 'none',
-            $due->lt($now) => 'overdue',
-            $due->isToday() => 'today',
-            $due->isTomorrow() => 'tomorrow',
-            $due->lte($now->addDays(self::SOON_DAYS)) => 'week',
-            default => 'later',
-        };
-
-        return [
-            'id' => (int) $task->getKey(),
-            'title' => $task->title,
-            'due_state' => $state,
-            // Короткая метка для ячейки, полная — для подсказки: в колонке
-            // на год и минуты места нет.
-            'due_at_label' => $due === null
-                ? null
-                : ($due->isCurrentYear() ? $due->format('d.m H:i') : $due->format('d.m.Y')),
-            'due_at_full' => $due?->format('d.m.Y H:i'),
-            'overdue_days' => $state === 'overdue' && $due !== null
-                ? (int) $due->startOfDay()->diffInDays($now->startOfDay())
-                : null,
-            'assignee_name' => $task->assignee->name,
         ];
     }
 

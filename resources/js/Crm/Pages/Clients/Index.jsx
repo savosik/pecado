@@ -20,7 +20,7 @@ import ClientsFilterBar from './components/ClientsFilterBar';
 import QuickFilters from './components/QuickFilters';
 import TasksCell from './components/TasksCell';
 import PlanFactCell from './components/PlanFactCell';
-import LastOrderCell from './components/LastOrderCell';
+import LastOrderCell from '@/Crm/Components/LastOrderCell';
 import LifecycleCell from './components/LifecycleCell';
 import ActivityHint from './components/ActivityHint';
 import LastVisitHint from '@/Crm/Components/LastVisitHint';

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Crm;
 
+use App\Enums\Crm\CrmScope;
 use App\Enums\Crm\PlanTarget;
 use App\Http\Requests\Crm\StoreSalesPlansRequest;
 use App\Models\CrmSalesPlan;
@@ -251,8 +252,11 @@ class PlanController extends CrmController
 
         $filters = [
             'search' => $request->string('search')->value(),
-            'manager_id' => $seesAll ? $request->input('manager_id') : null,
+            // Отбор по менеджеру — поверх видимого, поэтому по видимости отдела;
+            // сетка менеджеров ниже — по РОПовскому праву.
+            'manager_id' => $this->seesDepartment($request) ? $request->input('manager_id') : null,
             'only_with_plan' => $request->boolean('only_with_plan'),
+            'scope' => CrmScope::fromRequest($request, $actor)->value,
             'per_page' => (int) $request->input('per_page', 25),
         ];
 
@@ -279,6 +283,9 @@ class PlanController extends CrmController
                 ? PersonalManager::query()->active()->select('id', 'name')->orderBy('name')->get()
                 : [],
             'canSeeAll' => $seesAll,
+            // Расфокус на отдел доступен шире, чем сетка менеджеров: видеть
+            // партнёров коллеги можно, видеть его выручку — нет.
+            'canSeeDepartment' => $this->seesDepartment($request),
             'canEdit' => $actor->can('crm-plans.edit'),
             'filters' => $filters,
         ];
