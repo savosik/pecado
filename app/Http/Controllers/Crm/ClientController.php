@@ -11,6 +11,7 @@ use App\Models\CrmClientProfileRevision;
 use App\Models\Organization;
 use App\Models\PersonalManager;
 use App\Models\User;
+use App\Services\Crm\ClientInsightService;
 use App\Services\Crm\ClientLifecycleService;
 use App\Services\Crm\ClientListService;
 use App\Services\Crm\ClientProfileService;
@@ -190,6 +191,25 @@ class ClientController extends CrmController
                 : [],
             'organizationsEnabled' => (bool) config('erp.organizations.enabled'),
         ]);
+    }
+
+    /**
+     * Закупки партнёра за 12 месяцев: метрики, тренд, бренды и категории.
+     *
+     * Своей арифметики здесь нет — тот же {@see ClientInsightService}, что
+     * питает провал в партнёра на «грядках». Средний чек в карточке и средний
+     * чек на плитке обязаны совпадать, а два движка выручки этого не гарантируют.
+     */
+    public function insights(Request $request, int $client, ClientInsightService $insights): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+
+        // Тот же scope, что и в show(): чужой партнёр — 404, а не 403.
+        $user = User::query()
+            ->visibleInCrm($actor)
+            ->findOrFail($client);
+
+        return response()->json($insights->forClient($user, $actor, 12));
     }
 
     /**

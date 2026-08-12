@@ -24,6 +24,7 @@ import TaskPanel from '@/Crm/Components/TaskPanel';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import ClientKindDialog from '@/Crm/Components/ClientKindDialog';
 import PartnerContractors from '@/Crm/Components/PartnerContractors';
+import PartnerPurchases from '@/Crm/Components/PartnerPurchases';
 import ClientSummaryBar from './components/ClientSummaryBar';
 
 function InfoRow({ label, value }) {
@@ -56,6 +57,9 @@ export default function Show() {
     const [composeOpen, setComposeOpen] = useState(false);
     const [kindOpen, setKindOpen] = useState(false);
     const [impersonateOpen, setImpersonateOpen] = useState(false);
+    // Раскрытые спойлеры держим в состоянии: блок закупок ходит за данными
+    // сам и монтируется только тогда, когда менеджер его открыл.
+    const [openSections, setOpenSections] = useState([]);
     // Состав базы партнёров отдела — дело того, кто за отдел отвечает.
     const canManageKind = can('crm-clients-all.edit');
 
@@ -122,7 +126,13 @@ export default function Show() {
                 {/* Данные о партнёре живут над вкладками, а не среди них: они описывают
                     партнёра, а вкладки — работу с ним. Спойлеры закрыты по умолчанию,
                     чтобы лента начиналась сразу под шапкой. */}
-                <AccordionRoot collapsible size="sm" variant="outline">
+                <AccordionRoot
+                    collapsible
+                    size="sm"
+                    variant="outline"
+                    value={openSections}
+                    onValueChange={(details) => setOpenSections(details.value)}
+                >
                     <AccordionItem value="details">
                         <AccordionItemTrigger>
                             <Text fontSize="sm" fontWeight="600">Реквизиты и статусы</Text>
@@ -192,6 +202,22 @@ export default function Show() {
                             </AccordionItemContent>
                         </AccordionItem>
                     )}
+
+                    {/* Что партнёр берёт на самом деле — рядом с анкетой, где записано,
+                        что он о себе рассказывает: расхождение этих двух картин и есть
+                        повод для звонка. */}
+                    <AccordionItem value="purchases">
+                        <AccordionItemTrigger>
+                            <Text fontSize="sm" fontWeight="600">
+                                Закупки за 12 месяцев — средний чек, бренды, категории
+                            </Text>
+                        </AccordionItemTrigger>
+                        <AccordionItemContent>
+                            {openSections.includes('purchases') && (
+                                <PartnerPurchases clientId={client.id} />
+                            )}
+                        </AccordionItemContent>
+                    </AccordionItem>
                 </AccordionRoot>
 
                 {(canViewComments || canViewFiles || canViewTasks || canSeeContractors) && (
