@@ -62,7 +62,7 @@ class LeadStageController extends CrmController
      */
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:100'],
             'color' => ['sometimes', Rule::in(['gray', 'blue', 'green', 'red', 'purple', 'orange', 'yellow', 'teal'])],
             'position' => ['sometimes', 'integer', 'min:0'],
@@ -73,5 +73,16 @@ class LeadStageController extends CrmController
             'name.required' => 'Введите название стадии.',
             'color.in' => 'Такой цвет не поддерживается.',
         ]);
+
+        // Стадия не может быть одновременно выигрышной и проигрышной: конверсия
+        // считается именно по этим флагам, и такой лид попал бы в обе половины
+        // сразу, а сумма долей перестала бы сходиться к целому.
+        if (($data['is_won'] ?? false) && ($data['is_lost'] ?? false)) {
+            throw ValidationException::withMessages([
+                'is_won' => 'Стадия не может быть одновременно выигрышной и проигрышной.',
+            ]);
+        }
+
+        return $data;
     }
 }

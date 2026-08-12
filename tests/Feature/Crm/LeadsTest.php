@@ -250,6 +250,78 @@ class LeadsTest extends TestCase
         $this->assertContains(CrmEntityMap::LEAD, CrmEntityMap::commentableTypes());
     }
 
+    #[Test]
+    public function стадию_можно_переименовать_перекрасить_и_переставить(): void
+    {
+        $stage = $this->stage('Новый', 1);
+
+        $head = User::factory()->create();
+        $head->assignRole('sales-head');
+
+        $this->actingAs($head)
+            ->patchJson(route('crm.lead-stages.update', $stage), [
+                'name' => 'Первый контакт',
+                'color' => 'teal',
+                'position' => 3,
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseHas('crm_lead_stages', [
+            'id' => $stage->id,
+            'name' => 'Первый контакт',
+            'color' => 'teal',
+            'position' => 3,
+        ]);
+    }
+
+    /**
+     * Такой лид попал бы в обе половины конверсии сразу, и сумма долей
+     * перестала бы сходиться к целому.
+     */
+    #[Test]
+    public function стадия_не_может_быть_и_выигрышной_и_проигрышной(): void
+    {
+        $head = User::factory()->create();
+        $head->assignRole('sales-head');
+
+        $this->actingAs($head)
+            ->postJson(route('crm.lead-stages.store'), [
+                'name' => 'Странная',
+                'is_won' => true,
+                'is_lost' => true,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.is_won.0', 'Стадия не может быть одновременно выигрышной и проигрышной.');
+    }
+
+    #[Test]
+    public function менеджер_не_переименовывает_и_не_удаляет_стадии(): void
+    {
+        $stage = $this->stage('Новый', 1);
+
+        $this->actingAs($this->manager)
+            ->patchJson(route('crm.lead-stages.update', $stage), ['name' => 'Моё'])
+            ->assertForbidden();
+
+        $this->actingAs($this->manager)
+            ->deleteJson(route('crm.lead-stages.destroy', $stage))
+            ->assertForbidden();
+    }
+
+    #[Test]
+    public function скрытая_стадия_уходит_с_доски(): void
+    {
+        $visible = $this->stage('Новый', 1);
+        $this->stage('Архив', 2, ['is_active' => false]);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.leads.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('stages', 1)
+                ->where('stages.0.id', $visible->id));
+    }
+
     /**
      * По двум переходам «средняя длительность этапа» — шум, а решения по ней
      * принимают всерьёз. Ниже порога наблюдений метрика не показывается.

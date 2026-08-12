@@ -4,7 +4,7 @@ import { Head, router } from '@inertiajs/react';
 import { Box, Card, HStack, Text, VStack } from '@chakra-ui/react';
 import { DndContext, PointerSensor, closestCorners, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { LuPlus } from 'react-icons/lu';
+import { LuPlus, LuSlidersHorizontal } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { SearchInput } from '@/Admin/Components/SearchInput';
@@ -14,6 +14,7 @@ import { toastError, toastSuccess } from '@/utils/toast';
 import LeadCard from './components/LeadCard';
 import FunnelPanel from './components/FunnelPanel';
 import LeadDialog from './components/LeadDialog';
+import StagesDialog from './components/StagesDialog';
 
 /**
  * Доска лидов.
@@ -32,10 +33,12 @@ export default function Index({
     canSeeDepartment = false,
     canCreate = false,
     canEdit = false,
+    canManageStages = false,
 }) {
     const [leads, setLeads] = useState(initialLeads);
     const [dialogLead, setDialogLead] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [stagesOpen, setStagesOpen] = useState(false);
 
     // Перетаскивание начинается после небольшого сдвига: иначе обычный клик
     // по карточке считался бы началом драга и она не открывалась бы.
@@ -91,13 +94,20 @@ export default function Index({
             <PageHeader
                 title="Лиды"
                 description="Потенциальные клиенты до появления партнёра в 1С"
-                actions={canCreate
-                    ? (
-                        <Button size="sm" onClick={() => { setDialogLead(null); setDialogOpen(true); }}>
-                            <LuPlus /> Новый лид
-                        </Button>
-                    )
-                    : null}
+                actions={(
+                    <HStack gap={2}>
+                        {canManageStages && (
+                            <Button size="sm" variant="outline" onClick={() => setStagesOpen(true)}>
+                                <LuSlidersHorizontal /> Настроить воронку
+                            </Button>
+                        )}
+                        {canCreate && (
+                            <Button size="sm" onClick={() => { setDialogLead(null); setDialogOpen(true); }}>
+                                <LuPlus /> Новый лид
+                            </Button>
+                        )}
+                    </HStack>
+                )}
             />
 
             <VStack align="stretch" gap={4}>
@@ -117,9 +127,18 @@ export default function Index({
                 {stages.length === 0 ? (
                     <Card.Root>
                         <Card.Body>
-                            <Text fontSize="sm" color="fg.muted">
-                                Воронка пуста: руководитель отдела ещё не завёл стадии.
-                            </Text>
+                            <VStack align="start" gap={3}>
+                                <Text fontSize="sm" color="fg.muted">
+                                    {canManageStages
+                                        ? 'Воронка пуста — заведите стадии, и доска появится.'
+                                        : 'Воронка пуста: руководитель отдела ещё не завёл стадии.'}
+                                </Text>
+                                {canManageStages && (
+                                    <Button size="sm" onClick={() => setStagesOpen(true)}>
+                                        <LuSlidersHorizontal /> Настроить воронку
+                                    </Button>
+                                )}
+                            </VStack>
                         </Card.Body>
                     </Card.Root>
                 ) : (
@@ -162,6 +181,13 @@ export default function Index({
                     </DndContext>
                 )}
             </VStack>
+
+            <StagesDialog
+                open={stagesOpen}
+                stages={stages}
+                onClose={() => setStagesOpen(false)}
+                onSaved={() => router.reload({ only: ['stages', 'leads', 'funnel'] })}
+            />
 
             <LeadDialog
                 open={dialogOpen}
