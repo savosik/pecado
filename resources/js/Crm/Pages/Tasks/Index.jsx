@@ -10,10 +10,11 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
+import TaskRecurrenceDialog from '@/Crm/Components/TaskRecurrenceDialog';
 import TaskCloseDialog from '@/Crm/Components/TaskCloseDialog';
 import { primeTaskOptions } from '@/Crm/Components/useTaskOptions';
 import { usePermission } from '@/shared/Panel/usePermission';
-import { LuCheck, LuPencil, LuPlus, LuTrash2, LuUndo2 } from 'react-icons/lu';
+import { LuCheck, LuPencil, LuPlus, LuRepeat, LuTrash2, LuUndo2 } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 const PRESETS = [
@@ -52,6 +53,7 @@ export default function Index({ tasks, filters, counters, options, openTaskId, c
     const [pendingDelete, setPendingDelete] = useState(null);
     const [closingTask, setClosingTask] = useState(null);
     const [busy, setBusy] = useState(false);
+    const [recurrenceOpen, setRecurrenceOpen] = useState(false);
 
     // Справочники уже приехали пропсами — диалог не должен запрашивать их повторно.
     primeTaskOptions(options);
@@ -227,7 +229,14 @@ export default function Index({ tasks, filters, counters, options, openTaskId, c
                 title="Задачи"
                 description="Поручения себе и коллегам: полный список отдела в вашей зоне видимости"
                 actions={can('crm-tasks.create')
-                    ? <Button size="sm" onClick={() => openDialog(null)}><LuPlus /> Поставить задачу</Button>
+                    ? (
+                        <HStack gap={2}>
+                            <Button size="sm" variant="outline" onClick={() => setRecurrenceOpen(true)}>
+                                <LuRepeat /> Повторяющаяся
+                            </Button>
+                            <Button size="sm" onClick={() => openDialog(null)}><LuPlus /> Поставить задачу</Button>
+                        </HStack>
+                    )
                     : null}
             />
 
@@ -329,6 +338,12 @@ export default function Index({ tasks, filters, counters, options, openTaskId, c
                     onSort={(column, direction) => apply({ sort_by: column, sort_order: direction })}
                 />
             </VStack>
+
+            <TaskRecurrenceDialog
+                open={recurrenceOpen}
+                onClose={() => setRecurrenceOpen(false)}
+                onSaved={() => router.reload({ only: ['tasks', 'counters'] })}
+            />
 
             <TaskDialog
                 open={dialogOpen}

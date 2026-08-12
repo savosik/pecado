@@ -18,6 +18,7 @@ use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
 use App\Http\Controllers\Crm\TaskController;
+use App\Http\Controllers\Crm\TaskRecurrenceController;
 use App\Http\Controllers\Crm\TeamController;
 use Illuminate\Support\Facades\Route;
 
@@ -187,6 +188,15 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
 
     Route::middleware('permission:crm-tasks.create')->group(function () {
         Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+        // Правила автоповтора. Отдельный ресурс, а не режим задачи: правило —
+        // это станок, а не поручение, и живёт оно своей жизнью.
+        Route::post('/task-recurrences', [TaskRecurrenceController::class, 'store'])
+            ->name('task-recurrences.store');
+    });
+
+    Route::middleware('permission:crm-tasks.view')->group(function () {
+        Route::get('/task-recurrences', [TaskRecurrenceController::class, 'index'])
+            ->name('task-recurrences.index');
     });
 
     Route::middleware('permission:crm-tasks.edit')->group(function () {
@@ -198,6 +208,17 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/tasks/{task}/close', [TaskController::class, 'close'])
             ->name('tasks.close')
             ->whereNumber('task');
+    });
+
+    Route::middleware('permission:crm-tasks.edit')->group(function () {
+        Route::patch('/task-recurrences/{recurrence}', [TaskRecurrenceController::class, 'update'])
+            ->name('task-recurrences.update')
+            ->whereNumber('recurrence');
+        // Отмена цепочки — is_active=false: уже созданные задачи остаются
+        // в истории вместе с отчётами о закрытии.
+        Route::delete('/task-recurrences/{recurrence}', [TaskRecurrenceController::class, 'destroy'])
+            ->name('task-recurrences.destroy')
+            ->whereNumber('recurrence');
     });
 
     Route::middleware('permission:crm-tasks.delete')->group(function () {
