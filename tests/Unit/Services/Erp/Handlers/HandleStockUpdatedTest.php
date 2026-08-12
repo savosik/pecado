@@ -27,7 +27,7 @@ class HandleStockUpdatedTest extends TestCase
         // Создаём начальную связь
         $product->warehouses()->attach($warehouse->id, ['quantity' => 10]);
 
-        $handler = new HandleStockUpdated;
+        $handler = app(HandleStockUpdated::class);
         $handler->handle([
             'event' => 'stock.updated',
             'product_uuid' => '550e8400-e29b-41d4-a716-stock-001',
@@ -52,7 +52,7 @@ class HandleStockUpdatedTest extends TestCase
             'external_id' => 'w1a2b3c4-stock-002',
         ]);
 
-        $handler = new HandleStockUpdated;
+        $handler = app(HandleStockUpdated::class);
         $handler->handle([
             'event' => 'stock.updated',
             'product_uuid' => '550e8400-e29b-41d4-a716-stock-002',
@@ -80,7 +80,7 @@ class HandleStockUpdatedTest extends TestCase
                 return str_contains($msg, 'товар не найден по UUID');
             });
 
-        $handler = new HandleStockUpdated;
+        $handler = app(HandleStockUpdated::class);
         $handler->handle([
             'event' => 'stock.updated',
             'product_uuid' => 'nonexistent-product-uuid',
@@ -103,7 +103,7 @@ class HandleStockUpdatedTest extends TestCase
             'external_id' => 'w1a2b3c4-hidden',
         ]);
 
-        $handler = new HandleStockUpdated;
+        $handler = app(HandleStockUpdated::class);
         $handler->handle([
             'event' => 'stock.updated',
             'product_uuid' => 'hidden-stock-uuid',
@@ -131,7 +131,7 @@ class HandleStockUpdatedTest extends TestCase
                 return str_contains($msg, 'склад не найден по UUID');
             });
 
-        $handler = new HandleStockUpdated;
+        $handler = app(HandleStockUpdated::class);
         $handler->handle([
             'event' => 'stock.updated',
             'product_uuid' => '550e8400-e29b-41d4-a716-stock-004',
@@ -151,7 +151,7 @@ class HandleStockUpdatedTest extends TestCase
                 return str_contains($msg, 'отсутствует product_uuid, warehouse_uuid или quantity');
             });
 
-        $handler = new HandleStockUpdated;
+        $handler = app(HandleStockUpdated::class);
         $handler->handle([
             'event' => 'stock.updated',
             'warehouse_uuid' => 'w1a2b3c4-stock-005',
@@ -168,7 +168,7 @@ class HandleStockUpdatedTest extends TestCase
                 return str_contains($msg, 'отсутствует product_uuid, warehouse_uuid или quantity');
             });
 
-        $handler = new HandleStockUpdated;
+        $handler = app(HandleStockUpdated::class);
         $handler->handle([
             'event' => 'stock.updated',
             'product_uuid' => '550e8400-e29b-41d4-a716-stock-006',
@@ -185,7 +185,7 @@ class HandleStockUpdatedTest extends TestCase
                 return str_contains($msg, 'отсутствует product_uuid, warehouse_uuid или quantity');
             });
 
-        $handler = new HandleStockUpdated;
+        $handler = app(HandleStockUpdated::class);
         $handler->handle([
             'event' => 'stock.updated',
             'product_uuid' => '550e8400-e29b-41d4-a716-stock-007',
@@ -205,7 +205,7 @@ class HandleStockUpdatedTest extends TestCase
 
         $product->warehouses()->attach($warehouse->id, ['quantity' => 50]);
 
-        $handler = new HandleStockUpdated;
+        $handler = app(HandleStockUpdated::class);
         $handler->handle([
             'event' => 'stock.updated',
             'product_uuid' => 'zero-stock-uuid',
@@ -230,7 +230,7 @@ class HandleStockUpdatedTest extends TestCase
             'external_id' => 'overwrite-stock-wh-uuid',
         ]);
 
-        $handler = new HandleStockUpdated;
+        $handler = app(HandleStockUpdated::class);
 
         // Первое обновление
         $handler->handle([

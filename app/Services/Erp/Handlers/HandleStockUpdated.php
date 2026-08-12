@@ -4,16 +4,25 @@ namespace App\Services\Erp\Handlers;
 
 use App\Models\Product;
 use App\Models\Warehouse;
+use App\Services\Stock\ProductAvailabilityTracker;
 use Illuminate\Support\Facades\Log;
 
 class HandleStockUpdated
 {
+    public function __construct(
+        private readonly ProductAvailabilityTracker $availability,
+    ) {}
+
     /**
      * Обработка события stock.updated из 1С.
      *
      * Находит товар по product_uuid (external_id) и склад по warehouse_uuid (external_id),
      * обновляет остаток в pivot-таблице product_warehouse.
      * Если товар или склад не найден — событие игнорируется без ошибки.
+     *
+     * Контракт события не менялся: обработчик дополнительно фиксирует переход
+     * доступности (crm-30), но схема stock.updated, AsyncAPI и changelog
+     * остаются прежними — новых полей и событий нет.
      */
     public function handle(array $payload): void
     {
@@ -54,6 +63,11 @@ class HandleStockUpdated
         $product->warehouses()->syncWithoutDetaching([
             $warehouse->id => ['quantity' => (int) $quantity],
         ]);
+
+        // Переход доступности пишется только когда флаг реально сменился:
+        // снимок на каждое сообщение съел бы базу (урок Pulse). Обработчик
+        // в горячем пути шины, поэтому здесь один лишний агрегат, а не два.
+        $this->availability->track($product, $warehouse, $oldQuantity, (int) $quantity);
 
         Log::info('stock.updated: остаток товара обновлён', [
             'product_id' => $product->id,
