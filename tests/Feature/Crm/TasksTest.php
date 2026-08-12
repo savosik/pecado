@@ -14,11 +14,13 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
 use Tests\TestCase;
 
 class TasksTest extends TestCase
 {
     use RefreshDatabase;
+    use RestrictsManagersToOwnClients;
 
     private User $manager;
 
@@ -30,6 +32,7 @@ class TasksTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
+        $this->restrictManagersToOwnClients();
 
         $this->manager = User::factory()->create();
         $this->manager->assignRole('sales-manager');

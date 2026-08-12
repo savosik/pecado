@@ -279,16 +279,17 @@ class RolesAndPermissionsSeeder extends Seeder
                 'favorites', 'wishlist', 'supplier-preorders',
                 // Финансовые документы менеджер только смотрит
                 'payments' => ['view'],
-                // CRM: свои партнёры (те, что закреплены за его карточкой менеджера)
-                'crm-dashboard', 'crm-clients', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-impersonate',
+                // CRM: партнёры отдела. Менеджеры взаимозаменяемы — экран открывается
+                // сфокусированным на своих, расфокус остаётся осознанным действием.
+                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-impersonate',
             ],
         ],
         'sales-manager-crm' => [
             'label' => 'Менеджер продаж (только CRM)',
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
-                // Для менеджеров, которым нужны свои партнёры, но не нужна админка.
-                'crm-dashboard', 'crm-clients', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-impersonate',
+                // Для менеджеров, которым нужны партнёры отдела, но не нужна админка.
+                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-impersonate',
             ],
         ],
         'sales-head' => [

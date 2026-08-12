@@ -11,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestDox;
+use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
 use Tests\TestCase;
 
 /**
@@ -20,6 +21,7 @@ use Tests\TestCase;
 class ImpersonationTest extends TestCase
 {
     use RefreshDatabase;
+    use RestrictsManagersToOwnClients;
 
     private User $manager;
 
@@ -31,6 +33,7 @@ class ImpersonationTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
+        $this->restrictManagersToOwnClients();
 
         $this->manager = User::factory()->create();
         $this->manager->assignRole('sales-manager-crm');

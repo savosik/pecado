@@ -12,6 +12,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestDox;
+use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
 use Tests\TestCase;
 
 /**
@@ -24,6 +25,7 @@ use Tests\TestCase;
 class CrmApiTest extends TestCase
 {
     use RefreshDatabase;
+    use RestrictsManagersToOwnClients;
 
     private User $managerA;
 
@@ -39,6 +41,7 @@ class CrmApiTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
+        $this->restrictManagersToOwnClients();
 
         $this->managerA = User::factory()->create(['name' => 'Менеджер А']);
         $this->managerA->assignRole('sales-manager');

@@ -13,6 +13,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
 use Tests\TestCase;
 
 /**
@@ -25,6 +26,7 @@ use Tests\TestCase;
 class PaymentJournalTest extends TestCase
 {
     use RefreshDatabase;
+    use RestrictsManagersToOwnClients;
 
     private User $manager;
 
@@ -36,6 +38,7 @@ class PaymentJournalTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
+        $this->restrictManagersToOwnClients();
 
         $this->manager = User::factory()->create();
         $this->manager->assignRole('sales-manager');

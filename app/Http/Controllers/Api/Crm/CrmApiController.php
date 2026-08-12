@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Crm;
 
+use App\Enums\Crm\CrmScope;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Crm\Api\Operation;
@@ -63,7 +64,16 @@ class CrmApiController extends Controller
                 ],
                 'permissions' => $this->permissions($actor),
                 'scope' => [
-                    'clients_visible' => User::query()->visibleInCrm($actor)->count(),
+                    // Считаем по разрезу по умолчанию, а не по максимуму: агент
+                    // без параметра `scope` получит именно столько партнёров,
+                    // и цифра в discovery не должна обещать больше, чем отдадут.
+                    'clients_visible' => User::query()
+                        ->inCrmScope($actor, CrmScope::MINE)
+                        ->count(),
+                    'clients_in_department' => User::query()->visibleInCrm($actor)->count(),
+                    // Может расфокусироваться на отдел, передав scope=department.
+                    'sees_department' => $actor->can('crm-department.view'),
+                    // Разрезы по менеджерам и план отдела — РОПовское.
                     'sees_all' => $actor->can('crm-clients-all.view'),
                 ],
                 'sections' => $this->registry->sections(),

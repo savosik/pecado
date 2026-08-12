@@ -18,6 +18,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
 use Tests\TestCase;
 
 /**
@@ -33,6 +34,7 @@ use Tests\TestCase;
 class PlanProgressTest extends TestCase
 {
     use RefreshDatabase;
+    use RestrictsManagersToOwnClients;
 
     private User $manager;
 
@@ -48,6 +50,7 @@ class PlanProgressTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
+        $this->restrictManagersToOwnClients();
 
         // 10-е число месяца из 31 дня: прошло 10 дней, осталось 21.
         $this->travelTo(Carbon::parse('2026-08-10 12:00:00'));

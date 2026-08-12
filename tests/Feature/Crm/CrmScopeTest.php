@@ -9,6 +9,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
 use Tests\TestCase;
 
 /**
@@ -22,6 +23,7 @@ use Tests\TestCase;
 class CrmScopeTest extends TestCase
 {
     use RefreshDatabase;
+    use RestrictsManagersToOwnClients;
 
     private User $manager;
 
@@ -83,6 +85,10 @@ class CrmScopeTest extends TestCase
     #[Test]
     public function department_scope_collapses_to_mine_without_the_permission(): void
     {
+        // РОП может вернуть изоляцию, сняв право в матрице ролей — это живой
+        // сценарий, а не искусственный: тогда параметр обязан гаснуть.
+        $this->restrictManagersToOwnClients();
+
         User::factory()->count(2)->create(['personal_manager_id' => $this->ownCard->id]);
         User::factory()->count(3)->create(['personal_manager_id' => $this->foreignCard->id]);
 
