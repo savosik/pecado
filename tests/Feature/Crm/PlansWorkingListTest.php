@@ -132,6 +132,9 @@ class PlansWorkingListTest extends TestCase
         $this->assertNotNull($row, 'Партнёр с планом обязан быть в списке выполнения');
         $this->assertEqualsWithDelta(55000, $row['last_order']['amount_rub'], 0.01);
         $this->assertSame('Позвонить до пятницы', $row['next_task']['title']);
+        // Описание нужно подсказке при наведении: по заголовку не понять,
+        // что именно обещали сделать.
+        $this->assertArrayHasKey('description', $row['next_task']);
         $this->assertArrayHasKey('last_visit', $row);
     }
 

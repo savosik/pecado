@@ -88,6 +88,7 @@ export default function Index({
     // Диалоги монтируются по одному на страницу, а не на строку: на брифинге
     // в сетке бывает сотня партнёров, и сотня модалок в DOM положит таблицу.
     const [taskFor, setTaskFor] = useState(null);
+    const [openTaskId, setOpenTaskId] = useState(null);
     const [commentFor, setCommentFor] = useState(null);
     // Выполнение открыто по умолчанию: план расставляют раз в месяц, а смотрят
     // на него каждый день.
@@ -222,6 +223,7 @@ export default function Index({
                             canSeeAll={canSeeAll}
                             onTask={canCreateTask ? (row) => setTaskFor(row) : null}
                             onComment={canComment ? (row) => setCommentFor(row) : null}
+                            onOpenTask={(id) => setOpenTaskId(id)}
                         />
                     </Tabs.Content>
 
@@ -449,11 +451,13 @@ export default function Index({
             </VStack>
 
             <TaskDialog
-                open={taskFor !== null}
-                entity={taskFor ? { type: 'client', id: taskFor.id } : null}
-                onClose={() => setTaskFor(null)}
+                open={taskFor !== null || openTaskId !== null}
+                taskId={openTaskId}
+                entity={taskFor ? { type: 'client', id: taskFor.id, label: 'Партнёр', title: taskFor.name } : null}
+                onClose={() => { setTaskFor(null); setOpenTaskId(null); }}
                 onSaved={() => {
                     setTaskFor(null);
+                    setOpenTaskId(null);
                     // Перезагружаем только сетку партнёров: несохранённые суммы
                     // плана живут в стейте и полный визит их потерял бы.
                     router.reload({ only: ['clients'] });

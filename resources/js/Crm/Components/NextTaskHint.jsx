@@ -18,7 +18,7 @@ const TONE = {
     none: { palette: 'gray', label: 'без срока' },
 };
 
-export default function NextTaskHint({ task }) {
+export default function NextTaskHint({ task, onOpen = null }) {
     if (! task) {
         return <Text fontSize="sm" color="fg.muted">—</Text>;
     }
@@ -27,10 +27,26 @@ export default function NextTaskHint({ task }) {
 
     return (
         <Tooltip
-            content={`${task.title}${task.due_at_full ? ` — до ${task.due_at_full}` : ''}. Исполнитель: ${task.assignee_name}.`}
+            content={[
+                task.title,
+                task.description ? task.description.slice(0, 160) : null,
+                task.due_at_full ? `Срок: ${task.due_at_full}` : null,
+                task.assignee_name ? `Исполнитель: ${task.assignee_name}` : null,
+            ].filter(Boolean).join('\n')}
             openDelay={400}
+            contentProps={{ whiteSpace: 'pre-line' }}
         >
-            <HStack gap={1.5} maxW="240px">
+            <HStack
+                gap={1.5}
+                maxW="240px"
+                as={onOpen ? 'button' : 'div'}
+                type={onOpen ? 'button' : undefined}
+                onClick={onOpen ? () => onOpen(task.id) : undefined}
+                borderRadius="md"
+                px={onOpen ? 1 : 0}
+                _hover={onOpen ? { bg: 'bg.muted' } : undefined}
+                aria-label={onOpen ? `Открыть задачу: ${task.title}` : undefined}
+            >
                 <LuTarget size={12} style={{ flexShrink: 0 }} />
                 <Text fontSize="xs" lineClamp={1}>{task.title}</Text>
                 <Badge size="sm" colorPalette={tone.palette} variant="subtle" flexShrink={0}>

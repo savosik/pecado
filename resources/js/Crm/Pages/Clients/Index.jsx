@@ -49,6 +49,8 @@ export default function Index({
     // Диалоги монтируются по одному на страницу, а не на строку: пятнадцать
     // копий модалки в DOM — верный способ уронить таблицу на скролле.
     const [taskFor, setTaskFor] = useState(null);
+    // Открытие существующей задачи из строки: диалог догрузит её по id сам.
+    const [openTaskId, setOpenTaskId] = useState(null);
     const [emailFor, setEmailFor] = useState(null);
     const [callFor, setCallFor] = useState(null);
     const [kindFor, setKindFor] = useState(null);
@@ -173,6 +175,7 @@ export default function Index({
                 <TasksCell
                     tasks={row.tasks}
                     onCreate={canCreateTask ? () => setTaskFor(row) : undefined}
+                    onOpen={(id) => setOpenTaskId(id)}
                 />
             ),
         }] : []),
@@ -295,11 +298,13 @@ export default function Index({
             />
 
             <TaskDialog
-                open={taskFor !== null}
-                entity={taskFor ? { type: 'client', id: taskFor.id } : null}
-                onClose={() => setTaskFor(null)}
+                open={taskFor !== null || openTaskId !== null}
+                taskId={openTaskId}
+                entity={taskFor ? { type: 'client', id: taskFor.id, label: 'Партнёр', title: taskFor.name } : null}
+                onClose={() => { setTaskFor(null); setOpenTaskId(null); }}
                 onSaved={() => {
                     setTaskFor(null);
+                    setOpenTaskId(null);
                     // Перезагружаем только список: срок ближайшей задачи и счётчик
                     // считаются на сервере, пересобирать их в стейте — вторая правда.
                     router.reload({ only: ['clients', 'uncoveredCount'] });

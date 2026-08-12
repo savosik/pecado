@@ -102,6 +102,9 @@ class ClientRowEnricher
         return [
             'id' => (int) $task->getKey(),
             'title' => $task->title,
+            // Описание нужно подсказке при наведении: по одному заголовку
+            // не понять, что именно обещали сделать.
+            'description' => $task->description,
             'due_state' => $state,
             // Короткая метка для ячейки, полная — для подсказки: в колонке
             // на год и минуты места нет.

@@ -48,7 +48,19 @@ const EMPTY = {
  * @param {string} initialTitle — заголовок новой задачи по умолчанию (правится вручную)
  * @param {Function} onSaved — колбэк с сохранённой задачей
  */
-export default function TaskDialog({ open, onClose, task = null, entity = null, initialTitle = '', onSaved }) {
+export default function TaskDialog({
+    open,
+    onClose,
+    task = null,
+    // Из списков приходит только идентификатор: строка таблицы знает про задачу
+    // срок и заголовок, но не статус, приоритет и права. Догружаем сами, чтобы
+    // каждый список не таскал полный объект ради одной кнопки.
+    taskId = null,
+    entity = null,
+    initialTitle = '',
+    onSaved,
+}) {
+    const [loadedTask, setLoadedTask] = useState(null);
     const options = useTaskOptions(open);
     const { can } = usePermission();
     const { auth } = usePage().props;
@@ -61,9 +73,27 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
     const [linkType, setLinkType] = useState('');
     const [linkEntity, setLinkEntity] = useState(null);
 
-    const isEdit = !!task;
-    const canEditFields = !isEdit || task.can?.update;
-    const canReassign = !isEdit || task.can?.reassign;
+    // Задача либо передана целиком, либо догружена по идентификатору.
+    const current = task ?? loadedTask;
+    const isEdit = !! current;
+    const canEditFields = ! isEdit || current.can?.update;
+    const canReassign = ! isEdit || current.can?.reassign;
+
+    useEffect(() => {
+        if (! open || ! taskId || task) {
+            setLoadedTask(null);
+
+            return;
+        }
+
+        let cancelled = false;
+
+        axios.get(route('crm.tasks.show', taskId))
+            .then(({ data }) => { if (! cancelled) setLoadedTask(data); })
+            .catch(() => { if (! cancelled) toastError('Не удалось открыть задачу.'); });
+
+        return () => { cancelled = true; };
+    }, [open, taskId, task]);
 
     useEffect(() => {
         if (!open) {
@@ -73,19 +103,19 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
         setErrors({});
         setLinkType('');
         setLinkEntity(null);
-        setForm(task
+        setForm(current
             ? {
-                title: task.title || '',
-                description: task.description || '',
-                assignee_id: task.assignee?.id ?? '',
-                status: task.status || 'open',
-                priority: task.priority || 'normal',
-                due_at: task.due_at || '',
+                title: current.title || '',
+                description: current.description || '',
+                assignee_id: current.assignee?.id ?? '',
+                status: current.status || 'open',
+                priority: current.priority || 'normal',
+                due_at: current.due_at || '',
             }
             // Заголовок-заготовка от вызывающей страницы (например, «Оплата по
             // реализации …»): экономит набор текста, но остаётся обычным полем.
             : { ...EMPTY, title: initialTitle || '' });
-    }, [open, task, initialTitle]);
+    }, [open, current, initialTitle]);
 
     // Исполнитель новой задачи по умолчанию — тот, кто её ставит: себе задачи
     // ставят чаще, чем коллеге. Ждём справочник, потому что подставлять человека,
@@ -125,7 +155,7 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
             let saved;
 
             if (isEdit) {
-                saved = await axios.patch(`/crm/tasks/${task.id}`, payload);
+                saved = await axios.patch(`/crm/tasks/${current.id}`, payload);
             } else {
                 // Привязка из карточки сущности имеет приоритет над выбранной вручную:
                 // диалог там открыт «по этой записи», и менять цель на лету незачем.
@@ -178,17 +208,22 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
                             <VStack align="stretch" gap={4}>
                                 {isEdit && (
                                     <Text fontSize="xs" color="fg.muted">
-                                        {task.entity
-                                            ? <>Привязана: {task.entity.label} — {task.entity.url
-                                                ? <a href={task.entity.url}>{task.entity.title}</a>
-                                                : task.entity.title}</>
+                                        {current.entity
+                                            ? <>Привязана: {current.entity.label} — {current.entity.url
+                                                ? <a href={current.entity.url}>{current.entity.title}</a>
+                                                : current.entity.title}</>
                                             : 'Без привязки к записи'}
                                     </Text>
                                 )}
 
-                                {!isEdit && entity && (
+                                {/* Имя партнёра тонкой строкой: диалог открывают
+                                    из строки таблицы, и пока заполняешь поля,
+                                    легко забыть, на ком его открыл. */}
+                                {! isEdit && entity && (
                                     <Text fontSize="xs" color="fg.muted">
-                                        Задача будет привязана к текущей записи.
+                                        {entity.title
+                                            ? <>Будет привязана: {entity.label || 'Партнёр'} — <Text as="span" fontWeight="600">{entity.title}</Text></>
+                                            : 'Задача будет привязана к текущей записи.'}
                                     </Text>
                                 )}
 
@@ -325,7 +360,7 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
                                                 <Text fontSize="sm" fontWeight="600" mb={2}>Обсуждение</Text>
                                                 <CommentThread
                                                     entityType="task"
-                                                    entityId={task.id}
+                                                    entityId={current.id}
                                                     canCreate={can('crm-comments.create')}
                                                 />
                                             </Box>
@@ -335,7 +370,7 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
                                             <Box pt={2} borderTopWidth="1px">
                                                 <AttachmentPanel
                                                     entityType="task"
-                                                    entityId={task.id}
+                                                    entityId={current.id}
                                                     canUpload={can('crm-attachments.create')}
                                                     label="Файлы задачи"
                                                 />
@@ -347,7 +382,7 @@ export default function TaskDialog({ open, onClose, task = null, entity = null, 
                                                 <Text fontSize="xs" color="fg.muted" mb={2}>Голосом</Text>
                                                 <VoiceNotes
                                                     entityType="task"
-                                                    entityId={task.id}
+                                                    entityId={current.id}
                                                     canCreate={can('crm-attachments.create')}
                                                     compact
                                                 />

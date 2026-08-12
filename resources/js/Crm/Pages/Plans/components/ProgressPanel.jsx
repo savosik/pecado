@@ -66,7 +66,7 @@ function KpiTile({ title, value, hint, accent = 'gray' }) {
  * терял бы сам список и не мог перейти к следующему. Нижний (выбранный партнёр)
  * меняет только сводку и burndown.
  */
-export default function ProgressPanel({ month, canSeeAll = false, onTask = null, onComment = null }) {
+export default function ProgressPanel({ month, canSeeAll = false, onTask = null, onComment = null, onOpenTask = null }) {
     const [scope, setScope] = useState('department');
     const [clientId, setClientId] = useState(null);
 
@@ -395,7 +395,7 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                                             <LastOrderCell value={row.last_order} />
                                         </Table.Cell>
                                         <Table.Cell onClick={(e) => e.stopPropagation()}>
-                                            <NextTaskHint task={row.next_task} />
+                                            <NextTaskHint task={row.next_task} onOpen={onOpenTask} />
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">{money(row.plan)}</Table.Cell>
                                         <Table.Cell textAlign="right">{money(row.fact)}</Table.Cell>
