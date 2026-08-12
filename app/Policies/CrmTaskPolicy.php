@@ -46,13 +46,13 @@ class CrmTaskPolicy
     public function reassign(User $user, CrmTask $task): bool
     {
         return $this->update($user, $task)
-            && ($task->author_id === $user->id || $user->can('crm-clients-all.view'));
+            && ($task->author_id === $user->id || $user->can('crm-department.edit'));
     }
 
     public function delete(User $user, CrmTask $task): bool
     {
         return $user->can('crm-tasks.delete')
-            && ($task->author_id === $user->id || $user->can('crm-clients-all.view'));
+            && ($task->author_id === $user->id || $user->can('crm-department.edit'));
     }
 
     /**
@@ -65,6 +65,6 @@ class CrmTaskPolicy
     {
         return $task->author_id === $user->id
             || $task->assignee_id === $user->id
-            || $user->can('crm-clients-all.view');
+            || $user->can('crm-department.edit');
     }
 }

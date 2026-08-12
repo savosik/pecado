@@ -28,7 +28,7 @@ class FinanceScopeTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['crm-finance.view', 'crm-clients-all.view', 'crm-tasks.create'] as $name) {
+        foreach (['crm-finance.view', 'crm-department.view', 'crm-clients-all.view', 'crm-tasks.create'] as $name) {
             Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
         }
         app(PermissionRegistrar::class)->forgetCachedPermissions();
@@ -45,7 +45,7 @@ class FinanceScopeTest extends TestCase
         $actor->givePermissionTo('crm-finance.view');
 
         if ($head) {
-            $actor->givePermissionTo('crm-clients-all.view');
+            $actor->givePermissionTo(['crm-department.view', 'crm-clients-all.view']);
         }
 
         $card = PersonalManager::create(['name' => $head ? 'РОП' : 'Менеджер', 'user_id' => $actor->id]);

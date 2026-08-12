@@ -92,7 +92,7 @@ class CrmEntityResolver
 
         return $entity instanceof Model
             ? $this->canAccess($actor, $entity)
-            : $actor->can('crm-clients-all.view');
+            : $actor->can('crm-department.view');
     }
 
     /**

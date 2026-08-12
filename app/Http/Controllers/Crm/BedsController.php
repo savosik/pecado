@@ -41,7 +41,7 @@ class BedsController extends CrmController
             'month' => $month->format('Y-m'),
             'monthLabel' => $this->plans->monthLabel($month),
             'scopeOptions' => $this->scopes->options($actor),
-            'canSeeAll' => $this->seesAllClients($request),
+            'canSeeAll' => $this->seesDepartment($request),
         ]);
     }
 
@@ -58,7 +58,7 @@ class BedsController extends CrmController
         $month = $this->plans->parseMonth($request->string('month')->value());
         $scope = $this->resolveScope($request);
 
-        $wantsManagers = $this->seesAllClients($request)
+        $wantsManagers = $this->seesDepartment($request)
             && $request->string('scope')->value() !== 'manager'
             && $request->string('view')->value() !== 'clients';
 
@@ -71,7 +71,7 @@ class BedsController extends CrmController
             'monthLabel' => $this->plans->monthLabel($month),
             'scope' => $this->scopes->payload($scope),
             'scopeOptions' => $this->scopes->options($actor),
-            'canSeeAll' => $this->seesAllClients($request),
+            'canSeeAll' => $this->seesDepartment($request),
         ]);
     }
 

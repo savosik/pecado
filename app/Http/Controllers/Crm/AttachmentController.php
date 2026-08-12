@@ -107,7 +107,7 @@ class AttachmentController extends CrmController
 
         $uploadedBy = $media->getCustomProperty('uploaded_by');
         $canDelete = $actor->can('crm-attachments.delete')
-            && ((int) $uploadedBy === (int) $actor->getKey() || $actor->can('crm-clients-all.view'));
+            && ((int) $uploadedBy === (int) $actor->getKey() || $actor->can('crm-department.edit'));
 
         abort_unless($canDelete, 403);
 
@@ -161,7 +161,7 @@ class AttachmentController extends CrmController
             'uploaded_at' => $media->created_at?->format('d.m.Y H:i'),
             'uploaded_by' => $media->getCustomProperty('uploaded_by_name'),
             'can_delete' => $actor->can('crm-attachments.delete')
-                && ((int) $uploadedBy === (int) $actor->getKey() || $actor->can('crm-clients-all.view')),
+                && ((int) $uploadedBy === (int) $actor->getKey() || $actor->can('crm-department.edit')),
         ];
     }
 }

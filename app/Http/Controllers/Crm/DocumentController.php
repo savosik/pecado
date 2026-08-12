@@ -309,10 +309,10 @@ class DocumentController extends CrmController
                 'overdue_amount' => round($overdueEntries->sum(fn (array $entry): float => $entry['unpaid_rub']), 2),
                 'overdue_count' => $overdueEntries->count(),
             ],
-            'managers' => $this->seesAllClients($request) ? $this->managerOptions() : [],
-            'seesAll' => $this->seesAllClients($request),
+            'managers' => $this->seesDepartment($request) ? $this->managerOptions() : [],
+            'seesAll' => $this->seesDepartment($request),
             'filters' => [
-                'manager_ids' => $this->seesAllClients($request) ? $this->ids($request, 'manager_ids') : [],
+                'manager_ids' => $this->seesDepartment($request) ? $this->ids($request, 'manager_ids') : [],
             ],
         ]);
     }
@@ -1128,7 +1128,7 @@ class DocumentController extends CrmController
     private function listOptions(Request $request, string $table, Builder $clients, string $sortBy, string $sortOrder, int $perPage, ?string $search): array
     {
         $organizationsEnabled = (bool) config('erp.organizations.enabled');
-        $seesAll = $this->seesAllClients($request);
+        $seesAll = $this->seesDepartment($request);
         $productIds = $this->ids($request, 'product_ids');
 
         return [
@@ -1184,7 +1184,7 @@ class DocumentController extends CrmController
 
         // Менеджера подставляет только РОП: у рядового менеджера скоуп и так
         // сведён к своим партнёрам, а чужой id в запросе не должен ничего давать.
-        if ($this->seesAllClients($request)) {
+        if ($this->seesDepartment($request)) {
             $managerIds = $this->ids($request, 'manager_ids');
 
             if ($managerIds !== []) {

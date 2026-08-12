@@ -28,7 +28,7 @@ class GapAnalysisTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['crm-dashboard.view', 'crm-analytics.view', 'crm-clients-all.view'] as $name) {
+        foreach (['crm-dashboard.view', 'crm-analytics.view', 'crm-department.view', 'crm-clients-all.view'] as $name) {
             Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
         }
         app(PermissionRegistrar::class)->forgetCachedPermissions();
@@ -38,7 +38,7 @@ class GapAnalysisTest extends TestCase
     {
         $actor = User::factory()->create();
         $actor->givePermissionTo('crm-analytics.view');
-        $actor->givePermissionTo('crm-clients-all.view');
+        $actor->givePermissionTo(['crm-department.view', 'crm-clients-all.view']);
         PersonalManager::create(['name' => 'РОП', 'user_id' => $actor->id]);
 
         return $actor->fresh();

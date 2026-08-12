@@ -709,7 +709,7 @@ class User extends Authenticatable implements HasMedia
     /**
      * Клиенты, видимые пользователю в CRM.
      *
-     * РОП и суперадмин (crm-clients-all.view) видят всех клиентов отдела,
+     * Кто видит отдел (crm-department.view) — всех клиентов отдела,
      * менеджер — только закреплённых за его карточкой, менеджер без карточки — никого.
      *
      * Порядок веток важен: право на весь отдел проверяется до managerProfile,
@@ -724,7 +724,7 @@ class User extends Authenticatable implements HasMedia
         // менеджером в 1С, не должен попадать в CRM ни к РОПу, ни к менеджеру.
         $query->clients();
 
-        if ($actor->can('crm-clients-all.view')) {
+        if ($actor->can('crm-department.view')) {
             // Клиент без менеджера — лид, он живёт в админке, а не в CRM отдела.
             return $query->whereNotNull('personal_manager_id');
         }

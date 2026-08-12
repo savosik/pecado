@@ -110,7 +110,7 @@ class PlanController extends CrmController
             'distribution' => $this->progress->distribution($month, $scope),
             'clients' => $this->progress->clients($month, $scope, $actor),
             'scopeOptions' => $this->scopes->options($actor),
-            'canSeeAll' => $this->seesAllClients($request),
+            'canSeeAll' => $this->seesManagerBreakdown($request),
         ]);
     }
 
@@ -239,7 +239,7 @@ class PlanController extends CrmController
     private function payload(Request $request): array
     {
         $actor = $this->crmActor($request);
-        $seesAll = $this->seesAllClients($request);
+        $seesAll = $this->seesManagerBreakdown($request);
 
         $month = $this->plans->parseMonth($request->string('month')->value());
         $previousMonth = $month->copy()->subMonthNoOverflow();

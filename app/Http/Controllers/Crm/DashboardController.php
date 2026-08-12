@@ -20,7 +20,7 @@ class DashboardController extends CrmController
         PlanScopeResolver $scopes,
     ): Response {
         $actor = $this->crmActor($request);
-        $seesAll = $this->seesAllClients($request);
+        $seesAll = $this->seesDepartment($request);
 
         // Тот же scope, что и в списке партнёров, — цифры не разъедутся с выдачей.
         $visibleClients = User::query()->visibleInCrm($actor)->count();

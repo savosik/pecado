@@ -17,11 +17,28 @@ abstract class CrmController extends Controller
     }
 
     /**
-     * Видит ли сотрудник партнёров всего отдела (РОП), а не только своих.
+     * Видит ли сотрудник записи всего отдела, а не только свои.
+     *
+     * Это про охват данных: партнёры коллег, их задачи, звонки, письма
+     * и документы. Отвечает за взаимозаменяемость менеджеров.
      *
      * Суперадмин проходит бесплатно через Gate::before в AppServiceProvider.
      */
-    protected function seesAllClients(Request $request): bool
+    protected function seesDepartment(Request $request): bool
+    {
+        return $this->crmActor($request)->can('crm-department.view');
+    }
+
+    /**
+     * Доступны ли сотруднику разрезы по менеджерам: чужая выручка, план отдела,
+     * планы других менеджеров, фильтр по менеджерам.
+     *
+     * Намеренно отделено от {@see seesDepartment()}. «Вижу карточку партнёра
+     * коллеги» и «вижу, сколько коллега продал» — разные полномочия: первое
+     * нужно для подмены коллеги, второе остаётся у руководителя. Пока они были
+     * одним правом, выдать первое означало выдать и право переписать план отдела.
+     */
+    protected function seesManagerBreakdown(Request $request): bool
     {
         return $this->crmActor($request)->can('crm-clients-all.view');
     }

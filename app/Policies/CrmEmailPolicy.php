@@ -71,7 +71,7 @@ class CrmEmailPolicy
 
     private function ownsOrLeads(User $user, CrmEmail $email): bool
     {
-        return $email->user_id === $user->id || $user->can('crm-clients-all.view');
+        return $email->user_id === $user->id || $user->can('crm-department.edit');
     }
 
     private function clientAccessible(User $user, CrmEmail $email): bool

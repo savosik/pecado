@@ -218,7 +218,7 @@ class TaskController extends CrmController
             // Документ без партнёра (партнёрский из 1С) доступен только тем, кто видит
             // весь отдел, — то же правило, что в CrmEntityResolver::canAccess().
             ->when(
-                ! $actor->can('crm-clients-all.view'),
+                ! $actor->can('crm-department.view'),
                 fn (Builder $query) => $query->whereIn(
                     'user_id',
                     User::query()->visibleInCrm($actor)->select('id'),

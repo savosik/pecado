@@ -120,7 +120,7 @@ class ClientListService
     private function applySearch(Builder $query, string $search, User $actor): void
     {
         $like = '%'.$search.'%';
-        $seesAll = $actor->can('crm-clients-all.view');
+        $seesAll = $actor->can('crm-department.view');
         $actorId = (int) $actor->getKey();
 
         $query->where(function (Builder $inner) use ($search, $like, $seesAll, $actorId): void {
@@ -649,7 +649,7 @@ class ClientListService
             ->whereNull('crm_tasks.deleted_at')
             ->whereIn('crm_tasks.status', TaskStatus::activeValues());
 
-        if (! $actor->can('crm-clients-all.view')) {
+        if (! $actor->can('crm-department.view')) {
             $actorId = (int) $actor->getKey();
 
             $sub->where(fn ($q) => $q
@@ -672,7 +672,7 @@ class ClientListService
      */
     private function activeTasksConstraint(User $actor): \Closure
     {
-        $seesAll = $actor->can('crm-clients-all.view');
+        $seesAll = $actor->can('crm-department.view');
         $actorId = (int) $actor->getKey();
 
         return function (Builder $tasks) use ($seesAll, $actorId): void {

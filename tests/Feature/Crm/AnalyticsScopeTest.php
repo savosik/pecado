@@ -24,7 +24,7 @@ class AnalyticsScopeTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['crm-dashboard.view', 'crm-analytics.view', 'crm-clients-all.view'] as $name) {
+        foreach (['crm-dashboard.view', 'crm-analytics.view', 'crm-department.view', 'crm-clients-all.view'] as $name) {
             Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
         }
         app(PermissionRegistrar::class)->forgetCachedPermissions();
@@ -38,7 +38,7 @@ class AnalyticsScopeTest extends TestCase
         $actor = User::factory()->create();
         $actor->givePermissionTo('crm-analytics.view');
         if ($head) {
-            $actor->givePermissionTo('crm-clients-all.view');
+            $actor->givePermissionTo(['crm-department.view', 'crm-clients-all.view']);
         }
         $card = PersonalManager::create(['name' => $head ? 'РОП' : 'Менеджер', 'user_id' => $actor->id]);
 

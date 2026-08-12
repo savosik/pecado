@@ -38,7 +38,7 @@ class ClientOperations
         $filters = ClientListFilters::fromRequest(
             new Request($input->all()),
             $actor,
-            $actor->can('crm-clients-all.view'),
+            $actor->can('crm-department.view'),
         );
 
         $page = $this->clients->paginate($actor, $filters);

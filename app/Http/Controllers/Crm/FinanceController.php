@@ -542,7 +542,7 @@ class FinanceController extends CrmController
      */
     private function sharedOptions(Request $request, FinanceFilters $filters): array
     {
-        $seesAll = $this->seesAllClients($request);
+        $seesAll = $this->seesDepartment($request);
 
         return [
             'filters' => [
@@ -567,9 +567,9 @@ class FinanceController extends CrmController
         $actor = $this->crmActor($request);
         $query = User::query()->visibleInCrm($actor)->select('users.id');
 
-        // Менеджера подставляет только РОП: у рядового менеджера скоуп и так сведён
-        // к своим партнёрам, а чужой id в запросе не должен ничего давать.
-        if ($this->seesAllClients($request) && $filters->managerIds !== []) {
+        // Отбор по менеджеру сужает уже видимое: тому, кто отдел не видит,
+        // чужой id в запросе всё равно ничего не даст — скоуп отсечёт раньше.
+        if ($this->seesDepartment($request) && $filters->managerIds !== []) {
             $query->whereIn('users.personal_manager_id', $filters->managerIds);
         }
 

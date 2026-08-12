@@ -54,7 +54,7 @@ class CrmCommentPolicy
 
     private function ownsOrLeads(User $user, CrmComment $comment): bool
     {
-        return $comment->user_id === $user->id || $user->can('crm-clients-all.view');
+        return $comment->user_id === $user->id || $user->can('crm-department.edit');
     }
 
     /**

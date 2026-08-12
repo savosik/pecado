@@ -37,7 +37,7 @@ class FinanceReconciliationTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['crm-finance.view', 'crm-clients-all.view'] as $name) {
+        foreach (['crm-finance.view', 'crm-department.view', 'crm-clients-all.view'] as $name) {
             Permission::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
         }
         app(PermissionRegistrar::class)->forgetCachedPermissions();

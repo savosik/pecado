@@ -95,7 +95,18 @@ class RolesAndPermissionsSeeder extends Seeder
         // edit — управление составом клиентской базы отдела: пометить аккаунт
         // как не-клиента (сотрудник, служебный). Менеджеру недоступно намеренно:
         // убрав неудобного покупателя из базы, он убрал бы его и из своего плана.
+        //
+        // view — РОПовское: разрез выручки по менеджерам, план отдела и планы
+        // менеджеров, фильтр по менеджерам. НЕ путать с `crm-department.view`:
+        // «вижу карточку партнёра коллеги» и «вижу, сколько коллега продал» —
+        // разные полномочия, и второе рядовому менеджеру не выдаётся.
         'crm-clients-all' => ['view', 'edit'],
+        // Взаимозаменяемость менеджеров: view — вижу записи всего отдела
+        // (партнёров, задачи, звонки, письма, документы), edit — действую
+        // с чужими записями. Раньше и то и другое ехало вместе с
+        // `crm-clients-all.view`, из-за чего видимость отдела нельзя было выдать,
+        // не отдав заодно право менять план отдела и удалять чужие файлы.
+        'crm-department' => ['view', 'edit'],
         // edit — скрыть нерабочую карточку менеджера из списков и выборов.
         'crm-team' => ['view', 'edit'],
         'crm-analytics' => ['view'],
@@ -284,7 +295,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'label' => 'Руководитель отдела продаж',
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
-                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-contractors', 'crm-team', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-agent-tokens', 'crm-impersonate',
+                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-department', 'crm-contractors', 'crm-team', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-agent-tokens', 'crm-impersonate',
                 // Себестоимость руководителю отдела появится вместе с отчётом по марже
                 // и только под `crm-`-префиксом: `product-costs` — админский ресурс,
                 // и выдача его этой роли открыла бы ей вход в /admin (PermissionNamingTest).

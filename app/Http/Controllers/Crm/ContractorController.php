@@ -38,7 +38,7 @@ class ContractorController extends CrmController
     public function index(Request $request, ContractorListService $contractors): Response
     {
         $actor = $this->crmActor($request);
-        $seesAll = $this->seesAllClients($request);
+        $seesAll = $this->seesDepartment($request);
 
         $filters = $this->validateFilters($request, $seesAll);
 

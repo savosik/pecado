@@ -35,7 +35,7 @@ class CrmCallService
     {
         $query = CrmCall::query();
 
-        if ($actor->can('crm-clients-all.view')) {
+        if ($actor->can('crm-department.view')) {
             return $query;
         }
 

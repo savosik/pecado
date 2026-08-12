@@ -215,7 +215,7 @@ class Company extends Model
      */
     public function scopeVisibleInCrm(Builder $query, User $actor): Builder
     {
-        if ($actor->can('crm-clients-all.view')) {
+        if ($actor->can('crm-department.view')) {
             return $query;
         }
 

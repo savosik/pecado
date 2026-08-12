@@ -52,7 +52,7 @@ class OpportunityController extends CrmController
             'monthLabel' => $this->plans->monthLabel($month),
             'presets' => OpportunityPreset::options(),
             'scopeOptions' => $this->scopes->options($actor),
-            'canSeeAll' => $this->seesAllClients($request),
+            'canSeeAll' => $this->seesDepartment($request),
         ]);
     }
 
@@ -80,7 +80,7 @@ class OpportunityController extends CrmController
             'scopeOptions' => $this->scopes->options($actor),
             'presets' => OpportunityPreset::options(),
             'params' => $params,
-            'canSeeAll' => $this->seesAllClients($request),
+            'canSeeAll' => $this->seesDepartment($request),
         ]);
     }
 

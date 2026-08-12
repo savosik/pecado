@@ -58,7 +58,7 @@ class CrmCallPolicy
 
     private function ownsOrLeads(User $user, CrmCall $call): bool
     {
-        return $call->user_id === $user->id || $user->can('crm-clients-all.view');
+        return $call->user_id === $user->id || $user->can('crm-department.edit');
     }
 
     private function clientAccessible(User $user, CrmCall $call): bool

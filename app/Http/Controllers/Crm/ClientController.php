@@ -29,7 +29,7 @@ class ClientController extends CrmController
     public function index(Request $request, CrmTaskService $tasks, ClientListService $clients): Response
     {
         $actor = $this->crmActor($request);
-        $seesAll = $this->seesAllClients($request);
+        $seesAll = $this->seesDepartment($request);
 
         $canSeeProfile = $actor->can('crm-profile.view');
         $canSeeTasks = $actor->can('crm-tasks.view');
@@ -73,7 +73,7 @@ class ClientController extends CrmController
         $filters = ClientListFilters::fromRequest(
             new Request($data['payload']),
             $actor,
-            $this->seesAllClients($request),
+            $this->seesDepartment($request),
         );
 
         $preset = $actor->crmClientFilterPresets()->create([

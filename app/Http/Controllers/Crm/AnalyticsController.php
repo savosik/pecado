@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * Интерактивный отчёт продаж отдела (CRM).
  *
  * Изоляция данных: скоуп партнёров из User::visibleInCrm() —
- *  - РОП (crm-clients-all.view) видит весь отдел и разрез/фильтр по менеджерам;
+ *  - охват данных задаёт crm-department.view, разрез по менеджерам — crm-clients-all.view;
  *  - менеджер — только своих партнёров, без разреза по менеджерам.
  *
  * Отличия от кабинетной аналитики: набор партнёров вместо одного пользователя,
@@ -40,8 +40,8 @@ class AnalyticsController extends CrmController
     public function index(Request $request): InertiaResponse
     {
         $actor = $this->crmActor($request);
-        $seesAll = $this->seesAllClients($request);
-        $ctx = $this->resolveContext($request, $actor, $seesAll);
+        $seesAll = $this->seesManagerBreakdown($request);
+        $ctx = $this->resolveContext($request, $actor, $this->seesDepartment($request), $seesAll);
         $filters = AnalyticsFilters::fromScopeRequest($request);
 
         return Inertia::render('Crm/Pages/Analytics/Index', [
@@ -115,8 +115,8 @@ class AnalyticsController extends CrmController
     public function data(Request $request): JsonResponse
     {
         $actor = $this->crmActor($request);
-        $seesAll = $this->seesAllClients($request);
-        $ctx = $this->resolveContext($request, $actor, $seesAll);
+        $seesAll = $this->seesManagerBreakdown($request);
+        $ctx = $this->resolveContext($request, $actor, $this->seesDepartment($request), $seesAll);
         $filters = AnalyticsFilters::fromScopeRequest($request);
 
         return response()->json(
@@ -130,8 +130,8 @@ class AnalyticsController extends CrmController
     public function abcXyz(Request $request): JsonResponse
     {
         $actor = $this->crmActor($request);
-        $seesAll = $this->seesAllClients($request);
-        $ctx = $this->resolveContext($request, $actor, $seesAll);
+        $seesAll = $this->seesManagerBreakdown($request);
+        $ctx = $this->resolveContext($request, $actor, $this->seesDepartment($request), $seesAll);
 
         $dimension = (string) $request->input('dimension', 'brand');
         if (! in_array($dimension, ['brand', 'category', 'product'], true)) {
@@ -150,8 +150,8 @@ class AnalyticsController extends CrmController
     public function gap(Request $request): JsonResponse
     {
         $actor = $this->crmActor($request);
-        $seesAll = $this->seesAllClients($request);
-        $ctx = $this->resolveContext($request, $actor, $seesAll);
+        $seesAll = $this->seesManagerBreakdown($request);
+        $ctx = $this->resolveContext($request, $actor, $this->seesDepartment($request), $seesAll);
         $filters = AnalyticsFilters::fromScopeRequest($request);
 
         return response()->json(
@@ -165,8 +165,8 @@ class AnalyticsController extends CrmController
     public function gapExport(Request $request, SimpleXlsxExporter $exporter): StreamedResponse
     {
         $actor = $this->crmActor($request);
-        $seesAll = $this->seesAllClients($request);
-        $ctx = $this->resolveContext($request, $actor, $seesAll);
+        $seesAll = $this->seesManagerBreakdown($request);
+        $ctx = $this->resolveContext($request, $actor, $this->seesDepartment($request), $seesAll);
         $filters = AnalyticsFilters::fromScopeRequest($request);
 
         $result = $this->gap->analyze($ctx, $this->gapParams($request), $filters->dateFrom, $filters->dateTo);
@@ -241,8 +241,8 @@ class AnalyticsController extends CrmController
     public function export(Request $request, SimpleXlsxExporter $exporter): StreamedResponse
     {
         $actor = $this->crmActor($request);
-        $seesAll = $this->seesAllClients($request);
-        $ctx = $this->resolveContext($request, $actor, $seesAll);
+        $seesAll = $this->seesManagerBreakdown($request);
+        $ctx = $this->resolveContext($request, $actor, $this->seesDepartment($request), $seesAll);
         $filters = AnalyticsFilters::fromScopeRequest($request);
 
         $sections = $this->exportSections($ctx, $filters, $seesAll);
@@ -451,12 +451,13 @@ class AnalyticsController extends CrmController
      * Собирает контекст выполнения: набор id партнёров в скоупе + бизнес-дата 1С + рубли.
      * Для РОП применяет опциональный фильтр по менеджерам (manager_ids).
      */
-    private function resolveContext(Request $request, User $actor, bool $seesAll): AnalyticsContext
+    private function resolveContext(Request $request, User $actor, bool $seesDepartment, bool $seesBreakdown): AnalyticsContext
     {
         $query = User::query()->visibleInCrm($actor);
 
-        // Фильтр по менеджерам — только РОП; иначе менеджер подставил бы чужой id.
-        if ($seesAll) {
+        // Отбор по менеджерам сужает уже видимое. Тому, кто отдел не видит,
+        // он бесполезен (скоуп отсечёт раньше), поэтому и не предлагается.
+        if ($seesDepartment && $seesBreakdown) {
             $managerIds = $this->sanitizeIds($request->input('manager_ids', []));
             if ($managerIds !== []) {
                 $query->whereIn('personal_manager_id', $managerIds);

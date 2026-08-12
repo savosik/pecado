@@ -37,7 +37,7 @@ class CrmTaskService
     {
         $query = CrmTask::query();
 
-        if (! $actor->can('crm-clients-all.view')) {
+        if (! $actor->can('crm-department.view')) {
             $actorId = (int) $actor->getKey();
 
             $query->where(fn (Builder $inner) => $inner

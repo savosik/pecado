@@ -301,9 +301,10 @@ class SalesPlanService
                 ->orWhere('email', 'like', "%{$search}%"));
         }
 
-        // Фильтр по менеджеру доступен только тому, кто и так видит весь отдел:
-        // иначе менеджер подставил бы чужой id в адрес и увидел чужих партнёров.
-        if ($actor->can('crm-clients-all.view') && ! empty($filters['manager_id'])) {
+        // Фильтр по менеджеру — отбор поверх уже видимых партнёров, а не доступ
+        // к чужим: тому, кто отдел не видит, подставленный в адрес чужой id
+        // всё равно ничего не покажет — скоуп отсечёт раньше.
+        if ($actor->can('crm-department.view') && ! empty($filters['manager_id'])) {
             $query->where('personal_manager_id', (int) $filters['manager_id']);
         }
 

@@ -133,7 +133,7 @@ class ClientTimelineService
 
             // Задачи коллег по общему партнёру рядовому менеджеру не показываем — то же
             // правило, что в CrmTaskPolicy: поручения между сотрудниками не публичная лента.
-            if (! $viewer->can('crm-clients-all.view')) {
+            if (! $viewer->can('crm-department.view')) {
                 $tasks->where(fn ($query) => $query
                     ->where('author_id', $viewer->getKey())
                     ->orWhere('assignee_id', $viewer->getKey()));
