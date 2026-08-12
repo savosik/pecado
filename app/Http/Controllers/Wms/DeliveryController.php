@@ -378,6 +378,9 @@ class DeliveryController extends WmsController
                     'address' => (string) ($point['address'] ?? ''),
                     'phone' => $point['phone'] ?? null,
                     'timetable' => $point['timetable'] ?? null,
+                    // Координаты — для режима карты; без них точка на ней не встанет.
+                    'lat' => isset($point['lat']) ? (float) $point['lat'] : null,
+                    'lng' => isset($point['lng']) ? (float) $point['lng'] : null,
                 ])
                 ->filter(static fn (array $point): bool => $point['id'] !== '')
                 ->values(),

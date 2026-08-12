@@ -17,6 +17,7 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
+import { SearchableSelect } from '@/Wms/Components/SearchableSelect';
 import { toaster } from '@/components/ui/toaster';
 import { AddressSuggest } from '@/components/common/AddressSuggest';
 import { useFlashToast } from '@/hooks/useFlashToast';
@@ -163,7 +164,8 @@ export default function DeliveriesCreate() {
 
     const handleAddressSelect = (id) => {
         setSelectedAddressId(id);
-        const found = addressList.find((item) => item.id === id);
+        // Значение приходит строкой из списка, а id адреса может быть числом.
+        const found = addressList.find((item) => String(item.id) === String(id));
 
         if (found) {
             resolveAddress(found.address_string, found.data);
@@ -516,17 +518,16 @@ export default function DeliveriesCreate() {
                                 </Text>
                             ) : (
                                 <Field label="Адрес доставки" required>
-                                    <NativeSelectRoot size="sm">
-                                        <NativeSelectField
-                                            value={selectedAddressId}
-                                            onChange={(event) => handleAddressSelect(event.target.value)}
-                                        >
-                                            <option value="">Выберите адрес</option>
-                                            {addressList.map((item) => (
-                                                <option key={item.id} value={item.id}>{item.label}</option>
-                                            ))}
-                                        </NativeSelectField>
-                                    </NativeSelectRoot>
+                                    <SearchableSelect
+                                        options={addressList.map((item) => ({
+                                            value: String(item.id),
+                                            label: item.label,
+                                        }))}
+                                        value={selectedAddressId}
+                                        onChange={handleAddressSelect}
+                                        placeholder="Город, улица или название адреса"
+                                        emptyText="Такого адреса у клиента нет"
+                                    />
                                 </Field>
                             )}
 

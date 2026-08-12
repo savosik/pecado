@@ -112,7 +112,13 @@ class DeliveryOperationsTest extends DeliveryTestCase
         $this->fakeApiShip([
             '*/lists/points*' => Http::response([
                 'rows' => [
-                    ['id' => 'MSK1', 'name' => 'ПВЗ на Красносельской', 'address' => 'Москва, ул Нижняя Красносельская, 35'],
+                    [
+                        'id' => 'MSK1',
+                        'name' => 'ПВЗ на Красносельской',
+                        'address' => 'Москва, ул Нижняя Красносельская, 35',
+                        'lat' => 55.7807,
+                        'lng' => 37.6656,
+                    ],
                     ['id' => '', 'name' => 'Битая строка без идентификатора', 'address' => ''],
                 ],
             ], 200),
@@ -129,6 +135,9 @@ class DeliveryOperationsTest extends DeliveryTestCase
         // Строка без id отсеивается: выбрать такой пункт всё равно нельзя.
         $this->assertCount(1, $response->json('points'));
         $this->assertSame('MSK1', $response->json('points.0.id'));
+        // Координаты нужны режиму карты — без них метку не поставить.
+        $this->assertSame(55.7807, $response->json('points.0.lat'));
+        $this->assertSame(37.6656, $response->json('points.0.lng'));
 
         $url = collect(Http::recorded())
             ->map(fn (array $pair): string => $pair[0]->url())

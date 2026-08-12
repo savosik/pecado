@@ -203,6 +203,35 @@ class DeliveryShipmentFlowTest extends DeliveryTestCase
     }
 
     #[Test]
+    #[TestDox('Сумма к получению по позициям сходится с наложенным платежом заявки')]
+    public function item_cod_matches_order_cod(): void
+    {
+        $this->fakeApiShip([
+            '*/v1/orders' => Http::response(['orderId' => '4561112', 'created' => '2026-08-12T03:00:00+03:00'], 200),
+        ]);
+
+        $shipment = $this->makeShipment();
+        $delivery = DeliveryShipment::factory()->calculated()->create(['user_id' => $shipment->user_id]);
+        $delivery->shipments()->attach($shipment->id);
+        $this->addPlace($delivery);
+
+        $this->actingAs($this->userWithRole('storekeeper'))
+            ->post("/wms/deliveries/{$delivery->id}/submit");
+
+        $sent = $this->sentPayload('/v1/orders');
+        $items = $sent['places'][0]['items'];
+
+        $this->assertNotEmpty($items);
+
+        // `cost` у позиции — наложенный платёж, а не цена. Перевозчик сверяет его
+        // сумму с codCost заявки, и расхождение отклоняет заявку целиком.
+        $this->assertSame(0.0, array_sum(array_column($items, 'cost')));
+        $this->assertSame((float) $sent['cost']['codCost'], array_sum(array_column($items, 'cost')));
+        // Объявленная ценность при этом сохраняется — она нужна для страховки.
+        $this->assertGreaterThan(0, array_sum(array_column($items, 'assessedCost')));
+    }
+
+    #[Test]
     #[TestDox('Ошибка валидации от перевозчика переводит отправку в failed с текстом причины')]
     public function submit_failure_is_recorded(): void
     {

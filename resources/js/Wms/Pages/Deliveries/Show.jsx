@@ -26,9 +26,9 @@ import {
 import WmsLayout from '@/Wms/Layouts/WmsLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
+import { PickupPointPicker } from '@/Wms/Components/PickupPointPicker';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
-import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
 import { toaster } from '@/components/ui/toaster';
 import { usePermission } from '@/Admin/hooks/usePermission';
 import { useFlashToast } from '@/hooks/useFlashToast';
@@ -397,19 +397,12 @@ export default function DeliveriesShow() {
                                 {isPointDelivery && (
                                     <HStack gap={2} align="end" flexWrap="wrap">
                                         <Field label="Пункт выдачи" width={{ base: '100%', md: '480px' }}>
-                                            <NativeSelectRoot size="sm">
-                                                <NativeSelectField
-                                                    value={selectedPointId}
-                                                    onChange={(event) => setSelectedPointId(event.target.value)}
-                                                >
-                                                    <option value="">Выберите пункт выдачи</option>
-                                                    {points.map((point) => (
-                                                        <option key={point.id} value={point.id}>
-                                                            {point.name} — {point.address}
-                                                        </option>
-                                                    ))}
-                                                </NativeSelectField>
-                                            </NativeSelectRoot>
+                                            <PickupPointPicker
+                                                points={points}
+                                                value={selectedPointId}
+                                                onChange={setSelectedPointId}
+                                                loading={loadingPoints}
+                                            />
                                         </Field>
                                         <Button
                                             size="sm"

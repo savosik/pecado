@@ -204,6 +204,15 @@ class DeliveryOrderSubmitter
     }
 
     /**
+     * Товарный состав для описи.
+     *
+     * `assessedCost` — объявленная ценность позиции, `cost` — **сумма к получению
+     * с покупателя**, то есть наложенный платёж. Это разные вещи, и перевозчик
+     * сверяет сумму `cost` по позициям с `codCost` заявки: у нас наложенного
+     * платежа нет (клиент рассчитывается по документам 1С), поэтому здесь ноль.
+     * С ценой в этом поле DPD отклоняет заявку — «сумма к получению товарных
+     * позиций не совпадает с суммой к получению отправления».
+     *
      * @return list<array<string, mixed>>
      */
     private function buildItems(DeliveryShipment $delivery): array
@@ -217,7 +226,7 @@ class DeliveryOrderSubmitter
                     'description' => (string) ($item->product_name_snapshot ?: 'Товар'),
                     'quantity' => max(1, (int) $item->quantity),
                     'assessedCost' => (float) $item->price,
-                    'cost' => (float) $item->price,
+                    'cost' => 0.0,
                 ];
             }
         }
