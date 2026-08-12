@@ -65,7 +65,7 @@ class StoreCrmAttachmentRequest extends FormRequest
             'file.required' => 'Выберите файл.',
             'file.max' => 'Файл больше '.CrmAttachments::MAX_MB.' МБ — уменьшите его или отправьте ссылкой.',
             'file.mimetypes' => $this->isVoice()
-                ? 'Такой формат записи не поддерживается. Разрешены webm, ogg, mp3, mp4, wav.'
+                ? 'Такой формат записи не поддерживается. Разрешены webm, ogg, mp3, m4a, mp4 и wav.'
                 : 'Такой тип файла не поддерживается. Разрешены изображения, PDF, документы Word и Excel, CSV и текст.',
         ];
     }

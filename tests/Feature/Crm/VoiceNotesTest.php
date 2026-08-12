@@ -122,19 +122,83 @@ class VoiceNotesTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonPath(
                 'errors.file.0',
-                'Такой формат записи не поддерживается. Разрешены webm, ogg, mp3, mp4, wav.',
+                'Такой формат записи не поддерживается. Разрешены webm, ogg, mp3, m4a, mp4 и wav.',
             );
     }
 
     /**
-     * Контейнер выбирает браузер: Chromium пишет webm/opus, Safari — mp4.
-     * Список типов обязан покрывать оба, иначе на маке запись не отправится.
+     * Минимальный EBML/Matroska с DocType «webm» — ровно тот контейнер,
+     * который отдаёт MediaRecorder в Chromium.
+     */
+    private function chromiumWebm(): UploadedFile
+    {
+        $ebml = "\x1A\x45\xDF\xA3"."\x01\x00\x00\x00\x00\x00\x00\x1F"
+            ."\x42\x86\x81\x01"."\x42\xF7\x81\x01"."\x42\xF2\x81\x04"
+            ."\x42\xF3\x81\x08"."\x42\x82\x84".'webm'
+            ."\x42\x87\x81\x02"."\x42\x85\x81\x02";
+
+        return UploadedFile::fake()->createWithContent('voice.webm', $ebml.str_repeat("\x00", 2048));
+    }
+
+    /** Заголовок ftyp mp42 — то, что пишет MediaRecorder в Safari. */
+    private function safariMp4(): UploadedFile
+    {
+        $ftyp = "\x00\x00\x00\x1cftypmp42\x00\x00\x00\x00mp42isom";
+
+        return UploadedFile::fake()->createWithContent('voice.mp4', $ftyp.str_repeat("\x00", 2048));
+    }
+
+    /**
+     * Регрессия: запись из Chromium отлетала с «формат не поддерживается».
+     *
+     * Браузер отдаёт blob с типом `audio/webm`, но валидация смотрит
+     * на фактический тип через finfo, а WebM — контейнер: аудио-дорожку
+     * от видео по магическим байтам не отличить, и finfo отвечает
+     * `video/webm`. Первая версия списка форматов этого не знала, а тест
+     * собирал WAV и настоящий путь не проверял.
      */
     #[Test]
-    public function список_форматов_покрывает_и_chromium_и_safari(): void
+    public function запись_из_chromium_принимается(): void
     {
-        $this->assertContains('audio/webm', CrmAttachments::VOICE_MIMES);
-        $this->assertContains('audio/mp4', CrmAttachments::VOICE_MIMES);
+        $this->actingAs($this->manager)
+            ->postJson(route('crm.attachments.store'), [
+                'entity_type' => 'client',
+                'entity_id' => $this->client->id,
+                'kind' => 'voice',
+                'duration_seconds' => 12,
+                'file' => $this->chromiumWebm(),
+            ])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('media', [
+            'model_id' => $this->client->id,
+            'collection_name' => CrmAttachments::VOICE_COLLECTION,
+        ]);
+    }
+
+    #[Test]
+    public function запись_из_safari_принимается(): void
+    {
+        $this->actingAs($this->manager)
+            ->postJson(route('crm.attachments.store'), [
+                'entity_type' => 'client',
+                'entity_id' => $this->client->id,
+                'kind' => 'voice',
+                'file' => $this->safariMp4(),
+            ])
+            ->assertCreated();
+    }
+
+    /**
+     * Список форматов задаётся контейнерами: `audio/*` недостаточно, потому что
+     * finfo для webm и mp4 отвечает `video/*` даже на чистом аудио.
+     */
+    #[Test]
+    public function список_форматов_покрывает_контейнеры_а_не_только_аудио_типы(): void
+    {
+        foreach (['audio/webm', 'video/webm', 'audio/mp4', 'video/mp4'] as $mime) {
+            $this->assertContains($mime, CrmAttachments::VOICE_MIMES, "Не хватает {$mime}");
+        }
     }
 
     #[Test]
