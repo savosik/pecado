@@ -52,9 +52,19 @@ class ClientLastVisitTest extends TestCase
         $this->assertNotNull($client->fresh()->last_seen_at);
     }
 
+    /**
+     * Шаг обновления настраивается (`crm.presence.track_throttle_seconds`).
+     *
+     * До crm-23 он был зашит константой в пятнадцать минут. Полоске «кто сейчас
+     * на сайте» такой шаг превращал «сейчас» в «в течение последней четверти
+     * часа», поэтому значение переехало в конфиг и по умолчанию стало минутой.
+     * Плата — во столько же раз более частый UPDATE по users.
+     */
     #[Test]
-    public function отметка_не_обновляется_чаще_раза_в_пятнадцать_минут(): void
+    public function отметка_не_обновляется_чаще_настроенного_шага(): void
     {
+        config(['crm.presence.track_throttle_seconds' => 900]);
+
         $client = $this->client(['last_seen_at' => null]);
 
         $this->actingAs($client)->get('/');
@@ -66,6 +76,24 @@ class ClientLastVisitTest extends TestCase
         $this->actingAs($client)->get('/');
 
         $this->assertTrue($first->equalTo($client->fresh()->last_seen_at));
+
+        Carbon::setTestNow();
+    }
+
+    #[Test]
+    public function за_пределами_шага_отметка_обновляется(): void
+    {
+        config(['crm.presence.track_throttle_seconds' => 60]);
+
+        $client = $this->client(['last_seen_at' => null]);
+
+        $this->actingAs($client)->get('/');
+        $first = $client->fresh()->last_seen_at;
+
+        Carbon::setTestNow(now()->addMinutes(5));
+        $this->actingAs($client)->get('/');
+
+        $this->assertTrue($client->fresh()->last_seen_at->greaterThan($first));
 
         Carbon::setTestNow();
     }

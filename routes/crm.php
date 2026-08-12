@@ -16,6 +16,7 @@ use App\Http\Controllers\Crm\FinanceController;
 use App\Http\Controllers\Crm\ImpersonationController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
+use App\Http\Controllers\Crm\PresenceController;
 use App\Http\Controllers\Crm\TaskController;
 use App\Http\Controllers\Crm\TeamController;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +43,11 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(function () {
     Route::middleware('permission:crm-dashboard.view')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Полоска «кто сейчас на сайте». Опрашивается раз в ~45 секунд с каждой
+        // открытой вкладки CRM, поэтому запрос обязан оставаться дешёвым:
+        // один индексированный WHERE по users.last_seen_at и срез в семь строк.
+        Route::get('/presence', PresenceController::class)->name('presence');
     });
 
     // Старые адреса раздела партнёров. Менеджеры держат карточки в закладках

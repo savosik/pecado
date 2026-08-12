@@ -16,8 +16,11 @@ use Symfony\Component\HttpFoundation\Response;
  * в полгода, и по логину выходило бы «не заходил с марта» у того, кто открывает
  * сайт каждый день.
  *
- * Раз в 15 минут на пользователя — не чаще: иначе каждый запрос страницы стал бы
- * UPDATE по users, а точность до минуты в карточке партнёра никому не нужна.
+ * Частота обновления задаётся `crm.presence.track_throttle_seconds`. Карточке
+ * партнёра хватало и пятнадцати минут, но полоске «кто сейчас на сайте» такой
+ * шаг превращает «сейчас» в «в течение последней четверти часа» — то есть
+ * в ту же колонку последнего визита. Плата за точность — во столько же раз
+ * более частый UPDATE по users.
  *
  * Просмотр от имени партнёра (impersonation) отметку не двигает: иначе менеджер
  * своим же заходом «оживлял» бы карточку, и признак «ни разу не заходил» —
@@ -25,8 +28,17 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class TrackUserLastSeen
 {
-    /** Насколько отметка «залипает», прежде чем её обновят снова. */
-    private const THROTTLE_SECONDS = 900;
+    /**
+     * Насколько отметка «залипает», прежде чем её обновят снова.
+     *
+     * Живёт в конфиге, а не константой: от неё зависит и точность полоски
+     * присутствия в CRM, и частота UPDATE по users. Менять это значение —
+     * решение про нагрузку, а не про код.
+     */
+    private function throttleSeconds(): int
+    {
+        return (int) config('crm.presence.track_throttle_seconds', 60);
+    }
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -47,7 +59,7 @@ class TrackUserLastSeen
 
         // add() — атомарная «постановка замка»: параллельные запросы одного
         // пользователя (страница + её XHR) не дадут пачку одинаковых UPDATE.
-        if (! Cache::add($key, true, self::THROTTLE_SECONDS)) {
+        if (! Cache::add($key, true, $this->throttleSeconds())) {
             return;
         }
 

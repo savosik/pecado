@@ -11,8 +11,12 @@ import { Header } from './Header';
  *
  * Конкретная панель передаёт свой `panel` (см. PanelConfig в PanelContext)
  * и при необходимости `extras` — дополнительные виджеты поверх layout.
+ *
+ * `topBar` — узкая полоса между шапкой и содержимым. Слот, а не готовый виджет:
+ * каркас общий для админки, CRM и склада, и появившаяся у всех троих полоска
+ * присутствия клиентов на складе была бы шумом.
  */
-export const PanelLayout = ({ panel, children, breadcrumbs = [], extras = null }) => {
+export const PanelLayout = ({ panel, children, breadcrumbs = [], extras = null, topBar = null }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     return (
@@ -30,6 +34,8 @@ export const PanelLayout = ({ panel, children, breadcrumbs = [], extras = null }
                         onMobileMenuOpen={() => setIsMobileMenuOpen(true)}
                         breadcrumbs={breadcrumbs}
                     />
+
+                    {topBar}
 
                     <Box as="main" p={{ base: 3, md: 6 }}>
                         {children}
