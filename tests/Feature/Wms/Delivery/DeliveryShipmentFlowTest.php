@@ -203,6 +203,30 @@ class DeliveryShipmentFlowTest extends DeliveryTestCase
     }
 
     #[Test]
+    #[TestDox('Блок cost не требует с получателя ни копейки')]
+    public function nothing_is_collected_from_the_recipient(): void
+    {
+        $this->fakeApiShip([
+            '*/v1/orders' => Http::response(['orderId' => '4561113', 'created' => '2026-08-12T05:00:00+03:00'], 200),
+        ]);
+
+        $delivery = DeliveryShipment::factory()->calculated()->create(['delivery_cost' => 361.12]);
+        $this->addPlace($delivery);
+
+        $this->actingAs($this->userWithRole('storekeeper'))
+            ->post("/wms/deliveries/{$delivery->id}/submit");
+
+        $sent = $this->sentPayload('/v1/orders');
+
+        // deliveryCost — это сумма, которую перевозчик возьмёт С ПОЛУЧАТЕЛЯ, а не наш
+        // тариф. С тарифом в этом поле DPD отклоняет заявку целиком.
+        $this->assertSame(0, $sent['cost']['deliveryCost']);
+        $this->assertSame(0, $sent['cost']['codCost']);
+        // Наша стоимость при этом никуда не девается — она нужна для сводки расходов.
+        $this->assertEquals(361.12, $delivery->fresh()->delivery_cost);
+    }
+
+    #[Test]
     #[TestDox('Сумма к получению по позициям сходится с наложенным платежом заявки')]
     public function item_cod_matches_order_cod(): void
     {
