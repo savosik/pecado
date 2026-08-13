@@ -10,7 +10,7 @@ import {
     LuLayoutDashboard, LuShoppingBag, LuShoppingCart,
     LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin,
     LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuReceipt, LuLayoutGrid, LuWrench, LuCode,
-    LuChartPie, LuMessageSquare, LuArrowRightLeft,
+    LuChartPie, LuMessageSquare, LuArrowRightLeft, LuFileText,
 } from 'react-icons/lu';
 
 const menuGroups = [
@@ -27,6 +27,9 @@ const menuGroups = [
             { href: '/cabinet/orders', label: 'Мои заказы', icon: LuShoppingBag },
             { href: '/cabinet/order-changes', label: 'Изменения заказов', icon: LuArrowRightLeft },
             { href: '/cabinet/shipments', label: 'Отгрузки', icon: LuTruck },
+            // Печатные формы из 1С. Скрыт, пока раздел не открыт (config.documents_enabled);
+            // приём документов из 1С при этом работает всегда.
+            { href: '/cabinet/documents', label: 'Документы', icon: LuFileText, feature: 'documents' },
             // Раздел скрыт, пока цифры долга не сверены с 1С (config.cabinet_finance_enabled).
             { href: '/cabinet/payments', label: 'Оплаты', icon: LuReceipt, feature: 'finance' },
             { href: '/cabinet/returns', label: 'Возвраты', icon: LuRotateCcw },
@@ -98,12 +101,19 @@ function MenuItemRow({ item, isActive }) {
 
 function SidebarContent({ currentPath }) {
     const { config } = usePage().props;
-    const financeEnabled = !!config?.cabinet_finance_enabled;
+
+    // Карта фиче-флагов: пункт с `feature` виден, только когда его флаг включён.
+    // Раньше здесь был хардкод одного флага — второй раздел за флагом заставил бы
+    // писать цепочку условий вместо одной проверки.
+    const features = {
+        finance: !!config?.cabinet_finance_enabled,
+        documents: !!config?.documents_enabled,
+    };
 
     const visibleGroups = menuGroups
         .map((group) => ({
             ...group,
-            items: group.items.filter((item) => item.feature !== 'finance' || financeEnabled),
+            items: group.items.filter((item) => !item.feature || features[item.feature]),
         }))
         .filter((group) => group.items.length > 0);
 

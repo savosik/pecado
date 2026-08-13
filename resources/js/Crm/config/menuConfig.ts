@@ -19,6 +19,7 @@ import {
     LuScale,
     LuCalendarClock,
     LuUserPlus,
+    LuFileDown,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -26,6 +27,8 @@ export interface MenuItem {
     icon: React.ElementType;
     path: string;
     permission?: string;
+    /** Ключ фиче-флага в общих пропсах Inertia (`config`). Пункт скрыт, пока флаг выключен. */
+    feature?: string;
 }
 
 export interface MenuGroup {
@@ -87,6 +90,10 @@ export const menuConfig: MenuGroup[] = [
             { label: "Заказы", icon: LuFileText, path: "/crm/orders", permission: "crm-clients.view" },
             { label: "Реализации", icon: LuTruck, path: "/crm/shipments", permission: "crm-clients.view" },
             { label: "Платежи", icon: LuReceipt, path: "/crm/payments", permission: "crm-clients.view" },
+            // Печатные формы из 1С (v16.1.0). Своего права нет — то же решение,
+            // что и у журналов выше: «вижу партнёра, но не вижу его документы»
+            // это состояние, которого быть не должно.
+            { label: "Печатные формы", icon: LuFileDown, path: "/crm/printed-documents", permission: "crm-clients.view", feature: "documents_crm_enabled" },
         ],
     },
 ];

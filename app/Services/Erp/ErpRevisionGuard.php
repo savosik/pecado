@@ -5,6 +5,7 @@ namespace App\Services\Erp;
 use App\Models\Agreement;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\PrintedDocument;
 use App\Models\ProductReturn;
 use App\Models\SettlementDocument;
 use App\Models\Shipment;
@@ -75,6 +76,12 @@ class ErpRevisionGuard
         'settlement.posted' => SettlementDocument::class,
         'settlement.reverted' => SettlementDocument::class,
         'payment_schedule.updated' => SettlementDocument::class,
+        // v16.1.0 — печатные формы. Перепечатали счёт и тут же перевыставили:
+        // два сообщения с разными message_id и совпадающим до секунды
+        // erp_updated_at. Без ревизии клиенту достанется старый PDF, а заметить
+        // это некому — оба сообщения корректны.
+        'printed_document.published' => PrintedDocument::class,
+        'printed_document.deleted' => PrintedDocument::class,
     ];
 
     /**

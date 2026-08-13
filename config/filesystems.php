@@ -71,6 +71,48 @@ return [
             'throw' => true,
         ],
 
+        // Обменный бакет печатных форм (v16.1.0): 1С кладёт PDF, сайт забирает
+        // и удаляет исходник. Отдельно от prices-exchange намеренно — у того свой
+        // клинер app:clean-price-dumps с горизонтом в трое суток, и печатная форма,
+        // не успевшая перенестись, была бы им снесена.
+        // throw => true: молчаливый провал чтения означал бы потерянный документ,
+        // а перезалить его неоткуда — 1С печатные формы не хранит.
+        'documents-exchange' => [
+            'driver' => 's3',
+            'key' => env('DOCUMENTS_EXCHANGE_S3_ACCESS_KEY', 'sail'),
+            'secret' => env('DOCUMENTS_EXCHANGE_S3_SECRET_KEY', 'password'),
+            'region' => env('DOCUMENTS_EXCHANGE_S3_REGION', 'us-east-1'),
+            'bucket' => env('DOCUMENTS_EXCHANGE_S3_BUCKET', 'documents-exchange'),
+            'endpoint' => env('DOCUMENTS_EXCHANGE_S3_ENDPOINT', 'http://minio:9000'),
+            'use_path_style_endpoint' => true,
+            'throw' => true,
+        ],
+
+        // Долговременное приватное хранилище печатных форм (v16.1.0).
+        // Ключи знает только сайт, у 1С доступа сюда нет.
+        //
+        // Файл отдаётся ТОЛЬКО через контроллер с проверкой прав. Публичная
+        // ссылка на счёт-фактуру — утечка документов клиента любому, кто её
+        // получил (см. Crm\AttachmentController::download).
+        //
+        // ВАЖНО: `Storage::disk('printed-documents')->url()` всё равно вернёт
+        // строку — S3-драйвер собирает её из endpoint и bucket, даже когда поле
+        // `url` не задано. Не полагайтесь на «диск не выдаёт ссылок»: защищает
+        // не отсутствие URL, а приватность бакета — анонимный GET по нему даёт
+        // 403. Бакет обязан оставаться private: `mc anonymous set public` на нём
+        // мгновенно открывает все счета и УПД наружу.
+        'printed-documents' => [
+            'driver' => 's3',
+            'key' => env('PRINTED_DOCUMENTS_S3_ACCESS_KEY', 'sail'),
+            'secret' => env('PRINTED_DOCUMENTS_S3_SECRET_KEY', 'password'),
+            'region' => env('PRINTED_DOCUMENTS_S3_REGION', 'us-east-1'),
+            'bucket' => env('PRINTED_DOCUMENTS_S3_BUCKET', 'printed-documents'),
+            'endpoint' => env('PRINTED_DOCUMENTS_S3_ENDPOINT', 'http://minio:9000'),
+            'use_path_style_endpoint' => true,
+            'visibility' => 'private',
+            'throw' => true,
+        ],
+
         // Холодное хранилище архива лога шины ERP (Yandex Object Storage,
         // ледяной класс — там же, куда ночной скрипт кладёт бэкапы БД).
         // throw => true обязателен: команда удаляет строки из БД сразу после

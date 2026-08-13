@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 16.0.0
+  version: 16.1.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -7075,6 +7075,320 @@ channels:
           durable: true
           autoDelete: false
         bindingVersion: 0.3.0
+  erpInPrintedDocuments:
+    address: erp_in.printed_documents
+    title: Печатные формы документов (1С → Сайт)
+    description: >
+      Готовые PDF печатных форм для личного кабинета клиента: счета,
+      счета-фактуры,
+
+      УПД, акты сверки, договоры. Сам файл 1С кладёт в обменный бакет S3, а по
+      шине
+
+      присылает только запись о документе — как в `individual_prices.ready`.
+
+      Добавлено в v16.1.0.
+
+
+      Отдельная очередь, а не `erp_in.documents`: та обрабатывает реализации
+      одним
+
+      воркером, и первичная выгрузка печатных форм за год заблокировала бы их
+      приём.
+
+      Routing keys: `printed_document.*`
+    messages:
+      printedDocumentPublished:
+        name: printed_document.published
+        title: Печатная форма опубликована
+        summary: PDF выложен в обменный бакет, запись о документе — по шине
+        description: |
+          Один файл = одна печатная форма. `uuid` идентифицирует форму, а не
+          документ-основание, и стабилен между перевыставлениями.
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - message_id
+            - uuid
+            - type_code
+            - file_url
+            - date
+          properties:
+            event:
+              type: string
+              const: printed_document.published
+            message_id:
+              type: string
+              description: >-
+                Уникальный идентификатор сообщения. По нему сайт отбрасывает
+                дубли
+              examples:
+                - msg-pdoc-a1b2c3d4
+            timestamp:
+              type: string
+              format: date-time
+              description: Дата и время в формате ISO 8601
+              examples:
+                - '2026-03-17T12:00:00+03:00'
+            revision:
+              type: integer
+              minimum: 0
+              description: >
+                Номер версии печатной формы, монотонно растёт при каждом
+                перевыставлении.
+
+                Сообщение с ревизией не больше уже применённой отбрасывается:
+                порядок
+
+                доставки не гарантирован, а `erp_updated_at` у двух подряд
+                идущих
+
+                перевыставлений совпадает до секунды.
+              examples:
+                - 3
+            uuid:
+              allOf:
+                - type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+              description: >
+                UUID **печатной формы** в 1С — не документа-основания: у одной
+                реализации
+
+                бывают и УПД, и счёт-фактура, у каждой формы свой идентификатор.
+
+                Обязан быть стабильным между перевыставлениями: по нему сайт
+                обновляет
+
+                существующий документ. Новый `uuid` на ту же форму даст клиенту
+                вторую
+
+                копию, и валидацией схемы это не ловится.
+            type_code:
+              type: string
+              description: >
+                Код вида печатной формы. Известные сайту значения: `contract`,
+                `agreement`,
+
+                `invoice`, `tax_invoice`, `correction_invoice`, `upd`, `ukd`,
+                `waybill`,
+
+                `consignment_note`, `act`, `reconciliation_act`,
+                `specification`,
+
+                `price_list`. Неизвестный код принимается: документ показывается
+                как
+
+                «Прочее», исходный код сохраняется. Придумывать чужой код нельзя
+                —
+
+                форма уедет не в тот раздел.
+              examples:
+                - tax_invoice
+            type_name:
+              type: string
+              description: >-
+                Название вида формы как в 1С. Показывается клиенту, если код
+                неизвестен сайту
+              examples:
+                - Счёт-фактура
+            number:
+              type: string
+              description: >-
+                Номер документа-основания. Не уникален — номера повторяются
+                между организациями и годами
+              examples:
+                - 29УТ-002488
+            date:
+              type: string
+              format: date
+              description: Дата документа-основания. Ось фильтра и сортировки в кабинете
+              examples:
+                - '2026-08-12'
+            title:
+              type: string
+              description: >-
+                Готовый заголовок для показа клиенту. Если не передан — сайт
+                соберёт его из вида, номера и даты
+              examples:
+                - Счёт-фактура № 29УТ-002488 от 12.08.2026
+            file_url:
+              type: string
+              description: >
+                Ключ объекта в обменном бакете, `s3://<bucket>/<key>`. Бакет из
+                URL сайт
+
+                игнорирует и читает свой — из конфигурации диска. Файл должен
+                лежать
+
+                в бакете **до** отправки сообщения.
+              examples:
+                - >-
+                  s3://documents-exchange/2026/08/3f2504e0-4f89-11d3-9a0c-0305e82c3301.pdf
+            file_name:
+              type: string
+              description: Человекочитаемое имя файла. Основа имени при скачивании клиентом
+              examples:
+                - Счет-фактура_29УТ-002488.pdf
+            file_size:
+              type: integer
+              minimum: 0
+              examples:
+                - 184320
+            file_checksum:
+              type: string
+              pattern: ^[A-Fa-f0-9]{64}$
+              description: >-
+                SHA-256 содержимого. Позволяет пропустить повторное копирование,
+                если файл не изменился
+            mime_type:
+              type: string
+              description: Принимается только `application/pdf`
+              examples:
+                - application/pdf
+            partner_uuid:
+              type:
+                - string
+                - 'null'
+              description: UUID партнёра в 1С
+            contractor_uuid:
+              type:
+                - string
+                - 'null'
+              description: >
+                UUID контрагента в 1С. **Обязателен бизнес-правилом**: без него
+                документ
+
+                не увидит ни один клиент. В `required` не вынесен намеренно —
+                иначе
+
+                сообщение ушло бы в очередь недоставленных, а терять документ
+                нельзя.
+
+                Сохраняется всегда, связь доклеивается позже.
+            tax_id:
+              type:
+                - string
+                - 'null'
+              description: >-
+                ИНН контрагента. Резервный способ сопоставления в паре с
+                `partner_uuid`
+            organization_uuid:
+              type:
+                - string
+                - 'null'
+              description: UUID нашей организации, от имени которой проведён документ
+            base_document_kind:
+              type:
+                - string
+                - 'null'
+              enum:
+                - order
+                - shipment
+                - null
+              description: >
+                Вид документа-основания: `order` — заказ, `shipment` —
+                реализация,
+
+                `null` — форма не привязана к документу (договор, акт сверки)
+            order_uuid:
+              type:
+                - string
+                - 'null'
+              description: UUID заказа-основания в 1С
+            shipment_uuid:
+              type:
+                - string
+                - 'null'
+              description: UUID реализации-основания в 1С
+            erp_created_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: Когда форма сформирована в 1С
+            erp_updated_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: Когда форма последний раз переформирована в 1С
+      printedDocumentDeleted:
+        name: printed_document.deleted
+        title: Печатная форма отозвана
+        summary: Документ помечен на удаление или отменён в 1С
+        description: |
+          Мягкое удаление: запись пропадает из кабинета, файл на диске остаётся.
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - message_id
+            - uuid
+          properties:
+            event:
+              type: string
+              const: printed_document.deleted
+            message_id:
+              type: string
+            timestamp:
+              type: string
+              format: date-time
+              description: Дата и время в формате ISO 8601
+              examples:
+                - '2026-03-17T12:00:00+03:00'
+            revision:
+              type: integer
+              minimum: 0
+              description: >-
+                Ревизия отзыва. Без неё обогнавшее удаление стёрло бы уже
+                применённую свежую версию формы
+            uuid:
+              allOf:
+                - type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+              description: UUID печатной формы, тот же, что в `printed_document.published`
+            reason:
+              type:
+                - string
+                - 'null'
+              description: >-
+                Причина отзыва. Показывается сотрудникам, в логике сайта не
+                участвует
+              examples:
+                - Документ помечен на удаление в 1С
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.printed_documents
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
   erpInCatalog:
     address: erp_in.catalog
     title: Каталог товаров (1С → Сайт)
@@ -10272,6 +10586,57 @@ operations:
     tags:
       - name: US-14
       - name: prices
+  receivePrintedDocumentPublished:
+    title: Публикация печатной формы
+    summary: 1С сообщает, что PDF печатной формы выложен в обменный бакет
+    description: |
+      Обработчик: `HandlePrintedDocumentPublished`
+
+      Файл 1С кладёт в обменный бакет **до** отправки сообщения, ключом
+      `<ГГГГ>/<ММ>/<uuid>.pdf`. Сайт переносит PDF в собственное приватное
+      хранилище и удаляет исходник — обменный бакет живёт 7 дней.
+
+      `uuid` — идентификатор **печатной формы**, а не документа-основания:
+      у одной реализации бывают и УПД, и счёт-фактура, у каждой формы свой.
+      Он обязан быть стабильным между перевыставлениями: по нему сайт обновляет
+      существующий документ. Повторное сообщение с тем же `uuid` и большей
+      `revision` перезаписывает и запись, и файл — клиент всегда видит одну
+      актуальную версию.
+
+      Неизвестный сайту `type_code` не отбрасывается: документ показывается
+      как «Прочее», исходный код сохраняется.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPrintedDocuments'
+    messages:
+      - $ref: '#/channels/erpInPrintedDocuments/messages/printedDocumentPublished'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: DOC
+      - name: documents
+  receivePrintedDocumentDeleted:
+    title: Отзыв печатной формы
+    summary: 1С отзывает печатную форму — документ помечен на удаление или отменён
+    description: |
+      Обработчик: `HandlePrintedDocumentDeleted`
+
+      Мягкое удаление: запись помечается удалённой и пропадает из кабинета,
+      файл на диске остаётся. Снятие пометки удаления в 1С — обычная операция,
+      а перезалить PDF заново неоткуда: 1С печатные формы не хранит.
+      Физически файл сносит команда `documents:prune` по своей ретенции.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPrintedDocuments'
+    messages:
+      - $ref: '#/channels/erpInPrintedDocuments/messages/printedDocumentDeleted'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: DOC
+      - name: documents
   receiveCategoryCreated:
     title: Создание категории
     summary: 1С создаёт категорию (вид номенклатуры)
@@ -18288,6 +18653,280 @@ components:
             description: Дата и время в формате ISO 8601
             examples:
               - '2026-03-17T12:00:00+03:00'
+    PrintedDocumentPublished:
+      name: printed_document.published
+      title: Печатная форма опубликована
+      summary: PDF выложен в обменный бакет, запись о документе — по шине
+      description: |
+        Один файл = одна печатная форма. `uuid` идентифицирует форму, а не
+        документ-основание, и стабилен между перевыставлениями.
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - message_id
+          - uuid
+          - type_code
+          - file_url
+          - date
+        properties:
+          event:
+            type: string
+            const: printed_document.published
+          message_id:
+            type: string
+            description: Уникальный идентификатор сообщения. По нему сайт отбрасывает дубли
+            examples:
+              - msg-pdoc-a1b2c3d4
+          timestamp:
+            type: string
+            format: date-time
+            description: Дата и время в формате ISO 8601
+            examples:
+              - '2026-03-17T12:00:00+03:00'
+          revision:
+            type: integer
+            minimum: 0
+            description: >
+              Номер версии печатной формы, монотонно растёт при каждом
+              перевыставлении.
+
+              Сообщение с ревизией не больше уже применённой отбрасывается:
+              порядок
+
+              доставки не гарантирован, а `erp_updated_at` у двух подряд идущих
+
+              перевыставлений совпадает до секунды.
+            examples:
+              - 3
+          uuid:
+            allOf:
+              - type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+            description: >
+              UUID **печатной формы** в 1С — не документа-основания: у одной
+              реализации
+
+              бывают и УПД, и счёт-фактура, у каждой формы свой идентификатор.
+
+              Обязан быть стабильным между перевыставлениями: по нему сайт
+              обновляет
+
+              существующий документ. Новый `uuid` на ту же форму даст клиенту
+              вторую
+
+              копию, и валидацией схемы это не ловится.
+          type_code:
+            type: string
+            description: >
+              Код вида печатной формы. Известные сайту значения: `contract`,
+              `agreement`,
+
+              `invoice`, `tax_invoice`, `correction_invoice`, `upd`, `ukd`,
+              `waybill`,
+
+              `consignment_note`, `act`, `reconciliation_act`, `specification`,
+
+              `price_list`. Неизвестный код принимается: документ показывается
+              как
+
+              «Прочее», исходный код сохраняется. Придумывать чужой код нельзя —
+
+              форма уедет не в тот раздел.
+            examples:
+              - tax_invoice
+          type_name:
+            type: string
+            description: >-
+              Название вида формы как в 1С. Показывается клиенту, если код
+              неизвестен сайту
+            examples:
+              - Счёт-фактура
+          number:
+            type: string
+            description: >-
+              Номер документа-основания. Не уникален — номера повторяются между
+              организациями и годами
+            examples:
+              - 29УТ-002488
+          date:
+            type: string
+            format: date
+            description: Дата документа-основания. Ось фильтра и сортировки в кабинете
+            examples:
+              - '2026-08-12'
+          title:
+            type: string
+            description: >-
+              Готовый заголовок для показа клиенту. Если не передан — сайт
+              соберёт его из вида, номера и даты
+            examples:
+              - Счёт-фактура № 29УТ-002488 от 12.08.2026
+          file_url:
+            type: string
+            description: >
+              Ключ объекта в обменном бакете, `s3://<bucket>/<key>`. Бакет из
+              URL сайт
+
+              игнорирует и читает свой — из конфигурации диска. Файл должен
+              лежать
+
+              в бакете **до** отправки сообщения.
+            examples:
+              - >-
+                s3://documents-exchange/2026/08/3f2504e0-4f89-11d3-9a0c-0305e82c3301.pdf
+          file_name:
+            type: string
+            description: Человекочитаемое имя файла. Основа имени при скачивании клиентом
+            examples:
+              - Счет-фактура_29УТ-002488.pdf
+          file_size:
+            type: integer
+            minimum: 0
+            examples:
+              - 184320
+          file_checksum:
+            type: string
+            pattern: ^[A-Fa-f0-9]{64}$
+            description: >-
+              SHA-256 содержимого. Позволяет пропустить повторное копирование,
+              если файл не изменился
+          mime_type:
+            type: string
+            description: Принимается только `application/pdf`
+            examples:
+              - application/pdf
+          partner_uuid:
+            type:
+              - string
+              - 'null'
+            description: UUID партнёра в 1С
+          contractor_uuid:
+            type:
+              - string
+              - 'null'
+            description: >
+              UUID контрагента в 1С. **Обязателен бизнес-правилом**: без него
+              документ
+
+              не увидит ни один клиент. В `required` не вынесен намеренно —
+              иначе
+
+              сообщение ушло бы в очередь недоставленных, а терять документ
+              нельзя.
+
+              Сохраняется всегда, связь доклеивается позже.
+          tax_id:
+            type:
+              - string
+              - 'null'
+            description: >-
+              ИНН контрагента. Резервный способ сопоставления в паре с
+              `partner_uuid`
+          organization_uuid:
+            type:
+              - string
+              - 'null'
+            description: UUID нашей организации, от имени которой проведён документ
+          base_document_kind:
+            type:
+              - string
+              - 'null'
+            enum:
+              - order
+              - shipment
+              - null
+            description: |
+              Вид документа-основания: `order` — заказ, `shipment` — реализация,
+              `null` — форма не привязана к документу (договор, акт сверки)
+          order_uuid:
+            type:
+              - string
+              - 'null'
+            description: UUID заказа-основания в 1С
+          shipment_uuid:
+            type:
+              - string
+              - 'null'
+            description: UUID реализации-основания в 1С
+          erp_created_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: Когда форма сформирована в 1С
+          erp_updated_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: Когда форма последний раз переформирована в 1С
+    PrintedDocumentDeleted:
+      name: printed_document.deleted
+      title: Печатная форма отозвана
+      summary: Документ помечен на удаление или отменён в 1С
+      description: |
+        Мягкое удаление: запись пропадает из кабинета, файл на диске остаётся.
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - message_id
+          - uuid
+        properties:
+          event:
+            type: string
+            const: printed_document.deleted
+          message_id:
+            type: string
+          timestamp:
+            type: string
+            format: date-time
+            description: Дата и время в формате ISO 8601
+            examples:
+              - '2026-03-17T12:00:00+03:00'
+          revision:
+            type: integer
+            minimum: 0
+            description: >-
+              Ревизия отзыва. Без неё обогнавшее удаление стёрло бы уже
+              применённую свежую версию формы
+          uuid:
+            allOf:
+              - type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+            description: UUID печатной формы, тот же, что в `printed_document.published`
+          reason:
+            type:
+              - string
+              - 'null'
+            description: >-
+              Причина отзыва. Показывается сотрудникам, в логике сайта не
+              участвует
+            examples:
+              - Документ помечен на удаление в 1С
     CategoryCreated:
       name: category.created
       title: Категория создана
@@ -27123,6 +27762,248 @@ components:
           description: Дата и время в формате ISO 8601
           examples:
             - '2026-03-17T12:00:00+03:00'
+    PrintedDocumentPublishedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+        - type_code
+        - file_url
+        - date
+      properties:
+        event:
+          type: string
+          const: printed_document.published
+        message_id:
+          type: string
+          description: Уникальный идентификатор сообщения. По нему сайт отбрасывает дубли
+          examples:
+            - msg-pdoc-a1b2c3d4
+        timestamp:
+          type: string
+          format: date-time
+          description: Дата и время в формате ISO 8601
+          examples:
+            - '2026-03-17T12:00:00+03:00'
+        revision:
+          type: integer
+          minimum: 0
+          description: >
+            Номер версии печатной формы, монотонно растёт при каждом
+            перевыставлении.
+
+            Сообщение с ревизией не больше уже применённой отбрасывается:
+            порядок
+
+            доставки не гарантирован, а `erp_updated_at` у двух подряд идущих
+
+            перевыставлений совпадает до секунды.
+          examples:
+            - 3
+        uuid:
+          allOf:
+            - type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+          description: >
+            UUID **печатной формы** в 1С — не документа-основания: у одной
+            реализации
+
+            бывают и УПД, и счёт-фактура, у каждой формы свой идентификатор.
+
+            Обязан быть стабильным между перевыставлениями: по нему сайт
+            обновляет
+
+            существующий документ. Новый `uuid` на ту же форму даст клиенту
+            вторую
+
+            копию, и валидацией схемы это не ловится.
+        type_code:
+          type: string
+          description: >
+            Код вида печатной формы. Известные сайту значения: `contract`,
+            `agreement`,
+
+            `invoice`, `tax_invoice`, `correction_invoice`, `upd`, `ukd`,
+            `waybill`,
+
+            `consignment_note`, `act`, `reconciliation_act`, `specification`,
+
+            `price_list`. Неизвестный код принимается: документ показывается как
+
+            «Прочее», исходный код сохраняется. Придумывать чужой код нельзя —
+
+            форма уедет не в тот раздел.
+          examples:
+            - tax_invoice
+        type_name:
+          type: string
+          description: >-
+            Название вида формы как в 1С. Показывается клиенту, если код
+            неизвестен сайту
+          examples:
+            - Счёт-фактура
+        number:
+          type: string
+          description: >-
+            Номер документа-основания. Не уникален — номера повторяются между
+            организациями и годами
+          examples:
+            - 29УТ-002488
+        date:
+          type: string
+          format: date
+          description: Дата документа-основания. Ось фильтра и сортировки в кабинете
+          examples:
+            - '2026-08-12'
+        title:
+          type: string
+          description: >-
+            Готовый заголовок для показа клиенту. Если не передан — сайт соберёт
+            его из вида, номера и даты
+          examples:
+            - Счёт-фактура № 29УТ-002488 от 12.08.2026
+        file_url:
+          type: string
+          description: >
+            Ключ объекта в обменном бакете, `s3://<bucket>/<key>`. Бакет из URL
+            сайт
+
+            игнорирует и читает свой — из конфигурации диска. Файл должен лежать
+
+            в бакете **до** отправки сообщения.
+          examples:
+            - >-
+              s3://documents-exchange/2026/08/3f2504e0-4f89-11d3-9a0c-0305e82c3301.pdf
+        file_name:
+          type: string
+          description: Человекочитаемое имя файла. Основа имени при скачивании клиентом
+          examples:
+            - Счет-фактура_29УТ-002488.pdf
+        file_size:
+          type: integer
+          minimum: 0
+          examples:
+            - 184320
+        file_checksum:
+          type: string
+          pattern: ^[A-Fa-f0-9]{64}$
+          description: >-
+            SHA-256 содержимого. Позволяет пропустить повторное копирование,
+            если файл не изменился
+        mime_type:
+          type: string
+          description: Принимается только `application/pdf`
+          examples:
+            - application/pdf
+        partner_uuid:
+          type:
+            - string
+            - 'null'
+          description: UUID партнёра в 1С
+        contractor_uuid:
+          type:
+            - string
+            - 'null'
+          description: >
+            UUID контрагента в 1С. **Обязателен бизнес-правилом**: без него
+            документ
+
+            не увидит ни один клиент. В `required` не вынесен намеренно — иначе
+
+            сообщение ушло бы в очередь недоставленных, а терять документ
+            нельзя.
+
+            Сохраняется всегда, связь доклеивается позже.
+        tax_id:
+          type:
+            - string
+            - 'null'
+          description: >-
+            ИНН контрагента. Резервный способ сопоставления в паре с
+            `partner_uuid`
+        organization_uuid:
+          type:
+            - string
+            - 'null'
+          description: UUID нашей организации, от имени которой проведён документ
+        base_document_kind:
+          type:
+            - string
+            - 'null'
+          enum:
+            - order
+            - shipment
+            - null
+          description: |
+            Вид документа-основания: `order` — заказ, `shipment` — реализация,
+            `null` — форма не привязана к документу (договор, акт сверки)
+        order_uuid:
+          type:
+            - string
+            - 'null'
+          description: UUID заказа-основания в 1С
+        shipment_uuid:
+          type:
+            - string
+            - 'null'
+          description: UUID реализации-основания в 1С
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: Когда форма сформирована в 1С
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: Когда форма последний раз переформирована в 1С
+    PrintedDocumentDeletedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+      properties:
+        event:
+          type: string
+          const: printed_document.deleted
+        message_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          description: Дата и время в формате ISO 8601
+          examples:
+            - '2026-03-17T12:00:00+03:00'
+        revision:
+          type: integer
+          minimum: 0
+          description: >-
+            Ревизия отзыва. Без неё обогнавшее удаление стёрло бы уже
+            применённую свежую версию формы
+        uuid:
+          allOf:
+            - type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+          description: UUID печатной формы, тот же, что в `printed_document.published`
+        reason:
+          type:
+            - string
+            - 'null'
+          description: >-
+            Причина отзыва. Показывается сотрудникам, в логике сайта не
+            участвует
+          examples:
+            - Документ помечен на удаление в 1С
     CategoryPayload:
       type: object
       required:

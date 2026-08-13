@@ -79,6 +79,10 @@ class SetupRabbitMQTopology extends Command
         // первичная выгрузка — 224 632 движения за год, и она не должна
         // заблокировать приём платежей, балансов и реализаций.
         'erp_in.settlements' => ['settlement.*', 'payment_schedule.*'],
+        // v16.1.0: печатные формы документов. Отдельно от erp_in.documents
+        // намеренно — та обрабатывает реализации одним воркером, и первичная
+        // выгрузка печатных форм за год заблокировала бы их приём.
+        'erp_in.printed_documents' => ['printed_document.*'],
         'erp_in.catalog' => ['category.*', 'product.*'],
         'erp_in.promotions' => ['promotion.*'],
     ];
@@ -116,6 +120,7 @@ class SetupRabbitMQTopology extends Command
     private const INTERNAL_QUEUES = [
         'erp_publish',   // Publish*ToErpJob (Contractor/User/Order/Return)
         'catalog-media', // DownloadProductMediaJob
+        'documents',     // StorePrintedDocumentFile (v16.1.0)
         'default',       // safety-net для job-ов без явного onQueue()
     ];
 

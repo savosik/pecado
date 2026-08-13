@@ -27,6 +27,7 @@ class SearchPresetController extends Controller
         'media',
         'carts-list',
         'product-exports',
+        'documents',
     ];
 
     public function index(Request $request, string $section): JsonResponse

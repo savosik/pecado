@@ -234,6 +234,20 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/shipments/{shipment}/items/export', [ShipmentController::class, 'exportItems'])->name('shipments.items.export');
     Route::get('/shipments/{shipment}', [ShipmentController::class, 'show'])->name('shipments.show');
 
+    // Документы (печатные формы из 1С). Только чтение и скачивание: формы рисует
+    // 1С, сайт их не редактирует и не генерирует. Раздел закрыт флагом
+    // documents.enabled — приём из 1С при этом работает всегда.
+    // export строго до /{document}, иначе «export» уйдёт в биндинг модели.
+    Route::middleware(\App\Http\Middleware\EnsureDocumentsEnabled::class)->group(function () {
+        Route::get('/documents', [\App\Http\Controllers\User\PrintedDocumentController::class, 'index'])
+            ->name('documents.index');
+        Route::get('/documents/export', [\App\Http\Controllers\User\PrintedDocumentController::class, 'export'])
+            ->name('documents.export');
+        Route::get('/documents/{document}/download', [\App\Http\Controllers\User\PrintedDocumentController::class, 'download'])
+            ->name('documents.download')
+            ->whereNumber('document');
+    });
+
     // Оплаты (платёжные документы из 1С). Только чтение: платёж заводит 1С.
     // Раздел закрыт флагом cabinet.finance_enabled, пока цифры долга не сверены
     // с 1С: остаток по документам систематически больше реальной задолженности.

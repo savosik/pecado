@@ -34,6 +34,8 @@ use App\Services\Erp\Handlers\HandlePaymentDeleted;
 use App\Services\Erp\Handlers\HandlePaymentScheduleUpdated;
 use App\Services\Erp\Handlers\HandlePaymentUpdated;
 use App\Services\Erp\Handlers\HandlePriceUpdated;
+use App\Services\Erp\Handlers\HandlePrintedDocumentDeleted;
+use App\Services\Erp\Handlers\HandlePrintedDocumentPublished;
 use App\Services\Erp\Handlers\HandleProductCreated;
 use App\Services\Erp\Handlers\HandleProductUpdated;
 use App\Services\Erp\Handlers\HandlePromotionCreated;
@@ -125,6 +127,9 @@ class ErpIncomingJob extends BaseJob
         'settlement.opening_balance' => HandleSettlementOpeningBalance::class,
         'settlement.checkpoint' => HandleSettlementCheckpoint::class,
         'payment_schedule.updated' => HandlePaymentScheduleUpdated::class,
+        // DOC v16.1.0: печатные формы документов для личного кабинета
+        'printed_document.published' => HandlePrintedDocumentPublished::class,
+        'printed_document.deleted' => HandlePrintedDocumentDeleted::class,
     ];
 
     /**

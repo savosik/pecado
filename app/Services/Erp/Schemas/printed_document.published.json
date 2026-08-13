@@ -1,0 +1,124 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "printed_document.published",
+    "title": "printed_document.published (1С → Сайт)",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string",
+            "description": "Тип события. Всегда «printed_document.published».",
+            "const": "printed_document.published"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Уникальный идентификатор сообщения. По нему сайт отбрасывает дубли."
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Номер версии печатной формы, монотонно растёт при каждом перевыставлении. Сообщение с ревизией не больше применённой отбрасывается: порядок доставки не гарантирован, а erp_updated_at у двух подряд идущих перевыставлений совпадает до секунды."
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID печатной формы в 1С. Обязан быть СТАБИЛЬНЫМ между перевыставлениями: по нему сайт обновляет существующий документ. Новый uuid на ту же форму даст клиенту вторую копию, и валидацией это не ловится."
+        },
+        "type_code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Код вида печатной формы. Неизвестный сайту код принимается и показывается как «Прочее» — документ не теряется."
+        },
+        "type_name": {
+            "type": "string",
+            "description": "Название вида формы как в 1С. Показывается клиенту, если код неизвестен сайту."
+        },
+        "number": {
+            "type": "string",
+            "description": "Номер документа-основания. Не уникален: номера повторяются между организациями и годами."
+        },
+        "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Дата документа-основания. Ось фильтра и сортировки в кабинете."
+        },
+        "title": {
+            "type": "string",
+            "description": "Готовый заголовок для показа клиенту. Если не передан, сайт соберёт его из вида, номера и даты."
+        },
+        "file_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ключ объекта в обменном бакете, s3://<bucket>/<key>. Бакет из URL сайт игнорирует и читает свой — из конфигурации диска."
+        },
+        "file_name": {
+            "type": "string",
+            "description": "Человекочитаемое имя файла. Основа имени при скачивании клиентом."
+        },
+        "file_size": {
+            "type": "integer",
+            "minimum": 0
+        },
+        "file_checksum": {
+            "type": "string",
+            "pattern": "^[A-Fa-f0-9]{64}$",
+            "description": "SHA-256 содержимого файла. Позволяет пропустить повторное копирование, если файл не изменился."
+        },
+        "mime_type": {
+            "type": "string",
+            "description": "MIME-тип файла. Принимается только application/pdf."
+        },
+        "partner_uuid": {
+            "type": ["string", "null"],
+            "description": "UUID партнёра в 1С."
+        },
+        "contractor_uuid": {
+            "type": ["string", "null"],
+            "description": "UUID контрагента в 1С. Обязателен бизнес-правилом: без него документ не увидит ни один клиент. В required не вынесен намеренно — иначе документ ушёл бы в очередь недоставленных, а терять его нельзя. Сохраняется всегда, связь доклеивается позже."
+        },
+        "tax_id": {
+            "type": ["string", "null"],
+            "description": "ИНН контрагента. Резервный способ сопоставления в паре с partner_uuid."
+        },
+        "organization_uuid": {
+            "type": ["string", "null"],
+            "description": "UUID нашей организации, от имени которой проведён документ."
+        },
+        "base_document_kind": {
+            "type": ["string", "null"],
+            "description": "Вид документа-основания: 'order' — заказ, 'shipment' — реализация, null — форма не привязана к документу (договор, акт сверки).",
+            "enum": ["order", "shipment", null]
+        },
+        "order_uuid": {
+            "type": ["string", "null"],
+            "description": "UUID заказа-основания в 1С."
+        },
+        "shipment_uuid": {
+            "type": ["string", "null"],
+            "description": "UUID реализации-основания в 1С."
+        },
+        "erp_created_at": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Когда форма сформирована в 1С."
+        },
+        "erp_updated_at": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Когда форма последний раз переформирована в 1С."
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "message_id",
+        "uuid",
+        "type_code",
+        "file_url",
+        "date"
+    ]
+}

@@ -178,6 +178,8 @@ services:
       /usr/bin/mc mb --ignore-existing myminio/pecado;
       /usr/bin/mc anonymous set public myminio/pecado;
       /usr/bin/mc mb --ignore-existing myminio/prices-exchange;
+      /usr/bin/mc mb --ignore-existing myminio/documents-exchange;
+      /usr/bin/mc mb --ignore-existing myminio/printed-documents;
       exit 0;
       "
     networks:

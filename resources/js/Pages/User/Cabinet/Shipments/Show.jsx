@@ -1,6 +1,6 @@
 import { Box, Flex, HStack, VStack, Text, Badge, Card, Table, Separator, SimpleGrid, Image } from '@chakra-ui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { LuArrowLeft, LuPackage, LuShoppingBag, LuTriangleAlert, LuMapPin, LuMessageSquare, LuInfo, LuTruck, LuClock, LuFileSpreadsheet } from 'react-icons/lu';
+import { LuArrowLeft, LuPackage, LuShoppingBag, LuTriangleAlert, LuMapPin, LuMessageSquare, LuInfo, LuTruck, LuClock, LuFileSpreadsheet, LuFileText } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Tooltip } from '@/components/ui/tooltip';
 import PaymentScheduleBlock from '@/components/payments/PaymentScheduleBlock';
@@ -38,7 +38,8 @@ const PAYMENT_STATUS_COLORS = {
 };
 
 export default function ShipmentShow({ shipment, related_orders, overdue_detail }) {
-    const { currency } = usePage().props;
+    const { currency, config } = usePage().props;
+    const documentsEnabled = !!config?.documents_enabled;
     const currencySymbol = currency?.symbol ?? '₽';
 
     const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -58,14 +59,26 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
             <Head title={`Отгрузка ${shipment.number} — Pecado`} />
 
             {/* Назад */}
-            <Box mb="4">
+            <Flex mb="4" gap="4" align="center" justify="space-between" wrap="wrap">
                 <Link href="/cabinet/shipments">
                     <HStack gap="1" color="pecado.600" _hover={{ textDecoration: 'underline' }} fontSize="sm">
                         <LuArrowLeft size={14} />
                         <Text>К списку отгрузок</Text>
                     </HStack>
                 </Link>
-            </Box>
+
+                {/* Печатные формы по этой отгрузке: УПД, счёт-фактура, накладная.
+                    Ссылка ведёт в раздел с уже наложенным отбором — карточки
+                    документа у нас нет, показывать нечего кроме файла. */}
+                {documentsEnabled && (
+                    <Link href={`/cabinet/documents?shipment_id=${shipment.id}`}>
+                        <HStack gap="1" color="pecado.600" _hover={{ textDecoration: 'underline' }} fontSize="sm">
+                            <LuFileText size={14} />
+                            <Text>Документы по отгрузке</Text>
+                        </HStack>
+                    </Link>
+                )}
+            </Flex>
 
             {/* Основная информация */}
             <Card.Root bg="bg" mb={6} borderRadius="xl" border="1px solid" borderColor="border.muted">

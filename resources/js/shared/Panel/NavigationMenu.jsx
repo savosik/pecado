@@ -1,5 +1,5 @@
 import { Accordion, HStack, Text, Icon, VStack } from '@chakra-ui/react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { usePanel } from './PanelContext';
 import { useNavigation } from './useNavigation';
 import { usePermission } from './usePermission';
@@ -7,16 +7,25 @@ import { usePermission } from './usePermission';
 /**
  * NavigationMenu — навигация панели. Фильтрует пункты по правам пользователя:
  * пункт без права виден всем, группа без доступных пунктов скрывается целиком.
+ *
+ * Кроме права пункт может требовать включённой фичи (`feature`): ключ ищется
+ * в `config` из общих пропсов Inertia. Право отвечает на вопрос «можно ли этому
+ * сотруднику», фича — «работает ли раздел вообще»; смешивать их в одном признаке
+ * значит выдавать право там, где нужен рубильник.
  */
 export const NavigationMenu = ({ onItemClick, isCollapsed = false }) => {
     const { menuConfig } = usePanel();
     const { isActive, getActiveGroups } = useNavigation();
     const { can } = usePermission();
+    const { config = {} } = usePage().props;
 
     const filteredGroups = menuConfig
         .map((group) => ({
             ...group,
-            items: group.items.filter((item) => !item.permission || can(item.permission)),
+            items: group.items.filter((item) => (
+                (!item.permission || can(item.permission))
+                && (!item.feature || Boolean(config[item.feature]))
+            )),
         }))
         .filter((group) => group.items.length > 0);
 

@@ -1,0 +1,41 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "printed_document.deleted",
+    "title": "printed_document.deleted (1С → Сайт)",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string",
+            "description": "Тип события. Всегда «printed_document.deleted».",
+            "const": "printed_document.deleted"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Ревизия отзыва. Без неё обогнавшее удаление стёрло бы уже применённую свежую версию формы."
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID печатной формы, тот же, что в printed_document.published."
+        },
+        "reason": {
+            "type": ["string", "null"],
+            "description": "Причина отзыва. Показывается сотрудникам, в логике сайта не участвует."
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "message_id",
+        "uuid"
+    ]
+}

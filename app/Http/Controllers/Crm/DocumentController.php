@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Crm;
 
 use App\Enums\Crm\CrmScope;
 use App\Enums\OrderStatus;
+use App\Enums\PrintedDocumentType;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -11,6 +12,7 @@ use App\Models\Organization;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use App\Models\PersonalManager;
+use App\Models\PrintedDocument;
 use App\Models\Product;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
@@ -28,6 +30,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -555,6 +558,253 @@ class DocumentController extends CrmController
             'Реализации',
             fn (array $ids): array => $this->shipmentItemRows($ids, $productIds),
         );
+    }
+
+    /**
+     * Журнал печатных форм документов (v16.1.0).
+     *
+     * Менеджеру раздел нужен раньше клиента: пока идёт первичная выгрузка, именно
+     * здесь видно, что 1С прислала на самом деле. Поэтому в отличие от кабинета
+     * тут показываются и документы с проблемным файлом, и документы без контрагента —
+     * это и есть диагностика обмена.
+     */
+    public function printedDocuments(Request $request): Response
+    {
+        abort_unless((bool) config('documents.crm_enabled'), 404);
+
+        $actor = $this->crmActor($request);
+        $clients = $this->visibleClients($request, $actor);
+        $search = $this->search($request);
+
+        $query = $this->printedDocumentsQuery($request, $clients, $search)
+            ->with([
+                'user:id,name,erp_name,email',
+                'company:id,name',
+                'organization:id,name,is_stub',
+                'order:id,number,erp_number',
+                'shipment:id,number,erp_number',
+            ]);
+
+        [$sortBy, $sortOrder] = $this->printedDocumentsSort($request);
+        $perPage = min(max((int) $request->input('per_page', 15), 5), 100);
+
+        $documents = $query->orderBy($sortBy, $sortOrder)->paginate($perPage)->withQueryString();
+
+        $documents->getCollection()->transform(fn (PrintedDocument $document): array => [
+            'id' => (int) $document->getKey(),
+            'title' => $document->display_title,
+            'type' => $document->type->value,
+            'type_label' => $document->type_label,
+            'type_color' => $document->type->color(),
+            'number' => $document->number,
+            'date_label' => $document->date?->format('d.m.Y'),
+            'file_status' => $document->file_status,
+            'file_status_label' => PrintedDocument::FILE_STATUS_LABELS[$document->file_status] ?? $document->file_status,
+            'size_label' => $document->size_bytes === null
+                ? null
+                : round($document->size_bytes / 1024 / 1024, 2).' МБ',
+            'client' => $document->user === null ? null : [
+                'id' => (int) $document->user->getKey(),
+                'name' => $document->user->display_name,
+                'url' => route('crm.clients.show', $document->user->getKey()),
+            ],
+            'company' => $document->company?->getAttribute('name'),
+            'organization' => $document->organization === null ? null : [
+                'name' => $document->organization->getAttribute('name'),
+                'is_stub' => (bool) $document->organization->getAttribute('is_stub'),
+            ],
+            'base' => $this->printedDocumentBase($document),
+            'download_url' => $document->file_status === PrintedDocument::FILE_STORED
+                ? route('crm.printed-documents.download', $document->getKey())
+                : null,
+        ]);
+
+        return Inertia::render('Crm/Pages/Documents/PrintedDocuments', array_merge(
+            ['documents' => $documents],
+            $this->listOptions($request, 'printed_documents', $clients, $sortBy, $sortOrder, $perPage, $search),
+            [
+                'types' => PrintedDocumentType::options(),
+                'fileStatuses' => array_map(
+                    static fn (string $value, string $label): array => ['value' => $value, 'label' => $label],
+                    array_keys(PrintedDocument::FILE_STATUS_LABELS),
+                    array_values(PrintedDocument::FILE_STATUS_LABELS),
+                ),
+            ],
+        ));
+    }
+
+    public function printedDocumentsExport(Request $request, SimpleXlsxExporter $exporter): StreamedResponse
+    {
+        abort_unless((bool) config('documents.crm_enabled'), 404);
+
+        $actor = $this->crmActor($request);
+        $clients = $this->visibleClients($request, $actor);
+        [$sortBy, $sortOrder] = $this->printedDocumentsSort($request);
+
+        $query = $this->printedDocumentsQuery($request, $clients, $this->search($request))
+            ->with(['user:id,name,erp_name,email', 'company:id,name,tax_id', 'organization:id,name'])
+            ->orderBy($sortBy, $sortOrder);
+
+        $headers = ['Тип', 'Номер', 'Дата', 'Клиент', 'Контрагент', 'ИНН', 'Продавец', 'Основание', 'Файл', 'Размер, МБ'];
+
+        $rows = (function () use ($query): \Generator {
+            foreach ($query->cursor() as $document) {
+                yield [
+                    $document->type_label,
+                    $document->number,
+                    $document->date?->format('d.m.Y'),
+                    $document->user?->display_name,
+                    $document->company?->getAttribute('name'),
+                    $document->company?->getAttribute('tax_id'),
+                    $document->organization?->getAttribute('name'),
+                    $this->printedDocumentBase($document)['label'] ?? null,
+                    PrintedDocument::FILE_STATUS_LABELS[$document->file_status] ?? $document->file_status,
+                    $document->size_bytes === null ? null : round($document->size_bytes / 1024 / 1024, 2),
+                ];
+            }
+        })();
+
+        return $exporter->stream(
+            'crm-printed-documents-'.now()->format('Y-m-d-His'),
+            $headers,
+            $rows,
+            'Документы',
+        );
+    }
+
+    /**
+     * Скачивание печатной формы менеджером.
+     *
+     * Файл идёт через приложение, а не прямой ссылкой на диск: иначе счёт-фактура
+     * по угаданной ссылке утекла бы мимо скоупа партнёров. Та же причина, что
+     * у Crm\AttachmentController.
+     *
+     * Storage::url() не подходит: строку он вернёт, но бакет приватный и отдаст
+     * по ней 403 — получилась бы кнопка, которая всегда не работает.
+     */
+    public function printedDocumentDownload(Request $request, PrintedDocument $printedDocument): StreamedResponse
+    {
+        abort_unless((bool) config('documents.crm_enabled'), 404);
+
+        $actor = $this->crmActor($request);
+        $clients = $this->visibleClients($request, $actor);
+
+        $visible = PrintedDocument::query()
+            ->whereKey($printedDocument->getKey())
+            ->where(function (Builder $inner) use ($clients, $request): void {
+                $inner->whereIn('user_id', (clone $clients));
+
+                // Документ без партнёра — обмен ещё не сопоставил его с клиентом.
+                // Такие видит только тот, кому доступен весь отдел: иначе строка
+                // «ничья» была бы доступна любому менеджеру.
+                if ($this->seesDepartment($request)) {
+                    $inner->orWhereNull('user_id');
+                }
+            })
+            ->exists();
+
+        abort_unless($visible, 404);
+        abort_unless($printedDocument->file_status === PrintedDocument::FILE_STORED, 404, 'Файл ещё не готов');
+
+        $disk = Storage::disk($printedDocument->disk);
+
+        abort_unless($printedDocument->path && $disk->exists($printedDocument->path), 404, 'Файл не найден');
+
+        return $disk->download($printedDocument->path, $printedDocument->download_name);
+    }
+
+    /**
+     * Отбор печатных форм для журнала и выгрузки — один на оба.
+     *
+     * @param  Builder<User>  $clients
+     * @return Builder<PrintedDocument>
+     */
+    private function printedDocumentsQuery(Request $request, Builder $clients, ?string $search): Builder
+    {
+        $query = PrintedDocument::query()->where(function (Builder $inner) use ($clients, $request): void {
+            $inner->whereIn('user_id', (clone $clients));
+
+            if ($this->seesDepartment($request)) {
+                $inner->orWhereNull('user_id');
+            }
+        });
+
+        if ($search !== null) {
+            $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $search).'%';
+
+            $query->where(function (Builder $inner) use ($like): void {
+                $inner->where('number', 'like', $like)
+                    ->orWhere('title', 'like', $like)
+                    ->orWhere('erp_type_name', 'like', $like);
+            });
+        }
+
+        $types = $this->values($request, 'types');
+
+        if ($types !== []) {
+            $query->whereIn('type', array_intersect($types, PrintedDocumentType::values()));
+        }
+
+        $fileStatuses = $this->values($request, 'file_statuses');
+
+        if ($fileStatuses !== []) {
+            $query->whereIn('file_status', array_intersect($fileStatuses, array_keys(PrintedDocument::FILE_STATUS_LABELS)));
+        }
+
+        $this->applyIdFilter($query, 'user_id', $this->values($request, 'partner_ids'));
+        $this->applyIdFilter($query, 'company_id', $this->values($request, 'company_ids'));
+        $this->applyIdFilter($query, 'organization_id', $this->values($request, 'organization_ids'));
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('date', '>=', $request->input('date_from'));
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('date', '<=', $request->input('date_to'));
+        }
+
+        return $query;
+    }
+
+    /**
+     * Своя сортировка: общий sort() умеет `erp_created_at` и суммы, а печатную
+     * форму ищут по дате документа и номеру.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function printedDocumentsSort(Request $request): array
+    {
+        $allowed = ['date', 'number', 'type', 'id'];
+
+        $sortBy = in_array($request->input('sort_by'), $allowed, true)
+            ? (string) $request->input('sort_by')
+            : 'date';
+
+        return [$sortBy, $request->input('sort_order') === 'asc' ? 'asc' : 'desc'];
+    }
+
+    /**
+     * Документ-основание печатной формы для показа в списке.
+     *
+     * @return array{label: string, url: string|null}|null
+     */
+    private function printedDocumentBase(PrintedDocument $document): ?array
+    {
+        if ($document->shipment) {
+            return [
+                'label' => 'Реализация '.($document->shipment->erp_number ?: $document->shipment->number),
+                'url' => route('crm.shipments.show', $document->shipment->getKey()),
+            ];
+        }
+
+        if ($document->order) {
+            return [
+                'label' => 'Заказ '.($document->order->erp_number ?: $document->order->number),
+                'url' => route('crm.orders.show', $document->order->getKey()),
+            ];
+        }
+
+        return null;
     }
 
     /**
@@ -1122,7 +1372,7 @@ class DocumentController extends CrmController
     /**
      * Общие пропсы списков: справочники фильтров и снимок текущего отбора.
      *
-     * @param  'orders'|'shipments'  $table
+     * @param  'orders'|'shipments'|'payments'|'printed_documents'  $table
      * @param  Builder<User>  $clients  скоуп партнёров актора (уже с фильтром по менеджеру)
      * @return array<string, mixed>
      */
@@ -1275,7 +1525,7 @@ class DocumentController extends CrmController
      * Берём из самих документов, а не из списка партнёров: у РОПа партнёров
      * восемь сотен, и большинство в конкретном журнале не встречается ни разу.
      *
-     * @param  'orders'|'shipments'  $table
+     * @param  'orders'|'shipments'|'payments'|'printed_documents'  $table
      * @param  Builder<User>  $clients
      * @return list<array{id: int, name: string}>
      */
@@ -1310,7 +1560,7 @@ class DocumentController extends CrmController
     /**
      * Контрагенты — юрлица, на которые проведены документы журнала.
      *
-     * @param  'orders'|'shipments'  $table
+     * @param  'orders'|'shipments'|'payments'|'printed_documents'  $table
      * @param  Builder<User>  $clients
      * @return list<array{id: int, name: string}>
      */

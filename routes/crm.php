@@ -104,6 +104,16 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // у рядового менеджера может не быть.
         Route::get('/documents/products/search', [DocumentController::class, 'searchProducts'])
             ->name('documents.products.search');
+        // Печатные формы из 1С (v16.1.0). Отдельного права тоже нет — по той же
+        // причине, что и у журналов выше. Список и выгрузка объявлены до /{id},
+        // иначе «export» ушло бы в биндинг модели.
+        Route::get('/printed-documents', [DocumentController::class, 'printedDocuments'])
+            ->name('printed-documents.index');
+        Route::get('/printed-documents/export', [DocumentController::class, 'printedDocumentsExport'])
+            ->name('printed-documents.export');
+        Route::get('/printed-documents/{printedDocument}/download', [DocumentController::class, 'printedDocumentDownload'])
+            ->name('printed-documents.download')
+            ->whereNumber('printedDocument');
         Route::get('/orders/{order}', [DocumentController::class, 'order'])
             ->name('orders.show')
             ->whereNumber('order');

@@ -11,7 +11,7 @@ import {
     LuClock, LuUser, LuMessageSquare, LuBuilding2, LuLandmark, LuMapPin, LuTruck, LuShoppingBag,
     LuPencilLine, LuArrowRightLeft, LuChevronDown, LuChevronUp,
     LuPlus, LuMinus, LuTrendingDown, LuTrendingUp, LuCalendar, LuFileSpreadsheet,
-    LuSearch, LuStore, LuRepeat, LuShoppingCart, LuTrash2, LuTriangleAlert, LuBan, LuGift, LuSprout,
+    LuSearch, LuStore, LuRepeat, LuShoppingCart, LuTrash2, LuTriangleAlert, LuBan, LuGift, LuSprout, LuFileText,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -32,7 +32,8 @@ const SHIPMENT_STATUS_COLORS = {
 };
 
 export default function OrderShow({ order }) {
-    const { currency } = usePage().props;
+    const { currency, config } = usePage().props;
+    const documentsEnabled = !!config?.documents_enabled;
     const currencySymbol = currency?.symbol ?? '₽';
     const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -115,6 +116,17 @@ export default function OrderShow({ order }) {
                         >
                             <LuRepeat size={16} />
                             Повторить заказ
+                        </Button>
+                    )}
+                    {/* Печатные формы по этому заказу: счёт на оплату, договор.
+                        Ссылка ведёт в раздел с уже наложенным отбором — карточки
+                        документа у нас нет, показывать нечего кроме файла. */}
+                    {documentsEnabled && (
+                        <Button asChild variant="outline" size="sm">
+                            <Link href={`/cabinet/documents?order_id=${order.id}`}>
+                                <LuFileText size={16} />
+                                Документы
+                            </Link>
                         </Button>
                     )}
                     <Button asChild variant="outline" size="sm">

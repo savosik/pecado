@@ -55,6 +55,9 @@ class ErpMessageValidator
         'balance.updated' => 'balance.updated.json',
         // US-14: Индивидуальные цены
         'individual_prices.ready' => 'individual_prices.ready.json',
+        // DOC v16.1.0: печатные формы документов
+        'printed_document.published' => 'printed_document.published.json',
+        'printed_document.deleted' => 'printed_document.deleted.json',
         // US-15: Каталог
         'category.created' => 'category.created.json',
         'category.updated' => 'category.created.json', // Та же структура

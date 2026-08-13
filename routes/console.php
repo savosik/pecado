@@ -9,6 +9,13 @@ Artisan::command('inspire', function () {
 
 Schedule::command('currency:update')->daily();
 Schedule::command('app:clean-price-dumps')->dailyAt('04:00');
+// Печатные формы документов (v16.1.0): доклейка связей у форм, приехавших раньше
+// контрагента или реализации; перезапуск зависших переносов; уборка обменного
+// бакета и файлов отозванных форм.
+Schedule::command('documents:relink')->everyTenMinutes()->withoutOverlapping();
+Schedule::command('documents:reconcile')->hourly()->withoutOverlapping();
+Schedule::command('documents:clean-exchange')->dailyAt('04:10')->withoutOverlapping();
+Schedule::command('documents:prune')->dailyAt('04:20')->withoutOverlapping();
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
 Schedule::command('health:check')->everyMinute();
 Schedule::command('search:sync')->cron('0 3 */3 * *'); // каждые 3 дня в 03:00
