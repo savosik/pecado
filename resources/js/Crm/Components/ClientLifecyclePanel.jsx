@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from '@inertiajs/react';
 import {
     Badge,
@@ -35,6 +35,14 @@ export default function ClientLifecyclePanel({ clientId, lifecycle, options, loy
         reason: '',
     });
     const { data, setData, processing, errors } = form;
+
+    // Стадию меняют и чипом в шапке карточки. useForm читает начальное значение
+    // один раз, поэтому без синхронизации селект остался бы на прежней стадии,
+    // а «Сохранить статус» предлагал бы откатить только что сделанную смену.
+    useEffect(() => {
+        setData('lifecycle_status', lifecycle.status);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [lifecycle.status]);
 
     // transform, а не setData перед отправкой: setData асинхронен, и «Применить»
     // из подсказки уехало бы со старым значением селекта.

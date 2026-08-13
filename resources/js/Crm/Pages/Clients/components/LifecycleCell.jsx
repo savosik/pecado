@@ -18,8 +18,18 @@ import { toastSuccess } from '@/utils/toast';
  * @param {{status: string, label: string, color: string, hint: object|null}} lifecycle
  * @param {Array<{value: string, label: string, color: string}>} options
  * @param {boolean} canEdit — право crm-profile.edit
+ * @param {Array<string>} reloadOnly — какие props перечитать после смены. По
+ *   умолчанию список партнёров; в карточке стадия живёт в других props, и
+ *   зашитый `clients` возвращал бы пустой ответ — бейдж застывал бы на старом
+ *   значении при уже изменённом статусе.
  */
-export default function LifecycleCell({ clientId, lifecycle, options = [], canEdit }) {
+export default function LifecycleCell({
+    clientId,
+    lifecycle,
+    options = [],
+    canEdit,
+    reloadOnly = ['clients'],
+}) {
     const [busy, setBusy] = useState(false);
 
     if (!lifecycle) return null;
@@ -53,7 +63,7 @@ export default function LifecycleCell({ clientId, lifecycle, options = [], canEd
         }, {
             preserveScroll: true,
             preserveState: true,
-            only: ['clients'],
+            only: reloadOnly,
             onSuccess: () => toastSuccess('Стадия изменена'),
             onFinish: () => setBusy(false),
         });

@@ -54,6 +54,10 @@ export default function ClientSummaryBar({
                             }}
                             options={lifecycleOptions}
                             canEdit={canEditLifecycle}
+                            // В карточке стадия приезжает в props `lifecycle`
+                            // (бейдж, подсказка, журнал смен), а не в списке
+                            // партнёров, ради которого написан дефолт ячейки.
+                            reloadOnly={['lifecycle']}
                         />
                     </WrapItem>
                 )}
