@@ -13,6 +13,7 @@ import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
 import SelectedFilters from '@/components/cabinet/SelectedFilters';
 import ExportMenu from '@/components/cabinet/ExportMenu';
+import SubscriptionPanel from '@/components/cabinet/SubscriptionPanel';
 
 const TYPE_META = {
     added: { label: 'Добавлен', color: 'green', icon: LuPlus },
@@ -269,6 +270,12 @@ export default function OrderChangesIndex({ filters, types = [] }) {
                     )}
                 </>
             )}
+
+            <SubscriptionPanel
+                section="orders"
+                title="Подписка на изменения заказов"
+                description="Добавьте email-адреса, которые будут получать письма об изменениях ваших заказов, и отметьте для каждого, какие именно уведомления ему нужны. Удобно подключить бухгалтера или менеджера."
+            />
         </CabinetLayout>
     );
 }

@@ -25,6 +25,10 @@ class EntityChangeNotice
      *                                                  ['type'=>'action', 'kind'=>'added|removed|modified|shortfall|partial', 'label'=>, 'text'=>];
      *                                                  ['type'=>'note', 'text'=>] — вводная строка/подзаголовок.
      *                                                  Если пусто — шаблон откатывается на построчный вывод $body.
+     * @param  string|null  $event  тип события раздела (ключ из config/subscriptions.php →
+     *                              sections.{section}.events, для заказов — order_change_logs.type).
+     *                              По нему фильтруются подписки: адресат получает письмо, только
+     *                              если подписан на этот тип. null — раздел без градации.
      */
     public function __construct(
         public string $section,
@@ -34,5 +38,6 @@ class EntityChangeNotice
         public ?string $url = null,
         public ?string $entityLabel = null,
         public array $rows = [],
+        public ?string $event = null,
     ) {}
 }

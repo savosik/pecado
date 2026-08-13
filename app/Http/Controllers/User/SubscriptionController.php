@@ -8,6 +8,7 @@ use App\Services\Subscriptions\SubscriptionRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -23,6 +24,13 @@ class SubscriptionController extends Controller
      * Максимум активных email-адресов на один раздел для пользователя.
      */
     private const MAX_PER_SECTION = 5;
+
+    /**
+     * Поля подписки, отдаваемые фронту.
+     *
+     * @var array<int, string>
+     */
+    private const PAYLOAD_FIELDS = ['id', 'section', 'channel', 'destination', 'events', 'is_active', 'created_at'];
 
     public function __construct(
         private readonly SubscriptionRegistry $registry,
@@ -42,16 +50,21 @@ class SubscriptionController extends Controller
             ->where('section', $section)
             ->where('is_active', true)
             ->orderByDesc('id')
-            ->get(['id', 'section', 'channel', 'destination', 'is_active', 'created_at']);
+            ->get(self::PAYLOAD_FIELDS);
 
         return response()->json([
             'data' => $subscriptions,
             'max' => self::MAX_PER_SECTION,
+            'events' => $this->eventCatalog($section),
         ]);
     }
 
     /**
      * Добавить email-подписку на изменения раздела.
+     *
+     * Необязательный `events` — список типов событий раздела, на которые
+     * подписывается адрес. Не передан (или выбраны все) — подписка на все
+     * типы, включая те, что появятся в разделе позже.
      */
     public function store(Request $request, string $section): JsonResponse
     {
@@ -59,12 +72,17 @@ class SubscriptionController extends Controller
 
         $data = Validator::make($request->all(), [
             'email' => ['required', 'string', 'email', 'max:255'],
+            'events' => ['sometimes', 'nullable', 'array'],
+            'events.*' => ['string', Rule::in($this->registry->eventKeys($section))],
         ], [
             'email.required' => 'Укажите email-адрес.',
             'email.email' => 'Неверный формат email-адреса.',
+            'events.array' => 'Типы событий переданы в неверном формате.',
+            'events.*.in' => 'Указан неизвестный тип события.',
         ])->validate();
 
         $email = mb_strtolower(trim($data['email']));
+        $events = $this->registry->normalizeEvents($section, $data['events'] ?? null);
 
         $subscription = EntitySubscription::query()
             ->where('user_id', $request->user()->id)
@@ -73,11 +91,15 @@ class SubscriptionController extends Controller
             ->where('destination', $email)
             ->first();
 
-        // Уже подписан и активен — ничего не делаем (не считаем за новый).
+        // Уже подписан и активен — новую строку не заводим, но набор типов
+        // событий обновляем: повторное добавление того же адреса читается
+        // как «переподписать его вот на это».
         if ($subscription && $subscription->is_active) {
-            return response()->json(['data' => $subscription->only([
-                'id', 'section', 'channel', 'destination', 'is_active', 'created_at',
-            ])], 200);
+            if (array_key_exists('events', $data)) {
+                $subscription->update(['events' => $events]);
+            }
+
+            return response()->json(['data' => $subscription->only(self::PAYLOAD_FIELDS)], 200);
         }
 
         // Добавление нового адреса или реактивация отписанного увеличит число
@@ -96,20 +118,55 @@ class SubscriptionController extends Controller
         }
 
         if ($subscription) {
-            $subscription->update(['is_active' => true]);
+            $subscription->update(['is_active' => true, 'events' => $events]);
         } else {
             $subscription = EntitySubscription::create([
                 'user_id' => $request->user()->id,
                 'section' => $section,
                 'channel' => 'email',
                 'destination' => $email,
+                'events' => $events,
                 'is_active' => true,
             ]);
         }
 
-        return response()->json(['data' => $subscription->only([
-            'id', 'section', 'channel', 'destination', 'is_active', 'created_at',
-        ])], 201);
+        return response()->json(['data' => $subscription->only(self::PAYLOAD_FIELDS)], 201);
+    }
+
+    /**
+     * Изменить набор типов событий уже существующей подписки (только своей).
+     *
+     * Раздел берётся из самой подписки — фронту достаточно её id. Пустой
+     * список запрещён: подписка без типов не имела бы смысла, для отказа от
+     * уведомлений адрес удаляют.
+     */
+    public function update(Request $request, EntitySubscription $subscription): JsonResponse
+    {
+        if ($subscription->user_id !== $request->user()->id) {
+            abort(404);
+        }
+
+        $eventKeys = $this->registry->eventKeys($subscription->section);
+
+        $eventRules = $eventKeys === []
+            ? ['nullable', 'array']
+            : ['required', 'array', 'min:1'];
+
+        $data = Validator::make($request->all(), [
+            'events' => $eventRules,
+            'events.*' => ['string', Rule::in($eventKeys)],
+        ], [
+            'events.required' => 'Выберите хотя бы один тип уведомлений.',
+            'events.min' => 'Выберите хотя бы один тип уведомлений.',
+            'events.array' => 'Типы событий переданы в неверном формате.',
+            'events.*.in' => 'Указан неизвестный тип события.',
+        ])->validate();
+
+        $subscription->update([
+            'events' => $this->registry->normalizeEvents($subscription->section, $data['events'] ?? null),
+        ]);
+
+        return response()->json(['data' => $subscription->only(self::PAYLOAD_FIELDS)]);
     }
 
     /**
@@ -148,6 +205,26 @@ class SubscriptionController extends Controller
             'sectionLabel' => $sectionLabel,
             'destination' => $subscription?->destination,
         ]);
+    }
+
+    /**
+     * Каталог типов событий раздела для фронта (порядок — как в конфиге).
+     *
+     * @return array<int, array{value: string, label: string, description: string}>
+     */
+    private function eventCatalog(string $section): array
+    {
+        $catalog = [];
+
+        foreach ($this->registry->events($section) as $key => $meta) {
+            $catalog[] = [
+                'value' => (string) $key,
+                'label' => (string) ($meta['label'] ?? $key),
+                'description' => (string) ($meta['description'] ?? ''),
+            ];
+        }
+
+        return $catalog;
     }
 
     private function ensureSection(string $section): void

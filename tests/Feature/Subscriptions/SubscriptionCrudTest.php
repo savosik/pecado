@@ -177,6 +177,137 @@ class SubscriptionCrudTest extends TestCase
     }
 
     #[Test]
+    public function index_exposes_event_catalog_of_section(): void
+    {
+        $this->actingAs($this->user)
+            ->getJson('/cabinet/subscriptions/orders')
+            ->assertOk()
+            ->assertJsonPath('events.0.value', 'items_updated')
+            ->assertJsonPath('events.0.label', 'Изменение состава заказа')
+            ->assertJsonCount(3, 'events');
+    }
+
+    #[Test]
+    public function store_saves_selected_event_types(): void
+    {
+        $this->actingAs($this->user)
+            ->postJson('/cabinet/subscriptions/orders', [
+                'email' => 'buh@example.ru',
+                'events' => ['items_updated', 'api_shortfall'],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.events', ['items_updated', 'api_shortfall']);
+
+        $this->assertSame(
+            ['items_updated', 'api_shortfall'],
+            EntitySubscription::firstWhere('destination', 'buh@example.ru')->events
+        );
+    }
+
+    #[Test]
+    public function store_without_events_subscribes_to_all_types(): void
+    {
+        $this->actingAs($this->user)
+            ->postJson('/cabinet/subscriptions/orders', ['email' => 'all@example.ru'])
+            ->assertCreated()
+            ->assertJsonPath('data.events', null);
+
+        $this->assertNull(EntitySubscription::firstWhere('destination', 'all@example.ru')->events);
+    }
+
+    #[Test]
+    public function full_event_selection_is_stored_as_all_types(): void
+    {
+        // Все типы выбраны — храним NULL, чтобы адрес автоматически получал и
+        // те уведомления, которые появятся в разделе позже.
+        $this->actingAs($this->user)
+            ->postJson('/cabinet/subscriptions/orders', [
+                'email' => 'every@example.ru',
+                'events' => ['items_updated', 'attributes_updated', 'api_shortfall'],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.events', null);
+    }
+
+    #[Test]
+    public function store_rejects_unknown_event_type(): void
+    {
+        $this->actingAs($this->user)
+            ->postJson('/cabinet/subscriptions/orders', [
+                'email' => 'buh@example.ru',
+                'events' => ['items_updated', 'что-то-выдуманное'],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('events.1');
+    }
+
+    #[Test]
+    public function repeated_store_of_same_email_updates_event_types(): void
+    {
+        $this->actingAs($this->user)
+            ->postJson('/cabinet/subscriptions/orders', ['email' => 'dup@example.ru'])
+            ->assertCreated();
+
+        $this->actingAs($this->user)
+            ->postJson('/cabinet/subscriptions/orders', [
+                'email' => 'dup@example.ru',
+                'events' => ['attributes_updated'],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.events', ['attributes_updated']);
+
+        $this->assertDatabaseCount('entity_subscriptions', 1);
+    }
+
+    #[Test]
+    public function user_can_change_event_types_of_existing_subscription(): void
+    {
+        $sub = EntitySubscription::create([
+            'user_id' => $this->user->id, 'section' => 'orders', 'channel' => 'email',
+            'destination' => 'me@example.ru',
+        ]);
+
+        $this->actingAs($this->user)
+            ->patchJson("/cabinet/subscriptions/{$sub->id}", ['events' => ['items_updated']])
+            ->assertOk()
+            ->assertJsonPath('data.events', ['items_updated']);
+
+        $this->assertSame(['items_updated'], $sub->fresh()->events);
+    }
+
+    #[Test]
+    public function update_rejects_empty_event_selection(): void
+    {
+        $sub = EntitySubscription::create([
+            'user_id' => $this->user->id, 'section' => 'orders', 'channel' => 'email',
+            'destination' => 'me@example.ru', 'events' => ['items_updated'],
+        ]);
+
+        $this->actingAs($this->user)
+            ->patchJson("/cabinet/subscriptions/{$sub->id}", ['events' => []])
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('events');
+
+        $this->assertSame(['items_updated'], $sub->fresh()->events);
+    }
+
+    #[Test]
+    public function user_cannot_change_event_types_of_foreign_subscription(): void
+    {
+        $other = User::factory()->create();
+        $foreign = EntitySubscription::create([
+            'user_id' => $other->id, 'section' => 'orders', 'channel' => 'email',
+            'destination' => 'foreign@example.ru',
+        ]);
+
+        $this->actingAs($this->user)
+            ->patchJson("/cabinet/subscriptions/{$foreign->id}", ['events' => ['items_updated']])
+            ->assertNotFound();
+
+        $this->assertNull($foreign->fresh()->events);
+    }
+
+    #[Test]
     public function guest_cannot_access_subscription_endpoints(): void
     {
         $this->postJson('/cabinet/subscriptions/orders', ['email' => 'a@b.ru'])

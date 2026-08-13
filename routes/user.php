@@ -276,6 +276,7 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     // Подписки на изменения сущностей раздела (email; универсальный CRUD).
     Route::get('/subscriptions/{section}', [SubscriptionController::class, 'index'])->name('subscriptions.index');
     Route::post('/subscriptions/{section}', [SubscriptionController::class, 'store'])->name('subscriptions.store');
+    Route::patch('/subscriptions/{subscription}', [SubscriptionController::class, 'update'])->name('subscriptions.update');
     Route::delete('/subscriptions/{subscription}', [SubscriptionController::class, 'destroy'])->name('subscriptions.destroy');
 
     // Сохранённые поиски (PR 5.1, за флагом `search-cabinet.presets`).

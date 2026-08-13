@@ -19,6 +19,7 @@ use Illuminate\Support\Str;
  * @property string $section
  * @property string $channel
  * @property string $destination
+ * @property array<int, string>|null $events
  * @property bool $is_active
  * @property string $unsubscribe_token
  * @property \Illuminate\Support\Carbon|null $last_notified_at
@@ -33,6 +34,7 @@ class EntitySubscription extends Model
         'section',
         'channel',
         'destination',
+        'events',
         'is_active',
         'unsubscribe_token',
         'last_notified_at',
@@ -41,9 +43,25 @@ class EntitySubscription extends Model
     protected function casts(): array
     {
         return [
+            'events' => 'array',
             'is_active' => 'boolean',
             'last_notified_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Подписан ли адресат на данный тип события раздела.
+     *
+     * Пустой список событий = «все типы» (в т.ч. те, что появятся позже), как
+     * и у подписок, созданных до появления градации по типам.
+     */
+    public function wantsEvent(?string $event): bool
+    {
+        if ($event === null || blank($this->events)) {
+            return true;
+        }
+
+        return in_array($event, $this->events, true);
     }
 
     protected static function boot(): void

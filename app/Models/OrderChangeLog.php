@@ -83,6 +83,7 @@ class OrderChangeLog extends Model
                 url: url(route('cabinet.orders.show', $order, false)),
                 entityLabel: "Заказ {$number}",
                 rows: self::buildNoticeRows($log),
+                event: (string) $log->type,
             ));
         });
     }

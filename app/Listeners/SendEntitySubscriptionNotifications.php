@@ -50,6 +50,12 @@ class SendEntitySubscriptionNotifications implements ShouldQueue
             ->get();
 
         foreach ($subscriptions as $subscription) {
+            // Адресат мог сузить подписку до отдельных типов событий раздела
+            // (напр. только состав заказа, без правок реквизитов).
+            if (! $subscription->wantsEvent($notice->event)) {
+                continue;
+            }
+
             $this->deliver($subscription, $notice);
         }
     }

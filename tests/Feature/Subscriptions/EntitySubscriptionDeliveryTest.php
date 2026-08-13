@@ -144,11 +144,87 @@ class EntitySubscriptionDeliveryTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    #[Test]
+    public function notice_carries_change_type_as_event(): void
+    {
+        $user = User::factory()->create();
+        $order = Order::factory()->create(['user_id' => $user->id, 'number' => 'ORD-TEST-2']);
+
+        $captured = [];
+        Event::listen(EntityChanged::class, function (EntityChanged $e) use (&$captured) {
+            $captured[] = $e;
+        });
+
+        OrderChangeLog::create([
+            'order_id' => $order->id,
+            'type' => 'attributes_updated',
+            'summary' => 'Изменён адрес доставки',
+            'changes' => ['attributes' => []],
+            'source' => 'erp',
+        ]);
+
+        $this->assertSame('attributes_updated', $captured[0]->notice->event);
+    }
+
+    #[Test]
+    public function listener_skips_subscriber_not_interested_in_event_type(): void
+    {
+        Notification::fake();
+        config()->set('notifications.mail.features.entity_subscriptions', true);
+
+        $user = User::factory()->create();
+        EntitySubscription::create([
+            'user_id' => $user->id, 'section' => 'orders', 'channel' => 'email',
+            'destination' => 'items-only@example.ru', 'events' => ['items_updated'], 'is_active' => true,
+        ]);
+
+        $this->dispatchNotice($user->id, event: 'attributes_updated');
+
+        Notification::assertNothingSent();
+    }
+
+    #[Test]
+    public function listener_sends_only_to_subscribers_of_this_event_type(): void
+    {
+        Notification::fake();
+        config()->set('notifications.mail.features.entity_subscriptions', true);
+
+        $user = User::factory()->create();
+        EntitySubscription::create([
+            'user_id' => $user->id, 'section' => 'orders', 'channel' => 'email',
+            'destination' => 'items-only@example.ru', 'events' => ['items_updated'], 'is_active' => true,
+        ]);
+        EntitySubscription::create([
+            'user_id' => $user->id, 'section' => 'orders', 'channel' => 'email',
+            'destination' => 'attrs-only@example.ru', 'events' => ['attributes_updated'], 'is_active' => true,
+        ]);
+        // events = null — все типы (в т.ч. подписки, созданные до градации).
+        EntitySubscription::create([
+            'user_id' => $user->id, 'section' => 'orders', 'channel' => 'email',
+            'destination' => 'all@example.ru', 'is_active' => true,
+        ]);
+
+        $this->dispatchNotice($user->id, event: 'items_updated');
+
+        $recipients = [];
+        Notification::assertSentOnDemand(
+            EntityChangedNotification::class,
+            function ($notification, $channels, AnonymousNotifiable $notifiable) use (&$recipients) {
+                $recipients[] = $notifiable->routes['mail'] ?? null;
+
+                return true;
+            }
+        );
+
+        sort($recipients);
+        $this->assertSame(['all@example.ru', 'items-only@example.ru'], $recipients);
+    }
+
     /**
      * Прямой вызов листенера с готовым notice — детерминированно, минуя
      * очередь и afterCommit.
      */
-    private function dispatchNotice(int $ownerUserId): void
+    private function dispatchNotice(int $ownerUserId, ?string $event = null): void
     {
         $listener = new SendEntitySubscriptionNotifications(new SubscriptionRegistry);
         $listener->handle(new EntityChanged(new EntityChangeNotice(
@@ -158,6 +234,7 @@ class EntitySubscriptionDeliveryTest extends TestCase
             body: 'Добавлен товар',
             url: 'https://pecado.ru/cabinet/orders/1',
             entityLabel: 'Заказ ORD-1',
+            event: $event,
         )));
     }
 }

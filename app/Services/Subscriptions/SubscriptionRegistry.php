@@ -14,7 +14,7 @@ class SubscriptionRegistry
     /**
      * Все зарегистрированные разделы: ключ => метаданные.
      *
-     * @return array<string, array{label: string, enabled: bool}>
+     * @return array<string, array{label: string, enabled: bool, events?: array<string, array{label: string, description?: string}>}>
      */
     public function all(): array
     {
@@ -43,6 +43,51 @@ class SubscriptionRegistry
     public function label(string $section): string
     {
         return (string) ($this->all()[$section]['label'] ?? $section);
+    }
+
+    /**
+     * Каталог типов событий раздела: ключ => ['label' =>, 'description' =>].
+     * Пустой массив — раздел без градации (подписчик получает все события).
+     *
+     * @return array<string, array{label: string, description?: string}>
+     */
+    public function events(string $section): array
+    {
+        return (array) ($this->all()[$section]['events'] ?? []);
+    }
+
+    /**
+     * Ключи типов событий раздела.
+     *
+     * @return array<int, string>
+     */
+    public function eventKeys(string $section): array
+    {
+        return array_keys($this->events($section));
+    }
+
+    /**
+     * Привести выбор подписчика к хранимому виду.
+     *
+     * Отбрасывает незнакомые ключи и сохраняет порядок из конфига. Возвращает
+     * null (= «все типы»), если раздел без градации, выбор пуст или выбраны
+     * все типы — тогда подписка автоматически подхватит и те события,
+     * которые появятся в разделе позже.
+     *
+     * @param  array<int, string>|null  $selected
+     * @return array<int, string>|null
+     */
+    public function normalizeEvents(string $section, ?array $selected): ?array
+    {
+        $known = $this->eventKeys($section);
+
+        if ($known === [] || $selected === null) {
+            return null;
+        }
+
+        $normalized = array_values(array_intersect($known, array_map('strval', $selected)));
+
+        return ($normalized === [] || count($normalized) === count($known)) ? null : $normalized;
     }
 
     /**
