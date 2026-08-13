@@ -11,6 +11,7 @@ import {
     LuShieldCheck, LuCode, LuArrowRight, LuPackage,
     LuDollarSign, LuWarehouse, LuShoppingCart, LuKey,
     LuTriangleAlert, LuClock, LuGlobe, LuArrowRightLeft,
+    LuTruck, LuFileText,
 } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import axios from 'axios';
@@ -250,6 +251,105 @@ const apiMethods = [
             meta: { current_page: 1, last_page: 3, per_page: 500, total: 1240 },
         }, null, 2),
     },
+    {
+        method: 'GET',
+        path: '/shipments',
+        title: 'Получить реализации',
+        description: 'Реализации (отгрузочные документы), проведённые в 1С по вашему аккаунту: номер, дата, контрагент, счёт-фактура и сумма. Суммы отдаются в валюте документа (currency_code) без пересчёта — цифры сходятся с накладной. Товарный состав добавляется параметром with_items=1. Сортировка: свежие документы первыми. Для инкрементальной синхронизации используйте updated_since — он фильтрует по полю updated_at из ответа.',
+        icon: LuTruck,
+        color: 'orange',
+        params: [
+            { name: 'status', type: 'string|array', desc: 'Статус: new, in_progress, completed, cancelled. Можно передать массив: status[]=new&status[]=completed' },
+            { name: 'date_from', type: 'date', desc: 'С даты отгрузки включительно (YYYY-MM-DD)' },
+            { name: 'date_to', type: 'date', desc: 'По дату отгрузки включительно (YYYY-MM-DD)' },
+            { name: 'updated_since', type: 'datetime', desc: 'Только изменённые с указанного момента (YYYY-MM-DD или YYYY-MM-DD HH:MM:SS) — для догрузки изменений' },
+            { name: 'number', type: 'string', desc: 'Часть номера документа; дефисы и пробелы игнорируются (29УТ003413 ≡ 29УТ-003413)' },
+            { name: 'inn', type: 'string', desc: 'ИНН контрагента, если у вас несколько юрлиц' },
+            { name: 'order_uuid', type: 'string', desc: 'Только реализации по указанному заказу (UUID заказа из 1С)' },
+            { name: 'with_items', type: 'bool', desc: 'Добавить товарный состав каждой реализации (по умолчанию: false)' },
+            { name: 'page', type: 'int', desc: 'Номер страницы (по умолчанию: 1)' },
+            { name: 'per_page', type: 'int', desc: 'Кол-во на стр. (по умолчанию: 100, макс: 500; с with_items=1 — макс: 100)' },
+        ],
+        responseExample: JSON.stringify({
+            data: [
+                {
+                    id: 4821,
+                    uuid: "00000002-...-000000004821",
+                    number: "29УТ-003413",
+                    erp_number: "29УТ-003413",
+                    date: "2026-08-01",
+                    status: "completed",
+                    status_label: "Выполнена",
+                    currency_code: "RUB",
+                    total_amount: 18450.50,
+                    items_count: 2,
+                    invoice_number: "СФ-003413",
+                    invoice_date: "2026-08-01",
+                    tax_id: "7707083893",
+                    company: { id: 12, name: "ООО «Пример»", legal_name: "Общество с ограниченной ответственностью «Пример»", inn: "7707083893" },
+                    updated_at: "2026-08-02T10:15:00+03:00",
+                    erp_updated_at: "2026-08-01T18:40:00+03:00",
+                },
+            ],
+            meta: { current_page: 1, last_page: 6, per_page: 100, total: 574 },
+        }, null, 2),
+        errorExamples: [
+            {
+                title: 'Неверный формат даты (422)',
+                body: JSON.stringify({ message: "Дата начала должна быть в формате ГГГГ-ММ-ДД", errors: { date_from: ["Дата начала должна быть в формате ГГГГ-ММ-ДД"] } }, null, 2),
+            },
+        ],
+    },
+    {
+        method: 'GET',
+        path: '/shipments/{id}',
+        title: 'Реализация с составом',
+        description: 'Одна реализация целиком: реквизиты документа, товарный состав (items — всегда) и заказы, по которым он собран (orders). Вместо {id} можно передать id реализации на сайте, её UUID из 1С или номер документа. Чужие документы недоступны — по ним возвращается 404.',
+        icon: LuFileText,
+        color: 'cyan',
+        params: [
+            { name: 'id', type: 'string', required: true, desc: 'ID на сайте, UUID из 1С или номер документа (в пути запроса)' },
+        ],
+        responseExample: JSON.stringify({
+            data: {
+                id: 4821,
+                uuid: "00000002-...-000000004821",
+                number: "29УТ-003413",
+                date: "2026-08-01",
+                status: "completed",
+                status_label: "Выполнена",
+                currency_code: "RUB",
+                total_amount: 18450.50,
+                items_count: 2,
+                invoice_number: "СФ-003413",
+                invoice_date: "2026-08-01",
+                company: { id: 12, name: "ООО «Пример»", legal_name: "ООО «Пример»", inn: "7707083893" },
+                items: [
+                    {
+                        id: 90211,
+                        product: { uuid: "00000001-...-000000000001", code: "ART-001", sku: "SKU-001", barcode: "4600000000001", name: "Товар 1", brand: "Бренд" },
+                        order_uuid: "00000003-...-000000000777",
+                        quantity: 5,
+                        price: 1500.00,
+                        auto_discount_percent: 10.00,
+                        manual_discount_percent: 0.00,
+                        subtotal: 7500.00,
+                        total: 6750.00,
+                        vat_rate: 20,
+                    },
+                ],
+                orders: [
+                    { id: 3997, uuid: "00000003-...-000000000777", number: "29УТ-010000", type: "order", status: "completed", status_label: "Выполнен" },
+                ],
+            },
+        }, null, 2),
+        errorExamples: [
+            {
+                title: 'Документ не найден (404)',
+                body: JSON.stringify({ message: "Реализация не найдена." }, null, 2),
+            },
+        ],
+    },
 ];
 
 /* ──────────────────────────────────────────────── */
@@ -303,7 +403,8 @@ export default function Index({ tokens: initialTokens }) {
                 <Text fontSize="sm" color="gray.500" lineHeight="1.7">
                     Подключите вашу систему к каталогу Pecado через простой REST API.
                     Без авторизации — в URL используется уникальный ключ доступа.
-                    Получайте актуальные цены, остатки по вашему региону и создавайте заказы программно.
+                    Получайте актуальные цены, остатки по вашему региону, отгрузочные документы
+                    (реализации) и создавайте заказы программно.
                 </Text>
                 <HStack
                     bg="amber.50" _dark={{ bg: 'amber.900/20' }}

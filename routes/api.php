@@ -167,5 +167,7 @@ Route::prefix('client-api/{token}')
         Route::get('/prices', [\App\Http\Controllers\Api\ClientApiController::class, 'prices'])->name('prices');
         Route::get('/stocks', [\App\Http\Controllers\Api\ClientApiController::class, 'stocks'])->name('stocks');
         Route::get('/order-changes', [\App\Http\Controllers\Api\ClientApiController::class, 'orderChanges'])->name('order-changes');
+        Route::get('/shipments', [\App\Http\Controllers\Api\ClientApiController::class, 'shipments'])->name('shipments');
+        Route::get('/shipments/{shipment}', [\App\Http\Controllers\Api\ClientApiController::class, 'shipment'])->name('shipments.show');
         Route::post('/orders', [\App\Http\Controllers\Api\ClientApiController::class, 'orders'])->name('orders');
     });

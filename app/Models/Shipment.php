@@ -17,6 +17,9 @@ use Spatie\MediaLibrary\HasMedia;
  * @property string $uuid
  * @property string|null $number Локальный или комбинированный номер (если нужен)
  * @property string|null $erp_number Номер реализации в 1С
+ * @property string|null $invoice_number Номер счёта-фактуры в 1С
+ * @property string|null $invoice_number_display Печатный номер счёта-фактуры
+ * @property \Illuminate\Support\Carbon|null $invoice_date Дата счёта-фактуры
  * @property int|null $user_id
  * @property int|null $company_id
  * @property string|null $tax_id
@@ -183,6 +186,8 @@ class Shipment extends Model implements HasMedia
     /**
      * Все уникальные заказы, связанные с этой реализацией через позиции.
      * Выбираем заказы по order_uuid из items.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Order>
      */
     public function getRelatedOrders(): \Illuminate\Database\Eloquent\Collection
     {
