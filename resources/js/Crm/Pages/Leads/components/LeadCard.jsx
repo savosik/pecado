@@ -1,9 +1,10 @@
 import { useRef } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
-import { LuPhone, LuUser } from 'react-icons/lu';
+import { Badge, Box, HStack, IconButton, Text, VStack } from '@chakra-ui/react';
+import { LuPencil, LuPhone, LuUser } from 'react-icons/lu';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip } from '@/components/ui/tooltip';
 
 const RUB = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
 
@@ -36,7 +37,8 @@ export function LeadCardView({ lead, dragging = false, selected = false, ...rest
             {...rest}
         >
             <VStack align="stretch" gap={1}>
-                <Text fontSize="sm" fontWeight="600" lineClamp={1}>{lead.name}</Text>
+                {/* Место под кнопку в углу — иначе длинное имя уезжает под неё. */}
+                <Text fontSize="sm" fontWeight="600" lineClamp={1} pr={5}>{lead.name}</Text>
 
                 {lead.company_name && (
                     <Text fontSize="11px" color="fg.muted" lineClamp={1}>{lead.company_name}</Text>
@@ -115,7 +117,12 @@ export default function LeadCard({
     };
 
     return (
-        <Box position="relative" ref={setNodeRef} style={{ transform: CSS.Translate.toString(transform), transition }}>
+        <Box
+            position="relative"
+            ref={setNodeRef}
+            style={{ transform: CSS.Translate.toString(transform), transition }}
+            css={{ '&:hover .lead-card-edit': { opacity: 1 } }}
+        >
             {selectable && (
                 // Поверх карточки, а не внутри неё: чекбокс не должен начинать
                 // перетаскивание, поэтому он вне области с listeners.
@@ -126,6 +133,35 @@ export default function LeadCard({
                         onCheckedChange={({ checked }) => onToggleSelect?.(lead, checked === true)}
                         aria-label={`Выбрать лида ${lead.name}`}
                     />
+                </Box>
+            )}
+
+            {/* Карандаш вне области с listeners — иначе нажатие на него начинало бы
+                перетаскивание. Виден всегда, а не только по наведению: открытие
+                карточки кликом ниоткуда не следует, и его попросту не находят. */}
+            {! selectable && (
+                <Box
+                    position="absolute"
+                    top="4px"
+                    right="4px"
+                    zIndex={1}
+                    className="lead-card-edit"
+                    opacity={0.45}
+                    transition="opacity 120ms"
+                >
+                    <Tooltip content="Открыть карточку лида" openDelay={400}>
+                        <IconButton
+                            size="2xs"
+                            variant="ghost"
+                            aria-label={`Открыть лида ${lead.name}`}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                onOpen?.(lead);
+                            }}
+                        >
+                            <LuPencil />
+                        </IconButton>
+                    </Tooltip>
                 </Box>
             )}
 

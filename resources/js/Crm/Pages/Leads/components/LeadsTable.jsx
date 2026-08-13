@@ -1,5 +1,7 @@
-import { Badge, HStack, Text, VStack } from '@chakra-ui/react';
+import { Badge, HStack, IconButton, Text, VStack } from '@chakra-ui/react';
+import { LuPencil } from 'react-icons/lu';
 import { DataTable } from '@/Admin/Components/DataTable';
+import { Tooltip } from '@/components/ui/tooltip';
 import TasksCell from '@/Crm/Pages/Clients/components/TasksCell';
 
 const RUB = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
@@ -119,6 +121,26 @@ export default function LeadsTable({
                     </HStack>
                 )
                 : <Text fontSize="sm" color="fg.muted">—</Text>),
+        },
+        {
+            // Явная кнопка, хотя имя в первой колонке тоже открывает карточку:
+            // кликабельность имени ничем не обозначена, и её не находят.
+            key: 'actions',
+            label: '',
+            render: (_value, row) => (
+                <HStack gap={1} justify="end">
+                    <Tooltip content="Открыть карточку лида" openDelay={400}>
+                        <IconButton
+                            size="xs"
+                            variant="ghost"
+                            aria-label={`Открыть лида ${row.name}`}
+                            onClick={() => onOpen?.(row)}
+                        >
+                            <LuPencil />
+                        </IconButton>
+                    </Tooltip>
+                </HStack>
+            ),
         },
     ];
 
