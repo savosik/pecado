@@ -72,7 +72,7 @@ class ProductFilterRequest extends FormRequest
             'price_min' => 'nullable|numeric|min:0',
             'price_max' => 'nullable|numeric|min:0',
             'in_stock' => 'nullable|boolean',
-            'in_stock_mode' => 'nullable|in:instock,preorder,notavailable,defect',
+            'in_stock_mode' => 'nullable|in:instock,available,preorder,notavailable,defect',
             'in_sale' => 'nullable|in:0,1',
             'in_favourites' => 'nullable|boolean',
             'is_new' => 'nullable|boolean',

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Helpers\ContentHelper;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\User\SearchFilterRequest;
 use App\Models\Article;
 use App\Models\Brand;
 use App\Models\Category;
@@ -12,6 +13,7 @@ use App\Models\Product;
 use App\Models\SearchHistory;
 use App\Services\Product\ProductQueryService;
 use App\Services\Search\ExactProductMatcher;
+use App\Services\Search\ProductSearchResolver;
 use App\Support\Impersonation;
 use App\Support\Search\HybridSearchOptions;
 use Illuminate\Http\JsonResponse;
@@ -27,7 +29,10 @@ use Inertia\Response as InertiaResponse;
  */
 class SearchController extends Controller
 {
-    public function __construct(private readonly ExactProductMatcher $exactMatcher) {}
+    public function __construct(
+        private readonly ExactProductMatcher $exactMatcher,
+        private readonly ProductSearchResolver $resolver,
+    ) {}
 
     /**
      * Основной поиск по всем сущностям.
@@ -40,6 +45,12 @@ class SearchController extends Controller
      */
     public function index(Request $request): JsonResponse|InertiaResponse
     {
+        // Страница /search (не JSON) собирается иначе: товары фронт грузит сам через
+        // /api/search/products — с фильтрами, фасетами и сортировками каталога.
+        if (! $request->wantsJson()) {
+            return $this->renderPage($request);
+        }
+
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'min:2', 'max:255'],
             'type' => ['sometimes', 'string', 'in:all,products,categories,brands,articles'],
@@ -86,21 +97,8 @@ class SearchController extends Controller
             }
 
             // Сохранение запроса в историю для авторизованных пользователей
-            // Удаляем предыдущие дубликаты, чтобы запрос не повторялся в списке
-            //
-            // В режиме просмотра от имени клиента историю не пишем: искал менеджер,
-            // а клиент увидел бы чужие запросы в своих подсказках.
-            if ($request->user() && $page === 1 && ! Impersonation::active()) {
-                SearchHistory::where('user_id', $request->user()->id)
-                    ->where('query', $query)
-                    ->delete();
-
-                SearchHistory::create([
-                    'user_id' => $request->user()->id,
-                    'query' => $query,
-                    'results_count' => $totalCount,
-                    'ip_address' => $request->ip(),
-                ]);
+            if ($page === 1) {
+                $this->rememberQuery($request, $query, $totalCount);
             }
         }
 
@@ -112,11 +110,92 @@ class SearchController extends Controller
             'productsMeta' => $productsMeta,
         ];
 
-        if ($request->wantsJson()) {
-            return response()->json($responseData);
+        return response()->json($responseData);
+    }
+
+    /**
+     * Страница результатов поиска.
+     *
+     * Товары отдаёт не она, а `/api/search/products` — здесь только запрос,
+     * прочие сущности (категории, бренды, статьи, новости) и стартовые фильтры.
+     */
+    private function renderPage(Request $request): InertiaResponse
+    {
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'min:2', 'max:255'],
+            'availability' => ['sometimes', 'string', 'in:all,in_stock,in_stock_preorder'],
+        ], [
+            'q.min' => 'Минимум 2 символа для поиска.',
+            'q.max' => 'Запрос не может быть длиннее 255 символов.',
+        ]);
+
+        $query = $validated['q'] ?? null;
+
+        $results = [
+            'categories' => [],
+            'brands' => [],
+            'articles' => [],
+            'news' => [],
+        ];
+        $productsTotal = 0;
+
+        if ($query) {
+            $results = $this->searchEntities($query, 8);
+            $productsTotal = count($this->resolver->resolve($query)['ids']);
+
+            $this->rememberQuery(
+                $request,
+                $query,
+                $productsTotal + collect($results)->flatten(1)->count(),
+            );
         }
 
-        return Inertia::render('User/Search/Index', $responseData);
+        $initialFilters = ['q' => $query];
+
+        // Обратная совместимость со старыми ссылками /search?availability=…:
+        // теперь наличие — обычный фильтр каталога in_stock_mode, а режим «все»
+        // (включая товары не в наличии) остался поведением по умолчанию.
+        $legacyAvailability = match ($validated['availability'] ?? null) {
+            'in_stock' => 'instock',
+            'in_stock_preorder' => 'available',
+            default => null,
+        };
+        if ($legacyAvailability !== null) {
+            $initialFilters['in_stock_mode'] = $legacyAvailability;
+        }
+
+        return Inertia::render('User/Search/Index', [
+            'query' => $query,
+            'results' => $results,
+            'initialFilters' => $initialFilters,
+            'sortOptions' => SearchFilterRequest::sortOptions(),
+            'appName' => config('app.name'),
+        ]);
+    }
+
+    /**
+     * Записать запрос в историю поиска.
+     *
+     * Предыдущие дубликаты удаляем, чтобы запрос не повторялся в подсказках.
+     * В режиме просмотра от имени клиента историю не пишем: искал менеджер,
+     * а клиент увидел бы чужие запросы в своих подсказках.
+     */
+    private function rememberQuery(Request $request, string $query, int $totalCount): void
+    {
+        if (! $request->user() || Impersonation::active()) {
+            return;
+        }
+
+        SearchHistory::where('user_id', $request->user()->id)
+            ->where('query', $query)
+            ->delete();
+
+        SearchHistory::create([
+            'user_id' => $request->user()->id,
+            'query' => $query,
+            'results_count' => $totalCount,
+            'ip_address' => $request->ip(),
+        ]);
     }
 
     /**
@@ -350,88 +429,125 @@ class SearchController extends Controller
 
         // ── Категории ─────────────────────────────────────────────
         if ($searchAll || $type === 'categories') {
-            $categoryLimit = $limit ?? 5;
-
-            try {
-                $results['categories'] = Category::search($query)
-                    ->take($categoryLimit)
-                    ->get()
-                    ->filter(fn (Category $category) => $category->is_active)
-                    ->map(fn (Category $category) => [
-                        'id' => $category->id,
-                        'name' => $category->name,
-                        'slug' => $category->slug,
-                    ])->values()->toArray();
-            } catch (\Throwable) {
-                $results['categories'] = [];
-            }
+            $results['categories'] = $this->searchCategories($query, $limit ?? 5);
         }
 
         // ── Бренды ────────────────────────────────────────────────
         if ($searchAll || $type === 'brands') {
-            $brandLimit = $limit ?? 5;
-
-            try {
-                $results['brands'] = Brand::search($query)
-                    ->take($brandLimit)
-                    ->get()
-                    ->map(fn (Brand $brand) => [
-                        'id' => $brand->id,
-                        'name' => $brand->name,
-                        'slug' => $brand->slug,
-                    ])->toArray();
-            } catch (\Throwable) {
-                $results['brands'] = [];
-            }
+            $results['brands'] = $this->searchBrands($query, $limit ?? 5);
         }
 
         // ── Статьи и Новости ──────────────────────────────────────
         if ($searchAll || $type === 'articles') {
-            $contentLimit = $limit ?? 5;
-
-            try {
-                $articles = Article::search($query)
-                    ->query(fn ($q) => $q->published())
-                    ->take($contentLimit)
-                    ->get()
-                    ->map(fn (Article $article) => [
-                        'id' => $article->id,
-                        'title' => $article->title,
-                        'slug' => $article->slug,
-                        'excerpt' => $article->short_description,
-                        'image_url' => $article->getFirstMediaUrl('cover', 'thumb') ?: $article->getFirstMediaUrl('cover'),
-                        'published_at' => $article->published_at?->format('d.m.Y'),
-                        'type' => 'article',
-                        'type_label' => 'Статья',
-                    ])->toArray();
-            } catch (\Throwable) {
-                $articles = [];
-            }
-
-            try {
-                $news = News::search($query)
-                    ->query(fn ($q) => $q->published())
-                    ->take($contentLimit)
-                    ->get()
-                    ->map(fn (News $newsItem) => [
-                        'id' => $newsItem->id,
-                        'title' => $newsItem->title,
-                        'slug' => $newsItem->slug,
-                        'excerpt' => $newsItem->short_description
-                            ?: ContentHelper::extractText($newsItem->detailed_description, 150),
-                        'published_at' => $newsItem->published_at?->format('d.m.Y'),
-                        'type' => 'news',
-                        'type_label' => 'Новость',
-                    ])->toArray();
-            } catch (\Throwable) {
-                $news = [];
-            }
-
-            $results['articles'] = $articles;
-            $results['news'] = $news;
+            $results['articles'] = $this->searchArticles($query, $limit ?? 5);
+            $results['news'] = $this->searchNews($query, $limit ?? 5);
         }
 
         return $results;
+    }
+
+    /**
+     * Прочие сущности (не товары) по запросу — для страницы результатов.
+     *
+     * @return array{categories: array, brands: array, articles: array, news: array}
+     */
+    private function searchEntities(string $query, int $limit): array
+    {
+        return [
+            'categories' => $this->searchCategories($query, $limit),
+            'brands' => $this->searchBrands($query, $limit),
+            'articles' => $this->searchArticles($query, $limit),
+            'news' => $this->searchNews($query, $limit),
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function searchCategories(string $query, int $limit): array
+    {
+        try {
+            return Category::search($query)
+                ->take($limit)
+                ->get()
+                ->filter(fn (Category $category) => $category->is_active)
+                ->map(fn (Category $category) => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'slug' => $category->slug,
+                ])->values()->toArray();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function searchBrands(string $query, int $limit): array
+    {
+        try {
+            return Brand::search($query)
+                ->take($limit)
+                ->get()
+                ->map(fn (Brand $brand) => [
+                    'id' => $brand->id,
+                    'name' => $brand->name,
+                    'slug' => $brand->slug,
+                ])->values()->toArray();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function searchArticles(string $query, int $limit): array
+    {
+        try {
+            return Article::search($query)
+                ->query(fn ($q) => $q->published())
+                ->take($limit)
+                ->get()
+                ->map(fn (Article $article) => [
+                    'id' => $article->id,
+                    'title' => $article->title,
+                    'slug' => $article->slug,
+                    'excerpt' => $article->short_description,
+                    'image_url' => $article->getFirstMediaUrl('cover', 'thumb') ?: $article->getFirstMediaUrl('cover'),
+                    'published_at' => $article->published_at?->format('d.m.Y'),
+                    'type' => 'article',
+                    'type_label' => 'Статья',
+                ])->values()->toArray();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function searchNews(string $query, int $limit): array
+    {
+        try {
+            return News::search($query)
+                ->query(fn ($q) => $q->published())
+                ->take($limit)
+                ->get()
+                ->map(fn (News $newsItem) => [
+                    'id' => $newsItem->id,
+                    'title' => $newsItem->title,
+                    'slug' => $newsItem->slug,
+                    'excerpt' => $newsItem->short_description
+                        ?: ContentHelper::extractText($newsItem->detailed_description, 150),
+                    'published_at' => $newsItem->published_at?->format('d.m.Y'),
+                    'type' => 'news',
+                    'type_label' => 'Новость',
+                ])->values()->toArray();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /**

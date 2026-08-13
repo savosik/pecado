@@ -13,7 +13,8 @@ import {
  * При инициализации парсит URL query string и мержит с initialFilters (из Inertia props).
  * При изменении фильтров — обновляет URL через history.replaceState.
  *
- * @param {{ initialFilters?: object }} options
+ * @param {{ initialFilters?: object, defaults?: object }} options
+ *   defaults — дефолты страницы (sort/view/per_page/page); на поиске sort = relevance
  * @returns {{
  *   filters: object,
  *   view: string,
@@ -23,9 +24,12 @@ import {
  *   goToPage: (page: number) => void,
  * }}
  */
-export default function useCatalogFilters({ initialFilters = {} } = {}) {
+export default function useCatalogFilters({ initialFilters = {}, defaults = DEFAULTS } = {}) {
+    // Дефолты страницы: каталог — newest, поиск — relevance
+    const cfg = useRef({ ...DEFAULTS, ...defaults }).current;
+
     // Парсим URL один раз при монтировании
-    const urlParsed = useRef(parseCompactQuery(window.location.search)).current;
+    const urlParsed = useRef(parseCompactQuery(window.location.search, cfg)).current;
 
     // Начальные фильтры: initialFilters (из Inertia) + URL-параметры
     const [filters, setFilters] = useState(() => ({
@@ -48,7 +52,7 @@ export default function useCatalogFilters({ initialFilters = {} } = {}) {
     // Inertia использует это значение для определения страницы.
     // Без этого кнопка «Назад» браузера теряет фильтры.
     useEffect(() => {
-        const qs = buildCompactQuery(filters, view);
+        const qs = buildCompactQuery(filters, view, cfg);
         const newUrl = qs
             ? `${window.location.pathname}?${qs}`
             : window.location.pathname;
@@ -58,7 +62,7 @@ export default function useCatalogFilters({ initialFilters = {} } = {}) {
             state.page = { ...state.page, url: newUrl };
         }
         window.history.replaceState(state, '', newUrl);
-    }, [filters, view]);
+    }, [filters, view, cfg]);
 
     // ─── Обновить один фильтр (page сбрасывается на 1) ───
     const updateFilter = useCallback((key, value) => {
@@ -74,11 +78,11 @@ export default function useCatalogFilters({ initialFilters = {} } = {}) {
     const resetFilters = useCallback(() => {
         setFilters({
             ...initialFilters,
-            sort: DEFAULTS.sort,
-            per_page: DEFAULTS.per_page,
-            page: DEFAULTS.page,
+            sort: cfg.sort,
+            per_page: cfg.per_page,
+            page: cfg.page,
         });
-    }, [initialFilters]);
+    }, [initialFilters, cfg]);
 
     // ─── Перейти на страницу ───
     const goToPage = useCallback((page) => {

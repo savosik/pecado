@@ -7,10 +7,10 @@ import { buildApiParams } from '@/utils/compactFilters';
  * Запрашивает /api/catalog/products/facets с текущими фильтрами.
  * Поддерживает AbortController для отмены предыдущих запросов.
  *
- * @param {{ filters: object }} options
+ * @param {{ filters: object, endpoint?: string }} options
  * @returns {{ facets: { brands: Array, categories: Array, attributes: Array } | null, loading: boolean }}
  */
-export default function useCatalogFacets({ filters }) {
+export default function useCatalogFacets({ filters, endpoint = '/api/catalog/products/facets' }) {
     const [facets, setFacets] = useState(null);
     const [loading, setLoading] = useState(true);
     const abortRef = useRef(null);
@@ -33,7 +33,7 @@ export default function useCatalogFacets({ filters }) {
         params.delete('per_page');
         params.delete('page');
 
-        fetch(`/api/catalog/products/facets?${params.toString()}`, {
+        fetch(`${endpoint}?${params.toString()}`, {
             signal: abortRef.current.signal,
         })
             .then((r) => {
@@ -54,7 +54,7 @@ export default function useCatalogFacets({ filters }) {
         return () => {
             if (abortRef.current) abortRef.current.abort();
         };
-    }, [filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps -- filtersKey стабилизирует deps, sort/per_page/page исключены
+    }, [filtersKey, endpoint]); // eslint-disable-line react-hooks/exhaustive-deps -- filtersKey стабилизирует deps, sort/per_page/page исключены
 
     return { facets, loading };
 }

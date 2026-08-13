@@ -4,6 +4,7 @@ use App\Http\Controllers\User\CatalogApiController;
 use App\Http\Controllers\User\CatalogController as UserCatalogController;
 use App\Http\Controllers\User\PageController as UserPageController;
 use App\Http\Controllers\User\ProductController;
+use App\Http\Controllers\User\SearchApiController;
 use App\Http\Controllers\User\SearchController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +20,12 @@ Route::get('/catalog/selections', [UserCatalogController::class, 'selections'])-
 Route::get('/catalog/products', [CatalogApiController::class, 'products'])->name('api.catalog.products');
 Route::get('/catalog/products/facets', [CatalogApiController::class, 'facets'])->name('api.catalog.products.facets');
 Route::get('/catalog/products/price-intervals', [CatalogApiController::class, 'priceIntervals'])->name('api.catalog.products.price-intervals');
+
+// Поиск товаров: тот же набор фильтров/фасетов/сортировок, что и в каталоге,
+// но выборка ограничена релевантной выдачей Meilisearch по запросу q
+Route::get('/search/products', [SearchApiController::class, 'products'])->name('api.search.products');
+Route::get('/search/products/facets', [SearchApiController::class, 'facets'])->name('api.search.products.facets');
+Route::get('/search/products/price-intervals', [SearchApiController::class, 'priceIntervals'])->name('api.search.products.price-intervals');
 
 // Товары по массиву ID — для блока productCarousel в контенте
 Route::get('/products/by-ids', [\App\Http\Controllers\User\ProductByIdsController::class, '__invoke'])->name('api.products.by-ids');

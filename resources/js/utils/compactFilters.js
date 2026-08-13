@@ -67,9 +67,11 @@ const PASSTHROUGH_PARAMS = [
  *
  * @param {object} filters — объект фильтров
  * @param {string} [view] — текущий вид (grid/list)
+ * @param {object} [defaults] — дефолты страницы (на поиске sort = relevance)
  * @returns {string} — query string без ведущего `?`
  */
-export function buildCompactQuery(filters, view) {
+export function buildCompactQuery(filters, view, defaults = DEFAULTS) {
+    const cfg = { ...DEFAULTS, ...defaults };
     const params = new URLSearchParams();
 
     // Массивные параметры → alias[]
@@ -100,21 +102,21 @@ export function buildCompactQuery(filters, view) {
     }
 
     // Контролы — только если отличаются от дефолта
-    if (filters.sort && filters.sort !== DEFAULTS.sort) {
+    if (filters.sort && filters.sort !== cfg.sort) {
         params.set(ALIASES.sort, filters.sort);
     }
 
-    if (view && view !== DEFAULTS.view) {
+    if (view && view !== cfg.view) {
         params.set(ALIASES.view, view);
     }
 
     const perPage = filters.per_page;
-    if (perPage && Number(perPage) !== DEFAULTS.per_page) {
+    if (perPage && Number(perPage) !== cfg.per_page) {
         params.set(ALIASES.per_page, perPage);
     }
 
     const page = filters.page;
-    if (page && Number(page) !== DEFAULTS.page) {
+    if (page && Number(page) !== cfg.page) {
         params.set(ALIASES.page, page);
     }
 
@@ -125,9 +127,11 @@ export function buildCompactQuery(filters, view) {
  * Распарсить compact query string в объект { filters, view }.
  *
  * @param {string} search — window.location.search
+ * @param {object} [defaults] — дефолты страницы (на поиске sort = relevance)
  * @returns {{ filters: object, view: string }}
  */
-export function parseCompactQuery(search) {
+export function parseCompactQuery(search, defaults = DEFAULTS) {
+    const cfg = { ...DEFAULTS, ...defaults };
     const params = new URLSearchParams(search);
     const filters = {};
 
@@ -163,15 +167,15 @@ export function parseCompactQuery(search) {
     }
 
     // Контролы с дефолтами
-    filters.sort = params.get(ALIASES.sort) || DEFAULTS.sort;
+    filters.sort = params.get(ALIASES.sort) || cfg.sort;
     filters.per_page = params.has(ALIASES.per_page)
         ? Number(params.get(ALIASES.per_page))
-        : DEFAULTS.per_page;
+        : cfg.per_page;
     filters.page = params.has(ALIASES.page)
         ? Number(params.get(ALIASES.page))
-        : DEFAULTS.page;
+        : cfg.page;
 
-    const view = params.get(ALIASES.view) || DEFAULTS.view;
+    const view = params.get(ALIASES.view) || cfg.view;
 
     return { filters, view };
 }
@@ -193,8 +197,9 @@ export function buildApiParams(filters) {
         }
     }
 
-    // Контролы
-    if (filters.sort && filters.sort !== 'newest') {
+    // Контролы. Сортировку шлём всегда, когда она задана: у каталога и поиска
+    // разные значения по умолчанию, и пропуск параметра означал бы разное.
+    if (filters.sort) {
         params.set('sort', filters.sort);
     }
     if (filters.per_page && Number(filters.per_page) !== DEFAULTS.per_page) {

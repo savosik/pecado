@@ -3,6 +3,7 @@ import { LuX } from 'react-icons/lu';
 
 const STOCK_LABELS = {
     instock: 'В наличии',
+    available: 'В наличии или предзаказ',
     preorder: 'Предзаказ',
     notavailable: 'Нет в наличии',
     defect: 'Некондиция',
@@ -100,8 +101,9 @@ function buildChips(filters, facets, lockedFilters = {}, currencySymbol = '₽')
         lockedCategoryIds.add(Number(lockedFilters.category_id));
     }
 
-    // Поиск
-    if (filters.q) {
+    // Поиск. На странице /search запрос задан контекстом — чип не показываем,
+    // снять его нельзя (иначе результатов просто не будет).
+    if (filters.q && lockedFilters.q !== filters.q) {
         chips.push({
             key: 'q',
             filterKey: 'q',

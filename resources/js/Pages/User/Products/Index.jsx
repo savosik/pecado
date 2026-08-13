@@ -13,22 +13,14 @@ import SelectedFilters from './SelectedFilters';
 import ProductGrid from './ProductGrid';
 import ProductPagination from './ProductPagination';
 import ProductFiltersSheet, { countActiveFilters } from './ProductFiltersSheet';
+import CatalogFilterSidebar from './CatalogFilterSidebar';
 import useCatalogFilters from './hooks/useCatalogFilters';
 import useCatalogProducts from './hooks/useCatalogProducts';
 import usePriceIntervals from './hooks/usePriceIntervals';
 import useCatalogFacets from './hooks/useCatalogFacets';
 
-// Фильтры
-import CollapsibleFilterCard from './filters/CollapsibleFilterCard';
-import PriceFilter from './filters/PriceFilter';
-import CategoryFilter from './filters/CategoryFilter';
-import BrandFilter from './filters/BrandFilter';
-import PromotionFilter from './filters/PromotionFilter';
-import AttributeFilters from './filters/AttributeFilters';
-
 const DEFAULT_PER_PAGE = 20;
 const LS_INFINITE_SCROLL_KEY = 'catalog_infinite_scroll';
-const LS_ATTRIBUTES_OPEN_KEY = 'catalog_attributes_open';
 
 /**
  * Index — единая Inertia-страница каталога товаров.
@@ -121,10 +113,6 @@ export default function Index() {
     }, []);
 
     // ─── Обработчики фильтров ───
-    const handlePriceChange = useCallback((min, max) => {
-        updateFilters({ price_min: min || undefined, price_max: max || undefined });
-    }, [updateFilters]);
-
     const handleStockChange = useCallback((mode) => {
         if (mode) {
             updateFilter('in_stock_mode', mode);
@@ -132,26 +120,6 @@ export default function Index() {
             // «Все» — убираем фильтр наличия
             updateFilter('in_stock_mode', undefined);
         }
-    }, [updateFilter]);
-
-    const handleCategoriesChange = useCallback((ids) => {
-        updateFilter('category_ids', ids.length > 0 ? ids : undefined);
-    }, [updateFilter]);
-
-    const handleBrandsChange = useCallback((ids) => {
-        updateFilter('brand_ids', ids.length > 0 ? ids : undefined);
-    }, [updateFilter]);
-
-    const handlePromotionChange = useCallback((checked) => {
-        updateFilter('in_promotion', checked ? 1 : undefined);
-    }, [updateFilter]);
-
-    const handleAttributeValuesChange = useCallback((ids) => {
-        updateFilter('attribute_value_ids', ids.length > 0 ? ids : undefined);
-    }, [updateFilter]);
-
-    const handleInlineAttributeChange = useCallback((inlineFilters) => {
-        updateFilter('attribute_inline_filters', inlineFilters);
     }, [updateFilter]);
 
     const handleRemoveFilter = useCallback((key, value) => {
@@ -189,59 +157,18 @@ export default function Index() {
 
     // ─── Sidebar content (мемоизация для предотвращения лишних ререндеров) ───
     const sidebarContent = useMemo(() => (
-        <Flex direction="column" gap="2">
-            {!isCategoryPage && facets?.categories && facets.categories.length > 0 && (
-                <CollapsibleFilterCard title="Категории" storageKey="catalog_filter_categories_open" defaultOpen>
-                    <CategoryFilter
-                        categories={facets.categories}
-                        selectedIds={filters.category_ids || []}
-                        onChange={handleCategoriesChange}
-                    />
-                </CollapsibleFilterCard>
-            )}
-
-            {!isBrandPage && facets?.brands && facets.brands.length > 0 && (
-                <CollapsibleFilterCard title="Бренды" storageKey="catalog_filter_brands_open" defaultOpen>
-                    <BrandFilter
-                        brands={facets.brands}
-                        selectedIds={filters.brand_ids || []}
-                        onChange={handleBrandsChange}
-                    />
-                </CollapsibleFilterCard>
-            )}
-
-            {isAuthenticated && (
-                <CollapsibleFilterCard title="Цена" storageKey="catalog_filter_price_open" defaultOpen>
-                    <PriceFilter
-                        priceMin={filters.price_min || ''}
-                        priceMax={filters.price_max || ''}
-                        priceData={priceData}
-                        currencySymbol={currencySymbol}
-                        onPriceChange={handlePriceChange}
-                    />
-                </CollapsibleFilterCard>
-            )}
-
-            <CollapsibleFilterCard title="Акции" storageKey="catalog_filter_promotion_open" defaultOpen>
-                <PromotionFilter
-                    value={Boolean(filters.in_promotion)}
-                    onChange={handlePromotionChange}
-                />
-            </CollapsibleFilterCard>
-
-            {facets?.attributes && facets.attributes.length > 0 && (
-                <CollapsibleFilterCard title="Характеристики" storageKey={LS_ATTRIBUTES_OPEN_KEY}>
-                    <AttributeFilters
-                        attributes={facets.attributes}
-                        selectedValueIds={filters.attribute_value_ids || []}
-                        selectedInlineFilters={filters.attribute_inline_filters || {}}
-                        onChange={handleAttributeValuesChange}
-                        onInlineChange={handleInlineAttributeChange}
-                    />
-                </CollapsibleFilterCard>
-            )}
-        </Flex>
-    ), [filters, facets, priceData, isAuthenticated, isBrandPage, isCategoryPage, currencySymbol, handleCategoriesChange, handleBrandsChange, handlePriceChange, handlePromotionChange, handleAttributeValuesChange, handleInlineAttributeChange]);
+        <CatalogFilterSidebar
+            filters={filters}
+            facets={facets}
+            priceData={priceData}
+            currencySymbol={currencySymbol}
+            isAuthenticated={isAuthenticated}
+            hideCategories={isCategoryPage}
+            hideBrands={isBrandPage}
+            updateFilter={updateFilter}
+            updateFilters={updateFilters}
+        />
+    ), [filters, facets, priceData, isAuthenticated, isBrandPage, isCategoryPage, currencySymbol, updateFilter, updateFilters]);
 
     // ─── Динамический SEO (поисковый запрос → title, noindex для фильтров) ───
     const dynamicSeo = useMemo(() => {

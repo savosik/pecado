@@ -16,9 +16,23 @@ const SORT_LABELS = {
     article_desc: 'Артикул Я–А',
 };
 
-const STOCK_OPTIONS = [
+export const STOCK_OPTIONS = [
     { value: '', label: 'Все' },
     { value: 'instock', label: 'В наличии' },
+    { value: 'preorder', label: 'Предзаказ' },
+    { value: 'notavailable', label: 'Нет в наличии' },
+    { value: 'defect', label: 'Некондиция' },
+];
+
+/**
+ * Наличие на странице поиска: там «Все» действительно значит все, включая
+ * товары, которых нет ни в наличии, ни под предзаказ, — поэтому нужен явный
+ * пункт «В наличии или предзаказ» (в каталоге это поведение по умолчанию).
+ */
+export const SEARCH_STOCK_OPTIONS = [
+    { value: '', label: 'Любое наличие' },
+    { value: 'instock', label: 'В наличии' },
+    { value: 'available', label: 'В наличии или предзаказ' },
     { value: 'preorder', label: 'Предзаказ' },
     { value: 'notavailable', label: 'Нет в наличии' },
     { value: 'defect', label: 'Некондиция' },
@@ -166,6 +180,7 @@ export default function CatalogControls({
     onPerPageChange,
     inStockMode = '',
     onStockChange,
+    stockOptions = STOCK_OPTIONS,
     showStockFilter = false,
     onOpenFilters,
     activeFilterCount = 0,
@@ -176,8 +191,8 @@ export default function CatalogControls({
         ?? sort;
 
     const currentStockLabel =
-        STOCK_OPTIONS.find((o) => o.value === (inStockMode || ''))?.label
-        ?? STOCK_OPTIONS[0].label;
+        stockOptions.find((o) => o.value === (inStockMode || ''))?.label
+        ?? stockOptions[0].label;
 
     return (
         <Flex
@@ -239,7 +254,7 @@ export default function CatalogControls({
                                     value={inStockMode || ''}
                                     onChange={(e) => onStockChange?.(e.target.value)}
                                 >
-                                    {STOCK_OPTIONS.map((opt) => (
+                                    {stockOptions.map((opt) => (
                                         <option key={opt.value || 'all'} value={opt.value}>
                                             {opt.label}
                                         </option>

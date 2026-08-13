@@ -7,7 +7,8 @@ import { buildApiParams } from '@/utils/compactFilters';
  * Автоматически перезагружает данные при изменении filters.
  * Поддерживает infinite scroll через loadMore().
  *
- * @param {{ filters: object }} options
+ * @param {{ filters: object, endpoint?: string }} options
+ *   endpoint — URL списка товаров: каталог или поиск (`/api/search/products`)
  * @returns {{
  *   products: Array,
  *   meta: object|null,
@@ -17,7 +18,7 @@ import { buildApiParams } from '@/utils/compactFilters';
  *   loadMore: () => void,
  * }}
  */
-export default function useCatalogProducts({ filters }) {
+export default function useCatalogProducts({ filters, endpoint = '/api/catalog/products' }) {
     const [products, setProducts] = useState([]);
     const [meta, setMeta] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -43,7 +44,7 @@ export default function useCatalogProducts({ filters }) {
 
         const params = buildApiParams(filtersRef.current);
 
-        fetch(`/api/catalog/products?${params.toString()}`, {
+        fetch(`${endpoint}?${params.toString()}`, {
             signal: abortRef.current.signal,
         })
             .then((r) => {
@@ -67,7 +68,7 @@ export default function useCatalogProducts({ filters }) {
             if (abortRef.current) abortRef.current.abort();
             if (loadMoreAbortRef.current) loadMoreAbortRef.current.abort();
         };
-    }, [filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps -- filtersRef.current используется вместо filters для стабильности
+    }, [filtersKey, endpoint]); // eslint-disable-line react-hooks/exhaustive-deps -- filtersRef.current используется вместо filters для стабильности
 
     // ─── Загрузить ещё (infinite scroll) ───
     const loadMore = useCallback(() => {
@@ -85,7 +86,7 @@ export default function useCatalogProducts({ filters }) {
         const nextFilters = { ...filtersRef.current, page: nextPage };
         const params = buildApiParams(nextFilters);
 
-        fetch(`/api/catalog/products?${params.toString()}`, {
+        fetch(`${endpoint}?${params.toString()}`, {
             signal: loadMoreAbortRef.current.signal,
         })
             .then((r) => {
@@ -118,7 +119,7 @@ export default function useCatalogProducts({ filters }) {
                     setLoadingMore(false);
                 }
             });
-    }, [meta, filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps -- filtersRef.current используется вместо filters для стабильности
+    }, [meta, filtersKey, endpoint]); // eslint-disable-line react-hooks/exhaustive-deps -- filtersRef.current используется вместо filters для стабильности
 
     return {
         products,
