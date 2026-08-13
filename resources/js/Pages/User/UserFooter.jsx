@@ -2,6 +2,8 @@ import {
     Box, Flex, Grid, GridItem, Text, VStack, HStack, Badge,
 } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
+import { FaTelegramPlane } from 'react-icons/fa';
+import { Button } from '@/components/ui/button';
 import { ColorModeButton } from '@/components/ui/color-mode';
 import EffectsToggleButton from '@/components/common/EffectsToggleButton';
 import PwaInstallBanner from '@/components/PwaInstallBanner';
@@ -80,6 +82,27 @@ export default function UserFooter() {
                             <Text fontSize="sm" color="white" lineHeight="relaxed">
                                 Зарабатывать на удовольствии — это не грех, это Pecado. Мы отобрали товары, перед которыми не устоит ваш клиент, и создали условия, от которых невозможно отказаться партнеру.
                             </Text>
+
+                            {/* Подписка на Telegram-канал */}
+                            <Button
+                                asChild
+                                size="sm"
+                                mt="4"
+                                bg="#229ED9"
+                                color="white"
+                                borderRadius="full"
+                                _hover={{ bg: '#1B87BA' }}
+                            >
+                                <a
+                                    href="https://t.me/sexoptmsk"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label="Подписаться на Telegram-канал Pecado"
+                                >
+                                    <FaTelegramPlane />
+                                    Подписаться в Telegram
+                                </a>
+                            </Button>
                         </GridItem>
 
                         {/* Company */}
