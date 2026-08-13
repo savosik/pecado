@@ -111,6 +111,53 @@ class VerifySettlementsTest extends TestCase
     }
 
     /**
+     * Баланс без единого движения — не расхождение данных, а рассинхрон каналов
+     * на стороне 1С: `balance.updated` не смотрит список выведенных из обмена
+     * контрагентов. Держать это в общем счётчике значит месяцами смотреть
+     * на красное там, где всё правильно.
+     */
+    #[Test]
+    public function баланс_без_движений_не_считается_расхождением(): void
+    {
+        $this->balance(-3_000_000);
+
+        $this->artisan('settlements:verify')
+            ->expectsOutputToContain('балансы без движений')
+            ->assertExitCode(0);
+    }
+
+    /**
+     * Внутри одного документа законно встречается строка обратного знака:
+     * в отчёте комиссионера на −5 196 приезжала строка +31,32. Построчная
+     * проверка объявляла это инверсией и уводила разбор в ложный след.
+     */
+    #[Test]
+    public function строка_обратного_знака_внутри_документа_не_нарушение(): void
+    {
+        $uuid = '8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34';
+
+        $this->entry(['type' => SettlementEntry::TYPE_COMMISSION_SALE, 'amount' => -5196, 'document_uuid' => $uuid]);
+        $this->entry(['type' => SettlementEntry::TYPE_COMMISSION_SALE, 'amount' => 31.32, 'document_uuid' => $uuid]);
+        $this->balance(-5164.68);
+
+        $this->artisan('settlements:verify')->assertExitCode(0);
+    }
+
+    /**
+     * Но документ, у которого знак перевёрнут В ЦЕЛОМ, поймать обязаны.
+     */
+    #[Test]
+    public function перевёрнутый_знак_документа_ловится(): void
+    {
+        $uuid = '8e1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d34';
+
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => 120000, 'document_uuid' => $uuid]);
+        $this->balance(120000);
+
+        $this->artisan('settlements:verify')->assertExitCode(1);
+    }
+
+    /**
      * «Сальдо на 01.01 + движения первого полугодия» обязано сойтись со сверенной
      * точкой на 01.07. Расхождение означает, что история H1 недостоверна.
      */

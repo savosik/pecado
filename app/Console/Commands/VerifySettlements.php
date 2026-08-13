@@ -56,9 +56,11 @@ class VerifySettlements extends Command
             return self::SUCCESS;
         }
 
+        $orphans = array_values(array_filter($rows, static fn (array $r): bool => $r['orphan_balance']));
+
         $mismatched = array_values(array_filter(
             $rows,
-            static fn (array $row): bool => abs($row['delta_erp']) > $threshold,
+            static fn (array $row): bool => ! $row['orphan_balance'] && abs($row['delta_erp']) > $threshold,
         ));
 
         $visible = $this->option('only-mismatch') ? $mismatched : $rows;
@@ -67,7 +69,7 @@ class VerifySettlements extends Command
             ? $this->renderCsv($visible)
             : $this->renderTable($visible);
 
-        $this->renderSummary($rows, $mismatched, $threshold);
+        $this->renderSummary($rows, $mismatched, $orphans, $threshold);
         $failedInvariants = $this->renderInvariants();
 
         // Ненулевой код — чтобы гейт можно было поставить в CI, а не читать глазами.
@@ -121,6 +123,13 @@ class VerifySettlements extends Command
             }
 
             $rows[] = [
+                // Баланс есть, движений нет вовсе — контрагент выведен из обмена,
+                // а баланс продолжает приходить: канал `balance.updated` список
+                // исключений не смотрит (подтверждено 1С 13.08.2026, обещали
+                // починить). Это не расхождение данных, а рассинхрон двух каналов
+                // на их стороне, и держать его в общем счётчике значит месяцами
+                // смотреть на красное там, где всё правильно.
+                'orphan_balance' => abs($ledgerTotal) <= self::EPSILON,
                 'company_id' => $companyId === '' ? null : (int) $companyId,
                 'company' => $names[(int) $companyId] ?? '(контрагент не сопоставлен)',
                 'organization_id' => $organizationId === '' ? null : (int) $organizationId,
@@ -227,8 +236,9 @@ class VerifySettlements extends Command
     /**
      * @param  list<array<string, mixed>>  $rows
      * @param  list<array<string, mixed>>  $mismatched
+     * @param  list<array<string, mixed>>  $orphans
      */
-    private function renderSummary(array $rows, array $mismatched, float $threshold): void
+    private function renderSummary(array $rows, array $mismatched, array $orphans, float $threshold): void
     {
         $withinThreshold = array_values(array_filter(
             $rows,
@@ -248,7 +258,17 @@ class VerifySettlements extends Command
                 array_sum(array_map(static fn (array $row): float => abs($row['delta_erp']), $mismatched)),
                 2, ',', ' ',
             )],
+            ['— балансы без движений (вне обмена)', sprintf(
+                '%d пар на %s',
+                count($orphans),
+                number_format(array_sum(array_map(static fn (array $r): float => abs($r['delta_erp']), $orphans)), 2, ',', ' '),
+            )],
         ]);
+
+        if ($orphans !== []) {
+            $this->line('Балансы без движений в счётчик расхождений не входят: это контрагенты,');
+            $this->line('выведенные из обмена, по которым 1С продолжает слать `balance.updated`.');
+        }
     }
 
     /**
@@ -305,10 +325,32 @@ class VerifySettlements extends Command
             SettlementEntry::TYPE_GOODS_RETURN,
         ];
 
-        return SettlementEntry::query()->facts()->where(function ($query) use ($negativeOnly, $positiveOnly) {
-            $query->where(fn ($inner) => $inner->whereIn('type', $negativeOnly)->where('amount', '>', self::EPSILON))
-                ->orWhere(fn ($inner) => $inner->whereIn('type', $positiveOnly)->where('amount', '<', -self::EPSILON));
-        })->count();
+        // Проверка по документу, а не построчно. Внутри одного документа
+        // законно встречается строка обратного знака: в отчёте комиссионера
+        // на −5 196 приезжала строка +31,32 — комиссия или округление. Строгая
+        // построчная проверка объявляла это инверсией знака и уводила разбор
+        // в ложный след, пока настоящих нарушений не было вовсе.
+        // Движение без документа-регистратора проверяется само по себе: иначе
+        // строки, которым не с чем группироваться, выпали бы из проверки вовсе.
+        $key = "COALESCE(document_uuid, CONCAT('row-', id))";
+
+        // get()->count() здесь обязателен: агрегат с HAVING, и count() на самом
+        // запросе вернул бы число строк внутри групп, а не число документов.
+        // @phpstan-ignore larastan.noUnnecessaryCollectionCall
+        return DB::table('settlement_entries')
+            ->where('nature', SettlementEntry::NATURE_FACT)
+            ->whereIn('type', array_merge($negativeOnly, $positiveOnly))
+            ->groupBy(DB::raw($key), 'type')
+            ->selectRaw('type, SUM(amount) as total')
+            ->havingRaw(sprintf(
+                '(type IN (%s) AND SUM(amount) > %s) OR (type IN (%s) AND SUM(amount) < -%s)',
+                "'".implode("','", $negativeOnly)."'",
+                self::EPSILON,
+                "'".implode("','", $positiveOnly)."'",
+                self::EPSILON,
+            ))
+            ->get()
+            ->count();
     }
 
     /**
