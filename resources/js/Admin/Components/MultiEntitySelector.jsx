@@ -178,6 +178,9 @@ export const MultiEntitySelector = ({
                 <Box
                     id="multi-entity-selector-portal"
                     style={dropdownStyle}
+                    // См. EntitySelector: модалка Chakra выключает pointer-events на body,
+                    // портальной выпадашке их нужно вернуть явно.
+                    pointerEvents="auto"
                     bg="bg.panel"
                     borderWidth="1px"
                     borderRadius="md"

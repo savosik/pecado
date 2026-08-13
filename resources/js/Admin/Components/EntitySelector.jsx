@@ -206,6 +206,10 @@ export const EntitySelector = ({
                 <Box
                     id="entity-selector-portal"
                     style={dropdownStyle}
+                    // Модальный диалог Chakra гасит pointer-events на body, а выпадашка
+                    // живёт порталом именно там — без явного auto клик по варианту
+                    // не доходит до обработчика, и запись невозможно выбрать.
+                    pointerEvents="auto"
                     bg="bg.panel"
                     borderWidth="1px"
                     borderRadius="md"
