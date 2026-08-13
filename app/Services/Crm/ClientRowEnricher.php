@@ -96,6 +96,48 @@ class ClientRowEnricher
     }
 
     /**
+     * Ближайшая задача и число активных по каждой записи, привязанной полиморфно.
+     *
+     * Отдельно от {@see nextTasks()}, потому что у задачи на лиде `client_user_id`
+     * пуст — партнёра, к которому её свести, до конверсии просто нет, и связь
+     * держится на паре `related_type`/`related_id`.
+     *
+     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $relatedType
+     * @param  list<int>  $relatedIds
+     * @return array<int, array{active_count: int, next: array<string, mixed>|null}>
+     */
+    public function tasksForRelated(string $relatedType, array $relatedIds, User $actor): array
+    {
+        if ($relatedIds === []) {
+            return [];
+        }
+
+        $tasks = $this->tasks->visibleTo($actor)
+            ->where('related_type', $relatedType)
+            ->whereIn('related_id', $relatedIds)
+            ->whereIn('status', TaskStatus::activeValues())
+            ->with('assignee:id,name')
+            ->orderByRaw('due_at is null')
+            ->orderBy('due_at')
+            ->orderBy('id')
+            ->get();
+
+        $rows = [];
+
+        foreach ($tasks as $task) {
+            $relatedId = (int) $task->related_id;
+
+            $rows[$relatedId] ??= ['active_count' => 0, 'next' => null];
+            $rows[$relatedId]['active_count']++;
+
+            // Первая по порядку и есть ближайшая — сортировку задал запрос.
+            $rows[$relatedId]['next'] ??= $this->nextTaskPayload($task);
+        }
+
+        return $rows;
+    }
+
+    /**
      * Ячейка «Задачи» в той же форме, что в списке партнёров.
      *
      * Форма общая намеренно: пока у планов был свой компонент, пустое значение

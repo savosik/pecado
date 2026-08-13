@@ -139,6 +139,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // Квалификация в клиента — привязка к партнёру, которого создала 1С.
         Route::post('/leads/{lead}/convert', [LeadController::class, 'convert'])
             ->name('leads.convert')->whereNumber('lead');
+        // Разбор пачкой: назначить менеджера, перенести по воронке, удалить.
+        // Право на удаление проверяется внутри — оно строже права на правку.
+        Route::post('/leads/bulk', [LeadController::class, 'bulk'])->name('leads.bulk');
     });
 
     Route::middleware('permission:crm-leads.delete')->group(function () {

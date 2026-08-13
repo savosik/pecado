@@ -7,6 +7,7 @@ use App\Models\CrmLead;
 use App\Models\CrmLeadStage;
 use App\Models\PersonalManager;
 use App\Models\User;
+use App\Services\Crm\ClientRowEnricher;
 use App\Services\Crm\CrmLeadService;
 use App\Services\Crm\LeadFunnelService;
 use Illuminate\Http\JsonResponse;
@@ -29,16 +30,76 @@ class LeadController extends CrmController
     public function __construct(
         private readonly CrmLeadService $leads,
         private readonly LeadFunnelService $funnel,
+        private readonly ClientRowEnricher $rows,
     ) {}
+
+    /**
+     * Сортировки таблицы. Ключ — то, что приходит из UI, значение — колонка.
+     */
+    private const SORTABLE = [
+        'name' => 'name',
+        'qualified_amount' => 'qualified_amount',
+        'expected_close_at' => 'expected_close_at',
+        'stage_changed_at' => 'stage_changed_at',
+        'created_at' => 'created_at',
+    ];
 
     public function index(Request $request): Response
     {
         $actor = $this->crmActor($request);
         $scope = CrmScope::fromRequest($request, $actor);
 
-        $stages = CrmLeadStage::query()->onBoard()->get();
+        // Доска отдаётся целиком — карточки должны разложиться по колонкам, и
+        // «страница 2» на канбане смысла не имеет. Таблица, наоборот, обязана
+        // быть постраничной: в ней разбирают всю базу лидов сразу.
+        $table = $request->input('view') === 'table';
 
-        $leads = CrmLead::query()
+        $stages = CrmLeadStage::query()->onBoard()->get();
+        $query = $this->visibleQuery($request, $actor, $scope);
+
+        return Inertia::render('Crm/Pages/Leads/Index', [
+            'stages' => $stages->map(fn (CrmLeadStage $stage): array => $this->stagePayload($stage))->all(),
+            'leads' => $table ? [] : $query->orderByDesc('id')->get()
+                ->map(fn (CrmLead $lead): array => $this->payload($lead))->all(),
+            'rows' => $table ? $this->tableRows($request, $actor, $query) : null,
+            'funnel' => $this->funnel->summary($actor, $scope),
+            'managers' => $actor->can('crm-department.edit')
+                ? PersonalManager::query()->active()->select('id', 'name')->orderBy('name')->get()
+                : [],
+            // Своя карточка менеджера — чтобы рядовой сотрудник мог забрать
+            // ничьего лида себе, не получая списка всего отдела.
+            'currentManagerId' => $actor->managerProfile?->id,
+            // Ссылка из ленты и списка задач открывает карточку сразу.
+            'openLeadId' => $request->filled('lead') ? (int) $request->input('lead') : null,
+            'sources' => $this->sources($actor),
+            'filters' => [
+                'scope' => $scope->value,
+                'search' => $request->input('search'),
+                'view' => $table ? 'table' : 'board',
+                'manager_id' => $request->input('manager_id'),
+                'stage_id' => $request->input('stage_id'),
+                'source' => $request->input('source'),
+                'stale' => $request->boolean('stale') ?: null,
+                'sort' => $request->input('sort'),
+                'direction' => $request->input('direction'),
+            ],
+            'staleDays' => CrmLead::STALE_DAYS,
+            'canSeeDepartment' => $this->seesDepartment($request),
+            'canEdit' => $actor->can('crm-leads.edit'),
+            'canCreate' => $actor->can('crm-leads.create'),
+            'canDelete' => $actor->can('crm-leads.delete'),
+            'canManageStages' => $actor->can('crm-lead-stages.edit'),
+        ]);
+    }
+
+    /**
+     * Лиды, видимые актору, с наложенными фильтрами — общая основа доски и таблицы.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<CrmLead>
+     */
+    private function visibleQuery(Request $request, User $actor, CrmScope $scope)
+    {
+        return CrmLead::query()
             ->visibleTo($actor, $scope)
             ->with(['manager:id,name', 'stage:id,name,color', 'convertedUser:id,name,erp_name'])
             ->when($request->filled('search'), fn ($query) => $query->where(function ($inner) use ($request) {
@@ -48,32 +109,69 @@ class LeadController extends CrmController
                     ->orWhere('phone', 'like', $like)
                     ->orWhere('email', 'like', $like);
             }))
-            ->orderByDesc('id')
-            ->get();
+            ->when($request->filled('manager_id'), fn ($query) => $query
+                ->where('manager_id', (int) $request->input('manager_id')))
+            ->when($request->filled('stage_id'), fn ($query) => $query
+                ->where('stage_id', (int) $request->input('stage_id')))
+            ->when($request->filled('source'), fn ($query) => $query
+                ->where('source', $request->input('source')))
+            ->when($request->boolean('stale'), fn ($query) => $query->stagnant());
+    }
 
-        return Inertia::render('Crm/Pages/Leads/Index', [
-            'stages' => $stages->map(fn (CrmLeadStage $stage): array => $this->stagePayload($stage))->all(),
-            'leads' => $leads->map(fn (CrmLead $lead): array => $this->payload($lead))->all(),
-            'funnel' => $this->funnel->summary($actor, $scope),
-            'managers' => $this->seesDepartment($request)
-                ? PersonalManager::query()->active()->select('id', 'name')->orderBy('name')->get()
-                : [],
-            'filters' => [
-                'scope' => $scope->value,
-                'search' => $request->input('search'),
-            ],
-            'canSeeDepartment' => $this->seesDepartment($request),
-            'canEdit' => $actor->can('crm-leads.edit'),
-            'canCreate' => $actor->can('crm-leads.create'),
-            'canDelete' => $actor->can('crm-leads.delete'),
-            'canManageStages' => $actor->can('crm-lead-stages.edit'),
+    /**
+     * Страница таблицы вместе с ячейкой задач.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<CrmLead>  $query
+     * @return array<string, mixed>
+     */
+    private function tableRows(Request $request, User $actor, $query): array
+    {
+        $sort = self::SORTABLE[$request->input('sort')] ?? null;
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+
+        $leads = $query
+            ->when($sort !== null, fn ($inner) => $inner->orderBy($sort, $direction))
+            ->orderByDesc('id')
+            ->paginate(25)
+            ->withQueryString();
+
+        // Задачи одним запросом на страницу: у лида нет client_user_id, связь
+        // держится на related_type/related_id.
+        $tasks = $this->rows->tasksForRelated(
+            CrmLead::class,
+            $leads->getCollection()->map(fn (CrmLead $lead): int => (int) $lead->getKey())->all(),
+            $actor,
+        );
+
+        $leads->getCollection()->transform(fn (CrmLead $lead): array => [
+            ...$this->payload($lead),
+            'tasks' => $tasks[(int) $lead->getKey()] ?? ['active_count' => 0, 'next' => null],
         ]);
+
+        return $leads->toArray();
+    }
+
+    /**
+     * Источники, которые реально встречаются у видимых лидов — для фильтра.
+     *
+     * @return list<string>
+     */
+    private function sources(User $actor): array
+    {
+        return CrmLead::query()
+            ->visibleTo($actor)
+            ->whereNotNull('source')
+            ->where('source', '!=', '')
+            ->distinct()
+            ->orderBy('source')
+            ->pluck('source')
+            ->all();
     }
 
     public function store(Request $request): JsonResponse
     {
         $actor = $this->crmActor($request);
-        $data = $this->validated($request);
+        $data = $this->assertManagerAllowed($actor, $this->validated($request));
 
         $lead = $this->leads->create($data, $actor);
 
@@ -84,9 +182,38 @@ class LeadController extends CrmController
     {
         $this->authorizeLead($request, $lead);
 
-        $lead->update($this->validated($request));
+        $lead->update($this->assertManagerAllowed($this->crmActor($request), $this->validated($request)));
 
         return response()->json(['data' => $this->payload($lead->fresh())]);
+    }
+
+    /**
+     * Кому сотрудник вправе назначить лида.
+     *
+     * Без права на отдел выбор сводится к «себе или никому»: иначе менеджер
+     * перекидывал бы лидов коллегам, а список менеджеров ему и не отдаётся —
+     * то есть значение могло прийти только в обход интерфейса.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function assertManagerAllowed(User $actor, array $data): array
+    {
+        if (! array_key_exists('manager_id', $data) || $data['manager_id'] === null) {
+            return $data;
+        }
+
+        if ($actor->can('crm-department.edit')) {
+            return $data;
+        }
+
+        if ((int) $data['manager_id'] !== (int) $actor->managerProfile?->id) {
+            throw ValidationException::withMessages([
+                'manager_id' => 'Назначить лида другому менеджеру может только руководитель.',
+            ]);
+        }
+
+        return $data;
     }
 
     /**
@@ -133,6 +260,61 @@ class LeadController extends CrmController
         return response()->json(['data' => $this->payload($this->leads->convert($lead, $client, $actor))]);
     }
 
+    /**
+     * Разбор пачкой: назначить, перенести, удалить.
+     *
+     * Недоступные лиды молча пропускаются, а не роняют весь запрос: выделение
+     * идёт по видимой странице, и один чужой лид в списке не повод отменять
+     * работу с остальными двадцатью. Сколько применилось — в ответе.
+     */
+    public function bulk(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:200'],
+            'ids.*' => ['integer'],
+            'action' => ['required', 'string', Rule::in(['assign', 'move', 'delete'])],
+            'manager_id' => ['nullable', 'integer', 'exists:personal_managers,id'],
+            'stage_id' => ['nullable', 'integer', Rule::exists('crm_lead_stages', 'id')],
+        ], [
+            'ids.required' => 'Не выбрано ни одного лида.',
+            'ids.max' => 'За один раз можно обработать не больше 200 лидов.',
+            'action.in' => 'Неизвестное действие.',
+            'stage_id.exists' => 'Такой стадии нет.',
+        ]);
+
+        if ($validated['action'] === 'delete') {
+            abort_unless($actor->can('crm-leads.delete'), 403);
+        }
+
+        if ($validated['action'] === 'assign') {
+            $this->assertManagerAllowed($actor, ['manager_id' => $validated['manager_id'] ?? null]);
+        }
+
+        $stage = $validated['action'] === 'move'
+            ? CrmLeadStage::query()->findOrFail($validated['stage_id'] ?? 0)
+            : null;
+
+        $leads = CrmLead::query()
+            ->visibleTo($actor)
+            ->whereIn('id', $validated['ids'])
+            ->get()
+            ->filter(fn (CrmLead $lead): bool => $this->mayAct($actor, $lead));
+
+        foreach ($leads as $lead) {
+            match ((string) $validated['action']) {
+                // Через сервис, а не update(): иначе журнал переходов и
+                // stage_changed_at разъедутся с тем, что пишет доска.
+                'move' => $stage === null ? null : $this->leads->moveToStage($lead, $stage, $actor),
+                'assign' => $lead->update(['manager_id' => $validated['manager_id'] ?? null]),
+                default => $lead->delete(),
+            };
+        }
+
+        return response()->json(['applied' => $leads->count(), 'requested' => count($validated['ids'])]);
+    }
+
     public function destroy(Request $request, CrmLead $lead): RedirectResponse
     {
         $this->authorizeLead($request, $lead);
@@ -159,10 +341,21 @@ class LeadController extends CrmController
             404,
         );
 
+        abort_unless($this->mayAct($actor, $lead), 403);
+    }
+
+    /**
+     * Вправе ли сотрудник менять этого лида.
+     *
+     * Отдельно от {@see authorizeLead()}, потому что массовое действие обязано
+     * пропустить чужого лида молча, а не ответить 403 на всю пачку.
+     */
+    private function mayAct(User $actor, CrmLead $lead): bool
+    {
         $mine = $lead->manager_id === null
             || (int) $lead->manager_id === (int) $actor->managerProfile?->id;
 
-        abort_unless($mine || $actor->can('crm-department.edit'), 403);
+        return $mine || $actor->can('crm-department.edit');
     }
 
     /**
@@ -232,6 +425,13 @@ class LeadController extends CrmController
             'messenger' => $lead->messenger,
             'source' => $lead->source,
             'stage_id' => $lead->stage_id === null ? null : (int) $lead->stage_id,
+            // Стадия объектом нужна таблице: там нет колонок доски, из которых
+            // можно было бы взять название и цвет по одному stage_id.
+            'stage' => $lead->stage === null ? null : [
+                'id' => (int) $lead->stage->getKey(),
+                'name' => $lead->stage->name,
+                'color' => $lead->stage->color,
+            ],
             'manager' => $lead->manager === null ? null : [
                 'id' => (int) $lead->manager->getKey(),
                 'name' => $lead->manager->name,

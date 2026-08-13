@@ -250,6 +250,13 @@ final class CrmEntityMap
             self::TASK => (string) $entity->getAttribute('title'),
             self::EMAIL => 'Письмо: '.$entity->getAttribute('subject'),
             self::CALL => 'Звонок от '.($entity->getAttribute('started_at')?->format('d.m.Y H:i') ?? '—'),
+            // Организация в скобках: лида заводят и по имени человека, и по названию
+            // фирмы, и в списке задач одно без другого часто не узнаётся.
+            self::LEAD => trim((string) $entity->getAttribute('name')).(
+                filled($entity->getAttribute('company_name'))
+                    ? ' ('.$entity->getAttribute('company_name').')'
+                    : ''
+            ),
             default => (string) $entity->getKey(),
         };
     }
@@ -272,6 +279,13 @@ final class CrmEntityMap
 
         if ($type === self::EMAIL) {
             return route('crm.emails.index', ['email' => $entity->getKey()]);
+        }
+
+        // Отдельной страницы у лида нет — он живёт карточкой на доске, и ссылка
+        // открывает доску сразу с раскрытой карточкой. Тот же приём, что у задач
+        // и писем выше.
+        if ($type === self::LEAD) {
+            return route('crm.leads.index', ['lead' => $entity->getKey()]);
         }
 
         // Отдельного раздела звонков нет — звонок живёт в ленте своего партнёра.

@@ -9,6 +9,7 @@ use App\Http\Requests\Crm\CloseCrmTaskRequest;
 use App\Http\Requests\Crm\StoreCrmTaskRequest;
 use App\Http\Requests\Crm\UpdateCrmTaskRequest;
 use App\Models\Company;
+use App\Models\CrmLead;
 use App\Models\CrmTask;
 use App\Models\Order;
 use App\Models\Shipment;
@@ -151,8 +152,39 @@ class TaskController extends CrmController
                 : [],
             CrmEntityMap::ORDER => $this->searchDocuments($actor, Order::class, $search, 'Заказ'),
             CrmEntityMap::SHIPMENT => $this->searchDocuments($actor, Shipment::class, $search, 'Реализация'),
+            CrmEntityMap::LEAD => $this->searchLeads($actor, $search),
             default => [],
         });
+    }
+
+    /**
+     * Лиды — по имени, организации и контактам.
+     *
+     * Скоуп берётся из самой модели, а не из партнёров: у лида партнёра ещё нет,
+     * а «ничей» лид намеренно виден всему отделу.
+     *
+     * @return list<array{id: int, label: string, sublabel: string|null}>
+     */
+    private function searchLeads(User $actor, string $search): array
+    {
+        return CrmLead::query()
+            ->visibleTo($actor)
+            ->select('id', 'name', 'company_name', 'phone', 'email')
+            ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $inner) => $inner
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('company_name', 'like', "%{$search}%")
+                ->orWhere('phone', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")))
+            ->orderBy('name')
+            ->take(20)
+            ->get()
+            ->map(fn (CrmLead $lead): array => [
+                'id' => (int) $lead->getKey(),
+                'label' => (string) $lead->name,
+                // Организация различает одноимённых Иванов, контакт — одноимённые фирмы.
+                'sublabel' => $lead->company_name ?: $lead->primaryContact(),
+            ])
+            ->all();
     }
 
     /**
@@ -267,20 +299,24 @@ class TaskController extends CrmController
     /**
      * Типы привязки, доступные актору.
      *
-     * Контрагенты — отдельный раздел со своим правом: без него тип в диалоге
+     * Контрагенты и лиды — отдельные разделы со своим правом: без него тип в диалоге
      * не показываем, иначе выбор молча упирался бы в 404 от резолвера.
      *
      * @return list<string>
      */
     private function taskableTypesFor(User $actor): array
     {
-        $types = CrmEntityMap::taskableTypes();
+        $hidden = [];
 
-        if ($actor->can('crm-contractors.view')) {
-            return $types;
+        if (! $actor->can('crm-contractors.view')) {
+            $hidden[] = CrmEntityMap::CONTRACTOR;
         }
 
-        return array_values(array_diff($types, [CrmEntityMap::CONTRACTOR]));
+        if (! $actor->can('crm-leads.view')) {
+            $hidden[] = CrmEntityMap::LEAD;
+        }
+
+        return array_values(array_diff(CrmEntityMap::taskableTypes(), $hidden));
     }
 
     public function show(Request $request, CrmTask $task): JsonResponse

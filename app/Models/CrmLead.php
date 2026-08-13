@@ -38,6 +38,15 @@ class CrmLead extends Model implements HasMedia
 {
     use HasCrmAttachments, HasFactory, SoftDeletes;
 
+    /**
+     * Со скольких дней без движения лид считается залежавшимся.
+     *
+     * Одно число на весь раздел: по нему краснеет бейдж на карточке, фильтруется
+     * таблица и отбирает работу команда напоминаний. Разъехавшись, они показывали
+     * бы менеджеру разные ответы на один вопрос «что у меня стоит».
+     */
+    public const STALE_DAYS = 14;
+
     protected $fillable = [
         'name',
         'phone',
@@ -56,6 +65,7 @@ class CrmLead extends Model implements HasMedia
         'lost_reason',
         'converted_user_id',
         'stage_changed_at',
+        'stale_reminded_at',
     ];
 
     protected function casts(): array
@@ -64,19 +74,29 @@ class CrmLead extends Model implements HasMedia
             'qualified_amount' => 'decimal:2',
             'expected_close_at' => 'date',
             'stage_changed_at' => 'datetime',
+            'stale_reminded_at' => 'datetime',
         ];
     }
 
+    /**
+     * @return BelongsTo<PersonalManager, $this>
+     */
     public function manager(): BelongsTo
     {
         return $this->belongsTo(PersonalManager::class, 'manager_id');
     }
 
+    /**
+     * @return BelongsTo<CrmLeadStage, $this>
+     */
     public function stage(): BelongsTo
     {
         return $this->belongsTo(CrmLeadStage::class, 'stage_id');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function convertedUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'converted_user_id');
@@ -128,6 +148,26 @@ class CrmLead extends Model implements HasMedia
         return $query->where(fn (Builder $inner) => $inner
             ->where('manager_id', $managerId)
             ->orWhereNull('manager_id'));
+    }
+
+    /**
+     * Лиды, застрявшие на стадии дольше порога.
+     *
+     * Терминальные стадии исключены: выигранный и проигранный лид стоит на месте
+     * по определению, и напоминать по нему не о чем.
+     *
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeStagnant(Builder $query, ?int $days = null): Builder
+    {
+        return $query
+            ->whereNotNull('stage_changed_at')
+            ->where('stage_changed_at', '<=', Carbon::now()->subDays($days ?? self::STALE_DAYS))
+            ->whereNull('converted_user_id')
+            ->whereHas('stage', fn (Builder $stage) => $stage
+                ->where('is_won', false)
+                ->where('is_lost', false));
     }
 
     /**

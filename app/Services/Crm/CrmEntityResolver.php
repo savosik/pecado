@@ -4,6 +4,7 @@ namespace App\Services\Crm;
 
 use App\Models\Company;
 use App\Models\CrmComment;
+use App\Models\CrmLead;
 use App\Models\CrmTask;
 use App\Models\User;
 use App\Support\Crm\CrmEntityMap;
@@ -67,6 +68,14 @@ class CrmEntityResolver
         // Комментарий наследует доступ от того, на чём висит.
         if ($entity instanceof CrmComment) {
             return $this->canAccessAttached($actor, $entity->client_user_id, $entity->commentable);
+        }
+
+        // У лида собственный скоуп: партнёра, по которому его можно было бы отмерить,
+        // до конверсии просто нет. Без этой ветки clientIdFor() возвращал бы NULL,
+        // правило вырождалось бы в «есть crm-department.view» — а оно есть у всех
+        // ролей продаж, и любой менеджер писал бы в карточку чужого лида.
+        if ($entity instanceof CrmLead) {
+            return CrmLead::query()->visibleTo($actor)->whereKey($entity->getKey())->exists();
         }
 
         // Контрагент — отдельный раздел со своим правом. Без него скоуп партнёра
