@@ -115,6 +115,9 @@ export default function Index({ offers, counters = {}, filters, canSeeAll }) {
                     <Link href="/crm/shortages/links">
                         <Button size="xs" variant="ghost">Связи замен</Button>
                     </Link>
+                    <Link href="/crm/analytics/shortages">
+                        <Button size="xs" variant="ghost">Аналитика</Button>
+                    </Link>
                     <ScopeToggle section="shortages" scope={filters.scope} available={canSeeAll} label="Только мои" />
                 </HStack>
             </HStack>

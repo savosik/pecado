@@ -444,6 +444,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     });
 
     Route::middleware('permission:crm-analytics.view')->group(function () {
+        Route::get('/analytics/shortages', [ShortageController::class, 'analytics'])->name('analytics.shortages');
         Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
         Route::get('/analytics/data', [AnalyticsController::class, 'data'])->name('analytics.data');
         Route::get('/analytics/abc-xyz', [AnalyticsController::class, 'abcXyz'])->name('analytics.abc-xyz');

@@ -282,6 +282,35 @@ class ShortageController extends CrmController
     }
 
     /**
+     * Срез недоборов в CRM-аналитике: скорость реакции, покрытие, конверсия,
+     * спасённая сумма, слои и удержание — ежемесячный взгляд руководителя.
+     */
+    public function analytics(Request $request, \App\Services\Substitution\ShortageAnalyticsService $analytics): InertiaResponse
+    {
+        $actor = $this->crmActor($request);
+
+        $from = \Carbon\CarbonImmutable::parse((string) $request->input('from', now()->startOfMonth()->toDateString()))->startOfDay();
+        $to = \Carbon\CarbonImmutable::parse((string) $request->input('to', now()->toDateString()))->endOfDay();
+
+        // Скоуп клиентов — как в остальной CRM-аналитике.
+        $userIds = User::query()->visibleInCrm($actor)->pluck('id')->all();
+
+        return Inertia::render('Crm/Pages/Shortages/Analytics', [
+            'metrics' => $analytics->metrics($from, $to, $userIds),
+            'layers' => $analytics->layerAcceptance($from, $to, $userIds),
+            'managers' => $this->seesManagerBreakdown($request)
+                ? $analytics->byManager($from, $to, $userIds)
+                : [],
+            'retention' => $analytics->retention($from, $to, $userIds),
+            'repeated' => $analytics->repeatedShortages(),
+            'filters' => [
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+            ],
+        ]);
+    }
+
+    /**
      * Вкладка «Связи»: очередь подтверждений learned/ai-связей справочника.
      * Еженедельная 15-минутная рутина менеджера.
      */

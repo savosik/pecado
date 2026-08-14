@@ -37,4 +37,5 @@ Schedule::command('crm:tasks-remind')->dailyAt('08:30')->withoutOverlapping(); /
 Schedule::command('crm:leads-remind-stale')->dailyAt('05:50')->withoutOverlapping(); // задачи по залежавшимся лидам; до материализации повторов и утренних напоминаний
 Schedule::command('substitutions:follow-up')->hourly()->withoutOverlapping(); // дожим подборок замен: напоминание клиенту, задача «позвонить», просрочка (за флагом SHORTAGE_OFFERS_ENABLED)
 Schedule::command('substitutions:premark')->weeklyOn(1, '06:30')->withoutOverlapping(); // ai-предразметка связей по дефицитному ядру — в очередь подтверждений, автоподбор их не использует до решения человека
+Schedule::command('substitutions:purchasing-report')->weeklyOn(1, '07:00')->withoutOverlapping(); // отчёт закупкам о повторных недоборах — лечит запас, а не симптом (за флагом SHORTAGE_OFFERS_ENABLED)
 Schedule::command('apiship:sync-statuses')->everyThirtyMinutes()->withoutOverlapping(); // страховка вебхука ORDER_STATUS: догоняет статусы, потерянные при недоступности сайта
