@@ -70,6 +70,7 @@ class OrderItem extends Model
         'final_price',
         'quantity',
         'subtotal',
+        'replaces_order_item_id',
     ];
 
     protected $casts = [
@@ -132,6 +133,14 @@ class OrderItem extends Model
     public function productDefect(): BelongsTo
     {
         return $this->belongsTo(ProductDefect::class);
+    }
+
+    /**
+     * Отменённая строка исходного заказа, которую закрывает эта строка-замена.
+     */
+    public function replacesOrderItem(): BelongsTo
+    {
+        return $this->belongsTo(OrderItem::class, 'replaces_order_item_id');
     }
 
     /**
