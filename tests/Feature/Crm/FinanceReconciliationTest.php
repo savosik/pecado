@@ -248,10 +248,12 @@ class FinanceReconciliationTest extends TestCase
     #[Test]
     public function период_до_начала_ленты_помечается(): void
     {
+        // 30.12.2025, а не 31-е: последним днём года приезжает долг прошлых
+        // периодов («Ввод остатков взаиморасчётов»), и этот день уже в ленте.
         $act = $this->open([
             'client_id' => $this->client->id,
             'date_from' => '2025-01-01',
-            'date_to' => '2025-12-31',
+            'date_to' => '2025-12-30',
         ])['act'];
 
         $this->assertTrue($act['before_ledger']);

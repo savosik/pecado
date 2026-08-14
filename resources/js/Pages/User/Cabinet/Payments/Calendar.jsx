@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Box, Card, Flex, HStack, VStack, SimpleGrid, Text, Badge, Stack } from '@chakra-ui/react';
 import { Head, Link, router } from '@inertiajs/react';
-import { LuList, LuCalendar, LuTriangleAlert } from 'react-icons/lu';
+import { LuList, LuCalendar, LuScale, LuTriangleAlert } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Button } from '@/components/ui/button';
 import PaymentCalendarGrid, { formatMoney } from '@/components/payments/PaymentCalendarGrid';
@@ -61,6 +61,11 @@ export default function PaymentsCalendar({
                 </Button>
                 <Button size="sm" variant="solid" colorPalette="pecado">
                     <LuCalendar size={16} /> Календарь
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                    <Link href="/cabinet/payments/reconciliation">
+                        <LuScale size={16} /> Акт сверки
+                    </Link>
                 </Button>
             </Flex>
 
@@ -187,7 +192,12 @@ function EntryRow({ entry, symbol, showDate = false }) {
         >
             <VStack align="flex-start" gap="0.5">
                 <HStack gap="2" wrap="wrap">
-                    <Text fontWeight="medium">Реализация {entry.shipment.number}</Text>
+                    {/* На регистре строка графика бывает не только от реализации:
+                        предоплата по заказу приходит с тем же типом. Название вида
+                        документа даёт лента, старый расчёт его не знает. */}
+                    <Text fontWeight="medium">
+                        {entry.shipment.kind_label || 'Реализация'} {entry.shipment.number}
+                    </Text>
                     {entry.is_overdue && <Badge colorPalette="red" size="sm">Просрочено</Badge>}
                     {entry.is_paid && <Badge colorPalette="green" size="sm">Оплачено</Badge>}
                 </HStack>
@@ -203,9 +213,14 @@ function EntryRow({ entry, symbol, showDate = false }) {
                     <Text fontWeight="semibold">{formatMoney(entry.unpaid_amount)} {symbol}</Text>
                     <Text fontSize="xs" color="fg.muted">из {formatMoney(entry.amount)} {symbol}</Text>
                 </Box>
-                <Button size="xs" variant="ghost" asChild>
-                    <Link href={entry.shipment.url}>Открыть</Link>
-                </Button>
+                {/* Ссылки может не быть: у предоплаты по заказу карточки в кабинете
+                    нет, и лента отдаёт url = null. Inertia Link на null роняет всю
+                    страницу — TypeError на href.toString(). */}
+                {entry.shipment.url && (
+                    <Button size="xs" variant="ghost" asChild>
+                        <Link href={entry.shipment.url}>Открыть</Link>
+                    </Button>
+                )}
             </HStack>
         </Flex>
     );

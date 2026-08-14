@@ -412,9 +412,15 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
             {balance?.organizations?.length > 0 && (
                 <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted" mb="6">
                     <Card.Header p="5" pb="3">
-                        <Text fontWeight="700" fontSize="md">Задолженность по организациям</Text>
+                        {/* Заголовок зависит от знака: у клиента с переплатой
+                            «Задолженность» читается как ошибка сайта. */}
+                        <Text fontWeight="700" fontSize="md">
+                            {balance.organizations.some((row) => parseFloat(row.current_balance) < 0)
+                                ? 'Задолженность по организациям'
+                                : 'Расчёты по организациям'}
+                        </Text>
                         <Text fontSize="xs" color="fg.muted" mt="1">
-                            Оплачивайте каждой организации по её реквизитам — переплата одной
+                            Расчёты с каждой организацией ведутся отдельно — переплата одной
                             не погашает задолженность перед другой.
                         </Text>
                     </Card.Header>
@@ -446,6 +452,13 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                                 _dark={{ color: parseFloat(row.current_balance) < 0 ? 'red.400' : 'green.400' }}
                                             >
                                                 {parseFloat(row.current_balance).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
+                                            </Text>
+                                            {/* Одна сумма без подписи читается двусмысленно:
+                                                клиент не обязан помнить, что «плюс» — в его пользу. */}
+                                            <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">
+                                                {parseFloat(row.current_balance) < 0
+                                                    ? 'К оплате'
+                                                    : (parseFloat(row.current_balance) > 0 ? 'Аванс' : 'Расчёты закрыты')}
                                             </Text>
                                             {parseFloat(row.overdue_debt) > 0 && (
                                                 <Text fontSize="xs" color="red.500" whiteSpace="nowrap">

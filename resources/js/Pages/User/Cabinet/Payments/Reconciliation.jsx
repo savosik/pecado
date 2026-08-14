@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Badge, Box, Card, HStack, Input, Table, Text, VStack } from '@chakra-ui/react';
 import { Head, Link, router } from '@inertiajs/react';
-import { LuTriangleAlert } from 'react-icons/lu';
+import { LuCalendar, LuList, LuScale, LuTriangleAlert } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Button } from '@/components/ui/button';
 
@@ -37,6 +37,22 @@ export default function CabinetReconciliation({ act = null, organizations = [], 
     return (
         <CabinetLayout>
             <Head title="Акт сверки" />
+
+            <HStack gap="2" mb="4" wrap="wrap">
+                <Button size="sm" variant="outline" asChild>
+                    <Link href="/cabinet/payments">
+                        <LuList size={16} /> Список
+                    </Link>
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                    <Link href="/cabinet/payments/calendar">
+                        <LuCalendar size={16} /> Календарь
+                    </Link>
+                </Button>
+                <Button size="sm" variant="solid" colorPalette="pecado">
+                    <LuScale size={16} /> Акт сверки
+                </Button>
+            </HStack>
 
             <VStack align="stretch" gap={4}>
                 <Box>

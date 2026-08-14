@@ -6,7 +6,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
-    LuFilter, LuX, LuSearch, LuReceipt, LuCalendar, LuList,
+    LuFilter, LuX, LuSearch, LuReceipt, LuCalendar, LuList, LuScale,
     LuChevronLeft, LuChevronRight,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
@@ -136,6 +136,11 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
                 <Button size="sm" variant="outline" asChild>
                     <Link href="/cabinet/payments/calendar">
                         <LuCalendar size={16} /> Календарь
+                    </Link>
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                    <Link href="/cabinet/payments/reconciliation">
+                        <LuScale size={16} /> Акт сверки
                     </Link>
                 </Button>
             </Flex>
