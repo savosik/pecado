@@ -2,7 +2,7 @@
 
 namespace App\Services\Crm\Finance;
 
-use App\Models\ContractorOrganizationBalance;
+use App\Models\SettlementCheckpoint;
 use App\Models\SettlementEntry;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -60,11 +60,13 @@ class ReconciliationService
         ?int $agreementId = null,
         bool $withoutAgreement = false,
         string $currency = 'RUB',
+        ?int $companyId = null,
     ): array {
         $scope = fn () => SettlementEntry::query()
             ->facts()
             ->where('user_id', $client->id)
             ->where('currency_code', $currency)
+            ->when($companyId !== null, fn ($query) => $query->where('company_id', $companyId))
             ->when($organizationId !== null, fn ($query) => $query->where('organization_id', $organizationId))
             ->when($agreementId !== null, fn ($query) => $query->where('agreement_id', $agreementId))
             ->when($withoutAgreement, fn ($query) => $query->whereNull('agreement_id'));
@@ -123,39 +125,64 @@ class ReconciliationService
             // истории. Разница важная: пустой акт менеджер отправит клиенту.
             'before_ledger' => $to < self::LEDGER_STARTS_AT,
             'ledger_starts_at' => self::LEDGER_STARTS_AT,
-            'discrepancy' => $this->discrepancy($client, $organizationId, $currency),
+            'discrepancy' => $this->discrepancy($client, $organizationId, $currency, $companyId),
         ];
     }
 
     /**
-     * Расхождение суммы движений с балансом из 1С.
+     * Расхождение ленты со сверенной контрольной точкой 1С.
      *
-     * Показывается заметным баннером: акт уходит клиенту, и молча отправить
-     * цифру, не сходящуюся с учётной системой, нельзя. Приоритет у 1С —
-     * сайт предупреждает, но ничего не пересчитывает.
+     * ## Почему не с `balance.updated` (изменено в v16.3.0)
+     *
+     * Раньше сверялись с `contractor_organization_balances`, и баннер запрещал
+     * отправлять акт. 14.08.2026 сторона 1С сообщила, что канал балансов
+     * недостоверен и правка не запланирована: живой пример — Афонина, у которой
+     * лента сходится с контрольной точкой копейка в копейку, а `balance.updated`
+     * расходится на 53 652,42 ₽. Баннер блокировал корректный акт, и менеджер
+     * привыкал его игнорировать — худшее, что может случиться с предупреждением.
+     *
+     * Контрольная точка приходит из того же регистра, что и лента, поэтому
+     * расхождение с ней означает дырку в истории, а не спор двух каналов 1С.
+     *
+     * Сравнивается состояние НА дату точки: движения после неё в точку не входят.
      *
      * @return array<string, mixed>|null null — расхождения нет либо сверять не с чем
      */
-    private function discrepancy(User $client, ?int $organizationId, string $currency): ?array
+    private function discrepancy(User $client, ?int $organizationId, string $currency, ?int $companyId = null): ?array
     {
-        // Балансы приходят из 1С только в рублях: сверять валютный акт не с чем.
+        // Контрольные точки приходят из 1С только в рублях.
         if ($currency !== 'RUB') {
             return null;
         }
+
+        $checkpoints = SettlementCheckpoint::query()
+            ->where('is_verified', true)
+            ->where('user_id', $client->id)
+            ->when($companyId !== null, fn ($query) => $query->where('company_id', $companyId))
+            ->when($organizationId !== null, fn ($query) => $query->where('organization_id', $organizationId));
+
+        // Точек может быть несколько на разные даты — берём самую свежую.
+        $asOf = (clone $checkpoints)->max('as_of_date');
+
+        if ($asOf === null) {
+            return null;
+        }
+
+        $asOfDate = CarbonImmutable::parse((string) $asOf)->toDateString();
+
+        $erp = (float) (clone $checkpoints)->whereDate('as_of_date', $asOfDate)->sum('amount');
 
         $ledger = (float) SettlementEntry::query()
             ->facts()
             ->where('user_id', $client->id)
             ->where('currency_code', 'RUB')
+            ->when($companyId !== null, fn ($query) => $query->where('company_id', $companyId))
             ->when($organizationId !== null, fn ($query) => $query->where('organization_id', $organizationId))
+            // Строго раньше: точка описывает состояние на начало дня.
+            ->whereDate('date', '<', $asOfDate)
             ->sum('amount');
 
-        $erp = ContractorOrganizationBalance::query()
-            ->where('user_id', $client->id)
-            ->when($organizationId !== null, fn ($query) => $query->where('organization_id', $organizationId))
-            ->sum('current_balance');
-
-        $delta = round($ledger - (float) $erp, 2);
+        $delta = round($ledger - $erp, 2);
 
         if (abs($delta) <= self::EPSILON) {
             return null;
@@ -163,8 +190,10 @@ class ReconciliationService
 
         return [
             'ledger' => round($ledger, 2),
-            'erp' => round((float) $erp, 2),
+            'erp' => round($erp, 2),
             'delta' => $delta,
+            'as_of' => $asOfDate,
+            'as_of_label' => CarbonImmutable::parse($asOfDate)->format('d.m.Y'),
         ];
     }
 
@@ -200,6 +229,31 @@ class ReconciliationService
             ->distinct()
             ->orderBy('o.name')
             ->pluck('o.name', 'o.id')
+            ->map(static fn (string $name, int $id): array => ['id' => $id, 'name' => $name])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Контрагенты (юрлица клиента), по которым есть движения, — для выбора в форме.
+     *
+     * Из самих движений, а не из списка компаний клиента: акт по контрагенту
+     * без единой операции пуст всегда, и предлагать его выбирать незачем.
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    public function companiesOf(User $client): array
+    {
+        return SettlementEntry::query()
+            ->facts()
+            ->where('settlement_entries.user_id', $client->id)
+            ->whereNotNull('settlement_entries.company_id')
+            ->join('companies as c', 'c.id', '=', 'settlement_entries.company_id')
+            // Join в обход модели, поэтому SoftDeletes отфильтровываем руками.
+            ->whereNull('c.deleted_at')
+            ->distinct()
+            ->orderBy('c.name')
+            ->pluck('c.name', 'c.id')
             ->map(static fn (string $name, int $id): array => ['id' => $id, 'name' => $name])
             ->values()
             ->all();

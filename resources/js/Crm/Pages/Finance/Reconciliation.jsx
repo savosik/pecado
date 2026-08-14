@@ -25,6 +25,7 @@ import { formatRub } from './components/format';
 export default function FinanceReconciliation({ client = null, act = null, options = {}, form = {} }) {
     const [state, setState] = useState({
         client_id: form.client_id ?? null,
+        company_id: form.company_id ?? null,
         organization_id: form.organization_id ?? null,
         agreement_id: form.agreement_id ?? null,
         without_agreement: form.without_agreement ?? false,
@@ -49,6 +50,16 @@ export default function FinanceReconciliation({ client = null, act = null, optio
     // так повторный клик по строке меняет выбор, а не копит его.
     const pickOne = (key) => (ids) => set({ [key]: ids.length ? ids[ids.length - 1] : null });
 
+    // Смена клиента сбрасывает зависящие от него фильтры: контрагент, организация
+    // и соглашение прежнего клиента для нового бессмысленны, а молча оставить их
+    // в запросе значит получить пустой акт без видимой причины.
+    const pickClient = (ids) => set({
+        client_id: ids.length ? ids[ids.length - 1] : null,
+        company_id: null,
+        organization_id: null,
+        agreement_id: null,
+    });
+
     return (
         <CrmLayout breadcrumbs={[{ label: 'Финансы', href: '/crm/finance' }, { label: 'Акт сверки' }]}>
             <Head title="Акт сверки — CRM" />
@@ -66,9 +77,18 @@ export default function FinanceReconciliation({ client = null, act = null, optio
                         label="Клиент"
                         options={options.clients ?? []}
                         selectedIds={state.client_id ? [state.client_id] : []}
-                        onChange={pickOne('client_id')}
+                        onChange={pickClient}
                         allLabel="Не выбран"
                         minW="260px"
+                    />
+
+                    <MultiSelectFilter
+                        label="Контрагент"
+                        options={options.companies ?? []}
+                        selectedIds={state.company_id ? [state.company_id] : []}
+                        onChange={pickOne('company_id')}
+                        allLabel="Все"
+                        disabled={!client}
                     />
 
                     <MultiSelectFilter
@@ -171,15 +191,16 @@ function Act({ client, act }) {
                         <Box color="red.fg" mt={1}><LuTriangleAlert /></Box>
                         <Box>
                             <Text fontSize="sm" fontWeight="600" color="red.fg">
-                                Расхождение с данными 1С — акт отправлять нельзя
+                                История расходится со сверенными данными 1С — акт отправлять нельзя
                             </Text>
                             <Text fontSize="sm" mt={1}>
-                                По движениям: <b>{money(act.discrepancy.ledger)}</b>,
-                                по балансу 1С: <b>{money(act.discrepancy.erp)}</b>,
-                                разница <b>{money(act.discrepancy.delta)}</b>.
+                                На {act.discrepancy.as_of_label} по нашим движениям{' '}
+                                <b>{money(act.discrepancy.ledger)}</b>, по сверенной цифре 1С{' '}
+                                <b>{money(act.discrepancy.erp)}</b>, разница{' '}
+                                <b>{money(act.discrepancy.delta)}</b>.
                             </Text>
                             <Text fontSize="xs" color="fg.muted" mt={1}>
-                                Скорее всего, часть движений не доехала из 1С. Сообщите администратору —
+                                Часть движений до этой даты не доехала из 1С. Сообщите администратору —
                                 сайт ничего не пересчитывает сам, приоритет у учётной системы.
                             </Text>
                         </Box>

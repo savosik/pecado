@@ -228,28 +228,53 @@ class OperationRegistry
     private function payments(): array
     {
         return [
-            new Operation(
-                id: 'payment.balances',
-                section: 'payments',
-                method: 'GET',
-                uri: 'payments/balances',
-                permission: 'crm-clients.view',
-                summary: 'Сальдо и просроченная задолженность партнёров по данным 1С',
-                description: 'МАСТЕР-ДАННЫЕ по долгам: так их видит учётная система. '
-                    .'Именно отсюда отвечайте на «сколько партнёр должен» и «какая у него просрочка». '
-                    .'Не считайте долг суммированием остатков по документам (`payment.unpaid-shipments`): '
-                    .'1С закрывает долг не только платежами по накладным — есть авансы по заказам, '
-                    .'зачёты и корректировки, — и сумма по документам систематически больше реального долга. '
-                    .'Отрицательное сальдо — долг партнёра, положительное — переплата. '
-                    .'Строка — контрагент (юрлицо), у партнёра их может быть несколько.',
-                params: [
-                    Param::integer('client_id', 'Партнёр — балансы только по нему', rules: ['min:1']),
-                    Param::boolean('only_overdue', 'Только контрагенты с просроченной задолженностью'),
-                    Param::integer('per_page', 'Строк на странице (до 100)', rules: ['min:1', 'max:100']),
-                    Param::integer('page', 'Номер страницы', rules: ['min:1']),
-                ],
-                handler: [PaymentOperations::class, 'balances'],
-            ),
+            // `payment.balances` читает `contractor_balances` — канал `balance.updated`,
+            // который сторона 1С признала недостоверным (14.08.2026). При включённом
+            // регистре операция скрывается: иначе агент видит две почти одинаковые
+            // по описанию операции про долг и может ответить по сломанному источнику.
+            // Симметрично тому, как `settlements()` скрыт при выключенном регистре.
+            ...(config('settlements.ledger_enabled') ? [] : [$this->legacyBalancesOperation()]),
+            ...$this->paymentDocuments(),
+        ];
+    }
+
+    /**
+     * Балансы по данным `balance.updated`. Замещены `settlement.balance`.
+     */
+    private function legacyBalancesOperation(): Operation
+    {
+        return new Operation(
+            id: 'payment.balances',
+            section: 'payments',
+            method: 'GET',
+            uri: 'payments/balances',
+            permission: 'crm-clients.view',
+            summary: 'Сальдо и просроченная задолженность партнёров по данным 1С',
+            description: 'МАСТЕР-ДАННЫЕ по долгам: так их видит учётная система. '
+                .'Именно отсюда отвечайте на «сколько партнёр должен» и «какая у него просрочка». '
+                .'Не считайте долг суммированием остатков по документам (`payment.unpaid-shipments`): '
+                .'1С закрывает долг не только платежами по накладным — есть авансы по заказам, '
+                .'зачёты и корректировки, — и сумма по документам систематически больше реального долга. '
+                .'Отрицательное сальдо — долг партнёра, положительное — переплата. '
+                .'Строка — контрагент (юрлицо), у партнёра их может быть несколько.',
+            params: [
+                Param::integer('client_id', 'Партнёр — балансы только по нему', rules: ['min:1']),
+                Param::boolean('only_overdue', 'Только контрагенты с просроченной задолженностью'),
+                Param::integer('per_page', 'Строк на странице (до 100)', rules: ['min:1', 'max:100']),
+                Param::integer('page', 'Номер страницы', rules: ['min:1']),
+            ],
+            handler: [PaymentOperations::class, 'balances'],
+        );
+    }
+
+    /**
+     * Документы оплат: сами платежи, неоплаченные отгрузки, график.
+     *
+     * @return list<Operation>
+     */
+    private function paymentDocuments(): array
+    {
+        return [
             new Operation(
                 id: 'payment.list',
                 section: 'payments',

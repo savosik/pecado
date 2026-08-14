@@ -68,6 +68,23 @@ class FinanceReconciliationTest extends TestCase
     }
 
     /**
+     * Сверенная контрольная точка 1С на 01.03.2026 — эталон, с которым
+     * сравнивается лента. Дата после движений тестов, чтобы они в неё попадали.
+     */
+    private function checkpoint(float $amount): void
+    {
+        \App\Models\SettlementCheckpoint::factory()->create([
+            'user_id' => $this->client->id,
+            'company_id' => $this->company->id,
+            'organization_id' => $this->organization->id,
+            'currency_code' => 'RUB',
+            'as_of_date' => '2026-03-01',
+            'amount' => $amount,
+            'is_verified' => true,
+        ]);
+    }
+
+    /**
      * @param  array<string, mixed>  $query
      * @return array<string, mixed>
      */
@@ -197,7 +214,29 @@ class FinanceReconciliationTest extends TestCase
      * системой, нельзя — поэтому расхождение отдаётся отдельным полем.
      */
     #[Test]
-    public function расхождение_с_балансом_1с_попадает_в_ответ(): void
+    public function расхождение_со_сверенной_точкой_попадает_в_ответ(): void
+    {
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -120000, 'date' => '2026-02-10']);
+
+        $this->checkpoint(-100000);
+
+        $act = $this->open([
+            'client_id' => $this->client->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ])['act'];
+
+        $this->assertNotNull($act['discrepancy']);
+        $this->assertEqualsWithDelta(-20000.0, $act['discrepancy']['delta'], 0.01);
+        $this->assertSame('2026-03-01', $act['discrepancy']['as_of']);
+    }
+
+    /**
+     * Балансы из `balance.updated` баннер больше не поднимают: 1С признала канал
+     * недостоверным (v16.3.0). Расхождение с ним — не повод блокировать акт.
+     */
+    #[Test]
+    public function расхождение_с_балансом_1с_баннера_не_поднимает(): void
     {
         $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -120000, 'date' => '2026-02-10']);
 
@@ -215,12 +254,27 @@ class FinanceReconciliationTest extends TestCase
             'date_to' => '2026-02-28',
         ])['act'];
 
-        $this->assertNotNull($act['discrepancy']);
-        $this->assertEqualsWithDelta(-20000.0, $act['discrepancy']['delta'], 0.01);
+        $this->assertNull($act['discrepancy']);
     }
 
     #[Test]
-    public function сошедшийся_баланс_баннера_не_показывает(): void
+    public function сошедшаяся_точка_баннера_не_показывает(): void
+    {
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -120000, 'date' => '2026-02-10']);
+
+        $this->checkpoint(-120000);
+
+        $act = $this->open([
+            'client_id' => $this->client->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ])['act'];
+
+        $this->assertNull($act['discrepancy']);
+    }
+
+    #[Test]
+    public function без_контрольной_точки_баннера_нет(): void
     {
         $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -120000, 'date' => '2026-02-10']);
 
@@ -282,6 +336,73 @@ class FinanceReconciliationTest extends TestCase
 
         $this->assertCount(1, $act['rows']);
         $this->assertEqualsWithDelta(-10000.0, $act['closing_balance'], 0.01);
+    }
+
+    /**
+     * У партнёра может быть несколько юрлиц-контрагентов, и подписывают акт
+     * по каждому отдельно: без фильтра движения слипались бы в один документ.
+     */
+    #[Test]
+    public function фильтр_по_контрагенту_сужает_акт(): void
+    {
+        $second = Company::factory()->create(['user_id' => $this->client->id]);
+
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -10000, 'date' => '2026-02-10']);
+        $this->entry([
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -70000,
+            'date' => '2026-02-11',
+            'company_id' => $second->id,
+        ]);
+
+        $props = $this->open([
+            'client_id' => $this->client->id,
+            'company_id' => $this->company->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ]);
+
+        $this->assertCount(1, $props['act']['rows']);
+        $this->assertEqualsWithDelta(-10000.0, $props['act']['closing_balance'], 0.01);
+        // Справочник формы — оба контрагента с движениями.
+        $this->assertCount(2, $props['options']['companies']);
+    }
+
+    /**
+     * Сверка с 1С обязана идти в том же разрезе, что и акт: баланс другого
+     * контрагента — не расхождение.
+     */
+    #[Test]
+    public function расхождение_считается_в_разрезе_контрагента(): void
+    {
+        $second = Company::factory()->create(['user_id' => $this->client->id]);
+
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -10000, 'date' => '2026-02-10']);
+        $this->entry([
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -70000,
+            'date' => '2026-02-11',
+            'company_id' => $second->id,
+        ]);
+
+        foreach ([[$this->company->id, -10000], [$second->id, -70000]] as [$companyId, $balance]) {
+            ContractorOrganizationBalance::query()->create([
+                'user_id' => $this->client->id,
+                'company_id' => $companyId,
+                'organization_id' => $this->organization->id,
+                'current_balance' => $balance,
+                'overdue_debt' => 0,
+            ]);
+        }
+
+        $act = $this->open([
+            'client_id' => $this->client->id,
+            'company_id' => $this->company->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ])['act'];
+
+        $this->assertNull($act['discrepancy']);
     }
 
     /**
