@@ -130,17 +130,20 @@ class FinanceController extends CrmController
                 agreementId: $request->integer('agreement_id') ?: null,
                 withoutAgreement: $request->boolean('without_agreement'),
                 currency: (string) $request->string('currency', 'RUB'),
+                companyId: $request->integer('company_id') ?: null,
             ) : null,
             'options' => [
                 // Список партнёров нужен всегда: без него не с чего начать.
                 // Уже ограничен скоупом менеджера, поэтому чужих в нём нет.
                 'clients' => $this->clientOptions($request),
+                'companies' => $client !== null ? $service->companiesOf($client) : [],
                 'organizations' => $client !== null ? $service->organizationsOf($client) : [],
                 'agreements' => $client !== null ? $service->agreementsOf($client) : [],
                 'currencies' => $client !== null ? $service->currenciesOf($client) : ['RUB'],
             ],
             'form' => [
                 'client_id' => $clientId,
+                'company_id' => $request->integer('company_id') ?: null,
                 'organization_id' => $request->integer('organization_id') ?: null,
                 'agreement_id' => $request->integer('agreement_id') ?: null,
                 'without_agreement' => $request->boolean('without_agreement'),
@@ -178,6 +181,7 @@ class FinanceController extends CrmController
             agreementId: $request->integer('agreement_id') ?: null,
             withoutAgreement: $request->boolean('without_agreement'),
             currency: (string) $request->string('currency', 'RUB'),
+            companyId: $request->integer('company_id') ?: null,
         );
 
         return $exporter->streamSheets(
