@@ -73,16 +73,32 @@ class VerifySettlementsTest extends TestCase
     }
 
     /**
-     * Расхождение с 1С означает, что интеграция не досылает движения. Это блокер:
-     * переключать чтение на неполную ленту нельзя.
+     * Расхождение с `balance.updated` команду больше НЕ роняет.
+     *
+     * 1С признала канал балансов недостоверным (круг 8, 14.08.2026) и правку
+     * не запланировала. Гейт на источнике, который сама 1С считает сломанным,
+     * означал бы бессрочное ожидание чужой задачи.
      */
     #[Test]
-    public function расхождение_с_1с_роняет_команду(): void
+    public function расхождение_с_балансом_1с_команду_не_роняет(): void
     {
         $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -120000]);
         $this->balance(-55000);
 
-        $this->artisan('settlements:verify')->assertExitCode(1);
+        $this->artisan('settlements:verify')->assertExitCode(0);
+    }
+
+    /**
+     * …но `--strict-balances` прежнее поведение возвращает: когда канал балансов
+     * починят, флаг снова сделает расхождение блокером.
+     */
+    #[Test]
+    public function строгий_режим_балансов_роняет_команду(): void
+    {
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -120000]);
+        $this->balance(-55000);
+
+        $this->artisan('settlements:verify --strict-balances')->assertExitCode(1);
     }
 
     /**
