@@ -174,16 +174,19 @@ class VerifySettlementsTest extends TestCase
     }
 
     /**
-     * «Сальдо на 01.01 + движения первого полугодия» обязано сойтись со сверенной
-     * точкой на 01.07. Расхождение означает, что история H1 недостоверна.
+     * Сумма ленты до даты точки обязана сойтись со сверенной точкой. Расхождение
+     * означает дырку в истории — обе стороны равенства приходят из регистра 1С.
+     *
+     * Долг прошлых периодов приезжает обычным движением 2025 года: лента приходит
+     * целиком, отдельного начального сальдо в ней нет (v16.3.0).
      */
     #[Test]
     public function несошедшаяся_контрольная_точка_роняет_команду(): void
     {
         $this->entry([
-            'type' => SettlementEntry::TYPE_OPENING_BALANCE,
+            'type' => SettlementEntry::TYPE_ADJUSTMENT,
             'amount' => -50000,
-            'date' => '2026-01-01',
+            'date' => '2025-12-31',
         ]);
         $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -5000]);
         $this->balance(-55000);
@@ -193,7 +196,7 @@ class VerifySettlementsTest extends TestCase
             'company_id' => $this->company->id,
             'organization_id' => $this->organization->id,
             'currency_code' => 'RUB',
-            'as_of_date' => '2026-07-01',
+            'as_of_date' => '2026-08-01',
             'amount' => -70000,
             'is_verified' => true,
         ]);
@@ -205,9 +208,9 @@ class VerifySettlementsTest extends TestCase
     public function сошедшаяся_контрольная_точка_не_мешает(): void
     {
         $this->entry([
-            'type' => SettlementEntry::TYPE_OPENING_BALANCE,
+            'type' => SettlementEntry::TYPE_ADJUSTMENT,
             'amount' => -50000,
-            'date' => '2026-01-01',
+            'date' => '2025-12-31',
         ]);
         $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -5000]);
         $this->balance(-55000);
@@ -217,12 +220,30 @@ class VerifySettlementsTest extends TestCase
             'company_id' => $this->company->id,
             'organization_id' => $this->organization->id,
             'currency_code' => 'RUB',
-            'as_of_date' => '2026-07-01',
+            'as_of_date' => '2026-08-01',
             'amount' => -55000,
             'is_verified' => true,
         ]);
 
         $this->artisan('settlements:verify')->assertExitCode(0);
+    }
+
+    /**
+     * Строка `opening_balance` в регистре — сама по себе нарушение с v16.3.0:
+     * лента содержит историю целиком, и сальдо задваивает баланс. На проде это
+     * стоило 13,7 млн ₽ и ста разошедшихся контрольных точек.
+     */
+    #[Test]
+    public function строка_начального_сальдо_в_ленте_роняет_команду(): void
+    {
+        $this->entry([
+            'type' => SettlementEntry::TYPE_OPENING_BALANCE,
+            'amount' => -50000,
+            'date' => '2026-01-01',
+        ]);
+        $this->balance(-50000);
+
+        $this->artisan('settlements:verify')->assertExitCode(1);
     }
 
     /**

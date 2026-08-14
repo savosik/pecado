@@ -353,8 +353,14 @@ class SettlementLedgerIntegrationTest extends TestCase
         $this->assertSame(self::AGREEMENT_UUID, $entry->agreement_uuid);
     }
 
+    /**
+     * Начальное сальдо принимается, но движения НЕ создаёт (v16.3.0).
+     *
+     * 1С отдаёт ленту целиком, с 2025 года, поэтому сальдо её дублирует. Пока
+     * строка создавалась, баланс был задвоен на 13,7 млн ₽ на проде.
+     */
     #[Test]
-    public function начальное_сальдо_ложится_в_ленту_одной_строкой(): void
+    public function начальное_сальдо_принимается_но_в_ленту_не_попадает(): void
     {
         $message = [
             'event' => 'settlement.opening_balance',
@@ -371,29 +377,38 @@ class SettlementLedgerIntegrationTest extends TestCase
         $this->dispatch($message);
         $this->dispatch($message + ['message_id' => 'msg-opening-2']);
 
-        $entry = SettlementEntry::query()->sole();
-
-        $this->assertSame(SettlementEntry::TYPE_OPENING_BALANCE, $entry->type);
-        $this->assertEqualsWithDelta(-50000.0, (float) $entry->amount, 0.01);
-        $this->assertSame('2026-01-01', $entry->date->toDateString());
+        // Сообщение обработано без ошибки — в DLQ не ушло, — но ленты не коснулось.
+        $this->assertSame(0, SettlementEntry::query()->count());
     }
 
     /**
      * Формула акта сверки заказчика целиком, одним `SUM`:
-     * сальдо + оплаты + возвраты товара − реализации − возврат денег.
+     * долг прошлых периодов + оплаты + возвраты товара − реализации − возврат денег.
+     *
+     * Долг прошлых периодов приезжает обычным движением 2025 года, а не отдельным
+     * начальным сальдо: лента приходит от 1С целиком (v16.3.0).
      */
     #[Test]
     public function лента_движений_даёт_баланс_из_контракта(): void
     {
+        // Отдельный document_uuid обязателен: `settlement.posted` заменяет движения
+        // документа целиком, и общий регистратор затёр бы одно сообщение другим.
         $this->dispatch([
-            'event' => 'settlement.opening_balance',
+            'event' => 'settlement.posted',
             'message_id' => 'msg-opening-3',
-            'uuid' => '9d4c7e2a-1f8b-4356-a09c-3e7d5b2f8a14',
-            'as_of_date' => '2026-01-01',
-            'amount' => -50000.00,
-            'contractor_uuid' => self::CONTRACTOR_UUID,
-            'partner_uuid' => self::PARTNER_UUID,
-            'organization_uuid' => self::ORGANIZATION_UUID,
+            'document_uuid' => 'f0e1d2c3-b4a5-4967-8899-0a1b2c3d4e5f',
+            'document_kind' => 'other',
+            'document_number' => 'Ввод остатков 1',
+            'document_date' => '2025-12-31',
+            'entries' => [
+                $this->entry([
+                    'uuid' => '9d4c7e2a-1f8b-4356-a09c-3e7d5b2f8a14',
+                    'type' => 'adjustment',
+                    'date' => '2025-12-31',
+                    'amount' => -50000.00,
+                    'amount_rub' => -50000.00,
+                ]),
+            ],
         ]);
 
         $this->dispatch($this->postedMessage([

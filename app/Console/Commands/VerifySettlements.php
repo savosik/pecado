@@ -53,7 +53,7 @@ class VerifySettlements extends Command
         {--threshold=1.00 : Порог расхождения в рублях}
         {--format=table : table или csv}
         {--only-mismatch : Показывать только расхождения}
-        {--checkpoint=2026-07-01 : Дата контрольной точки для инварианта}
+        {--checkpoint=2026-08-01 : Дата контрольной точки-эталона (01.08.2026 — итог по 31.07, 150 пар)}
         {--strict-balances : Считать провалом и расхождение с balance.updated}';
 
     protected $description = 'Сверка регистра взаиморасчётов с балансами из 1С и со старой моделью';
@@ -312,9 +312,12 @@ class VerifySettlements extends Command
             'Знак движения соответствует типу' => $this->wrongSignCount(),
             'У фактических движений нет погашенной части' => SettlementEntry::query()
                 ->facts()->whereRaw('settled_amount > '.self::EPSILON)->count(),
-            'Нет движений раньше начала ленты' => SettlementEntry::query()
-                ->where('type', '!=', SettlementEntry::TYPE_OPENING_BALANCE)
-                ->whereDate('date', '<', '2026-01-01')->count(),
+            // Инварианта «нет движений раньше начала ленты» здесь больше нет:
+            // он исходил из того, что лента начинается 01.01.2026, а она начинается
+            // раньше — 1С отдаёт историю целиком, 772 движения датированы 2025 годом.
+            // Проверка объявляла нарушением совершенно законные строки (v16.3.0).
+            'Начальное сальдо не попало в ленту' => SettlementEntry::query()
+                ->where('type', SettlementEntry::TYPE_OPENING_BALANCE)->count(),
             'Разнесённая оплата заказа помечена производной' => SettlementEntry::query()
                 ->plans()->where('document_kind', 'order')
                 ->whereRaw('settled_amount > '.self::EPSILON)
@@ -382,9 +385,15 @@ class VerifySettlements extends Command
     }
 
     /**
-     * «Сальдо на 01.01 + движения до даты закрытия» обязано сойтись со сверенной
-     * контрольной точкой. Расхождение говорит, что история первого полугодия
-     * недостоверна, — и это решение принимается осознанно, а не по умолчанию.
+     * Сумма ленты до даты точки обязана сойтись со сверенной контрольной точкой.
+     *
+     * Обе стороны равенства приходят из регистра 1С, поэтому расхождение означает
+     * дырку в истории, а не спор двух каналов, — в отличие от сравнения с
+     * `balance.updated`, которое 1С сама считает недостоверным.
+     *
+     * Строки `opening_balance` в расчёт не входят: лента содержит историю целиком,
+     * и сальдо её дублирует (v16.3.0). После чистки прода таких строк нет вовсе,
+     * но исключение оставлено — на случай, если 1С пришлёт их снова.
      */
     private function checkpointMismatchCount(Carbon $asOf): int
     {
@@ -399,6 +408,7 @@ class VerifySettlements extends Command
 
             $ledger = (float) SettlementEntry::query()
                 ->facts()
+                ->where('type', '!=', SettlementEntry::TYPE_OPENING_BALANCE)
                 ->forReconciliation($checkpoint->company_id, $checkpoint->organization_id, $checkpoint->currency_code)
                 // Контрольная точка — состояние НА начало дня, поэтому строго раньше.
                 ->whereDate('date', '<', $asOf->toDateString())
