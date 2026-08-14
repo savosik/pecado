@@ -77,9 +77,9 @@ export default function UserHeader() {
     const { openLogin, openRegister } = useAuthDialog();
     const headerHidden = useHideOnScrollDown();
 
-    // Загрузка избранного и корзины при наличии пользователя
+    // Загрузка избранного и корзины; при user = null сторы сами сбрасывают
+    // данные предыдущего пользователя (разлогин SPA-переходом)
     useEffect(() => {
-        if (!user) return;
         useFavoritesStore.getState().loadOnce(user);
         useCartStore.getState().init(user);
     }, [user?.id]);

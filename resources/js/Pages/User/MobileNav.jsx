@@ -97,9 +97,9 @@ export default function MobileNav() {
     const cartTotals = useCartStore((s) => s.cartTotals);
     const cartBadge = cartBadgeProps(cartTotals.instock, cartTotals.preorder);
 
-    // Инициализация сторов при наличии пользователя
+    // Инициализация сторов; при user = null сторы сами сбрасывают
+    // данные предыдущего пользователя (разлогин SPA-переходом)
     useEffect(() => {
-        if (!user) return;
         useFavoritesStore.getState().loadOnce(user);
         useCartStore.getState().init(user);
     }, [user?.id]);

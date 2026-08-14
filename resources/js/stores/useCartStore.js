@@ -22,7 +22,9 @@ import { create } from 'zustand';
 import { router } from '@inertiajs/react';
 import { toastError } from '@/utils/toast';
 
-const STORAGE_KEY = 'cart:qty:v1';
+const STORAGE_KEY = 'cart:qty:v2';
+// Ключ старого формата (без владельца) — подчищается при первом чтении.
+const LEGACY_STORAGE_KEY = 'cart:qty:v1';
 // Длиннее debounce комфортнее переживает long-press на +/-: накапливаем
 // финальное значение и шлём один POST. Фронт уже clamp-ит до stock+preorder,
 // так что spillover-коррекций сервера ждать не нужно.
@@ -36,19 +38,41 @@ const defectDebounceTimers = {};
 // localStorage helpers
 // ────────────────────────────────────────────
 
+/**
+ * Владелец кэша — id пользователя, под которым прошёл init().
+ *
+ * CRM, админка и витрина — одно Inertia-приложение, поэтому смена аккаунта
+ * (logout/login, вход менеджера под партнёром из CRM) происходит SPA-переходом
+ * без перезагрузки. Кэш без владельца показывал новому пользователю корзину
+ * предыдущего, поэтому id хранится и в модуле, и внутри записи localStorage.
+ */
+let cacheOwnerId = null;
+
 function loadFromCache() {
     try {
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return {};
-        return parseQuantitiesMap(JSON.parse(raw));
+
+        const payload = JSON.parse(raw);
+        if (!payload || payload.owner !== cacheOwnerId) {
+            // Кэш другого пользователя этого браузера — не показываем и стираем.
+            localStorage.removeItem(STORAGE_KEY);
+            return {};
+        }
+
+        return parseQuantitiesMap(payload.quantities);
     } catch {
         return {};
     }
 }
 
 function saveToCache(quantities) {
+    if (cacheOwnerId === null) return;
+
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(quantities));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ owner: cacheOwnerId, quantities }));
     } catch {
         // quota exceeded — ignore
     }
@@ -121,6 +145,12 @@ function parseTotals(data) {
 
 export const useCartStore = create((set, get) => ({
     /**
+     * Id пользователя, чьи данные сейчас в сторе (null — стор пуст/гость).
+     * @type {number|null}
+     */
+    ownerId: null,
+
+    /**
      * Карта количеств: { [productId]: totalQty }
      * @type {Object<number, number>}
      */
@@ -178,7 +208,26 @@ export const useCartStore = create((set, get) => ({
      * @param {object|null} user — auth.user из Inertia props (null для гостей)
      */
     init: async (user) => {
-        if (!user || get().loading) return;
+        if (!user) {
+            // Разлогин SPA-переходом: в сторе могла остаться корзина прошлого
+            // пользователя — гостю её показывать нельзя.
+            if (get().ownerId !== null) get().reset();
+
+            return;
+        }
+
+        const uid = Number(user.id);
+        if (get().ownerId !== uid) {
+            // Смена аккаунта без перезагрузки (logout/login, вход менеджера
+            // под партнёром): сбрасываем данные и кэш прошлого пользователя,
+            // включая pending debounce — иначе его количества уехали бы
+            // POST-ом в корзину нового.
+            get().reset();
+            cacheOwnerId = uid;
+            set({ ownerId: uid });
+        }
+
+        if (get().loading) return;
 
         // Если уже загружено — не повторять, но re-sync допускается через _serverSync
         if (get().loaded) return;
@@ -629,6 +678,7 @@ export const useCartStore = create((set, get) => ({
             delete defectDebounceTimers[key];
         });
         set({
+            ownerId: null,
             quantities: {},
             productSplits: {},
             cartTotals: { total: 0, instock: 0, preorder: 0 },
@@ -638,6 +688,7 @@ export const useCartStore = create((set, get) => ({
             syncing: new Set(),
             syncingDefects: new Set(),
         });
+        cacheOwnerId = null;
         try {
             localStorage.removeItem(STORAGE_KEY);
         } catch {
@@ -684,7 +735,14 @@ if (typeof window !== 'undefined') {
 
         let quantities;
         try {
-            quantities = parseQuantitiesMap(JSON.parse(e.newValue || '{}'));
+            const payload = JSON.parse(e.newValue || 'null');
+
+            // Запись другой вкладки принимаем только от того же пользователя:
+            // соседняя вкладка могла уже сменить аккаунт (logout/login,
+            // вход менеджера под партнёром).
+            if (!payload || payload.owner !== cacheOwnerId) return;
+
+            quantities = parseQuantitiesMap(payload.quantities);
         } catch {
             return;
         }

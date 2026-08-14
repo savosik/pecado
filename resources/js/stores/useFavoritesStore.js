@@ -12,6 +12,15 @@
 import { create } from 'zustand';
 
 export const useFavoritesStore = create((set, get) => ({
+    /**
+     * Id пользователя, чьё избранное сейчас в сторе (null — стор пуст/гость).
+     * CRM, админка и витрина — одно Inertia-приложение: смена аккаунта
+     * (logout/login, вход менеджера под партнёром) проходит SPA-переходом,
+     * и без привязки к владельцу новый пользователь видел бы чужой счётчик.
+     * @type {number|null}
+     */
+    ownerId: null,
+
     /** @type {Set<number>} ID товаров в избранном */
     ids: new Set(),
 
@@ -28,7 +37,21 @@ export const useFavoritesStore = create((set, get) => ({
      * @param {object|null} user — объект auth.user из Inertia props (null для гостей)
      */
     loadOnce: async (user) => {
-        if (!user || get().loaded || get().loading) return;
+        if (!user) {
+            // Разлогин SPA-переходом: гостю чужое избранное не показываем.
+            if (get().ownerId !== null) get().reset();
+
+            return;
+        }
+
+        const uid = Number(user.id);
+        if (get().ownerId !== uid) {
+            // Смена аккаунта без перезагрузки — сбрасываем избранное
+            // предыдущего пользователя и грузим заново.
+            set({ ownerId: uid, ids: new Set(), loaded: false, loading: false });
+        }
+
+        if (get().loaded || get().loading) return;
 
         set({ loading: true });
 
@@ -87,5 +110,5 @@ export const useFavoritesStore = create((set, get) => ({
     /**
      * Сброс стора (при logout).
      */
-    reset: () => set({ ids: new Set(), loaded: false, loading: false }),
+    reset: () => set({ ownerId: null, ids: new Set(), loaded: false, loading: false }),
 }));
