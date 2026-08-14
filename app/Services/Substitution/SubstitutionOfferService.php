@@ -1,0 +1,157 @@
+<?php
+
+namespace App\Services\Substitution;
+
+use App\Enums\Crm\TaskPriority;
+use App\Enums\Crm\TaskStatus;
+use App\Models\CrmTask;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\SubstitutionOffer;
+use App\Models\User;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * Рождение и дополнение подборок замен по отменам строк из 1С.
+ *
+ * Одна открытая подборка на заказ: 1С проверяет сборку в несколько заходов,
+ * и вторая волна отмен по тому же заказу дополняет существующую подборку,
+ * а не плодит новые. Подтверждённая подборка закрыта — следующая волна
+ * рождает новую.
+ *
+ * Недобор не должен зависнуть ничьим: без персонального менеджера задача
+ * уходит руководителю отдела (правило «по данным, не по ролям» здесь
+ * упирается в то, что задача обязана иметь исполнителя).
+ */
+class SubstitutionOfferService
+{
+    /**
+     * Зарегистрировать волну отмен: создать или дополнить подборку, поставить задачу.
+     *
+     * @param  list<int>  $orderItemIds  строки, отменённые этой волной
+     */
+    public function registerCancellation(Order $order, array $orderItemIds): ?SubstitutionOffer
+    {
+        $order->loadMissing('user.personalManager.user');
+
+        $cancelledItems = $order->items()
+            ->whereIn('id', $orderItemIds)
+            ->where('cancelled', true)
+            ->get();
+
+        if ($cancelledItems->isEmpty()) {
+            return null;
+        }
+
+        $offer = SubstitutionOffer::query()
+            ->where('order_id', $order->id)
+            ->open()
+            ->latest('id')
+            ->first();
+
+        $manager = $order->user?->personalManager?->user;
+
+        if ($offer === null) {
+            $offer = SubstitutionOffer::create([
+                'order_id' => $order->id,
+                'user_id' => $order->user_id,
+                'company_id' => $order->company_id,
+                'manager_user_id' => $manager?->id,
+                'expires_at' => now()->addDays((int) config('substitutions.offer_ttl_days', 7)),
+            ]);
+        }
+
+        $this->ensureTask($order, $offer, $cancelledItems->all(), $manager);
+
+        return $offer;
+    }
+
+    /**
+     * Задача менеджеру: одна активная на подборку, повторная волна отмен
+     * при живой задаче новую не ставит.
+     *
+     * @param  list<OrderItem>  $cancelledItems
+     */
+    private function ensureTask(Order $order, SubstitutionOffer $offer, array $cancelledItems, ?User $manager): void
+    {
+        $assignee = $manager ?? $this->fallbackAssignee();
+
+        if ($assignee === null) {
+            Log::warning('Недобор без исполнителя: нет персонального менеджера и руководителя отдела', [
+                'order_id' => $order->id,
+                'offer_id' => $offer->id,
+            ]);
+
+            return;
+        }
+
+        $number = $order->erp_number ?: $order->number;
+
+        $hasActiveTask = CrmTask::query()
+            ->where('related_type', (new Order)->getMorphClass())
+            ->where('related_id', $order->id)
+            ->whereIn('status', [TaskStatus::OPEN, TaskStatus::IN_PROGRESS])
+            ->where('title', 'like', 'Недобор по заказу%')
+            ->exists();
+
+        if ($hasActiveTask) {
+            return;
+        }
+
+        $amount = round(array_sum(array_map(
+            static fn (OrderItem $item) => (float) $item->subtotal,
+            $cancelledItems,
+        )), 2);
+
+        $urgent = $amount > (float) config('substitutions.urgent_amount', 10000);
+
+        $task = new CrmTask([
+            'title' => sprintf(
+                'Недобор по заказу %s — %s, %s ₽, %d поз.',
+                $number,
+                $order->user?->name ?: 'клиент без карточки',
+                number_format($amount, 0, ',', ' '),
+                count($cancelledItems),
+            ),
+            'description' => sprintf(
+                "1С отменила строки при сборке. Подборка замен: %s\n%s",
+                url("/crm/shortages/{$offer->id}"),
+                collect($cancelledItems)
+                    ->map(fn (OrderItem $item) => sprintf('— %s, %d шт.', $item->name, $item->quantity))
+                    ->implode("\n"),
+            ),
+            'author_id' => $assignee->id,
+            'assignee_id' => $assignee->id,
+            'status' => TaskStatus::OPEN,
+            'priority' => $urgent ? TaskPriority::HIGH : TaskPriority::NORMAL,
+            'due_at' => $this->deadline($urgent),
+        ]);
+
+        $task->related()->associate($order);
+        $task->save();
+    }
+
+    /**
+     * Дедлайн: срочный недобор — +2 часа, обычный — до конца рабочего дня.
+     * Отмена, приехавшая вечером, не должна получать дедлайн в прошлом.
+     */
+    private function deadline(bool $urgent): Carbon
+    {
+        if ($urgent) {
+            return now()->addHours(2);
+        }
+
+        $endOfDay = now()->setTime((int) config('substitutions.task_deadline_hour', 18), 0);
+
+        return $endOfDay->isPast() ? now()->addHours(2) : $endOfDay;
+    }
+
+    /**
+     * Фолбэк-исполнитель — руководитель отдела продаж.
+     */
+    private function fallbackAssignee(): ?User
+    {
+        return User::role('sales-head')->orderBy('id')->first();
+    }
+}

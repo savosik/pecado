@@ -139,6 +139,11 @@ class ErpBusController extends AdminController
         //     означает, что 1С шлёт лишние сообщения либо порядок систематически рвётся.
         $staleCount = ErpBusMessage::where('status', 'stale')->count();
 
+        // 11. Рассинхрон каталога: позиции заказов, чей товар не нашёлся по UUID.
+        //     Это не недобор и не ошибка обработки — сообщение принято, но строка
+        //     осталась без привязки к товару. Молча копятся, поэтому счётчик.
+        $unknownProductItemsCount = \App\Models\OrderItem::whereNull('product_id')->count();
+
         return Inertia::render('Admin/Pages/ErpBus/Index', [
             'queues' => Inertia::defer(fn () => $this->fetchQueuesFromApi()),
             'processed' => $processed,
@@ -151,6 +156,7 @@ class ErpBusController extends AdminController
             'processingErrorsCount' => $processingErrorsCount,
             'recoveredCount' => $recoveredCount,
             'staleCount' => $staleCount,
+            'unknownProductItemsCount' => $unknownProductItemsCount,
             'busMessagesCount' => $busMessagesCount,
             'busLoggingEnabled' => $busLoggingEnabled,
             // Счётчики выше считаются по таблице, а её глубина ограничена

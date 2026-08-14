@@ -3,10 +3,13 @@
 namespace App\Services\Erp\Support;
 
 use App\Enums\PromoKind;
+use App\Events\OrderItemsCancelled;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Приведение позиций заказа к содержимому `items[]` из 1С (протокол v15.16.0).
@@ -62,6 +65,7 @@ class OrderItemsSynchronizer
         [$byLine, $orphans] = $this->indexExisting($existing);
 
         $matchedIds = [];
+        $newlyCancelledIds = [];
         $total = 0.0;
 
         foreach ($rows as $row) {
@@ -70,6 +74,11 @@ class OrderItemsSynchronizer
             if ($match !== null) {
                 $matchedIds[] = $match->id;
             }
+
+            // Строка стала отменённой этим сообщением: была активной и отменилась,
+            // либо появилась сразу отменённой. Уже отменённая повторно не считается —
+            // повторная доставка payload не должна рождать событие.
+            $becameCancelled = $row['cancelled'] && ($match === null || ! $match->cancelled);
 
             $links = $this->resolveLinks($row, $match, $linksByProduct);
             $subtotal = round($row['quantity'] * $row['final_price'], 2);
@@ -93,8 +102,13 @@ class OrderItemsSynchronizer
 
             if ($match !== null) {
                 $match->update($fields);
+                $itemId = $match->id;
             } else {
-                $order->items()->create($fields);
+                $itemId = $order->items()->create($fields)->id;
+            }
+
+            if ($becameCancelled) {
+                $newlyCancelledIds[] = $itemId;
             }
 
             // Отменённая строка хранится и показывается клиенту, но заказ
@@ -105,6 +119,19 @@ class OrderItemsSynchronizer
         }
 
         $this->deleteMissing($order, $existing, $matchedIds);
+
+        if ($newlyCancelledIds !== []) {
+            // После коммита обработчика: слушатели (подборка замен, задача
+            // менеджеру) должны видеть уже сохранённое состояние заказа.
+            $orderId = $order->id;
+            DB::afterCommit(static function () use ($orderId, $newlyCancelledIds) {
+                $order = Order::withTrashed()->find($orderId);
+
+                if ($order !== null) {
+                    OrderItemsCancelled::dispatch($order, $newlyCancelledIds);
+                }
+            });
+        }
 
         return round($total, 2);
     }
@@ -135,6 +162,15 @@ class OrderItemsSynchronizer
             $product = $productUuid
                 ? Product::withoutGlobalScopes()->where('external_id', $productUuid)->first()
                 : null;
+
+            if ($productUuid && $product === null) {
+                // Рассинхрон каталога, а не недобор: товар есть в 1С, но не найден
+                // по UUID на сайте. Молча копить такие строки нельзя — алерт.
+                Log::warning('ERP: позиция заказа с неизвестным сайту товаром', [
+                    'product_uuid' => $productUuid,
+                    'name' => $item['name'] ?? null,
+                ]);
+            }
 
             $quantity = (int) ($item['quantity'] ?? 0);
             $basePrice = (float) ($item['base_price'] ?? $item['price'] ?? 0);

@@ -173,7 +173,7 @@ const Pagination = ({ data, paramName = 'page' }) => {
     );
 };
 
-export default function Index({ queues, processed, failedJobs, eventStats, eventTypes, filters, validationErrors, validationErrorsCount, processingErrors, processingErrorsCount, recoveredCount, staleCount, busMessagesCount, busLoggingEnabled, busRetentionDays = 0, busArchiveEnabled = false }) {
+export default function Index({ queues, processed, failedJobs, eventStats, eventTypes, filters, validationErrors, validationErrorsCount, processingErrors, processingErrorsCount, recoveredCount, staleCount, unknownProductItemsCount = 0, busMessagesCount, busLoggingEnabled, busRetentionDays = 0, busArchiveEnabled = false }) {
     const [search, setSearch] = useState(filters.search || '');
     const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
     const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
@@ -544,6 +544,13 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
                                 Устаревших сообщений: {staleCount}
                             </Badge>
                         </Link>
+                    )}
+                    {/* Рассинхрон каталога: строки заказов, чей товар не нашёлся по UUID.
+                        Это не недобор — замену предлагать не по чему, нужен разбор каталога */}
+                    {unknownProductItemsCount > 0 && (
+                        <Badge colorPalette="yellow" variant="subtle" size="sm" title="Позиции заказов без привязки к товару сайта — товар не найден по UUID из 1С">
+                            Позиций без товара: {unknownProductItemsCount}
+                        </Badge>
                     )}
                 </HStack>
 
