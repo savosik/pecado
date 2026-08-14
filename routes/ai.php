@@ -2,8 +2,10 @@
 
 use App\Http\Middleware\AuthenticateAnalyticsMcp;
 use App\Http\Middleware\AuthenticateCrmAgent;
+use App\Http\Middleware\AuthenticatePurchasingAgent;
 use App\Mcp\Servers\AnalyticsServer;
 use App\Mcp\Servers\CrmServer;
+use App\Mcp\Servers\PurchasingServer;
 use Laravel\Mcp\Facades\Mcp;
 
 /*
@@ -50,3 +52,16 @@ Mcp::web('/mcp/analytics', AnalyticsServer::class)
  */
 Mcp::web('/mcp/crm', CrmServer::class)
     ->middleware([AuthenticateCrmAgent::class, 'throttle:60,1']);
+
+/*
+ * Уценка глазами агента закупщика — осмотр партий по фото, цена, публикация.
+ *
+ * Отдельный сервер и отдельные токены (purchasing_agent_tokens): токен
+ * закупщика не должен открывать CRM, а токен менеджера — цены уценки.
+ * Права проверяются обычными permission-ами владельца токена
+ * (defects.view / defects.price / defects.publish).
+ *
+ * URL для агента: https://pecado.ru/mcp/purchasing
+ */
+Mcp::web('/mcp/purchasing', PurchasingServer::class)
+    ->middleware([AuthenticatePurchasingAgent::class, 'throttle:60,1']);

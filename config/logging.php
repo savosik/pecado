@@ -105,6 +105,14 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'purchasing-agent' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/purchasing-agent.log'),
+            'level' => 'info',
+            'days' => env('LOG_PURCHASING_AGENT_DAYS', 180),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
