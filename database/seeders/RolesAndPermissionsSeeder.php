@@ -133,6 +133,9 @@ class RolesAndPermissionsSeeder extends Seeder
         // Финансы: только view — раздел читает деньги из 1С и ничего не меняет,
         // а действия по строке идут через права задач. Границы задаёт скоуп клиентов.
         'crm-finance' => ['view'],
+        // Недоборы: view — очередь и карточка, edit — кандидаты, письмо и исходы.
+        // Границы задаёт скоуп клиентов, как в остальных разделах.
+        'crm-shortages' => ['view', 'edit'],
         // Вложения: edit нет — заменить файл это удалить и загрузить заново.
         'crm-attachments' => ['view', 'create', 'delete'],
         // Лиды: потенциальные клиенты до появления партнёра в 1С.
@@ -245,6 +248,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-plans' => 'CRM: Планы продаж',
         'crm-opportunities' => 'CRM: Возможности',
         'crm-beds' => 'CRM: Грядки',
+        'crm-shortages' => 'CRM: Недоборы',
         'crm-attachments' => 'CRM: Вложения',
         'crm-agent-tokens' => 'CRM: Токены ИИ-агентов',
         'crm-impersonate' => 'CRM: Вход под партнёром',
@@ -288,7 +292,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'payments' => ['view'],
                 // CRM: партнёры отдела. Менеджеры взаимозаменяемы — экран открывается
                 // сфокусированным на своих, расфокус остаётся осознанным действием.
-                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-impersonate',
+                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-shortages', 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-impersonate',
             ],
         ],
         'sales-manager-crm' => [
@@ -296,14 +300,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
                 // Для менеджеров, которым нужны партнёры отдела, но не нужна админка.
-                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-impersonate',
+                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-shortages', 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-impersonate',
             ],
         ],
         'sales-head' => [
             'label' => 'Руководитель отдела продаж',
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
-                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-department', 'crm-leads', 'crm-lead-stages', 'crm-contractors', 'crm-team', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-agent-tokens', 'crm-impersonate',
+                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-department', 'crm-leads', 'crm-lead-stages', 'crm-contractors', 'crm-team', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-shortages', 'crm-agent-tokens', 'crm-impersonate',
                 // Себестоимость руководителю отдела появится вместе с отчётом по марже
                 // и только под `crm-`-префиксом: `product-costs` — админский ресурс,
                 // и выдача его этой роли открыла бы ей вход в /admin (PermissionNamingTest).

@@ -1,4 +1,4 @@
-import { Accordion, HStack, Text, Icon, VStack } from '@chakra-ui/react';
+import { Accordion, Badge, HStack, Text, Icon, VStack } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
 import { usePanel } from './PanelContext';
 import { useNavigation } from './useNavigation';
@@ -17,7 +17,7 @@ export const NavigationMenu = ({ onItemClick, isCollapsed = false }) => {
     const { menuConfig } = usePanel();
     const { isActive, getActiveGroups } = useNavigation();
     const { can } = usePermission();
-    const { config = {} } = usePage().props;
+    const { config = {}, crmCounters = {} } = usePage().props;
 
     const filteredGroups = menuConfig
         .map((group) => ({
@@ -68,6 +68,11 @@ export const NavigationMenu = ({ onItemClick, isCollapsed = false }) => {
                                         >
                                             <Icon as={item.icon} boxSize={4} />
                                             {!isCollapsed && <Text fontSize="sm">{item.label}</Text>}
+                                            {!isCollapsed && item.counter && crmCounters[item.counter] > 0 && (
+                                                <Badge colorPalette="red" variant="solid" size="xs" ml="auto">
+                                                    {crmCounters[item.counter]}
+                                                </Badge>
+                                            )}
                                         </HStack>
                                     </Link>
                                 ))}

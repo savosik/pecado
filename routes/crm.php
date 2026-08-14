@@ -18,6 +18,7 @@ use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
+use App\Http\Controllers\Crm\ShortageController;
 use App\Http\Controllers\Crm\PresenceController;
 use App\Http\Controllers\Crm\TaskController;
 use App\Http\Controllers\Crm\TaskRecurrenceController;
@@ -471,5 +472,21 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // рискует быть съеденной параметром, если у страницы появится сегмент.
         Route::get('/finance/reconciliation/export', [FinanceController::class, 'reconciliationExport'])->name('finance.reconciliation.export');
         Route::get('/finance/reconciliation', [FinanceController::class, 'reconciliation'])->name('finance.reconciliation');
+    });
+
+    // Недоборы: подборки замен по отменам строк 1С. view — очередь и карточка,
+    // edit — кандидаты, письмо и исходы. Поиск товара — свой роут под правом
+    // раздела (crm.products.search закрыт правом аналитики, которого у рядового
+    // менеджера может не быть). Статические сегменты — до /{offer}.
+    Route::middleware('permission:crm-shortages.view')->group(function () {
+        Route::get('/shortages/products/search', [ShortageController::class, 'searchProducts'])->name('shortages.products.search');
+        Route::get('/shortages', [ShortageController::class, 'index'])->name('shortages.index');
+        Route::get('/shortages/{offer}', [ShortageController::class, 'show'])->name('shortages.show')->whereNumber('offer');
+    });
+    Route::middleware('permission:crm-shortages.edit')->group(function () {
+        Route::post('/shortages/{offer}/candidates', [ShortageController::class, 'storeCandidate'])->name('shortages.candidates.store')->whereNumber('offer');
+        Route::delete('/shortages/{offer}/candidates/{item}', [ShortageController::class, 'removeCandidate'])->name('shortages.candidates.remove')->whereNumber('offer')->whereNumber('item');
+        Route::post('/shortages/{offer}/candidates/{item}/restore', [ShortageController::class, 'restoreCandidate'])->name('shortages.candidates.restore')->whereNumber('offer')->whereNumber('item');
+        Route::post('/shortages/{offer}/outcome', [ShortageController::class, 'outcome'])->name('shortages.outcome')->whereNumber('offer');
     });
 });

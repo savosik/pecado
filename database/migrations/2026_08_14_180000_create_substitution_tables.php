@@ -58,12 +58,21 @@ return new class extends Migration
                 ->comment('Причина закрытия без замены (обязательна при dismissed)');
 
             $table->timestamp('expires_at')->comment('Срок жизни подборки (по умолчанию +7 дней от создания)');
+            $table->timestamp('sent_at')->nullable()->comment('Когда менеджер отправил подборку клиенту (письмо)');
+            $table->timestamp('reminded_at')->nullable()->comment('Когда ушло автонапоминание клиенту (строго одно)');
+            $table->timestamp('call_task_at')->nullable()->comment('Когда поставлена задача «позвонить» по молчащей подборке (дожим)');
             $table->timestamp('viewed_at')->nullable()->comment('Когда клиент впервые открыл страницу подборки');
             $table->timestamp('confirmed_at')->nullable()->comment('Когда клиент согласовал замену');
 
             $table->json('result_order_ids')
                 ->nullable()
                 ->comment('Созданные заказы-замены (orders.id); их может быть два: обычный и уценочный');
+
+            $table->foreignId('crm_email_id')
+                ->nullable()
+                ->comment('Письмо-черновик подборки в CRM (crm_emails.id); NULL — черновик удалён или не создавался')
+                ->constrained('crm_emails')
+                ->nullOnDelete();
 
             $table->timestamp('created_at')->nullable()->comment('Когда запись создана');
             $table->timestamp('updated_at')->nullable()->comment('Когда запись менялась');

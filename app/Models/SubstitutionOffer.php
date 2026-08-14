@@ -44,9 +44,13 @@ class SubstitutionOffer extends Model
         'status',
         'dismiss_reason',
         'expires_at',
+        'sent_at',
+        'reminded_at',
+        'call_task_at',
         'viewed_at',
         'confirmed_at',
         'result_order_ids',
+        'crm_email_id',
     ];
 
     protected function casts(): array
@@ -54,6 +58,9 @@ class SubstitutionOffer extends Model
         return [
             'status' => OfferStatus::class,
             'expires_at' => 'datetime',
+            'sent_at' => 'datetime',
+            'reminded_at' => 'datetime',
+            'call_task_at' => 'datetime',
             'viewed_at' => 'datetime',
             'confirmed_at' => 'datetime',
             'result_order_ids' => 'array',
@@ -90,6 +97,14 @@ class SubstitutionOffer extends Model
     public function items(): HasMany
     {
         return $this->hasMany(SubstitutionOfferItem::class, 'offer_id');
+    }
+
+    /**
+     * Письмо-черновик подборки: система готовит, менеджер правит и отправляет.
+     */
+    public function draftEmail(): BelongsTo
+    {
+        return $this->belongsTo(CrmEmail::class, 'crm_email_id');
     }
 
     /**

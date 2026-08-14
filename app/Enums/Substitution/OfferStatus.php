@@ -32,6 +32,17 @@ enum OfferStatus: string
         };
     }
 
+    public function color(): string
+    {
+        return match ($this) {
+            self::PENDING => 'orange',
+            self::VIEWED => 'blue',
+            self::CONFIRMED => 'green',
+            self::EXPIRED => 'red',
+            self::DISMISSED => 'gray',
+        };
+    }
+
     /**
      * Оффер ещё живой: его можно дополнять новыми строками и показывать клиенту.
      */

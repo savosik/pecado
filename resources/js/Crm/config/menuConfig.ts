@@ -20,6 +20,7 @@ import {
     LuCalendarClock,
     LuUserPlus,
     LuFileDown,
+    LuPackageX,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -29,6 +30,8 @@ export interface MenuItem {
     permission?: string;
     /** Ключ фиче-флага в общих пропсах Inertia (`config`). Пункт скрыт, пока флаг выключен. */
     feature?: string;
+    /** Ключ счётчика в `crmCounters` из общих пропсов — числовой бейдж у пункта. */
+    counter?: string;
 }
 
 export interface MenuGroup {
@@ -59,6 +62,8 @@ export const menuConfig: MenuGroup[] = [
             { label: "Планы продаж", icon: LuTarget, path: "/crm/plans", permission: "crm-plans.view" },
             { label: "Возможности", icon: LuLightbulb, path: "/crm/opportunities", permission: "crm-opportunities.view" },
             { label: "Грядки", icon: LuSprout, path: "/crm/beds", permission: "crm-beds.view" },
+            // Недоборы: отмены строк 1С на сборке → подборка замен клиенту.
+            { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", feature: "shortage_offers_enabled", counter: "shortages" },
             { label: "Отчёты продаж", icon: LuChartLine, path: "/crm/analytics", permission: "crm-analytics.view" },
             { label: "Команда", icon: LuUsersRound, path: "/crm/team", permission: "crm-team.view" },
             { label: "Токены ИИ-агентов", icon: LuKeyRound, path: "/crm/agent-tokens", permission: "crm-agent-tokens.view" },
