@@ -50,11 +50,11 @@ class SeedSettlementDemo extends Command
     /** Метка сгенерированных строк: по ней и чистим. */
     private const SOURCE = 'demo';
 
-    /** Начало ленты — совпадает с датой отсечки из контракта. */
-    private const OPENING_DATE = '2026-01-01';
+    /** Долг прошлых периодов: лента начинается до 2026 года, как у 1С. */
+    private const OPENING_DATE = '2025-12-31';
 
     /** Дата сверенной контрольной точки. */
-    private const CHECKPOINT_DATE = '2026-07-01';
+    private const CHECKPOINT_DATE = '2026-08-01';
 
     public function handle(): int
     {
@@ -147,13 +147,12 @@ class SeedSettlementDemo extends Command
         $agreement = $this->agreement($client, $company, $organization);
         $balance = $this->openingBalance($client, $company, $organization, $agreement);
 
-        // H1 — до контрольной точки, H2 — после. Разделение нужно, чтобы инвариант
-        // «сальдо 01.01 + движения первого полугодия = checkpoint 01.07» проверялся
-        // на данных, а не на нуле.
+        // До контрольной точки и после неё. Разделение нужно, чтобы инвариант
+        // «сумма ленты до даты точки = сумма точки» проверялся на данных, а не на нуле.
         $balance += $this->documents($client, $company, $organization, $agreement, '2026-02-01', 3);
         $checkpointAmount = $balance;
 
-        $balance += $this->documents($client, $company, $organization, $agreement, '2026-07-15', 4);
+        $balance += $this->documents($client, $company, $organization, $agreement, '2026-08-05', 4);
 
         $this->checkpoint($client, $company, $organization, $checkpointAmount);
         $this->projectBalance($client, $company, $organization, $balance);
@@ -177,16 +176,23 @@ class SeedSettlementDemo extends Command
         ]);
     }
 
+    /**
+     * Долг прошлых периодов — обычным движением, а не строкой `opening_balance`.
+     *
+     * 1С отдаёт ленту целиком, с 2025 года, и отдельного начального сальдо в ней
+     * нет (v16.3.0). Демо-данные обязаны повторять боевую форму, иначе на них
+     * не воспроизведётся то, что случается на проде.
+     */
     private function openingBalance(User $client, Company $company, Organization $organization, Agreement $agreement): float
     {
         $amount = -1 * random_int(20, 200) * 1000;
 
         $this->entry($client, $company, $organization, $agreement, [
-            'type' => SettlementEntry::TYPE_OPENING_BALANCE,
+            'type' => SettlementEntry::TYPE_ADJUSTMENT,
             'amount' => $amount,
             'date' => self::OPENING_DATE,
             'document_kind' => 'other',
-            'comment' => 'Начальное сальдо на '.self::OPENING_DATE,
+            'comment' => 'Долг прошлых периодов на '.self::OPENING_DATE,
         ]);
 
         return (float) $amount;
