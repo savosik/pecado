@@ -21,6 +21,9 @@ return [
     // Час дедлайна обычной задачи «связаться с клиентом» (до конца рабочего дня).
     'task_deadline_hour' => (int) env('SHORTAGE_TASK_DEADLINE_HOUR', 18),
 
+    // Тихие письма менеджеру «клиент открыл/согласовал» — информируют, не требуют действий.
+    'manager_notices' => (bool) env('SHORTAGE_MANAGER_NOTICES', true),
+
     /*
      * Автоподбор кандидатов (sub-06).
      *

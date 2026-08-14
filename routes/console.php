@@ -35,4 +35,5 @@ Schedule::command('crm:back-in-stock-drafts')->dailyAt('07:20')->withoutOverlapp
 Schedule::command('crm:tasks-recur')->dailyAt('05:40')->withoutOverlapping(); // задачи по расписанию: материализация на сутки вперёд, до утренних напоминаний
 Schedule::command('crm:tasks-remind')->dailyAt('08:30')->withoutOverlapping(); // напоминания о завтрашних дедлайнах и о просрочке за сутки (за флагом MAIL_FEATURE_CRM_TASKS)
 Schedule::command('crm:leads-remind-stale')->dailyAt('05:50')->withoutOverlapping(); // задачи по залежавшимся лидам; до материализации повторов и утренних напоминаний
+Schedule::command('substitutions:follow-up')->hourly()->withoutOverlapping(); // дожим подборок замен: напоминание клиенту, задача «позвонить», просрочка (за флагом SHORTAGE_OFFERS_ENABLED)
 Schedule::command('apiship:sync-statuses')->everyThirtyMinutes()->withoutOverlapping(); // страховка вебхука ORDER_STATUS: догоняет статусы, потерянные при недоступности сайта

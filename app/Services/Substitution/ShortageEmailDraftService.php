@@ -152,7 +152,38 @@ class ShortageEmailDraftService
             return ['ok' => false, 'message' => $e->getMessage()];
         }
 
+        $this->notifySubscribers($offer);
+
         return ['ok' => true, 'message' => null];
+    }
+
+    /**
+     * Блок «подобрана замена» подписчикам раздела «Заказы» — вдобавок к
+     * письму-извинению, которое первично и уходит и неподписанным.
+     */
+    private function notifySubscribers(SubstitutionOffer $offer): void
+    {
+        $order = $offer->order;
+
+        if ($order === null || blank($order->user_id)) {
+            return;
+        }
+
+        $number = $order->erp_number ?: $order->number;
+
+        \App\Events\EntityChanged::dispatch(new \App\Subscriptions\EntityChangeNotice(
+            section: 'orders',
+            ownerUserId: (int) $order->user_id,
+            title: sprintf('Подобрана замена по заказу %s — Pecado.ru', $number),
+            body: 'По отменённым при сборке позициям подобрана замена — подборка отправлена на вашу почту.',
+            url: url(route('cabinet.orders.show', $order, false)),
+            entityLabel: "Заказ {$number}",
+            rows: [[
+                'type' => 'note',
+                'text' => 'Персональный менеджер отправил подборку замен по недобору. Ссылка на согласование — в отдельном письме.',
+            ]],
+            event: 'substitution_offered',
+        ));
     }
 
     /**

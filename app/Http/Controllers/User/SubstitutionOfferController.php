@@ -69,6 +69,7 @@ class SubstitutionOfferController extends Controller
 
         if ($model->status === OfferStatus::PENDING) {
             $model->update(['status' => OfferStatus::VIEWED, 'viewed_at' => now()]);
+            $this->notifyManager($model, 'viewed');
         }
 
         return Inertia::render('User/Substitutions/Show', [
@@ -141,6 +142,7 @@ class SubstitutionOfferController extends Controller
         if ($chosen === []) {
             // Клиент осознанно отказался от всех замен: фиксируем и закрываем.
             $this->finalize($model, []);
+            $this->notifyManager($model, 'confirmed');
 
             return response()->json(['confirmed' => true, 'orders' => []]);
         }
@@ -166,6 +168,12 @@ class SubstitutionOfferController extends Controller
         }
 
         $this->finalize($model, $chosen, $orders->pluck('id')->all());
+
+        $this->notifyManager(
+            $model,
+            'confirmed',
+            $orders->map(fn (Order $o) => (string) ($o->erp_number ?: $o->number))->all(),
+        );
 
         return response()->json([
             'confirmed' => true,
@@ -297,6 +305,27 @@ class SubstitutionOfferController extends Controller
                 'result_order_ids' => $resultOrderIds ?: null,
             ]);
         });
+    }
+
+    /**
+     * Тихое письмо менеджеру: информирует, не требует действий.
+     *
+     * @param  list<string>  $orderNumbers
+     */
+    private function notifyManager(SubstitutionOffer $offer, string $kind, array $orderNumbers = []): void
+    {
+        if (! config('substitutions.manager_notices', true)) {
+            return;
+        }
+
+        $email = $offer->manager?->email;
+
+        if (blank($email)) {
+            return;
+        }
+
+        \Illuminate\Support\Facades\Notification::route('mail', $email)
+            ->notify(new \App\Notifications\Substitutions\ShortageManagerNoticeNotification($offer, $kind, $orderNumbers));
     }
 
     /**

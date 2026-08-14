@@ -26,6 +26,10 @@ use Illuminate\Support\Facades\Log;
  */
 class SubstitutionOfferService
 {
+    public function __construct(
+        private readonly ShortageEmailDraftService $drafts,
+    ) {}
+
     /**
      * Зарегистрировать волну отмен: создать или дополнить подборку, поставить задачу.
      *
@@ -60,6 +64,10 @@ class SubstitutionOfferService
                 'manager_user_id' => $manager?->id,
                 'expires_at' => now()->addDays((int) config('substitutions.offer_ttl_days', 7)),
             ]);
+
+            // Черновик письма-извинения готовится сразу: менеджер в карточке
+            // правит готовый текст, а не пишет с нуля.
+            $this->drafts->createDraft($offer);
         }
 
         $this->ensureTask($order, $offer, $cancelledItems->all(), $manager);
