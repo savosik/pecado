@@ -322,7 +322,7 @@ class VerifySettlements extends Command
                 ->plans()->where('document_kind', 'order')
                 ->whereRaw('settled_amount > '.self::EPSILON)
                 ->where('is_settled_derived', false)->count(),
-            'Сальдо 01.01 + движения сходятся с контрольной точкой' => $this->checkpointMismatchCount($checkpointDate),
+            'Лента до даты точки сходится с контрольной точкой' => $this->checkpointMismatchCount($checkpointDate),
         ];
 
         $this->newLine();
