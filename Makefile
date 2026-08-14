@@ -109,7 +109,8 @@ verify:
 	@start=$$(date +%s); \
 	$(MAKE) --no-print-directory lint  && \
 	$(MAKE) --no-print-directory test  && \
-	$(MAKE) --no-print-directory build && \
+	$(MAKE) --no-print-directory build \
+	|| { echo ""; echo "✗ Проверка НЕ прошла — смотри вывод выше"; exit 1; }; \
 	end=$$(date +%s); \
 	echo ""; \
 	echo "✓ Всё прошло за $$(( (end-start)/60 ))м $$(( (end-start)%60 ))с"; \
