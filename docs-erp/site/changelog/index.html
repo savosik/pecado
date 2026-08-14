@@ -337,6 +337,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#2026-08-14-replaces_order_uuid-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-14 · replaces_order_uuid включён: 1С принимает, пока не обрабатывает
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#2026-08-12-14" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4980,6 +4991,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#2026-08-14-replaces_order_uuid-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2026-08-14 · replaces_order_uuid включён: 1С принимает, пока не обрабатывает
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#2026-08-12-14" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -8037,6 +8059,13 @@
 <p>Payload-схемы: <a href="/docs/erp/spec.yaml">AsyncAPI</a> | <a href="/docs/erp/schemas/">JSON Schemas</a></p>
 <hr />
 <h2 id="_1">Решения без изменения контракта<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<h3 id="2026-08-14-replaces_order_uuid-1">2026-08-14 · <code>replaces_order_uuid</code> включён: 1С принимает, пока не обрабатывает<a class="headerlink" href="#2026-08-14-replaces_order_uuid-1" title="Permanent link">&para;</a></h3>
+<p>Сторона 1С подтвердила, что незнакомое поле <code>replaces_order_uuid</code> в <code>order.created</code>
+их приёмник <strong>принимает и не роняет</strong>; обработка связи на их стороне пока не
+запланирована. Сайт включил отправку поля (<code>SHORTAGE_PROTOCOL_FIELD_ENABLED=true</code>
+на dev и prod): у заказов-замен поле присутствует, у обычных заказов его нет —
+контракт v16.2.0 без изменений. Текстовая пометка «Замена недоборов по заказу N»
+в <code>manager_comment</code> сохраняется, пока 1С не начнёт использовать машинную связь.</p>
 <h3 id="2026-08-12-14">2026-08-12 · Глубина журнала шины — 14 дней, дальше архив<a class="headerlink" href="#2026-08-12-14" title="Permanent link">&para;</a></h3>
 <p>Контракт обмена не меняется: сайт по-прежнему принимает и публикует всё то же
 самое. Меняется срок, в течение которого сообщение можно посмотреть в админке
