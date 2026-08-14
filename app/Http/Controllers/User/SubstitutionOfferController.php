@@ -308,6 +308,9 @@ class SubstitutionOfferController extends Controller
                 'result_order_ids' => $resultOrderIds ?: null,
             ]);
         });
+
+        // Обучающая выборка: согласованный выбор растит справочник замен.
+        app(\App\Services\Substitution\SubstitutionLearningService::class)->recordClientChoice($offer);
     }
 
     /**

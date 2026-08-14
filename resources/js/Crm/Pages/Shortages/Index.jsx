@@ -111,7 +111,12 @@ export default function Index({ offers, counters = {}, filters, canSeeAll }) {
                         </Button>
                     ))}
                 </HStack>
-                <ScopeToggle section="shortages" scope={filters.scope} available={canSeeAll} label="Только мои" />
+                <HStack gap={3}>
+                    <Link href="/crm/shortages/links">
+                        <Button size="xs" variant="ghost">Связи замен</Button>
+                    </Link>
+                    <ScopeToggle section="shortages" scope={filters.scope} available={canSeeAll} label="Только мои" />
+                </HStack>
             </HStack>
 
             <Box>

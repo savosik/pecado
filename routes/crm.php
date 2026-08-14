@@ -18,8 +18,8 @@ use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
-use App\Http\Controllers\Crm\ShortageController;
 use App\Http\Controllers\Crm\PresenceController;
+use App\Http\Controllers\Crm\ShortageController;
 use App\Http\Controllers\Crm\TaskController;
 use App\Http\Controllers\Crm\TaskRecurrenceController;
 use App\Http\Controllers\Crm\TeamController;
@@ -480,10 +480,13 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     // менеджера может не быть). Статические сегменты — до /{offer}.
     Route::middleware('permission:crm-shortages.view')->group(function () {
         Route::get('/shortages/products/search', [ShortageController::class, 'searchProducts'])->name('shortages.products.search');
+        Route::get('/shortages/links', [ShortageController::class, 'links'])->name('shortages.links');
         Route::get('/shortages', [ShortageController::class, 'index'])->name('shortages.index');
         Route::get('/shortages/{offer}', [ShortageController::class, 'show'])->name('shortages.show')->whereNumber('offer');
     });
     Route::middleware('permission:crm-shortages.edit')->group(function () {
+        Route::post('/shortages/links/{link}/approve', [ShortageController::class, 'approveLink'])->name('shortages.links.approve')->whereNumber('link');
+        Route::post('/shortages/links/{link}/reject', [ShortageController::class, 'rejectLink'])->name('shortages.links.reject')->whereNumber('link');
         Route::post('/shortages/{offer}/candidates', [ShortageController::class, 'storeCandidate'])->name('shortages.candidates.store')->whereNumber('offer');
         Route::delete('/shortages/{offer}/candidates/{item}', [ShortageController::class, 'removeCandidate'])->name('shortages.candidates.remove')->whereNumber('offer')->whereNumber('item');
         Route::post('/shortages/{offer}/candidates/{item}/restore', [ShortageController::class, 'restoreCandidate'])->name('shortages.candidates.restore')->whereNumber('offer')->whereNumber('item');

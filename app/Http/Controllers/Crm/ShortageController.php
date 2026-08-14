@@ -282,6 +282,92 @@ class ShortageController extends CrmController
     }
 
     /**
+     * Вкладка «Связи»: очередь подтверждений learned/ai-связей справочника.
+     * Еженедельная 15-минутная рутина менеджера.
+     */
+    public function links(Request $request): InertiaResponse
+    {
+        $links = ProductSubstitution::query()
+            ->awaitingReview()
+            ->with(['fromProduct.media', 'toProduct.media', 'author:id,name'])
+            ->orderByDesc('id')
+            ->paginate(25)
+            ->withQueryString()
+            ->through(function (ProductSubstitution $link) {
+                // Негативные сигналы по паре — аргумент против подтверждения.
+                $negativeSignals = SubstitutionEvent::query()
+                    ->whereIn('event', [SignalEvent::MANAGER_REMOVED, SignalEvent::CLIENT_SKIPPED])
+                    ->whereHas('offerItem', function ($q) use ($link) {
+                        $q->where('product_id', $link->to_product_id)
+                            ->whereHas('sourceOrderItem', fn ($s) => $s->where('product_id', $link->from_product_id));
+                    })
+                    ->count();
+
+                return [
+                    'id' => $link->id,
+                    'from' => $this->linkProductPayload($link->fromProduct),
+                    'to' => $this->linkProductPayload($link->toProduct),
+                    'kind' => $link->kind->value,
+                    'kind_label' => $link->kind->label(),
+                    'source' => $link->source->value,
+                    'source_label' => $link->source->label(),
+                    'score' => $link->score,
+                    'note' => $link->note,
+                    'negative_signals' => $negativeSignals,
+                    'created_at' => $link->created_at?->format('d.m.Y'),
+                ];
+            });
+
+        return Inertia::render('Crm/Pages/Shortages/Links', [
+            'links' => $links,
+            'awaitingCount' => ProductSubstitution::awaitingReview()->count(),
+        ]);
+    }
+
+    public function approveLink(Request $request, int $link): JsonResponse
+    {
+        $model = ProductSubstitution::query()->awaitingReview()->findOrFail($link);
+
+        $model->update(['confirmed_at' => now()]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Отклонённая пара больше не предлагается автоподбором
+     * и не создаётся заново — защита от зацикливания.
+     */
+    public function rejectLink(Request $request, int $link): JsonResponse
+    {
+        $model = ProductSubstitution::query()->awaitingReview()->findOrFail($link);
+
+        $model->update(['rejected_at' => now()]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function linkProductPayload(?Product $product): ?array
+    {
+        if ($product === null) {
+            return null;
+        }
+
+        $client = null; // очередь смотрит менеджер: цены базовые, остатки общие
+
+        return [
+            'id' => $product->id,
+            'name' => $product->name,
+            'sku' => $product->sku,
+            'image_url' => $product->getFirstMediaUrl('images', 'thumb') ?: null,
+            'price' => (float) $product->base_price,
+            'available' => $this->stock->getAvailableStock($product, $client),
+        ];
+    }
+
+    /**
      * Скоуп видимости: менеджер — свои подборки (снимок менеджера на оффере
      * или текущее закрепление клиента), отдел — все.
      *
