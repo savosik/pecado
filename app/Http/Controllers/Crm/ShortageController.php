@@ -99,6 +99,7 @@ class ShortageController extends CrmController
         return Inertia::render('Crm/Pages/Shortages/Show', [
             'offer' => $this->cardPayload($model, $actor),
             'draft' => $this->drafts->draftFor($model),
+            'recipientOptions' => $this->drafts->recipientOptions($model, $actor),
             'outboundEnabled' => (bool) config('notifications.mail.features.crm_outbound'),
         ]);
     }
@@ -107,26 +108,43 @@ class ShortageController extends CrmController
      * Поиск товара для ручного кандидата — свой роут под правом раздела:
      * crm.products.search закрыт правом аналитики, которого у рядового
      * менеджера может не быть.
+     *
+     * Контракт ответа — плоский массив, как у admin.products.search:
+     * ProductSelector рендерит ответ напрямую через suggestions.map().
      */
     public function searchProducts(Request $request): JsonResponse
     {
-        $query = trim((string) $request->input('q', ''));
+        $query = trim((string) $request->input('query', (string) $request->input('q', '')));
 
         if (mb_strlen($query) < 2) {
-            return response()->json(['data' => []]);
+            return response()->json([]);
         }
 
-        $products = Product::search($query)->take(20)->get()->load(['media', 'brand:id,name']);
+        $products = Product::search($query)->take(20)->get()->load(['media', 'brand:id,name', 'barcodes']);
 
-        return response()->json([
-            'data' => $products->map(fn (Product $product) => [
-                'id' => $product->id,
-                'name' => $product->name,
-                'sku' => $product->sku,
-                'brand_name' => $product->brand?->name,
-                'image_url' => $product->getFirstMediaUrl('images', 'thumb') ?: null,
-            ])->values(),
-        ]);
+        return response()->json($products->map(fn (Product $product) => [
+            'id' => $product->id,
+            'name' => $product->name,
+            'sku' => $product->sku,
+            'brand_name' => $product->brand?->name,
+            'image_url' => $product->getFirstMediaUrl('images', 'thumb') ?: null,
+            'price' => (float) $product->base_price,
+            'barcode' => $product->barcode,
+            'barcodes' => $product->barcodes->pluck('barcode')->all(),
+        ])->values());
+    }
+
+    /**
+     * Перегенерация черновика письма после правки состава кандидатов —
+     * карточка обновляет текст без перезагрузки страницы.
+     */
+    public function refreshDraft(Request $request, int $offer): JsonResponse
+    {
+        $model = $this->visibleOffers($request, CrmScope::DEPARTMENT)->findOrFail($offer);
+
+        abort_unless($model->isOpen(), 422, 'Подборка уже закрыта.');
+
+        return response()->json($this->drafts->refreshDraft($model));
     }
 
     /**
@@ -241,7 +259,11 @@ class ShortageController extends CrmController
             'type' => ['required', 'in:send,wait,call,dismiss'],
             'subject' => ['nullable', 'string', 'max:255'],
             'body_html' => ['nullable', 'string'],
+            'to' => ['nullable', 'array', 'max:10'],
+            'to.*' => ['string', 'email'],
             'reason' => ['required_if:type,dismiss', 'nullable', 'string', 'max:255'],
+        ], [
+            'to.*.email' => 'Адрес «:input» не похож на email.',
         ]);
 
         abort_unless($model->isOpen(), 422, 'Подборка уже закрыта.');
@@ -254,6 +276,7 @@ class ShortageController extends CrmController
                     $actor,
                     (string) ($data['subject'] ?? ''),
                     (string) ($data['body_html'] ?? ''),
+                    array_values($data['to'] ?? []),
                 );
 
                 if (! $result['ok']) {

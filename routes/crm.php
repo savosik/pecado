@@ -491,6 +491,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/shortages/{offer}/candidates', [ShortageController::class, 'storeCandidate'])->name('shortages.candidates.store')->whereNumber('offer');
         Route::delete('/shortages/{offer}/candidates/{item}', [ShortageController::class, 'removeCandidate'])->name('shortages.candidates.remove')->whereNumber('offer')->whereNumber('item');
         Route::post('/shortages/{offer}/candidates/{item}/restore', [ShortageController::class, 'restoreCandidate'])->name('shortages.candidates.restore')->whereNumber('offer')->whereNumber('item');
+        Route::post('/shortages/{offer}/draft/refresh', [ShortageController::class, 'refreshDraft'])->name('shortages.draft.refresh')->whereNumber('offer');
         Route::post('/shortages/{offer}/outcome', [ShortageController::class, 'outcome'])->name('shortages.outcome')->whereNumber('offer');
     });
 });

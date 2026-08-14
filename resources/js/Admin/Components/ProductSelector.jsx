@@ -83,16 +83,22 @@ export const ProductSelector = ({
                 params: { query: searchQuery, ...customSearchParams }
             });
 
+            // Ответ обязан быть плоским массивом; обёртку {data: [...]} разворачиваем,
+            // чтобы нестандартный endpoint не ронял рендер на suggestions.map().
+            const results = Array.isArray(response.data)
+                ? response.data
+                : (Array.isArray(response.data?.data) ? response.data.data : []);
+
             // Фильтрация
-            let filtered = response.data;
+            let filtered = results;
             if (mode === 'multi') {
                 const selectedIds = Array.isArray(value) ? value.map(p => p.id) : [];
-                filtered = response.data.filter(p => !selectedIds.includes(p.id));
+                filtered = results.filter(p => !selectedIds.includes(p.id));
             } else if (mode === 'single') {
                 // For single/search, maybe we allow selecting same product again? or filtering?
                 // Usually for single select we filter out the currently selected one if present
                 if (value && value.id) {
-                    filtered = response.data.filter(p => p.id !== value.id);
+                    filtered = results.filter(p => p.id !== value.id);
                 }
             }
 

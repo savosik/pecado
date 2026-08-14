@@ -5,6 +5,7 @@ namespace App\Services\Substitution;
 use App\Enums\Crm\EmailStatus;
 use App\Models\CrmEmail;
 use App\Models\CrmEmailTemplate;
+use App\Models\EntitySubscription;
 use App\Models\SubstitutionOffer;
 use App\Models\User;
 use App\Services\Crm\CrmEmailService;
@@ -49,7 +50,7 @@ class ShortageEmailDraftService
                 'user_id' => $manager->id,
                 'related_type' => $offer->order->getMorphClass(),
                 'related_id' => $offer->order_id,
-                'to' => [$client->email],
+                'to' => $this->defaultRecipients($offer),
                 'reply_to' => $manager->email,
                 'subject' => $subject,
                 'body_html' => $body,
@@ -72,7 +73,7 @@ class ShortageEmailDraftService
     /**
      * Черновик для карточки: сохранённый CrmEmail, а если его нет — текст на лету.
      *
-     * @return array{subject: string, body_html: string, to: string|null, email_id: int|null, editable: bool}
+     * @return array{subject: string, body_html: string, to: list<string>, email_id: int|null, editable: bool}
      */
     public function draftFor(SubstitutionOffer $offer): array
     {
@@ -84,7 +85,7 @@ class ShortageEmailDraftService
             return [
                 'subject' => (string) $email->subject,
                 'body_html' => (string) $email->body_html,
-                'to' => $email->to[0] ?? null,
+                'to' => array_values($email->to ?? []),
                 'email_id' => $email->id,
                 'editable' => true,
             ];
@@ -95,19 +96,131 @@ class ShortageEmailDraftService
         return [
             'subject' => $subject,
             'body_html' => $body,
-            'to' => $offer->user?->email,
+            'to' => $this->defaultRecipients($offer),
             'email_id' => null,
             'editable' => $offer->user !== null && filled($offer->user->email),
         ];
     }
 
     /**
+     * Перегенерация текста после правки состава кандидатов: письмо в карточке
+     * сразу отражает актуальную подборку, сохранённый черновик обновляется.
+     * Ручные правки текста при этом затираются — это осознанная цена
+     * актуальности: состав замен в письме важнее формулировок.
+     *
+     * @return array{subject: string, body_html: string, to: list<string>, email_id: int|null, editable: bool}
+     */
+    public function refreshDraft(SubstitutionOffer $offer): array
+    {
+        $offer->loadMissing(['draftEmail', 'user', 'manager', 'order.items']);
+        $offer->load(['items.product', 'items.productDefect.product']);
+
+        [$subject, $body] = $this->render($offer);
+
+        $email = $offer->draftEmail;
+
+        if ($email !== null && $email->status->isEditable()) {
+            $email->update(['subject' => $subject, 'body_html' => $body]);
+        }
+
+        return $this->draftFor($offer);
+    }
+
+    /**
+     * Получатели по умолчанию: основной email клиента плюс адреса из его
+     * активных email-подписок раздела «Заказы», ждущих событие замены.
+     *
+     * @return list<string>
+     */
+    public function defaultRecipients(SubstitutionOffer $offer): array
+    {
+        $client = $offer->user;
+
+        if ($client === null) {
+            return [];
+        }
+
+        $subscribed = $client->subscriptions()
+            ->where('section', 'orders')
+            ->where('channel', 'email')
+            ->where('is_active', true)
+            ->get()
+            ->filter(fn (EntitySubscription $subscription) => $subscription->wantsEvent('substitution_offered'))
+            ->pluck('destination');
+
+        return collect([$client->email])
+            ->concat($subscribed)
+            ->map(fn ($address) => mb_strtolower(trim((string) $address)))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Подсказки адресов для поля «Кому»: клиент, его подписки, контакты из
+     * анкеты партнёра, менеджер и сам актор — всё, что менеджеру может
+     * понадобиться дописать в письмо без копания по карточкам.
+     *
+     * @return list<array{email: string, label: string}>
+     */
+    public function recipientOptions(SubstitutionOffer $offer, User $actor): array
+    {
+        $offer->loadMissing(['user.crmProfile', 'manager']);
+
+        $client = $offer->user;
+        $options = collect();
+
+        $push = function (?string $address, string $label) use ($options): void {
+            $address = mb_strtolower(trim((string) $address));
+
+            if ($address === '' || ! filter_var($address, FILTER_VALIDATE_EMAIL) || $options->has($address)) {
+                return;
+            }
+
+            $options->put($address, ['email' => $address, 'label' => $label]);
+        };
+
+        $push($client?->email, 'Основной email клиента');
+
+        foreach ($this->defaultRecipients($offer) as $address) {
+            $push($address, 'Подписка на изменения заказов');
+        }
+
+        // Анкета партнёра хранит контакты свободным текстом — вылавливаем адреса.
+        $profile = $client?->crmProfile;
+        $profileContacts = [
+            'ЛПР из анкеты' => $profile?->decision_maker_contact,
+            'Бухгалтер из анкеты' => $profile?->accountant_contact,
+            'Собственник из анкеты' => $profile?->owner_contact,
+        ];
+
+        foreach ($profileContacts as $label => $contact) {
+            if (blank($contact)) {
+                continue;
+            }
+
+            preg_match_all('/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/u', (string) $contact, $matches);
+
+            foreach ($matches[0] as $address) {
+                $push($address, $label);
+            }
+        }
+
+        $push($offer->manager?->email, 'Персональный менеджер');
+        $push($actor->email, 'Ваш адрес');
+
+        return $options->values()->all();
+    }
+
+    /**
      * Отправка подборки из карточки: правки менеджера ложатся в черновик,
      * черновик уходит через общий контур CRM-писем (очередь, журнал, история).
      *
+     * @param  list<string>  $to  адреса из формы; пустой список = получатели по умолчанию
      * @return array{ok: bool, message: string|null}
      */
-    public function send(SubstitutionOffer $offer, User $actor, string $subject, string $bodyHtml): array
+    public function send(SubstitutionOffer $offer, User $actor, string $subject, string $bodyHtml, array $to = []): array
     {
         if (! $this->emails->outboundEnabled()) {
             return [
@@ -118,10 +231,19 @@ class ShortageEmailDraftService
 
         $offer->loadMissing(['draftEmail', 'user', 'manager', 'order']);
 
-        $client = $offer->user;
+        $recipients = collect($to)
+            ->map(fn ($address) => mb_strtolower(trim((string) $address)))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
 
-        if ($client === null || blank($client->email)) {
-            return ['ok' => false, 'message' => 'У клиента нет email — письмо отправить некому.'];
+        if ($recipients === []) {
+            $recipients = $this->defaultRecipients($offer);
+        }
+
+        if ($recipients === []) {
+            return ['ok' => false, 'message' => 'Не указан ни один получатель, а у клиента нет email — письмо отправить некому.'];
         }
 
         $email = $offer->draftEmail;
@@ -131,7 +253,7 @@ class ShortageEmailDraftService
                 'user_id' => $offer->manager?->id ?? $actor->id,
                 'related_type' => $offer->order->getMorphClass(),
                 'related_id' => $offer->order_id,
-                'to' => [$client->email],
+                'to' => $recipients,
                 'reply_to' => ($offer->manager ?? $actor)->email,
                 'subject' => $subject,
                 'body_html' => $bodyHtml,
@@ -141,6 +263,7 @@ class ShortageEmailDraftService
             $offer->update(['crm_email_id' => $email->id]);
         } else {
             $email->update([
+                'to' => $recipients,
                 'subject' => $subject !== '' ? $subject : $email->subject,
                 'body_html' => $bodyHtml !== '' ? $bodyHtml : $email->body_html,
             ]);
@@ -201,13 +324,40 @@ class ShortageEmailDraftService
             ? $offer->order->items->where('cancelled', true)->values()
             : collect();
 
+        // Видимые клиенту кандидаты — прямо в тексте письма, по строкам недобора:
+        // менеджер добавил замену в карточке — письмо сразу её показывает.
+        $offer->loadMissing(['items.product', 'items.productDefect.product']);
+        $candidatesBySource = $offer->items
+            ->whereNull('removed_by_manager_at')
+            ->groupBy('source_order_item_id');
+
         $linesHtml = $lines->isEmpty()
             ? ''
-            : '<ul>'.$lines->map(fn ($item) => sprintf(
-                '<li>%s — %d шт.</li>',
-                e($item->name),
-                $item->quantity,
-            ))->implode('').'</ul>';
+            : '<ul>'.$lines->map(function ($item) use ($candidatesBySource) {
+                $line = sprintf('<li>%s — %d шт.', e($item->name), $item->quantity);
+
+                $candidates = ($candidatesBySource[$item->id] ?? collect())
+                    ->map(function ($candidate) {
+                        $product = $candidate->product ?? $candidate->productDefect?->product;
+
+                        if ($product === null) {
+                            return null;
+                        }
+
+                        return sprintf(
+                            '<li>%s — %s ₽</li>',
+                            e($product->name),
+                            number_format((float) $candidate->price_snapshot, 0, ',', ' '),
+                        );
+                    })
+                    ->filter();
+
+                if ($candidates->isNotEmpty()) {
+                    $line .= '<br>Предлагаем на замену:<ul>'.$candidates->implode('').'</ul>';
+                }
+
+                return $line.'</li>';
+            })->implode('').'</ul>';
 
         $link = Route::has('substitutions.show')
             ? \URL::temporarySignedRoute('substitutions.show', $offer->expires_at, ['offer' => $offer->uuid])

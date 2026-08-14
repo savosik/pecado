@@ -35,15 +35,32 @@ const money = (value) =>
  * Слева — строки недобора с кандидатами (галочка = кандидат виден клиенту),
  * справа — контекст клиента и черновик письма. Четыре исхода одной кнопкой.
  */
-export default function Show({ offer, draft, outboundEnabled }) {
+const isEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+export default function Show({ offer, draft, recipientOptions, outboundEnabled }) {
     const [subject, setSubject] = useState(draft?.subject || '');
     const [body, setBody] = useState(draft?.body_html || '');
+    const [recipients, setRecipients] = useState(draft?.to || []);
+    const [recipientInput, setRecipientInput] = useState('');
+    const [recipientFocus, setRecipientFocus] = useState(false);
     const [busy, setBusy] = useState(false);
     const [callOpen, setCallOpen] = useState(false);
     const [dismissOpen, setDismissOpen] = useState(false);
     const [dismissReason, setDismissReason] = useState('');
 
     const reload = () => router.reload();
+
+    // Состав кандидатов поменялся — письмо перегенерируется на сервере,
+    // текст в карточке сразу отражает актуальную подборку.
+    const refreshDraft = async () => {
+        try {
+            const { data } = await axios.post(`/crm/shortages/${offer.id}/draft/refresh`);
+            setSubject(data.subject || '');
+            setBody(data.body_html || '');
+        } catch {
+            // Не критично: после reload() черновик подтянется с пропсами.
+        }
+    };
 
     const toggleCandidate = async (candidate) => {
         try {
@@ -52,6 +69,7 @@ export default function Show({ offer, draft, outboundEnabled }) {
             } else {
                 await axios.delete(`/crm/shortages/${offer.id}/candidates/${candidate.id}`);
             }
+            await refreshDraft();
             reload();
         } catch (e) {
             toastError(e.response?.data?.message || 'Не удалось изменить кандидата');
@@ -65,11 +83,34 @@ export default function Show({ offer, draft, outboundEnabled }) {
                 product_id: product.id,
             });
             toastSuccess('Кандидат добавлен, связь записана в справочник');
+            await refreshDraft();
             reload();
         } catch (e) {
             toastError(e.response?.data?.message || 'Не удалось добавить кандидата');
         }
     };
+
+    const addRecipient = (value) => {
+        const email = String(value || '').trim().toLowerCase().replace(/[,;]+$/, '');
+        if (!email) {
+            return;
+        }
+        if (!isEmail(email)) {
+            toastError(`Адрес «${email}» не похож на email`);
+            return;
+        }
+        setRecipients((prev) => (prev.includes(email) ? prev : [...prev, email]));
+        setRecipientInput('');
+    };
+
+    const removeRecipient = (email) => {
+        setRecipients((prev) => prev.filter((item) => item !== email));
+    };
+
+    const recipientSuggestions = (recipientOptions || []).filter(
+        (option) => !recipients.includes(option.email)
+            && (!recipientInput.trim() || option.email.includes(recipientInput.trim().toLowerCase())),
+    );
 
     const submitOutcome = async (type, extra = {}) => {
         setBusy(true);
@@ -286,8 +327,92 @@ export default function Show({ offer, draft, outboundEnabled }) {
                             </Alert>
                         )}
                         <VStack align="stretch" gap={3}>
-                            <Field label="Кому">
-                                <Input size="sm" value={draft?.to || ''} readOnly disabled />
+                            <Field
+                                label="Кому"
+                                helperText={offer.is_open
+                                    ? 'Подставлены адрес клиента и адреса из его подписок на изменения заказов. Добавить свой — Enter или запятая.'
+                                    : undefined}
+                            >
+                                <Box width="100%">
+                                    {recipients.length > 0 && (
+                                        <HStack wrap="wrap" gap={1} mb={2}>
+                                            {recipients.map((email) => (
+                                                <Badge key={email} variant="subtle" colorPalette="blue" size="sm">
+                                                    {email}
+                                                    {offer.is_open && (
+                                                        <Box
+                                                            as="button"
+                                                            type="button"
+                                                            ml={1}
+                                                            cursor="pointer"
+                                                            aria-label={`Убрать ${email}`}
+                                                            onClick={() => removeRecipient(email)}
+                                                        >
+                                                            <LuX size={10} />
+                                                        </Box>
+                                                    )}
+                                                </Badge>
+                                            ))}
+                                        </HStack>
+                                    )}
+                                    {offer.is_open && (
+                                        <Box position="relative">
+                                            <Input
+                                                size="sm"
+                                                placeholder="Добавить адрес…"
+                                                value={recipientInput}
+                                                onChange={(e) => setRecipientInput(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
+                                                        e.preventDefault();
+                                                        addRecipient(recipientInput);
+                                                    }
+                                                }}
+                                                onFocus={() => setRecipientFocus(true)}
+                                                onBlur={() => {
+                                                    setRecipientFocus(false);
+                                                    if (recipientInput.trim()) {
+                                                        addRecipient(recipientInput);
+                                                    }
+                                                }}
+                                            />
+                                            {recipientFocus && recipientSuggestions.length > 0 && (
+                                                <Box
+                                                    position="absolute"
+                                                    top="100%"
+                                                    left={0}
+                                                    right={0}
+                                                    zIndex={1000}
+                                                    bg="bg"
+                                                    boxShadow="lg"
+                                                    borderRadius="md"
+                                                    borderWidth="1px"
+                                                    mt={1}
+                                                    maxHeight="200px"
+                                                    overflowY="auto"
+                                                >
+                                                    {recipientSuggestions.map((option) => (
+                                                        <HStack
+                                                            key={option.email}
+                                                            px={3}
+                                                            py={2}
+                                                            justify="space-between"
+                                                            cursor="pointer"
+                                                            _hover={{ bg: 'bg.muted' }}
+                                                            onMouseDown={(e) => {
+                                                                e.preventDefault();
+                                                                addRecipient(option.email);
+                                                            }}
+                                                        >
+                                                            <Text fontSize="sm">{option.email}</Text>
+                                                            <Text fontSize="xs" color="fg.muted">{option.label}</Text>
+                                                        </HStack>
+                                                    ))}
+                                                </Box>
+                                            )}
+                                        </Box>
+                                    )}
+                                </Box>
                             </Field>
                             <Field label="Тема">
                                 <Input
@@ -317,14 +442,14 @@ export default function Show({ offer, draft, outboundEnabled }) {
                                 <Button
                                     colorPalette="green"
                                     loading={busy}
-                                    onClick={() => submitOutcome('send', { subject, body_html: body })}
+                                    onClick={() => submitOutcome('send', { subject, body_html: body, to: recipients })}
                                 >
                                     <LuMailCheck /> Отправить подборку
                                 </Button>
                                 <Button
                                     variant="outline"
                                     loading={busy}
-                                    onClick={() => submitOutcome('wait', { subject, body_html: body })}
+                                    onClick={() => submitOutcome('wait', { subject, body_html: body, to: recipients })}
                                 >
                                     <LuTimer /> Предложить подождать
                                 </Button>

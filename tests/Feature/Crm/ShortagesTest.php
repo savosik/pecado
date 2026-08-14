@@ -8,6 +8,7 @@ use App\Enums\Substitution\OfferStatus;
 use App\Enums\Substitution\SignalEvent;
 use App\Jobs\SendCrmEmailJob;
 use App\Models\CrmTask;
+use App\Models\EntitySubscription;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PersonalManager;
@@ -241,5 +242,126 @@ class ShortagesTest extends TestCase
         $this->assertNotNull($offer->crm_email_id);
         $this->assertSame([$this->client->email], $offer->draftEmail->to);
         $this->assertSame($this->manager->email, $offer->draftEmail->reply_to);
+    }
+
+    /**
+     * ProductSelector рендерит ответ напрямую через suggestions.map() и шлёт
+     * параметр `query` — обёртка {data: []} роняла карточку на проде.
+     */
+    #[Test]
+    public function product_search_returns_flat_array_for_the_selector(): void
+    {
+        $response = $this->actingAs($this->manager)
+            ->getJson('/crm/shortages/products/search?query=вибро');
+
+        $response->assertOk();
+        $this->assertIsList($response->json());
+
+        // Короткий запрос — тоже плоский массив, а не {data: []}.
+        $this->actingAs($this->manager)
+            ->getJson('/crm/shortages/products/search?query=а')
+            ->assertOk()
+            ->assertExactJson([]);
+    }
+
+    #[Test]
+    public function draft_prefills_client_email_and_order_subscription_addresses(): void
+    {
+        ['offer' => $offer] = $this->makeOffer();
+
+        EntitySubscription::create([
+            'user_id' => $this->client->id,
+            'section' => 'orders',
+            'channel' => 'email',
+            'destination' => 'buyer@example.com',
+            'is_active' => true,
+        ]);
+
+        // Неактивная подписка и чужой раздел в поле «Кому» не попадают.
+        EntitySubscription::create([
+            'user_id' => $this->client->id,
+            'section' => 'orders',
+            'channel' => 'email',
+            'destination' => 'inactive@example.com',
+            'is_active' => false,
+        ]);
+
+        $response = $this->actingAs($this->manager)->get("/crm/shortages/{$offer->id}");
+
+        $response->assertOk();
+        $props = $response->viewData('page')['props'];
+        $this->assertSame(['client@example.com', 'buyer@example.com'], $props['draft']['to']);
+
+        $optionEmails = array_column($props['recipientOptions'], 'email');
+        $this->assertContains('buyer@example.com', $optionEmails);
+        $this->assertContains('manager@pecado.ru', $optionEmails);
+        $this->assertNotContains('inactive@example.com', $optionEmails);
+    }
+
+    #[Test]
+    public function refreshing_the_draft_puts_the_chosen_candidate_into_the_letter(): void
+    {
+        ['offer' => $offer, 'line' => $line] = $this->makeOffer();
+        $candidateProduct = Product::factory()->create(['name' => 'Замена-Кандидат-123']);
+
+        $this->actingAs($this->manager)
+            ->postJson("/crm/shortages/{$offer->id}/candidates", [
+                'source_order_item_id' => $line->id,
+                'product_id' => $candidateProduct->id,
+            ])
+            ->assertOk();
+
+        $response = $this->actingAs($this->manager)
+            ->postJson("/crm/shortages/{$offer->id}/draft/refresh");
+
+        $response->assertOk();
+        $this->assertStringContainsString('Замена-Кандидат-123', $response->json('body_html'));
+        $this->assertStringContainsString('Предлагаем на замену', $response->json('body_html'));
+    }
+
+    #[Test]
+    public function send_outcome_delivers_to_the_addresses_picked_by_the_manager(): void
+    {
+        Bus::fake([SendCrmEmailJob::class]);
+        config(['notifications.mail.features.crm_outbound' => true]);
+
+        ['offer' => $offer] = $this->makeOffer();
+
+        $this->actingAs($this->manager)
+            ->postJson("/crm/shortages/{$offer->id}/outcome", [
+                'type' => 'send',
+                'subject' => 'Заказ 29УТ-011777: подборка замен',
+                'body_html' => '<p>Здравствуйте!</p>',
+                'to' => ['client@example.com', 'buyer@example.com', 'client@example.com'],
+            ])
+            ->assertOk();
+
+        Bus::assertDispatched(SendCrmEmailJob::class);
+
+        // Дубликат схлопнут, порядок сохранён.
+        $this->assertSame(
+            ['client@example.com', 'buyer@example.com'],
+            $offer->refresh()->draftEmail->to,
+        );
+    }
+
+    #[Test]
+    public function send_outcome_rejects_a_malformed_address(): void
+    {
+        config(['notifications.mail.features.crm_outbound' => true]);
+
+        ['offer' => $offer] = $this->makeOffer();
+
+        $this->actingAs($this->manager)
+            ->postJson("/crm/shortages/{$offer->id}/outcome", [
+                'type' => 'send',
+                'subject' => 'Тест',
+                'body_html' => '<p>Тест</p>',
+                'to' => ['не-адрес'],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['to.0']);
+
+        $this->assertNull($offer->fresh()->sent_at);
     }
 }
