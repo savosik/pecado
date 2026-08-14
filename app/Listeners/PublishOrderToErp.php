@@ -78,6 +78,16 @@ class PublishOrderToErp
             'timestamp' => now()->toIso8601String(),
         ];
 
+        // v16.2.0: машинная связь заказа-замены с исходным заказом недобора.
+        // Ключ добавляется только у заказов-замен и только под флагом — до
+        // подтверждения 1С, что незнакомое поле не ломает приёмник, обычные
+        // payload-ы не меняются байт-в-байт.
+        if ((bool) config('substitutions.protocol_field_enabled')
+            && $order->replacement_for_order_id !== null
+            && $order->replacementFor?->uuid) {
+            $payload['replaces_order_uuid'] = $order->replacementFor->uuid;
+        }
+
         // Данные контрагента (v13.2: приоритет UUID, fallback на ИНН)
         if ($order->company) {
             $company = $order->company;

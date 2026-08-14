@@ -24,6 +24,11 @@ return [
     // Тихие письма менеджеру «клиент открыл/согласовал» — информируют, не требуют действий.
     'manager_notices' => (bool) env('SHORTAGE_MANAGER_NOTICES', true),
 
+    // Отправка replaces_order_uuid в order.created (протокол v16.2.0).
+    // Выключено до подтверждения стороны 1С, что незнакомое поле не роняет
+    // их приёмник; текстовая пометка в manager_comment уходит в любом случае.
+    'protocol_field_enabled' => (bool) env('SHORTAGE_PROTOCOL_FIELD_ENABLED', false),
+
     /*
      * Автоподбор кандидатов (sub-06).
      *
