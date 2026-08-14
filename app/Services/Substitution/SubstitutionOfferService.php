@@ -8,6 +8,7 @@ use App\Models\CrmTask;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\SubstitutionOffer;
+use App\Models\SubstitutionOfferItem;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -28,6 +29,7 @@ class SubstitutionOfferService
 {
     public function __construct(
         private readonly ShortageEmailDraftService $drafts,
+        private readonly SubstitutionCandidateService $candidates,
     ) {}
 
     /**
@@ -70,9 +72,80 @@ class SubstitutionOfferService
             $this->drafts->createDraft($offer);
         }
 
+        // Автоподбор: оффер наполняется кандидатами сразу; менеджер в карточке
+        // проверяет и правит, а не собирает с нуля.
+        $this->populateCandidates($offer, $cancelledItems->all());
+
         $this->ensureTask($order, $offer, $cancelledItems->all(), $manager);
 
         return $offer;
+    }
+
+    /**
+     * Пересбор кандидатов по всем отменённым строкам заказа — идемпотентный
+     * (уникальный ключ строк подборки): вызывается при InsufficientStock
+     * на согласовании, когда часть кандидатов кончилась.
+     */
+    public function refreshCandidates(SubstitutionOffer $offer): void
+    {
+        $offer->loadMissing('order.items');
+
+        $cancelled = $offer->order?->items->where('cancelled', true)->values() ?? collect();
+
+        $this->populateCandidates($offer, $cancelled->all());
+    }
+
+    /**
+     * @param  list<OrderItem>  $cancelledItems
+     */
+    private function populateCandidates(SubstitutionOffer $offer, array $cancelledItems): void
+    {
+        foreach ($cancelledItems as $line) {
+            try {
+                $set = $this->candidates->forOrderItem($line);
+            } catch (\Throwable $e) {
+                Log::warning('Автоподбор замен упал по строке — оффер остаётся с ручным наполнением', [
+                    'order_item_id' => $line->id,
+                    'error' => $e->getMessage(),
+                ]);
+
+                continue;
+            }
+
+            if ($set->waitAvailable && $line->product_id !== null) {
+                SubstitutionOfferItem::query()->firstOrCreate(
+                    [
+                        'offer_id' => $offer->id,
+                        'source_order_item_id' => $line->id,
+                        'product_id' => $line->product_id,
+                        'product_defect_id' => null,
+                    ],
+                    [
+                        'kind' => \App\Enums\Substitution\CandidateKind::SAME_PRODUCT_WAIT,
+                        'reason' => $set->waitReason ?? 'Тот же товар, подождать прихода',
+                        'price_snapshot' => $line->final_price,
+                        'suggested_quantity' => max(1, (int) $line->quantity),
+                    ],
+                );
+            }
+
+            foreach ($set->candidates as $candidate) {
+                SubstitutionOfferItem::query()->firstOrCreate(
+                    [
+                        'offer_id' => $offer->id,
+                        'source_order_item_id' => $line->id,
+                        'product_id' => $candidate['product_id'],
+                        'product_defect_id' => $candidate['product_defect_id'],
+                    ],
+                    [
+                        'kind' => $candidate['kind'],
+                        'reason' => $candidate['reason'],
+                        'price_snapshot' => $candidate['price'],
+                        'suggested_quantity' => $candidate['suggested_quantity'],
+                    ],
+                );
+            }
+        }
     }
 
     /**

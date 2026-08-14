@@ -158,7 +158,10 @@ class SubstitutionOfferController extends Controller
         try {
             $orders = $this->postReplacementOrders($model, $chosen, $company);
         } catch (InsufficientStockException $e) {
-            // Товар кончился, пока клиент думал: не 500, а список строк к пересбору.
+            // Товар кончился, пока клиент думал: не 500, а пересбор кандидатов
+            // и человеческое сообщение со списком закончившегося.
+            app(\App\Services\Substitution\SubstitutionOfferService::class)->refreshCandidates($model);
+
             $gone = collect($e->getItems())->pluck('name')->filter()->implode(', ');
 
             return response()->json([
@@ -378,8 +381,11 @@ class SubstitutionOfferController extends Controller
                     'quantity' => $line->quantity,
                     'final_price' => (float) $line->final_price,
                     'subtotal' => (float) $line->subtotal,
-                    'wait_available' => $preorderStock >= $line->quantity,
+                    'wait_available' => $preorderStock >= $line->quantity
+                        || ($candidatesBySource[$line->id] ?? collect())
+                            ->contains(fn (SubstitutionOfferItem $item) => $item->kind === \App\Enums\Substitution\CandidateKind::SAME_PRODUCT_WAIT),
                     'candidates' => ($candidatesBySource[$line->id] ?? collect())
+                        ->reject(fn (SubstitutionOfferItem $item) => $item->kind === \App\Enums\Substitution\CandidateKind::SAME_PRODUCT_WAIT)
                         ->map(fn (SubstitutionOfferItem $item) => $this->candidatePayload($item, $client, $line))
                         ->filter(fn (array $payload) => $payload['available'] > 0)
                         ->values(),
