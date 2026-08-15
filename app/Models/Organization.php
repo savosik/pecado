@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $account_number
  * @property bool $is_active
  * @property bool $is_stub
+ * @property bool $is_settlements_excluded
  * @property int $sort_order
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -51,6 +52,7 @@ class Organization extends Model
         'account_number',
         'is_active',
         'is_stub',
+        'is_settlements_excluded',
         'sort_order',
     ];
 
@@ -59,8 +61,26 @@ class Organization extends Model
         return [
             'is_active' => 'boolean',
             'is_stub' => 'boolean',
+            'is_settlements_excluded' => 'boolean',
             'sort_order' => 'integer',
         ];
+    }
+
+    /**
+     * ID организаций, исключённых из взаиморасчётов (например, внутренняя «Реклама»).
+     *
+     * Обработчики регистра фильтруют по этому списку входящие движения, контрольные
+     * точки и балансы. Мягко удалённые считаются тоже: исключение — свойство юрлица,
+     * а не состояния его карточки.
+     *
+     * @return list<int>
+     */
+    public static function settlementsExcludedIds(): array
+    {
+        return self::withTrashed()
+            ->where('is_settlements_excluded', true)
+            ->pluck('id')
+            ->all();
     }
 
     /**

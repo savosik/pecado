@@ -2,6 +2,7 @@
 
 namespace App\Services\Erp\Handlers;
 
+use App\Models\Organization;
 use App\Models\SettlementDocument;
 use App\Models\SettlementEntry;
 use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
@@ -106,6 +107,19 @@ class HandlePaymentScheduleUpdated
     private function buildRows(array $payload, array $lines, string $documentUuid, string $documentKind): array
     {
         $parties = $this->resolveSettlementParties($payload);
+
+        // График внутренней организации (например, «Рекламы») клиенту не показываем.
+        // Пустой список строк не короткое замыкание: транзакция в handle() всё равно
+        // выполнится и удалит ранее принятые плановые строки этого документа.
+        if (in_array($parties['organization_id'], Organization::settlementsExcludedIds(), true)) {
+            Log::info('payment_schedule.updated: график исключённой организации пропущен', [
+                'document_uuid' => $documentUuid,
+                'organization_id' => $parties['organization_id'],
+            ]);
+
+            return [];
+        }
+
         $currency = $this->stringOrNull($payload['currency_code'] ?? null) ?? 'RUB';
         $derived = $this->derivedSettlements($payload, $lines, $documentKind);
 

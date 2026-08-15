@@ -2,6 +2,7 @@
 
 namespace App\Services\Erp\Handlers;
 
+use App\Models\Organization;
 use App\Models\SettlementCheckpoint;
 use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
 use App\Services\Erp\Support\ResolvesSettlementParties;
@@ -39,6 +40,18 @@ class HandleSettlementCheckpoint
         $amount = (float) $payload['amount'];
         $currency = $this->stringOrNull($payload['currency_code'] ?? null) ?? 'RUB';
         $parties = $this->resolveSettlementParties($payload);
+
+        // Точка по внутренней организации («Реклама») сверять нечего: её движения
+        // на входе отбрасываются, и сохранённая точка вечно показывала бы расхождение.
+        if (in_array($parties['organization_id'], Organization::settlementsExcludedIds(), true)) {
+            Log::info('settlement.checkpoint: точка исключённой организации пропущена', [
+                'contractor_uuid' => $contractorUuid,
+                'organization_id' => $parties['organization_id'],
+                'as_of_date' => $asOfDate,
+            ]);
+
+            return;
+        }
 
         // Пустая строка вместо NULL: уникальный индекс MySQL считает NULL-ы
         // различными, и точка без организации задвоилась бы при повторе.

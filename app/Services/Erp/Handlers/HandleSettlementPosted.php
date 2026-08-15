@@ -2,6 +2,7 @@
 
 namespace App\Services\Erp\Handlers;
 
+use App\Models\Organization;
 use App\Models\SettlementDocument;
 use App\Models\SettlementEntry;
 use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
@@ -75,6 +76,8 @@ class HandleSettlementPosted
 
             $rows[] = $this->buildRow($payload, $entry, $documentUuid, $index);
         }
+
+        $rows = $this->rejectExcludedOrganizations($rows, $documentUuid);
 
         DB::transaction(function () use ($documentUuid, $payload, $rows) {
             $this->rememberDocument($documentUuid, $payload, count($rows));
@@ -166,6 +169,40 @@ class HandleSettlementPosted
         }
 
         return $row;
+    }
+
+    /**
+     * Движения внутренних организаций (например, «Рекламы») в расчёты с клиентами
+     * не попадают: они описывают внутренние операции 1С, а не долг контрагента.
+     *
+     * Фильтр стоит ПОСЛЕ построения строк и ДО транзакции: delete-and-recreate
+     * при этом выполняется как обычно, поэтому перепроведение документа заодно
+     * вычищает его ранее принятые движения исключённой организации.
+     *
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<array<string, mixed>>
+     */
+    private function rejectExcludedOrganizations(array $rows, string $documentUuid): array
+    {
+        $excluded = Organization::settlementsExcludedIds();
+
+        if ($excluded === []) {
+            return $rows;
+        }
+
+        $kept = array_values(array_filter(
+            $rows,
+            static fn (array $row): bool => ! in_array($row['organization_id'], $excluded, true),
+        ));
+
+        if (count($kept) !== count($rows)) {
+            Log::info('settlement.posted: движения исключённой организации пропущены', [
+                'document_uuid' => $documentUuid,
+                'skipped' => count($rows) - count($kept),
+            ]);
+        }
+
+        return $kept;
     }
 
     /**

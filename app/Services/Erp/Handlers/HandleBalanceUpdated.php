@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\ContractorBalance;
 use App\Models\ContractorBalanceOverdueDetail;
 use App\Models\ContractorOrganizationBalance;
+use App\Models\Organization;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\Erp\Support\OrganizationResolver;
@@ -49,8 +50,9 @@ class HandleBalanceUpdated
         }
 
         $updatedAt = $payload['updated_at'] ?? null;
+        $excludedOrganizationIds = Organization::settlementsExcludedIds();
 
-        DB::transaction(function () use ($user, $contractors, $updatedAt) {
+        DB::transaction(function () use ($user, $contractors, $updatedAt, $excludedOrganizationIds) {
             foreach ($contractors as $contractorData) {
                 $contractorInn = $contractorData['tax_id'] ?? null;
                 $contractorUuid = $contractorData['uuid'] ?? null;
@@ -114,6 +116,7 @@ class HandleBalanceUpdated
                     $company,
                     $contractorData,
                     $updatedAt,
+                    $excludedOrganizationIds,
                 );
 
                 // Обновить детализацию просрочки: полностью заменяем
@@ -130,10 +133,16 @@ class HandleBalanceUpdated
                         continue;
                     }
                     $shipment = $shipmentsByUuid[$detail['shipment_uuid']] ?? null;
+                    $organizationId = $this->resolveOverdueOrganizationId($detail, $organizationsByUuid, $shipment);
+
+                    // Просрочка внутренней организации («Реклама») — не долг клиента.
+                    if ($organizationId !== null && in_array($organizationId, $excludedOrganizationIds, true)) {
+                        continue;
+                    }
 
                     ContractorBalanceOverdueDetail::create([
                         'contractor_balance_id' => $balance->id,
-                        'organization_id' => $this->resolveOverdueOrganizationId($detail, $organizationsByUuid, $shipment),
+                        'organization_id' => $organizationId,
                         'shipment_id' => $shipment?->id,
                         'shipment_uuid' => $detail['shipment_uuid'],
                         'amount' => $detail['amount'] ?? 0,
@@ -161,6 +170,7 @@ class HandleBalanceUpdated
      * в детали просрочки. Пустая, если 1С разрез не прислала.
      *
      * @param  array<string, mixed>  $contractorData
+     * @param  list<int>  $excludedOrganizationIds
      * @return array<string, int>
      */
     private function syncOrganizationBalances(
@@ -168,6 +178,7 @@ class HandleBalanceUpdated
         ?Company $company,
         array $contractorData,
         ?string $updatedAt,
+        array $excludedOrganizationIds = [],
     ): array {
         $organizations = $contractorData['organizations'] ?? null;
 
@@ -208,6 +219,17 @@ class HandleBalanceUpdated
             $organization = app(OrganizationResolver::class)->resolveByUuid($uuid, $row);
 
             if (! $organization) {
+                continue;
+            }
+
+            // Внутренняя организация («Реклама») в расчётах с клиентами не участвует:
+            // строку разреза не пишем и в карту для деталей просрочки не отдаём.
+            if (in_array($organization->id, $excludedOrganizationIds, true)) {
+                Log::info('HandleBalanceUpdated: строка разреза исключённой организации пропущена', [
+                    'company_id' => $company->id,
+                    'organization_id' => $organization->id,
+                ]);
+
                 continue;
             }
 
