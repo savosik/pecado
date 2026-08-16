@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Crm\AbsenceController;
 use App\Http\Controllers\Crm\AgentTokenController;
 use App\Http\Controllers\Crm\AnalyticsController;
 use App\Http\Controllers\Crm\AttachmentController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\Crm\ShortageController;
 use App\Http\Controllers\Crm\TaskController;
 use App\Http\Controllers\Crm\TaskRecurrenceController;
 use App\Http\Controllers\Crm\TeamController;
+use App\Http\Controllers\Crm\TimesheetController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -430,6 +432,28 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::put('/team/{manager}/active', [TeamController::class, 'setActive'])
             ->name('team.active')
             ->whereNumber('manager');
+    });
+
+    // Отсутствия и замещения менеджеров (abs-02). Смотрит весь отдел,
+    // управляет руководитель.
+    Route::middleware('permission:crm-absences.view')->group(function () {
+        Route::get('/absences', [AbsenceController::class, 'index'])->name('absences.index');
+    });
+
+    Route::middleware('permission:crm-absences.edit')->group(function () {
+        Route::post('/absences', [AbsenceController::class, 'store'])->name('absences.store');
+        Route::put('/absences/{absence}/finish', [AbsenceController::class, 'finish'])
+            ->name('absences.finish')
+            ->whereNumber('absence');
+        Route::delete('/absences/{absence}', [AbsenceController::class, 'destroy'])
+            ->name('absences.destroy')
+            ->whereNumber('absence');
+    });
+
+    // Табель отдела (abs-03): производная отсутствий, только руководитель.
+    Route::middleware('permission:crm-timesheet.view')->group(function () {
+        Route::get('/timesheet', [TimesheetController::class, 'index'])->name('timesheet.index');
+        Route::get('/timesheet/export', [TimesheetController::class, 'export'])->name('timesheet.export');
     });
 
     // Токены ИИ-агентов (crm-13). Только у РОПа: токен даёт запись в CRM

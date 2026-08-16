@@ -137,6 +137,86 @@ class NewOrderForManagerEmailTest extends TestCase
         );
     }
 
+    public function test_goes_to_substitute_during_absence(): void
+    {
+        Notification::fake();
+
+        $pm = PersonalManager::create(['name' => 'Анна', 'email' => 'anna.personal@pecado.ru']);
+        $sub = PersonalManager::create(['name' => 'Иван', 'email' => 'ivan.sub@pecado.ru']);
+        \App\Models\ManagerAbsence::factory()->create([
+            'personal_manager_id' => $pm->id,
+            'substitute_manager_id' => $sub->id,
+            'starts_on' => today(),
+            'ends_on' => today()->addWeek(),
+        ]);
+
+        $client = User::factory()->create(['personal_manager_id' => $pm->id]);
+        $order = Order::factory()->create(['user_id' => $client->id]);
+
+        OrdersPlaced::dispatch(collect([$order]));
+
+        Notification::assertSentTimes(NewOrderForManagerNotification::class, 1);
+        Notification::assertSentTo(
+            new AnonymousNotifiable,
+            NewOrderForManagerNotification::class,
+            fn ($n, $channels, $notifiable) => ($notifiable->routes['mail'] ?? null) === 'ivan.sub@pecado.ru'
+        );
+    }
+
+    /**
+     * У замещающего пустой email — письмо возвращается на адрес самого менеджера,
+     * а не в общий fallback: он прочитает после выхода, что лучше потери письма.
+     */
+    public function test_substitute_without_email_falls_back_to_manager(): void
+    {
+        Notification::fake();
+
+        $pm = PersonalManager::create(['name' => 'Анна', 'email' => 'anna.personal@pecado.ru']);
+        $sub = PersonalManager::create(['name' => 'Без почты', 'email' => null]);
+        \App\Models\ManagerAbsence::factory()->create([
+            'personal_manager_id' => $pm->id,
+            'substitute_manager_id' => $sub->id,
+            'starts_on' => today(),
+            'ends_on' => today()->addWeek(),
+        ]);
+
+        $client = User::factory()->create(['personal_manager_id' => $pm->id]);
+        $order = Order::factory()->create(['user_id' => $client->id]);
+
+        OrdersPlaced::dispatch(collect([$order]));
+
+        Notification::assertSentTo(
+            new AnonymousNotifiable,
+            NewOrderForManagerNotification::class,
+            fn ($n, $channels, $notifiable) => ($notifiable->routes['mail'] ?? null) === 'anna.personal@pecado.ru'
+        );
+    }
+
+    public function test_goes_to_manager_again_after_absence_ends(): void
+    {
+        Notification::fake();
+
+        $pm = PersonalManager::create(['name' => 'Анна', 'email' => 'anna.personal@pecado.ru']);
+        $sub = PersonalManager::create(['name' => 'Иван', 'email' => 'ivan.sub@pecado.ru']);
+        \App\Models\ManagerAbsence::factory()->create([
+            'personal_manager_id' => $pm->id,
+            'substitute_manager_id' => $sub->id,
+            'starts_on' => today()->subDays(10),
+            'ends_on' => today()->subDay(),
+        ]);
+
+        $client = User::factory()->create(['personal_manager_id' => $pm->id]);
+        $order = Order::factory()->create(['user_id' => $client->id]);
+
+        OrdersPlaced::dispatch(collect([$order]));
+
+        Notification::assertSentTo(
+            new AnonymousNotifiable,
+            NewOrderForManagerNotification::class,
+            fn ($n, $channels, $notifiable) => ($notifiable->routes['mail'] ?? null) === 'anna.personal@pecado.ru'
+        );
+    }
+
     public function test_notification_subject_and_payload(): void
     {
         $client = User::factory()->create(['name' => 'Клиент Петров']);

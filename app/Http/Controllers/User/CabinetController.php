@@ -80,13 +80,38 @@ class CabinetController extends Controller
                 'color' => $user->clientStatus->color,
                 'image_url' => $user->clientStatus->getFirstMediaUrl('image'),
             ] : null,
-            'personalManager' => $user->personalManager ? [
-                'name' => $user->personalManager->name,
-                'phone' => $user->personalManager->phone,
-                'email' => $user->personalManager->email,
-                'photo_url' => $user->personalManager->getFirstMediaUrl('photo'),
-            ] : null,
+            'personalManager' => $this->personalManagerProp($user),
         ]);
+    }
+
+    /**
+     * Карточка менеджера для дашборда кабинета с учётом замещения (abs-01).
+     *
+     * При активном отсутствии с замещающим клиент видит контакты замещающего
+     * и пояснение, кого и до какой даты тот замещает. personal_manager_id
+     * клиента не меняется — подмена только на чтении.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function personalManagerProp(\App\Models\User $user): ?array
+    {
+        if (! $user->personalManager) {
+            return null;
+        }
+
+        $resolution = app(\App\Services\Crm\ManagerAbsenceResolver::class)->resolve($user->personalManager);
+        $manager = $resolution->manager->loadMissing('media');
+
+        return [
+            'name' => $manager->name,
+            'phone' => $manager->phone,
+            'email' => $manager->email,
+            'photo_url' => $manager->getFirstMediaUrl('photo'),
+            'substitution' => $resolution->isSubstitution() ? [
+                'absent_manager_name' => $resolution->absentManager->name,
+                'until' => $resolution->until->format('d.m.Y'),
+            ] : null,
+        ];
     }
 
     /**
