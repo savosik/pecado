@@ -345,6 +345,8 @@ class User extends Authenticatable implements HasMedia
 
     /**
      * Get the companies for the user.
+     *
+     * @return HasMany<Company, $this>
      */
     public function companies(): HasMany
     {
