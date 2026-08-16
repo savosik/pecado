@@ -209,6 +209,11 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::put('/partners/{client}/lifecycle', [ClientProfileController::class, 'lifecycle'])
             ->name('clients.lifecycle.update')
             ->whereNumber('client');
+        // Страховой запас (buf-02): тоже правка карточки партнёра менеджером,
+        // поэтому право то же, что у профиля и жизненного статуса.
+        Route::put('/partners/{client}/stock-buffer', [ClientProfileController::class, 'stockBuffer'])
+            ->name('clients.stock-buffer.update')
+            ->whereNumber('client');
     });
 
     // Тип аккаунта — состав базы партнёров отдела, а не работа с партнёром,

@@ -24,6 +24,7 @@ use Spatie\Tags\HasTags;
  * @property string $email
  * @property \Illuminate\Support\Carbon|null $email_verified_at
  * @property \Illuminate\Support\Carbon|null $last_seen_at
+ * @property bool $stock_buffer_enabled Страховой запас: показывать заниженные остатки по рисковым товарам (buf-02)
  * @property string $password
  * @property bool $must_change_password
  * @property string|null $remember_token
@@ -315,6 +316,9 @@ class User extends Authenticatable implements HasMedia
             'must_change_password' => 'boolean',
             'is_subscribed' => 'boolean',
             'terms_accepted' => 'boolean',
+            // Не в $fillable намеренно: меняется только CRM-экшеном
+            // (ClientLifecycleService::changeStockBuffer), не массовым заполнением.
+            'stock_buffer_enabled' => 'boolean',
             'country' => Country::class,
             'default_delivery_method' => \App\Enums\DeliveryMethod::class,
             'status' => UserStatus::class,

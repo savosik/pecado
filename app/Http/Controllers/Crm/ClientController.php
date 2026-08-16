@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Crm;
 
+use App\Enums\Crm\BusinessType;
 use App\Enums\Crm\ClientLifecycleStatus;
 use App\Enums\Crm\ClientSentiment;
 use App\Enums\Crm\PaymentBehavior;
 use App\Enums\Crm\PreferredChannel;
 use App\Models\CrmClientFilterPreset;
+use App\Models\CrmClientProfile;
 use App\Models\CrmClientProfileRevision;
 use App\Models\Organization;
 use App\Models\PersonalManager;
@@ -182,6 +184,12 @@ class ClientController extends CrmController
                 // Пользуется ли партнёр кабинетом: заказы могут идти через 1С,
                 // а на сайт он при этом не заходил ни разу.
                 'last_visit' => LastVisit::payload($user->last_seen_at),
+                // Страховой запас (buf-02). Рекомендация — подсказка по анкете,
+                // не автопроставление: решение принимает менеджер.
+                'stock_buffer' => [
+                    'enabled' => (bool) $user->stock_buffer_enabled,
+                    'recommended' => $canSeeProfile && $this->stockBufferRecommended($profiles->forClient($user)),
+                ],
             ],
             // Наши юрлица — для колонки и фильтра во вкладках «Заказы» и «Реализации».
             // Заглушки в список фильтра не идут: выбирать «юрлицо-UUID» менеджеру
@@ -242,6 +250,18 @@ class ClientController extends CrmController
             ],
             'history' => $lifecycle->history($user),
         ];
+    }
+
+    /**
+     * Похож ли партнёр по анкете на интернет-магазин или маркетплейсера.
+     *
+     * Только бейдж-рекомендация у галочки страхового запаса: анкета может быть
+     * неточной, поэтому сама она ничего не включает (решение заказчика, buf-02).
+     */
+    private function stockBufferRecommended(CrmClientProfile $profile): bool
+    {
+        return in_array($profile->business_type, [BusinessType::ONLINE, BusinessType::SELLER], true)
+            || (bool) $profile->works_with_marketplaces;
     }
 
     /**

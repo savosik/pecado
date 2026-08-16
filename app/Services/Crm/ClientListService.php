@@ -111,6 +111,11 @@ class ClientListService
             $this->applyPlanState($query, $filters->planState);
         }
 
+        // Страховой запас (buf-02): прямой флаг на users, без join-ов.
+        if ($filters->stockBuffer !== null) {
+            $query->where('stock_buffer_enabled', $filters->stockBuffer === 'enabled');
+        }
+
         $this->applySort($query, $filters, $actor);
 
         return $query;
@@ -593,6 +598,9 @@ class ClientListService
                 'name' => $client->clientStatus->name,
                 'color' => $client->clientStatus->color,
             ],
+            // Страховой запас (buf-02) — бейдж в строке: включённых ~50,
+            // менеджер должен видеть их без открытия карточки.
+            'stock_buffer_enabled' => (bool) $client->stock_buffer_enabled,
             'manager' => $client->personalManager === null ? null : [
                 'id' => (int) $client->personalManager->getKey(),
                 'name' => $client->personalManager->name,

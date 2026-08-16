@@ -34,6 +34,15 @@ class CrmClientStatusChange extends Model
      */
     public const FIELD_KIND = 'user_kind';
 
+    /**
+     * Страховой запас (users.stock_buffer_enabled): показывать ли клиенту
+     * заниженные остатки по рисковым товарам.
+     *
+     * Тот же журнал: включение меняет то, что клиент видит на витрине,
+     * и вопрос «кто и когда это включил» встанет ровно как со статусами.
+     */
+    public const FIELD_STOCK_BUFFER = 'stock_buffer';
+
     protected $fillable = [
         'client_user_id',
         'field',

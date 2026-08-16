@@ -24,6 +24,7 @@ Schedule::command('media:clean-temp')->hourly();
 Schedule::command('exports:warm')->everyFifteenMinutes()->withoutOverlapping(); // прогрев кэша стандартных пресетных выгрузок
 Schedule::command('exports:cleanup')->dailyAt('04:30')->withoutOverlapping(); // удаление orphaned/stale файлов кеша выгрузок
 Schedule::command('stock:cleanup-availability')->dailyAt('04:50')->withoutOverlapping(); // журнал переходов доступности: ретенция STOCK_AVAILABILITY_RETENTION_DAYS
+Schedule::command('stock:buffers:recompute')->dailyAt('02:20')->withoutOverlapping(); // страховой буфер по рисковым SKU (отмены/брак/срок годности); показ занижает только флаг STOCK_BUFFER_ENABLED (buf-04)
 Schedule::command('erp:cleanup-messages')->dailyAt('05:00')->withoutOverlapping(); // лог шины ERP: архив в холодное хранилище + удаление старше ERP_BUS_RETENTION_DAYS
 Schedule::command('erp:cleanup-processed')->dailyAt('05:20')->withoutOverlapping(); // журнал дедупликации входящих: ретенция ERP_PROCESSED_RETENTION_DAYS
 Schedule::command('model:prune', ['--model' => [\App\Models\SentEmail::class]])->dailyAt('05:10'); // журнал исходящих писем: ретенция MAIL_JOURNAL_RETENTION_DAYS
