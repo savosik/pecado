@@ -19,6 +19,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProductExportService
 {
+    use \App\Services\ProductExport\Concerns\AppliesStockBufferToWarehouses;
     use \App\Services\ProductExport\Concerns\RestrictsWarehousesByRegion;
 
     /** @var array<int, Currency> Pre-loaded currencies for current export run */
@@ -211,6 +212,9 @@ class ProductExportService
 
         $products = $query->get();
 
+        // Страховой буфер (buf-05): preview обязан совпадать с файлом до штуки.
+        $this->applyStockBufferToWarehouses($products, $clientUser);
+
         return $products->map(function ($product) use ($fieldKeys, $modifiers, $clientUser) {
             return $this->extractFields($product, $fieldKeys, $modifiers, $clientUser);
         });
@@ -239,6 +243,12 @@ class ProductExportService
 
             if ($field && ! empty($fieldModifiers)) {
                 $value = $this->applyModifiers($value, $field->modifierType(), $fieldModifiers);
+
+                // Складские остатки не бывают отрицательными: ручной модификатор
+                // вида «add: -3» иначе увёл бы колонку в минус (buf-05).
+                if ($field->group() === 'Складские остатки' && is_numeric($value)) {
+                    $value = max(0, $value);
+                }
             }
 
             $row[$fieldKey] = $value;

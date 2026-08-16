@@ -6,6 +6,7 @@ use App\Enums\Crm\ClientLifecycleStatus;
 use App\Enums\UserKind;
 use App\Models\CrmClientProfile;
 use App\Models\CrmClientStatusChange;
+use App\Models\ProductExport;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -126,6 +127,13 @@ class ClientLifecycleService
                 'to_value' => $enabled ? '1' : '0',
                 'user_id' => $actor->getKey(),
             ]);
+
+            // Адресный сброс кеша выгрузок (buf-05): только этого клиента —
+            // его витрина должна увидеть новые остатки, чужие кеши не трогаем.
+            ProductExport::query()
+                ->where('client_user_id', $client->getKey())
+                ->whereNotNull('cached_at')
+                ->update(['cached_at' => null]);
 
             return $client;
         });

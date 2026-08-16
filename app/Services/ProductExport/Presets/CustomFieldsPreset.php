@@ -33,6 +33,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class CustomFieldsPreset implements PresetInterface, TimerAware
 {
+    use \App\Services\ProductExport\Concerns\AppliesStockBufferToWarehouses;
     use \App\Services\ProductExport\Concerns\RestrictsWarehousesByRegion;
 
     protected const CHUNK_SIZE = 200;
@@ -444,6 +445,10 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
             // вместо N походов в сервисы из каждого Field::getValue.
             $this->preloadChunkCache($products, $clientUser, $timer);
 
+            // Страховой буфер (buf-05): складские колонки читают pivot-ы
+            // напрямую и обязаны сходиться с user_stock_available до штуки.
+            $this->applyStockBufferToWarehouses($products, $clientUser);
+
             $rows = $timer->measure('map_rows', fn () => $products->map(fn (Product $p) => $native
                 ? $this->extractRowNative($p, $clientUser)
                 : $this->extractRow($p, $clientUser)));
@@ -561,6 +566,12 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
 
             if ($field && ! empty($this->modifiers[$key])) {
                 $value = $this->applyModifiers($value, $field->modifierType(), $this->modifiers[$key]);
+
+                // Складские остатки не бывают отрицательными: ручной модификатор
+                // вида «add: -3» иначе увёл бы колонку в минус (buf-05).
+                if ($field->group() === 'Складские остатки' && is_numeric($value)) {
+                    $value = max(0, $value);
+                }
             }
 
             if ($sample) {
@@ -594,6 +605,11 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
 
             if ($field && ! empty($this->modifiers[$key])) {
                 $value = $this->applyModifiers($value, $field->modifierType(), $this->modifiers[$key], native: true);
+
+                // Тот же кламп, что в extractRow: складские числа не уходят в минус.
+                if ($field->group() === 'Складские остатки' && is_numeric($value)) {
+                    $value = max(0, $value);
+                }
             }
 
             if ($sample) {

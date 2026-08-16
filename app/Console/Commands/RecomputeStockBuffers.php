@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Models\ProductExport;
+use App\Models\User;
 use App\Services\Stock\StockBufferRecalculator;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -42,6 +44,37 @@ class RecomputeStockBuffers extends Command
             'changed' => $result['changed'],
         ]);
 
+        $this->invalidateSegmentExports($result['changed']);
+
         return self::SUCCESS;
+    }
+
+    /**
+     * Условная инвалидация кешей выгрузок (buf-05).
+     *
+     * Строго при непустом диффе и только выгрузки клиентов сегмента:
+     * глобальный bump версии протух бы ВСЕ кеши каждую ночь и устроил утро
+     * массовой перегенерации, а клиентов без галочки жизнь буфера не касается.
+     * При выключенном STOCK_BUFFER_ENABLED буфер нигде не показывается —
+     * трогать кеши не за чем.
+     *
+     * @param  array<int, array{before: int, after: int}>  $changed
+     */
+    private function invalidateSegmentExports(array $changed): void
+    {
+        if ($changed === [] || ! config('stock_buffer.enabled')) {
+            return;
+        }
+
+        $reset = ProductExport::query()
+            ->whereIn('client_user_id', User::query()
+                ->where('stock_buffer_enabled', true)
+                ->select('id'))
+            ->whereNotNull('cached_at')
+            ->update(['cached_at' => null]);
+
+        if ($reset > 0) {
+            $this->info("Сброшен кеш {$reset} выгрузок клиентов сегмента.");
+        }
     }
 }
