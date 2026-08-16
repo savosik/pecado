@@ -7,6 +7,7 @@ use App\Http\Controllers\Wms\DeliveryCandidateController;
 use App\Http\Controllers\Wms\DeliveryController;
 use App\Http\Controllers\Wms\DeliverySettingsController;
 use App\Http\Controllers\Wms\GoodsIssueController;
+use App\Http\Controllers\Wms\StockBufferController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -53,6 +54,19 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
         Route::middleware('permission:wms-defects.delete')->group(function () {
             Route::post('/defects/{defect}/write-off', [DefectController::class, 'writeOff'])->name('defects.write-off');
             Route::delete('/defects/{defect}', [DefectController::class, 'destroy'])->name('defects.destroy');
+        });
+    });
+
+    // Страховой запас (эпик buf-00): рисковые SKU с занижением показа для
+    // клиентов сегмента. Ручные пометки «придержи N шт» ставит склад;
+    // расчётный буфер руками не редактируется — пересчитается ночью.
+    Route::middleware('permission:wms-stock-buffers.view')->group(function () {
+        Route::get('/stock-buffers', [StockBufferController::class, 'index'])->name('stock-buffers.index');
+        Route::get('/stock-buffers/search-products', [StockBufferController::class, 'searchProducts'])->name('stock-buffers.search-products');
+
+        Route::middleware('permission:wms-stock-buffers.edit')->group(function () {
+            Route::post('/stock-buffers/manual', [StockBufferController::class, 'storeManual'])->name('stock-buffers.manual.store');
+            Route::delete('/stock-buffers/{buffer}/manual', [StockBufferController::class, 'clearManual'])->name('stock-buffers.manual.destroy');
         });
     });
 

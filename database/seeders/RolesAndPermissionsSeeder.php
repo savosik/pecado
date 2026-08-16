@@ -169,6 +169,9 @@ class RolesAndPermissionsSeeder extends Seeder
         // Настройки ApiShip: токен боевого API и адрес отправителя. Только начальнику
         // склада — сломать ими можно весь раздел разом.
         'wms-delivery-settings' => ['view', 'edit'],
+        // Страховой запас (эпик buf-00): рисковые SKU с занижением показа
+        // и ручные пометки склада «придержи N шт».
+        'wms-stock-buffers' => ['view', 'edit'],
 
         // Уценка глазами закупщика — админский ресурс (без `wms-` префикса):
         // цену и публикацию задаёт buyer-manager в /admin, а не кладовщик.
@@ -256,6 +259,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'wms-defects' => 'Склад: Некондиция',
         'wms-defect-types' => 'Склад: Справочник дефектов',
         'wms-goods-issues' => 'Склад: Расходные ордера',
+        'wms-stock-buffers' => 'Склад: Страховой запас',
         'defects' => 'Уценка (цены и публикация)',
         'defect-types' => 'Справочник дефектов',
         'supplier-preorders' => 'Предзаказы поставщику',
@@ -329,14 +333,14 @@ class RolesAndPermissionsSeeder extends Seeder
                 // Только WMS: в /admin роль намеренно не пускает.
                 // Справочник дефектов ведёт начальник склада — у кладовщика его нет.
                 'wms-dashboard', 'wms-defects', 'wms-defect-types', 'wms-goods-issues',
-                'wms-deliveries', 'wms-delivery-settings',
+                'wms-deliveries', 'wms-delivery-settings', 'wms-stock-buffers',
             ],
         ],
         'storekeeper' => [
             'label' => 'Кладовщик',
             'resources' => [
                 // Только WMS: в /admin роль намеренно не пускает.
-                'wms-dashboard', 'wms-defects', 'wms-goods-issues',
+                'wms-dashboard', 'wms-defects', 'wms-goods-issues', 'wms-stock-buffers',
                 // Отправки собирает и передаёт в ТК кладовщик, но отменить
                 // уже принятую перевозчиком заявку может только начальник склада.
                 'wms-deliveries' => ['view', 'create', 'edit', 'submit'],

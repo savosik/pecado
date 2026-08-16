@@ -2,6 +2,7 @@ import {
     LuClipboardList,
     LuLayoutDashboard,
     LuPackageX,
+    LuShieldCheck,
     LuTruck,
     LuScanBarcode,
     LuListOrdered,
@@ -41,6 +42,13 @@ export const menuConfig: MenuGroup[] = [
             { label: "К отгрузке", icon: LuTruck, path: "/wms/defects/shipping", permission: "wms-defects.view" },
             { label: "Коды дефектов", icon: LuListOrdered, path: "/wms/defects/codes", permission: "wms-defects.view" },
             { label: "Справочник дефектов", icon: LuClipboardList, path: "/wms/defect-types", permission: "wms-defect-types.view" },
+        ],
+    },
+    {
+        title: "Страховой запас",
+        icon: LuShieldCheck,
+        items: [
+            { label: "Рисковые SKU", icon: LuShieldCheck, path: "/wms/stock-buffers", permission: "wms-stock-buffers.view" },
         ],
     },
     {
