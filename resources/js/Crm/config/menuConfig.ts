@@ -18,6 +18,8 @@ import {
     LuTriangleAlert,
     LuScale,
     LuCalendarClock,
+    LuCalendarOff,
+    LuCalendarCheck,
     LuUserPlus,
     LuFileDown,
     LuPackageX,
@@ -66,6 +68,9 @@ export const menuConfig: MenuGroup[] = [
             { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", feature: "shortage_offers_enabled", counter: "shortages" },
             { label: "Отчёты продаж", icon: LuChartLine, path: "/crm/analytics", permission: "crm-analytics.view" },
             { label: "Команда", icon: LuUsersRound, path: "/crm/team", permission: "crm-team.view" },
+            // Отсутствия видит весь отдел: кто кого замещает — рабочая информация.
+            { label: "Отсутствия", icon: LuCalendarOff, path: "/crm/absences", permission: "crm-absences.view" },
+            { label: "Табель", icon: LuCalendarCheck, path: "/crm/timesheet", permission: "crm-timesheet.view" },
             { label: "Токены ИИ-агентов", icon: LuKeyRound, path: "/crm/agent-tokens", permission: "crm-agent-tokens.view" },
         ],
     },

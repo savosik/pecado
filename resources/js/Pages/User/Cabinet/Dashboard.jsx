@@ -4,7 +4,7 @@ import {
 } from '@chakra-ui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import CabinetLayout from './CabinetLayout';
-import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuPhone, LuMail, LuUserRound } from 'react-icons/lu';
+import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuPhone, LuMail, LuUserRound, LuInfo } from 'react-icons/lu';
 import { Tooltip } from '@/components/ui/tooltip';
 import PwaInstallBanner from '@/components/PwaInstallBanner';
 import { getOrderTypeShortLabel, getOrderTypeColor } from '@/constants/orderType';
@@ -206,6 +206,26 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                 </HStack>
                             </Box>
                         </Flex>
+                        {personalManager.substitution && (
+                            <Flex
+                                mt="4"
+                                p="3"
+                                gap="2.5"
+                                align="flex-start"
+                                borderRadius="lg"
+                                bg="pecado.50"
+                                _dark={{ bg: 'pecado.900/20' }}
+                            >
+                                <Box color="pecado.600" _dark={{ color: 'pecado.300' }} flexShrink="0" mt="0.5">
+                                    <LuInfo size={16} />
+                                </Box>
+                                <Text fontSize="sm" color="gray.700" _dark={{ color: 'gray.200' }}>
+                                    {personalManager.name} временно замещает вашего персонального менеджера{' '}
+                                    {personalManager.substitution.absent_manager_name} до {personalManager.substitution.until}.
+                                    На это время по любым вопросам пишите или звоните по контактам выше — все ваши заказы под контролем.
+                                </Text>
+                            </Flex>
+                        )}
                     </Card.Body>
                 </Card.Root>
             )}

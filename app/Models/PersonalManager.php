@@ -93,6 +93,22 @@ class PersonalManager extends Model implements HasMedia
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Периоды отсутствия этого менеджера (отпуска, отгулы, больничные, прогулы).
+     */
+    public function absences(): HasMany
+    {
+        return $this->hasMany(ManagerAbsence::class, 'personal_manager_id');
+    }
+
+    /**
+     * Отсутствия коллег, в которых этот менеджер назначен замещающим.
+     */
+    public function substitutions(): HasMany
+    {
+        return $this->hasMany(ManagerAbsence::class, 'substitute_manager_id');
+    }
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('photo')
