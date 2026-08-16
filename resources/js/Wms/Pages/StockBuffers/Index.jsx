@@ -235,11 +235,11 @@ export default function Index() {
                                     <Table.Header>
                                         <Table.Row>
                                             <Table.ColumnHeader>Товар</Table.ColumnHeader>
-                                            <Table.ColumnHeader textAlign="right">Остаток</Table.ColumnHeader>
-                                            <Table.ColumnHeader textAlign="right">Буфер</Table.ColumnHeader>
-                                            <Table.ColumnHeader textAlign="right">Скрыто</Table.ColumnHeader>
+                                            <Table.ColumnHeader textAlign="right">Остаток на складе</Table.ColumnHeader>
+                                            <Table.ColumnHeader textAlign="right">Занижение показа</Table.ColumnHeader>
+                                            <Table.ColumnHeader textAlign="right">Скрыто от сегмента</Table.ColumnHeader>
                                             <Table.ColumnHeader>Почему в списке</Table.ColumnHeader>
-                                            <Table.ColumnHeader>Пометка</Table.ColumnHeader>
+                                            <Table.ColumnHeader>Пометка склада</Table.ColumnHeader>
                                             {canEdit && <Table.ColumnHeader />}
                                         </Table.Row>
                                     </Table.Header>
@@ -296,6 +296,41 @@ export default function Index() {
                                 </Table.Root>
                             </Table.ScrollArea>
                         )}
+
+                        {/* Легенда: раздел смотрят не каждый день, механику
+                            должно быть видно без документации. */}
+                        <Box mt={4} pt={3} borderTopWidth="1px">
+                            <Text fontSize="xs" fontWeight="600" color="fg.muted" mb={1}>
+                                Как это работает
+                            </Text>
+                            <VStack align="start" gap={1}>
+                                <Text fontSize="xs" color="fg.muted">
+                                    <b>Занижение показа</b> — на сколько штук клиенты с галочкой
+                                    «страховой запас» (интернет-магазины и маркетплейсеры) видят
+                                    остаток меньше реального. Считается каждую ночь по сигналам
+                                    риска; ручная пометка склада всегда побеждает расчёт.
+                                </Text>
+                                <Text fontSize="xs" color="fg.muted">
+                                    <b>Скрыто от сегмента</b> — сколько штук фактически спрятано
+                                    сейчас: не больше, чем лежит на складе.
+                                </Text>
+                                <Text fontSize="xs" color="fg.muted">
+                                    Занижение виртуальное: ничего не резервируется — розница, опт
+                                    и витрина видят и покупают полный остаток. Смысл в том, чтобы
+                                    заказы сегмента не претендовали на последние экземпляры
+                                    и у кладовщика оставался выбор лучшей единицы при сборке.
+                                </Text>
+                                <Text fontSize="xs" color="fg.muted">
+                                    Подтверждённый брак сюда не относится: его заводите партией
+                                    некондиции — тогда единица уходит из продажи для всех,
+                                    а не только для сегмента.
+                                </Text>
+                                <Text fontSize="xs" color="fg.muted">
+                                    Расчётные строки исчезают сами, когда сигналы пропадают;
+                                    ручные пометки живут, пока их не снимут.
+                                </Text>
+                            </VStack>
+                        </Box>
                     </Card.Body>
                 </Card.Root>
 
