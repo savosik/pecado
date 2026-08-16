@@ -9,6 +9,13 @@ set -uo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
+# Коммит может идти из git worktree внутри проекта (.worktrees/<фича> —
+# см. память feedback_feature_branches). Контейнеры смонтированы на основной
+# каталог, поэтому рабочую директорию внутри контейнера вычисляем от корня
+# основного репозитория: /var/www + относительный путь worktree.
+MAIN_ROOT="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+APP_DIR="/var/www${PWD#"$MAIN_ROOT"}"
+
 RED=$'\033[1;31m'; GRN=$'\033[1;32m'; DIM=$'\033[2m'; RST=$'\033[0m'
 FAILED=0
 
@@ -23,7 +30,7 @@ running() { docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "$1"; }
 PHP_FILES=$(staged '*.php')
 if [[ -n "$PHP_FILES" ]] && running pecado-app; then
   # shellcheck disable=SC2086
-  if docker exec pecado-app vendor/bin/pint --quiet $PHP_FILES 2>/dev/null; then
+  if docker exec -w "$APP_DIR" pecado-app vendor/bin/pint --quiet $PHP_FILES 2>/dev/null; then
     # Pint правит файлы на месте — возвращаем исправления в индекс,
     # иначе закоммитится неотформатированная версия.
     echo "$PHP_FILES" | xargs -r git add
@@ -38,12 +45,13 @@ fi
 # ESLint по изменённым JS/JSX
 # ─────────────────────────────────────────────────────────────
 JS_FILES=$(staged '*.js' '*.jsx')
-if [[ -n "$JS_FILES" ]] && running pecado-node; then
+# В worktree обычно нет node_modules — тогда проверку оставляем CI.
+if [[ -n "$JS_FILES" ]] && running pecado-node && [[ -d "$PWD/node_modules" ]]; then
   # shellcheck disable=SC2086
-  if docker exec pecado-node npx eslint --no-warn-ignored $JS_FILES 2>&1 | grep -qE "error|problem"; then
+  if docker exec -w "$APP_DIR" pecado-node npx eslint --no-warn-ignored $JS_FILES 2>&1 | grep -qE "error|problem"; then
     printf '%s✗%s ESLint нашёл ошибки:\n' "$RED" "$RST"
     # shellcheck disable=SC2086
-    docker exec pecado-node npx eslint --no-warn-ignored $JS_FILES 2>&1 | head -30
+    docker exec -w "$APP_DIR" pecado-node npx eslint --no-warn-ignored $JS_FILES 2>&1 | head -30
     FAILED=1
   else
     printf '%s✓%s ESLint: %d файл(ов)\n' "$GRN" "$RST" "$(wc -l <<<"$JS_FILES")"
