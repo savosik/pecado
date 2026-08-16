@@ -162,7 +162,30 @@ class StockService implements StockServiceInterface
             }
         }
 
+        // Страховой буфер (buf-04): клиентам сегмента available занижается,
+        // preorder — никогда (предзаказ — обещание прихода, не полка).
+        if ($this->buffersApplyTo($user)) {
+            $buffers = app(StockBufferService::class)->bufferMap(array_keys($available));
+
+            foreach ($available as $productId => $quantity) {
+                $available[$productId] = max(0, $quantity - ($buffers[$productId] ?? 0));
+            }
+        }
+
         return ['available' => $available, 'preorder' => $preorder];
+    }
+
+    /**
+     * Применять ли страховой буфер к этому пользователю (buf-04).
+     *
+     * Цена для горячего пути — ноль: гость и клиент без галочки отсекаются
+     * двумя булевыми проверками, без единого SQL-запроса.
+     */
+    private function buffersApplyTo(?User $user): bool
+    {
+        return (bool) config('stock_buffer.enabled')
+            && $user !== null
+            && (bool) $user->stock_buffer_enabled;
     }
 
     /**
@@ -183,12 +206,32 @@ class StockService implements StockServiceInterface
         $warehouses = $this->regionWarehouseIds($user);
 
         if ($warehouses['primary'] !== []) {
-            $query->addSelect([
-                'primary_stock' => DB::table('product_warehouse')
+            if ($this->buffersApplyTo($user)) {
+                // Страховой буфер (buf-04): сортировка «в наличии первыми»
+                // не должна поднимать товар, который карточка уже показывает
+                // нулевым. GREATEST есть только в MySQL, в SQLite (тесты)
+                // двухаргументный MAX — скалярный аналог.
+                $stockSql = DB::table('product_warehouse')
                     ->selectRaw('COALESCE(SUM(quantity), 0)')
                     ->whereColumn('product_warehouse.product_id', 'products.id')
-                    ->whereIn('product_warehouse.warehouse_id', $warehouses['primary']),
-            ]);
+                    ->whereIn('product_warehouse.warehouse_id', $warehouses['primary']);
+
+                $greatest = DB::connection()->getDriverName() === 'sqlite' ? 'MAX' : 'GREATEST';
+                $bufferSql = 'SELECT '.$greatest.'(COALESCE(manual_qty, buffer_qty), 0)'
+                    .' FROM product_stock_buffers WHERE product_stock_buffers.product_id = products.id';
+
+                $query->selectRaw(
+                    $greatest.'(('.$stockSql->toSql().') - COALESCE(('.$bufferSql.'), 0), 0) as primary_stock',
+                    $stockSql->getBindings(),
+                );
+            } else {
+                $query->addSelect([
+                    'primary_stock' => DB::table('product_warehouse')
+                        ->selectRaw('COALESCE(SUM(quantity), 0)')
+                        ->whereColumn('product_warehouse.product_id', 'products.id')
+                        ->whereIn('product_warehouse.warehouse_id', $warehouses['primary']),
+                ]);
+            }
         } else {
             $query->selectRaw('0 as primary_stock');
         }

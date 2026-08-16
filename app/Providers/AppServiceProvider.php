@@ -48,6 +48,9 @@ class AppServiceProvider extends ServiceProvider
         // региона, чтобы карточка + варианты + похожие резолвили регион один
         // раз. Интерфейс биндится на тот же скоупленный экземпляр.
         $this->app->scoped(\App\Services\Stock\StockService::class);
+        // Тот же скоуп для буфера (buf-04): таблица буферов читается один раз
+        // на запрос, все потребители отвечают из памяти.
+        $this->app->scoped(\App\Services\Stock\StockBufferService::class);
         $this->app->bind(
             \App\Contracts\Stock\StockServiceInterface::class,
             \App\Services\Stock\StockService::class

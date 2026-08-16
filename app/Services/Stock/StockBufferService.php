@@ -9,21 +9,22 @@ use Illuminate\Support\Facades\DB;
  *
  * Буфер — производная, не поле остатка (прецеденты PromoStockService и
  * DefectStockService): `product_warehouse.quantity` остаётся абсолютным
- * значением из 1С, вычитание происходит при показе. Здесь только чтение
- * карты; занижение применяют потребители (buf-04/buf-05) и только для
- * клиентов с галочкой `users.stock_buffer_enabled`.
+ * значением из 1С, вычитание происходит при показе (StockService, buf-04)
+ * и только для клиентов с галочкой `users.stock_buffer_enabled`.
  *
- * Рисковых SKU ~100–150, поэтому для больших списков (выгрузки, каталог
- * целиком) дешевле поднять все буферы одним запросом без WHERE IN и
- * пересечь в PHP, чем гнать в MySQL список из тысяч id.
+ * Экземпляр скоуплен на запрос (AppServiceProvider): вся таблица буферов
+ * (~100–150 строк) поднимается одним запросом при первом обращении, дальше
+ * карточка + варианты + похожие + корзина отвечают из памяти — дисциплина
+ * «один запрос к product_stock_buffers на HTTP-запрос».
  */
 class StockBufferService
 {
     /**
-     * Порог, после которого WHERE IN по списку товаров дороже полного чтения
-     * таблицы буферов (в ней сотни строк, не тысячи).
+     * Эффективные буферы всех товаров: product_id → шт. NULL до первого чтения.
+     *
+     * @var array<int, int>|null
      */
-    private const FULL_SCAN_THRESHOLD = 500;
+    private ?array $effective = null;
 
     /**
      * Эффективный буфер одного товара, шт.
@@ -36,8 +37,8 @@ class StockBufferService
     /**
      * Батч-карта эффективных буферов: товар → на сколько штук занижать показ.
      *
-     * Один запрос независимо от размера списка. Ручная пометка склада
-     * (`manual_qty`) побеждает расчёт; отсутствие записи = 0.
+     * Ручная пометка склада (`manual_qty`) побеждает расчёт; отсутствие
+     * записи = 0.
      *
      * @param  iterable<int>  $productIds
      * @return array<int, int>
@@ -53,23 +54,42 @@ class StockBufferService
             return [];
         }
 
-        $query = DB::table('product_stock_buffers')
-            ->select(['product_id', 'buffer_qty', 'manual_qty']);
+        $effective = $this->allEffective();
 
-        if (count($result) <= self::FULL_SCAN_THRESHOLD) {
-            $query->whereIn('product_id', array_keys($result));
-        }
-
-        foreach ($query->get() as $row) {
-            $productId = (int) $row->product_id;
-
-            if (! array_key_exists($productId, $result)) {
-                continue;
+        foreach ($result as $productId => $zero) {
+            if (isset($effective[$productId])) {
+                $result[$productId] = $effective[$productId];
             }
-
-            $result[$productId] = max((int) ($row->manual_qty ?? $row->buffer_qty), 0);
         }
 
         return $result;
+    }
+
+    /**
+     * Полная карта эффективных буферов, поднятая один раз на запрос.
+     *
+     * @return array<int, int>
+     */
+    private function allEffective(): array
+    {
+        if ($this->effective !== null) {
+            return $this->effective;
+        }
+
+        $this->effective = [];
+
+        $rows = DB::table('product_stock_buffers')
+            ->select(['product_id', 'buffer_qty', 'manual_qty'])
+            ->get();
+
+        foreach ($rows as $row) {
+            $qty = max((int) ($row->manual_qty ?? $row->buffer_qty), 0);
+
+            if ($qty > 0) {
+                $this->effective[(int) $row->product_id] = $qty;
+            }
+        }
+
+        return $this->effective;
     }
 }
