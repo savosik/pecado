@@ -26,6 +26,7 @@ import ClientKindDialog from '@/Crm/Components/ClientKindDialog';
 import PartnerContractors from '@/Crm/Components/PartnerContractors';
 import PartnerPurchases from '@/Crm/Components/PartnerPurchases';
 import ClientSummaryBar from './components/ClientSummaryBar';
+import StockBufferPanel from './components/StockBufferPanel';
 
 function InfoRow({ label, value }) {
     return (
@@ -179,6 +180,12 @@ export default function Show() {
                                     />
                                 </Box>
                             )}
+
+                            <StockBufferPanel
+                                clientId={client.id}
+                                stockBuffer={client.stock_buffer}
+                                canEdit={can('crm-profile.edit')}
+                            />
                         </AccordionItemContent>
                     </AccordionItem>
 

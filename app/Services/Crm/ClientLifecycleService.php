@@ -100,6 +100,38 @@ class ClientLifecycleService
     }
 
     /**
+     * Включить или выключить страховой запас (users.stock_buffer_enabled).
+     *
+     * Только руками менеджера: автопроставления по анкете нет намеренно —
+     * business_type в CRM-профиле может быть неточным (решение заказчика,
+     * buf-02). Смена журналируется: включение меняет остатки, которые клиент
+     * видит на витрине.
+     */
+    public function changeStockBuffer(User $client, bool $enabled, User $actor): User
+    {
+        return DB::transaction(function () use ($client, $enabled, $actor): User {
+            $from = (bool) $client->stock_buffer_enabled;
+
+            if ($from === $enabled) {
+                return $client;
+            }
+
+            $client->stock_buffer_enabled = $enabled;
+            $client->save();
+
+            CrmClientStatusChange::create([
+                'client_user_id' => $client->getKey(),
+                'field' => CrmClientStatusChange::FIELD_STOCK_BUFFER,
+                'from_value' => $from ? '1' : '0',
+                'to_value' => $enabled ? '1' : '0',
+                'user_id' => $actor->getKey(),
+            ]);
+
+            return $client;
+        });
+    }
+
+    /**
      * История смен статусов партнёра для карточки.
      *
      * @return list<array<string, mixed>>

@@ -117,6 +117,13 @@ export default function Index({
                     <HStack gap={2}>
                         <Text fontWeight="semibold">{row.name}</Text>
                         <Text fontFamily="mono" fontSize="10px" color="fg.muted">#{row.id}</Text>
+                        {/* Страховой запас (buf-02): партнёр видит заниженные
+                            остатки по рисковым товарам. */}
+                        {row.stock_buffer_enabled && (
+                            <Badge colorPalette="blue" variant="subtle" size="xs">
+                                страховой запас
+                            </Badge>
+                        )}
                     </HStack>
                     {/* Имя из кабинета — только когда партнёр назвал себя иначе,
                         чем записано в карточке 1С. */}

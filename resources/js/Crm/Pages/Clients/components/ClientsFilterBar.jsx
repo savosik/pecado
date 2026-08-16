@@ -149,6 +149,19 @@ export default function ClientsFilterBar({
                 ]}
             />
 
+            {/* Страховой запас (buf-02): включённых ~50 — менеджеру нужен их
+                список одним кликом. */}
+            <FilterSelect
+                value={filters.stock_buffer}
+                onChange={(value) => onChange({ stock_buffer: value })}
+                placeholder="Страховой запас: неважно"
+                minW="220px"
+                options={[
+                    { value: 'enabled', label: 'Страховой запас включён' },
+                    { value: 'disabled', label: 'Страховой запас выключен' },
+                ]}
+            />
+
             {/* Отдельно от «не покупает»: там отгрузки (факт), здесь заказы
                 (намерение). Клиент мог заказать вчера и ещё не получить товар. */}
             <FilterSelect

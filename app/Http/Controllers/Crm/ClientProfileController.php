@@ -53,6 +53,29 @@ class ClientProfileController extends CrmController
     }
 
     /**
+     * Страховой запас: показывать ли партнёру заниженные остатки по рисковым
+     * товарам (buf-02). Только руками менеджера — подсказка по анкете в карточке
+     * остаётся рекомендацией и ничего не проставляет сама.
+     */
+    public function stockBuffer(
+        Request $request,
+        int $client,
+        ClientLifecycleService $lifecycle,
+    ): RedirectResponse {
+        $user = User::query()
+            ->visibleInCrm($this->crmActor($request))
+            ->findOrFail($client);
+
+        $enabled = (bool) $request->validate(['enabled' => ['required', 'boolean']])['enabled'];
+
+        $lifecycle->changeStockBuffer($user, $enabled, $this->crmActor($request));
+
+        return back()->with('success', $enabled
+            ? 'Страховой запас включён: партнёр видит заниженные остатки по рисковым товарам'
+            : 'Страховой запас выключен: партнёр видит остатки как все');
+    }
+
+    /**
      * Тип аккаунта: убрать из базы партнёров отдела или вернуть обратно.
      *
      * Скоуп поиска — не `visibleInCrm()`, а вся закреплённая за отделом база:
