@@ -157,6 +157,11 @@ class AbstractPresetBatchingTest extends TestCase
             'is_active' => true,
         ]);
 
+        // Прогрев мемоизации складов региона (buf-03): StockService скоуплен
+        // на запрос, и холодный первый замер иначе нёс бы +1 запрос
+        // region_warehouse относительно тёплого второго.
+        app(\App\Services\Stock\StockService::class)->regionWarehouseIds($client);
+
         $smallCount = $this->countQueriesForCatalog($export, 5, $warehouse->id);
         $largeCount = $this->countQueriesForCatalog($export, 50, $warehouse->id);
 

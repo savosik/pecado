@@ -5,7 +5,6 @@ namespace App\Services\Product;
 use App\Models\Product;
 use App\Models\Promotion;
 use App\Models\PromotionRule;
-use App\Models\Region;
 use App\Services\CurrencyService;
 use App\Services\Promotion\ActivePromotionRuleCache;
 use Illuminate\Support\Collection;
@@ -71,106 +70,54 @@ class ProductQueryService
     /**
      * Получить ID складов региона текущего пользователя.
      *
-     * Для гостя используется регион по умолчанию — чтобы запросы остатков
-     * на SQL-уровне работали консистентно с фасетами. Наружу (в ответ API)
-     * эти поля для гостя всё равно не попадают — см. CatalogApiController.
+     * Тонкий адаптер над StockService (buf-03): SQL остатков и резолв региона
+     * живут в одной точке и мемоизируются на время запроса. Для гостя —
+     * регион по умолчанию; наружу (в ответ API) поля остатков для гостя
+     * всё равно не попадают — см. CatalogProductPresenter.
      *
      * @return array{primary: int[], preorder: int[]}
      */
     public static function getRegionWarehouseIds(): array
     {
-        $user = Auth::user();
-        $regionId = $user !== null ? $user->region_id : null;
-        $regionId = $regionId ?? Region::defaultId();
-        if (! $regionId) {
-            return ['primary' => [], 'preorder' => []];
-        }
-
-        $rows = DB::table('region_warehouse')
-            ->where('region_id', $regionId)
-            ->select('warehouse_id', 'type')
-            ->get();
-
-        return [
-            'primary' => $rows->where('type', 'primary')->pluck('warehouse_id')->toArray(),
-            'preorder' => $rows->where('type', 'preorder')->pluck('warehouse_id')->toArray(),
-        ];
+        return app(\App\Services\Stock\StockService::class)
+            ->regionWarehouseIds(Auth::user());
     }
 
     /**
      * Добавить к запросу суммы остатков по primary и preorder складам региона пользователя.
+     *
+     * Адаптер над StockService::applyStockSubselects (buf-03). Нужен только
+     * потребителям с остатком в ORDER BY (поиск, избранное) — остальным
+     * дешевле enrichProductsWithStock() после пагинации.
      */
     public static function withRegionStockSums($query): void
     {
-        $wh = self::getRegionWarehouseIds();
-
-        // Primary stock
-        if (! empty($wh['primary'])) {
-            $query->addSelect([
-                'primary_stock' => DB::table('product_warehouse')
-                    ->selectRaw('COALESCE(SUM(quantity), 0)')
-                    ->whereColumn('product_warehouse.product_id', 'products.id')
-                    ->whereIn('product_warehouse.warehouse_id', $wh['primary']),
-            ]);
-        } else {
-            $query->selectRaw('0 as primary_stock');
-        }
-
-        // Preorder stock
-        if (! empty($wh['preorder'])) {
-            $query->addSelect([
-                'preorder_stock' => DB::table('product_warehouse')
-                    ->selectRaw('COALESCE(SUM(quantity), 0)')
-                    ->whereColumn('product_warehouse.product_id', 'products.id')
-                    ->whereIn('product_warehouse.warehouse_id', $wh['preorder']),
-            ]);
-        } else {
-            $query->selectRaw('0 as preorder_stock');
-        }
+        app(\App\Services\Stock\StockService::class)
+            ->applyStockSubselects($query, Auth::user());
     }
 
     /**
      * Обогатить массив товаров остатками по региону текущего пользователя.
-     * Используется для товаров, загруженных из кеша (без stock sums).
+     *
+     * Единственный путь показа остатков для батч-потребителей (каталог,
+     * карточка, главная, акции, client-api): страховой буфер (buf-04)
+     * врежется именно сюда.
      */
     public static function enrichProductsWithStock(array $products): array
     {
-        $wh = self::getRegionWarehouseIds();
-        $productIds = collect($products)->pluck('id')->toArray();
+        $productIds = collect($products)->pluck('id')
+            ->filter()->map(fn ($id) => (int) $id)->all();
 
         if (empty($productIds)) {
             return $products;
         }
 
-        // Загрузить остатки одним запросом
-        $stockRows = DB::table('product_warehouse')
-            ->whereIn('product_id', $productIds)
-            ->whereIn('warehouse_id', array_merge($wh['primary'], $wh['preorder']))
-            ->select('product_id', 'warehouse_id', 'quantity')
-            ->get();
+        $maps = app(\App\Services\Stock\StockService::class)
+            ->getStockMapsByIds($productIds, Auth::user());
 
-        $primaryIds = array_flip($wh['primary']);
-        $preorderIds = array_flip($wh['preorder']);
-
-        // Группируем по product_id
-        $stockMap = [];
-        foreach ($stockRows as $row) {
-            $pid = $row->product_id;
-            if (! isset($stockMap[$pid])) {
-                $stockMap[$pid] = ['primary' => 0, 'preorder' => 0];
-            }
-            if (isset($primaryIds[$row->warehouse_id])) {
-                $stockMap[$pid]['primary'] += $row->quantity;
-            }
-            if (isset($preorderIds[$row->warehouse_id])) {
-                $stockMap[$pid]['preorder'] += $row->quantity;
-            }
-        }
-
-        return array_map(function ($product) use ($stockMap) {
-            $stock = $stockMap[$product['id']] ?? ['primary' => 0, 'preorder' => 0];
-            $product['stock_quantity'] = $stock['primary'];
-            $product['preorder_quantity'] = $stock['preorder'];
+        return array_map(function ($product) use ($maps) {
+            $product['stock_quantity'] = $maps['available'][$product['id']] ?? 0;
+            $product['preorder_quantity'] = $maps['preorder'][$product['id']] ?? 0;
 
             return $product;
         }, $products);

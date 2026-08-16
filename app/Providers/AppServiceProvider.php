@@ -44,6 +44,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Services\Currency\UserCurrencyResolver::class
         );
 
+        // Скоуп на запрос (buf-03): StockService мемоизирует карту складов
+        // региона, чтобы карточка + варианты + похожие резолвили регион один
+        // раз. Интерфейс биндится на тот же скоупленный экземпляр.
+        $this->app->scoped(\App\Services\Stock\StockService::class);
         $this->app->bind(
             \App\Contracts\Stock\StockServiceInterface::class,
             \App\Services\Stock\StockService::class

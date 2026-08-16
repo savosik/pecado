@@ -8,8 +8,36 @@ use App\Models\Region;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Единственная точка SQL остатков витрины (buf-03).
+ *
+ * До рефакторинга остатки считались двумя независимо выросшими ветками:
+ * батч-карты здесь (корзина, чекаут, экспорт, client-api) и подзапросы
+ * `ProductQueryService::withRegionStockSums` (каталог, поиск, избранное,
+ * похожие, главная). Теперь и карты, и подзапросы строятся здесь —
+ * страховой буфер (buf-04) врежется в одно место, а не в пять.
+ *
+ * Экземпляр скоуплен на запрос (`AppServiceProvider`): карта складов региона
+ * мемоизируется, поэтому карточка товара с вариантами и похожими резолвит
+ * регион один раз, а не три.
+ */
 class StockService implements StockServiceInterface
 {
+    /**
+     * Мемо складов по региону на время запроса: region_id → списки складов.
+     *
+     * @var array<int, array{primary: list<int>, preorder: list<int>}>
+     */
+    private array $regionWarehouses = [];
+
+    /**
+     * Мемо региона по умолчанию: Region::defaultId() дёргается для каждого
+     * гостя, а меняется — никогда в пределах запроса.
+     */
+    private ?int $defaultRegionId = null;
+
+    private bool $defaultRegionResolved = false;
+
     /**
      * Get the stock information for a product for a specific user.
      * Returns array with 'available' (from primary warehouses) and 'preorder' (from preorder warehouses) quantities.
@@ -18,9 +46,11 @@ class StockService implements StockServiceInterface
      */
     public function getStock(Product $product, ?User $user = null): array
     {
+        $maps = $this->getStockMaps([$product], $user);
+
         return [
-            'available' => $this->getAvailableStock($product, $user),
-            'preorder' => $this->getPreorderStock($product, $user),
+            'available' => $maps['available'][$product->id] ?? 0,
+            'preorder' => $maps['preorder'][$product->id] ?? 0,
         ];
     }
 
@@ -30,7 +60,7 @@ class StockService implements StockServiceInterface
      */
     public function getAvailableStock(Product $product, ?User $user = null): int
     {
-        return $this->sumByWarehouseType($product, $user, 'primary');
+        return $this->getStock($product, $user)['available'];
     }
 
     /**
@@ -39,21 +69,18 @@ class StockService implements StockServiceInterface
      */
     public function getPreorderStock(Product $product, ?User $user = null): int
     {
-        return $this->sumByWarehouseType($product, $user, 'preorder');
+        return $this->getStock($product, $user)['preorder'];
     }
 
     /**
-     * Получить карту доступных остатков для коллекции товаров одним SQL.
-     * Делает 2 запроса независимо от размера коллекции:
-     *   1) region_warehouse → warehouse_id для primary-складов региона;
-     *   2) product_warehouse → SUM(quantity) GROUP BY product_id.
+     * Карта доступных остатков для коллекции товаров.
      *
      * @param  iterable<Product>  $products
      * @return array<int, int>
      */
     public function getAvailableStockMap(iterable $products, ?User $user = null): array
     {
-        return $this->stockMapByWarehouseType($products, $user, 'primary');
+        return $this->getStockMaps($products, $user)['available'];
     }
 
     /**
@@ -64,54 +91,150 @@ class StockService implements StockServiceInterface
      */
     public function getPreorderStockMap(iterable $products, ?User $user = null): array
     {
-        return $this->stockMapByWarehouseType($products, $user, 'preorder');
+        return $this->getStockMaps($products, $user)['preorder'];
     }
 
     /**
-     * Общий батч-запрос остатков по типу склада (primary/preorder).
+     * Комбинированная карта остатков: оба типа складов за один запрос
+     * к product_warehouse (+ мемоизированный резолв складов региона).
+     *
+     * Всегда предпочитайте её паре getAvailableStockMap + getPreorderStockMap:
+     * порознь они дважды ходят за product_warehouse.
      *
      * @param  iterable<Product>  $products
-     * @return array<int, int>
+     * @return array{available: array<int, int>, preorder: array<int, int>}
      */
-    private function stockMapByWarehouseType(iterable $products, ?User $user, string $type): array
+    public function getStockMaps(iterable $products, ?User $user = null): array
     {
-        $result = [];
-        $productIds = [];
+        $ids = [];
         foreach ($products as $product) {
-            $result[$product->id] = 0;
-            $productIds[] = (int) $product->id;
+            $ids[] = (int) $product->id;
         }
 
-        if ($productIds === []) {
-            return $result;
+        return $this->getStockMapsByIds($ids, $user);
+    }
+
+    /**
+     * Вариант getStockMaps по голым ID — для товаров из кеша (главная,
+     * подборки), где моделей нет.
+     *
+     * @param  list<int>  $productIds
+     * @return array{available: array<int, int>, preorder: array<int, int>}
+     */
+    public function getStockMapsByIds(array $productIds, ?User $user = null): array
+    {
+        $available = [];
+        $preorder = [];
+        foreach ($productIds as $id) {
+            $available[(int) $id] = 0;
+            $preorder[(int) $id] = 0;
         }
 
-        $regionId = $this->resolveRegionId($user);
-        if (! $regionId) {
-            return $result;
+        if ($available === []) {
+            return ['available' => [], 'preorder' => []];
         }
 
-        $warehouseIds = DB::table('region_warehouse')
-            ->where('region_id', $regionId)
-            ->where('type', $type)
-            ->pluck('warehouse_id');
+        $warehouses = $this->regionWarehouseIds($user);
+        $allWarehouseIds = array_merge($warehouses['primary'], $warehouses['preorder']);
 
-        if ($warehouseIds->isEmpty()) {
-            return $result;
+        if ($allWarehouseIds === []) {
+            return ['available' => $available, 'preorder' => $preorder];
         }
 
         $rows = DB::table('product_warehouse')
-            ->whereIn('warehouse_id', $warehouseIds)
-            ->whereIn('product_id', $productIds)
-            ->select('product_id', DB::raw('SUM(quantity) as total'))
-            ->groupBy('product_id')
+            ->whereIn('warehouse_id', $allWarehouseIds)
+            ->whereIn('product_id', array_keys($available))
+            ->select('product_id', 'warehouse_id', 'quantity')
             ->get();
 
+        $primaryIds = array_flip($warehouses['primary']);
+        $preorderIds = array_flip($warehouses['preorder']);
+
         foreach ($rows as $row) {
-            $result[(int) $row->product_id] = (int) $row->total;
+            $productId = (int) $row->product_id;
+
+            if (isset($primaryIds[$row->warehouse_id])) {
+                $available[$productId] += (int) $row->quantity;
+            }
+
+            if (isset($preorderIds[$row->warehouse_id])) {
+                $preorder[$productId] += (int) $row->quantity;
+            }
         }
 
-        return $result;
+        return ['available' => $available, 'preorder' => $preorder];
+    }
+
+    /**
+     * Добавить к запросу товаров подзапросы-суммы `primary_stock` и
+     * `preorder_stock` по складам региона пользователя.
+     *
+     * Нужен потребителям, у которых остаток участвует в ORDER BY до пагинации
+     * (поиск: «в наличии выше предзаказа», избранное: stock_desc). Остальным
+     * дешевле батч-карта после paginate() — см. getStockMaps().
+     *
+     * ВАЖНО: вызывать после select('products.*') — ветка с пустыми складами
+     * добавляет selectRaw-константы, и без явного select они затёрли бы `*`.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<Product>|\Illuminate\Database\Query\Builder  $query
+     */
+    public function applyStockSubselects($query, ?User $user = null): void
+    {
+        $warehouses = $this->regionWarehouseIds($user);
+
+        if ($warehouses['primary'] !== []) {
+            $query->addSelect([
+                'primary_stock' => DB::table('product_warehouse')
+                    ->selectRaw('COALESCE(SUM(quantity), 0)')
+                    ->whereColumn('product_warehouse.product_id', 'products.id')
+                    ->whereIn('product_warehouse.warehouse_id', $warehouses['primary']),
+            ]);
+        } else {
+            $query->selectRaw('0 as primary_stock');
+        }
+
+        if ($warehouses['preorder'] !== []) {
+            $query->addSelect([
+                'preorder_stock' => DB::table('product_warehouse')
+                    ->selectRaw('COALESCE(SUM(quantity), 0)')
+                    ->whereColumn('product_warehouse.product_id', 'products.id')
+                    ->whereIn('product_warehouse.warehouse_id', $warehouses['preorder']),
+            ]);
+        } else {
+            $query->selectRaw('0 as preorder_stock');
+        }
+    }
+
+    /**
+     * Склады региона пользователя (primary и preorder) с мемоизацией
+     * на время запроса. Гость и пользователь без региона — регион по
+     * умолчанию, как в каталоге.
+     *
+     * @return array{primary: list<int>, preorder: list<int>}
+     */
+    public function regionWarehouseIds(?User $user = null): array
+    {
+        $regionId = $this->resolveRegionId($user);
+
+        if ($regionId === null) {
+            return ['primary' => [], 'preorder' => []];
+        }
+
+        if (isset($this->regionWarehouses[$regionId])) {
+            return $this->regionWarehouses[$regionId];
+        }
+
+        $rows = DB::table('region_warehouse')
+            ->where('region_id', $regionId)
+            ->select('warehouse_id', 'type')
+            ->get();
+
+        return $this->regionWarehouses[$regionId] = [
+            'primary' => $rows->where('type', 'primary')
+                ->pluck('warehouse_id')->map(fn ($id) => (int) $id)->values()->all(),
+            'preorder' => $rows->where('type', 'preorder')
+                ->pluck('warehouse_id')->map(fn ($id) => (int) $id)->values()->all(),
+        ];
     }
 
     /**
@@ -125,27 +248,11 @@ class StockService implements StockServiceInterface
             return (int) $user->region_id;
         }
 
-        return Region::defaultId();
-    }
-
-    private function sumByWarehouseType(Product $product, ?User $user, string $type): int
-    {
-        $regionId = $this->resolveRegionId($user);
-        if (! $regionId) {
-            return 0;
+        if (! $this->defaultRegionResolved) {
+            $this->defaultRegionId = Region::defaultId();
+            $this->defaultRegionResolved = true;
         }
 
-        $warehouseIds = DB::table('region_warehouse')
-            ->where('region_id', $regionId)
-            ->where('type', $type)
-            ->pluck('warehouse_id');
-
-        if ($warehouseIds->isEmpty()) {
-            return 0;
-        }
-
-        return (int) $product->warehouses()
-            ->whereIn('warehouses.id', $warehouseIds)
-            ->sum('product_warehouse.quantity');
+        return $this->defaultRegionId;
     }
 }
