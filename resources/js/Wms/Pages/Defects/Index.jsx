@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { usePermission } from '@/Admin/hooks/usePermission';
 import { useFlashToast } from '@/hooks/useFlashToast';
 import { DefectStatusBadge } from '@/Wms/Components/DefectStatusBadge';
+import ImageLightbox from '@/components/common/ImageLightbox';
 
 const FILTERS = [
     { value: '', label: 'Все' },
@@ -43,7 +44,7 @@ function StatCard({ label, value }) {
     );
 }
 
-function DefectPhoto({ defect }) {
+function DefectPhoto({ defect, onOpen }) {
     const photo = defect.photos?.[0];
 
     if (!photo) {
@@ -66,15 +67,43 @@ function DefectPhoto({ defect }) {
     }
 
     return (
-        <Image
-            src={photo.thumb_url}
-            alt={defect.defect_description}
-            w="48px"
-            h="48px"
-            objectFit="cover"
-            borderRadius="md"
+        <Box
+            as="button"
+            type="button"
+            position="relative"
             flexShrink={0}
-        />
+            cursor="zoom-in"
+            borderRadius="md"
+            overflow="hidden"
+            title="Открыть фотографии"
+            aria-label={`Фотографии партии #${defect.id}`}
+            onClick={onOpen}
+        >
+            <Image
+                src={photo.thumb_url}
+                alt={defect.defect_description}
+                w="48px"
+                h="48px"
+                objectFit="cover"
+                display="block"
+            />
+            {defect.photos.length > 1 && (
+                <Box
+                    position="absolute"
+                    bottom="0"
+                    right="0"
+                    bg="blackAlpha.700"
+                    color="white"
+                    fontSize="10px"
+                    lineHeight="1"
+                    px="1"
+                    py="0.5"
+                    borderTopLeftRadius="sm"
+                >
+                    +{defect.photos.length - 1}
+                </Box>
+            )}
+        </Box>
     );
 }
 
@@ -84,14 +113,14 @@ function DefectPhoto({ defect }) {
  * Действия крупные (44px): попадать пальцем в иконку размера xs на складе
  * невозможно.
  */
-function DefectMobileCard({ defect, can, onDelete }) {
+function DefectMobileCard({ defect, can, onDelete, onOpenGallery }) {
     const reserved = defect.reserved_quantity > 0;
 
     return (
         <Box borderWidth="1px" borderColor="border" borderRadius="md" p={3}>
             <VStack align="stretch" gap={3}>
                 <HStack gap={3} align="start">
-                    <DefectPhoto defect={defect} />
+                    <DefectPhoto defect={defect} onOpen={onOpenGallery} />
                     <Box flex="1" minW={0}>
                         <Text fontSize="sm" fontWeight="medium" lineClamp={2}>
                             {defect.product.name}
@@ -156,6 +185,8 @@ export default function DefectsIndex() {
     const { defects, filters, stats } = usePage().props;
     const { can } = usePermission();
     const [confirmTarget, setConfirmTarget] = useState(null);
+    // Партия, чьи фотографии открыты в полноэкранной галерее.
+    const [galleryDefect, setGalleryDefect] = useState(null);
 
     useFlashToast();
 
@@ -238,6 +269,7 @@ export default function DefectsIndex() {
                                             defect={defect}
                                             can={can}
                                             onDelete={() => setConfirmTarget(defect)}
+                                            onOpenGallery={() => setGalleryDefect(defect)}
                                         />
                                     ))}
                                 </VStack>
@@ -266,7 +298,10 @@ export default function DefectsIndex() {
                                                     </Table.Cell>
                                                     <Table.Cell>
                                                         <HStack gap={3}>
-                                                            <DefectPhoto defect={defect} />
+                                                            <DefectPhoto
+                                                                defect={defect}
+                                                                onOpen={() => setGalleryDefect(defect)}
+                                                            />
                                                             <VStack align="start" gap={0}>
                                                                 <Text fontSize="sm" lineClamp={2}>
                                                                     {defect.product.name}
@@ -350,6 +385,16 @@ export default function DefectsIndex() {
                         : ''
                 }
                 confirmLabel="Удалить"
+            />
+
+            <ImageLightbox
+                images={(galleryDefect?.photos ?? []).map((photo) => ({
+                    url: photo.url,
+                    alt: galleryDefect?.defect_description,
+                }))}
+                open={galleryDefect !== null}
+                onClose={() => setGalleryDefect(null)}
+                title={galleryDefect ? `#${galleryDefect.id} · ${galleryDefect.product.name}` : ''}
             />
         </>
     );

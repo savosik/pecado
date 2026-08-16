@@ -45,13 +45,37 @@ export default function DefectsCreate() {
     // Какая из кнопок сохранения нажата — чтобы спиннер крутился только на ней.
     const [continueMode, setContinueMode] = useState(false);
 
-    // continue=1 — бэк вернёт чистую форму на том же складе вместо карточки
-    // заведённой партии. Через transform, а не setData: значение нужно ровно
-    // в момент отправки, а setData применился бы только к следующему рендеру.
+    // Ключ формы: инкремент перемонтирует поля после «Сохранить и продолжить»,
+    // сбрасывая внутреннее состояние (поиск ProductSelector, превью загрузчика)
+    // и возвращая автофокус в поле товара под сканер.
+    const [formKey, setFormKey] = useState(0);
+
+    // continue=1 — бэк редиректит обратно на форму создания. Но Inertia при
+    // редиректе на тот же компонент его не перемонтирует, поэтому useForm
+    // сохранил бы введённое — чистим форму сами в onSuccess: склад остаётся,
+    // остальные поля — заново. Флаг continue через transform, а не setData:
+    // значение нужно ровно в момент отправки, а setData применился бы только
+    // к следующему рендеру.
     const submit = (keepCreating) => {
         setContinueMode(keepCreating);
         transform((current) => ({ ...current, continue: keepCreating ? 1 : 0 }));
-        post('/wms/defects', { forceFormData: true });
+        post('/wms/defects', {
+            forceFormData: true,
+            onSuccess: () => {
+                if (!keepCreating) return;
+
+                setSelectedProduct(null);
+                setData({
+                    product_id: null,
+                    warehouse_id: data.warehouse_id,
+                    defect_description: '',
+                    quantity: 1,
+                    photos: [],
+                });
+                setFormKey((key) => key + 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+        });
     };
 
     const handleSubmit = (event) => {
@@ -67,7 +91,7 @@ export default function DefectsCreate() {
                 description="Одна партия — один вид дефекта. Если дефекты разные, заведите отдельные партии."
             />
 
-            <form onSubmit={handleSubmit}>
+            <form key={formKey} onSubmit={handleSubmit}>
                 <VStack gap={4} align="stretch" maxW="4xl">
                     <Card.Root>
                         <Card.Body>
