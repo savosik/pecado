@@ -30,6 +30,13 @@ Route::middleware('guest')->group(function () {
     Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])->name('auth.social.callback');
 });
 
+// Подписной ICS-фид задач CRM: Google и Яндекс Календарь ходят по ссылке
+// без сессии, доступ охраняет только 64-символьный токен (отзывается перевыпуском).
+Route::get('/crm/tasks/feed/{token}.ics', [\App\Http\Controllers\Crm\CalendarFeedController::class, 'feed'])
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->middleware('throttle:60,1')
+    ->name('crm.tasks.feed');
+
 // ──────────────────────────────────────────────
 // Authenticated routes
 // ──────────────────────────────────────────────

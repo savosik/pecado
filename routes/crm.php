@@ -5,6 +5,7 @@ use App\Http\Controllers\Crm\AgentTokenController;
 use App\Http\Controllers\Crm\AnalyticsController;
 use App\Http\Controllers\Crm\AttachmentController;
 use App\Http\Controllers\Crm\BedsController;
+use App\Http\Controllers\Crm\CalendarFeedController;
 use App\Http\Controllers\Crm\CallController;
 use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientProfileController;
@@ -251,6 +252,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/tasks/data', [TaskController::class, 'data'])->name('tasks.data');
         Route::get('/tasks/calendar', [TaskController::class, 'calendar'])->name('tasks.calendar');
         Route::get('/tasks/calendar-feed', [TaskController::class, 'calendarFeed'])->name('tasks.calendar-feed');
+        // Ссылки подписки для внешних календарей (сам фид — в routes/web.php, без auth).
+        Route::get('/tasks/calendar-links', [CalendarFeedController::class, 'show'])->name('tasks.calendar-links');
+        Route::post('/tasks/calendar-links/rotate', [CalendarFeedController::class, 'rotate'])->name('tasks.calendar-links.rotate');
         Route::get('/tasks/list', [TaskController::class, 'list'])->name('tasks.list');
         Route::get('/tasks/options', [TaskController::class, 'options'])->name('tasks.options');
         Route::get('/tasks/entities', [TaskController::class, 'entities'])->name('tasks.entities');

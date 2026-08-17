@@ -9,9 +9,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import TaskCloseDialog from '@/Crm/Components/TaskCloseDialog';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
+import TaskCalendarSubscribeDialog from '@/Crm/Components/TaskCalendarSubscribeDialog';
 import { primeTaskOptions } from '@/Crm/Components/useTaskOptions';
 import { usePermission } from '@/shared/Panel/usePermission';
-import { LuChevronLeft, LuChevronRight, LuList, LuPlus } from 'react-icons/lu';
+import { LuChevronLeft, LuChevronRight, LuLink, LuList, LuPlus } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -42,6 +43,7 @@ export default function Calendar({ options, canSeeDepartment = false, scope }) {
     const [managerFilter, setManagerFilter] = useState([]);
     const [dragTaskId, setDragTaskId] = useState(null);
     const [dropDay, setDropDay] = useState(null);
+    const [subscribeOpen, setSubscribeOpen] = useState(false);
 
     primeTaskOptions(options);
 
@@ -194,6 +196,9 @@ export default function Calendar({ options, canSeeDepartment = false, scope }) {
                 description="Задачи по срокам: весь отдел или отдельный менеджер"
                 actions={(
                     <HStack gap={2}>
+                        <Button size="sm" variant="outline" onClick={() => setSubscribeOpen(true)} title="Google/Яндекс Календарь">
+                            <LuLink /> Подписка
+                        </Button>
                         <Button size="sm" variant="outline" onClick={() => router.visit(route('crm.tasks.index'))}>
                             <LuList /> Списком
                         </Button>
@@ -378,6 +383,11 @@ export default function Calendar({ options, canSeeDepartment = false, scope }) {
                 task={closingTask}
                 onClose={() => setClosingTask(null)}
                 onClosed={load}
+            />
+
+            <TaskCalendarSubscribeDialog
+                open={subscribeOpen}
+                onClose={() => setSubscribeOpen(false)}
             />
         </>
     );
