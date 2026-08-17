@@ -1,0 +1,482 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>Недоборы: памятка менеджера</title>
+<style>
+  :root {
+    --paper: #FFFFFF;
+    --panel: #F4F6F8;
+    --ink: #22303C;
+    --muted: #5C6B78;
+    --line: #D9E0E6;
+    --accent: #9E1B32;
+    --accent-soft: #F8ECEF;
+    --good: #2E7D5B;
+    --good-soft: #EAF4EF;
+    --warn: #C77700;
+    --warn-soft: #FBF1E2;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #E8ECEF;
+    color: var(--ink);
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.45;
+  }
+
+  .page {
+    background: var(--paper);
+    width: 210mm;
+    min-height: 296mm;
+    margin: 0 auto 8mm;
+    padding: 14mm 16mm 12mm;
+    display: flex;
+    flex-direction: column;
+    gap: 6mm;
+    page-break-after: always;
+    box-shadow: 0 1px 6px rgba(34,48,60,.14);
+    overflow: hidden;
+  }
+
+  @media print {
+    body { background: var(--paper); }
+    .page { margin: 0; box-shadow: none; min-height: auto; height: 296mm; }
+  }
+
+  h1, h2, h3 { font-family: Georgia, 'Times New Roman', serif; }
+  h1 { font-size: 24pt; line-height: 1.1; }
+  h2 { font-size: 16pt; font-weight: 700; text-wrap: balance; }
+  h3 { font-size: 11.5pt; font-weight: 700; }
+
+  .eyebrow {
+    font-size: 8pt; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600;
+  }
+
+  .section-head { display: flex; align-items: baseline; gap: 4mm; border-bottom: 1px solid var(--line); padding-bottom: 2.5mm; }
+  .section-head .pageno { margin-left: auto; font-size: 8pt; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+
+  .num { font-variant-numeric: tabular-nums; }
+
+  figure { margin: 0; }
+  figure svg { display: block; max-width: 100%; height: auto; }
+  figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 1.5mm; }
+
+  .cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; align-items: start; }
+  .cols-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4mm; align-items: stretch; }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); padding: 3.5mm 4mm; }
+  .panel h3 { margin-bottom: 2mm; }
+  .panel.accent { background: var(--accent-soft); border-color: #E4C4CB; }
+  .panel.good { background: var(--good-soft); border-color: #C4DFD2; }
+  .panel.warn { background: var(--warn-soft); border-color: #EBD3AC; }
+
+  ul.tight { list-style: none; display: flex; flex-direction: column; gap: 1.6mm; }
+  ul.tight li { padding-left: 4.5mm; position: relative; }
+  ul.tight li::before { content: ''; position: absolute; left: 0; top: .5em; width: 2.2mm; height: 2.2mm; background: var(--accent); }
+
+  table.data { border-collapse: collapse; width: 100%; font-size: 9pt; }
+  table.data th { text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border-bottom: 1.5px solid var(--ink); padding: 1.5mm 2mm; }
+  table.data td { border-bottom: 1px solid var(--line); padding: 1.8mm 2mm; vertical-align: top; }
+  table.data.compact { font-size: 8.5pt; line-height: 1.32; }
+  table.data.compact td { padding: 1.3mm 2mm; }
+
+  .footer-note { margin-top: auto; border-top: 1px solid var(--line); padding-top: 2.5mm; font-size: 8pt; color: var(--muted); display: flex; justify-content: space-between; }
+
+  .step { display: flex; gap: 3mm; align-items: flex-start; }
+  .step .n {
+    flex-shrink: 0; width: 6.5mm; height: 6.5mm; border-radius: 50%;
+    background: var(--accent); color: #fff; font-weight: 700; font-size: 10pt;
+    display: flex; align-items: center; justify-content: center; font-family: Georgia, serif;
+  }
+
+  .kbd {
+    display: inline-block; border: 1px solid var(--line); border-bottom-width: 2px;
+    background: var(--panel); border-radius: 2px; padding: 0 1.5mm;
+    font-size: 8.5pt; font-weight: 600; white-space: nowrap;
+  }
+  .path { font-family: Consolas, 'Courier New', monospace; font-size: 9pt; color: var(--accent); font-weight: 600; white-space: nowrap; }
+</style>
+
+<style>@page { size: A4; margin: 0; }</style></head><body><!-- ═══════ СТР. 1 — ЧТО СЛУЧИЛОСЬ И КУДА ИДТИ ═══════ -->
+<div class="page">
+  <div>
+    <div style="display:flex; justify-content:space-between; align-items:baseline;">
+      <span class="eyebrow">Pecado · CRM · памятка менеджера по продажам</span>
+      <span class="eyebrow" style="color:var(--muted); letter-spacing:.1em;">август 2026</span>
+    </div>
+    <h1 style="margin-top:6mm;">Недоборы: что делать, когда 1С отменила строки заказа</h1>
+    <p style="color:var(--muted); margin-top:3mm; max-width:70ch;">На сборке не хватило товара — 1С сняла позиции с отгрузки.
+    Раньше клиент узнавал об этом из коробки. Теперь система сама готовит подборку замен и письмо,
+    а ваша работа — <b style="color:var(--ink);">проверить и нажать одну кнопку</b>. Обычно это 5 минут.</p>
+  </div>
+
+  <div class="panel accent" style="display:flex; gap:5mm; align-items:center;">
+    <div style="font-family:Georgia,serif; font-size:26pt; font-weight:700; color:var(--accent); white-space:nowrap;">1 день</div>
+    <div style="font-size:9.5pt;">Главное правило: <b>письмо клиенту должно уйти в день отмены</b> — посылка уже собрана, отгрузка скоро.
+    Задача ставится с дедлайном до 18:00; если сумма недобора больше 10 000 ₽ — на реакцию 2 часа, такие помечены <span style="color:var(--accent);">⚠</span> и стоят первыми в очереди.</div>
+  </div>
+
+  <div>
+    <h2 style="margin-bottom:3mm;">Как вы узнаете о недоборе — искать ничего не нужно</h2>
+    <div class="cols-3">
+      <div class="panel">
+        <h3>1 · Задача в CRM</h3>
+        <div style="font-size:9pt; color:var(--muted);">В ваших задачах появится
+        «<b style="color:var(--ink);">Недобор по заказу 29УТ-… — клиент, сумма, позиции</b>» с дедлайном.
+        Ссылка в описании ведёт прямо в карточку недобора.</div>
+      </div>
+      <div class="panel">
+        <h3>2 · Бейдж в меню</h3>
+        <div style="font-size:9pt; color:var(--muted);">В меню CRM, раздел «Продажи» → пункт
+        «<b style="color:var(--ink);">Недоборы</b>» с красным счётчиком необработанных. Виден всегда, пока есть новые.</div>
+      </div>
+      <div class="panel">
+        <h3>3 · Тихие письма</h3>
+        <div style="font-size:9pt; color:var(--muted);">Когда клиент откроет подборку или согласует замену —
+        вам придёт информационное письмо. Делать по нему ничего не нужно.</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <h2 style="margin-bottom:3mm;">Очередь: <span class="path">/crm/shortages</span></h2>
+    <figure>
+      <svg viewBox="0 0 780 168" role="img" aria-label="Мокап очереди недоборов: пресеты статусов сверху, таблица с заказами, срочные помечены и стоят первыми." style="color:#22303C;">
+        <g font-family="Segoe UI, Arial, sans-serif" font-size="10">
+          <rect x="0" y="0" width="780" height="168" fill="#FFFFFF" stroke="#D9E0E6" stroke-width="1.5"/>
+          <!-- пресеты -->
+          <rect x="12" y="12" width="74" height="20" fill="#9E1B32"/>
+          <text x="49" y="26" text-anchor="middle" fill="#FFFFFF" font-weight="600">В работе</text>
+          <rect x="92" y="12" width="150" height="20" fill="none" stroke="#D9E0E6"/>
+          <text x="167" y="26" text-anchor="middle" fill="#5C6B78">Отправлено, не открыто</text>
+          <rect x="248" y="12" width="160" height="20" fill="none" stroke="#D9E0E6"/>
+          <text x="328" y="26" text-anchor="middle" fill="#5C6B78">Открыто, не согласовано</text>
+          <rect x="414" y="12" width="100" height="20" fill="none" stroke="#D9E0E6"/>
+          <text x="464" y="26" text-anchor="middle" fill="#5C6B78">Согласовано</text>
+          <rect x="640" y="12" width="128" height="20" fill="none" stroke="#D9E0E6"/>
+          <text x="704" y="26" text-anchor="middle" fill="#5C6B78">☑ Только мои</text>
+          <!-- шапка таблицы -->
+          <line x1="12" y1="44" x2="768" y2="44" stroke="#22303C" stroke-width="1.2"/>
+          <text x="16" y="56" fill="#5C6B78" font-size="8.5">ЗАКАЗ</text>
+          <text x="140" y="56" fill="#5C6B78" font-size="8.5">КЛИЕНТ</text>
+          <text x="320" y="56" fill="#5C6B78" font-size="8.5">ПОТЕРЯ, ₽</text>
+          <text x="420" y="56" fill="#5C6B78" font-size="8.5">КАНДИДАТОВ</text>
+          <text x="530" y="56" fill="#5C6B78" font-size="8.5">СТАТУС</text>
+          <text x="650" y="56" fill="#5C6B78" font-size="8.5">ДЕЙСТВУЕТ ДО</text>
+          <!-- строка срочная -->
+          <text x="16" y="78" fill="#9E1B32" font-weight="700">⚠ 29УТ-011777</text>
+          <text x="140" y="78">ООО «Оптовик» (Сухов)</text>
+          <text x="320" y="78" font-weight="600">15 300</text>
+          <text x="420" y="78">4</text>
+          <rect x="528" y="66" width="66" height="16" fill="#FBF1E2"/>
+          <text x="561" y="78" text-anchor="middle" fill="#C77700" font-size="9">Ожидает</text>
+          <text x="650" y="78">21.08.2026</text>
+          <line x1="12" y1="88" x2="768" y2="88" stroke="#D9E0E6"/>
+          <!-- строка обычная -->
+          <text x="16" y="106" fill="#9E1B32" font-weight="600" text-decoration="underline">29УТ-011803</text>
+          <text x="140" y="106">ИП Иванова</text>
+          <text x="320" y="106">2 140</text>
+          <text x="420" y="106">3</text>
+          <rect x="528" y="94" width="80" height="16" fill="#E7EEF7"/>
+          <text x="568" y="106" text-anchor="middle" fill="#3B5B82" font-size="9">Просмотрена</text>
+          <text x="650" y="106">20.08.2026</text>
+          <line x1="12" y1="116" x2="768" y2="116" stroke="#D9E0E6"/>
+          <!-- подпись -->
+          <text x="16" y="140" fill="#5C6B78" font-size="9.5">Кликните по номеру заказа — откроется карточка недобора. Срочные (⚠, сумма выше 10 000 ₽) всегда сверху.</text>
+          <text x="16" y="155" fill="#5C6B78" font-size="9.5">Пресеты «Отправлено, не открыто» и «Открыто, не согласовано» — ваша воронка: видно, кто молчит.</text>
+        </g>
+      </svg>
+    </figure>
+  </div>
+
+  <div class="panel good">
+    <h3>Суть работы в одну строку</h3>
+    <div style="font-size:9.5pt;">Система уже подобрала замены и написала письмо → вы <b>проверяете кандидатов</b> (снять лишних / добавить своих) →
+    <b>правите текст письма</b>, если нужно → нажимаете <b>один из четырёх исходов</b>. Всё остальное — напоминания, задачи «позвонить», архив — система делает сама.</div>
+  </div>
+
+  <div class="footer-note"><span>Недоборы · памятка менеджера · Pecado</span><span>стр. 1 / 4</span></div>
+</div>
+
+<!-- ═══════ СТР. 2 — КАРТОЧКА ═══════ -->
+<div class="page">
+  <div class="section-head">
+    <span class="eyebrow">Карточка недобора</span>
+    <h2>Всё решение на одном экране — по шагам</h2>
+    <span class="pageno num">2 / 4</span>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 780 330" role="img" aria-label="Мокап карточки недобора с пронумерованными зонами: строки недобора с кандидатами слева, контекст клиента и письмо справа, кнопки исходов внизу справа." style="color:#22303C;">
+      <g font-family="Segoe UI, Arial, sans-serif" font-size="10">
+        <rect x="0" y="0" width="780" height="330" fill="#FFFFFF" stroke="#D9E0E6" stroke-width="1.5"/>
+        <!-- шапка -->
+        <text x="14" y="24" font-family="Georgia, serif" font-size="14" font-weight="700">Недобор по заказу 29УТ-011777</text>
+        <rect x="286" y="10" width="70" height="18" fill="#FBF1E2"/>
+        <text x="321" y="23" text-anchor="middle" fill="#C77700" font-size="9">Ожидает</text>
+        <rect x="646" y="10" width="122" height="18" fill="none" stroke="#D9E0E6"/>
+        <text x="707" y="23" text-anchor="middle" fill="#5C6B78" font-size="9">↗ Страница клиента</text>
+        <circle cx="768" cy="7" r="0" fill="none"/>
+        <!-- предупреждение -->
+        <rect x="14" y="34" width="754" height="20" fill="#FBF1E2"/>
+        <text x="22" y="48" fill="#C77700" font-size="9.5">⚠ Посылка уже собрана — отгрузка скоро. Письмо лучше отправить сегодня.</text>
+
+        <!-- ЛЕВАЯ КОЛОНКА: строки -->
+        <rect x="14" y="64" width="440" height="252" fill="none" stroke="#D9E0E6"/>
+        <text x="22" y="82" font-weight="700" font-size="10.5" text-decoration="line-through" fill="#5C6B78">Стропа фиксирующая TOYFA Theatre — 3 шт. · 1 800 ₽</text>
+
+        <rect x="22" y="92" width="424" height="34" fill="#FFFFFF" stroke="#D9E0E6"/>
+        <rect x="30" y="102" width="12" height="12" fill="#2E7D5B"/>
+        <text x="34" y="112" fill="#fff" font-size="9">✓</text>
+        <text x="50" y="106" font-size="9.5">Стропа Anonymo #0701 · 600 ₽ · остаток 5</text>
+        <text x="50" y="120" fill="#5C6B78" font-size="8.5">Стропа другого бренда, то же назначение</text>
+
+        <rect x="22" y="130" width="424" height="34" fill="#FBF1E2" stroke="#EBD3AC"/>
+        <rect x="30" y="140" width="12" height="12" fill="#2E7D5B"/>
+        <text x="34" y="150" fill="#fff" font-size="9">✓</text>
+        <text x="50" y="144" font-size="9.5">Та же стропа, уценка · 420 ₽ · остаток 1 <tspan fill="#C77700" font-weight="600">· УЦЕНКА</tspan></text>
+        <text x="50" y="158" fill="#5C6B78" font-size="8.5">Идентичный товар, уценка: вмята упаковка</text>
+
+        <rect x="22" y="168" width="424" height="34" fill="#FFFFFF" stroke="#D9E0E6"/>
+        <rect x="30" y="178" width="12" height="12" fill="none" stroke="#5C6B78"/>
+        <text x="50" y="182" font-size="9.5" fill="#5C6B78">Ошейник TOYFA · 620 ₽ · остаток 8 — галочка снята вами</text>
+        <text x="50" y="196" fill="#5C6B78" font-size="8.5">клиент этого кандидата не увидит; система запомнит «не предлагать»</text>
+
+        <rect x="22" y="210" width="424" height="24" fill="#EAF4EF"/>
+        <text x="30" y="226" fill="#2E7D5B" font-size="9.5">ⓘ Можно предложить подождать: на предзаказном складе 12 шт.</text>
+
+        <rect x="22" y="242" width="424" height="26" fill="none" stroke="#9E1B32" stroke-dasharray="4 3"/>
+        <text x="30" y="259" fill="#9E1B32" font-size="9.5">🔍 Найти и добавить свой товар (поиск по названию / артикулу)…</text>
+
+        <text x="22" y="290" fill="#5C6B78" font-size="9">Контекст клиента: оборот за год 1,2 млн ₽ · недобор 2-й за квартал</text>
+        <rect x="22" y="296" width="180" height="16" fill="#FBF1E2"/>
+        <text x="112" y="308" text-anchor="middle" fill="#C77700" font-size="8.5">2-й за квартал — лучше позвонить</text>
+
+        <!-- ПРАВАЯ КОЛОНКА: письмо + исходы -->
+        <rect x="466" y="64" width="302" height="148" fill="none" stroke="#D9E0E6"/>
+        <text x="474" y="80" font-weight="700">Письмо клиенту</text>
+        <text x="474" y="96" fill="#5C6B78" font-size="9">Кому: client@optovik.ru (менять нельзя)</text>
+        <rect x="474" y="102" width="286" height="18" fill="#F4F6F8"/>
+        <text x="480" y="115" font-size="9">Тема: Заказ 29УТ-011777: часть позиций…</text>
+        <rect x="474" y="124" width="286" height="60" fill="#F4F6F8"/>
+        <text x="480" y="138" font-size="9" fill="#5C6B78">Здравствуйте! При сборке заказа…</text>
+        <text x="480" y="151" font-size="9" fill="#5C6B78">[текст уже написан — правьте как</text>
+        <text x="480" y="164" font-size="9" fill="#5C6B78">хотите, ссылка подставится сама]</text>
+        <text x="474" y="200" fill="#5C6B78" font-size="8.5">Отправится от вашего имени; ответ клиента придёт на вашу почту</text>
+
+        <rect x="466" y="222" width="302" height="94" fill="none" stroke="#D9E0E6"/>
+        <text x="474" y="238" font-weight="700">Исход — одна кнопка</text>
+        <rect x="474" y="246" width="140" height="24" fill="#2E7D5B"/>
+        <text x="544" y="262" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="600">Отправить подборку</text>
+        <rect x="620" y="246" width="140" height="24" fill="none" stroke="#22303C"/>
+        <text x="690" y="262" text-anchor="middle" font-size="9.5">Предложить подождать</text>
+        <rect x="474" y="276" width="140" height="24" fill="none" stroke="#22303C"/>
+        <text x="544" y="292" text-anchor="middle" font-size="9.5">Позвонить</text>
+        <rect x="620" y="276" width="140" height="24" fill="none" stroke="#9E1B32"/>
+        <text x="690" y="292" text-anchor="middle" fill="#9E1B32" font-size="9.5">Закрыть без замены</text>
+
+        <!-- выноски -->
+        <g font-family="Georgia, serif" font-weight="700" font-size="11">
+          <circle cx="457" cy="109" r="8" fill="#9E1B32"/><text x="457" y="113" text-anchor="middle" fill="#fff">1</text>
+          <circle cx="457" cy="147" r="8" fill="#9E1B32"/><text x="457" y="151" text-anchor="middle" fill="#fff">2</text>
+          <circle cx="457" cy="185" r="8" fill="#9E1B32"/><text x="457" y="189" text-anchor="middle" fill="#fff">3</text>
+          <circle cx="457" cy="255" r="8" fill="#9E1B32"/><text x="457" y="259" text-anchor="middle" fill="#fff">4</text>
+          <circle cx="770" cy="140" r="8" fill="#9E1B32"/><text x="770" y="144" text-anchor="middle" fill="#fff">5</text>
+          <circle cx="770" cy="260" r="8" fill="#9E1B32"/><text x="770" y="264" text-anchor="middle" fill="#fff">6</text>
+        </g>
+      </g>
+    </svg>
+    <figcaption>Мокап карточки. Цифры — к шагам ниже. Кнопка «↗ Страница клиента» в шапке показывает подборку глазами клиента — загляните перед отправкой.</figcaption>
+  </figure>
+
+  <div class="cols-2">
+    <div style="display:flex; flex-direction:column; gap:2.5mm;">
+      <div class="step"><div class="n">1</div><div><b>Проверьте кандидатов.</b> У каждого — цена клиента, остаток и причина, которую увидит клиент. Галочка стоит = клиент это увидит.</div></div>
+      <div class="step"><div class="n">2</div><div><b>Уценка подсвечена жёлтым.</b> Тот же товар дешевле с описанием дефекта — обычно лучший вариант, оставляйте первой.</div></div>
+      <div class="step"><div class="n">3</div><div><b>Снимите лишнее.</b> Кандидат не нравится — снимите галочку. Система запомнит и больше не предложит такую пару.</div></div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:2.5mm;">
+      <div class="step"><div class="n">4</div><div><b>Добавьте своё</b> через поиск, не уходя из карточки. Ваш выбор попадёт в справочник — система научится.</div></div>
+      <div class="step"><div class="n">5</div><div><b>Поправьте письмо.</b> Черновик уже написан от вашего имени. Тон — извинение и конкретика, без канцелярита.</div></div>
+      <div class="step"><div class="n">6</div><div><b>Нажмите исход.</b> Любая из четырёх кнопок закрывает вашу задачу. Что делает каждая — на следующей странице.</div></div>
+    </div>
+  </div>
+
+  <div class="footer-note"><span>Недоборы · памятка менеджера · Pecado</span><span>стр. 2 / 4</span></div>
+</div>
+
+<!-- ═══════ СТР. 3 — ИСХОДЫ И КЛИЕНТ ═══════ -->
+<div class="page">
+  <div class="section-head">
+    <span class="eyebrow">Четыре кнопки и путь клиента</span>
+    <h2>Что произойдёт после нажатия — и что увидит клиент</h2>
+    <span class="pageno num">3 / 4</span>
+  </div>
+
+  <table class="data">
+    <tr><th style="width:22%;">Кнопка</th><th>Когда нажимать</th><th>Что произойдёт</th></tr>
+    <tr>
+      <td><b style="color:var(--good);">Отправить подборку</b></td>
+      <td>Кандидаты в порядке, письмо готово</td>
+      <td>Клиенту уходит письмо со ссылкой на подборку. Задача закрывается. Дальше работает автодожим.</td>
+    </tr>
+    <tr>
+      <td><b>Предложить подождать</b></td>
+      <td>Товар скоро вернётся (карточка это подсказывает), замена не нужна</td>
+      <td>То же письмо — перед нажатием перепишите текст под «подождём прихода, зарезервируем». Задача закрывается.</td>
+    </tr>
+    <tr>
+      <td><b>Позвонить</b></td>
+      <td>VIP, повторный недобор, крупная сумма — или подсказка «лучше позвонить»</td>
+      <td>Откроется диалог звонка: телефон клиента, фиксация итога. Задача закрывается, подборка остаётся открытой — письмо можно отправить после разговора.</td>
+    </tr>
+    <tr>
+      <td><b style="color:var(--accent);">Закрыть без замены</b></td>
+      <td>Замена не нужна (договорились о возврате денег и т.п.)</td>
+      <td>Попросит причину (обязательно). Подборка закрывается, клиент ссылку больше не откроет.</td>
+    </tr>
+  </table>
+
+  <div>
+    <h3 style="margin-bottom:2.5mm;">Что видит клиент после «Отправить подборку»</h3>
+    <figure>
+      <svg viewBox="0 0 780 210" role="img" aria-label="Путь клиента: письмо от менеджера, страница замены с вариантами и ценами, согласование, подтверждение с номером нового заказа." style="color:#22303C;">
+        <defs>
+          <marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#9E1B32"/>
+          </marker>
+        </defs>
+        <g font-family="Segoe UI, Arial, sans-serif" font-size="10">
+          <!-- письмо -->
+          <rect x="4" y="16" width="180" height="150" fill="#FFFFFF" stroke="#D9E0E6" stroke-width="1.4"/>
+          <text x="14" y="34" font-weight="700" font-size="10.5">Письмо от вас</text>
+          <text x="14" y="52" fill="#5C6B78" font-size="9">От: отдел продаж Pecado</text>
+          <text x="14" y="66" fill="#5C6B78" font-size="9">Ответить: вам лично</text>
+          <line x1="14" y1="76" x2="174" y2="76" stroke="#D9E0E6"/>
+          <text x="14" y="92" font-size="9">«Часть позиций не прошла</text>
+          <text x="14" y="105" font-size="9">контроль при сборке…»</text>
+          <rect x="14" y="118" width="156" height="22" fill="#9E1B32"/>
+          <text x="92" y="133" text-anchor="middle" fill="#fff" font-size="9.5">Подборка замен по заказу</text>
+          <text x="14" y="158" fill="#5C6B78" font-size="8.5">ссылка действует 7 дней</text>
+
+          <line x1="184" y1="90" x2="216" y2="90" stroke="#9E1B32" stroke-width="1.5" marker-end="url(#ma)"/>
+
+          <!-- страница -->
+          <rect x="218" y="4" width="330" height="196" fill="#FFFFFF" stroke="#D9E0E6" stroke-width="1.4"/>
+          <text x="228" y="22" font-family="Georgia, serif" font-size="12" font-weight="700">Замена по заказу 29УТ-011777</text>
+          <text x="228" y="38" fill="#5C6B78" font-size="8.5">открывается без входа, с телефона тоже удобно</text>
+          <text x="228" y="56" font-size="9" text-decoration="line-through" fill="#5C6B78">Стропа TOYFA — 3 шт. · 1 800 ₽</text>
+          <rect x="228" y="62" width="310" height="26" fill="#F4F6F8" stroke="#9E1B32"/>
+          <circle cx="240" cy="75" r="4" fill="#9E1B32"/>
+          <text x="250" y="72" font-size="9">Стропа Anonymo — 600 ₽/шт · <tspan font-weight="600">его цена</tspan></text>
+          <text x="250" y="84" fill="#5C6B78" font-size="8.5">Стропа другого бренда, то же назначение</text>
+          <rect x="228" y="92" width="310" height="26" fill="#FBF1E2" stroke="#EBD3AC"/>
+          <circle cx="240" cy="105" r="4" fill="none" stroke="#5C6B78"/>
+          <text x="250" y="102" font-size="9">Та же стропа, уценка — 420 ₽ <tspan fill="#C77700" font-weight="600">УЦЕНКА</tspan></text>
+          <text x="250" y="114" fill="#5C6B78" font-size="8.5">вмята упаковка · доступно 1 из 3</text>
+          <rect x="228" y="122" width="310" height="20" fill="none" stroke="#D9E0E6"/>
+          <circle cx="240" cy="132" r="4" fill="none" stroke="#5C6B78"/>
+          <text x="250" y="136" font-size="9" fill="#5C6B78">Подождать прихода / Без замены</text>
+          <text x="228" y="160" font-size="9.5" font-weight="600">Итого замена: 1 800 ₽ (вместо 1 800 ₽)</text>
+          <rect x="228" y="168" width="150" height="24" fill="#2E7D5B"/>
+          <text x="303" y="184" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="600">Согласовать замену</text>
+          <text x="388" y="184" fill="#5C6B78" font-size="8.5">попросит войти в аккаунт</text>
+
+          <line x1="548" y1="102" x2="580" y2="102" stroke="#9E1B32" stroke-width="1.5" marker-end="url(#ma)"/>
+
+          <!-- результат -->
+          <rect x="582" y="30" width="194" height="140" fill="#EAF4EF" stroke="#2E7D5B" stroke-width="1.5"/>
+          <text x="592" y="50" font-weight="700" fill="#2E7D5B">✓ Замена согласована</text>
+          <text x="592" y="70" font-size="9">«Создан заказ 29УТ-011912,</text>
+          <text x="592" y="83" font-size="9">связан с 29УТ-011777»</text>
+          <text x="592" y="103" font-size="9" fill="#5C6B78">Новый заказ уходит в 1С</text>
+          <text x="592" y="116" font-size="9" fill="#5C6B78">обычным документом.</text>
+          <text x="592" y="136" font-size="9" fill="#5C6B78">Вам — тихое письмо</text>
+          <text x="592" y="149" font-size="9" fill="#5C6B78">«клиент согласовал».</text>
+        </g>
+      </svg>
+      <figcaption>Количество клиент может уменьшить, увеличить — нельзя (докупка — обычный заказ). Если выбрал и обычный товар, и уценку —
+      создадутся два связанных заказа: так устроен учёт уценки. В кабинете клиента на исходном заказе висит баннер «подобрана замена» до согласования и плашка со ссылкой на новый заказ — после.</figcaption>
+    </figure>
+  </div>
+
+  <div class="panel">
+    <h3>После отправки система дожимает сама — вам ничего отслеживать не нужно</h3>
+    <div style="display:flex; gap:2mm; font-size:9pt; margin-top:1.5mm; align-items:stretch;">
+      <div style="flex:1; border-left:3px solid var(--accent); padding-left:3mm;"><b>+24 ч</b> не открыто<br><span style="color:var(--muted);">клиенту уйдёт одно вежливое напоминание</span></div>
+      <div style="flex:1; border-left:3px solid var(--accent); padding-left:3mm;"><b>+48 ч</b> открыто, но тишина<br><span style="color:var(--muted);">вам появится задача «позвонить по недобору»</span></div>
+      <div style="flex:1; border-left:3px solid var(--accent); padding-left:3mm;"><b>7 дней</b> без ответа<br><span style="color:var(--muted);">подборка в архив + финальная задача: продлить или закрыть</span></div>
+    </div>
+  </div>
+
+  <div class="footer-note"><span>Недоборы · памятка менеджера · Pecado</span><span>стр. 3 / 4</span></div>
+</div>
+
+<!-- ═══════ СТР. 4 — РУТИНА И FAQ ═══════ -->
+<div class="page" style="gap:5mm;">
+  <div class="section-head">
+    <span class="eyebrow">Раз в неделю + частые вопросы</span>
+    <h2>15 минут на «Связи» — и система подбирает всё лучше</h2>
+    <span class="pageno num">4 / 4</span>
+  </div>
+
+  <div class="cols-2">
+    <div class="panel accent">
+      <h3>Очередь подтверждений: <span class="path" style="font-size:8.5pt;">/crm/shortages → «Связи замен»</span></h3>
+      <div style="font-size:9pt; margin-top:1mm;">Система копит пары «вместо товара А предлагать Б»: из выбора клиентов и от ИИ-разметки.
+      Ни одна пара <b>не используется без вашего подтверждения</b>.</div>
+      <ul class="tight" style="font-size:9pt; margin-top:2mm;">
+        <li><b>Подтвердить</b> — пара начнёт предлагаться автоматически в новых недоборах</li>
+        <li><b>Отклонить</b> — пара исчезнет навсегда и не вернётся</li>
+        <li>Красный бейдж «негативные сигналы» = эту пару уже снимали или пропускали — аргумент отклонить</li>
+      </ul>
+      <div style="font-size:8.5pt; color:var(--muted); margin-top:2mm;">Сейчас в очереди ~30 пар от ИИ по самым дефицитным товарам — разберите на этой неделе.</div>
+    </div>
+    <div class="panel">
+      <h3>Цифры для руководителя</h3>
+      <div style="font-size:9pt; margin-top:1mm;">
+        <span class="path" style="font-size:8.5pt;">/crm/analytics/shortages</span> — скорость реакции, покрытие, конверсия,
+        спасённая выручка и разрез по менеджерам. Отчёт о повторных недоборах уходит закупщику сам, по понедельникам —
+        собирать его не нужно.
+      </div>
+      <div class="quote" style="border-left:3px solid var(--accent); padding:2mm 0 2mm 3.5mm; font-family:Georgia,serif; font-size:10.5pt; margin-top:3mm;">
+        Ваша метрика номер один — письмо в день отмены. Остальное система вытянет сама.
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <h3 style="margin-bottom:2mm;">Частые вопросы</h3>
+    <table class="data compact">
+      <tr><th style="width:38%;">Вопрос</th><th>Ответ</th></tr>
+      <tr><td>Кандидаты пустые или не те. Что делать?</td>
+        <td>Нормальная ситуация для редких товаров (~каждый четвёртый случай). Добавьте свой через поиск в карточке — заодно научите систему. Совсем нечего предложить — «Позвонить» или «Закрыть без замены».</td></tr>
+      <tr><td>Клиент хочет больше штук, чем отменили</td>
+        <td>На странице замены нельзя — кап равен отменённому количеству. Докупка — обычный заказ через корзину.</td></tr>
+      <tr><td>Клиент говорит «пришлите ссылку ещё раз»</td>
+        <td>Откройте карточку → «↗ Страница клиента» → скопируйте адрес из браузера и отправьте. Ссылка живёт 7 дней с момента создания подборки.</td></tr>
+      <tr><td>Клиент открыл ссылку, но согласовать не может</td>
+        <td>Согласование — только под аккаунтом владельца заказа. Если он смотрит с чужого/без входа — страница сама попросит войти, выбор при этом не потеряется.</td></tr>
+      <tr><td>Товар кончился, пока клиент думал</td>
+        <td>Страница не даст оформить недоступное: покажет «часть товара закончилась» и обновит варианты. Ничего делать не нужно.</td></tr>
+      <tr><td>Письмо «не отправляется»</td>
+        <td>Чаще всего у клиента нет email в карточке — заполните и попробуйте снова. Если система пишет другую причину — передайте её администратору.</td></tr>
+      <tr><td>Это мой клиент, но недобор вижу не я</td>
+        <td>Очередь по умолчанию показывает «только моих». Руководитель видит всех; если клиент закреплён неверно — поправьте персонального менеджера в карточке клиента.</td></tr>
+      <tr><td>1С прислала вторую волну отмен по тому же заказу</td>
+        <td>Строки доклеятся в ту же подборку автоматически, дублей не будет. Если вы уже отправили письмо — при необходимости отправьте обновлённое из карточки.</td></tr>
+    </table>
+  </div>
+
+  <div class="panel good">
+    <h3>Шпаргалка на стикер</h3>
+    <div style="font-size:9.5pt;">
+      Задача «Недобор» → открыть карточку → проверить галочки → поправить письмо → <b>«Отправить подборку»</b> в день отмены.
+      Повторный недобор или VIP → сначала <b>«Позвонить»</b>. Раз в неделю → вкладка <b>«Связи»</b>, 15 минут.
+    </div>
+  </div>
+
+  <div class="footer-note"><span>Недоборы · памятка менеджера · Pecado</span><span>стр. 4 / 4 · август 2026</span></div>
+</div>
+</body></html>

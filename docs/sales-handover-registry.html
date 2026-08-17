@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Реестр передачи дел — руководитель отдела продаж</title>
+<style>
+@page { size: A4; margin: 14mm 11mm; }
+* { box-sizing: border-box; }
+body { font-family: "PT Sans", "DejaVu Sans", Arial, sans-serif; font-size: 9.5pt; color: #1a202c; margin: 0; }
+h1 { font-size: 17pt; margin: 0 0 2mm; }
+h2 { font-size: 12.5pt; margin: 7mm 0 2mm; border-bottom: 2px solid #2b6cb0; padding-bottom: 1mm; break-after: avoid; }
+h2 .count { font-size: 8.5pt; font-weight: normal; color: #718096; margin-left: 3mm; }
+.meta { color: #4a5568; font-size: 9pt; margin-bottom: 4mm; }
+.summary { background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 4px; padding: 3mm 4mm; font-size: 9.5pt; margin-bottom: 2mm; }
+.warn { background: #fffaf0; border: 1px solid #fbd38d; border-radius: 4px; padding: 3mm 4mm; font-size: 9.5pt; margin-top: 2mm; }
+table { width: 100%; border-collapse: collapse; margin-top: 1.5mm; }
+th { background: #2d3748; color: #fff; text-align: left; padding: 1.6mm 2mm; font-size: 8.5pt; }
+td { border: 1px solid #cbd5e0; padding: 1.5mm 2mm; vertical-align: top; }
+tr { break-inside: avoid; }
+tr:nth-child(even) td { background: #f7fafc; }
+.num { width: 6mm; color: #718096; text-align: right; }
+.what { width: 44mm; font-weight: 600; }
+.st { width: 21mm; }
+.links { width: 34mm; word-break: break-all; font-size: 8pt; }
+.comment { font-size: 8.8pt; }
+a { color: #2b6cb0; text-decoration: none; }
+.badge { display: inline-block; border-radius: 3px; padding: 0.4mm 1.6mm; font-size: 8pt; font-weight: 600; }
+.badge.done { background: #c6f6d5; color: #22543d; }
+.badge.progress { background: #feebc8; color: #7b341e; }
+.badge.empty, .badge.other { background: #e2e8f0; color: #4a5568; }
+.note { color: #4a5568; font-size: 8.8pt; margin: 0 0 1mm; }
+</style>
+</head>
+<body>
+<h1>Реестр передачи дел: руководитель отдела продаж</h1>
+<p class="meta">Источник — Google-таблица «Передача дел» (передающий: Игорь Астапенко, РОП) и 17 смежных документов.
+Составлено 14.08.2026 при приёме дел. Принимающий: Вячеслав.</p>
+<div class="summary"><b>Итого 77 пунктов передачи:</b> 61 со статусом «Готово», 13 «В процессе», 3 без статуса.
+Три зоны ответственности: <b>ОПТ</b> (оптовый канал: дебиторка, клиентская база, планы, договоры, акции),
+<b>МП</b> (маркетплейсы: WB, Ozon, Яндекс.Маркет, Золотое Яблоко, Самокат — команда Артём и Адель),
+<b>Админ</b> (отчётность руководству, табели, учётные записи, реестры).</div>
+<div class="warn"><b>Безопасность:</b> в исходной таблице «Передача дел» пароли учётных записей (HH, HH Kz, 2ГИС, Infostart, личный Google-аккаунт передающего, сервисы truestats и sellerstats) лежат открытым текстом; в таблице STPULSE — ключи Ozon Performance API. В настоящий реестр пароли сознательно не перенесены. После приёма дел учётные данные стоит сменить, а сервисные — перевести на корпоративные ящики.</div>
+<section>
+<h2>Зона «ОПТ» — оптовый канал <span class="count">37 пунктов: 24 готово, 13 в процессе, 0 без статуса</span></h2>
+
+<table>
+<thead><tr><th>№</th><th>Что передаётся</th><th>Статус</th><th>Ссылки</th><th>Комментарий передающего</th></tr></thead>
+<tbody><tr>
+<td class="num">1</td>
+<td class="what">Дебеторская задолженность статусы по должникам и отчет</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links">Задолженность клиентов - копия: e1c://server/am1c/trade#e1cib/data/Справочник.ВариантыОтчетов?ref=893ab329383581e711f11701e928fc50</td>
+<td class="comment">смотрю отчет на ежедневной основе, дергаю менеджеров задачами по просрочке. в дальнейшем срм будет этим заниматься.</td>
+</tr><tr>
+<td class="num">2</td>
+<td class="what">Дебеторская задолженность статусы по судебным делам</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">сделал комментарии по должникам в срм</td>
+</tr><tr>
+<td class="num">3</td>
+<td class="what">Дебеторская задолженность по KPI</td>
+<td class="st"><span class="badge progress">В процессе</span></td>
+<td class="links"></td>
+<td class="comment">нет отчета, который бы показывал необходимую информацию. ТЗ передавал Елене.</td>
+</tr><tr>
+<td class="num">4</td>
+<td class="what">Работа с отделом продаж по дебеторской задолженности</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">Отдел продаж на ежедневной основне в конце дня сдает отчет по проделанной работе с должниками. либо сделать в срм задачи вспылвающие при появлении просрочки</td>
+</tr><tr>
+<td class="num">5</td>
+<td class="what">Работа отдела продаж с клиентами по дебеторской задолженности</td>
+<td class="st"><span class="badge progress">В процессе</span></td>
+<td class="links"></td>
+<td class="comment">авто письма клиентам, когда менеджеру звонить и напоминать, когда требовать меняется тон общения, когда требовать угрозой и когда досудебка.</td>
+</tr><tr>
+<td class="num">6</td>
+<td class="what">Клиентская база активных клиентов нашего филиала</td>
+<td class="st"><span class="badge progress">В процессе</span></td>
+<td class="links">Слава делает на сайте с ИИ. Файл есть</td>
+<td class="comment">клиенсткая база с планами, фактами, данными по магазинам, статусом клиентов в срм</td>
+</tr><tr>
+<td class="num">7</td>
+<td class="what">Клиентская база всех клиентов офлайн по РФ</td>
+<td class="st"><span class="badge progress">В процессе</span></td>
+<td class="links"></td>
+<td class="comment">сделать сводку в красивую базу, перетащить данные из Тюмени</td>
+</tr><tr>
+<td class="num">8</td>
+<td class="what">Тезисный рассказ про клиентов</td>
+<td class="st"><span class="badge progress">В процессе</span></td>
+<td class="links">для Павла. и с ИИ. или объеденить?</td>
+<td class="comment">комментарии от меня, точки роста, риски и т.п.</td>
+</tr><tr>
+<td class="num">9</td>
+<td class="what">Отчеты в 1с по продажам план/факт</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links">Слава делает на сайте</td>
+<td class="comment">настроить в новой, выгрузить старые</td>
+</tr><tr>
+<td class="num">10</td>
+<td class="what">Отчеты в 1с по продажам бренды, клиенты, номенклатура</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links">Слава делает на сайте</td>
+<td class="comment">настроить в новой, выгрузить старые</td>
+</tr><tr>
+<td class="num">11</td>
+<td class="what">Отчеты в 1с по продажам сравнение аналогичных периодов</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links">Слава делает на сайте</td>
+<td class="comment">настроить в новой, выгрузить старые</td>
+</tr><tr>
+<td class="num">12</td>
+<td class="what">Визуализация каждую неделю и месяц</td>
+<td class="st"><span class="badge progress">В процессе</span></td>
+<td class="links">предложить Славе в crm засунуть</td>
+<td class="comment">рассказать про концепт визуализации, зачем и как</td>
+</tr><tr>
+<td class="num">13</td>
+<td class="what">Реестр договоров</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://docs.google.com/spreadsheets/d/1Fzmg2Iq_wJpP8PzJlu-pX4noDjQyYl52lztNG5V3tK0/edit?gid=0#gid=0">https://docs.google.com/spreadsheets/d/1Fzmg2Iq_wJpP8PzJlu-pX4noDjQyYl52lztNG5V3tK0/edit?gid=0#gid=0</a></td>
+<td class="comment">реестр следить за документами</td>
+</tr><tr>
+<td class="num">14</td>
+<td class="what">ЭДО проверка подписей документов</td>
+<td class="st"><span class="badge progress">В процессе</span></td>
+<td class="links"></td>
+<td class="comment">проверка как часто</td>
+</tr><tr>
+<td class="num">15</td>
+<td class="what">Проверка резервов заказов</td>
+<td class="st"><span class="badge progress">В процессе</span></td>
+<td class="links"></td>
+<td class="comment">проверка старых заказов на актуальность, ознакомить с регламентом</td>
+</tr><tr>
+<td class="num">16</td>
+<td class="what">Неоформленные накладные</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">раз в неделю ставить задачи менеджерам, чтобы чистили неоформленные документы (когда сделали расходник, но нет реализации, или наоборот, или в целом что то не так)</td>
+</tr><tr>
+<td class="num">17</td>
+<td class="what">Потенциалы проверка обработки</td>
+<td class="st"><span class="badge progress">В процессе</span></td>
+<td class="links"></td>
+<td class="comment">регламент, и как часто смотреть</td>
+</tr><tr>
+<td class="num">18</td>
+<td class="what">Журнал потенциалов подумать как действовать в новой</td>
+<td class="st"><span class="badge progress">В процессе</span></td>
+<td class="links"></td>
+<td class="comment">журнал</td>
+</tr><tr>
+<td class="num">19</td>
+<td class="what">Акции на месяц, обсуждение с Ильей</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">акции обсуждаются каждый месяц. зависят от оборачиваемости, нашего желаняи что то пропушить. анализа прошлых акции сработали или нет и стоит ли продлевать или менять и т.п.</td>
+</tr><tr>
+<td class="num">20</td>
+<td class="what">Афонины контроль бонусов</td>
+<td class="st"><span class="badge progress">В процессе</span></td>
+<td class="links"></td>
+<td class="comment">файл привести в порядок</td>
+</tr><tr>
+<td class="num">21</td>
+<td class="what">Лавка концепт работы</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">С Лавкой подписан прямой договор поставки с отсрочкой. Доставка до их склада нашими силами. Потенциально хороший клиент, но Тюмень почти всю матрицу плохо поставляет, либо сняла с продажи. Ротацию они очень туго делают, и надо продавливать и дергать менеджеров и их. Потенциал 1 млн р. Работают следующим образом с ними подключен EDI это платформа на которой сети размещают свои заказы, они прилетают к нам в кабинет, далее менеджеры его переносят в 1с (можно автоматизировать с 1с), до четверга мы должны их уведомить, что мы не сможем привезти. lдалее идет сборка заказ на палет определенным способом и доставялем каждый раз в пятницу, но часто так случаеится, что там очереди и наш водила там может провести несколько часов - это тоже пытались решить сменой графика (я полагаю, что пятница очень нагружена), сумма минимального заказа 100 т.р. Операторски делает Курочкина. Есть чатик в ТГ, куда наверно тебе стоит добавиться или Славе, чтобы контролить траблы (там категорийный менджеры, маркетолог Лавки и мы)</td>
+</tr><tr>
+<td class="num">22</td>
+<td class="what">ТГ канал опт чек</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://t.me/sexoptmsk">https://t.me/sexoptmsk</a></td>
+<td class="comment">3 поста в неделю в группе, нужно нагонять аудиторию</td>
+</tr><tr>
+<td class="num">23</td>
+<td class="what">ТГ канал lovense чек</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://t.me/lovenseRUcommunity">https://t.me/lovenseRUcommunity</a></td>
+<td class="comment">цель нагонять целевую аудиторию, потом использовать как маркетинговый инстурмент с отсылкой либо на магазин, либо на МП</td>
+</tr><tr>
+<td class="num">24</td>
+<td class="what">KPI расчет менеджеров ОПТа</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links">показывался Славе, концепт понятен</td>
+<td class="comment">будет добавлен на сайт, расчет для каждого менеджера будет виден в режиме онлайн</td>
+</tr><tr>
+<td class="num">25</td>
+<td class="what">Новости индустрии, че читать, как быть в курсе</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment"><a href="https://sexshopers.ru/">https://sexshopers.ru/</a> , тг каналы у Ивана можно взять</td>
+</tr><tr>
+<td class="num">26</td>
+<td class="what">Возвраты регламент</td>
+<td class="st"><span class="badge progress">В процессе</span></td>
+<td class="links"></td>
+<td class="comment">пока работаем в том же ключе, потом оформление через сайт и лк клиента</td>
+</tr><tr>
+<td class="num">27</td>
+<td class="what">Некондиция</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links">слава сделал инсутрмент на сайте</td>
+<td class="comment">слава сделал инсутрмент на сайте</td>
+</tr><tr>
+<td class="num">28</td>
+<td class="what">Реклама</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">по сути самые активные в маркетинге - рейне и интимшоп, еще была гевея, но сейчас непонятно. обращаемся к ним с желаение рекламировать, а дальше договариваемся об условиях</td>
+</tr><tr>
+<td class="num">29</td>
+<td class="what">Подвисшие деньги, требовать их потратить</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">следить за кредиторкой и выравнивать. часто клиенты переплачивают на балансе валяются незначительные суммы - это повод их потратить, позвонить и т.п.</td>
+</tr><tr>
+<td class="num">30</td>
+<td class="what">Рассылки по клиентам</td>
+<td class="st"><span class="badge progress">В процессе</span></td>
+<td class="links"></td>
+<td class="comment">пока рассылаются силами менеджеров. Елена делает текст. В дальнейшем сделать через CRM</td>
+</tr><tr>
+<td class="num">31</td>
+<td class="what">Согласование скидок, условий и т.п.</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">тут индивидуально. будет зависеть от новой системы лояльности. сейчас это выглядит так - менеджер общаясь с клиентом, понимает что нужно снижение по каким то причинам. либо мы анализируя продажи клиента придумываем сами ему стимуляцию в виде скидки, условий. тестеров и т.п.</td>
+</tr><tr>
+<td class="num">32</td>
+<td class="what">Частные лица</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://docs.google.com/spreadsheets/d/1JciO5zB7IQhjYgHoTp8O57bKuiNglL1T36Cy65jiqdk/edit?gid=0#gid=0">https://docs.google.com/spreadsheets/d/1JciO5zB7IQhjYgHoTp8O57bKuiNglL1T36Cy65jiqdk/edit?gid=0#gid=0</a></td>
+<td class="comment">реестр покупок частных лиц. менеджер вносит заказ. Павел подтверждает получение денег.</td>
+</tr><tr>
+<td class="num">33</td>
+<td class="what">Актуализировать Акции для менеджеров каждый месяц</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">т.к. акций много и руками надо было проставлять скидки - вел список акций в новостной ленте группы &quot;отдел продаж B2b&quot;. менеджеры забывают какие акции активны, потому надо напоминать в новой система работы</td>
+</tr><tr>
+<td class="num">34</td>
+<td class="what">Новый план для опта на следующий месяц</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">в конце месяца или в первые дни нового месяца пересматривается план на предстоящий месяц с учетом нынешних обстоятельств</td>
+</tr><tr>
+<td class="num">35</td>
+<td class="what">Регионы таблица с клиентами, по РФ офлайн магазины</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://docs.google.com/spreadsheets/d/1I7Gq9JiNnKKnFs64j9Dtkn-YsjpV0zvMdWfOQ01LHek/edit?gid=0#gid=0">https://docs.google.com/spreadsheets/d/1I7Gq9JiNnKKnFs64j9Dtkn-YsjpV0zvMdWfOQ01LHek/edit?gid=0#gid=0</a></td>
+<td class="comment">таблица с клиентами. было несколько отборов. сначала по нашим регионам, потом по остальной рф. получился компот, но думаю ИИ разгребет по названия, по областям и получится нормальная база офлайна для работы. Плюс ее можно сопоставить с клиентами из 1с, который не сопоставлены</td>
+</tr><tr>
+<td class="num">36</td>
+<td class="what">План 2026 опт</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://docs.google.com/spreadsheets/d/1DdRJEkcrt-_0m5TPSt2UnfiTDSLMWied/edit?usp=drive_web&amp;ouid=107486468486264269175&amp;rtpof=true">https://docs.google.com/spreadsheets/d/1DdRJEkcrt-_0m5TPSt2UnfiTDSLMWied/edit?usp=drive_web&amp;ouid=107486468486264269175&amp;rtpof=true</a></td>
+<td class="comment">табличный план, который уже прогружен в срм. плюс немного инфы по категориям клиентов, мб пригодится</td>
+</tr><tr>
+<td class="num">37</td>
+<td class="what">Брак таблиза ОПТ</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://docs.google.com/spreadsheets/d/1WfTqcDpB5WmI_RoF6xNg-jLTniXW1a1I0HrARfvDr_4/edit?gid=1463524095#gid=1463524095">https://docs.google.com/spreadsheets/d/1WfTqcDpB5WmI_RoF6xNg-jLTniXW1a1I0HrARfvDr_4/edit?gid=1463524095#gid=1463524095</a></td>
+<td class="comment">сюда заносятся браки от менеджеров и решение от бракера</td>
+</tr></tbody>
+</table>
+</section>
+<section>
+<h2>Зона «МП» — маркетплейсы <span class="count">20 пунктов: 19 готово, 0 в процессе, 1 без статуса</span></h2>
+
+<table>
+<thead><tr><th>№</th><th>Что передаётся</th><th>Статус</th><th>Ссылки</th><th>Комментарий передающего</th></tr></thead>
+<tbody><tr>
+<td class="num">1</td>
+<td class="what">KPI МП</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">150 к оклад у Артема +1,5% от чистой прибыли<br>110 к оклад у Адели +2% от чистой прибыли ЗЯ и ЯМ<br>процент высчитывается, когда ребята подсчитают все данные из сервисов и защитят их, примерно 10-15 числа каждого месяца. Яблоко обычно в 20 числах дает инфо, потому по нему kpi выплачивается отдельно в ЗП</td>
+</tr><tr>
+<td class="num">2</td>
+<td class="what">Другие таблички МП</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">Самовыкупы - <a href="https://docs.google.com/spreadsheets/d/1qJ5xCZda4HiQiltfhLLDktIpBxPQYl9j/edit?gid=2092476485#gid=2092476485">https://docs.google.com/spreadsheets/d/1qJ5xCZda4HiQiltfhLLDktIpBxPQYl9j/edit?gid=2092476485#gid=2092476485</a>   - проверять их учет в данных продаж по итогу месяца<br>Коммерческие расходы - <a href="https://docs.google.com/spreadsheets/d/1QalzBGT3npDysaBw0bfKvGe3B6rCDyky/edit?gid=1067891726#gid=1067891726">https://docs.google.com/spreadsheets/d/1QalzBGT3npDysaBw0bfKvGe3B6rCDyky/edit?gid=1067891726#gid=1067891726</a>  - сравнить с суммами, который выделялись в этом месяе<br>Возвраты - <a href="https://docs.google.com/spreadsheets/d/1hr2bEuNyhf2GD49zw_P78Xe5lzvWxmmWCEa7a5jXMzc/edit?gid=0#gid=0">https://docs.google.com/spreadsheets/d/1hr2bEuNyhf2GD49zw_P78Xe5lzvWxmmWCEa7a5jXMzc/edit?gid=0#gid=0</a>  - следить за своевременностью работы</td>
+</tr><tr>
+<td class="num">3</td>
+<td class="what">Сервисы МП</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">OZON Мурака — таблица STPULSE (ссылка ниже в реестре документов); WB Елисеев — app.truestats.ru (логин davitashvili@andrey-company.ru); ЯМ Елисеев — sellerstats.ru (логин mavlekaeva@andrey-company.ru); у «Яблока» сервиса нет — только личный кабинет. Пароли — в исходной таблице «Передача дел».</td>
+</tr><tr>
+<td class="num">4</td>
+<td class="what">Финансы Муравьева</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment"></td>
+</tr><tr>
+<td class="num">5</td>
+<td class="what">Доступы на МП</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">ОЗОН ТЛК - кабинет бренда, управляющий Кербер. Озон Мурка - управляющий Артем. ВБ Елисеев - Павел</td>
+</tr><tr>
+<td class="num">6</td>
+<td class="what">Проверять магазин, карточки, отзывы, рейтинга</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">смотрим периодически: отзывы, вопросы и ответы, ответы на отзывы. работу в личке с клиентами, карточки и их наполненность, рейтинг карточек, наличие товара</td>
+</tr><tr>
+<td class="num">7</td>
+<td class="what">Чекать конкурентов, нашу Долю, оценивать рост конкурентов</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">периодически слежу за конкуретнами, особенно с брендам lovense, shunga, ff, теперь еще письки пекадо, в озоне есть удобная аналитика для этого. Что можешь выявить: lush 4 у нас не ранжируется на 1 месте, можем быть не первыми по продажам. и т.п.</td>
+</tr><tr>
+<td class="num">8</td>
+<td class="what">Еженедельный отчет</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">отчеты ты видел. по хорошему они должны быть углубленнее, при твоем контроле, т.к. я многое просматривал самостоятельно. Например ДРР, темпы продаж текущего месяца, SKU, выдача и т.п.</td>
+</tr><tr>
+<td class="num">9</td>
+<td class="what">Ежедневные брифинги</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">текущие проблемы, задачи, результаты. каждое утро. последнее время время плавающее. но стараемся около 10:30 созваниаться.</td>
+</tr><tr>
+<td class="num">10</td>
+<td class="what">ВБ, озон, ЯМ, ЗЯ, Самокат</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">думаю за несколько собраний понимание о них у тебя более чем достаточное.</td>
+</tr><tr>
+<td class="num">11</td>
+<td class="what">Ставить задачи и контролить</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">тут я думал передать в битриксе, но битрикс теряет свою актуальность из-за созданной Славой CRM. Вероятно он Вам не будет нужен, рабочие чаты уйдут в другое место</td>
+</tr><tr>
+<td class="num">12</td>
+<td class="what">Контроль таблицы с возвратами и самовыкупами</td>
+<td class="st"><span class="badge empty">не указан</span></td>
+<td class="links"></td>
+<td class="comment">регламент работы</td>
+</tr><tr>
+<td class="num">13</td>
+<td class="what">следить за изменениями на МП, новости. Артем, паблики</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">в ЛК маркетплейсов есть чаты, в которые приходят новости. Их стоит просматривать, подписаться на официальные паблики МП и селлерские с новостями. Важно, т.к. часты изменения</td>
+</tr><tr>
+<td class="num">14</td>
+<td class="what">План и его редактура</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">план теперь в crm</td>
+</tr><tr>
+<td class="num">15</td>
+<td class="what">Цели МП в т.ч. по маркетингу и развитию</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">быи мысли о масштабировании МП с помощью найма маркетолога в штат. работа с инфлюенсерами, digital рекламой и т.п. для развития продаж.</td>
+</tr><tr>
+<td class="num">16</td>
+<td class="what">Реклама МП, следить за эффективностью</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">в сервисах аналитики отслеживать данные по ДРР, в ЛК просматривать рекламные компании и их эффективность. Целевой уровень не выше 10%. в идеале 7-8%</td>
+</tr><tr>
+<td class="num">17</td>
+<td class="what">Плашки оригинальность на товар</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">контролировать процесс получения плашек оригинал или их подтверждение</td>
+</tr><tr>
+<td class="num">18</td>
+<td class="what">Реестр МП</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://docs.google.com/spreadsheets/d/19hihYNV_QtugAj4CDBHRKKwegofoRI-fd93Cq_hANbo/edit?gid=0#gid=0">https://docs.google.com/spreadsheets/d/19hihYNV_QtugAj4CDBHRKKwegofoRI-fd93Cq_hANbo/edit?gid=0#gid=0</a></td>
+<td class="comment">какие есть кабинеты, какой статус закрытия</td>
+</tr><tr>
+<td class="num">19</td>
+<td class="what">ДБС по озон и вб</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links">запускаем фбс, тестируем ДБС</td>
+<td class="comment">расширение возможностей. и страховка товара от атак бпла</td>
+</tr><tr>
+<td class="num">20</td>
+<td class="what">Яблоко возврат товара после фотосессии</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">яблоку высылался lovense на фотосессию, курирует Адель. они должны вернуть, но очень долго тянут</td>
+</tr></tbody>
+</table>
+</section>
+<section>
+<h2>Зона «Админ» — администрирование и отчётность <span class="count">20 пунктов: 18 готово, 0 в процессе, 2 без статуса</span></h2>
+
+<table>
+<thead><tr><th>№</th><th>Что передаётся</th><th>Статус</th><th>Ссылки</th><th>Комментарий передающего</th></tr></thead>
+<tbody><tr>
+<td class="num">1</td>
+<td class="what">Номера телефонов и гаджеты (ОП)</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">отдельный лист</td>
+</tr><tr>
+<td class="num">2</td>
+<td class="what">Почты сотрудников и мои действующие</td>
+<td class="st"><span class="badge empty">не указан</span></td>
+<td class="links"></td>
+<td class="comment">перенос почт и аккаунтов на домен Пекадо</td>
+</tr><tr>
+<td class="num">3</td>
+<td class="what">Табель МП и ОП</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">каждый день, подумать над автоматизацией, сдача за 1-2 дня до конца месяца. Пример будет в папке &quot;полезные документы&quot;</td>
+</tr><tr>
+<td class="num">4</td>
+<td class="what">ОПИУ итоги месяца, квартала, полугодия</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links">\\10.2.0.4\Share\БУХ\БЮДЖЕТ</td>
+<td class="comment">просмотр ОПИУ, анализ. МБ ИИ прикрутить</td>
+</tr><tr>
+<td class="num">5</td>
+<td class="what">CF</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links">e1cib/data/Справочник.ВариантыОтчетов?ref=8943b1a98e976f1c11f1757f9851af81</td>
+<td class="comment">по ссылке отчет в 1с по оптовому каналу. ребятам из МП надо ставить задачу, что предоставили данные. формат понедельно, они в курсе. Формат файла будет передан</td>
+</tr><tr>
+<td class="num">6</td>
+<td class="what">Оборачиваемость</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">каждый месяц просматривать оборачиваемость товара. Илья готовит отчет. Пока Слава не автоматизирует процесс</td>
+</tr><tr>
+<td class="num">7</td>
+<td class="what">Данные раз в месяц по дебеторке и остатку товара</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links">e1c://server/am1c/trade#e1cib/data/Справочник.ВариантыОтчетов?ref=893ab329383581e711f11701e928fc50</td>
+<td class="comment">запрашивать в последний день месяца у ребят из МП даные по остаткам складов МП, плюс просматривать отчет дебеторской задолженности</td>
+</tr><tr>
+<td class="num">8</td>
+<td class="what">Сроковые товары</td>
+<td class="st"><span class="badge empty">не указан</span></td>
+<td class="links"></td>
+<td class="comment"></td>
+</tr><tr>
+<td class="num">9</td>
+<td class="what">HH</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">логин salesdir@andrey-company.ru, пароль — в исходной таблице «Передача дел» (не дублируется в этом документе)</td>
+</tr><tr>
+<td class="num">10</td>
+<td class="what">2gis</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">логин info@pecado.ru, пароль — в исходной таблице «Передача дел» (не дублируется в этом документе)</td>
+</tr><tr>
+<td class="num">11</td>
+<td class="what">HH Kz</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">логин salesdir@andrey-company.ru, пароль — в исходной таблице «Передача дел» (не дублируется в этом документе)</td>
+</tr><tr>
+<td class="num">12</td>
+<td class="what">https://infostart.ru/</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">логин salesdir@andrey-company.ru, пароль — в исходной таблице «Передача дел» (не дублируется в этом документе)</td>
+</tr><tr>
+<td class="num">13</td>
+<td class="what">google.com</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"></td>
+<td class="comment">логин igorsalesdirastapenko@gmail.com, пароль — в исходной таблице «Передача дел» (не дублируется в этом документе)</td>
+</tr><tr>
+<td class="num">14</td>
+<td class="what">Реестр договоров</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://docs.google.com/spreadsheets/d/1Fzmg2Iq_wJpP8PzJlu-pX4noDjQyYl52lztNG5V3tK0/edit?pli=1&amp;gid=0#gid=0">https://docs.google.com/spreadsheets/d/1Fzmg2Iq_wJpP8PzJlu-pX4noDjQyYl52lztNG5V3tK0/edit?pli=1&amp;gid=0#gid=0</a></td>
+<td class="comment">ведется реестр договоро. в основном подписываются в ЭДО. если нет, то есть папка пекадо с договорами, сканы у менеджеров и оригиналы бывают хранятся у менеджеров</td>
+</tr><tr>
+<td class="num">15</td>
+<td class="what">Ресстр УПД</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://docs.google.com/spreadsheets/d/1_v8KKQMT4hXYS35HE_dnnXYg8moJXGWTi-5c2UY2WGA/edit?gid=984901493#gid=984901493">https://docs.google.com/spreadsheets/d/1_v8KKQMT4hXYS35HE_dnnXYg8moJXGWTi-5c2UY2WGA/edit?gid=984901493#gid=984901493</a></td>
+<td class="comment">старый реестр, мб пригодится. новый не ведется, т.к. не хватает рук контролировать. нужна автоматизация на контроль подписи накладных, либо делегирование на бухаглтерию</td>
+</tr><tr>
+<td class="num">16</td>
+<td class="what">Передача дел</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://docs.google.com/spreadsheets/d/1XIPavPOzfXWVv1j9_ZznHAuUiDseQW_4Vtr_t_b1fvQ/edit?sharingaction=ownershiptransfer&amp;gid=0#gid=0">https://docs.google.com/spreadsheets/d/1XIPavPOzfXWVv1j9_ZznHAuUiDseQW_4Vtr_t_b1fvQ/edit?sharingaction=ownershiptransfer&amp;gid=0#gid=0</a></td>
+<td class="comment">передача дел от меня</td>
+</tr><tr>
+<td class="num">17</td>
+<td class="what">Казахия Старая СРМ</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://docs.google.com/spreadsheets/d/1XLnCkBieHUdVD9pB-N11i4ubxkusMIsIzuqSzbp8Dic/edit?gid=0#gid=0">https://docs.google.com/spreadsheets/d/1XLnCkBieHUdVD9pB-N11i4ubxkusMIsIzuqSzbp8Dic/edit?gid=0#gid=0</a></td>
+<td class="comment">База казахии</td>
+</tr><tr>
+<td class="num">18</td>
+<td class="what">Клиентская база и контакты</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://docs.google.com/spreadsheets/d/1t3Acsx3crMd_tYxxc-ISzgNhf03Y-FS7/edit?gid=1882348409#gid=1882348409">https://docs.google.com/spreadsheets/d/1t3Acsx3crMd_tYxxc-ISzgNhf03Y-FS7/edit?gid=1882348409#gid=1882348409</a></td>
+<td class="comment">разные базы, разных временных интервалов. могут быть полезны при расширении клиентских баз</td>
+</tr><tr>
+<td class="num">19</td>
+<td class="what">Блогеры</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://docs.google.com/spreadsheets/d/1U8m_lULSQrvfKPOj048tGSYWtPFG5zlTavEULoTzb44/edit?gid=1200311976#gid=1200311976">https://docs.google.com/spreadsheets/d/1U8m_lULSQrvfKPOj048tGSYWtPFG5zlTavEULoTzb44/edit?gid=1200311976#gid=1200311976</a></td>
+<td class="comment">старая большая категорийная база блогеров с контактами, но большинство думаю до сих пор актуальны</td>
+</tr><tr>
+<td class="num">20</td>
+<td class="what">Таблтца со сроками годности</td>
+<td class="st"><span class="badge done">Готово</span></td>
+<td class="links"><a href="https://docs.google.com/spreadsheets/d/1dHLrxFJVCGBwLhUp2DjTY6tuj_6LfH8EfGrM5Y6QDZ4/edit?gid=0#gid=0">https://docs.google.com/spreadsheets/d/1dHLrxFJVCGBwLhUp2DjTY6tuj_6LfH8EfGrM5Y6QDZ4/edit?gid=0#gid=0</a></td>
+<td class="comment">не факт, что актуальна. курирует Илья и Костя</td>
+</tr></tbody>
+</table>
+</section>
+
+<section>
+<h2>Реестр смежных документов <span class="count">17 источников</span></h2>
+<p class="note">Все таблицы, на которые ссылается документ передачи дел. Объёмы — количество непустых строк на 14.08.2026.</p>
+<table>
+<thead><tr><th>№</th><th>Документ</th><th>Содержимое и объём</th><th>Состояние</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td class="what"><a href="https://docs.google.com/spreadsheets/d/1Fzmg2Iq_wJpP8PzJlu-pX4noDjQyYl52lztNG5V3tK0/edit">Реестр договоров</a></td><td>Листы по юрлицам: ООО Пекадо — 330 строк, ИП Елисеев (клиенты) — 32, ИП Кербер (клиенты) — 329, ИП Кербер (дистрибьюторы) — 6, ООО Пекадо Импорт — 10. Партнёр, контрагент, № договора, оплата, статус подписания, менеджер, ЭДО/скан.</td><td>Живой, ведётся (договоры 2024–2025)</td></tr>
+<tr><td class="num">2</td><td class="what"><a href="https://docs.google.com/spreadsheets/d/1_v8KKQMT4hXYS35HE_dnnXYg8moJXGWTi-5c2UY2WGA/edit">Реестр УПД</a></td><td>12 листов по месяцам 2025 года, по 1,6–2,1 тыс. строк: № документа, сумма, клиент, статус подписания (ЭДО/бумага/нет), менеджер.</td><td>⚠ Заброшен: только 2025 год, новый не ведётся — «не хватает рук», нужна автоматизация или передача бухгалтерии</td></tr>
+<tr><td class="num">3</td><td class="what"><a href="https://docs.google.com/spreadsheets/d/1I7Gq9JiNnKKnFs64j9Dtkn-YsjpV0zvMdWfOQ01LHek/edit">Регионы — офлайн-клиенты РФ</a></td><td>«Основной» — 106 строк (регион/клиент/сеть/менеджер), «РФ» — 703 магазина с адресами и телефонами, «СЕТИ РФ» — 94 сети с привязкой к партнёрам 1С, «Чёрная база» — 463 непроверенных точки, «Сводка по магазинам» — 270 сетей.</td><td>Рабочая база для экспансии в офлайн; передающий предлагает разгрести её ИИ и сопоставить с 1С</td></tr>
+<tr><td class="num">4</td><td class="what"><a href="https://docs.google.com/spreadsheets/d/1DdRJEkcrt-_0m5TPSt2UnfiTDSLMWied/edit">План 2026 опт</a></td><td>«ОПТ действующие» — 223 строки: статус, тип клиента, офлайн/онлайн/МП, сайт, план-факт по месяцам; «Категории клиентов» — 110; «Лиды в проработку» — 22.</td><td>Уже импортирован в CRM (2026-08-08, crm:import-sales-sheet); остаётся источником правки планов</td></tr>
+<tr><td class="num">5</td><td class="what"><a href="https://docs.google.com/spreadsheets/d/1JciO5zB7IQhjYgHoTp8O57bKuiNglL1T36Cy65jiqdk/edit">Частные лица</a></td><td>Реестр покупок физлиц с ноября 2023: 327 строк (заказ, реализация, сумма, менеджер, оплата, подтверждение Павла) + «Покупки сотрудников» — 39 + годовые своды.</td><td>Живой процесс: менеджер вносит заказ, Павел подтверждает деньги</td></tr>
+<tr><td class="num">6</td><td class="what"><a href="https://docs.google.com/spreadsheets/d/1WfTqcDpB5WmI_RoF6xNg-jLTniXW1a1I0HrARfvDr_4/edit">Брак ОПТ</a></td><td>Листы по годам: 2024 — 140, 2025 — 306, 2026 — 97 строк + форма приёма (25). Менеджер, контрагент, артикул, причина, решение бракера, возвратная накладная 1С, взаимозачёт.</td><td>Живой; параллельно на сайте уже есть инструмент некондиции</td></tr>
+<tr><td class="num">7</td><td class="what"><a href="https://docs.google.com/spreadsheets/d/1dHLrxFJVCGBwLhUp2DjTY6tuj_6LfH8EfGrM5Y6QDZ4/edit">Сроки годности</a></td><td>Выгрузки из 1С: сток — 10 130 строк, справочник сроков — 39 530, «столбики Ильи» по брендам с датами «годен до».</td><td>Свежая выгрузка от 14.08.2026; курируют Илья и Костя, актуальность «не факт»</td></tr>
+<tr><td class="num">8</td><td class="what"><a href="https://docs.google.com/spreadsheets/d/1XLnCkBieHUdVD9pB-N11i4ubxkusMIsIzuqSzbp8Dic/edit">Казахия — старая CRM</a></td><td>72 казахстанских клиента: статус, город, вид торговли, продажи/потенциал в год, условия, контакты, наличие в «беседе КЗ».</td><td>Архивная база, полезна при работе с КЗ</td></tr>
+<tr><td class="num">9</td><td class="what"><a href="https://docs.google.com/spreadsheets/d/1t3Acsx3crMd_tYxxc-ISzgNhf03Y-FS7/edit">Клиентская база и контакты</a></td><td>Сборник баз разных лет: выставка ЭроЭкспо — 268, Форус — 195, выгрузка старой CRM (Казахия) — 6 380, «База Макс» — 180, Казахстан — 30, Беларусь — 26, свинг-клубы — 8.</td><td>Архив; источник лидов при расширении базы</td></tr>
+<tr><td class="num">10</td><td class="what"><a href="https://docs.google.com/spreadsheets/d/1U8m_lULSQrvfKPOj048tGSYWtPFG5zlTavEULoTzb44/edit">Блогеры</a></td><td>29 листов, категорийная база 2021–2023: общий список — 1 868 сообществ, «План на неделю» — 600, результаты размещений с ДРР — 2 181, врачи, мамы, свингеры, ИЛИТА (Литвинова, «Кровавая барыня») и др.</td><td>Старая, но, по оценке передающего, контакты в основном актуальны; пригодится для маркетинга МП</td></tr>
+<tr><td class="num">11</td><td class="what"><a href="https://docs.google.com/spreadsheets/d/19hihYNV_QtugAj4CDBHRKKwegofoRI-fd93Cq_hANbo/edit">Реестр МП</a></td><td>Матрица «юрлицо × площадка» (Муравьева, Елисеев, Андрей-М, Импиранте, ТЛК × WB/Ozon/ЯМ/Самокат/ЗЯ/Мегамаркет): какой кабинет основной, где есть продажи, статус закрытия.</td><td>Актуальный справочник кабинетов</td></tr>
+<tr><td class="num">12</td><td class="what"><a href="https://docs.google.com/spreadsheets/d/16K2L8JAfwJqratC_iv2CIKo-a12sStdlkxvrQYEyUXY/edit">OZON Мурака (STPULSE)</a></td><td>Рабочий финансово-аналитический сервис по кабинету Ozon: ОПиУ, юнит-экономика, себестоимость (411 SKU), реклама (СтатистикаРК — 21,8 тыс. строк), начисления — 75,8 тыс., возвраты — 3 001, самовыкупы.</td><td>Живой, автообновление (последняя загрузка 14.08.2026). ⚠ Внутри листа PerfomanceAPI лежат client_id/secret Ozon Performance</td></tr>
+<tr><td class="num">13</td><td class="what"><a href="https://docs.google.com/spreadsheets/d/1hr2bEuNyhf2GD49zw_P78Xe5lzvWxmmWCEa7a5jXMzc/edit">Возвраты МП</a></td><td>Листы по площадкам: Озон возвраты — 588, ВБ возвраты — 475, ВБ самовыкупы — 116, Озон самовыкупы — 89, ЯМ, Самокат. Состояние (в продажу/брак), № документа возврата в 1С.</td><td>Живой (записи от 06–10.08.2026); требует контроля своевременности</td></tr>
+<tr><td class="num">14</td><td class="what">Самовыкупы МП</td><td>—</td><td>⚠ Нет доступа (файл под личным аккаунтом, 401) — запросить доступ или передачу владения</td></tr>
+<tr><td class="num">15</td><td class="what">Коммерческие расходы МП</td><td>—</td><td>⚠ Нет доступа (401) — запросить доступ или передачу владения</td></tr>
+<tr><td class="num">16</td><td class="what">Отчёты 1С (дебиторка, CF)</td><td>Варианты отчётов в 1С: «Задолженность клиентов — копия» (ежедневный контроль просрочки) и отчёт CF по оптовому каналу — ссылки e1c:// в реестре выше.</td><td>Открываются только из 1С (сервер am1c/trade)</td></tr>
+<tr><td class="num">17</td><td class="what">\\10.2.0.4\Share\БУХ\БЮДЖЕТ</td><td>Сетевая папка с ОПИУ (итоги месяца/квартала/полугодия); там же в Share — сканы возвраток и папка «полезные документы» с примером табеля.</td><td>Доступ по локальной сети офиса</td></tr>
+</tbody>
+</table>
+</section>
+
+
+<section>
+<h2>Телефоны и гаджеты отдела продаж <span class="count">лист «Гаджеты, почты, телефоны»</span></h2>
+<table>
+<thead><tr><th>Позиция</th><th>Значение</th><th>У кого</th></tr></thead>
+<tbody>
+<tr><td>Телефон мобильный</td><td>1 шт</td><td>Курочкина Елена</td></tr>
+<tr><td>Номер телефона 1</td><td>+7 901 782-28-32</td><td>Курочкина Елена</td></tr>
+<tr><td>Номер телефона 2</td><td>+7 901 782-28-35</td><td>Сухов Иван</td></tr>
+<tr><td>Номер телефона 3</td><td>+7 901 782-28-47</td><td>Сдан в бухгалтерию</td></tr>
+</tbody>
+</table>
+</section>
+
+</body>
+</html>

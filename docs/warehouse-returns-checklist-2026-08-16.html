@@ -1,0 +1,684 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
+<title>Чек-лист проверки по реестру возвратов — 16.08.2026</title>
+<style>
+@page { size: A4; margin: 11mm 9mm; }
+* { box-sizing: border-box; }
+body { font-family: "PT Sans","DejaVu Sans",Arial,sans-serif; font-size: 8.5pt; color:#1a1a1a; margin:0; }
+h1 { font-size:14pt; margin:0 0 2mm; }
+h2 { font-size:10.5pt; margin:4mm 0 1.5mm; }
+.meta { color:#555; font-size:8pt; margin-bottom:2.5mm; line-height:1.45; }
+table { width:100%; border-collapse:collapse; }
+th,td { border:0.6pt solid #999; padding:1.3mm 1.5mm; vertical-align:top; text-align:left; }
+th { background:#ececec; font-size:7.5pt; text-transform:uppercase; }
+tr { page-break-inside:avoid; }
+td.num { text-align:right; color:#777; width:6mm; }
+td.cb { width:6.5mm; text-align:center; }
+.box { display:inline-block; width:3.8mm; height:3.8mm; border:1pt solid #333; border-radius:0.6mm; }
+td.cell { width:15mm; font-weight:700; font-size:9.5pt; white-space:nowrap; }
+td.sku { width:21mm; font-family:"PT Mono","DejaVu Sans Mono",monospace; font-size:7.8pt; word-break:break-all; }
+td.qty { width:10mm; text-align:center; font-weight:700; }
+td.signal { width:22mm; font-size:7.5pt; color:#333; }
+td.check { width:52mm; font-size:7.5pt; }
+td.fact { width:11mm; }
+.ex { color:#777; font-style:italic; margin-top:0.5mm; }
+.prio { background:#fdeeea; }
+.summary td { font-size:8.5pt; }
+.footer { margin-top:4mm; font-size:8pt; color:#444; }
+.sign { margin-top:7mm; display:flex; gap:12mm; font-size:8.5pt; }
+.sign div { flex:1; border-top:0.8pt solid #333; padding-top:1.5mm; }
+</style></head><body>
+
+<h1>Чек-лист проверки товара по реестру возвратов брака</h1>
+<div class="meta">
+Склад «Москва Основной» · составлен 16.08.2026 · источник: реестр возвратов 2024–2026 (Google-таблица, вкладки 2024/2025/2026 + ответы формы, 560 записей).<br>
+<b>Отбор:</b> артикулы из реестра, которые сейчас есть с остатком на «Москва Основной» — 125 товаров, 266 случаев брака
+(возвраты не по браку — задвоения 1С, отказы клиентов — исключены). Ячейки — из расходных ордеров 1С (последняя по времени; передаются с 08.08.2026).
+Розовым выделены товары с 4+ случаями брака.</div>
+
+<h2>Частые причины брака (систематизация по 266 случаям)</h2>
+<table class="summary"><thead><tr><th>Категория</th><th>Случаев</th><th>Что проверять на складе</th></tr></thead>
+<tbody><tr><td>Электроника</td><td class="qty">193</td><td>включить, зарядить, прогнать все режимы</td></tr>
+<tr><td>Причина не указана</td><td class="qty">25</td><td>общий осмотр</td></tr>
+<tr><td>Механика</td><td class="qty">14</td><td>осмотр на разрывы, трещины, швы, крепления</td></tr>
+<tr><td>Упаковка</td><td class="qty">13</td><td>состояние коробки/пакета, пломбы</td></tr>
+<tr><td>Течь/материал</td><td class="qty">13</td><td>протечки, липкость, пятна, запах</td></tr>
+<tr><td>Связь/приложение</td><td class="qty">3</td><td>сопряжение с приложением/пультом</td></tr>
+<tr><td>Комплектация</td><td class="qty">2</td><td>состав комплекта, соответствие описанию</td></tr>
+<tr><td>Прочее</td><td class="qty">2</td><td>общий осмотр</td></tr>
+<tr><td>Срок годности</td><td class="qty">1</td><td>проверить срок годности</td></tr></tbody></table>
+
+<h2>1. Товары с ячейкой из расходных ордеров — 45 поз. (маршрут обхода)</h2>
+<table><thead><tr><th></th><th>✓</th><th>Ячейка</th><th>Артикул</th><th>Наименование</th>
+<th>Ост., шт</th><th>Случаев брака</th><th>Что проверить</th><th>Брак, шт</th><th>Комментарий</th></tr></thead><tbody><tr><td class="num">1</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А1-2-2</td><td class="sku">541450</td>
+<td>Массажное масло Erotist GRAPEFRUIT, съедобное, грейпфрут, 150 мл</td><td class="qty">15</td>
+<td class="signal">1 (1 подтв.), посл. 09.12.25</td>
+<td class="check"><b>Течь/материал</b> — протечки, липкость, пятна, запах<div class="ex">«масло течет, дозатор неисправен»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">2</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А2-5-2</td><td class="sku">17304</td>
+<td>Натуральный интимный гель ORGIE All - Natural Strawberry на водной основе, 150 мл</td><td class="qty">1</td>
+<td class="signal">2 (2 подтв.)</td>
+<td class="check"><b>Причина не указана</b> ×2 — общий осмотр</td><td class="fact"></td><td></td></tr>
+<tr><td class="num">3</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А2-7-3</td><td class="sku">71</td>
+<td>Концентрат для мужчин и женщин Лошадиный возбудитель, 50 м</td><td class="qty">7</td>
+<td class="signal">1 (1 подтв.), посл. 16.07.25</td>
+<td class="check"><b>Течь/материал</b> — протечки, липкость, пятна, запах<div class="ex">«плесень»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">4</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А2-7-3</td><td class="sku">72</td>
+<td>Концентрат для женщин Ночная бабочка, 50 мл</td><td class="qty">1</td>
+<td class="signal">1 (1 подтв.), посл. 16.07.25</td>
+<td class="check"><b>Течь/материал</b> — протечки, липкость, пятна, запах<div class="ex">«плесень»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">5</td><td class="cb"><span class="box"></span></td>
+<td class="cell">A3-1-3</td><td class="sku">8208</td>
+<td>Набор Shunga «Секрет Гейши» (Geisha&#x27;s Secret), 5 средств, аромат клубника и шампанское</td><td class="qty">5</td>
+<td class="signal">6 (5 подтв.), посл. 13.08.25</td>
+<td class="check"><b>Течь/материал</b> ×4 — протечки, липкость, пятна, запах<br><b>Комплектация</b> ×2 — состав комплекта, соответствие описанию<div class="ex">«Внутри набора протек лубрикант»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">6</td><td class="cb"><span class="box"></span></td>
+<td class="cell">A4-5-1</td><td class="sku">4007595</td>
+<td>Гибкий вибратор с фиксацией формы Satisfyer Elastic Joy, красный, 20 см</td><td class="qty">1</td>
+<td class="signal">1 (1 подтв.), посл. 24.09.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">7</td><td class="cb"><span class="box"></span></td>
+<td class="cell">A4-5-2</td><td class="sku">4051895</td>
+<td>Вакуумный стимулятор клитора с вибрацией Satisfyer Pro 2 Generation 3, фиолетовый, 16,4 см</td><td class="qty">1</td>
+<td class="signal">1 (1 подтв.), посл. 22.04.26</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«Перестал работать после зарядки»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">8</td><td class="cb"><span class="box"></span></td>
+<td class="cell">A4-6-1</td><td class="sku">9015108</td>
+<td>Вакуумно-волновой бесконтактный стимулятор клитора Satisfyer Penguin, силикон, черный, 10,8 см</td><td class="qty">3</td>
+<td class="signal">1 (1 подтв.), посл. 30.12.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не работают»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">9</td><td class="cb"><span class="box"></span></td>
+<td class="cell">A4-7-1</td><td class="sku">J2008-16-3</td>
+<td>Многофункциональный стимулятор для пар Satisfyer Double Joy Connect App, силикон, фиолетовый, 18 см</td><td class="qty">4</td>
+<td class="signal">1 (1 подтв.), посл. 12.12.24</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«&quot;залипание кнопки, некорректное переключение режимов, невозможно …»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">10</td><td class="cb"><span class="box"></span></td>
+<td class="cell">A4-7-4</td><td class="sku">4009919</td>
+<td>Эрекционное кольцо на пенис Satisfyer Glorious Duo, силикон, синий</td><td class="qty">3</td>
+<td class="signal">1 (1 подтв.)</td>
+<td class="check"><b>Причина не указана</b> — общий осмотр</td><td class="fact"></td><td></td></tr>
+<tr><td class="num">11</td><td class="cb"><span class="box"></span></td>
+<td class="cell">A4-10-1</td><td class="sku">J2018-17</td>
+<td>Вибратор Satisfyer Pro+ G-Spot, с вакуумно-волновым стимулятором, силикон, белый, 22 см</td><td class="qty">4</td>
+<td class="signal">3 (3 подтв.), посл. 18.04.25</td>
+<td class="check"><b>Электроника</b> ×3 — включить, зарядить, прогнать все режимы<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">12</td><td class="cb"><span class="box"></span></td>
+<td class="cell">A5-4-1</td><td class="sku">985102-1</td>
+<td>Реалистичный ротатор на присоске RealStick Elite Mulatto Mr. Diaz, TPR, коричневый, 16 см</td><td class="qty">1</td>
+<td class="signal">1 (1 подтв.), посл. 14.11.24</td>
+<td class="check"><b>Прочее</b> — общий осмотр<div class="ex">«Еле работает ротация, движения практически нет.»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">13</td><td class="cb"><span class="box"></span></td>
+<td class="cell">A5-6-3</td><td class="sku">985005-1</td>
+<td>Ротатор на присоске RealStick Elite William, SoftSkin, телесный, 7 режимов вращения, 18 см</td><td class="qty">2</td>
+<td class="signal">1 (1 подтв.), посл. 03.06.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не крутится»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">14</td><td class="cb"><span class="box"></span></td>
+<td class="cell">A5-6-3</td><td class="sku">987004</td>
+<td>Реалистичный вибратор с пультом ДУ RealStick Elite Vibro, TPR, телесный, 10 режимов вибрации, 18,5 см</td><td class="qty">10</td>
+<td class="signal">1 (1 подтв.), посл. 09.11.24</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«Не заряжается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">15</td><td class="cb"><span class="box"></span></td>
+<td class="cell">A5-8-1</td><td class="sku">583001</td>
+<td>Реалистичный фаллоимитатор My Babe My Precious,TPE, телесный, 17,5 см</td><td class="qty">30</td>
+<td class="signal">3 (3 подтв.), посл. 03.07.25</td>
+<td class="check"><b>Упаковка</b> ×2 — состояние коробки/пакета, пломбы<br><b>Механика</b> — осмотр на разрывы, трещины, швы, крепления<div class="ex">«мятые коробки»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">16</td><td class="cb"><span class="box"></span></td>
+<td class="cell">A5-8-4</td><td class="sku">583007</td>
+<td>Реалистичный фаллоимитатор My Babe My Darling, TPE, телесный, 22 см</td><td class="qty">28</td>
+<td class="signal">3 (3 подтв.), посл. 03.07.25</td>
+<td class="check"><b>Упаковка</b> ×2 — состояние коробки/пакета, пломбы<br><b>Причина не указана</b> — общий осмотр<div class="ex">«мятые коробки»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">17</td><td class="cb"><span class="box"></span></td>
+<td class="cell">A7-1-4</td><td class="sku">893034</td>
+<td>Мастурбатор реалистичный Juicy Pussy by TOYFA Fleshy boobs, TPE, телесный</td><td class="qty">5</td>
+<td class="signal">1 (1 подтв.), посл. 28.10.25</td>
+<td class="check"><b>Течь/материал</b> — протечки, липкость, пятна, запах<div class="ex">«жидкие сиськи»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">18</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А8-1-2</td><td class="sku">LE-09</td>
+<td>Вибростимулятор клитора в трусики LOVENSE Ferri, силикон, розовый, 7,4 см</td><td class="qty">6</td>
+<td class="signal">5 (3 подтв.), посл. 01.07.26</td>
+<td class="check"><b>Электроника</b> ×5 — включить, зарядить, прогнать все режимы<div class="ex">«не заряжается не реагирует на включение не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">19</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А8-1-3</td><td class="sku">LE-25</td>
+<td>Вибратор LOVENSE Flexer, силикон, розовый, 10,1 см</td><td class="qty">16</td>
+<td class="signal">16 (12 подтв.), посл. 26.03.26</td>
+<td class="check"><b>Электроника</b> ×13 — включить, зарядить, прогнать все режимы<br><b>Причина не указана</b> ×3 — общий осмотр<div class="ex">«включается но не работает вылетает через минуту подключения»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">20</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А8-2-2</td><td class="sku">LE-44</td>
+<td>Вакуумно-волновой стимулятор клитора LOVENSE Tenera 2 PulseSense, силикон, розовый</td><td class="qty">12</td>
+<td class="signal">3 (3 подтв.), посл. 14.10.25</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<br><b>Причина не указана</b> — общий осмотр<div class="ex">«не работает пульсация на некоторых режимах, когда полностью закры…»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">21</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А8-2-2</td><td class="sku">LE-35</td>
+<td>Фрикционное виброяйцо LOVENSE Vulse, силикон, красный, 20,3 см</td><td class="qty">19</td>
+<td class="signal">1 (1 подтв.), посл. 30.07.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«при полной зарядке разряжается за 10-15 мин»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">22</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А8-2-2</td><td class="sku">LE-48</td>
+<td>Вибромастурбатор с осцилляцией LOVENSE Gush 2, силикон, бирюзовый</td><td class="qty">8</td>
+<td class="signal">1 (1 подтв.)</td>
+<td class="check"><b>Причина не указана</b> — общий осмотр</td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">23</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А8-2-3</td><td class="sku">LE-10</td>
+<td>Виброяйцо LOVENSE Lush 3, силикон, розовый, 18 см</td><td class="qty">10</td>
+<td class="signal">9 (9 подтв.), посл. 07.08.25</td>
+<td class="check"><b>Электроника</b> ×9 — включить, зарядить, прогнать все режимы<div class="ex">«пищит на малой скорости, кроме писка он садится при большой за 15…»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">24</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А8-2-4</td><td class="sku">LE-46</td>
+<td>Вибромастурбатор нереалистичный LOVENSE Solace PRO, TPE, черный, 23,1 см</td><td class="qty">6</td>
+<td class="signal">2 (2 подтв.), посл. 03.12.25</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«не работают»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">25</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А8-3-1</td><td class="sku">LE-12</td>
+<td>Стимулятор простаты LOVENSE Edge 2, силикон, черный, 12,4 см</td><td class="qty">10</td>
+<td class="signal">1 (0 подтв.), посл. 17.11.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«На видео слышно характерное постукивание то в одном, то в другом …»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">26</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А8-3-2</td><td class="sku">LE-01</td>
+<td>Мастурбатор нереалистичный LOVENSE Max 2, TPE, белый, 24 см</td><td class="qty">5</td>
+<td class="signal">3 (3 подтв.), посл. 30.12.25</td>
+<td class="check"><b>Механика</b> ×2 — осмотр на разрывы, трещины, швы, крепления<br><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«брак резинки, залом рукава»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">27</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А8-3-3</td><td class="sku">LE-49</td>
+<td>Виброяйцо LOVENSE Lush 4, силикон, розовый, 18,1 см</td><td class="qty">28</td>
+<td class="signal">9 (7 подтв.), посл. 27.05.26</td>
+<td class="check"><b>Электроника</b> ×8 — включить, зарядить, прогнать все режимы<br><b>Механика</b> — осмотр на разрывы, трещины, швы, крепления<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">28</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А8-3-3</td><td class="sku">LE-16</td>
+<td>Мастурбатор нереалистичный LOVENSE Calor, TPE, черный, 15,9 см</td><td class="qty">4</td>
+<td class="signal">5 (5 подтв.), посл. 03.12.25</td>
+<td class="check"><b>Электроника</b> ×5 — включить, зарядить, прогнать все режимы<div class="ex">«залипают режимы, плохо переключаются, выключается иногда»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">29</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А8-4-4</td><td class="sku">LE-43</td>
+<td>Секс-машина SM Mini Lovense, металл, белый, 31.6 см</td><td class="qty">5</td>
+<td class="signal">4 (4 подтв.), посл. 01.09.25</td>
+<td class="check"><b>Электроника</b> ×3 — включить, зарядить, прогнать все режимы<br><b>Причина не указана</b> — общий осмотр<div class="ex">«не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">30</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А9-1-3</td><td class="sku">761008</td>
+<td>Реалистичный фаллоимитатор A-Toys by TOYFA Slock, TPE, телесный, 19 см</td><td class="qty">13</td>
+<td class="signal">1 (1 подтв.), посл. 26.08.25</td>
+<td class="check"><b>Механика</b> — осмотр на разрывы, трещины, швы, крепления<div class="ex">«отрывается присоска»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">31</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А9-1-4</td><td class="sku">761011</td>
+<td>Реалистичный вибратор с подогревом A-Toys by TOYFA Benedick, TPE, телесный, 25 см</td><td class="qty">4</td>
+<td class="signal">1 (1 подтв.), посл. 31.03.26</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«работает только нагрев, не работает вибрация. Заряжен»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">32</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А9-7-1</td><td class="sku">761314</td>
+<td>Анальная пробка с вибрацией A-Toys by TOYFA Kamet, размер M, силикон, фиолетовый, 12,9 см</td><td class="qty">1</td>
+<td class="signal">1 (1 подтв.), посл. 09.12.24</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«Не работает вибрация»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">33</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А9-9-1</td><td class="sku">768014</td>
+<td>Насадка на пенис A-Toys by TOYFA Fril с вибропулей, TPR, прозрачная, 13,4 см</td><td class="qty">5</td>
+<td class="signal">2 (2 подтв.), посл. 24.12.24</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«не работает вибропулька»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">34</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А10-5-3</td><td class="sku">783038</td>
+<td>Пульсатор JOS B-nana, силикон, белый, 19 см</td><td class="qty">8</td>
+<td class="signal">4 (3 подтв.), посл. 26.03.26</td>
+<td class="check"><b>Электроника</b> ×4 — включить, зарядить, прогнать все режимы<div class="ex">«стал выключаться примерно через ~полчаса использования (хотя заяв…»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">35</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А10-9-1</td><td class="sku">782006</td>
+<td>Вибронасадка на палец JOS TWITY для прелюдии, силикон, розовая, 10,2 см</td><td class="qty">1</td>
+<td class="signal">3 (2 подтв.), посл. 28.02.25</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<br><b>Причина не указана</b> — общий осмотр<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">36</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А10-9-1</td><td class="sku">782036</td>
+<td>Стимулятор точки G с вакуум-волновой стимуляцией JOS Shani, силикон, розовый, 12 см</td><td class="qty">7</td>
+<td class="signal">1 (1 подтв.), посл. 22.01.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«отсутствует вибрация, товар не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">37</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А10-9-2</td><td class="sku">783028</td>
+<td>Вакуумный стимулятор клитора с язычком JOS DINGO, силикон, голубой, 9,5 см</td><td class="qty">3</td>
+<td class="signal">2 (2 подтв.), посл. 02.12.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<br><b>Причина не указана</b> — общий осмотр<div class="ex">«перестал работать вакуум»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">38</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А10-9-2</td><td class="sku">783042</td>
+<td>Виброяйцо с имитацией фрикций JOS Bumpy, силикон, фиолетовое, 9 см</td><td class="qty">8</td>
+<td class="signal">1 (0 подтв.), посл. 01.11.24</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«Не включился заряжали и ничего не с пульта не как»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">39</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А11-1-4</td><td class="sku">748037</td>
+<td>Насадка на пенис XLover by TOYFA для увеличения размера, TPE, телесный, 16 см</td><td class="qty">5</td>
+<td class="signal">1 (1 подтв.), посл. 28.10.25</td>
+<td class="check"><b>Механика</b> — осмотр на разрывы, трещины, швы, крепления<div class="ex">«порвано кольцо для мошонки»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">40</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А11-4-1</td><td class="sku">358003</td>
+<td>Анальная вибровтулка ToDo by Toyfa Bland, силикон, мятный, 12 см, Ø 2,8 см</td><td class="qty">3</td>
+<td class="signal">2 (2 подтв.), посл. 28.10.25</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«не вклюается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">41</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А11-4-2</td><td class="sku">358008</td>
+<td>Анальная вибровтулка ToDo by Toyfa Lancy, силикон, желтый, 11 см</td><td class="qty">8</td>
+<td class="signal">1 (1 подтв.), посл. 18.12.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«греется не выключается после кнопки»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">42</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А11-5-4</td><td class="sku">359002</td>
+<td>Вибростимулятор простаты ToDo by Toyfa Stroman, силикон, синий, 14,5 см</td><td class="qty">9</td>
+<td class="signal">1 (1 подтв.)</td>
+<td class="check"><b>Причина не указана</b> — общий осмотр</td><td class="fact"></td><td></td></tr>
+<tr><td class="num">43</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А11-9-3</td><td class="sku">117010</td>
+<td>Кукла надувная Dolls-X by TOYFA Violet, брюнетка, с тремя отверстиями, кибер вставка: вагина</td><td class="qty">6</td>
+<td class="signal">2 (1 подтв.), посл. 20.03.26</td>
+<td class="check"><b>Механика</b> ×2 — осмотр на разрывы, трещины, швы, крепления<div class="ex">«Брак материала. Отверстие на шве сцепки»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">44</td><td class="cb"><span class="box"></span></td>
+<td class="cell">А14-9-3</td><td class="sku">46875</td>
+<td>Вибратор Mystim Daring Danny силиконовый с электростимуляцией, черный, 27 см</td><td class="qty">1</td>
+<td class="signal">2 (2 подтв.), посл. 13.02.25</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«не реагирует на кнопки даже после двух часов зарядки, индикатор а…»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">45</td><td class="cb"><span class="box"></span></td>
+<td class="cell">B1-1-1</td><td class="sku">12124-03</td>
+<td>Леденец Sosuчki, «Пенис Blue Curacao», средний, голубой, 80гр</td><td class="qty">20</td>
+<td class="signal">1 (1 подтв.), посл. 24.04.25</td>
+<td class="check"><b>Механика</b> — осмотр на разрывы, трещины, швы, крепления<div class="ex">«леденец треснул посередине»</div></td><td class="fact"></td><td></td></tr></tbody></table>
+
+<h2>2. Товары без ячейки в расходных ордерах — 80 поз. <span style="font-weight:normal;font-size:8pt;color:#666">(ячейку смотреть в 1С; отсортированы по числу случаев брака)</span></h2>
+<table><thead><tr><th></th><th>✓</th><th>Ячейка</th><th>Артикул</th><th>Наименование</th>
+<th>Ост., шт</th><th>Случаев брака</th><th>Что проверить</th><th>Брак, шт</th><th>Комментарий</th></tr></thead><tbody><tr class="prio"><td class="num">46</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">J2018-TR</td>
+<td>Вакуумно-волновой стимулятор клитора Satisfyer Traveler, силикон, баклажан, 10,7 см</td><td class="qty">1</td>
+<td class="signal">14 (14 подтв.), посл. 09.12.25</td>
+<td class="check"><b>Электроника</b> ×12 — включить, зарядить, прогнать все режимы<br><b>Упаковка</b> ×2 — состояние коробки/пакета, пломбы<div class="ex">«при переключении режим в большую сторону (кнопка +) скорости сбра…»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">47</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">LE-03</td>
+<td>Виброяйцо LOVENSE Lush 2, силикон, розовый, 18 см</td><td class="qty">10</td>
+<td class="signal">9 (8 подтв.), посл. 07.05.26</td>
+<td class="check"><b>Электроника</b> ×8 — включить, зарядить, прогнать все режимы<br><b>Связь/приложение</b> — сопряжение с приложением/пультом<div class="ex">«после нескольких использований перестал работать»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">48</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">LE-26</td>
+<td>Фрикционный фаллоимитатор с вибрацией LOVENSE Gravity, красный, силикон, 25,9 см</td><td class="qty">9</td>
+<td class="signal">6 (6 подтв.), посл. 24.02.26</td>
+<td class="check"><b>Электроника</b> ×5 — включить, зарядить, прогнать все режимы<br><b>Причина не указана</b> — общий осмотр<div class="ex">«игрушка не включалась»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">49</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">541302</td>
+<td>Стимулятор простаты Erotist Second, силикон, черный, 14 см</td><td class="qty">15</td>
+<td class="signal">5 (4 подтв.), посл. 10.04.26</td>
+<td class="check"><b>Электроника</b> ×4 — включить, зарядить, прогнать все режимы<br><b>Причина не указана</b> — общий осмотр<div class="ex">«Не реагирует на зарядное устройство, не включается.»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">50</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761051</td>
+<td>Реалистичный вибратор A-Toys by TOYFA Multi-Speed Nod, TPE, телесный, 20,5см</td><td class="qty">7</td>
+<td class="signal">5 (5 подтв.), посл. 03.07.26</td>
+<td class="check"><b>Электроника</b> ×4 — включить, зарядить, прогнать все режимы<br><b>Течь/материал</b> — протечки, липкость, пятна, запах<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">51</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">782003</td>
+<td>Виброяйцо и вибронасадка на палец JOS VITA, силикон, пудровые, 8,5 и 8 см</td><td class="qty">4</td>
+<td class="signal">5 (3 подтв.), посл. 26.03.26</td>
+<td class="check"><b>Электроника</b> ×4 — включить, зарядить, прогнать все режимы<br><b>Причина не указана</b> — общий осмотр<div class="ex">«Вибронасадка на палец показывает, что заряжена сразу при подключе…»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">52</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761041</td>
+<td>Нереалистичный вибратор A-Toys by TOYFA Mist, силикон, розовый, 25,4 см</td><td class="qty">2</td>
+<td class="signal">4 (2 подтв.), посл. 23.03.26</td>
+<td class="check"><b>Электроника</b> ×3 — включить, зарядить, прогнать все режимы<br><b>Причина не указана</b> — общий осмотр<div class="ex">«не вставляется батарейка из-за внутреннего шва»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">53</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">796001</td>
+<td>Вибратор с электростимуляцией PHYSICS GALVANI VIBE, силикон, розовый, 21 см</td><td class="qty">4</td>
+<td class="signal">4 (4 подтв.), посл. 21.11.25</td>
+<td class="check"><b>Электроника</b> ×3 — включить, зарядить, прогнать все режимы<br><b>Причина не указана</b> — общий осмотр<div class="ex">«брак - не включается, не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr class="prio"><td class="num">54</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">LE-45</td>
+<td>Дилдо-вибратор LOVENSE Mission 2 с технологией Touch-Sense, силикон, красный, 27,2 см</td><td class="qty">5</td>
+<td class="signal">4 (2 подтв.), посл. 26.02.26</td>
+<td class="check"><b>Электроника</b> ×3 — включить, зарядить, прогнать все режимы<br><b>Связь/приложение</b> — сопряжение с приложением/пультом<div class="ex">«Не включается, не заряжается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">55</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">456601</td>
+<td>Секс-машина F*ckBag MotorLovers by TOYFA, ABS, желтый, 36 см</td><td class="qty">11</td>
+<td class="signal">3 (2 подтв.), посл. 25.11.25</td>
+<td class="check"><b>Механика</b> ×2 — осмотр на разрывы, трещины, швы, крепления<br><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«рассклеившаяся»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">56</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761002</td>
+<td>Реалистичный вибратор A-Toys by TOYFA Plim, TPE, телесный, 19,5 см</td><td class="qty">5</td>
+<td class="signal">3 (3 подтв.), посл. 25.12.25</td>
+<td class="check"><b>Причина не указана</b> ×2 — общий осмотр<br><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«отсутствует вибрация, товар не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">57</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761026</td>
+<td>Нереалистичный вибратор A-Toys by TOYFA Dowk, силикон, фиолетовый, 17 см</td><td class="qty">5</td>
+<td class="signal">3 (2 подтв.), посл. 19.03.26</td>
+<td class="check"><b>Электроника</b> ×3 — включить, зарядить, прогнать все режимы<div class="ex">«Не работает вибрация»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">58</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">LE-07</td>
+<td>Нереалистичный вибратор LOVENSE Osci 2 G-spot, силикон, розовый, 22 см</td><td class="qty">3</td>
+<td class="signal">3 (3 подтв.), посл. 22.01.25</td>
+<td class="check"><b>Электроника</b> ×3 — включить, зарядить, прогнать все режимы<div class="ex">«Не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">59</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">LE-34</td>
+<td>Анальная втулка LOVENSE Hush 2 (M), силикон, черная, 13,5 см, Ø 4,4 см</td><td class="qty">5</td>
+<td class="signal">3 (3 подтв.), посл. 14.10.25</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<br><b>Причина не указана</b> — общий осмотр<div class="ex">«не работает, не вибрирует, не коннектится, заряжается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">60</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">274500</td>
+<td>Массажное аромамасло в виде свечи Shunga «Афродизия. Лепестки роз» (Aphrodisia. Rose Petals), 170 м</td><td class="qty">12</td>
+<td class="signal">2 (2 подтв.)</td>
+<td class="check"><b>Причина не указана</b> ×2 — общий осмотр</td><td class="fact"></td><td></td></tr>
+<tr><td class="num">61</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">4002774</td>
+<td>Виброяйцо Satisfyer Ribbed Petal Connect App с пультом ДУ, розовое, 7,8 см</td><td class="qty">5</td>
+<td class="signal">2 (1 подтв.), посл. 11.08.26</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«не работает зарядка»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">62</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761023</td>
+<td>Нереалистичный вибратор A-Toys by TOYFA Folly, силикон, розовый, 16 см</td><td class="qty">3</td>
+<td class="signal">2 (2 подтв.), посл. 09.12.25</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«Брак поставки 3206798- виброэелемент и игрушка не работает, свето…»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">63</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761038</td>
+<td>Нереалистичный вибратор A-Toys by TOYFA Mika, силикон, розовый, 19,8 см</td><td class="qty">4</td>
+<td class="signal">2 (2 подтв.), посл. 24.12.24</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«включается, но не переключает режимы»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">64</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761048</td>
+<td>Реалистичный вибратор A-Toys by TOYFA Mang, TPE, телесный, 20 см</td><td class="qty">5</td>
+<td class="signal">2 (2 подтв.), посл. 24.09.25</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">65</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761049</td>
+<td>Реалистичный вибратор A-Toys by TOYFA Multi-Speed Rican, TPE, телесный, 22,5 см</td><td class="qty">3</td>
+<td class="signal">2 (2 подтв.), посл. 24.09.25</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">66</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761050</td>
+<td>Реалистичный вибратор A-Toys by TOYFA Toron, TPE, телесный, 21 см</td><td class="qty">16</td>
+<td class="signal">2 (2 подтв.), посл. 24.09.25</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">67</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761064</td>
+<td>Вибронасадка для душа A-Toys by TOYFA Wesea, силикон, фиолетовый, 20,5 см</td><td class="qty">5</td>
+<td class="signal">2 (1 подтв.), посл. 6.00.11</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«&quot;Не заряжается, хотя на выходе кабеля напряжение показывает 5.2 В…»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">68</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">782017</td>
+<td>Эрекционное кольцо на пенис JOS GOOD BUNNY, силикон, фиолетовый, 9 см</td><td class="qty">6</td>
+<td class="signal">2 (2 подтв.), посл. 04.09.25</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">69</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">783039</td>
+<td>Вакуум-волновой стимулятор клитора JOS Danvi, силикон, розовый, 21,5 см</td><td class="qty">4</td>
+<td class="signal">2 (1 подтв.), посл. 06.06.25</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«не рабочий, после зарядки не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">70</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">8269</td>
+<td>Набор Shunga «Шаловливая Гейша» (Naughty Geisha), 4 средства + вибропуля</td><td class="qty">12</td>
+<td class="signal">2 (2 подтв.), посл. 11.11.25</td>
+<td class="check"><b>Течь/материал</b> — протечки, липкость, пятна, запах<br><b>Механика</b> — осмотр на разрывы, трещины, швы, крепления<div class="ex">«Пришли протекшие»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">71</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">955051-XL</td>
+<td>Платье Glossy Bessie из материала Wetlook, красный, XL</td><td class="qty">3</td>
+<td class="signal">2 (2 подтв.), посл. 06.02.26</td>
+<td class="check"><b>Течь/материал</b> ×2 — протечки, липкость, пятна, запах<div class="ex">«платья в пятнах»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">72</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">J2018-57-1</td>
+<td>Вакуум-волновой стимулятор клитора с вибрацией Satisfyer Love Triangle Connect App, силикон, черный, 8,8 см</td><td class="qty">3</td>
+<td class="signal">2 (2 подтв.), посл. 10.09.25</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«товар приобретали у Вас в апреле для нашего клиента-До этой недел…»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">73</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">J2018-98</td>
+<td>Вибровкладыш в трусики Satisfyer Sexy Secret Connect App, силикон, бордовый, 8,5 см</td><td class="qty">7</td>
+<td class="signal">2 (2 подтв.), посл. 12.12.24</td>
+<td class="check"><b>Электроника</b> ×2 — включить, зарядить, прогнать все режимы<div class="ex">«не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">74</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">LE-17-1</td>
+<td>Анальная втулка LOVENSE Hush 2 (L), силикон, черная, 15 см, Ø 5,7 см</td><td class="qty">5</td>
+<td class="signal">2 (1 подтв.), посл. 11.03.26</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<br><b>Причина не указана</b> — общий осмотр<div class="ex">«Перестала реагировать на нажатия и управление с телефона, хотя ин…»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">75</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">10713</td>
+<td>Портупея Pecado BDSM, «Осанка», натуральная кожа, чёрная</td><td class="qty">2</td>
+<td class="signal">1 (0 подтв.), посл. 12.12.24</td>
+<td class="check"><b>Упаковка</b> — состояние коробки/пакета, пломбы<div class="ex">«ржавые застёжки+коробка вспучилась»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">76</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">12037-03</td>
+<td>Массажная свеча Pecado BDSM, Tobacco Vanilla 35мл.</td><td class="qty">14</td>
+<td class="signal">1 (1 подтв.), посл. 10.07.25</td>
+<td class="check"><b>Срок годности</b> — проверить срок годности<div class="ex">«срок годности»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">77</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">2210</td>
+<td>Масло массажное для тела Shunga «Кокосовое волнение» (Coconut Thrills), разогревающее, 100 мл.</td><td class="qty">35</td>
+<td class="signal">1 (1 подтв.), посл. 26.06.25</td>
+<td class="check"><b>Течь/материал</b> — протечки, липкость, пятна, запах<div class="ex">«масло протекает, слюда не закреплена»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">78</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">271006</td>
+<td>Масло массажное для тела Shunga «Чувство. Лаванда» (Sensation. Lavender), 240 мл.</td><td class="qty">3</td>
+<td class="signal">1 (1 подтв.), посл. 10.02.25</td>
+<td class="check"><b>Упаковка</b> — состояние коробки/пакета, пломбы<div class="ex">«не закрывается крышка»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">79</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">310102</td>
+<td>Наручники Anonymo #0102, PU кожа, принт, 19,5 см</td><td class="qty">2</td>
+<td class="signal">1 (0 подтв.)</td>
+<td class="check"><b>Причина не указана</b> — общий осмотр</td><td class="fact"></td><td></td></tr>
+<tr><td class="num">80</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">358005</td>
+<td>Анальный вибратор ToDo by Toyfa Adore, влагостойкий, силикон, синий, 15 см, Ø 3,1 см</td><td class="qty">11</td>
+<td class="signal">1 (1 подтв.), посл. 22.01.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«отсутствует вибрация, товар не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">81</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">359001</td>
+<td>Вибростимулятор простаты ToDo by Toyfa Proman, силикон, красный, 12,5 см</td><td class="qty">12</td>
+<td class="signal">1 (1 подтв.), посл. 09.12.24</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«Не работает вибрация»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">82</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">4007649</td>
+<td>Гибкий вибратор с фиксацией формы Satisfyer Elastic Game, синий, 20 см</td><td class="qty">5</td>
+<td class="signal">1 (1 подтв.), посл. 22.01.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«отсутствует вибрация, товар не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">83</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">457701</td>
+<td>Вибратор с клиторальным стимулятором Flovetta Aster, силикон, желтый, 22 см</td><td class="qty">2</td>
+<td class="signal">1 (1 подтв.), посл. 26.12.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«все 3 не работаюn не заряжаются»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">84</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">481002</td>
+<td>Нереалистичный вибратор WANAME D-SPLASH Tornado, силикон, черный, 25 см</td><td class="qty">2</td>
+<td class="signal">1 (1 подтв.), посл. 09.07.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">85</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">541311</td>
+<td>Анальная вибровтулка Erotist Arrow, черный, силикон, 8,5 см</td><td class="qty">5</td>
+<td class="signal">1 (0 подтв.), посл. 22.09.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не выключаеттся вибрация»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">86</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">561032</td>
+<td>Многофункциональный вибратор L&#x27;Eroina Cycla, силикон, голубой, 20 см</td><td class="qty">7</td>
+<td class="signal">1 (1 подтв.), посл. 21.11.24</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">87</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">565002</td>
+<td>Вибратор для пар L`Eroina APP LANGOU  с управлением от приложения и пульта, силикон, синий, 16,5 см </td><td class="qty">1</td>
+<td class="signal">1 (1 подтв.), посл. 27.02.25</td>
+<td class="check"><b>Упаковка</b> — состояние коробки/пакета, пломбы<div class="ex">«Не было в коробке, когда принимали товар»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">88</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">593002</td>
+<td>Вакуум-волновой стимулятор eroTEQ by TOYFA Molette, силикон, розовый, 13 см</td><td class="qty">18</td>
+<td class="signal">1 (1 подтв.), посл. 11.08.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«Он не включается, нет световой индикации при зарядке»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">89</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761001</td>
+<td>Реалистичный вибратор A-Toys by TOYFA Frem, TPE, телесный, 19 см</td><td class="qty">7</td>
+<td class="signal">1 (1 подтв.), посл. 22.01.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«застревает батарейка»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">90</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761018</td>
+<td>Реалистичный вибратор A-Toys by TOYFA Hook, TPE, телесный, 23 см</td><td class="qty">12</td>
+<td class="signal">1 (1 подтв.)</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«уже отдавали на возврат, поправили и вернули назад, вытаскивается…»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">91</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761019</td>
+<td>Реалистичный вибратор A-Toys by TOYFA Fand, TPE, телесный, 17,5 см</td><td class="qty">3</td>
+<td class="signal">1 (1 подтв.), посл. 22.01.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«отсутствует вибрация, товар не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">92</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761030</td>
+<td>Реалистичный фаллоимитатор A-Toys by TOYFA Twint, силикон, телесный, 19,5 см</td><td class="qty">1</td>
+<td class="signal">1 (0 подтв.), посл. 14.11.24</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не работает вибропуля»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">93</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761034</td>
+<td>Вибратор с клиторальным стимулятором A-Toys by TOYFA High-Tech fantasy, TPE, фиолетовый, 22 см</td><td class="qty">4</td>
+<td class="signal">1 (1 подтв.), посл. 24.09.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">94</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">761055</td>
+<td>Нереалистичный вибратор A-Toys by TOYFA Mastick, ABS пластик, розовый, 18 см, Ø 2,9 см</td><td class="qty">1</td>
+<td class="signal">1 (1 подтв.), посл. 28.05.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">95</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">764003</td>
+<td>Виброяйцо A-Toys by TOYFA Eggo с пультом ДУ, силикон, розовый, 6 см</td><td class="qty">5</td>
+<td class="signal">1 (0 подтв.), посл. 01.11.24</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«Само яйцо работают пульт включается, но не конектиться с яйцом, б…»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">96</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">764021</td>
+<td>Виброяйцо A-Toys by TOYFA Purr, силикон, фиолетовый, 18 см</td><td class="qty">4</td>
+<td class="signal">1 (1 подтв.), посл. 22.01.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«отсутствует вибрация, товар не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">97</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">765006</td>
+<td>Нереалистичный вибратор A-Toys by TOYFA Una, силикон, розовый, 19,8 см</td><td class="qty">3</td>
+<td class="signal">1 (1 подтв.), посл. 09.12.24</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«Не работает вибрация»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">98</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">765007</td>
+<td>Стимулятор точки G A-Toys by TOYFA Ida, силикон, розовый, 19 см</td><td class="qty">6</td>
+<td class="signal">1 (1 подтв.), посл. 09.12.24</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«Не работает вибрация»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">99</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">768024</td>
+<td>Виброкольцо на пенис A-Toys by TOYFA Brid, силикон, черный, 6,3, Ø 3,1 </td><td class="qty">2</td>
+<td class="signal">1 (1 подтв.), посл. 22.01.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">100</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">768036</td>
+<td>Лассо на пенис A-Toys by TOYFA Ect, силикон, черный, 14 см</td><td class="qty">3</td>
+<td class="signal">1 (0 подтв.), посл. 01.11.24</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не работает кнопка включения»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">101</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">769002</td>
+<td>Эрекционное кольцо на пенис A-Toys by TOYFA Rabbi, силикон, розовый, Ø 2,5 см</td><td class="qty">1</td>
+<td class="signal">1 (1 подтв.), посл. 09.11.24</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«Нет устойчивой вибрации Не фиксируется кнопка вкл»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">102</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">782005</td>
+<td>Вибронасадка на палец JOS NOVA для анальной стимуляции, силикон, розовая, 9 см</td><td class="qty">3</td>
+<td class="signal">1 (0 подтв.), посл. 25.09.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«батарейки окислились, пуля не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">103</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">782007</td>
+<td>Вибронасадка на палец JOS DANKO для точки G, силикон, голубая, 9,5 см</td><td class="qty">3</td>
+<td class="signal">1 (1 подтв.), посл. 24.12.24</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">104</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">783001</td>
+<td>Вибратор c клиторальным стимулятором JOS TATY с пульсирующими шариками, силикон, фиолетовый, 21,5 см</td><td class="qty">3</td>
+<td class="signal">1 (1 подтв.), посл. 06.06.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«Не смогла включить.»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">105</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">783008</td>
+<td>Стимулятор для точки G JOS GAELL, с гибкой головкой, силикон, фиолетовый, 21,6 см.      </td><td class="qty">2</td>
+<td class="signal">1 (0 подтв.), посл. 01.11.24</td>
+<td class="check"><b>Прочее</b> — общий осмотр<div class="ex">«Розовый отлично, фиолетовый не але»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">106</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">783034</td>
+<td>Вибратор JOS Redli с двигающейся головкой, силикон, красный, 21 см</td><td class="qty">2</td>
+<td class="signal">1 (1 подтв.), посл. 10.02.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не работает вибрация»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">107</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">783035</td>
+<td>Стимулятор 2 в 1 JOS Kisom, силикон, фиолетовый, 24 см</td><td class="qty">7</td>
+<td class="signal">1 (1 подтв.), посл. 20.02.26</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«порвалась мембрана»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">108</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">783048</td>
+<td>Виброкролик с функцией Come-Hither JOS Fingie, силикон, фиолетовый, 21,6 см</td><td class="qty">4</td>
+<td class="signal">1 (1 подтв.), посл. 28.10.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«вибрирует только клиторальный отросток, при нажатии на другие кно…»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">109</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">783050</td>
+<td>Вибратор поворотный c вакуумной стимуляцией JOS Spinser, силикон, фиолетовый, 23 см</td><td class="qty">2</td>
+<td class="signal">1 (1 подтв.), посл. 22.07.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">110</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">783058</td>
+<td>Вибратор с вакуумной стимуляцией и язычком JOS Pitti, силикон, фиолетовый, 24 см </td><td class="qty">4</td>
+<td class="signal">1 (1 подтв.), посл. 06.06.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">111</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">893035</td>
+<td>Мастурбатор реалистичный Juicy Pussy by TOYFA Brigitte, TPE, телесный</td><td class="qty">7</td>
+<td class="signal">1 (1 подтв.), посл. 23.05.25</td>
+<td class="check"><b>Упаковка</b> — состояние коробки/пакета, пломбы<div class="ex">«нарушена упаковка во внутренней части, так же сама игрушка словно…»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">112</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">901402-5</td>
+<td>Анально-вагинальный вибратор Black&amp;Red by TOYFA, силикон, черный, 19,5 см</td><td class="qty">2</td>
+<td class="signal">1 (1 подтв.), посл. 29.05.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«вибропуля не работает, а батарейки греются»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">113</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">955022-M</td>
+<td>Платье Glossy Naomi из материала Wetlook, черное, M</td><td class="qty">1</td>
+<td class="signal">1 (1 подтв.), посл. 06.06.25</td>
+<td class="check"><b>Механика</b> — осмотр на разрывы, трещины, швы, крепления<div class="ex">«левая лямка перекручена, вверху правого бокового шва с изнанки не…»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">114</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">955027-S</td>
+<td>Комплект Glossy Brianna из материала Wetlook, черный, S</td><td class="qty">9</td>
+<td class="signal">1 (1 подтв.), посл. 21.11.24</td>
+<td class="check"><b>Упаковка</b> — состояние коробки/пакета, пломбы<div class="ex">«маркировка»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">115</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">955044-M</td>
+<td>Боди Glossy Stacy из материала Wetlook, M</td><td class="qty">5</td>
+<td class="signal">1 (1 подтв.)</td>
+<td class="check"><b>Упаковка</b> — состояние коробки/пакета, пломбы<div class="ex">«кривой пакет»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">116</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">955045-M</td>
+<td>Боди Glossy Sherrie из материала Wetlook, M</td><td class="qty">44</td>
+<td class="signal">1 (1 подтв.), посл. 22.09.25</td>
+<td class="check"><b>Механика</b> — осмотр на разрывы, трещины, швы, крепления<div class="ex">«нет заклепки»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">117</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">955061-S</td>
+<td>Платье Glossy Elisia с пышной юбкой из материала Wetlook, черное, S</td><td class="qty">4</td>
+<td class="signal">1 (1 подтв.)</td>
+<td class="check"><b>Упаковка</b> — состояние коробки/пакета, пломбы<div class="ex">«кривой пакет»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">118</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">983051</td>
+<td>Вибропуля  с пультом управления RealStick CALIBER, черная</td><td class="qty">3</td>
+<td class="signal">1 (1 подтв.), посл. 28.10.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«выключается через минуту работы»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">119</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">988001</td>
+<td>Ротатор с пультом ДУ RealStick Elite REMOTE Shane, TPR, телесный, 10 режимов ротации, 22 см</td><td class="qty">7</td>
+<td class="signal">1 (0 подтв.), посл. 08.12.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не реагирует пульт, игрушко отдельно тоже не включается»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">120</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">LE-01/1</td>
+<td>USB Bluetooth адаптер LOVENSE, ABS пластик, белый, 2 см</td><td class="qty">7</td>
+<td class="signal">1 (0 подтв.), посл. 17.07.25</td>
+<td class="check"><b>Связь/приложение</b> — сопряжение с приложением/пультом<div class="ex">«не коннектит игрушку с компьюетром»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">121</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">LE-05</td>
+<td>Вибропуля LOVENSE Ambi, силикон, розовая, 8,6 см</td><td class="qty">14</td>
+<td class="signal">1 (1 подтв.), посл. 10.06.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«Не заряжается, что-то с зарядкой»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">122</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">LE-13</td>
+<td>Многофункциональный стимулятор для пар LOVENSE Dolce (Quake), силикон, розовый, 20 см</td><td class="qty">20</td>
+<td class="signal">1 (0 подтв.), посл. 08.05.26</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">123</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">LE-23</td>
+<td>Тайный мини-вибратор LOVENSE Exomoon, силикон, чёрный, 8,8 см</td><td class="qty">5</td>
+<td class="signal">1 (1 подтв.), посл. 02.06.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«пуля очень сильно вибрирует, хотя написано что вибрация как раз т…»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">124</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">LE-37</td>
+<td>Вибромастурбатор нереалистичный LOVENSE Solace, TPE, черный, 29,4 см</td><td class="qty">5</td>
+<td class="signal">1 (1 подтв.), посл. 07.07.25</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr>
+<tr><td class="num">125</td><td class="cb"><span class="box"></span></td>
+<td class="cell">____</td><td class="sku">LE-61</td>
+<td>Виброяйцо LOVENSE Lush Mini, силикон, розовый, 9,6 см</td><td class="qty">10</td>
+<td class="signal">1 (1 подтв.)</td>
+<td class="check"><b>Электроника</b> — включить, зарядить, прогнать все режимы<div class="ex">«не работает»</div></td><td class="fact"></td><td></td></tr></tbody></table>
+
+<div class="footer">«Случаев брака» — записи реестра по артикулу за 2024–2026: всего (из них «Брак подтверждён»), дата последнего случая.
+«Ост., шт» — остаток на «Москва Основной» на 16.08.2026. Найденную некондицию заводить партией в WMS (склад «Москва некондиция»).</div>
+<div class="sign"><div>Проверил (ФИО, подпись)</div><div>Дата проверки</div><div>Принял (ФИО, подпись)</div></div>
+</body></html>

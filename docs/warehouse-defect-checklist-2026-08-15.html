@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Чек-лист проверки на некондицию — 15.08.2026</title>
+<style>
+  @page { size: A4; margin: 12mm 10mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "PT Sans", "DejaVu Sans", Arial, sans-serif; font-size: 9.5pt; color: #1a1a1a; margin: 0; }
+  h1 { font-size: 15pt; margin: 0 0 2mm; }
+  h2 { font-size: 11pt; margin: 5mm 0 2mm; }
+  .meta { color: #555; font-size: 8.5pt; margin-bottom: 3mm; line-height: 1.45; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 0.6pt solid #999; padding: 1.6mm 1.8mm; vertical-align: top; text-align: left; }
+  th { background: #ececec; font-size: 8pt; text-transform: uppercase; letter-spacing: .02em; }
+  tr { page-break-inside: avoid; }
+  td.num { text-align: right; color: #777; width: 6mm; }
+  td.cb { width: 7mm; text-align: center; }
+  .box { display: inline-block; width: 4mm; height: 4mm; border: 1pt solid #333; border-radius: 0.6mm; }
+  td.cell { width: 17mm; font-weight: 700; font-size: 10.5pt; white-space: nowrap; }
+  td.sku { width: 24mm; font-family: "PT Mono", "DejaVu Sans Mono", monospace; font-size: 8.5pt; }
+  td.qty { width: 12mm; text-align: center; font-weight: 700; }
+  td.signal { width: 34mm; font-size: 8pt; color: #333; }
+  td.fact { width: 13mm; }
+  td.defect-found { width: 15mm; }
+  .prio { background: #fdeaea; }
+  .prio td.cell, .prio .tag-def { color: #a02020; }
+  .tag { display: inline-block; border-radius: 1mm; padding: 0 1.2mm; font-size: 7.5pt; font-weight: 700; margin-right: 1mm; }
+  .tag-def { background: #f6d3d3; color: #8c1a1a; }
+  .tag-short { background: #d9e6f7; color: #1c4d8f; }
+  .note { color: #666; font-size: 8pt; }
+  .footer { margin-top: 5mm; font-size: 8.5pt; color: #444; }
+  .sign { margin-top: 8mm; display: flex; gap: 12mm; font-size: 9pt; }
+  .sign div { flex: 1; border-top: 0.8pt solid #333; padding-top: 1.5mm; }
+</style>
+</head>
+<body>
+
+<h1>Чек-лист проверки товара на некондицию</h1>
+<div class="meta">
+  Склад «Москва Основной» · составлен 15.08.2026 по данным 1С/сайта (остатки, партии некондиции, недоборы на сборке).<br>
+  <b>Критерии отбора:</b> товар с остатком на основном складе, который засветился в некондиции и/или в недоборах (отменённые строки заказов при сборке).
+  Ячейки — из расходных ордеров 1С (последняя ячейка по строкам с 08.08.2026). Строки отсортированы по ячейкам — как маршрут обхода.<br>
+  <span class="tag tag-def">НЕКОНДИЦИЯ</span> — были партии некондиции по товару&nbsp;·&nbsp;
+  <span class="tag tag-short">НЕДОБОР</span> — строки заказов, отменённые 1С на сборке. Красным выделен товар с обоими сигналами.
+</div>
+
+<h2>1. Товары с известной ячейкой (маршрут обхода)</h2>
+<table>
+  <thead>
+    <tr>
+      <th></th><th>✓</th><th>Ячейка</th><th>Артикул</th><th>Наименование</th>
+      <th>Ост., шт</th><th>Сигнал</th><th>Факт, шт</th><th>Некондиция, шт</th><th>Комментарий</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td class="num">1</td><td class="cb"><span class="box"></span></td><td class="cell">А1-1-2</td><td class="sku">541404</td><td>Лубрикант Erotist на водной основе FOREST FRUIT, 100 мл</td><td class="qty">5</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 14.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">2</td><td class="cb"><span class="box"></span></td><td class="cell">А1-2-1</td><td class="sku">541435</td><td>Крем Erotist для мужчин LONG STAY, продлевающий, 50 мл</td><td class="qty">28</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>2 строки, посл. 14.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">3</td><td class="cb"><span class="box"></span></td><td class="cell">А1-5-3</td><td class="sku">6400</td><td>Лубрикант Shunga Toko Aroma, вишня, 165 мл</td><td class="qty">84</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 13.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">4</td><td class="cb"><span class="box"></span></td><td class="cell">А1-8-2</td><td class="sku">14014</td><td>Мусс «CLEAR TOY» очищающий, 150 мл</td><td class="qty">2</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 12.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">5</td><td class="cb"><span class="box"></span></td><td class="cell">А2-8-1</td><td class="sku">301</td><td>Пролонгирующий лубрикант Splashglide LONGPLAY prolong, 50 мл</td><td class="qty">2</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>2 строки, посл. 07.07</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">6</td><td class="cb"><span class="box"></span></td><td class="cell">А2-9-2</td><td class="sku">0113</td><td>Лубрикант ESKA 2 в 1 на масляной основе, 75 мл</td><td class="qty">19</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 06.07</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">7</td><td class="cb"><span class="box"></span></td><td class="cell">А2-9-3</td><td class="sku">0052</td><td>Гель ESKA «Летняя ночь» для интимного ухода, 75 мл</td><td class="qty">6</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 07.07</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">8</td><td class="cb"><span class="box"></span></td><td class="cell">A5-4-3</td><td class="sku">582019</td><td>Реалистичный фаллоимитатор RealStick Nude Rolo, PVC, 17 см</td><td class="qty">3</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 06.07</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">9</td><td class="cb"><span class="box"></span></td><td class="cell">A5-7-2</td><td class="sku">456604</td><td>Секс-машина MotorLovers by TOYFA Sekster, 29 см</td><td class="qty">11</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 30.03</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">10</td><td class="cb"><span class="box"></span></td><td class="cell">A5-8-4</td><td class="sku">583007</td><td>Реалистичный фаллоимитатор My Babe My Darling, TPE, 22 см</td><td class="qty">28</td><td class="signal"><span class="tag tag-def">НЕКОНДИЦИЯ</span>2 партии, 12.08 (порвана/помята упаковка)</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">11</td><td class="cb"><span class="box"></span></td><td class="cell">A7-6-2</td><td class="sku">704002</td><td>Верёвка для бондажа TOYFA Theatre, красная, 1000 см</td><td class="qty">2</td><td class="signal"><span class="tag tag-def">НЕКОНДИЦИЯ</span>1 партия, 12.08 (порвана упаковка)</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">12</td><td class="cb"><span class="box"></span></td><td class="cell">A7-8-4</td><td class="sku">310009</td><td>Шлепалка Anonymo #0009, полиэстер, 37 см</td><td class="qty">4</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 02.06</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">13</td><td class="cb"><span class="box"></span></td><td class="cell">А8-2-3</td><td class="sku">LE-10</td><td>Виброяйцо LOVENSE Lush 3, розовый, 18 см</td><td class="qty">10</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 09.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">14</td><td class="cb"><span class="box"></span></td><td class="cell">А8-3-3</td><td class="sku">LE-49</td><td>Виброяйцо LOVENSE Lush 4, розовый, 18,1 см</td><td class="qty">28</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>2 строки, посл. 09.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">15</td><td class="cb"><span class="box"></span></td><td class="cell">А8-5-1</td><td class="sku">LE-68</td><td>Двухголовочный клиторальный вибратор Lovense Fizz, 12,5 см</td><td class="qty">2</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 11.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">16</td><td class="cb"><span class="box"></span></td><td class="cell">А10-1-2</td><td class="sku">912064</td><td>Анальная втулка Sexus Glass, стекло, 14 см</td><td class="qty">1</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 02.07</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">17</td><td class="cb"><span class="box"></span></td><td class="cell">А11-2-2</td><td class="sku">731440</td><td>Анальный фаллоимитатор POPO Pleasure by TOYFA Serpens, M</td><td class="qty">3</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>2 строки, посл. 12.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">18</td><td class="cb"><span class="box"></span></td><td class="cell">А11-4-1</td><td class="sku">358003</td><td>Анальная вибровтулка ToDo by Toyfa Bland, мятный, 12 см</td><td class="qty">3</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 02.07</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">19</td><td class="cb"><span class="box"></span></td><td class="cell">А13-6-3</td><td class="sku">691009</td><td>Вибратор-пульсатор Mr.Baton RealMotion, силикон, 22 см</td><td class="qty">42</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 11.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">20</td><td class="cb"><span class="box"></span></td><td class="cell">А14-3-2</td><td class="sku">FF000986PU01</td><td>Шарик вагинальный Fun Factory SMARTBALL UNO, сиреневый</td><td class="qty">5</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 12.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">21</td><td class="cb"><span class="box"></span></td><td class="cell">А14-3-3</td><td class="sku">FF001091MG01</td><td>Вибропуля Fun Factory Bijou, розовый</td><td class="qty">1</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 12.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+  </tbody>
+</table>
+
+<h2>2. Товары без ячейки в расходных ордерах <span class="note">(ячейку смотреть в 1С; с 08.08 в ордерах не встречались)</span></h2>
+<table>
+  <thead>
+    <tr>
+      <th></th><th>✓</th><th>Ячейка</th><th>Артикул</th><th>Наименование</th>
+      <th>Ост., шт</th><th>Сигнал</th><th>Факт, шт</th><th>Некондиция, шт</th><th>Комментарий</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="prio"><td class="num">22</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">701009</td><td><b>Наручники TOYFA Theatre, PU кожа, чёрный, 26,5 см</b> — оба сигнала</td><td class="qty">1</td><td class="signal"><span class="tag tag-def">НЕКОНДИЦИЯ</span>12.08 (упаковка) + <span class="tag tag-short">НЕДОБОР</span>31.07</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">23</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">LE-21</td><td>Сменный рукав для Max 2, TPE, прозрачный, 24 см</td><td class="qty">9</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>3 строки, посл. 12.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">24</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">LE-61</td><td>Виброяйцо LOVENSE Lush Mini, розовый, 9,6 см</td><td class="qty">10</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 12.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">25</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">FF000978BK01</td><td>Вибратор с клит. стимулятором Fun Factory MiSS BI, чёрный</td><td class="qty">15</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 08.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">26</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">104</td><td>Анальный лубрикант Splashglide ANAL anesthetic, 600 мл</td><td class="qty">4</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 08.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">27</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">117022</td><td>Кукла надувная Dolls-X by TOYFA Jennifer, 150 см</td><td class="qty">6</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 07.08</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">28</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">181</td><td>Презервативы Ganzo Invisible, супертонкие, 15 шт</td><td class="qty">5</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 23.07</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">29</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">44161</td><td>Гель-лубрикант HOT Bio Sensitive, 100 мл</td><td class="qty">3</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 23.07</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">30</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">CS.004-L</td><td>Насадка реалистичная KOKOS COCK SLEEVE 004-L, TPE</td><td class="qty">4</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 23.07</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">31</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">0038</td><td>Лубрикант ESKA на водной основе, с дозатором, 200 мл</td><td class="qty">3</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 09.07</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">32</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">761023</td><td>Нереалистичный вибратор A-Toys by TOYFA Folly, розовый, 16 см</td><td class="qty">3</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 29.06</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">33</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">901017-9</td><td>Двусторонний вибратор Black&amp;Red by TOYFA, красный, 35 см</td><td class="qty">5</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 25.06</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">34</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">955031-M</td><td>Боди Glossy Alessandra, Wetlook, M</td><td class="qty">1</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 20.06</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">35</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">748040</td><td>Насадка на пенис XLover by TOYFA, с мошонкой, TPE, 16 см</td><td class="qty">2</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 20.06</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">36</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">5220</td><td>Крем-лубрикант Shunga «Дракон Сенситив», 60 мл</td><td class="qty">9</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 09.06</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+    <tr><td class="num">37</td><td class="cb"><span class="box"></span></td><td class="cell">____</td><td class="sku">FF000970MG01</td><td>Вибратор кролик Fun Factory LADY BI, пурпурный, 22 см</td><td class="qty">5</td><td class="signal"><span class="tag tag-short">НЕДОБОР</span>1 строка, 04.06</td><td class="fact"></td><td class="defect-found"></td><td></td></tr>
+  </tbody>
+</table>
+
+<div class="footer">
+  Итого 37 позиций: 21 с ячейкой, 16 — ячейку уточнить в 1С. «Ост., шт» — остаток на «Москва Основной» по учёту на 15.08.2026.
+  Найденную некондицию заводить партией в WMS (склад «Москва некондиция»), фактическое расхождение остатка — в комментарий.
+</div>
+
+<div class="sign">
+  <div>Проверил (ФИО, подпись)</div>
+  <div>Дата проверки</div>
+  <div>Принял (ФИО, подпись)</div>
+</div>
+
+</body>
+</html>

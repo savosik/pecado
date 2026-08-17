@@ -1,0 +1,624 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>Замены недоборов</title>
+<style>
+  :root {
+    --paper: #FFFFFF;
+    --panel: #F4F6F8;
+    --ink: #22303C;
+    --muted: #5C6B78;
+    --line: #D9E0E6;
+    --accent: #9E1B32;
+    --accent-soft: #F8ECEF;
+    --good: #2E7D5B;
+    --good-soft: #EAF4EF;
+    --warn: #C77700;
+    --warn-soft: #FBF1E2;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #E8ECEF;
+    color: var(--ink);
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.45;
+  }
+
+  .page {
+    background: var(--paper);
+    width: 210mm;
+    min-height: 296mm;
+    margin: 0 auto 8mm;
+    padding: 16mm 17mm 14mm;
+    display: flex;
+    flex-direction: column;
+    gap: 7mm;
+    page-break-after: always;
+    box-shadow: 0 1px 6px rgba(34,48,60,.14);
+    position: relative;
+    overflow: hidden;
+  }
+
+  @media print {
+    body { background: var(--paper); }
+    .page { margin: 0; box-shadow: none; min-height: auto; height: 296mm; }
+  }
+
+  h1, h2, h3, .display { font-family: Georgia, 'Times New Roman', serif; }
+
+  .eyebrow {
+    font-size: 8pt;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+  }
+
+  h2 { font-size: 17pt; font-weight: 700; text-wrap: balance; }
+  h3 { font-size: 12pt; font-weight: 700; }
+  .lede { color: var(--muted); max-width: 62ch; }
+
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ── Титул ── */
+  .cover { justify-content: space-between; }
+  .cover-rule { height: 3px; background: var(--accent); width: 34mm; }
+  .cover h1 { font-size: 34pt; line-height: 1.08; text-wrap: balance; }
+  .cover .sub { font-size: 12.5pt; color: var(--muted); max-width: 58ch; margin-top: 4mm; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; }
+  .kpi {
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--accent);
+    padding: 4mm 4mm 3.5mm;
+    background: var(--paper);
+  }
+  .kpi .v { font-family: Georgia, serif; font-size: 19pt; font-weight: 700; }
+  .kpi .l { font-size: 8.5pt; color: var(--muted); margin-top: 1mm; line-height: 1.3; }
+  .kpi.good { border-top-color: var(--good); }
+  .kpi.good .v { color: var(--good); }
+  .kpi.accent .v { color: var(--accent); }
+
+  .cover-foot { display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid var(--line); padding-top: 4mm; font-size: 8.5pt; color: var(--muted); }
+
+  .badge {
+    display: inline-block;
+    background: var(--good-soft); color: var(--good);
+    font-size: 8pt; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    padding: 1mm 2.5mm; border-radius: 2px;
+  }
+
+  /* ── Общие блоки ── */
+  .section-head { display: flex; align-items: baseline; gap: 4mm; border-bottom: 1px solid var(--line); padding-bottom: 2.5mm; }
+  .section-head .pageno { margin-left: auto; font-size: 8pt; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+
+  figure { margin: 0; }
+  figure svg { display: block; max-width: 100%; height: auto; }
+  figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 2mm; max-width: 80ch; }
+
+  .cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; align-items: start; }
+  .cols-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4mm; align-items: stretch; }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); padding: 4mm; }
+  .panel h3 { margin-bottom: 2mm; }
+  .panel.accent { background: var(--accent-soft); border-color: #E4C4CB; }
+  .panel.good { background: var(--good-soft); border-color: #C4DFD2; }
+
+  ul.tight { list-style: none; display: flex; flex-direction: column; gap: 1.8mm; }
+  ul.tight li { padding-left: 4.5mm; position: relative; }
+  ul.tight li::before { content: ''; position: absolute; left: 0; top: .5em; width: 2.2mm; height: 2.2mm; background: var(--accent); }
+  ul.tight.good li::before { background: var(--good); }
+
+  table.data { border-collapse: collapse; width: 100%; font-size: 9pt; }
+  table.data th { text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border-bottom: 1.5px solid var(--ink); padding: 1.5mm 2mm; }
+  table.data td { border-bottom: 1px solid var(--line); padding: 1.8mm 2mm; vertical-align: top; }
+  table.data td.r, table.data th.r { text-align: right; }
+
+  .footer-note { margin-top: auto; border-top: 1px solid var(--line); padding-top: 2.5mm; font-size: 8pt; color: var(--muted); display: flex; justify-content: space-between; }
+
+  .quote {
+    border-left: 3px solid var(--accent);
+    padding: 2mm 0 2mm 4mm;
+    font-family: Georgia, serif;
+    font-size: 11.5pt;
+    color: var(--ink);
+  }
+</style>
+
+<style>@page { size: A4; margin: 0; }</style></head><body><!-- ═══════════ СТР. 1 — ТИТУЛ ═══════════ -->
+<div class="page cover">
+  <div>
+    <div style="display:flex; justify-content:space-between; align-items:baseline;">
+      <span class="eyebrow">Pecado · CRM + ERP-интеграция с 1С</span>
+      <span class="eyebrow" style="color:var(--muted); letter-spacing:.1em;">август 2026</span>
+    </div>
+    <div style="margin-top: 18mm;">
+      <div class="cover-rule"></div>
+      <h1 style="margin-top: 5mm;">Замены недоборов</h1>
+      <p class="sub">Когда при сборке заказа на складе не хватает товара, 1С отменяет строки —
+      и раньше клиент узнавал об этом из коробки. Теперь система сама подбирает замену,
+      персональный менеджер отправляет клиенту готовую подборку с его ценами,
+      а согласие клиента в один клик превращается в новый заказ.</p>
+    </div>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 780 74" role="img" aria-label="Пять шагов: отмена в 1С, подборка замен, письмо менеджера, выбор клиента, новый заказ в 1С." style="color:#22303C;">
+      <defs>
+        <marker id="ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#9E1B32"/>
+        </marker>
+      </defs>
+      <g font-family="Segoe UI, Arial, sans-serif" font-size="11">
+        <rect x="2" y="14" width="132" height="46" fill="#F8ECEF" stroke="#9E1B32" stroke-width="1.4"/>
+        <text x="68" y="33" text-anchor="middle" font-weight="600">Отмена в 1С</text>
+        <text x="68" y="48" text-anchor="middle" fill="#5C6B78" font-size="9.5">товара не хватило</text>
+        <line x1="134" y1="37" x2="160" y2="37" stroke="#9E1B32" stroke-width="1.4" marker-end="url(#ca)"/>
+        <rect x="162" y="14" width="132" height="46" fill="#FFFFFF" stroke="currentColor" stroke-width="1.3"/>
+        <text x="228" y="33" text-anchor="middle" font-weight="600">Подборка замен</text>
+        <text x="228" y="48" text-anchor="middle" fill="#5C6B78" font-size="9.5">автоматически</text>
+        <line x1="294" y1="37" x2="320" y2="37" stroke="#9E1B32" stroke-width="1.4" marker-end="url(#ca)"/>
+        <rect x="322" y="14" width="132" height="46" fill="#FFFFFF" stroke="currentColor" stroke-width="1.3"/>
+        <text x="388" y="33" text-anchor="middle" font-weight="600">Письмо менеджера</text>
+        <text x="388" y="48" text-anchor="middle" fill="#5C6B78" font-size="9.5">проверил и отправил</text>
+        <line x1="454" y1="37" x2="480" y2="37" stroke="#9E1B32" stroke-width="1.4" marker-end="url(#ca)"/>
+        <rect x="482" y="14" width="132" height="46" fill="#FFFFFF" stroke="currentColor" stroke-width="1.3"/>
+        <text x="548" y="33" text-anchor="middle" font-weight="600">Выбор клиента</text>
+        <text x="548" y="48" text-anchor="middle" fill="#5C6B78" font-size="9.5">одна страница</text>
+        <line x1="614" y1="37" x2="640" y2="37" stroke="#9E1B32" stroke-width="1.4" marker-end="url(#ca)"/>
+        <rect x="642" y="14" width="136" height="46" fill="#EAF4EF" stroke="#2E7D5B" stroke-width="1.5"/>
+        <text x="710" y="33" text-anchor="middle" font-weight="600">Новый заказ</text>
+        <text x="710" y="48" text-anchor="middle" fill="#5C6B78" font-size="9.5">в 1С обычным документом</text>
+      </g>
+    </svg>
+  </figure>
+
+  <div>
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="v num">22 <span style="font-size:10pt;">заказа/мес</span></div>
+        <div class="l">с недобором в августе — рост втрое за лето (июнь 8 → июль 14 → август 22)</div>
+      </div>
+      <div class="kpi good">
+        <div class="v num">75 %</div>
+        <div class="l">отменённых позиций система закрывает сама: 59 % — подбором замены, 16 % — «подождать прихода»</div>
+      </div>
+      <div class="kpi accent">
+        <div class="v num">9 <span style="font-size:10pt;">подзадач</span></div>
+        <div class="l">весь эпик — от базы данных до аналитики и протокола 1С — реализован за одну ночь</div>
+      </div>
+      <div class="kpi">
+        <div class="v num">3 779</div>
+        <div class="l">автотестов зелёные, из них 53 новых по домену; выкачено на dev-стенд</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cover-foot">
+    <span><span class="badge">Работает на dev</span>&nbsp;&nbsp;прод — после ревью, включается одним флагом</span>
+    <span>10 коммитов · 84 файла · ~10 400 строк</span>
+  </div>
+</div>
+
+<!-- ═══════════ СТР. 2 — ПРОБЛЕМА И РЕШЕНИЕ ═══════════ -->
+<div class="page">
+  <div class="section-head">
+    <span class="eyebrow">Проблема → решение</span>
+    <h2>Цепочка, которая раньше обрывалась на столе упаковщика</h2>
+    <span class="pageno num">2 / 5</span>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 780 300" role="img" aria-label="Было: после отмены строк в 1С клиент узнавал о недоборе из коробки. Стало: сайт создаёт подборку замен, менеджер отправляет письмо, клиент выбирает и создаётся новый заказ в 1С." style="color:#22303C;">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+        </marker>
+        <marker id="arr-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#9E1B32"/>
+        </marker>
+        <marker id="arr-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#2E7D5B"/>
+        </marker>
+      </defs>
+
+      <!-- Общая часть цепочки -->
+      <g font-family="Segoe UI, Arial, sans-serif" font-size="12">
+        <rect x="10" y="30" width="120" height="44" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="70" y="49" text-anchor="middle">Заказ клиента</text>
+        <text x="70" y="64" text-anchor="middle" fill="#5C6B78" font-size="10">сайт → 1С</text>
+
+        <line x1="130" y1="52" x2="168" y2="52" stroke="currentColor" stroke-width="1.4" marker-end="url(#arr)"/>
+
+        <rect x="170" y="30" width="120" height="44" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="230" y="49" text-anchor="middle">Сборка в 1С</text>
+        <text x="230" y="64" text-anchor="middle" fill="#5C6B78" font-size="10">контроль качества</text>
+
+        <line x1="290" y1="52" x2="328" y2="52" stroke="currentColor" stroke-width="1.4" marker-end="url(#arr)"/>
+
+        <rect x="330" y="30" width="140" height="44" fill="#F8ECEF" stroke="#9E1B32" stroke-width="1.6"/>
+        <text x="400" y="49" text-anchor="middle" font-weight="600">Товара не хватило</text>
+        <text x="400" y="64" text-anchor="middle" fill="#9E1B32" font-size="10">1С отменяет строки</text>
+      </g>
+
+      <!-- БЫЛО -->
+      <g font-family="Segoe UI, Arial, sans-serif" font-size="12">
+        <text x="500" y="22" font-size="10" font-weight="700" fill="#9E1B32" letter-spacing="2">БЫЛО</text>
+        <line x1="470" y1="45" x2="538" y2="45" stroke="#9E1B32" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arr-red)"/>
+        <text x="504" y="38" text-anchor="middle" font-size="9.5" fill="#9E1B32">тишина</text>
+        <rect x="540" y="26" width="228" height="40" fill="none" stroke="#9E1B32" stroke-width="1.4" stroke-dasharray="5 4"/>
+        <text x="654" y="42" text-anchor="middle" fill="#9E1B32">Клиент узнаёт из коробки</text>
+        <text x="654" y="57" text-anchor="middle" fill="#5C6B78" font-size="10">его покупатель уже внёс предоплату</text>
+      </g>
+
+      <!-- СТАЛО -->
+      <g font-family="Segoe UI, Arial, sans-serif" font-size="12">
+        <text x="30" y="128" font-size="10" font-weight="700" fill="#2E7D5B" letter-spacing="2">СТАЛО</text>
+        <line x1="400" y1="74" x2="400" y2="106" stroke="#2E7D5B" stroke-width="1.6" marker-end="url(#arr-green)"/>
+        <text x="408" y="94" font-size="9.5" fill="#2E7D5B">автоматически</text>
+
+        <rect x="290" y="108" width="220" height="46" fill="#EAF4EF" stroke="#2E7D5B" stroke-width="1.6"/>
+        <text x="400" y="127" text-anchor="middle" font-weight="600">Подборка замен</text>
+        <text x="400" y="142" text-anchor="middle" fill="#5C6B78" font-size="10">кандидаты, цены клиента, причины</text>
+
+        <line x1="400" y1="154" x2="400" y2="186" stroke="currentColor" stroke-width="1.4" marker-end="url(#arr)"/>
+        <text x="408" y="174" font-size="9.5" fill="#5C6B78">задача менеджеру · дедлайн до конца дня</text>
+
+        <rect x="290" y="188" width="220" height="46" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="400" y="207" text-anchor="middle" font-weight="600">Письмо от менеджера</text>
+        <text x="400" y="222" text-anchor="middle" fill="#5C6B78" font-size="10">проверил кандидатов, отправил в 1 клик</text>
+
+        <line x1="510" y1="211" x2="558" y2="211" stroke="currentColor" stroke-width="1.4" marker-end="url(#arr)"/>
+        <text x="534" y="204" text-anchor="middle" font-size="9.5" fill="#5C6B78">ссылка</text>
+
+        <rect x="560" y="188" width="208" height="46" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="664" y="207" text-anchor="middle" font-weight="600">Страница клиента</text>
+        <text x="664" y="222" text-anchor="middle" fill="#5C6B78" font-size="10">выбрал замену — ни одного поля ввода</text>
+
+        <line x1="664" y1="234" x2="664" y2="264" stroke="#2E7D5B" stroke-width="1.6" marker-end="url(#arr-green)"/>
+        <text x="672" y="252" font-size="9.5" fill="#2E7D5B">«Согласовать»</text>
+
+        <rect x="500" y="266" width="268" height="30" fill="#EAF4EF" stroke="#2E7D5B" stroke-width="1.6"/>
+        <text x="634" y="285" text-anchor="middle" font-weight="600">Новый заказ → в 1С обычным документом</text>
+
+        <text x="30" y="285" font-size="10" fill="#5C6B78">Исходный заказ не редактируется: замена — всегда новый заказ</text>
+        <text x="30" y="298" font-size="10" fill="#5C6B78">со ссылкой на исходный. Протокол обмена с 1С не изменился.</text>
+      </g>
+    </svg>
+    <figcaption>Красный пунктир — то, что происходило раньше: после отмены строк процесс молча обрывался.
+    Зелёная ветка — достроенная цепочка: от отмены до нового заказа, без единого действия «вручную с нуля».</figcaption>
+  </figure>
+
+  <div class="cols-3">
+    <div class="panel">
+      <div class="v num" style="font-family:Georgia,serif; font-size:16pt; font-weight:700;">2,5 %</div>
+      <div style="font-size:9pt; color:var(--muted);">заказов августа пришли с недобором — и доля растёт вместе с оборотом. Каждый такой случай — удар по репутации у оптовика, который уже продал товар своему покупателю.</div>
+    </div>
+    <div class="panel">
+      <div class="v num" style="font-family:Georgia,serif; font-size:16pt; font-weight:700;">93 строки</div>
+      <div style="font-size:9pt; color:var(--muted);">отменено за историю. Дефицит концентрированный: топ-14 товаров дали треть отмен — «Андрогерон» отменялся 6 раз. Повторные недоборы теперь автоматически уходят отчётом закупкам.</div>
+    </div>
+    <div class="panel">
+      <div class="v num" style="font-family:Georgia,serif; font-size:16pt; font-weight:700;">3–4 / нед</div>
+      <div style="font-size:9pt; color:var(--muted);">нагрузка на менеджеров. Поэтому это не отдельная роль, а пятиминутный контур в рутине персонального менеджера: система готовит всё, человек проверяет и нажимает кнопку.</div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:auto;">
+    <h3 style="margin-bottom:2.5mm;">Пять принципов, на которых стоит решение</h3>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 2mm 6mm; font-size:9pt;">
+      <div><b>Исходный заказ неприкосновенен.</b> Замена — всегда новый заказ со ссылкой на исходный: ничего не переписываем задним числом.</div>
+      <div><b>Цена — ограничение, не критерий.</b> Клиент уже перепродал товар по своей цене: коридор от −25 % до +10 %, и только индивидуальные цены.</div>
+      <div><b>Уценка того же товара сильнее любой замены.</b> «Идентичный, вмята коробка, −30 %» — это не замена вовсе.</div>
+      <div><b>Замена без объяснения не продаётся.</b> Каждый кандидат несёт причину, которую менеджер перешлёт клиенту, а клиент — своему покупателю.</div>
+      <div style="grid-column: 1 / -1;"><b>Менеджер проверяет, а не делает.</b> Система готовит всё; человек нужен там, где кандидатов нет или где важны отношения — VIP, повторный недобор, крупная сумма.</div>
+    </div>
+  </div>
+
+  <div class="footer-note"><span>Замены недоборов · Pecado</span><span>эпик sub-00…sub-09</span></div>
+</div>
+
+<!-- ═══════════ СТР. 3 — КАК РАБОТАЕТ ═══════════ -->
+<div class="page">
+  <div class="section-head">
+    <span class="eyebrow">Механика</span>
+    <h2>Кто что делает: система готовит, менеджер решает, клиент выбирает</h2>
+    <span class="pageno num">3 / 5</span>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 780 330" role="img" aria-label="Три дорожки: система автоматически создаёт подборку и следит за сроками; менеджер проверяет кандидатов и выбирает один из четырёх исходов; клиент выбирает замены на одной странице." style="color:#22303C;">
+      <defs>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+      <g font-family="Segoe UI, Arial, sans-serif" font-size="11.5">
+        <!-- Дорожки -->
+        <rect x="0" y="14" width="780" height="96" fill="#F4F6F8"/>
+        <rect x="0" y="122" width="780" height="96" fill="none" stroke="#D9E0E6"/>
+        <rect x="0" y="230" width="780" height="96" fill="#F4F6F8"/>
+
+        <text x="10" y="32" font-size="9" font-weight="700" letter-spacing="1.5" fill="#9E1B32">СИСТЕМА · автоматически</text>
+        <text x="10" y="140" font-size="9" font-weight="700" letter-spacing="1.5" fill="#9E1B32">МЕНЕДЖЕР · 5 минут в карточке</text>
+        <text x="10" y="248" font-size="9" font-weight="700" letter-spacing="1.5" fill="#9E1B32">КЛИЕНТ · одна страница, без входа</text>
+
+        <!-- Система -->
+        <rect x="14" y="46" width="150" height="48" fill="#FFFFFF" stroke="currentColor" stroke-width="1.3"/>
+        <text x="89" y="65" text-anchor="middle">Ловит отмену из 1С</text>
+        <text x="89" y="80" text-anchor="middle" fill="#5C6B78" font-size="9.5">order.updated, cancelled</text>
+
+        <line x1="164" y1="70" x2="196" y2="70" stroke="currentColor" stroke-width="1.3" marker-end="url(#a2)"/>
+
+        <rect x="198" y="46" width="170" height="48" fill="#FFFFFF" stroke="currentColor" stroke-width="1.3"/>
+        <text x="283" y="60" text-anchor="middle">Создаёт подборку:</text>
+        <text x="283" y="74" text-anchor="middle" fill="#5C6B78" font-size="9.5">кандидаты 8 слоёв, цены клиента,</text>
+        <text x="283" y="87" text-anchor="middle" fill="#5C6B78" font-size="9.5">черновик письма-извинения</text>
+
+        <line x1="368" y1="70" x2="400" y2="70" stroke="currentColor" stroke-width="1.3" marker-end="url(#a2)"/>
+
+        <rect x="402" y="46" width="160" height="48" fill="#FFFFFF" stroke="currentColor" stroke-width="1.3"/>
+        <text x="482" y="60" text-anchor="middle">Ставит задачу</text>
+        <text x="482" y="74" text-anchor="middle" fill="#5C6B78" font-size="9.5">дедлайн до конца дня;</text>
+        <text x="482" y="87" text-anchor="middle" fill="#5C6B78" font-size="9.5">крупная сумма — 2 часа</text>
+
+        <rect x="590" y="46" width="176" height="48" fill="#FFFFFF" stroke="currentColor" stroke-width="1.3"/>
+        <text x="678" y="60" text-anchor="middle">Дожим по таймеру</text>
+        <text x="678" y="74" text-anchor="middle" fill="#5C6B78" font-size="9.5">24 ч — напоминание · 48 ч —</text>
+        <text x="678" y="87" text-anchor="middle" fill="#5C6B78" font-size="9.5">«позвонить» · 7 дней — архив</text>
+
+        <!-- Менеджер -->
+        <line x1="482" y1="94" x2="482" y2="124" stroke="currentColor" stroke-width="1.3" marker-end="url(#a2)"/>
+
+        <rect x="198" y="150" width="360" height="52" fill="#FFFFFF" stroke="currentColor" stroke-width="1.3"/>
+        <text x="378" y="166" text-anchor="middle">Карточка недобора — всё решение на одном экране:</text>
+        <text x="378" y="181" text-anchor="middle" fill="#5C6B78" font-size="9.5">строки недобора · кандидаты с причинами · контекст клиента</text>
+        <text x="378" y="194" text-anchor="middle" fill="#5C6B78" font-size="9.5">(оборот, повторные недоборы) · правит письмо · снимает лишних</text>
+
+        <line x1="558" y1="176" x2="590" y2="176" stroke="currentColor" stroke-width="1.3" marker-end="url(#a2)"/>
+
+        <rect x="592" y="150" width="174" height="52" fill="#F8ECEF" stroke="#9E1B32" stroke-width="1.5"/>
+        <text x="679" y="165" text-anchor="middle" font-weight="600">Один из 4 исходов</text>
+        <text x="679" y="180" text-anchor="middle" fill="#5C6B78" font-size="9.5">отправить · подождать прихода</text>
+        <text x="679" y="193" text-anchor="middle" fill="#5C6B78" font-size="9.5">позвонить · закрыть без замены</text>
+
+        <!-- Клиент -->
+        <line x1="679" y1="202" x2="679" y2="232" stroke="currentColor" stroke-width="1.3" marker-end="url(#a2)"/>
+        <text x="686" y="222" font-size="9.5" fill="#5C6B78">письмо со ссылкой</text>
+
+        <rect x="402" y="258" width="364" height="56" fill="#FFFFFF" stroke="currentColor" stroke-width="1.3"/>
+        <text x="584" y="274" text-anchor="middle">«Замена по заказу №…» — радио-варианты с его ценами,</text>
+        <text x="584" y="289" text-anchor="middle" fill="#5C6B78" font-size="9.5">уценка выделена, «подождать прихода», «без замены»; количество</text>
+        <text x="584" y="302" text-anchor="middle" fill="#5C6B78" font-size="9.5">не больше отменённого; итого «X ₽ вместо Y ₽»</text>
+
+        <line x1="400" y1="286" x2="368" y2="286" stroke="#2E7D5B" stroke-width="1.6" marker-end="url(#a2)"/>
+        <rect x="180" y="262" width="186" height="48" fill="#EAF4EF" stroke="#2E7D5B" stroke-width="1.6"/>
+        <text x="273" y="281" text-anchor="middle" font-weight="600">Согласовал → новый заказ</text>
+        <text x="273" y="296" text-anchor="middle" fill="#5C6B78" font-size="9.5">реквизиты и доставка — из исходного</text>
+      </g>
+    </svg>
+    <figcaption>Принцип «менеджер проверяет, а не делает»: система не отправляет клиенту ничего сама —
+    но и не даёт недобору зависнуть: просмотр без входа по защищённой ссылке, согласование — только владельцем заказа.</figcaption>
+  </figure>
+
+  <div class="cols-2">
+    <div class="panel">
+      <h3>Защита от «зависших» недоборов</h3>
+      <ul class="tight" style="font-size:9pt;">
+        <li>Нет персонального менеджера — задача уходит руководителю отдела: недобор не бывает «ничьим»</li>
+        <li>Клиент молчит — ровно одно вежливое напоминание, затем задача «позвонить»; капельной рассылки нет</li>
+        <li>Товар кончился, пока клиент думал — страница честно пересоберёт варианты, а не покажет ошибку</li>
+      </ul>
+    </div>
+    <div class="panel good">
+      <h3>Каждое действие оставляет след</h3>
+      <ul class="tight good" style="font-size:9pt;">
+        <li>Письмо — в истории переписки клиента в CRM, от имени его менеджера</li>
+        <li>Выбор клиента и снятые менеджером кандидаты — обучающая выборка для автоподбора</li>
+        <li>Новый заказ связан с исходным полем в базе — «спасённая выручка» считается точно, без оценок</li>
+      </ul>
+    </div>
+  </div>
+
+  <figure style="margin-top:auto;">
+    <svg viewBox="0 0 780 96" role="img" aria-label="Таймлайн дожима: в ноль часов письмо, через 24 часа одно напоминание, через 48 часов задача позвонить, через 7 дней подборка архивируется с финальной задачей менеджеру." style="color:#22303C;">
+      <g font-family="Segoe UI, Arial, sans-serif" font-size="10.5">
+        <text x="2" y="14" font-size="9" font-weight="700" letter-spacing="1.5" fill="#5C6B78">ДОЖИМ БЕЗ УЧАСТИЯ МЕНЕДЖЕРА — ОТМЕНЯЕТСЯ РЕАКЦИЕЙ КЛИЕНТА</text>
+        <line x1="30" y1="52" x2="750" y2="52" stroke="currentColor" stroke-width="1.6"/>
+        <circle cx="85" cy="52" r="5" fill="#9E1B32"/>
+        <text x="85" y="40" text-anchor="middle" font-weight="700">0 ч</text>
+        <text x="85" y="72" text-anchor="middle">письмо с подборкой</text>
+        <text x="85" y="85" text-anchor="middle" fill="#5C6B78" font-size="9">от персонального менеджера</text>
+        <circle cx="270" cy="52" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <text x="270" y="40" text-anchor="middle" font-weight="700">+24 ч не открыто</text>
+        <text x="270" y="72" text-anchor="middle">одно вежливое напоминание</text>
+        <text x="270" y="85" text-anchor="middle" fill="#5C6B78" font-size="9">капельной рассылки нет</text>
+        <circle cx="480" cy="52" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <text x="480" y="40" text-anchor="middle" font-weight="700">+48 ч тишины</text>
+        <text x="480" y="72" text-anchor="middle">задача менеджеру «позвонить»</text>
+        <text x="480" y="85" text-anchor="middle" fill="#5C6B78" font-size="9">открыл, но не согласовал</text>
+        <circle cx="690" cy="52" r="5" fill="#22303C"/>
+        <text x="690" y="40" text-anchor="middle" font-weight="700">7 дней</text>
+        <text x="690" y="72" text-anchor="middle">подборка в архив</text>
+        <text x="690" y="85" text-anchor="middle" fill="#5C6B78" font-size="9">финальная задача: продлить/закрыть</text>
+      </g>
+    </svg>
+  </figure>
+
+  <div class="footer-note"><span>Замены недоборов · Pecado</span><span>/crm/shortages · /substitutions/{ссылка}</span></div>
+</div>
+
+<!-- ═══════════ СТР. 4 — АВТОПОДБОР ═══════════ -->
+<div class="page">
+  <div class="section-head">
+    <span class="eyebrow">Интеллект</span>
+    <h2>Автоподбор: 8 слоёв, и каждый кандидат объясняет, почему он здесь</h2>
+    <span class="pageno num">4 / 5</span>
+  </div>
+
+  <div class="cols-2">
+    <figure>
+      <svg viewBox="0 0 370 330" role="img" aria-label="Восемь слоёв подбора от сильного к слабому: подождать прихода, уценка того же товара, проверенные связи, варианты модели, линейка бренда, функциональный тип, категория и цена, семантический поиск." style="color:#22303C;">
+        <g font-family="Segoe UI, Arial, sans-serif" font-size="10.5">
+          <text x="6" y="14" font-size="9" font-weight="700" letter-spacing="1.5" fill="#5C6B78">СИЛЬНЫЕ СЛОИ</text>
+          <rect x="6" y="22" width="358" height="30" fill="#EAF4EF" stroke="#2E7D5B" stroke-width="1.4"/>
+          <text x="16" y="41" font-weight="600">0 · Тот же товар — «подождать прихода»</text>
+
+          <rect x="6" y="56" width="358" height="30" fill="#EAF4EF" stroke="#2E7D5B" stroke-width="1.4"/>
+          <text x="16" y="75" font-weight="600">0.5 · Уценка того же товара</text>
+          <text x="358" y="75" text-anchor="end" fill="#5C6B78" font-size="9.5">«идентичный, вмята коробка, −30 %»</text>
+
+          <rect x="6" y="90" width="358" height="30" fill="#F8ECEF" stroke="#9E1B32" stroke-width="1.4"/>
+          <text x="16" y="109" font-weight="600">1 · Проверенные связи справочника</text>
+          <text x="358" y="109" text-anchor="end" fill="#5C6B78" font-size="9.5">растёт сам — см. ниже</text>
+
+          <rect x="6" y="124" width="358" height="30" fill="#FFFFFF" stroke="currentColor" stroke-width="1.2"/>
+          <text x="16" y="143">2 · Варианты той же модели</text>
+          <text x="358" y="143" text-anchor="end" fill="#5C6B78" font-size="9.5">«другой цвет / размер»</text>
+
+          <rect x="6" y="158" width="358" height="30" fill="#FFFFFF" stroke="currentColor" stroke-width="1.2"/>
+          <text x="16" y="177">3 · Линейка бренда</text>
+          <text x="358" y="177" text-anchor="end" fill="#5C6B78" font-size="9.5">Lush 4 → Lush 3 / Mini / 2</text>
+
+          <rect x="6" y="192" width="358" height="30" fill="#FFFFFF" stroke="currentColor" stroke-width="1.2"/>
+          <text x="16" y="211">4 · Функциональный тип</text>
+          <text x="358" y="211" text-anchor="end" fill="#5C6B78" font-size="9.5">«стропа вместо стропы»</text>
+
+          <rect x="6" y="226" width="358" height="30" fill="#FFFFFF" stroke="currentColor" stroke-width="1.2"/>
+          <text x="16" y="245">5 · Категория + коридор цены</text>
+          <text x="358" y="245" text-anchor="end" fill="#5C6B78" font-size="9.5">ранжирование продажами</text>
+
+          <rect x="6" y="260" width="358" height="30" fill="#FFFFFF" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <text x="16" y="279">6 · Семантический поиск (ИИ-эмбеддинги)</text>
+          <text x="358" y="279" text-anchor="end" fill="#5C6B78" font-size="9.5">фолбэк для пустых категорий</text>
+
+          <text x="6" y="308" font-size="9.5" fill="#5C6B78">Сквозные условия каждого слоя: товар в наличии на нужное количество,</text>
+          <text x="6" y="321" font-size="9.5" fill="#5C6B78">индивидуальная цена клиента в коридоре от −25 % до +10 %.</text>
+        </g>
+      </svg>
+      <figcaption>Слои идут сверху вниз, пока не наберётся 4 кандидата. Цена — ограничение, а не критерий:
+      клиент уже перепродал товар, замена дороже +10 % не продаётся.</figcaption>
+    </figure>
+
+    <div style="display:flex; flex-direction:column; gap:5mm;">
+      <div class="panel good">
+        <h3>Проверено на всех 93 реальных отменах</h3>
+        <figure style="margin-top:2mm;">
+          <svg viewBox="0 0 330 64" role="img" aria-label="59 процентов строк получили кандидатов, 16 процентов — вариант подождать прихода, 25 процентов уходят менеджеру на ручной подбор.">
+            <g font-family="Segoe UI, Arial, sans-serif">
+              <rect x="0" y="8" width="195" height="26" fill="#2E7D5B"/>
+              <rect x="195" y="8" width="53" height="26" fill="#7FB89E"/>
+              <rect x="248" y="8" width="82" height="26" fill="#D9E0E6"/>
+              <text x="8" y="25" fill="#FFFFFF" font-size="12" font-weight="700">59 %</text>
+              <text x="200" y="25" fill="#FFFFFF" font-size="11" font-weight="700">16 %</text>
+              <text x="256" y="25" fill="#5C6B78" font-size="11" font-weight="700">25 %</text>
+              <text x="0" y="52" font-size="9" fill="#22303C">замена найдена</text>
+              <text x="150" y="52" font-size="9" fill="#22303C">«подождать»</text>
+              <text x="248" y="52" font-size="9" fill="#5C6B78">ручной подбор</text>
+            </g>
+          </svg>
+        </figure>
+        <div style="font-size:9pt; color:var(--muted); margin-top:2mm;">Прогон движка по всей истории отмен на копии боевой базы —
+        с реальными остатками и индивидуальными ценами клиентов.</div>
+      </div>
+
+      <div class="panel">
+        <h3>Выборочная проверка глазами</h3>
+        <table class="data" style="margin-top:1mm;">
+          <tr><th>Отменили</th><th>Система предложила</th></tr>
+          <tr><td>Виброяйцо Lush 4</td><td>Lush 3 / Lush 2 / Lush Mini — вся линейка + «подождать прихода»</td></tr>
+          <tr><td>Стропа TOYFA, 600 ₽</td><td>Стропа Anonymo, 600 ₽ — а не ошейник с «похожими характеристиками»</td></tr>
+          <tr><td>Лубрикант JO Warming</td><td>Аналоги-лубриканты 270–375 ₽ в ценовом коридоре</td></tr>
+        </table>
+      </div>
+
+      <div class="panel accent">
+        <h3>Справочник замен учится сам</h3>
+        <ul class="tight" style="font-size:9pt;">
+          <li>Выбор клиента и ручные добавления менеджера становятся связями справочника</li>
+          <li><b>ИИ-агент</b> предразметил дефицитное ядро: <b class="num">36 связей</b> за один прогон (JO Warming → JO Cooling, линейка Lush…)</li>
+          <li>Ничего не публикуется без человека: связи ждут подтверждения менеджером в очереди — 15 минут в неделю</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:auto;">
+    <h3 style="margin-bottom:2mm;">Почему не «подбор по характеристикам» — ловушка, которую мы обошли</h3>
+    <div style="font-size:9pt; color:var(--muted); max-width:none;">
+      Наивный подбор по совпадению характеристик ставил «Ошейник за 1550 ₽» выше «Стропы за 600 ₽» при отменённой стропе за 600 ₽:
+      лучше всего в каталоге заполнены «Страна происхождения», «Изготовитель» и «Импортёр» — они совпадают у всей серии
+      и ничего не говорят о назначении товара. Поэтому функция товара определяется по <b style="color:var(--ink);">головному слову названия и категории</b>
+      («стропа» ≠ «ошейник»), а характеристики — материал, цвет, объём, питание — только уточняют порядок внутри слоя.
+      Это закреплено автотестом: <i>стропа никогда не получит ошейник первым кандидатом</i>.
+    </div>
+  </div>
+
+  <div class="footer-note"><span>Замены недоборов · Pecado</span><span>движок: SubstitutionCandidateService · регресс-тест «стропа ≠ ошейник»</span></div>
+</div>
+
+<!-- ═══════════ СТР. 5 — КОНТРОЛЬ И ИТОГ ═══════════ -->
+<div class="page">
+  <div class="section-head">
+    <span class="eyebrow">Контроль и запуск</span>
+    <h2>Руководитель видит воронку в цифрах, закупки — причину недоборов</h2>
+    <span class="pageno num">5 / 5</span>
+  </div>
+
+  <div class="cols-2">
+    <div class="panel">
+      <h3>Аналитика для руководителя отдела</h3>
+      <table class="data" style="margin-top:1mm;">
+        <tr><th>Метрика</th><th>Что отвечает</th></tr>
+        <tr><td><b>Скорость реакции</b></td><td>медиана «отмена → письмо клиенту»; цель — до конца рабочего дня</td></tr>
+        <tr><td><b>Покрытие</b></td><td>по какой доле недоборов клиенту вообще что-то предложили</td></tr>
+        <tr><td><b>Конверсия</b></td><td>сколько подборок клиенты согласовали</td></tr>
+        <tr><td><b>Спасённая выручка</b></td><td>сумма заказов-замен — точно, по связи в базе</td></tr>
+        <tr><td><b>Удержание</b></td><td>возвращаются ли клиенты после недобора — «удар по репутации» цифрой</td></tr>
+      </table>
+      <div style="font-size:9pt; color:var(--muted); margin-top:2mm;">Разрез по менеджерам — как в остальной CRM-аналитике.
+      Плюс еженедельный отчёт закупщику: топ повторных недоборов — <b>лечим запас, а не симптом</b>.</div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:5mm;">
+      <div class="panel">
+        <h3>Внедрение без риска</h3>
+        <ul class="tight" style="font-size:9pt;">
+          <li>Весь контур за выключателем: на проде код спит, пока флаг не включён</li>
+          <li>Протокол обмена с 1С <b>не изменился</b>: заказ-замена — обычный документ</li>
+          <li>Задел на будущее оформлен по правилам: спецификация v16.2.0, вопрос стороне 1С подготовлен — новое поле связи включится одним флагом после их подтверждения</li>
+          <li>Автоотправки писем нет: первую волну менеджер отправляет сам — сначала докажем качество подбора</li>
+        </ul>
+      </div>
+      <div class="quote">Система готовит оффер, кандидатов и письмо за секунды.<br>
+      Человек остаётся там, где нужны отношения: VIP, повторный недобор, крупная сумма.</div>
+    </div>
+  </div>
+
+  <div>
+    <h3 style="margin-bottom:3mm;">Сделано за одну ночь — готово к продакшену</h3>
+    <div class="kpi-row">
+      <div class="kpi accent"><div class="v num">10</div><div class="l">коммитов — 9 подзадач эпика полностью, от миграций БД до документации протокола</div></div>
+      <div class="kpi"><div class="v num">~10 400</div><div class="l">строк кода: домен, CRM-раздел, клиентская страница, движок подбора, аналитика</div></div>
+      <div class="kpi"><div class="v num">53</div><div class="l">новых автотеста, включая интеграционные «от сообщения шины 1С до нового заказа»</div></div>
+      <div class="kpi good"><div class="v num">CI ✓</div><div class="l">полный прогон 3 779 тестов зелёный, выкачено на dev, сквозной сценарий проверен вживую</div></div>
+    </div>
+  </div>
+
+  <div class="panel" style="display:flex; gap:6mm; align-items:center;">
+    <div style="flex:1;">
+      <h3>Следующие шаги</h3>
+      <div style="font-size:9pt; color:var(--muted); margin-top:1mm;">
+        1&nbsp;·&nbsp;Ревью на dev-стенде &nbsp;→&nbsp; 2&nbsp;·&nbsp;Релиз на прод и включение флага &nbsp;→&nbsp;
+        3&nbsp;·&nbsp;Письмо стороне 1С про поле связи (готово) &nbsp;→&nbsp; 4&nbsp;·&nbsp;Через месяц — решение об автоотправке на цифрах конверсии
+      </div>
+    </div>
+    <div style="text-align:right; font-size:8.5pt; color:var(--muted); white-space:nowrap;">
+      dev.pecado.ru/crm/shortages<br>август 2026
+    </div>
+  </div>
+
+  <div class="footer-note"><span>Замены недоборов · Pecado</span><span>эпик закрыт: sub-01…09 → done</span></div>
+</div>
+</body></html>

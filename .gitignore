@@ -70,3 +70,9 @@ docker/supervisor/conf.d.local/
 
 # Материалы от Andrey Company (докуметация API поставщика, токен) — локально
 /docs/andrey/
+
+# Конкурентная разведка — локальные скрипты с dev-кредами, работают с tmp/insides
+/scripts/insights/
+
+# Runtime-темп медиабиблиотеки (spatie) — не версионируем
+/storage/media-library/
