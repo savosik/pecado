@@ -94,8 +94,14 @@ class HandleCrmInertiaRequests extends Middleware
         $tasks = app(\App\Services\Crm\CrmTaskService::class);
         $actorId = (int) $user->getKey();
 
-        $count = $tasks->visibleTo($user)->assignedTo($actorId)->overdue()->count()
-            + $tasks->visibleTo($user)->assignedTo($actorId)->dueToday()->count();
+        // Одно условие «due_at до конца дня»: сумма скоупов overdue+dueToday
+        // посчитала бы просроченную сегодня задачу дважды.
+        $count = $tasks->visibleTo($user)
+            ->assignedTo($actorId)
+            ->whereIn('status', \App\Enums\Crm\TaskStatus::activeValues())
+            ->whereNotNull('due_at')
+            ->where('due_at', '<=', now()->endOfDay())
+            ->count();
 
         return ['tasks' => $count];
     }

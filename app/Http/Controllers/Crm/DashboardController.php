@@ -110,9 +110,13 @@ class DashboardController extends CrmController
         };
 
         // Три группы входа: просрочено, сегодня, неделя — ответ на «с чего начать».
+        // «Сегодня» — только ещё не просроченное: просроченная сегодня задача
+        // живёт в «Просрочено», в двух группах разом ей делать нечего.
         return [
             'overdue' => $group(fn ($query) => $query->overdue()),
-            'today' => $group(fn ($query) => $query->dueToday()),
+            'today' => $group(fn ($query) => $query
+                ->whereIn('status', \App\Enums\Crm\TaskStatus::activeValues())
+                ->whereBetween('due_at', [now(), now()->endOfDay()])),
             'week' => $group(fn ($query) => $query
                 ->whereIn('status', \App\Enums\Crm\TaskStatus::activeValues())
                 ->whereBetween('due_at', [now()->addDay()->startOfDay(), now()->addDays(7)->endOfDay()])),

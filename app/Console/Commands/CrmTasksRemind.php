@@ -13,6 +13,10 @@ use Illuminate\Console\Command;
  * Просрочку берём окном в сутки, а не «всё, что просрочено»: иначе забытая задача
  * писала бы исполнителю каждое утро до скончания века, и напоминания перестали бы
  * читать вовсе.
+ *
+ * Дедупликация — через общий reminder-лог (канал mail): двойной прогон команды
+ * или задвоенный воркер не отправят письмо повторно, а перенос срока стирает
+ * отметку — к новому сроку письмо уйдёт снова.
  */
 class CrmTasksRemind extends Command
 {
@@ -58,15 +62,28 @@ class CrmTasksRemind extends Command
     private function notify(\Illuminate\Database\Eloquent\Builder $query, bool $overdue, bool $dryRun): int
     {
         $sent = 0;
+        $reminders = app(\App\Services\Crm\TaskReminderService::class);
+        $kind = $overdue
+            ? \App\Models\CrmTaskReminderLog::KIND_OVERDUE
+            : \App\Models\CrmTaskReminderLog::KIND_DUE_SOON;
 
-        $query->with(['assignee', 'author:id,name'])->chunkById(200, function ($tasks) use ($overdue, $dryRun, &$sent) {
+        $query->with(['assignee', 'author:id,name'])->chunkById(200, function ($tasks) use ($overdue, $dryRun, &$sent, $reminders, $kind) {
             foreach ($tasks as $task) {
+                if ($dryRun) {
+                    $sent++;
+                    $this->line("  #{$task->id} {$task->title} → {$task->assignee->name}");
+
+                    continue;
+                }
+
+                // Отметка в общем логе: не удалось — уже слали, молча пропускаем.
+                if (! $reminders->claim($task, $task->assignee, $kind, \App\Models\CrmTaskReminderLog::CHANNEL_MAIL)) {
+                    continue;
+                }
+
                 $sent++;
                 $this->line("  #{$task->id} {$task->title} → {$task->assignee->name}");
-
-                if (! $dryRun) {
-                    $task->assignee->notify(new TaskDueSoonNotification($task, $overdue));
-                }
+                $task->assignee->notify(new TaskDueSoonNotification($task, $overdue));
             }
         });
 

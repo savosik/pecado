@@ -1,5 +1,6 @@
 import { PanelLayout } from '@/shared/Panel/PanelLayout';
 import PresenceBar from '@/Crm/Components/PresenceBar';
+import TaskReminderToaster from '@/Crm/Components/TaskReminderToaster';
 import { menuConfig } from '../config/menuConfig';
 
 const panel = {
@@ -19,6 +20,8 @@ const panel = {
 export const CrmLayout = ({ children, breadcrumbs = [] }) => (
     <PanelLayout panel={panel} breadcrumbs={breadcrumbs} topBar={<PresenceBar />}>
         {children}
+        {/* Тосты-напоминания по задачам живут на каждой странице CRM. */}
+        <TaskReminderToaster />
     </PanelLayout>
 );
 

@@ -30,6 +30,33 @@ export const Toaster = () => {
               {toast.description && (
                 <Toast.Description>{toast.description}</Toast.Description>
               )}
+              {/* Кнопки действий (напоминания задач CRM): meta.buttons = [{label, onClick}] */}
+              {toast.meta?.buttons?.length > 0 && (
+                <Stack direction='row' gap='2' mt='1' flexWrap='wrap'>
+                  {toast.meta.buttons.map((button) => (
+                    <button
+                      key={button.label}
+                      type='button'
+                      onClick={() => {
+                        button.onClick?.()
+                        toaster.dismiss(toast.id)
+                      }}
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        border: '1px solid currentColor',
+                        background: 'transparent',
+                        color: 'inherit',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {button.label}
+                    </button>
+                  ))}
+                </Stack>
+              )}
             </Stack>
             {toast.action && (
               <Toast.ActionTrigger>{toast.action.label}</Toast.ActionTrigger>

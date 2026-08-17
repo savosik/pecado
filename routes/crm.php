@@ -250,6 +250,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
         // До /tasks/{task}: иначе «list» и «options» ушли бы в биндинг модели.
         Route::get('/tasks/data', [TaskController::class, 'data'])->name('tasks.data');
+        // Пульс задач: счётчик меню + свежие поводы для тостов, один запрос в минуту.
+        Route::get('/notifications/poll', \App\Http\Controllers\Crm\NotificationPollController::class)
+            ->name('notifications.poll');
         Route::get('/tasks/calendar', [TaskController::class, 'calendar'])->name('tasks.calendar');
         Route::get('/tasks/calendar-feed', [TaskController::class, 'calendarFeed'])->name('tasks.calendar-feed');
         // Ссылки подписки для внешних календарей (сам фид — в routes/web.php, без auth).

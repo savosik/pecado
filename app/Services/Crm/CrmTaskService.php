@@ -335,6 +335,9 @@ class CrmTaskService
             $record->user_id = (int) $actor->getKey();
             $record->save();
 
+            // К новому сроку напоминания срабатывают заново — во всех каналах.
+            app(TaskReminderService::class)->resetDueReminders($task);
+
             $this->notifyWatchers($task, $actor, 'postponed', $reason);
 
             return $task;
