@@ -298,6 +298,11 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/tasks/{task}/close', [TaskController::class, 'close'])
             ->name('tasks.close')
             ->whereNumber('task');
+        // Перенос — не закрытие: отдельная механика, её переиспользуют
+        // тосты-напоминания и календарь.
+        Route::post('/tasks/{task}/postpone', [TaskController::class, 'postpone'])
+            ->name('tasks.postpone')
+            ->whereNumber('task');
     });
 
     Route::middleware('permission:crm-tasks.edit')->group(function () {

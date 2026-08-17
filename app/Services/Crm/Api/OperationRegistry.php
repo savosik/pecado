@@ -9,6 +9,7 @@ use App\Enums\Crm\ClientSentiment;
 use App\Enums\Crm\OpportunityPreset;
 use App\Enums\Crm\PaymentBehavior;
 use App\Enums\Crm\PreferredChannel;
+use App\Enums\Crm\TaskOutcome;
 use App\Enums\Crm\TaskPriority;
 use App\Enums\Crm\TaskStatus;
 use App\Models\User;
@@ -733,10 +734,28 @@ class OperationRegistry
                     .'с партнёром рассыпается на разовые дёрганья.',
                 params: [
                     Param::integer('task', 'Идентификатор задачи', required: true, rules: ['min:1']),
+                    Param::string('outcome', 'Исход: success — успешно (по умолчанию), problem — с проблемой (comment обязателен)', enum: array_column(TaskOutcome::cases(), 'value')),
                     Param::string('comment', 'Что сделано', rules: ['max:5000'], nullable: true),
                     new Param('follow_up', 'object', 'Следующий шаг: title, description, due_at, priority, assignee_id'),
                 ],
                 handler: [TaskOperations::class, 'close'],
+                mutating: true,
+            ),
+            new Operation(
+                id: 'task.postpone',
+                section: 'tasks',
+                method: 'POST',
+                uri: 'tasks/{task}/postpone',
+                permission: 'crm-tasks.edit',
+                summary: 'Перенести срок задачи',
+                description: 'Перенос — не закрытие: задача остаётся открытой, растёт счётчик переносов, '
+                    .'в комментарии задачи фиксируется «с какой даты на какую и почему».',
+                params: [
+                    Param::integer('task', 'Идентификатор задачи', required: true, rules: ['min:1']),
+                    Param::string('due_at', 'Новый срок в формате ГГГГ-ММ-ДД или ГГГГ-ММ-ДД ЧЧ:ММ', required: true, rules: ['date']),
+                    Param::string('reason', 'Причина переноса', rules: ['max:1000'], nullable: true),
+                ],
+                handler: [TaskOperations::class, 'postpone'],
                 mutating: true,
             ),
             // Видна в каталоге, но не выполняется. Молча её не показывать было бы

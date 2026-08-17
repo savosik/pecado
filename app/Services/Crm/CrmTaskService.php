@@ -3,12 +3,14 @@
 namespace App\Services\Crm;
 
 use App\Enums\Crm\CrmScope;
+use App\Enums\Crm\TaskOutcome;
 use App\Enums\Crm\TaskPriority;
 use App\Enums\Crm\TaskStatus;
 use App\Models\CrmComment;
 use App\Models\CrmTask;
 use App\Models\User;
 use App\Notifications\Crm\TaskAssignedNotification;
+use App\Notifications\Crm\WatchedTaskEventNotification;
 use App\Support\Crm\CrmAttachments;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
@@ -253,11 +255,21 @@ class CrmTaskService
      * @param  array<string, mixed>|null  $followUp
      * @return array{task: CrmTask, follow_up: CrmTask|null}
      */
-    public function close(CrmTask $task, User $actor, ?string $comment = null, ?array $followUp = null): array
-    {
-        return DB::transaction(function () use ($task, $actor, $comment, $followUp): array {
+    public function close(
+        CrmTask $task,
+        User $actor,
+        ?string $comment = null,
+        ?array $followUp = null,
+        ?TaskOutcome $outcome = null,
+    ): array {
+        return DB::transaction(function () use ($task, $actor, $comment, $followUp, $outcome): array {
             $task->status = TaskStatus::DONE;
+            // Старые вызовы (кнопка-галочка, агент без параметра) закрывают
+            // «успешно»: это ожидаемый смысл галочки, а не отсутствие исхода.
+            $task->outcome = $outcome ?? TaskOutcome::SUCCESS;
             $task->save();
+
+            $this->notifyWatchersAboutClose($task, $actor);
 
             $comment = $comment === null ? null : trim($comment);
 
@@ -293,6 +305,66 @@ class CrmTaskService
 
             return ['task' => $task, 'follow_up' => $next];
         });
+    }
+
+    /**
+     * Перенос срока — не закрытие: задача остаётся в своём статусе.
+     *
+     * Сдвиг даты, счётчик и системный комментарий ложатся одной транзакцией:
+     * перенос без следа в ленте выглядел бы как «срок сам собой поменялся»,
+     * а счётчик без комментария не отвечал бы на вопрос «почему».
+     */
+    public function postpone(CrmTask $task, User $actor, Carbon $newDue, ?string $reason = null): CrmTask
+    {
+        return DB::transaction(function () use ($task, $actor, $newDue, $reason): CrmTask {
+            $previousLabel = $task->due_at?->format('d.m.Y H:i') ?? 'без срока';
+
+            $task->due_at = $newDue;
+            $task->postponed_count = (int) $task->postponed_count + 1;
+            $task->save();
+
+            $body = sprintf(
+                'Перенесена с «%s» на «%s»%s',
+                $previousLabel,
+                $newDue->format('d.m.Y H:i'),
+                $reason !== null && trim($reason) !== '' ? ': '.trim($reason) : '',
+            );
+
+            $record = new CrmComment(['body' => $body]);
+            $record->commentable()->associate($task);
+            $record->user_id = (int) $actor->getKey();
+            $record->save();
+
+            $this->notifyWatchers($task, $actor, 'postponed', $reason);
+
+            return $task;
+        });
+    }
+
+    /**
+     * Контролёрам — о закрытии задачи, которую они наблюдают.
+     */
+    private function notifyWatchersAboutClose(CrmTask $task, User $actor): void
+    {
+        $this->notifyWatchers($task, $actor, 'closed');
+    }
+
+    /**
+     * @param  'closed'|'postponed'  $event
+     */
+    private function notifyWatchers(CrmTask $task, User $actor, string $event, ?string $detail = null): void
+    {
+        if (! config('notifications.mail.features.crm_tasks')) {
+            return;
+        }
+
+        $watchers = $task->watchers()
+            ->whereKeyNot((int) $actor->getKey())
+            ->get();
+
+        foreach ($watchers as $watcher) {
+            $watcher->notify(new WatchedTaskEventNotification($task, $event, $detail));
+        }
     }
 
     /**
@@ -364,6 +436,10 @@ class CrmTaskService
             'status' => $task->status->value,
             'status_label' => $task->status->label(),
             'status_color' => $task->status->color(),
+            'outcome' => $task->outcome?->value,
+            'outcome_label' => $task->outcome?->label(),
+            'outcome_color' => $task->outcome?->color(),
+            'postponed_count' => (int) $task->postponed_count,
             'priority' => $task->priority->value,
             'priority_label' => $task->priority->label(),
             'priority_color' => $task->priority->color(),

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Crm;
 
 use App\Enums\Crm\CrmScope;
+use App\Enums\Crm\TaskOutcome;
 use App\Enums\Crm\TaskPriority;
 use App\Enums\Crm\TaskStatus;
 use App\Http\Requests\Crm\CloseCrmTaskRequest;
@@ -296,6 +297,7 @@ class TaskController extends CrmController
         return [
             'assignees' => $this->tasks->assignableUsers(),
             'statuses' => TaskStatus::optionsWithColor(),
+            'outcomes' => TaskOutcome::optionsWithColor(),
             'priorities' => TaskPriority::optionsWithColor(),
             'entity_types' => array_map(
                 fn (string $type): array => ['value' => $type, 'label' => CrmEntityMap::labelFor($type)],
@@ -384,11 +386,16 @@ class TaskController extends CrmController
         $actor = $this->crmActor($request);
         Gate::authorize('update', $task);
 
+        $outcome = $request->filled('outcome')
+            ? TaskOutcome::from($request->string('outcome')->value())
+            : null;
+
         $result = $this->tasks->close(
             $task,
             $actor,
             $request->input('comment'),
             $request->input('follow_up'),
+            $outcome,
         );
 
         $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
@@ -399,6 +406,38 @@ class TaskController extends CrmController
             'task' => $this->tasks->payload($task, $actor),
             'follow_up' => $followUp === null ? null : $this->tasks->payload($followUp, $actor),
         ]);
+    }
+
+    /**
+     * Перенос срока — не закрытие: задача остаётся открытой, счётчик растёт,
+     * системный комментарий фиксирует «с какой даты на какую и почему».
+     *
+     * Отдельный эндпоинт: перенос переиспользуют тосты и календарь, и вариант
+     * PATCH размазал бы механику по трём вызывающим сторонам.
+     */
+    public function postpone(Request $request, CrmTask $task): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('update', $task);
+
+        $validated = $request->validate([
+            'due_at' => ['required', 'date'],
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'due_at.required' => 'Укажите новый срок.',
+            'due_at.date' => 'Укажите корректную дату.',
+        ]);
+
+        $this->tasks->postpone(
+            $task,
+            $actor,
+            \Illuminate\Support\Carbon::parse($validated['due_at']),
+            $validated['reason'] ?? null,
+        );
+
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+
+        return response()->json($this->tasks->payload($task, $actor));
     }
 
     public function destroy(Request $request, CrmTask $task): JsonResponse
@@ -485,6 +524,7 @@ class TaskController extends CrmController
         $validated = $request->validate([
             'preset' => ['nullable', Rule::in(['mine', 'authored', 'watching', 'overdue', 'unlinked', 'all'])],
             'status' => ['nullable', Rule::enum(TaskStatus::class)],
+            'outcome' => ['nullable', Rule::enum(TaskOutcome::class)],
             'priority' => ['nullable', Rule::enum(TaskPriority::class)],
             'assignee_id' => ['nullable', 'integer'],
             'author_id' => ['nullable', 'integer'],
@@ -500,6 +540,7 @@ class TaskController extends CrmController
         return [
             'preset' => $validated['preset'] ?? 'mine',
             'status' => $validated['status'] ?? null,
+            'outcome' => $validated['outcome'] ?? null,
             'priority' => $validated['priority'] ?? null,
             'assignee_id' => $validated['assignee_id'] ?? null,
             'author_id' => $validated['author_id'] ?? null,
@@ -534,6 +575,10 @@ class TaskController extends CrmController
 
         if ($filters['status'] !== null) {
             $query->where('status', $filters['status']);
+        }
+
+        if ($filters['outcome'] !== null) {
+            $query->where('outcome', $filters['outcome']);
         }
 
         if ($filters['priority'] !== null) {

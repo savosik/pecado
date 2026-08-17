@@ -27,7 +27,12 @@ class CloseCrmTaskRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'comment' => ['nullable', 'string', 'max:5000'],
+            'outcome' => ['nullable', Rule::enum(\App\Enums\Crm\TaskOutcome::class)],
+            // «С проблемой» без описания проблемы бессмысленно — отчёт обязателен.
+            'comment' => [
+                Rule::requiredIf(fn (): bool => $this->input('outcome') === \App\Enums\Crm\TaskOutcome::PROBLEM->value),
+                'nullable', 'string', 'max:5000',
+            ],
             'follow_up' => ['nullable', 'array'],
             'follow_up.title' => ['required_with:follow_up', 'string', 'min:2', 'max:255'],
             'follow_up.description' => ['nullable', 'string', 'max:5000'],
@@ -52,6 +57,7 @@ class CloseCrmTaskRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'comment.required' => 'При закрытии с проблемой опишите, что пошло не так.',
             'comment.max' => 'Комментарий не может быть длиннее 5000 символов.',
             'follow_up.title.required_with' => 'Сформулируйте следующий шаг или снимите галочку.',
             'follow_up.title.min' => 'Слишком короткий заголовок следующей задачи.',

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Crm\TaskOutcome;
 use App\Enums\Crm\TaskPriority;
 use App\Enums\Crm\TaskStatus;
 use App\Models\Concerns\HasCrmAttachments;
@@ -70,9 +71,11 @@ class CrmTask extends Model implements HasMedia
         return [
             'status' => TaskStatus::class,
             'priority' => TaskPriority::class,
+            'outcome' => TaskOutcome::class,
             'due_at' => 'datetime',
             'done_at' => 'datetime',
             'estimate_minutes' => 'integer',
+            'postponed_count' => 'integer',
         ];
     }
 
@@ -107,9 +110,13 @@ class CrmTask extends Model implements HasMedia
                 $task->done_at = now();
             }
 
-            // Задачу переоткрыли — факт выполнения больше не факт.
+            // Задачу переоткрыли — факт выполнения больше не факт, исход тоже.
             if ($task->status !== TaskStatus::DONE && $task->done_at !== null) {
                 $task->done_at = null;
+            }
+
+            if ($task->status !== TaskStatus::DONE && $task->outcome !== null) {
+                $task->outcome = null;
             }
         });
     }

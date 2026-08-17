@@ -146,7 +146,15 @@ class TaskOperations
 
         $followUp = $input->has('follow_up') ? $input->array('follow_up') : null;
 
-        $result = $this->tasks->close($task, $actor, $input->string('comment'), $followUp);
+        $outcome = $input->has('outcome')
+            ? \App\Enums\Crm\TaskOutcome::from((string) $input->string('outcome'))
+            : null;
+
+        if ($outcome === \App\Enums\Crm\TaskOutcome::PROBLEM && trim((string) $input->string('comment')) === '') {
+            throw new \InvalidArgumentException('При закрытии с проблемой опишите в comment, что пошло не так.');
+        }
+
+        $result = $this->tasks->close($task, $actor, $input->string('comment'), $followUp, $outcome);
 
         return [
             'task' => $this->tasks->payload($result['task'], $actor),
@@ -154,6 +162,27 @@ class TaskOperations
                 ? null
                 : $this->tasks->payload($result['follow_up'], $actor),
         ];
+    }
+
+    /**
+     * Перенести срок задачи: due_at сдвигается, задача остаётся открытой.
+     *
+     * @return array<string, mixed>
+     */
+    public function postpone(User $actor, OperationInput $input): array
+    {
+        $task = $this->task($actor, $input);
+        Gate::forUser($actor)->authorize('update', $task);
+
+        $task = $this->tasks->postpone(
+            $task,
+            $actor,
+            \Illuminate\Support\Carbon::parse((string) $input->string('due_at')),
+            $input->string('reason'),
+        );
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+
+        return $this->tasks->payload($task, $actor);
     }
 
     /**
