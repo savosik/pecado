@@ -39,7 +39,22 @@ class HandleCrmInertiaRequests extends Middleware
     {
         $user = $request->user();
 
-        if ($user === null || ! config('substitutions.enabled') || ! $user->can('crm-shortages.view')) {
+        if ($user === null) {
+            return [];
+        }
+
+        return [
+            ...$this->shortagesCounter($user),
+            ...$this->tasksCounter($user),
+        ];
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function shortagesCounter(\App\Models\User $user): array
+    {
+        if (! config('substitutions.enabled') || ! $user->can('crm-shortages.view')) {
             return [];
         }
 
@@ -60,5 +75,28 @@ class HandleCrmInertiaRequests extends Middleware
         }
 
         return ['shortages' => $query->count()];
+    }
+
+    /**
+     * Задачи актора «просрочено + сегодня»: то, из-за чего стоит зайти в раздел.
+     *
+     * Два count-запроса по индексу (assignee_id, status, due_at) — дёшево на
+     * каждый Inertia-рендер; polling-обновление между переходами делает task-08.
+     *
+     * @return array<string, int>
+     */
+    private function tasksCounter(\App\Models\User $user): array
+    {
+        if (! $user->can('crm-tasks.view')) {
+            return [];
+        }
+
+        $tasks = app(\App\Services\Crm\CrmTaskService::class);
+        $actorId = (int) $user->getKey();
+
+        $count = $tasks->visibleTo($user)->assignedTo($actorId)->overdue()->count()
+            + $tasks->visibleTo($user)->assignedTo($actorId)->dueToday()->count();
+
+        return ['tasks' => $count];
     }
 }

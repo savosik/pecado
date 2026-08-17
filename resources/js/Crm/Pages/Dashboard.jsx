@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { LuUsers, LuUsersRound, LuBriefcase } from 'react-icons/lu';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import TaskCloseDialog from '@/Crm/Components/TaskCloseDialog';
-import TaskListItem from '@/Crm/Components/TaskListItem';
+import TaskRow from '@/Crm/Components/TaskRow';
 import { toastError } from '@/utils/toast';
 
 function StatCard({ label, value, icon: Icon }) {
@@ -28,24 +28,33 @@ function StatCard({ label, value, icon: Icon }) {
     );
 }
 
+// Вкладки входа: просрочено — первым, если оно есть.
+const TASK_TABS = [
+    { key: 'overdue', label: 'Просрочено', tone: 'red', due: 'overdue', empty: 'Просрочек нет.' },
+    { key: 'today', label: 'Сегодня', tone: 'blue', due: 'today', empty: 'На сегодня задач нет.' },
+    { key: 'week', label: 'Неделя', tone: 'gray', due: 'week', empty: 'На неделю вперёд пусто.' },
+];
+
 /**
- * «Мои задачи на сегодня»: просроченное и то, что горит сегодня, одним списком.
+ * Задачи при входе в CRM: просрочено / сегодня / неделя тремя вкладками.
  *
- * Просрочку не выносим отдельно — менеджеру важно «что делать сейчас»,
- * а не «в какой день это протухло».
+ * Никаких модальных «встречалок» — блок на дашборде плюс счётчик в меню:
+ * окно поверх всего при входе закрывают не глядя.
  */
 function TodayTasks({ tasks }) {
     const [dialogTask, setDialogTask] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [closingTask, setClosingTask] = useState(null);
     const [busy, setBusy] = useState(false);
+    // Если есть просрочка — открываем сразу её: это главное при входе.
+    const [tab, setTab] = useState(tasks.overdue?.count > 0 ? 'overdue' : 'today');
 
     // Закрытие задачи меняет и покрытие партнёров — перечитываем оба блока.
     const refresh = () => router.reload({ only: ['tasks', 'coverage'] });
 
-    // Закрытие идёт через диалог: там спрашивают, что сделано и что дальше.
+    // Закрытие идёт через диалог: там спрашивают исход и что дальше.
     const toggleDone = async (task) => {
-        if (task.status !== 'done') {
+        if (task.status !== 'done' && task.status !== 'canceled') {
             setClosingTask(task);
 
             return;
@@ -62,41 +71,74 @@ function TodayTasks({ tasks }) {
         }
     };
 
+    const active = TASK_TABS.find((item) => item.key === tab) ?? TASK_TABS[1];
+    const group = tasks[active.key] ?? { count: 0, items: [] };
+    const overdueCount = tasks.overdue?.count ?? 0;
+
     return (
         <Card.Root>
             <Card.Header>
                 <HStack justify="space-between" flexWrap="wrap" gap={2}>
-                    <HStack gap={2}>
-                        <Text fontWeight="semibold">Мои задачи на сегодня</Text>
-                        {tasks.overdue_count > 0 && (
-                            <Badge colorPalette="red" variant="solid">просрочено: {tasks.overdue_count}</Badge>
-                        )}
-                        {tasks.today_count > 0 && (
-                            <Badge colorPalette="blue" variant="subtle">на сегодня: {tasks.today_count}</Badge>
-                        )}
+                    <Text fontWeight="semibold">
+                        {overdueCount > 0
+                            ? `Задачи: ${overdueCount} просроч.`
+                            : 'Задачи'}
+                    </Text>
+                    <HStack gap={1} flexWrap="wrap">
+                        {TASK_TABS.map((item) => {
+                            const count = tasks[item.key]?.count ?? 0;
+
+                            return (
+                                <Button
+                                    key={item.key}
+                                    size="xs"
+                                    variant={tab === item.key ? 'solid' : 'ghost'}
+                                    colorPalette={item.key === 'overdue' && count > 0 ? 'red' : undefined}
+                                    onClick={() => setTab(item.key)}
+                                >
+                                    {item.label}
+                                    {count > 0 && (
+                                        <Badge ml={1} variant="subtle" colorPalette={item.tone}>{count}</Badge>
+                                    )}
+                                </Button>
+                            );
+                        })}
+                        <Button
+                            size="xs"
+                            variant="outline"
+                            onClick={() => router.visit(route('crm.tasks.index', { preset: 'mine', due: active.due }))}
+                        >
+                            Все задачи
+                        </Button>
                     </HStack>
-                    <Button size="xs" variant="outline" onClick={() => router.visit(route('crm.tasks.index'))}>
-                        Все задачи
-                    </Button>
                 </HStack>
             </Card.Header>
             <Card.Body>
-                {tasks.items.length === 0 ? (
+                {group.items.length === 0 ? (
                     <Text fontSize="sm" color="fg.muted">
-                        На сегодня задач нет и просроченных тоже — можно заняться партнёрами.
+                        {active.empty}{tab === 'overdue' && overdueCount === 0 ? ' Так держать.' : ''}
                     </Text>
                 ) : (
-                    <VStack align="stretch" gap={2}>
-                        {tasks.items.map((task) => (
-                            <TaskListItem
+                    <VStack align="stretch" gap={1}>
+                        {group.items.map((task) => (
+                            <TaskRow
                                 key={task.id}
                                 task={task}
-                                showEntity
                                 busy={busy}
-                                onEdit={(item) => { setDialogTask(item); setDialogOpen(true); }}
+                                showAssignee={false}
                                 onToggleDone={toggleDone}
+                                onOpen={(item) => { setDialogTask(item); setDialogOpen(true); }}
                             />
                         ))}
+                        {group.count > group.items.length && (
+                            <Button
+                                size="xs"
+                                variant="ghost"
+                                onClick={() => router.visit(route('crm.tasks.index', { preset: 'mine', due: active.due }))}
+                            >
+                                Ещё {group.count - group.items.length} в разделе задач →
+                            </Button>
+                        )}
                     </VStack>
                 )}
             </Card.Body>

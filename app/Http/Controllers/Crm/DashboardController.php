@@ -91,18 +91,32 @@ class DashboardController extends CrmController
     {
         $actorId = (int) $actor->getKey();
 
-        $items = $tasks->visibleTo($actor)
-            ->assignedTo($actorId)
-            ->where(fn ($query) => $query->overdue()->orWhere(fn ($today) => $today->dueToday()))
-            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'])
-            ->orderBy('due_at')
-            ->take(8)
-            ->get()
-            ->map(fn (CrmTask $task) => $tasks->payload($task, $actor))
-            ->all();
+        $group = function (callable $constrain, int $limit = 6) use ($tasks, $actor, $actorId): array {
+            $query = $tasks->visibleTo($actor)
+                ->assignedTo($actorId)
+                ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
 
+            $constrain($query);
+
+            return [
+                'count' => (clone $query)->count(),
+                'items' => $query->orderByRaw('due_at is null')
+                    ->orderBy('due_at')
+                    ->take($limit)
+                    ->get()
+                    ->map(fn (CrmTask $task) => $tasks->payload($task, $actor))
+                    ->all(),
+            ];
+        };
+
+        // Три группы входа: просрочено, сегодня, неделя — ответ на «с чего начать».
         return [
-            'items' => $items,
+            'overdue' => $group(fn ($query) => $query->overdue()),
+            'today' => $group(fn ($query) => $query->dueToday()),
+            'week' => $group(fn ($query) => $query
+                ->whereIn('status', \App\Enums\Crm\TaskStatus::activeValues())
+                ->whereBetween('due_at', [now()->addDay()->startOfDay(), now()->addDays(7)->endOfDay()])),
+            // Совместимость со старой разметкой виджета.
             'overdue_count' => $tasks->visibleTo($actor)->assignedTo($actorId)->overdue()->count(),
             'today_count' => $tasks->visibleTo($actor)->assignedTo($actorId)->dueToday()->count(),
         ];

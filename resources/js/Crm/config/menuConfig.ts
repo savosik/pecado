@@ -59,7 +59,7 @@ export const menuConfig: MenuGroup[] = [
             // Контрагенты — юрлица партнёров. Отдельный пункт, потому что переписка
             // о реквизитах и сверках идёт по юрлицу, а у партнёра их может быть несколько.
             { label: "Контрагенты", icon: LuBuilding2, path: "/crm/contractors", permission: "crm-contractors.view" },
-            { label: "Задачи", icon: LuListChecks, path: "/crm/tasks", permission: "crm-tasks.view" },
+            { label: "Задачи", icon: LuListChecks, path: "/crm/tasks", permission: "crm-tasks.view", counter: "tasks" },
             { label: "Письма", icon: LuMail, path: "/crm/emails", permission: "crm-emails.view" },
             { label: "Планы продаж", icon: LuTarget, path: "/crm/plans", permission: "crm-plans.view" },
             { label: "Возможности", icon: LuLightbulb, path: "/crm/opportunities", permission: "crm-opportunities.view" },
