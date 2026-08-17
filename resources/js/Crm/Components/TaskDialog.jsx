@@ -14,6 +14,7 @@ import {
     VStack,
 } from '@chakra-ui/react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import VoiceInput from '@/shared/voice/VoiceInput';
 import VoiceTextarea from '@/shared/voice/VoiceTextarea';
@@ -23,16 +24,30 @@ import CommentThread from '@/Crm/Components/CommentThread';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
 import VoiceNotes from '@/Crm/Components/VoiceNotes';
 import { usePermission } from '@/shared/Panel/usePermission';
+import { LuEye } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 const EMPTY = {
     title: '',
     description: '',
     assignee_id: '',
+    co_assignee_ids: [],
     status: 'open',
     priority: 'normal',
     due_at: '',
+    estimate_minutes: '',
 };
+
+// Пресеты плановой трудоёмкости; своё значение из БД добавляется на лету.
+const ESTIMATE_OPTIONS = [
+    { value: '', label: 'Не оценена' },
+    { value: '15', label: '15 минут' },
+    { value: '30', label: '30 минут' },
+    { value: '60', label: '1 час' },
+    { value: '120', label: '2 часа' },
+    { value: '240', label: '4 часа' },
+    { value: '480', label: 'Рабочий день' },
+];
 
 /**
  * Создание и правка задачи.
@@ -72,6 +87,9 @@ export default function TaskDialog({
     // Когда диалог открыт из карточки сущности, привязка приходит пропсом и не выбирается.
     const [linkType, setLinkType] = useState('');
     const [linkEntity, setLinkEntity] = useState(null);
+    // Личный контроль: локальное состояние, чтобы кнопка отвечала мгновенно.
+    const [watched, setWatched] = useState(false);
+    const [watchBusy, setWatchBusy] = useState(false);
 
     // Задача либо передана целиком, либо догружена по идентификатору.
     const current = task ?? loadedTask;
@@ -108,9 +126,11 @@ export default function TaskDialog({
                 title: current.title || '',
                 description: current.description || '',
                 assignee_id: current.assignee?.id ?? '',
+                co_assignee_ids: (current.co_assignees || []).map((user) => Number(user.id)),
                 status: current.status || 'open',
                 priority: current.priority || 'normal',
                 due_at: current.due_at || '',
+                estimate_minutes: current.estimate_minutes ? String(current.estimate_minutes) : '',
             }
             // Заголовок-заготовка от вызывающей страницы (например, «Оплата по
             // реализации …»): экономит набор текста, но остаётся обычным полем.
@@ -133,7 +153,31 @@ export default function TaskDialog({
         setForm((prev) => (prev.assignee_id ? prev : { ...prev, assignee_id: String(currentUserId) }));
     }, [open, isEdit, currentUserId, options]);
 
+    useEffect(() => {
+        setWatched(!!current?.is_watched);
+    }, [current]);
+
     const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+
+    const toggleWatch = async () => {
+        if (!current) {
+            return;
+        }
+
+        setWatchBusy(true);
+        try {
+            const res = watched
+                ? await axios.delete(`/crm/tasks/${current.id}/watch`)
+                : await axios.post(`/crm/tasks/${current.id}/watch`);
+
+            setWatched(!!res.data.is_watched);
+            onSaved?.(res.data);
+        } catch (e) {
+            toastError('Не удалось изменить контроль', e?.response?.data?.message || 'Попробуйте ещё раз.');
+        } finally {
+            setWatchBusy(false);
+        }
+    };
 
     const submit = async () => {
         setBusy(true);
@@ -146,10 +190,17 @@ export default function TaskDialog({
                 status: form.status,
                 priority: form.priority,
                 due_at: form.due_at || null,
+                estimate_minutes: form.estimate_minutes ? Number(form.estimate_minutes) : null,
             };
 
             if (canReassign && form.assignee_id) {
                 payload.assignee_id = form.assignee_id;
+            }
+
+            // Состав соисполнителей шлём только тому, кто вправе его менять:
+            // иначе бэкенд молча проигнорирует поле, а форма соврёт, что сохранила.
+            if (canReassign) {
+                payload.co_assignee_ids = form.co_assignee_ids;
             }
 
             let saved;
@@ -351,7 +402,67 @@ export default function TaskDialog({
                                             </NativeSelectField>
                                         </NativeSelectRoot>
                                     </Field>
+
+                                    <Field
+                                        label="Трудоёмкость"
+                                        helperText="Плановая оценка, необязательно"
+                                        errorText={error('estimate_minutes')}
+                                        invalid={!!error('estimate_minutes')}
+                                    >
+                                        <NativeSelectRoot disabled={!canEditFields}>
+                                            <NativeSelectField
+                                                value={form.estimate_minutes}
+                                                onChange={(e) => set('estimate_minutes', e.target.value)}
+                                            >
+                                                {estimateOptions(form.estimate_minutes).map((item) => (
+                                                    <option key={item.value} value={item.value}>{item.label}</option>
+                                                ))}
+                                            </NativeSelectField>
+                                        </NativeSelectRoot>
+                                    </Field>
                                 </SimpleGrid>
+
+                                {/* Соисполнители работают вместе с ответственным, но за срок
+                                    отвечает он один — поэтому отдельный блок, а не мультиселект
+                                    на месте исполнителя. */}
+                                {canReassign && (options?.assignees || []).length > 1 && (
+                                    <Field label={`Соисполнители${form.co_assignee_ids.length ? ` (${form.co_assignee_ids.length})` : ''}`}>
+                                        <Box
+                                            borderWidth="1px"
+                                            borderRadius="md"
+                                            p={2}
+                                            maxH="140px"
+                                            overflowY="auto"
+                                            w="100%"
+                                        >
+                                            <VStack align="stretch" gap={1}>
+                                                {(options?.assignees || [])
+                                                    .filter((user) => String(user.id) !== String(form.assignee_id))
+                                                    .map((user) => (
+                                                        <Checkbox
+                                                            key={user.id}
+                                                            size="sm"
+                                                            checked={form.co_assignee_ids.includes(Number(user.id))}
+                                                            onCheckedChange={(e) => set(
+                                                                'co_assignee_ids',
+                                                                e.checked
+                                                                    ? [...form.co_assignee_ids, Number(user.id)]
+                                                                    : form.co_assignee_ids.filter((id) => id !== Number(user.id)),
+                                                            )}
+                                                        >
+                                                            {user.name}
+                                                        </Checkbox>
+                                                    ))}
+                                            </VStack>
+                                        </Box>
+                                    </Field>
+                                )}
+
+                                {isEdit && !canReassign && (current.co_assignees || []).length > 0 && (
+                                    <Text fontSize="xs" color="fg.muted">
+                                        Соисполнители: {current.co_assignees.map((user) => user.name).join(', ')}
+                                    </Text>
+                                )}
 
                                 {isEdit && (
                                     <>
@@ -394,13 +505,29 @@ export default function TaskDialog({
                         </Dialog.Body>
 
                         <Dialog.Footer>
-                            <HStack gap={2}>
-                                <Button variant="outline" onClick={onClose} disabled={busy}>Закрыть</Button>
-                                {canEditFields && (
-                                    <Button onClick={submit} loading={busy}>
-                                        {isEdit ? 'Сохранить' : 'Поставить задачу'}
+                            <HStack gap={2} w="100%" justify={isEdit && current.can?.watch ? 'space-between' : 'flex-end'}>
+                                {isEdit && current.can?.watch && (
+                                    <Button
+                                        size="sm"
+                                        variant={watched ? 'solid' : 'outline'}
+                                        colorPalette={watched ? 'purple' : undefined}
+                                        onClick={toggleWatch}
+                                        loading={watchBusy}
+                                        title={watched
+                                            ? 'Задача у вас на личном контроле'
+                                            : 'Получать уведомления о закрытии и переносах'}
+                                    >
+                                        <LuEye /> {watched ? 'На контроле' : 'На контроль'}
                                     </Button>
                                 )}
+                                <HStack gap={2}>
+                                    <Button variant="outline" onClick={onClose} disabled={busy}>Закрыть</Button>
+                                    {canEditFields && (
+                                        <Button onClick={submit} loading={busy}>
+                                            {isEdit ? 'Сохранить' : 'Поставить задачу'}
+                                        </Button>
+                                    )}
+                                </HStack>
                             </HStack>
                         </Dialog.Footer>
                     </Dialog.Content>
@@ -408,4 +535,16 @@ export default function TaskDialog({
             </Portal>
         </Dialog.Root>
     );
+}
+
+/**
+ * Пресеты трудоёмкости + текущее значение из БД, если оно нестандартное:
+ * иначе селект показал бы «Не оценена» при заполненном поле.
+ */
+function estimateOptions(currentValue) {
+    if (!currentValue || ESTIMATE_OPTIONS.some((item) => item.value === String(currentValue))) {
+        return ESTIMATE_OPTIONS;
+    }
+
+    return [...ESTIMATE_OPTIONS, { value: String(currentValue), label: `${currentValue} мин` }];
 }

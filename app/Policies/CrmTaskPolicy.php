@@ -40,13 +40,36 @@ class CrmTaskPolicy
      */
     public function update(User $user, CrmTask $task): bool
     {
-        return $user->can('crm-tasks.edit') && $this->involvedOrLeads($user, $task);
+        // Контролёр намеренно не входит: личный контроль — наблюдение, а не
+        // право переписывать чужую работу.
+        return $user->can('crm-tasks.edit')
+            && ($task->author_id === $user->id
+                || $user->can('crm-department.edit')
+                || $task->isAssigneeOf((int) $user->id));
     }
 
     public function reassign(User $user, CrmTask $task): bool
     {
         return $this->update($user, $task)
             && ($task->author_id === $user->id || $user->can('crm-department.edit'));
+    }
+
+    /**
+     * Взять задачу на личный контроль может любой, кто её видит: контроль — это
+     * подписка-наблюдение, а не вмешательство в работу.
+     */
+    public function watch(User $user, CrmTask $task): bool
+    {
+        return $this->view($user, $task);
+    }
+
+    /**
+     * Поставить на контроль другому — только РОП: иначе это способ спамить коллег
+     * чужими задачами.
+     */
+    public function watchOther(User $user, CrmTask $task): bool
+    {
+        return $this->view($user, $task) && $user->can('crm-department.edit');
     }
 
     public function delete(User $user, CrmTask $task): bool
@@ -58,13 +81,17 @@ class CrmTaskPolicy
     /**
      * Задача видна её участникам; РОП видит задачи всего отдела.
      *
+     * Участие — это авторство, исполнение (ответственный или соисполнитель)
+     * и личный контроль: контролёр обязан видеть то, за чем наблюдает.
+     *
      * Задача коллеги по своему партнёру намеренно не видна рядовому менеджеру: партнёр
      * общий по скоупу только у РОПа, а поручения между сотрудниками — не публичная лента.
      */
     private function involvedOrLeads(User $user, CrmTask $task): bool
     {
         return $task->author_id === $user->id
-            || $task->assignee_id === $user->id
-            || $user->can('crm-department.edit');
+            || $user->can('crm-department.edit')
+            || $task->isAssigneeOf((int) $user->id)
+            || $task->isWatchedBy((int) $user->id);
     }
 }

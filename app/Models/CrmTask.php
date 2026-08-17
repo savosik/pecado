@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -60,6 +61,7 @@ class CrmTask extends Model implements HasMedia
         'status',
         'priority',
         'due_at',
+        'estimate_minutes',
     ];
 
     protected function casts(): array
@@ -69,6 +71,7 @@ class CrmTask extends Model implements HasMedia
             'priority' => TaskPriority::class,
             'due_at' => 'datetime',
             'done_at' => 'datetime',
+            'estimate_minutes' => 'integer',
         ];
     }
 
@@ -125,6 +128,58 @@ class CrmTask extends Model implements HasMedia
         return $this->belongsTo(User::class, 'assignee_id');
     }
 
+    /**
+     * Соисполнители — работают над задачей вместе с ответственным.
+     *
+     * Ответственный (`assignee_id`) в pivot не дублируется: у задачи всегда ровно
+     * один человек, отвечающий за срок, — на нём каунтеры и покрытие партнёров.
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function coAssignees(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'crm_task_assignees', 'task_id', 'user_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Контролёры — наблюдают («личный контроль»), но не исполняют.
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function watchers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'crm_task_watchers', 'task_id', 'user_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Участвует ли пользователь в исполнении: ответственный или соисполнитель.
+     */
+    public function isAssigneeOf(int $userId): bool
+    {
+        if ((int) $this->assignee_id === $userId) {
+            return true;
+        }
+
+        // Через загруженную коллекцию, когда она есть: политика зовётся на каждую
+        // строку списка, и запрос на задачу превратился бы в N+1.
+        if ($this->relationLoaded('coAssignees')) {
+            return $this->coAssignees->contains(fn (User $user): bool => (int) $user->getKey() === $userId);
+        }
+
+        return $this->coAssignees()->whereKey($userId)->exists();
+    }
+
+    public function isWatchedBy(int $userId): bool
+    {
+        if ($this->relationLoaded('watchers')) {
+            return $this->watchers->contains(fn (User $user): bool => (int) $user->getKey() === $userId);
+        }
+
+        return $this->watchers()->whereKey($userId)->exists();
+    }
+
     public function client(): BelongsTo
     {
         return $this->belongsTo(User::class, 'client_user_id');
@@ -156,12 +211,19 @@ class CrmTask extends Model implements HasMedia
     }
 
     /**
+     * Задачи, где пользователь исполняет: ответственный или соисполнитель.
+     *
+     * «Мне» для соисполнителя значит то же, что для ответственного, — задача
+     * должна быть в его списке, иначе соисполнение теряется.
+     *
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
     public function scopeAssignedTo(Builder $query, int $userId): Builder
     {
-        return $query->where('assignee_id', $userId);
+        return $query->where(fn (Builder $inner) => $inner
+            ->where('assignee_id', $userId)
+            ->orWhereHas('coAssignees', fn (Builder $users) => $users->whereKey($userId)));
     }
 
     /**

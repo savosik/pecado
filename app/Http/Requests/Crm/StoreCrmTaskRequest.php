@@ -29,6 +29,9 @@ class StoreCrmTaskRequest extends FormRequest
             'status' => ['sometimes', Rule::enum(TaskStatus::class)],
             'priority' => ['sometimes', Rule::enum(TaskPriority::class)],
             'due_at' => ['nullable', 'date'],
+            'estimate_minutes' => ['nullable', 'integer', 'min:1', 'max:4800'],
+            'co_assignee_ids' => ['nullable', 'array', 'max:20'],
+            'co_assignee_ids.*' => ['integer', 'exists:users,id', $this->crmAccessRule()],
             // Привязки может не быть вовсе: «позвонить в пятницу» живёт в списке само по себе.
             // Но половина пары бессмысленна — тип без ID и наоборот.
             'entity_type' => ['nullable', 'required_with:entity_id', 'string', Rule::in(CrmEntityMap::taskableTypes())],
@@ -63,7 +66,10 @@ class StoreCrmTaskRequest extends FormRequest
             'description.max' => 'Описание не может быть длиннее 5000 символов.',
             'assignee_id.required' => 'Выберите исполнителя.',
             'assignee_id.exists' => 'Такого сотрудника нет.',
+            'co_assignee_ids.*.exists' => 'Такого сотрудника нет.',
             'due_at.date' => 'Укажите корректную дату дедлайна.',
+            'estimate_minutes.integer' => 'Трудоёмкость указывается в минутах.',
+            'estimate_minutes.max' => 'Трудоёмкость не может превышать 10 рабочих дней.',
             'entity_type.required_with' => 'Не указано, к чему привязать задачу.',
             'entity_type.in' => 'К этому типу записей задачи не привязываются.',
             'entity_id.required_with' => 'Не указана запись, к которой привязать задачу.',

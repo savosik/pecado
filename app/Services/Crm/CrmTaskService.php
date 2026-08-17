@@ -47,7 +47,9 @@ class CrmTaskService
 
             $query->where(fn (Builder $inner) => $inner
                 ->where('author_id', $actorId)
-                ->orWhere('assignee_id', $actorId));
+                ->orWhere('assignee_id', $actorId)
+                ->orWhereHas('coAssignees', fn (Builder $users) => $users->whereKey($actorId))
+                ->orWhereHas('watchers', fn (Builder $users) => $users->whereKey($actorId)));
         }
 
         return $query;
@@ -130,6 +132,7 @@ class CrmTaskService
             'status' => $data['status'] ?? TaskStatus::OPEN->value,
             'priority' => $data['priority'] ?? TaskPriority::NORMAL->value,
             'due_at' => $this->parseDue($data['due_at'] ?? null),
+            'estimate_minutes' => $data['estimate_minutes'] ?? null,
         ]);
 
         if ($related !== null) {
@@ -140,9 +143,37 @@ class CrmTaskService
         // client_user_id и done_at проставляет сама модель — единая точка на все пути.
         $task->save();
 
+        $added = $this->syncCoAssignees($task, $data['co_assignee_ids'] ?? null);
+
         $this->notifyAssignee($task, $actor);
+        $this->notifyCoAssignees($task, $actor, $added);
 
         return $task;
+    }
+
+    /**
+     * Состав соисполнителей: ответственный в pivot не дублируется, дубли схлопываются.
+     *
+     * @param  list<int|string>|null  $ids  null — состав не трогаем
+     * @return list<int> добавленные пользователи — им уходит уведомление
+     */
+    private function syncCoAssignees(CrmTask $task, ?array $ids): array
+    {
+        if ($ids === null) {
+            return [];
+        }
+
+        $clean = collect($ids)
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->reject(fn (int $id): bool => $id === (int) $task->assignee_id)
+            ->values()
+            ->all();
+
+        $result = $task->coAssignees()->sync($clean);
+        $task->unsetRelation('coAssignees');
+
+        return array_map('intval', $result['attached'] ?? []);
     }
 
     /**
@@ -162,10 +193,25 @@ class CrmTaskService
             $task->due_at = $this->parseDue($data['due_at']);
         }
 
+        if (array_key_exists('estimate_minutes', $data)) {
+            $task->estimate_minutes = $data['estimate_minutes'] === null || $data['estimate_minutes'] === ''
+                ? null
+                : (int) $data['estimate_minutes'];
+        }
+
         // Переназначение — отдельное право: исполнитель может закрыть задачу,
-        // но не перевесить её на третьего.
-        if (array_key_exists('assignee_id', $data) && $actor->can('reassign', $task)) {
-            $task->assignee_id = (int) $data['assignee_id'];
+        // но не перевесить её на третьего. Состав соисполнителей — то же право:
+        // это тоже перераспределение работы.
+        $added = [];
+
+        if ($actor->can('reassign', $task)) {
+            if (array_key_exists('assignee_id', $data)) {
+                $task->assignee_id = (int) $data['assignee_id'];
+            }
+
+            if (array_key_exists('co_assignee_ids', $data)) {
+                $added = $this->syncCoAssignees($task, $data['co_assignee_ids']);
+            }
         }
 
         $task->save();
@@ -174,7 +220,24 @@ class CrmTaskService
             $this->notifyAssignee($task, $actor);
         }
 
+        $this->notifyCoAssignees($task, $actor, $added);
+
         return $task;
+    }
+
+    /**
+     * Личный контроль: поставить задачу на контроль пользователю.
+     */
+    public function watch(CrmTask $task, User $watcher): void
+    {
+        $task->watchers()->syncWithoutDetaching([(int) $watcher->getKey()]);
+        $task->unsetRelation('watchers');
+    }
+
+    public function unwatch(CrmTask $task, User $watcher): void
+    {
+        $task->watchers()->detach((int) $watcher->getKey());
+        $task->unsetRelation('watchers');
     }
 
     /**
@@ -253,6 +316,27 @@ class CrmTaskService
     }
 
     /**
+     * Уведомление новым соисполнителям — только добавленным, не всему составу
+     * при каждой правке, и не тому, кто добавил сам себя.
+     *
+     * @param  list<int>  $addedIds
+     */
+    private function notifyCoAssignees(CrmTask $task, User $actor, array $addedIds): void
+    {
+        if ($addedIds === [] || ! config('notifications.mail.features.crm_tasks')) {
+            return;
+        }
+
+        $recipients = User::query()
+            ->whereKey(array_diff($addedIds, [(int) $actor->getKey()]))
+            ->get();
+
+        foreach ($recipients as $recipient) {
+            $recipient->notify(new TaskAssignedNotification($task));
+        }
+    }
+
+    /**
      * Дедлайн из формы: пустая строка — это «без срока», а не «сегодня».
      */
     private function parseDue(mixed $value): ?Carbon
@@ -298,6 +382,23 @@ class CrmTaskService
                 'id' => (int) $task->assignee_id,
                 'name' => $task->assignee->name,
             ],
+            'co_assignees' => $task->coAssignees
+                ->map(fn (User $user): array => [
+                    'id' => (int) $user->getKey(),
+                    'name' => (string) $user->name,
+                ])
+                ->values()
+                ->all(),
+            'watchers' => $task->watchers
+                ->map(fn (User $user): array => [
+                    'id' => (int) $user->getKey(),
+                    'name' => (string) $user->name,
+                ])
+                ->values()
+                ->all(),
+            'is_watched' => $task->isWatchedBy((int) $viewer->getKey()),
+            'estimate_minutes' => $task->estimate_minutes,
+            'estimate_label' => self::estimateLabel($task->estimate_minutes),
             'client_id' => $task->client_user_id === null ? null : (int) $task->client_user_id,
             'entity' => $related instanceof Model
                 ? CrmEntityMap::describe($related, $viewer)
@@ -310,7 +411,27 @@ class CrmTaskService
                 'update' => $viewer->can('update', $task),
                 'reassign' => $viewer->can('reassign', $task),
                 'delete' => $viewer->can('delete', $task),
+                'watch' => $viewer->can('watch', $task),
             ],
         ];
+    }
+
+    /**
+     * Человеческая подпись трудоёмкости: «30 мин», «2 ч», «1 ч 30 мин».
+     */
+    public static function estimateLabel(?int $minutes): ?string
+    {
+        if ($minutes === null || $minutes <= 0) {
+            return null;
+        }
+
+        $hours = intdiv($minutes, 60);
+        $rest = $minutes % 60;
+
+        if ($hours === 0) {
+            return "{$minutes} мин";
+        }
+
+        return $rest === 0 ? "{$hours} ч" : "{$hours} ч {$rest} мин";
     }
 }

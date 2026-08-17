@@ -57,7 +57,7 @@ class TaskController extends CrmController
         $scope = CrmScope::fromRequest($request, $actor);
 
         $query = $this->tasks->visibleTo($actor, $scope)
-            ->with(['author:id,name', 'assignee:id,name', 'related'])
+            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'])
             ->withCount(['media as attachments_count' => fn ($media) => $media->where(
                 'collection_name',
                 CrmAttachments::COLLECTION,
@@ -101,7 +101,7 @@ class TaskController extends CrmController
         $paginator = $this->tasks->visibleTo($actor)
             ->where('related_type', $entity::class)
             ->where('related_id', $entity->getKey())
-            ->with(['author:id,name', 'assignee:id,name', 'related'])
+            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'])
             ->withCount(['media as attachments_count' => fn ($media) => $media->where(
                 'collection_name',
                 CrmAttachments::COLLECTION,
@@ -324,7 +324,7 @@ class TaskController extends CrmController
         $actor = $this->crmActor($request);
         Gate::authorize('view', $task);
 
-        $task->load(['author:id,name', 'assignee:id,name', 'related']);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
 
         return response()->json($this->tasks->payload($task, $actor));
     }
@@ -344,7 +344,7 @@ class TaskController extends CrmController
             : null;
 
         $task = $this->tasks->create($actor, $request->validated(), $related);
-        $task->load(['author:id,name', 'assignee:id,name', 'related']);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
 
         return response()->json($this->tasks->payload($task, $actor), 201);
     }
@@ -355,7 +355,7 @@ class TaskController extends CrmController
         Gate::authorize('update', $task);
 
         $this->tasks->update($task, $request->validated(), $actor);
-        $task->load(['author:id,name', 'assignee:id,name', 'related']);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
 
         return response()->json($this->tasks->payload($task, $actor));
     }
@@ -380,9 +380,9 @@ class TaskController extends CrmController
             $request->input('follow_up'),
         );
 
-        $task->load(['author:id,name', 'assignee:id,name', 'related']);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
         $followUp = $result['follow_up'];
-        $followUp?->load(['author:id,name', 'assignee:id,name', 'related']);
+        $followUp?->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
 
         return response()->json([
             'task' => $this->tasks->payload($task, $actor),
@@ -400,6 +400,51 @@ class TaskController extends CrmController
     }
 
     /**
+     * Взять задачу на личный контроль — себе или (РОП) поставить коллеге.
+     */
+    public function watch(Request $request, CrmTask $task): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+
+        $validated = $request->validate([
+            'user_id' => ['nullable', 'integer', 'exists:users,id'],
+        ]);
+
+        $watcherId = (int) ($validated['user_id'] ?? $actor->getKey());
+
+        if ($watcherId === (int) $actor->getKey()) {
+            Gate::authorize('watch', $task);
+            $watcher = $actor;
+        } else {
+            Gate::authorize('watchOther', $task);
+            $watcher = User::query()->findOrFail($watcherId);
+
+            if (! $watcher->hasCrmAccess()) {
+                abort(422, 'На контроль можно поставить только сотруднику с доступом в CRM.');
+            }
+        }
+
+        $this->tasks->watch($task, $watcher);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+
+        return response()->json($this->tasks->payload($task, $actor));
+    }
+
+    /**
+     * Снять с контроля можно только себя: чужое наблюдение не отменяется извне.
+     */
+    public function unwatch(Request $request, CrmTask $task): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('watch', $task);
+
+        $this->tasks->unwatch($task, $actor);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+
+        return response()->json($this->tasks->payload($task, $actor));
+    }
+
+    /**
      * Счётчики пресетов — они же подписи на кнопках фильтров.
      *
      * @return array<string, int>
@@ -412,6 +457,10 @@ class TaskController extends CrmController
         return [
             'mine' => $this->tasks->visibleTo($actor)->assignedTo($actorId)->whereIn('status', $active)->count(),
             'authored' => $this->tasks->visibleTo($actor)->authoredBy($actorId)->whereIn('status', $active)->count(),
+            'watching' => $this->tasks->visibleTo($actor)
+                ->whereHas('watchers', fn (Builder $users) => $users->whereKey($actorId))
+                ->whereIn('status', $active)
+                ->count(),
             'overdue' => $this->tasks->visibleTo($actor)->assignedTo($actorId)->overdue()->count(),
             'today' => $this->tasks->visibleTo($actor)->assignedTo($actorId)->dueToday()->count(),
         ];
@@ -423,7 +472,7 @@ class TaskController extends CrmController
     private function validateFilters(Request $request): array
     {
         $validated = $request->validate([
-            'preset' => ['nullable', Rule::in(['mine', 'authored', 'overdue', 'unlinked', 'all'])],
+            'preset' => ['nullable', Rule::in(['mine', 'authored', 'watching', 'overdue', 'unlinked', 'all'])],
             'status' => ['nullable', Rule::enum(TaskStatus::class)],
             'priority' => ['nullable', Rule::enum(TaskPriority::class)],
             'assignee_id' => ['nullable', 'integer'],
@@ -464,6 +513,9 @@ class TaskController extends CrmController
         match ($filters['preset']) {
             'mine' => $query->assignedTo($actorId)->whereIn('status', TaskStatus::activeValues()),
             'authored' => $query->authoredBy($actorId)->whereIn('status', TaskStatus::activeValues()),
+            'watching' => $query
+                ->whereHas('watchers', fn (Builder $users) => $users->whereKey($actorId))
+                ->whereIn('status', TaskStatus::activeValues()),
             'overdue' => $query->overdue(),
             'unlinked' => $query->whereNull('related_type'),
             default => $query,

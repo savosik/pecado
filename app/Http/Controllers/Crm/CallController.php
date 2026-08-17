@@ -104,7 +104,7 @@ class CallController extends CrmController
             'call' => $this->calls->payload($call, $actor),
             'follow_up' => $followUp === null
                 ? null
-                : app(CrmTaskService::class)->payload($followUp->load('author:id,name', 'assignee:id,name', 'related'), $actor),
+                : app(CrmTaskService::class)->payload($followUp->load('author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'), $actor),
         ], 201);
     }
 

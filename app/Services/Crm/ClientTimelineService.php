@@ -267,7 +267,7 @@ class ClientTimelineService
 
         $tasks = CrmTask::query()
             ->whereIn('id', $rows->where('source', self::TYPE_TASK)->pluck('id')->all())
-            ->with(['author:id,name', 'assignee:id,name', 'related'])
+            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'])
             ->withCount($this->attachmentsCount())
             ->get()
             ->keyBy('id');

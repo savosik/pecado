@@ -33,6 +33,9 @@ class UpdateCrmTaskRequest extends FormRequest
             'status' => ['sometimes', Rule::enum(TaskStatus::class)],
             'priority' => ['sometimes', Rule::enum(TaskPriority::class)],
             'due_at' => ['sometimes', 'nullable', 'date'],
+            'estimate_minutes' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:4800'],
+            'co_assignee_ids' => ['sometimes', 'nullable', 'array', 'max:20'],
+            'co_assignee_ids.*' => ['integer', 'exists:users,id', $this->crmAccessRule()],
         ];
     }
 

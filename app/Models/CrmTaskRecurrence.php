@@ -44,6 +44,7 @@ class CrmTaskRecurrence extends Model
         'title',
         'description',
         'priority',
+        'estimate_minutes',
         'related_type',
         'related_id',
         'weekdays',

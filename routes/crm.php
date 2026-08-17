@@ -253,6 +253,14 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/tasks/{task}', [TaskController::class, 'show'])
             ->name('tasks.show')
             ->whereNumber('task');
+        // Личный контроль — подписка-наблюдение, доступна любому видящему задачу,
+        // поэтому живёт под crm-tasks.view, а не edit.
+        Route::post('/tasks/{task}/watch', [TaskController::class, 'watch'])
+            ->name('tasks.watch')
+            ->whereNumber('task');
+        Route::delete('/tasks/{task}/watch', [TaskController::class, 'unwatch'])
+            ->name('tasks.unwatch')
+            ->whereNumber('task');
     });
 
     Route::middleware('permission:crm-tasks.create')->group(function () {

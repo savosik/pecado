@@ -34,7 +34,7 @@ class TaskOperations
         Gate::forUser($actor)->authorize('viewAny', CrmTask::class);
 
         $query = $this->tasks->visibleTo($actor)
-            ->with(['author:id,name', 'assignee:id,name', 'related']);
+            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
 
         if ($input->has('status')) {
             $query->where('status', $input->string('status'));
@@ -100,7 +100,7 @@ class TaskOperations
             )
             : null;
 
-        $data = $input->only(['title', 'description', 'assignee_id', 'status', 'priority', 'due_at']);
+        $data = $input->only(['title', 'description', 'assignee_id', 'co_assignee_ids', 'status', 'priority', 'due_at', 'estimate_minutes']);
 
         // Исполнитель по умолчанию — сам актор: агент ставит задачу своему
         // менеджеру, и требовать явный assignee_id в каждом вызове незачем.
@@ -113,7 +113,7 @@ class TaskOperations
         }
 
         $task = $this->tasks->create($actor, $data, $related);
-        $task->load(['author:id,name', 'assignee:id,name', 'related']);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
 
         return $this->tasks->payload($task, $actor);
     }
@@ -128,10 +128,10 @@ class TaskOperations
 
         $task = $this->tasks->update(
             $task,
-            $input->only(['title', 'description', 'status', 'priority', 'due_at', 'assignee_id']),
+            $input->only(['title', 'description', 'status', 'priority', 'due_at', 'assignee_id', 'co_assignee_ids', 'estimate_minutes']),
             $actor,
         );
-        $task->load(['author:id,name', 'assignee:id,name', 'related']);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
 
         return $this->tasks->payload($task, $actor);
     }
@@ -164,7 +164,7 @@ class TaskOperations
         /** @var Builder<CrmTask> $query */
         $query = $this->tasks->visibleTo($actor);
 
-        return $query->with(['author:id,name', 'assignee:id,name', 'related'])
+        return $query->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'])
             ->findOrFail((int) $input->int('task'));
     }
 }

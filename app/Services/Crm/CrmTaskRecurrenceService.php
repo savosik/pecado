@@ -130,6 +130,8 @@ class CrmTaskRecurrenceService
                     // у задачи обычный, как у заведённой руками.
                     'priority' => $recurrence->priority ?? TaskPriority::NORMAL,
                     'due_at' => $dueAt,
+                    // Повторяющаяся задача наследует плановую трудоёмкость правила.
+                    'estimate_minutes' => $recurrence->estimate_minutes,
                 ]);
 
                 CrmTaskOccurrence::create([

@@ -94,7 +94,7 @@ class DashboardController extends CrmController
         $items = $tasks->visibleTo($actor)
             ->assignedTo($actorId)
             ->where(fn ($query) => $query->overdue()->orWhere(fn ($today) => $today->dueToday()))
-            ->with(['author:id,name', 'assignee:id,name', 'related'])
+            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'])
             ->orderBy('due_at')
             ->take(8)
             ->get()

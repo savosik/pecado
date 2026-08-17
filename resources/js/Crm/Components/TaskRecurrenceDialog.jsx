@@ -25,11 +25,22 @@ const EMPTY = {
     title: '',
     description: '',
     assignee_id: '',
+    estimate_minutes: '',
     weekdays: WORKDAYS,
     due_time: '10:00',
     starts_on: today(),
     ends_on: '',
 };
+
+const ESTIMATE_OPTIONS = [
+    { value: '', label: 'Не оценена' },
+    { value: '15', label: '15 минут' },
+    { value: '30', label: '30 минут' },
+    { value: '60', label: '1 час' },
+    { value: '120', label: '2 часа' },
+    { value: '240', label: '4 часа' },
+    { value: '480', label: 'Рабочий день' },
+];
 
 /**
  * Правило автоповтора: «каждый будний день в 13:30».
@@ -66,6 +77,7 @@ export default function TaskRecurrenceDialog({ open, onClose, onSaved }) {
         try {
             await axios.post(route('crm.task-recurrences.store'), {
                 ...form,
+                estimate_minutes: form.estimate_minutes ? Number(form.estimate_minutes) : null,
                 ends_on: form.ends_on || null,
             });
 
@@ -184,6 +196,23 @@ export default function TaskRecurrenceDialog({ open, onClose, onSaved }) {
                                         />
                                     </Field>
                                 </HStack>
+
+                                <Field label="Трудоёмкость" helperText="Наследуется каждой порождённой задачей">
+                                    <select
+                                        value={form.estimate_minutes}
+                                        onChange={(event) => set({ estimate_minutes: event.target.value })}
+                                        style={{
+                                            padding: '0.4rem',
+                                            borderRadius: '0.375rem',
+                                            border: '1px solid var(--chakra-colors-border)',
+                                            width: '100%',
+                                        }}
+                                    >
+                                        {ESTIMATE_OPTIONS.map((item) => (
+                                            <option key={item.value} value={item.value}>{item.label}</option>
+                                        ))}
+                                    </select>
+                                </Field>
 
                                 <Text fontSize="xs" color="fg.muted">
                                     Пустая дата окончания — цепочка живёт, пока её не отменят. Отмена
