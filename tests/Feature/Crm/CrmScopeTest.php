@@ -158,4 +158,40 @@ class CrmScopeTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page->where('tasks.total', 2));
     }
+
+    /**
+     * Журнал писем живёт по тем же правилам: по умолчанию — письма своих
+     * партнёров, разрез «отдел» открывает письма коллег. Черновик, созданный
+     * коллегой от своего имени, без переключения разреза не виден — именно
+     * поэтому на странице нужен переключатель, а не только параметр в адресе.
+     */
+    #[Test]
+    public function department_scope_widens_email_journal_to_colleagues_letters(): void
+    {
+        $own = User::factory()->create(['personal_manager_id' => $this->ownCard->id]);
+        $foreign = User::factory()->create(['personal_manager_id' => $this->foreignCard->id]);
+
+        $colleague = User::factory()->create();
+        $colleague->assignRole('sales-manager');
+
+        \App\Models\CrmEmail::factory()->by($this->manager)->on($own)->create();
+        \App\Models\CrmEmail::factory()->by($colleague)->on($foreign)->create();
+
+        $actor = $this->seesDepartment($this->manager);
+
+        $this->actingAs($actor)
+            ->get(route('crm.emails.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('emails.total', 1)
+                ->where('filters.scope', CrmScope::MINE->value)
+                ->where('canSeeDepartment', true));
+
+        $this->actingAs($actor)
+            ->get(route('crm.emails.index', ['scope' => CrmScope::DEPARTMENT->value]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('emails.total', 2)
+                ->where('filters.scope', CrmScope::DEPARTMENT->value));
+    }
 }

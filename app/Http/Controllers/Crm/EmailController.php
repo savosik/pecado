@@ -41,8 +41,9 @@ class EmailController extends CrmController
         Gate::authorize('viewAny', CrmEmail::class);
 
         $filters = $this->validateFilters($request);
+        $scope = CrmScope::fromRequest($request, $actor);
 
-        $query = $this->emails->visibleTo($actor, CrmScope::fromRequest($request, $actor))
+        $query = $this->emails->visibleTo($actor, $scope)
             ->with(['author:id,name', 'related'])
             ->withCount(['media as attachments_count' => fn ($media) => $media->where(
                 'collection_name',
@@ -72,7 +73,8 @@ class EmailController extends CrmController
 
         return Inertia::render('Crm/Pages/Emails/Index', [
             'emails' => $paginator->through(fn (CrmEmail $email) => $this->emails->payload($email, $actor)),
-            'filters' => $filters,
+            'filters' => [...$filters, 'scope' => $scope->value],
+            'canSeeDepartment' => $this->seesDepartment($request),
             'statuses' => EmailStatus::optionsWithColor(),
             'templates' => $this->templates(),
             'outboundEnabled' => $this->emails->outboundEnabled(),

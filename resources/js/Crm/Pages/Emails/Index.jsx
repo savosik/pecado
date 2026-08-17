@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
+import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import { usePermission } from '@/shared/Panel/usePermission';
 import { LuMail, LuPaperclip, LuPencil, LuSend, LuTrash2 } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
@@ -27,7 +28,7 @@ const selectStyle = {
  * Отправленное письмо неизменяемо — журнал, который можно переписать задним числом,
  * бесполезен как журнал. Править и удалять можно только черновики и то, что не ушло.
  */
-export default function Index({ emails, filters, statuses, outboundEnabled, openEmailId }) {
+export default function Index({ emails, filters, statuses, outboundEnabled, openEmailId, canSeeDepartment = false }) {
     const { can } = usePermission();
     const [dialogEmail, setDialogEmail] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -213,6 +214,12 @@ export default function Index({ emails, filters, statuses, outboundEnabled, open
                             <option key={item.value} value={item.value}>{item.label}</option>
                         ))}
                     </select>
+
+                    <ScopeToggle
+                        section="emails"
+                        scope={filters.scope}
+                        available={canSeeDepartment}
+                    />
                 </HStack>
 
                 <DataTable data={emails.data} columns={columns} pagination={emails} />
