@@ -3,7 +3,9 @@
 namespace Tests\Feature\Crm;
 
 use App\Enums\Crm\PlanTarget;
+use App\Models\ContractorBalance;
 use App\Models\CrmSalesPlan;
+use App\Models\Payment;
 use App\Models\PersonalManager;
 use App\Models\Product;
 use App\Models\Shipment;
@@ -18,6 +20,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Role;
 use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
 use Tests\TestCase;
 
@@ -428,6 +431,91 @@ class PlanProgressTest extends TestCase
         $this->assertNull($rows[2]['lag']);
     }
 
+    /**
+     * Долг, просрочка и последний платёж в строке партнёра — те же источники,
+     * что в /crm/finance: суммы `contractor_balances` и свежайшее входящее
+     * поступление из `payments`. Возврат клиенту платежом не считается.
+     */
+    #[Test]
+    public function clients_rows_carry_debt_and_last_payment(): void
+    {
+        $client = $this->client();
+        $this->plan(PlanTarget::CLIENT, $client->id, 100000);
+        $this->shipment($client, 40000);
+
+        // Два контрагента одного партнёра — долг и просрочка складываются.
+        ContractorBalance::create([
+            'user_id' => $client->id,
+            'contractor_uuid' => (string) Str::uuid(),
+            'tax_id' => '7700000001',
+            'current_balance' => 150000,
+            'overdue_debt' => 30000,
+        ]);
+        ContractorBalance::create([
+            'user_id' => $client->id,
+            'contractor_uuid' => (string) Str::uuid(),
+            'tax_id' => '7700000002',
+            'current_balance' => 50000,
+            'overdue_debt' => 0,
+        ]);
+
+        Payment::factory()->create(['user_id' => $client->id, 'date' => '2026-08-03 10:00:00', 'amount' => 25000]);
+        Payment::factory()->create(['user_id' => $client->id, 'date' => '2026-08-08 12:00:00', 'amount' => 40000]);
+        // Возврат позже поступления — последним платежом быть не должен.
+        Payment::factory()->outgoing()->create(['user_id' => $client->id, 'date' => '2026-08-09 09:00:00', 'amount' => 5000]);
+
+        $row = collect($this->progress($this->manager)['clients'])->firstWhere('id', $client->id);
+
+        $this->assertEqualsWithDelta(200000.0, $row['finance']['debt'], 0.01);
+        $this->assertEqualsWithDelta(30000.0, $row['finance']['overdue_debt'], 0.01);
+        $this->assertSame('08.08.2026', $row['finance']['last_payment']['date']);
+        $this->assertEqualsWithDelta(40000.0, $row['finance']['last_payment']['amount'], 0.01);
+        // Сегодня заморожено 10 августа — платёж 8-го был два дня назад.
+        $this->assertSame(2, $row['finance']['last_payment']['days_ago']);
+    }
+
+    /**
+     * Партнёр без строки баланса (1С ещё не прислала) — нули, а не отсутствие
+     * ячейки; без платежей — last_payment = null.
+     */
+    #[Test]
+    public function partner_without_balance_gets_zero_debt_not_missing_cell(): void
+    {
+        $client = $this->client();
+        $this->plan(PlanTarget::CLIENT, $client->id, 100000);
+
+        $row = collect($this->progress($this->manager)['clients'])->firstWhere('id', $client->id);
+
+        $this->assertEqualsWithDelta(0.0, $row['finance']['debt'], 0.001);
+        $this->assertEqualsWithDelta(0.0, $row['finance']['overdue_debt'], 0.001);
+        $this->assertNull($row['finance']['last_payment']);
+    }
+
+    /**
+     * Долг — финансовые данные: без `crm-finance.view` колонка не приходит
+     * вовсе (`finance: null`), а не приходит нулями.
+     */
+    #[Test]
+    public function finance_cell_requires_finance_permission(): void
+    {
+        $client = $this->client();
+        $this->plan(PlanTarget::CLIENT, $client->id, 100000);
+
+        ContractorBalance::create([
+            'user_id' => $client->id,
+            'contractor_uuid' => (string) Str::uuid(),
+            'tax_id' => '7700000003',
+            'current_balance' => 150000,
+            'overdue_debt' => 30000,
+        ]);
+
+        Role::findByName('sales-manager')->revokePermissionTo('crm-finance.view');
+
+        $row = collect($this->progress($this->manager->fresh())['clients'])->firstWhere('id', $client->id);
+
+        $this->assertNull($row['finance']);
+    }
+
     #[Test]
     public function export_streams_xlsx(): void
     {
@@ -443,6 +531,22 @@ class PlanProgressTest extends TestCase
             'spreadsheetml',
             (string) $response->headers->get('content-type'),
         );
+    }
+
+    /**
+     * Команда прогрева проходит весь путь расчёта под первым пользователем
+     * с правом на отдел: те же сервисы и те же ключи кэша, что у страницы.
+     */
+    #[Test]
+    public function warm_command_precomputes_progress_caches(): void
+    {
+        $client = $this->client();
+        $this->shipment($client, 50000);
+        $this->plan(PlanTarget::DEPARTMENT, null, 1000000);
+
+        $this->artisan('crm:plans-warm')
+            ->expectsOutputToContain('Прогрето скоупов')
+            ->assertSuccessful();
     }
 
     #[Test]

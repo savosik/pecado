@@ -163,7 +163,10 @@ class PlanController extends CrmController
         $scope = $this->resolveScope($request, $actor);
 
         $summary = $this->progress->progress($month, $scope);
-        $headers = ['Раздел', 'Объект', 'План, ₽', 'Факт, ₽', 'Выполнение, %', 'Отставание, ₽', 'Прогноз при текущем темпе, ₽'];
+        $headers = [
+            'Раздел', 'Объект', 'План, ₽', 'Факт, ₽', 'Выполнение, %', 'Отставание, ₽',
+            'Прогноз при текущем темпе, ₽', 'Долг, ₽', 'Просрочка, ₽', 'Последний платёж',
+        ];
 
         $rows = [[
             'Сводка',
@@ -173,6 +176,7 @@ class PlanController extends CrmController
             $summary['percent'] ?? '',
             $summary['remaining'] ?? '',
             $summary['forecast'] ?? '',
+            '', '', '',
         ]];
 
         foreach ($this->progress->byManager($month, $actor) as $row) {
@@ -184,10 +188,13 @@ class PlanController extends CrmController
                 $row['percent'] ?? '',
                 $row['plan'] !== null ? round(max(0.0, $row['plan'] - $row['fact']), 2) : '',
                 $row['forecast'] ?? '',
+                '', '', '',
             ];
         }
 
         foreach ($this->progress->clients($month, $scope, $actor) as $row) {
+            $payment = $row['finance']['last_payment'] ?? null;
+
             $rows[] = [
                 'Партнёры',
                 $row['name'],
@@ -196,6 +203,9 @@ class PlanController extends CrmController
                 $row['percent'] ?? '',
                 $row['lag'] ?? '',
                 '',
+                $row['finance']['debt'] ?? '',
+                $row['finance']['overdue_debt'] ?? '',
+                $payment !== null ? $payment['date'].' — '.$payment['amount'].' ₽' : '',
             ];
         }
 

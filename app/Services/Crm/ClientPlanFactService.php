@@ -26,12 +26,20 @@ use Illuminate\Support\Facades\Cache;
 class ClientPlanFactService
 {
     /**
-     * Сколько держать факт по всему скоупу.
+     * Сколько держать факт по всему скоупу свежим.
      *
      * Пять минут: отгрузки приезжают из 1С пачками, и пересчитывать агрегат по
      * восьмистам партнёрам на каждое нажатие «отстают от плана» незачем.
      */
     private const SCOPE_CACHE_TTL = 300;
+
+    /**
+     * Ещё час после протухания значение отдаётся как есть, а пересчёт уходит
+     * в фон после ответа — тот же stale-while-revalidate, что в
+     * {@see PlanProgressService}: первый заход после простоя не должен ждать
+     * агрегат по восьмистам партнёрам синхронно.
+     */
+    private const SCOPE_CACHE_GRACE = 3600;
 
     public function __construct(private readonly ShipmentAnalyticsService $analytics) {}
 
@@ -103,7 +111,11 @@ class ClientPlanFactService
         sort($ids);
         $key = 'crm:plan-fact:'.md5(implode(',', $ids)).':'.CarbonImmutable::instance($month)->format('Y-m');
 
-        return Cache::remember($key, self::SCOPE_CACHE_TTL, fn (): array => $this->forClients($ids, $month));
+        return Cache::flexible(
+            $key,
+            [self::SCOPE_CACHE_TTL, self::SCOPE_CACHE_TTL + self::SCOPE_CACHE_GRACE],
+            fn (): array => $this->forClients($ids, $month),
+        );
     }
 
     /**

@@ -42,6 +42,74 @@ const PACE = {
     behind: { label: 'Отстаём от плана', color: 'red' },
 };
 
+const daysAgoLabel = (days) => {
+    if (days === 0) return 'сегодня';
+    if (days === 1) return 'вчера';
+
+    return `${days} дн. назад`;
+};
+
+/**
+ * «Факт из плана» одной ячейкой: раньше это были три колонки (План, Факт,
+ * Выполнение), и таблица не влезала в экран уже на семи колонках.
+ */
+function PlanFactCell({ plan, fact, percent }) {
+    return (
+        <VStack align="stretch" gap={1} minW="150px">
+            <HStack justify="space-between" gap={2}>
+                <Text fontSize="sm" fontWeight="600">{money(fact)}</Text>
+                <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">
+                    {plan === null || plan === undefined ? 'без плана' : `из ${money(plan)}`}
+                </Text>
+            </HStack>
+            <HStack gap={2}>
+                <ProgressRoot flex="1" value={Math.min(percent ?? 0, 100)} size="xs" colorPalette={palette(percent)}>
+                    <ProgressBar />
+                </ProgressRoot>
+                <Text fontSize="xs" fontWeight="600" color={`${palette(percent)}.fg`} minW="34px" textAlign="right">
+                    {percent === null || percent === undefined ? '—' : `${percent}%`}
+                </Text>
+            </HStack>
+        </VStack>
+    );
+}
+
+/** Долг партнёра из 1С; просрочка — красной строкой под общей суммой. */
+function DebtCell({ finance }) {
+    if (!finance) {
+        return <Text fontSize="sm" color="fg.muted">—</Text>;
+    }
+
+    return (
+        <>
+            <Text fontSize="sm" color={finance.debt > 0 ? undefined : 'fg.muted'}>{money(finance.debt)}</Text>
+            {finance.overdue_debt > 0 && (
+                <Text fontSize="xs" color="red.fg" fontWeight="600" whiteSpace="nowrap">
+                    просрочено {money(finance.overdue_debt)}
+                </Text>
+            )}
+        </>
+    );
+}
+
+/** Последнее входящее поступление: сумма и как давно оно было. */
+function LastPaymentCell({ finance }) {
+    if (!finance || !finance.last_payment) {
+        return <Text fontSize="sm" color="fg.muted">не было</Text>;
+    }
+
+    const payment = finance.last_payment;
+
+    return (
+        <>
+            <Text fontSize="sm">{money(payment.amount)}</Text>
+            <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">
+                {payment.date} · {daysAgoLabel(payment.days_ago)}
+            </Text>
+        </>
+    );
+}
+
 function KpiTile({ title, value, hint, accent = 'gray' }) {
     return (
         <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4} boxShadow="sm">
@@ -160,6 +228,9 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
     const detail = clientId === null ? parentData : clientDetail;
     const clients = parentData.clients ?? [];
     const scopeOptions = parentData.scopeOptions ?? [];
+    // Долг и платежи приходят только тем, у кого есть право на финансы CRM:
+    // без него finance = null во всех строках, и колонки не рисуются вовсе.
+    const showFinance = clients.some((row) => row.finance);
 
     // Пока сводка по выбранному партнёру не приехала, показываем скоуп — иначе
     // плитки на мгновение опустели бы.
@@ -294,13 +365,11 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                 <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4}>
                     <Text fontWeight="600" mb={3}>По менеджерам</Text>
                     <Box overflowX="auto">
-                        <Table.Root size="sm">
+                        <Table.Root size="sm" interactive>
                             <Table.Header>
                                 <Table.Row>
                                     <Table.ColumnHeader>Менеджер</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">План</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Факт</Table.ColumnHeader>
-                                    <Table.ColumnHeader minW="160px">Выполнение</Table.ColumnHeader>
+                                    <Table.ColumnHeader minW="180px">Факт / план</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Прогноз при текущем темпе</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Активных партнёров</Table.ColumnHeader>
                                 </Table.Row>
@@ -316,21 +385,8 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                                         <Table.Cell>
                                             <Text fontSize="sm" fontWeight="500">{row.name}</Text>
                                         </Table.Cell>
-                                        <Table.Cell textAlign="right">{money(row.plan)}</Table.Cell>
-                                        <Table.Cell textAlign="right">{money(row.fact)}</Table.Cell>
                                         <Table.Cell>
-                                            <VStack align="stretch" gap={1}>
-                                                <Text fontSize="xs" fontWeight="600" color={`${palette(row.percent)}.fg`}>
-                                                    {row.percent === null ? 'без плана' : `${row.percent}%`}
-                                                </Text>
-                                                <ProgressRoot
-                                                    value={Math.min(row.percent ?? 0, 100)}
-                                                    size="xs"
-                                                    colorPalette={palette(row.percent)}
-                                                >
-                                                    <ProgressBar />
-                                                </ProgressRoot>
-                                            </VStack>
+                                            <PlanFactCell plan={row.plan} fact={row.fact} percent={row.percent} />
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">{money(row.forecast)}</Table.Cell>
                                         <Table.Cell textAlign="right">{row.clients_count}</Table.Cell>
@@ -355,16 +411,16 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                     </Text>
                 ) : (
                     <Box overflowX="auto">
-                        <Table.Root size="sm">
+                        <Table.Root size="sm" interactive>
                             <Table.Header>
                                 <Table.Row>
                                     <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
                                     <Table.ColumnHeader>Последний заказ</Table.ColumnHeader>
                                     <Table.ColumnHeader>Ближайшая задача</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">План</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Факт</Table.ColumnHeader>
-                                    <Table.ColumnHeader minW="160px">Выполнение</Table.ColumnHeader>
+                                    <Table.ColumnHeader minW="170px">Факт / план</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Отставание</Table.ColumnHeader>
+                                    {showFinance && <Table.ColumnHeader textAlign="right">Долг</Table.ColumnHeader>}
+                                    {showFinance && <Table.ColumnHeader textAlign="right">Последний платёж</Table.ColumnHeader>}
                                     <Table.ColumnHeader />
                                 </Table.Row>
                             </Table.Header>
@@ -401,27 +457,24 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                                                 onOpen={onOpenTask}
                                             />
                                         </Table.Cell>
-                                        <Table.Cell textAlign="right">{money(row.plan)}</Table.Cell>
-                                        <Table.Cell textAlign="right">{money(row.fact)}</Table.Cell>
                                         <Table.Cell>
-                                            <VStack align="stretch" gap={1}>
-                                                <Text fontSize="xs" fontWeight="600" color={`${palette(row.percent)}.fg`}>
-                                                    {row.percent === null ? 'без плана' : `${row.percent}%`}
-                                                </Text>
-                                                <ProgressRoot
-                                                    value={Math.min(row.percent ?? 0, 100)}
-                                                    size="xs"
-                                                    colorPalette={palette(row.percent)}
-                                                >
-                                                    <ProgressBar />
-                                                </ProgressRoot>
-                                            </VStack>
+                                            <PlanFactCell plan={row.plan} fact={row.fact} percent={row.percent} />
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">
                                             <Text fontSize="sm" color={row.lag > 0 ? 'red.fg' : 'fg.muted'}>
                                                 {row.lag === null ? '—' : money(row.lag)}
                                             </Text>
                                         </Table.Cell>
+                                        {showFinance && (
+                                            <Table.Cell textAlign="right">
+                                                <DebtCell finance={row.finance} />
+                                            </Table.Cell>
+                                        )}
+                                        {showFinance && (
+                                            <Table.Cell textAlign="right">
+                                                <LastPaymentCell finance={row.finance} />
+                                            </Table.Cell>
+                                        )}
                                         <Table.Cell onClick={(e) => e.stopPropagation()}>
                                             <RowActions
                                                 onComment={onComment ? () => onComment(row) : undefined}

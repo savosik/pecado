@@ -40,3 +40,4 @@ Schedule::command('substitutions:follow-up')->hourly()->withoutOverlapping(); //
 Schedule::command('substitutions:premark')->weeklyOn(1, '06:30')->withoutOverlapping(); // ai-предразметка связей по дефицитному ядру — в очередь подтверждений, автоподбор их не использует до решения человека
 Schedule::command('substitutions:purchasing-report')->weeklyOn(1, '07:00')->withoutOverlapping(); // отчёт закупкам о повторных недоборах — лечит запас, а не симптом (за флагом SHORTAGE_OFFERS_ENABLED)
 Schedule::command('apiship:sync-statuses')->everyThirtyMinutes()->withoutOverlapping(); // страховка вебхука ORDER_STATUS: догоняет статусы, потерянные при недоступности сайта
+Schedule::command('crm:plans-warm')->everyTenMinutes()->between('7:00', '21:00')->withoutOverlapping(); // прогрев тяжёлых агрегатов /crm/plans: первый утренний заход не ждёт пересчёт синхронно

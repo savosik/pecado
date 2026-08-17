@@ -3,10 +3,13 @@
 namespace App\Services\Crm;
 
 use App\Enums\Crm\TaskStatus;
+use App\Models\ContractorBalance;
 use App\Models\CrmTask;
+use App\Models\Payment;
 use App\Models\User;
 use App\Support\Crm\LastVisit;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Общее содержимое строки партнёра: ближайшая задача, последний заказ, визит.
@@ -163,6 +166,72 @@ class ClientRowEnricher
     public function lastOrders(array $clientIds): array
     {
         return $this->lastOrders->forClients($clientIds);
+    }
+
+    /**
+     * Финансовая сводка по каждому партнёру: долг, просрочка и последний платёж.
+     *
+     * Долг и просрочка — суммы `current_balance`/`overdue_debt` по контрагентам
+     * партнёра из `contractor_balances`. Это единственный источник долга: сумма
+     * неоплаченных документов больше долга в разы, потому что 1С гасит его ещё
+     * и авансами по заказам. Последний платёж — свежайшее входящее поступление
+     * из `payments`; возвраты клиенту платежом не считаются.
+     *
+     * @param  list<int>  $clientIds
+     * @return array<int, array{debt: float, overdue_debt: float, last_payment: array{date: string, days_ago: int, amount: float}|null}>
+     */
+    public function finance(array $clientIds): array
+    {
+        if ($clientIds === []) {
+            return [];
+        }
+
+        $rows = [];
+
+        ContractorBalance::query()
+            ->whereIn('user_id', $clientIds)
+            ->selectRaw('user_id, SUM(current_balance) as debt, SUM(overdue_debt) as overdue')
+            ->groupBy('user_id')
+            ->get()
+            ->each(function (ContractorBalance $balance) use (&$rows): void {
+                $rows[(int) $balance->user_id] = [
+                    'debt' => round((float) $balance->getAttribute('debt'), 2),
+                    'overdue_debt' => round((float) $balance->getAttribute('overdue'), 2),
+                    'last_payment' => null,
+                ];
+            });
+
+        // Последнее поступление каждого партнёра одним запросом: оконная
+        // нумерация вместо N подзапросов или выборки всей истории платежей.
+        $latest = DB::query()
+            ->fromSub(
+                Payment::query()
+                    ->incoming()
+                    ->whereIn('user_id', $clientIds)
+                    ->select('user_id', 'date', 'amount')
+                    ->selectRaw('ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY date DESC, id DESC) as rn')
+                    ->toBase(),
+                'last_payments',
+            )
+            ->where('rn', 1)
+            ->get();
+
+        $today = CarbonImmutable::now()->startOfDay();
+
+        foreach ($latest as $payment) {
+            $date = CarbonImmutable::parse((string) $payment->date);
+
+            // Партнёр может платить, не имея строки баланса (1С ещё не прислала
+            // partner.balance) — платёж всё равно показываем, долг нулевой.
+            $rows[(int) $payment->user_id] ??= ['debt' => 0.0, 'overdue_debt' => 0.0, 'last_payment' => null];
+            $rows[(int) $payment->user_id]['last_payment'] = [
+                'date' => $date->format('d.m.Y'),
+                'days_ago' => (int) $date->startOfDay()->diffInDays($today),
+                'amount' => round((float) $payment->amount, 2),
+            ];
+        }
+
+        return $rows;
     }
 
     /**

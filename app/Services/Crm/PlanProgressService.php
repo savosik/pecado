@@ -37,6 +37,15 @@ class PlanProgressService
     private const OPEN_MONTH_TTL = 300;
 
     /**
+     * Сколько после протухания отдавать устаревшее значение, пересчитывая
+     * в фоне. Раньше первый заход после пяти минут простоя ловил все тяжёлые
+     * агрегаты синхронно и «раздел долго открывается»; теперь этот посетитель
+     * получает вчерашнюю пятиминутную цифру мгновенно, а пересчёт уходит
+     * за пределы ответа (defer после fastcgi_finish_request).
+     */
+    private const OPEN_MONTH_GRACE = 3600;
+
+    /**
      * Закрытый месяц пересчитывать незачем — сутки.
      */
     private const CLOSED_MONTH_TTL = 86400;
@@ -291,7 +300,11 @@ class PlanProgressService
         $lastOrders = $this->enricher->lastOrders($ids);
         $lastSeen = User::query()->whereIn('id', $ids)->pluck('last_seen_at', 'id');
 
-        return array_map(function (array $row) use ($canSeeTasks, $nextTasks, $taskCounts, $lastOrders, $lastSeen): array {
+        // Долг — те же цифры, что в /crm/finance, и под тем же правом: без
+        // `crm-finance.view` колонка не приходит вовсе, а не приходит нулями.
+        $finance = $actor->can('crm-finance.view') ? $this->enricher->finance($ids) : null;
+
+        return array_map(function (array $row) use ($canSeeTasks, $nextTasks, $taskCounts, $lastOrders, $lastSeen, $finance): array {
             $id = (int) $row['id'];
 
             return [
@@ -303,6 +316,9 @@ class PlanProgressService
                     : null,
                 'last_order' => $lastOrders[$id] ?? null,
                 'last_visit' => $this->enricher->lastVisitPayload($lastSeen[$id] ?? null),
+                'finance' => $finance === null
+                    ? null
+                    : ($finance[$id] ?? ['debt' => 0.0, 'overdue_debt' => 0.0, 'last_payment' => null]),
             ];
         }, $rows);
     }
@@ -536,7 +552,9 @@ class PlanProgressService
     }
 
     /**
-     * Кэш агрегата. Закрытый месяц не меняется — держим сутки, текущий — пять минут.
+     * Кэш агрегата. Закрытый месяц не меняется — держим сутки. Текущий месяц —
+     * пять минут свежести, а дальше час stale-while-revalidate: устаревшую
+     * цифру отдаём сразу, пересчёт уезжает в фон после ответа.
      *
      * @template TValue
      *
@@ -550,10 +568,8 @@ class PlanProgressService
 
         $key = 'crm:plan-progress:'.$bucket.':'.$period->format('Y-m').':'.$scope->cacheKey();
 
-        return Cache::remember(
-            $key,
-            $isClosed ? self::CLOSED_MONTH_TTL : self::OPEN_MONTH_TTL,
-            $callback,
-        );
+        return $isClosed
+            ? Cache::remember($key, self::CLOSED_MONTH_TTL, $callback)
+            : Cache::flexible($key, [self::OPEN_MONTH_TTL, self::OPEN_MONTH_TTL + self::OPEN_MONTH_GRACE], $callback);
     }
 }
