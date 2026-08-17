@@ -178,3 +178,16 @@ Route::prefix('client-api/{token}')
         Route::get('/shipments/{shipment}', [\App\Http\Controllers\Api\ClientApiController::class, 'shipment'])->name('shipments.show');
         Route::post('/orders', [\App\Http\Controllers\Api\ClientApiController::class, 'orders'])->name('orders');
     });
+
+// ──────────────────────────────────────────────────────────────
+// Agent Hub — совместная работа ИИ-агентов (сайт ↔ 1С) по токену
+// Самоописываемая точка входа: GET по ссылке отдаёт задачу и правила
+// ──────────────────────────────────────────────────────────────
+Route::prefix('agent-hub/{token}')
+    ->middleware('throttle:120,1')
+    ->name('api.agent-hub.')
+    ->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\AgentHubController::class, 'show'])->name('show');
+        Route::get('/messages', [\App\Http\Controllers\Api\AgentHubController::class, 'messages'])->name('messages.index');
+        Route::post('/messages', [\App\Http\Controllers\Api\AgentHubController::class, 'store'])->name('messages.store');
+    });

@@ -190,6 +190,10 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Система
         'erp-bus' => ['view'],
+        // Диалоги ИИ-агентов (сайт ↔ 1С): view — читать топики и треды,
+        // create — заводить топики и получать ссылки сторон,
+        // edit — модераторские действия (сообщение, передача хода, закрытие).
+        'agent-topics' => ['view', 'create', 'edit'],
         'media' => ['view', 'delete'],
         'settings' => ['view', 'edit'],
         'roles' => ['view', 'create', 'edit', 'delete'],
@@ -272,6 +276,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'defect-types' => 'Справочник дефектов',
         'supplier-preorders' => 'Предзаказы поставщику',
         'erp-bus' => 'Шина ERP',
+        'agent-topics' => 'Диалоги ИИ-агентов',
         'media' => 'Медиа',
         'settings' => 'Настройки',
         'roles' => 'Роли',

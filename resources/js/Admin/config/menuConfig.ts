@@ -46,6 +46,7 @@ import {
     LuMenu,
     LuUserRound,
     LuLandmark,
+    LuBot,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -171,6 +172,7 @@ export const menuConfig: MenuGroup[] = [
         items: [
             { label: "Канбан", icon: LuLayoutDashboard, path: "/admin/kanban", permission: "settings.view" },
             { label: "Шина ERP", icon: LuRadio, path: "/admin/erp-bus", permission: "erp-bus.view" },
+            { label: "Диалоги ИИ-агентов", icon: LuBot, path: "/admin/agent-topics", permission: "agent-topics.view" },
             { label: "Медиа", icon: LuImagePlay, path: "/admin/media", permission: "media.view" },
             { label: "Роли", icon: LuShieldCheck, path: "/admin/roles", permission: "roles.view" },
             { label: "Настройки", icon: LuSettings, path: "/admin/settings", permission: "settings.view" },

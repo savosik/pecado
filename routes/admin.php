@@ -447,6 +447,21 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::delete('/defect-types/{defectType}', [\App\Http\Controllers\Admin\DefectTypeController::class, 'destroy'])
         ->name('defect-types.destroy')->middleware('permission:defect-types.delete');
 
+    // Диалоги ИИ-агентов (сайт ↔ 1С): топики совместной работы двух агентов.
+    Route::middleware('permission:agent-topics.view')->group(function () {
+        Route::get('/agent-topics', [\App\Http\Controllers\Admin\AgentTopicController::class, 'index'])->name('agent-topics.index');
+        Route::get('/agent-topics/{agentTopic}', [\App\Http\Controllers\Admin\AgentTopicController::class, 'show'])->name('agent-topics.show')->whereNumber('agentTopic');
+    });
+    Route::middleware('permission:agent-topics.create')->group(function () {
+        Route::get('/agent-topics/create', [\App\Http\Controllers\Admin\AgentTopicController::class, 'create'])->name('agent-topics.create');
+        Route::post('/agent-topics', [\App\Http\Controllers\Admin\AgentTopicController::class, 'store'])->name('agent-topics.store');
+    });
+    Route::middleware('permission:agent-topics.edit')->group(function () {
+        Route::post('/agent-topics/{agentTopic}/messages', [\App\Http\Controllers\Admin\AgentTopicController::class, 'storeMessage'])->name('agent-topics.messages.store');
+        Route::post('/agent-topics/{agentTopic}/pass-turn', [\App\Http\Controllers\Admin\AgentTopicController::class, 'passTurn'])->name('agent-topics.pass-turn');
+        Route::post('/agent-topics/{agentTopic}/close', [\App\Http\Controllers\Admin\AgentTopicController::class, 'close'])->name('agent-topics.close');
+    });
+
     // Регионы
     Route::middleware('permission:regions.view')->group(function () {
         Route::get('/regions', [\App\Http\Controllers\Admin\RegionController::class, 'index'])->name('regions.index');
