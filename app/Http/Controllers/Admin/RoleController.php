@@ -27,7 +27,7 @@ class RoleController extends Controller
         'Финансы' => ['organizations', 'currencies', 'contractor-balances', 'payments', 'individual-prices'],
         'Контент' => ['articles', 'brand-stories', 'news', 'faqs', 'banners', 'pages', 'stories', 'menu-items', 'user-questions'],
         'Теги' => ['tags'],
-        'Система' => ['erp-bus', 'media', 'settings', 'roles'],
+        'Система' => ['erp-bus', 'agent-topics', 'media', 'settings', 'roles'],
     ];
 
     protected array $resourceLabels = [
@@ -68,6 +68,7 @@ class RoleController extends Controller
         'articles' => 'Статьи', 'brand-stories' => 'О брендах', 'news' => 'Новости',
         'faqs' => 'FAQ', 'banners' => 'Баннеры', 'pages' => 'Страницы',
         'stories' => 'Истории', 'tags' => 'Теги', 'erp-bus' => 'Шина ERP',
+        'agent-topics' => 'Диалоги ИИ-агентов',
         'supplier-preorders' => 'Предзаказы поставщику',
         'media' => 'Медиа', 'settings' => 'Настройки', 'roles' => 'Роли',
     ];
