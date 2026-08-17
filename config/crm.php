@@ -146,4 +146,10 @@ return [
         'template_name' => env('CRM_BACK_IN_STOCK_TEMPLATE', 'Товар снова в наличии'),
     ],
 
+    // Web Push по задачам (task-09). Выключено по умолчанию, как все
+    // нотификационные фичи; без VAPID-ключей (config/webpush.php) молчит.
+    'push' => [
+        'enabled' => (bool) env('CRM_PUSH_ENABLED', false),
+    ],
+
 ];

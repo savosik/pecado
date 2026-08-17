@@ -99,6 +99,19 @@ class TaskReminderService
     }
 
     /**
+     * Поводы для push-канала: те же, что у тостов, плюс заголовок уведомления.
+     *
+     * @return list<array{0: CrmTask, 1: string, 2: string}>
+     */
+    public function pendingPushFor(User $actor): array
+    {
+        return array_map(
+            fn (array $pair): array => [$pair[0], $pair[1], $this->kindLabel($pair[1])],
+            $this->pendingFor($actor),
+        );
+    }
+
+    /**
      * Отметить повод отправленным. false — уже отправляли (или гонка вкладок).
      */
     public function claim(CrmTask $task, User $recipient, string $kind, string $channel): bool

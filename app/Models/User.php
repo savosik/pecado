@@ -136,6 +136,7 @@ class User extends Authenticatable implements HasMedia
     // InteractsWithMedia приходит внутри HasCrmAttachments: подключать его ещё и напрямую
     // нельзя — registerMediaCollections() из двух трейтов даёт коллизию методов.
     use HasApiTokens, HasCrmAttachments, HasFactory, HasRoles, HasTags, Notifiable;
+    use \NotificationChannels\WebPush\HasPushSubscriptions;
 
     /**
      * Тип тегов «интересы клиента» в CRM.

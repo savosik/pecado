@@ -13,6 +13,7 @@
         "dedoc/scramble": "^0.13.17",
         "inertiajs/inertia-laravel": "^2.0",
         "kalnoy/nestedset": "^6.0",
+        "laravel-notification-channels/webpush": "^12.1",
         "laravel/framework": "^12.0",
         "laravel/horizon": "^5.45",
         "laravel/mcp": "0.5.3",
@@ -120,7 +121,7 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
-            "php-http/discovery": true
+            "php-http/discovery": false
         }
     },
     "minimum-stability": "stable",

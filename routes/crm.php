@@ -253,6 +253,13 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // Пульс задач: счётчик меню + свежие поводы для тостов, один запрос в минуту.
         Route::get('/notifications/poll', \App\Http\Controllers\Crm\NotificationPollController::class)
             ->name('notifications.poll');
+        // Web Push: состояние фичи и подписка текущего браузера.
+        Route::get('/push-subscriptions/status', [\App\Http\Controllers\Crm\PushSubscriptionController::class, 'status'])
+            ->name('push.status');
+        Route::post('/push-subscriptions', [\App\Http\Controllers\Crm\PushSubscriptionController::class, 'store'])
+            ->name('push.store');
+        Route::delete('/push-subscriptions', [\App\Http\Controllers\Crm\PushSubscriptionController::class, 'destroy'])
+            ->name('push.destroy');
         Route::get('/tasks/calendar', [TaskController::class, 'calendar'])->name('tasks.calendar');
         Route::get('/tasks/calendar-feed', [TaskController::class, 'calendarFeed'])->name('tasks.calendar-feed');
         // Ссылки подписки для внешних календарей (сам фид — в routes/web.php, без auth).

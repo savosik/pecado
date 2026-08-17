@@ -21,9 +21,10 @@ import TaskRow from '@/Crm/Components/TaskRow';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import TaskRecurrenceDialog from '@/Crm/Components/TaskRecurrenceDialog';
 import TaskCloseDialog from '@/Crm/Components/TaskCloseDialog';
+import TaskPushDialog from '@/Crm/Components/TaskPushDialog';
 import { primeTaskOptions } from '@/Crm/Components/useTaskOptions';
 import { usePermission } from '@/shared/Panel/usePermission';
-import { LuCalendarDays, LuChevronDown, LuChevronRight, LuPlus, LuRepeat } from 'react-icons/lu';
+import { LuBellRing, LuCalendarDays, LuChevronDown, LuChevronRight, LuPlus, LuRepeat } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 const PRESETS = [
@@ -77,6 +78,7 @@ export default function Index({ tasks, filters, counters, options, openTaskId, c
     const [closingTask, setClosingTask] = useState(null);
     const [busy, setBusy] = useState(false);
     const [recurrenceOpen, setRecurrenceOpen] = useState(false);
+    const [pushOpen, setPushOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(() => readCollapsed());
     const sentinelRef = useRef(null);
 
@@ -262,6 +264,9 @@ export default function Index({ tasks, filters, counters, options, openTaskId, c
                 description="Поручения себе и коллегам: полный список отдела в вашей зоне видимости"
                 actions={(
                     <HStack gap={2}>
+                        <Button size="sm" variant="ghost" onClick={() => setPushOpen(true)} title="Push-уведомления браузера">
+                            <LuBellRing />
+                        </Button>
                         <Button size="sm" variant="outline" onClick={() => router.visit(route('crm.tasks.calendar'))}>
                             <LuCalendarDays /> Календарь
                         </Button>
@@ -453,6 +458,11 @@ export default function Index({ tasks, filters, counters, options, openTaskId, c
                 open={recurrenceOpen}
                 onClose={() => setRecurrenceOpen(false)}
                 onSaved={reload}
+            />
+
+            <TaskPushDialog
+                open={pushOpen}
+                onClose={() => setPushOpen(false)}
             />
 
             <TaskDialog
