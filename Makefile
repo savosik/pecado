@@ -154,6 +154,21 @@ focus:
 unfocus:
 	@bash scripts/focus.sh --restore
 
+# Лёгкий локальный профиль воркера: те же очереди/программы, но numprocs=1
+# у каждой (52 процесса → ~26, примерно −1,3 GiB RSS). Генерирует
+# docker/supervisor/conf.d.local/ из canonical conf.d/ и перезапускает worker.
+# Подключается через docker-compose.override.yml (вне git) — dev/prod не видят.
+# После изменения canonical conf.d/*.conf перегенерировать: make worker-slim.
+worker-slim:
+	@mkdir -p docker/supervisor/conf.d.local
+	@for f in docker/supervisor/conf.d/*.conf; do \
+		{ echo "; СГЕНЕРИРОВАНО make worker-slim из conf.d/$$(basename $$f) — руками не править."; \
+		  echo "; Локальный профиль: numprocs=1 у всех программ, состав очередей тот же."; \
+		  sed 's/^numprocs=[0-9]\+/numprocs=1/' "$$f"; } > docker/supervisor/conf.d.local/$$(basename "$$f"); \
+	done
+	@echo "✓ conf.d.local перегенерирован"
+	$(DC) up -d worker
+
 # ─────────────────────────────────────────────────────────────
 # Данные и релиз
 # ─────────────────────────────────────────────────────────────

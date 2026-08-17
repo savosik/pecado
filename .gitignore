@@ -53,6 +53,10 @@ docs/ANDREY_ESB_CONNECTION.md
 # Локальный compose override — каждый разработчик ведёт свой
 docker-compose.override.yml
 
+# Лёгкий локальный профиль supervisor-воркера (numprocs=1),
+# генерируется `make worker-slim` из docker/supervisor/conf.d/
+docker/supervisor/conf.d.local/
+
 # AsyncAPI и MkDocs: трекаем сборку в git — деплоится через rsync
 
 # Временные файлы и скрипты разработки
