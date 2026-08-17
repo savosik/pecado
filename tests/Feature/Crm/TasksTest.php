@@ -351,7 +351,11 @@ class TasksTest extends TestCase
 
         $props = $this->actingAs($this->manager)->get(route('crm.dashboard'))->viewData('page')['props'];
 
-        $this->assertCount(2, $props['tasks']['items']);
+        // Виджет v2 (task-05): три группы вместо общего списка.
+        $this->assertSame(1, $props['tasks']['overdue']['count']);
+        $this->assertSame(1, $props['tasks']['today']['count']);
+        $this->assertCount(1, $props['tasks']['overdue']['items']);
+        $this->assertCount(1, $props['tasks']['today']['items']);
         $this->assertSame(1, $props['tasks']['overdue_count']);
         $this->assertSame(1, $props['tasks']['today_count']);
     }
