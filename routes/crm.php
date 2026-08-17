@@ -249,6 +249,8 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
         // До /tasks/{task}: иначе «list» и «options» ушли бы в биндинг модели.
         Route::get('/tasks/data', [TaskController::class, 'data'])->name('tasks.data');
+        Route::get('/tasks/calendar', [TaskController::class, 'calendar'])->name('tasks.calendar');
+        Route::get('/tasks/calendar-feed', [TaskController::class, 'calendarFeed'])->name('tasks.calendar-feed');
         Route::get('/tasks/list', [TaskController::class, 'list'])->name('tasks.list');
         Route::get('/tasks/options', [TaskController::class, 'options'])->name('tasks.options');
         Route::get('/tasks/entities', [TaskController::class, 'entities'])->name('tasks.entities');

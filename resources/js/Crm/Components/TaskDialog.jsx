@@ -74,6 +74,8 @@ export default function TaskDialog({
     taskId = null,
     entity = null,
     initialTitle = '',
+    // Срок новой задачи по умолчанию — календарь передаёт кликнутый день.
+    initialDue = '',
     onSaved,
 }) {
     const [loadedTask, setLoadedTask] = useState(null);
@@ -135,8 +137,8 @@ export default function TaskDialog({
             }
             // Заголовок-заготовка от вызывающей страницы (например, «Оплата по
             // реализации …»): экономит набор текста, но остаётся обычным полем.
-            : { ...EMPTY, title: initialTitle || '' });
-    }, [open, current, initialTitle]);
+            : { ...EMPTY, title: initialTitle || '', due_at: initialDue || '' });
+    }, [open, current, initialTitle, initialDue]);
 
     // Исполнитель новой задачи по умолчанию — тот, кто её ставит: себе задачи
     // ставят чаще, чем коллеге. Ждём справочник, потому что подставлять человека,

@@ -23,7 +23,7 @@ import TaskRecurrenceDialog from '@/Crm/Components/TaskRecurrenceDialog';
 import TaskCloseDialog from '@/Crm/Components/TaskCloseDialog';
 import { primeTaskOptions } from '@/Crm/Components/useTaskOptions';
 import { usePermission } from '@/shared/Panel/usePermission';
-import { LuChevronDown, LuChevronRight, LuPlus, LuRepeat } from 'react-icons/lu';
+import { LuCalendarDays, LuChevronDown, LuChevronRight, LuPlus, LuRepeat } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 const PRESETS = [
@@ -260,16 +260,21 @@ export default function Index({ tasks, filters, counters, options, openTaskId, c
             <PageHeader
                 title="Задачи"
                 description="Поручения себе и коллегам: полный список отдела в вашей зоне видимости"
-                actions={can('crm-tasks.create')
-                    ? (
-                        <HStack gap={2}>
-                            <Button size="sm" variant="outline" onClick={() => setRecurrenceOpen(true)}>
-                                <LuRepeat /> Повторяющаяся
-                            </Button>
-                            <Button size="sm" onClick={() => openDialog(null)}><LuPlus /> Поставить задачу</Button>
-                        </HStack>
-                    )
-                    : null}
+                actions={(
+                    <HStack gap={2}>
+                        <Button size="sm" variant="outline" onClick={() => router.visit(route('crm.tasks.calendar'))}>
+                            <LuCalendarDays /> Календарь
+                        </Button>
+                        {can('crm-tasks.create') && (
+                            <>
+                                <Button size="sm" variant="outline" onClick={() => setRecurrenceOpen(true)}>
+                                    <LuRepeat /> Повторяющаяся
+                                </Button>
+                                <Button size="sm" onClick={() => openDialog(null)}><LuPlus /> Поставить задачу</Button>
+                            </>
+                        )}
+                    </HStack>
+                )}
             />
 
             <VStack align="stretch" gap={4}>

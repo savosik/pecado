@@ -71,6 +71,72 @@ class TaskController extends CrmController
     }
 
     /**
+     * Календарь задач: месяц и неделя, «мои» или весь отдел.
+     */
+    public function calendar(Request $request): Response
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('viewAny', CrmTask::class);
+
+        return Inertia::render('Crm/Pages/Tasks/Calendar', [
+            'options' => $this->optionsPayload($actor),
+            'canSeeDepartment' => $this->seesDepartment($request),
+            'scope' => CrmScope::fromRequest($request, $actor)->value,
+        ]);
+    }
+
+    /**
+     * Задачи диапазона дат для календарной сетки.
+     *
+     * Только открытые и только со сроком: задачам без due_at в календаре
+     * не место — для них есть список.
+     */
+    public function calendarFeed(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('viewAny', CrmTask::class);
+
+        $validated = $request->validate([
+            'from' => ['required', 'date'],
+            'to' => ['required', 'date', 'after_or_equal:from'],
+            'manager_ids' => ['nullable', 'array', 'max:50'],
+            'manager_ids.*' => ['integer'],
+        ]);
+
+        $from = \Illuminate\Support\Carbon::parse($validated['from'])->startOfDay();
+        $to = \Illuminate\Support\Carbon::parse($validated['to'])->endOfDay();
+
+        // Потолок диапазона — защита от запроса «на десять лет» одной строкой.
+        abort_if($from->diffInDays($to) > 70, 422, 'Слишком большой диапазон дат.');
+
+        $scope = CrmScope::fromRequest($request, $actor);
+
+        $query = $this->tasks->visibleTo($actor, $scope)
+            ->whereIn('status', TaskStatus::activeValues())
+            ->whereBetween('due_at', [$from, $to])
+            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'])
+            ->withCount([
+                'checklistItems as checklist_total',
+                'checklistItems as checklist_done' => fn ($items) => $items->where('is_done', true),
+            ])
+            ->orderBy('due_at');
+
+        $managerIds = array_map('intval', $validated['manager_ids'] ?? []);
+
+        if ($managerIds !== []) {
+            $query->where(fn (Builder $inner) => $inner
+                ->whereIn('assignee_id', $managerIds)
+                ->orWhereHas('coAssignees', fn (Builder $users) => $users->whereKey($managerIds)));
+        }
+
+        return response()->json([
+            'data' => $query->take(1000)->get()
+                ->map(fn (CrmTask $task) => $this->tasks->payload($task, $actor))
+                ->all(),
+        ]);
+    }
+
+    /**
      * Следующие порции для бесконечной прокрутки — JSON с теми же фильтрами.
      *
      * Отдельный эндпоинт, а не Inertia-визит: догрузка не должна перерисовывать
