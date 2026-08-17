@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -201,6 +202,18 @@ class CrmTask extends Model implements HasMedia
     public function comments(): MorphMany
     {
         return $this->morphMany(CrmComment::class, 'commentable');
+    }
+
+    /**
+     * Чек-лист: плоские todo-пункты внутри задачи, в заданном порядке.
+     *
+     * @return HasMany<CrmTaskChecklistItem, $this>
+     */
+    public function checklistItems(): HasMany
+    {
+        return $this->hasMany(CrmTaskChecklistItem::class, 'task_id')
+            ->orderBy('position')
+            ->orderBy('id');
     }
 
     public function isOverdue(): bool

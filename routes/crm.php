@@ -21,6 +21,7 @@ use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
 use App\Http\Controllers\Crm\ShortageController;
+use App\Http\Controllers\Crm\TaskChecklistController;
 use App\Http\Controllers\Crm\TaskController;
 use App\Http\Controllers\Crm\TaskRecurrenceController;
 use App\Http\Controllers\Crm\TeamController;
@@ -280,6 +281,18 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::patch('/tasks/{task}', [TaskController::class, 'update'])
             ->name('tasks.update')
             ->whereNumber('task');
+        // Чек-лист — часть задачи: доступ решает политика задачи, не свои права.
+        Route::post('/tasks/{task}/checklist', [TaskChecklistController::class, 'store'])
+            ->name('tasks.checklist.store')
+            ->whereNumber('task');
+        Route::patch('/tasks/{task}/checklist/{item}', [TaskChecklistController::class, 'update'])
+            ->name('tasks.checklist.update')
+            ->whereNumber('task')
+            ->whereNumber('item');
+        Route::delete('/tasks/{task}/checklist/{item}', [TaskChecklistController::class, 'destroy'])
+            ->name('tasks.checklist.destroy')
+            ->whereNumber('task')
+            ->whereNumber('item');
         // Закрытие — своим эндпоинтом: отметка, отчёт и следующий шаг
         // должны лечь одной транзакцией.
         Route::post('/tasks/{task}/close', [TaskController::class, 'close'])

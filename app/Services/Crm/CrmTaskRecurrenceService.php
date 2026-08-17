@@ -134,6 +134,15 @@ class CrmTaskRecurrenceService
                     'estimate_minutes' => $recurrence->estimate_minutes,
                 ]);
 
+                // Шаблон чек-листа копируется в каждую порождённую задачу:
+                // «еженедельная сверка» приходит с готовым списком шагов.
+                foreach (array_values($recurrence->checklist ?? []) as $index => $itemTitle) {
+                    $task->checklistItems()->create([
+                        'title' => (string) $itemTitle,
+                        'position' => $index + 1,
+                    ]);
+                }
+
                 CrmTaskOccurrence::create([
                     'recurrence_id' => $recurrence->getKey(),
                     'task_id' => $task->getKey(),

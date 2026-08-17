@@ -45,6 +45,7 @@ class CrmTaskRecurrence extends Model
         'description',
         'priority',
         'estimate_minutes',
+        'checklist',
         'related_type',
         'related_id',
         'weekdays',
@@ -58,6 +59,7 @@ class CrmTaskRecurrence extends Model
     {
         return [
             'weekdays' => 'array',
+            'checklist' => 'array',
             'starts_on' => 'date',
             'ends_on' => 'date',
             'last_generated_for' => 'date',

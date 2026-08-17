@@ -399,6 +399,17 @@ class CrmTaskService
             'is_watched' => $task->isWatchedBy((int) $viewer->getKey()),
             'estimate_minutes' => $task->estimate_minutes,
             'estimate_label' => self::estimateLabel($task->estimate_minutes),
+            // Счётчики приходят из withCount() в списках; на одиночных путях
+            // достаточно загруженной связи — полный чек-лист там и так нужен.
+            'checklist_total' => (int) ($task->getAttribute('checklist_total')
+                ?? ($task->relationLoaded('checklistItems') ? $task->checklistItems->count() : $task->checklistItems()->count())),
+            'checklist_done' => (int) ($task->getAttribute('checklist_done')
+                ?? ($task->relationLoaded('checklistItems')
+                    ? $task->checklistItems->where('is_done', true)->count()
+                    : $task->checklistItems()->where('is_done', true)->count())),
+            'checklist' => $task->relationLoaded('checklistItems')
+                ? $this->checklistPayload($task)['items']
+                : null,
             'client_id' => $task->client_user_id === null ? null : (int) $task->client_user_id,
             'entity' => $related instanceof Model
                 ? CrmEntityMap::describe($related, $viewer)
@@ -413,6 +424,35 @@ class CrmTaskService
                 'delete' => $viewer->can('delete', $task),
                 'watch' => $viewer->can('watch', $task),
             ],
+        ];
+    }
+
+    /**
+     * Чек-лист задачи для фронта: пункты + счётчики одной формой.
+     *
+     * @return array{items: list<array<string, mixed>>, checklist_total: int, checklist_done: int}
+     */
+    public function checklistPayload(CrmTask $task): array
+    {
+        $items = $task->checklistItems
+            ->map(fn ($item): array => [
+                'id' => (int) $item->getKey(),
+                'title' => (string) $item->title,
+                'position' => (int) $item->position,
+                'is_done' => (bool) $item->is_done,
+                'done_by' => $item->doneBy === null ? null : [
+                    'id' => (int) $item->doneBy->getKey(),
+                    'name' => (string) $item->doneBy->name,
+                ],
+                'done_at_label' => $item->done_at?->format('d.m.Y H:i'),
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'items' => $items,
+            'checklist_total' => count($items),
+            'checklist_done' => count(array_filter($items, fn (array $item): bool => $item['is_done'])),
         ];
     }
 

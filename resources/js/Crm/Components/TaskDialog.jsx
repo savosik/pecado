@@ -21,6 +21,7 @@ import VoiceTextarea from '@/shared/voice/VoiceTextarea';
 import { EntitySelector } from '@/Admin/Components/EntitySelector';
 import { useTaskOptions } from '@/Crm/Components/useTaskOptions';
 import CommentThread from '@/Crm/Components/CommentThread';
+import TaskChecklist from '@/Crm/Components/TaskChecklist';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
 import VoiceNotes from '@/Crm/Components/VoiceNotes';
 import { usePermission } from '@/shared/Panel/usePermission';
@@ -466,6 +467,15 @@ export default function TaskDialog({
 
                                 {isEdit && (
                                     <>
+                                        <Box pt={2} borderTopWidth="1px">
+                                            <TaskChecklist
+                                                taskId={current.id}
+                                                items={current.checklist ?? null}
+                                                canEdit={!!current.can?.update}
+                                                onChanged={() => onSaved?.(current)}
+                                            />
+                                        </Box>
+
                                         {can('crm-comments.view') && (
                                             <Box pt={2} borderTopWidth="1px">
                                                 <Text fontSize="sm" fontWeight="600" mb={2}>Обсуждение</Text>

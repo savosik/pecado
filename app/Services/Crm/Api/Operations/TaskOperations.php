@@ -157,6 +157,46 @@ class TaskOperations
     }
 
     /**
+     * Добавить пункт чек-листа.
+     *
+     * @return array<string, mixed>
+     */
+    public function checklistAdd(User $actor, OperationInput $input): array
+    {
+        $task = $this->task($actor, $input);
+        Gate::forUser($actor)->authorize('update', $task);
+
+        $task->checklistItems()->create([
+            'title' => trim((string) $input->string('title')),
+            'position' => (int) ($task->checklistItems()->max('position') ?? 0) + 1,
+        ]);
+
+        $task->load('checklistItems.doneBy:id,name');
+
+        return $this->tasks->checklistPayload($task);
+    }
+
+    /**
+     * Отметить или снять пункт чек-листа.
+     *
+     * @return array<string, mixed>
+     */
+    public function checklistToggle(User $actor, OperationInput $input): array
+    {
+        $task = $this->task($actor, $input);
+        Gate::forUser($actor)->authorize('update', $task);
+
+        /** @var \App\Models\CrmTaskChecklistItem $item */
+        $item = $task->checklistItems()->findOrFail((int) $input->int('item'));
+        $item->markDone((bool) $input->bool('is_done'), (int) $actor->getKey());
+        $item->save();
+
+        $task->load('checklistItems.doneBy:id,name');
+
+        return $this->tasks->checklistPayload($task);
+    }
+
+    /**
      * Задача из скоупа актора. Чужая — 404, как и партнёр вне скоупа.
      */
     private function task(User $actor, OperationInput $input): CrmTask

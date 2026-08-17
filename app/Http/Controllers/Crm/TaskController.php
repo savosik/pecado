@@ -58,10 +58,14 @@ class TaskController extends CrmController
 
         $query = $this->tasks->visibleTo($actor, $scope)
             ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'])
-            ->withCount(['media as attachments_count' => fn ($media) => $media->where(
-                'collection_name',
-                CrmAttachments::COLLECTION,
-            )]);
+            ->withCount([
+                'media as attachments_count' => fn ($media) => $media->where(
+                    'collection_name',
+                    CrmAttachments::COLLECTION,
+                ),
+                'checklistItems as checklist_total',
+                'checklistItems as checklist_done' => fn ($items) => $items->where('is_done', true),
+            ]);
 
         $this->applyFilters($query, $filters, $actor);
         $this->applySort($query, $filters);
@@ -102,10 +106,14 @@ class TaskController extends CrmController
             ->where('related_type', $entity::class)
             ->where('related_id', $entity->getKey())
             ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'])
-            ->withCount(['media as attachments_count' => fn ($media) => $media->where(
-                'collection_name',
-                CrmAttachments::COLLECTION,
-            )])
+            ->withCount([
+                'media as attachments_count' => fn ($media) => $media->where(
+                    'collection_name',
+                    CrmAttachments::COLLECTION,
+                ),
+                'checklistItems as checklist_total',
+                'checklistItems as checklist_done' => fn ($items) => $items->where('is_done', true),
+            ])
             ->orderByRaw('due_at is null')
             ->orderBy('due_at')
             ->orderByDesc('id')
@@ -324,7 +332,10 @@ class TaskController extends CrmController
         $actor = $this->crmActor($request);
         Gate::authorize('view', $task);
 
-        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+        $task->load([
+            'author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name',
+            'related', 'checklistItems.doneBy:id,name',
+        ]);
 
         return response()->json($this->tasks->payload($task, $actor));
     }
