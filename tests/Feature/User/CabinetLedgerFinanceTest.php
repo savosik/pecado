@@ -195,6 +195,181 @@ class CabinetLedgerFinanceTest extends TestCase
     }
 
     /**
+     * У клиента бывает несколько юрлиц-контрагентов; сверяются по каждому
+     * отдельно, поэтому акт и календарь принимают разрез company_id.
+     */
+    #[Test]
+    public function акт_сверки_фильтруется_по_контрагенту(): void
+    {
+        $first = Company::factory()->create(['user_id' => $this->client->id]);
+        $second = Company::factory()->create(['user_id' => $this->client->id]);
+
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -10000,
+            'date' => '2026-02-10',
+            'company_id' => $first->id,
+        ]);
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -70000,
+            'date' => '2026-02-11',
+            'company_id' => $second->id,
+        ]);
+
+        $this->actingAs($this->client)
+            ->get('/cabinet/payments/reconciliation?date_from=2026-02-01&date_to=2026-02-28&company_id='.$first->id)
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('act.rows', 1)
+                ->where('act.closing_balance', -10000)
+                ->has('companies', 2)
+                ->where('form.company_id', $first->id));
+    }
+
+    #[Test]
+    public function календарь_фильтруется_по_контрагенту(): void
+    {
+        $first = Company::factory()->create(['user_id' => $this->client->id]);
+        $second = Company::factory()->create(['user_id' => $this->client->id]);
+
+        $due = CarbonImmutable::today()->addDays(3)->toDateString();
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'amount' => 50000,
+            'settled_amount' => 0,
+            'date' => $due,
+            'document_kind' => 'shipment',
+            'document_number' => '29УТ-000001',
+            'company_id' => $first->id,
+        ]);
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'amount' => 30000,
+            'settled_amount' => 0,
+            'date' => $due,
+            'document_kind' => 'shipment',
+            'document_number' => '29УТ-000002',
+            'company_id' => $second->id,
+        ]);
+
+        $this->actingAs($this->client)
+            ->get('/cabinet/payments/calendar?company_id='.$first->id)
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('entries', 1)
+                ->where('summary.week_amount', 50000)
+                ->where('companyId', $first->id)
+                ->has('companies', 2));
+    }
+
+    /**
+     * Клиент видит, перед каким нашим юрлицом долг, но должен видеть и обратное:
+     * какое из ЕГО юрлиц должно. Платёжку выставляет конкретный контрагент,
+     * и без подписи бухгалтер клиента не поймёт, чью оплату ждут.
+     */
+    #[Test]
+    public function долг_на_дашборде_дробится_по_юрлицам_клиента(): void
+    {
+        $first = Company::factory()->create(['user_id' => $this->client->id, 'name' => 'ООО «Ромашка»']);
+        $second = Company::factory()->create(['user_id' => $this->client->id, 'name' => 'ИП Иванов']);
+
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -50000,
+            'amount_rub' => -50000,
+            'date' => CarbonImmutable::today()->subDays(10)->toDateString(),
+            'company_id' => $first->id,
+        ]);
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -20000,
+            'amount_rub' => -20000,
+            'date' => CarbonImmutable::today()->subDays(10)->toDateString(),
+            'company_id' => $second->id,
+        ]);
+        // Полностью закрытый контрагент в списке не появляется — как и в старом
+        // расчёте, строки «0 ₽» клиенту не показываем.
+        $closed = Company::factory()->create(['user_id' => $this->client->id, 'name' => 'ООО «Закрытые расчёты»']);
+        foreach ([-7000, 7000] as $amount) {
+            $this->entry([
+                'nature' => SettlementEntry::NATURE_FACT,
+                'type' => $amount < 0 ? SettlementEntry::TYPE_SHIPMENT : SettlementEntry::TYPE_PAYMENT_IN,
+                'amount' => $amount,
+                'amount_rub' => $amount,
+                'date' => CarbonImmutable::today()->subDays(10)->toDateString(),
+                'company_id' => $closed->id,
+            ]);
+        }
+
+        // Просрочка только у первого юрлица — не должна размазаться на второе.
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'amount' => 10000,
+            'settled_amount' => 0,
+            'date' => CarbonImmutable::today()->subDays(3)->toDateString(),
+            'document_kind' => 'shipment',
+            'document_number' => '29УТ-000003',
+            'company_id' => $first->id,
+        ]);
+
+        $this->actingAs($this->client)
+            ->get('/cabinet/dashboard')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                // Карточка организации одна, юрлица клиента — списком внутри неё.
+                ->has('balance.organizations', 1)
+                ->where('balance.organizations.0.current_balance', -70000)
+                ->where('balance.organizations.0.due_total', 70000)
+                ->where('balance.organizations.0.advance_total', 0)
+                ->where('balance.organizations.0.overdue_debt', 10000)
+                ->has('balance.organizations.0.contractors', 2)
+                // Сортировка по имени контрагента: «И» < «О».
+                ->where('balance.organizations.0.contractors.0.name', 'ИП Иванов')
+                ->where('balance.organizations.0.contractors.0.current_balance', -20000)
+                ->where('balance.organizations.0.contractors.0.overdue_debt', 0)
+                ->where('balance.organizations.0.contractors.1.name', 'ООО «Ромашка»')
+                ->where('balance.organizations.0.contractors.1.current_balance', -50000)
+                ->where('balance.organizations.0.contractors.1.overdue_debt', 10000));
+    }
+
+    /**
+     * Пока юрлицо у клиента одно, подпись «По контрагенту» — шум: строка одна
+     * на организацию и без имени контрагента.
+     */
+    #[Test]
+    public function единственный_контрагент_не_дробит_долг_на_дашборде(): void
+    {
+        $company = Company::factory()->create(['user_id' => $this->client->id]);
+
+        foreach ([-10000, -5000] as $amount) {
+            $this->entry([
+                'nature' => SettlementEntry::NATURE_FACT,
+                'type' => SettlementEntry::TYPE_SHIPMENT,
+                'amount' => $amount,
+                'amount_rub' => $amount,
+                'date' => CarbonImmutable::today()->subDays(10)->toDateString(),
+                'company_id' => $company->id,
+            ]);
+        }
+
+        $this->actingAs($this->client)
+            ->get('/cabinet/dashboard')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('balance.organizations', 1)
+                ->has('balance.organizations.0.contractors', 0)
+                ->where('balance.organizations.0.current_balance', -15000));
+    }
+
+    /**
      * Акт показывает только свои движения: скоуп задаёт сессия, а не параметр.
      */
     #[Test]

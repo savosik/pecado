@@ -4,7 +4,7 @@ import {
 } from '@chakra-ui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import CabinetLayout from './CabinetLayout';
-import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuPhone, LuMail, LuUserRound, LuInfo } from 'react-icons/lu';
+import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuPhone, LuMail, LuUserRound, LuInfo, LuBuilding2 } from 'react-icons/lu';
 import { Tooltip } from '@/components/ui/tooltip';
 import PwaInstallBanner from '@/components/PwaInstallBanner';
 import { getOrderTypeShortLabel, getOrderTypeColor } from '@/constants/orderType';
@@ -19,6 +19,10 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
     const mainIsDebt = ledgerBalance
         ? Number(balance.due_now || 0) > 0
         : parseFloat(balance?.current_balance ?? 0) < 0;
+
+    // Деньги в блоке организаций всегда без знака: направление объясняет
+    // подпись («К оплате» / «Аванс»), а минус клиент читает как ошибку сайта.
+    const money = (value) => Math.abs(parseFloat(value || 0)).toLocaleString('ru-RU', { minimumFractionDigits: 2 });
 
     const { auth } = usePage().props;
     const user = auth?.user;
@@ -435,7 +439,7 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                         {/* Заголовок зависит от знака: у клиента с переплатой
                             «Задолженность» читается как ошибка сайта. */}
                         <Text fontWeight="700" fontSize="md">
-                            {balance.organizations.some((row) => parseFloat(row.current_balance) < 0)
+                            {balance.organizations.some((row) => parseFloat(row.current_balance) < 0 || parseFloat(row.due_total || 0) > 0)
                                 ? 'Задолженность по организациям'
                                 : 'Расчёты по организациям'}
                         </Text>
@@ -457,36 +461,162 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                     <Flex justify="space-between" align="start" gap="4" wrap="wrap">
                                         <Box minW="0">
                                             <Text fontSize="sm" fontWeight="600">{row.organization_name}</Text>
-                                            {row.contractor_name && (
+                                            {row.contractors?.length > 0 && (
                                                 <Text fontSize="xs" color="fg.muted">
-                                                    По контрагенту: {row.contractor_name}
+                                                    Расчёты по {row.contractors.length} вашим юрлицам
                                                 </Text>
                                             )}
                                         </Box>
-                                        <Box textAlign="right">
-                                            <Text
-                                                fontSize="lg"
-                                                fontWeight="700"
-                                                whiteSpace="nowrap"
-                                                color={parseFloat(row.current_balance) < 0 ? 'red.600' : 'green.600'}
-                                                _dark={{ color: parseFloat(row.current_balance) < 0 ? 'red.400' : 'green.400' }}
-                                            >
-                                                {parseFloat(row.current_balance).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
-                                            </Text>
-                                            {/* Одна сумма без подписи читается двусмысленно:
-                                                клиент не обязан помнить, что «плюс» — в его пользу. */}
-                                            <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">
-                                                {parseFloat(row.current_balance) < 0
-                                                    ? 'К оплате'
-                                                    : (parseFloat(row.current_balance) > 0 ? 'Аванс' : 'Расчёты закрыты')}
-                                            </Text>
-                                            {parseFloat(row.overdue_debt) > 0 && (
-                                                <Text fontSize="xs" color="red.500" whiteSpace="nowrap">
-                                                    Просрочено: {parseFloat(row.overdue_debt).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
+                                        {row.contractors?.length > 0 ? (
+                                            /*
+                                                Итог организации при нескольких юрлицах клиента: долги
+                                                и авансы НЕ сворачиваются — зачёт между юрлицами делает
+                                                только 1С, и «свёрнутый ноль» убедил бы клиента, что
+                                                платить нечего.
+                                            */
+                                            <Box textAlign="right">
+                                                {parseFloat(row.due_total) > 0 ? (
+                                                    <>
+                                                        <Text
+                                                            fontSize="lg"
+                                                            fontWeight="700"
+                                                            whiteSpace="nowrap"
+                                                            color="red.600"
+                                                            _dark={{ color: 'red.400' }}
+                                                        >
+                                                            {money(row.due_total)}&nbsp;₽
+                                                        </Text>
+                                                        <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">
+                                                            К оплате по организации
+                                                        </Text>
+                                                    </>
+                                                ) : parseFloat(row.advance_total) > 0 ? (
+                                                    <>
+                                                        <Text
+                                                            fontSize="lg"
+                                                            fontWeight="700"
+                                                            whiteSpace="nowrap"
+                                                            color="green.600"
+                                                            _dark={{ color: 'green.400' }}
+                                                        >
+                                                            {money(row.advance_total)}&nbsp;₽
+                                                        </Text>
+                                                        <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">Переплата</Text>
+                                                    </>
+                                                ) : (
+                                                    <Text fontSize="xs" color="fg.muted">Расчёты закрыты</Text>
+                                                )}
+                                                {parseFloat(row.due_total) > 0 && parseFloat(row.advance_total) > 0 && (
+                                                    <Text fontSize="xs" color="green.600" _dark={{ color: 'green.400' }} whiteSpace="nowrap">
+                                                        Переплата: {money(row.advance_total)}&nbsp;₽
+                                                    </Text>
+                                                )}
+                                                {parseFloat(row.overdue_debt) > 0 && (
+                                                    <Text fontSize="xs" color="red.500" whiteSpace="nowrap">
+                                                        Просрочено: {money(row.overdue_debt)}&nbsp;₽
+                                                    </Text>
+                                                )}
+                                            </Box>
+                                        ) : (
+                                            <Box textAlign="right">
+                                                <Text
+                                                    fontSize="lg"
+                                                    fontWeight="700"
+                                                    whiteSpace="nowrap"
+                                                    color={parseFloat(row.current_balance) < 0 ? 'red.600' : 'green.600'}
+                                                    _dark={{ color: parseFloat(row.current_balance) < 0 ? 'red.400' : 'green.400' }}
+                                                >
+                                                    {parseFloat(row.current_balance).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
                                                 </Text>
-                                            )}
-                                        </Box>
+                                                {/* Одна сумма без подписи читается двусмысленно:
+                                                    клиент не обязан помнить, что «плюс» — в его пользу. */}
+                                                <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">
+                                                    {parseFloat(row.current_balance) < 0
+                                                        ? 'К оплате'
+                                                        : (parseFloat(row.current_balance) > 0 ? 'Аванс' : 'Расчёты закрыты')}
+                                                </Text>
+                                                {parseFloat(row.overdue_debt) > 0 && (
+                                                    <Text fontSize="xs" color="red.500" whiteSpace="nowrap">
+                                                        Просрочено: {parseFloat(row.overdue_debt).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
+                                                    </Text>
+                                                )}
+                                            </Box>
+                                        )}
                                     </Flex>
+
+                                    {/*
+                                        Ответ на вопрос «какое из МОИХ юрлиц должно»: платёжку
+                                        выставляет конкретный контрагент клиента, и бухгалтеру нужно
+                                        видеть, чью оплату ждут. Строки с просрочкой подсвечены.
+                                    */}
+                                    {row.contractors?.length > 0 && (
+                                        <Box mt="3" pt="3" borderTopWidth="1px" borderColor="border.muted">
+                                            <Text
+                                                fontSize="xs"
+                                                fontWeight="600"
+                                                color="fg.muted"
+                                                textTransform="uppercase"
+                                                letterSpacing="0.05em"
+                                                mb="2"
+                                            >
+                                                По вашим юрлицам
+                                            </Text>
+                                            <VStack align="stretch" gap="1.5">
+                                                {row.contractors.map((contractor, contractorIndex) => {
+                                                    const contractorBalance = parseFloat(contractor.current_balance);
+                                                    const isDebt = contractorBalance < 0;
+                                                    const hasOverdue = parseFloat(contractor.overdue_debt) > 0;
+
+                                                    return (
+                                                        <Flex
+                                                            key={contractorIndex}
+                                                            align="center"
+                                                            justify="space-between"
+                                                            gap="3"
+                                                            wrap="wrap"
+                                                            py="2.5"
+                                                            px="3"
+                                                            borderRadius="md"
+                                                            bg={hasOverdue ? 'red.50' : 'gray.50'}
+                                                            _dark={{ bg: hasOverdue ? 'red.900/30' : 'gray.700' }}
+                                                            borderLeftWidth="3px"
+                                                            borderLeftColor={hasOverdue ? 'red.500' : (isDebt ? 'orange.400' : 'green.400')}
+                                                        >
+                                                            <HStack gap="2" minW="0">
+                                                                <Box color="fg.muted" flexShrink="0">
+                                                                    <LuBuilding2 size={14} />
+                                                                </Box>
+                                                                <Text fontSize="sm" fontWeight="500">{contractor.name}</Text>
+                                                            </HStack>
+                                                            <Box textAlign="right">
+                                                                <HStack gap="2" justify="flex-end">
+                                                                    {hasOverdue && (
+                                                                        <Badge colorPalette="red" size="sm">
+                                                                            Просрочено {money(contractor.overdue_debt)}&nbsp;₽
+                                                                        </Badge>
+                                                                    )}
+                                                                    <Text
+                                                                        fontSize="sm"
+                                                                        fontWeight="700"
+                                                                        whiteSpace="nowrap"
+                                                                        color={isDebt ? 'red.600' : 'green.600'}
+                                                                        _dark={{ color: isDebt ? 'red.400' : 'green.400' }}
+                                                                    >
+                                                                        {money(contractor.current_balance)}&nbsp;₽
+                                                                    </Text>
+                                                                </HStack>
+                                                                {contractorBalance !== 0 && (
+                                                                    <Text fontSize="xs" color="fg.muted">
+                                                                        {isDebt ? 'к оплате' : 'аванс'}
+                                                                    </Text>
+                                                                )}
+                                                            </Box>
+                                                        </Flex>
+                                                    );
+                                                })}
+                                            </VStack>
+                                        </Box>
+                                    )}
 
                                     {Object.keys(row.requisites || {}).length > 0 && (
                                         <Box mt="3" pt="3" borderTopWidth="1px" borderColor="border.muted">

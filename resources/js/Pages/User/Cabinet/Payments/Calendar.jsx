@@ -22,10 +22,22 @@ export default function PaymentsCalendar({
     entries = [],
     overdueEntries = [],
     summary = {},
+    companies = [],
+    companyId = null,
     currencyCode = 'RUB',
 }) {
     const [selectedDate, setSelectedDate] = useState(null);
     const symbol = CURRENCY_SYMBOLS[currencyCode] || currencyCode;
+
+    // Разрез по контрагенту применяется сразу: календарь — не форма с кнопкой
+    // «Показать», лишний клик тут только мешает.
+    const changeCompany = (value) => {
+        setSelectedDate(null);
+        router.get('/cabinet/payments/calendar', {
+            month,
+            ...(value ? { company_id: value } : {}),
+        }, { preserveState: true, replace: true });
+    };
 
     // Группировка по дням делается один раз на выдачу, а не в каждой из 42 ячеек.
     const byDate = useMemo(() => {
@@ -44,7 +56,11 @@ export default function PaymentsCalendar({
 
     const changeMonth = (next) => {
         setSelectedDate(null);
-        router.get('/cabinet/payments/calendar', { month: next }, { preserveState: true, replace: true });
+        router.get('/cabinet/payments/calendar', {
+            month: next,
+            // Разрез по контрагенту переживает листание месяцев.
+            ...(companyId ? { company_id: companyId } : {}),
+        }, { preserveState: true, replace: true });
     };
 
     const selected = selectedDate ? byDate.get(selectedDate) : null;
@@ -67,6 +83,26 @@ export default function PaymentsCalendar({
                         <LuScale size={16} /> Акт сверки
                     </Link>
                 </Button>
+
+                {companies.length > 1 && (
+                    <HStack gap="2" ml={{ md: 'auto' }}>
+                        <Text fontSize="sm" color="fg.muted">Контрагент:</Text>
+                        {/*
+                            Нативный select, как в акте сверки: контрол обязан
+                            работать без сюрпризов портала/коллекции Chakra-селекта.
+                        */}
+                        <select
+                            value={companyId ?? ''}
+                            onChange={(e) => changeCompany(e.target.value)}
+                            style={{ padding: '6px 8px', borderRadius: 6, borderWidth: 1 }}
+                        >
+                            <option value="">Все</option>
+                            {companies.map((c) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
+                    </HStack>
+                )}
             </Flex>
 
             <SimpleGrid columns={{ base: 1, md: 3 }} gap="3" mb="4">

@@ -111,6 +111,7 @@ class ShipmentController extends Controller
                 'search' => $search,
                 'status' => $context['selected_statuses'],
                 'payment_status' => $context['payment_statuses'],
+                'company_id' => $context['company_id'] ? (string) $context['company_id'] : '',
                 'order_uuid' => $context['order_uuid'] ?: null,
                 'brand_ids' => $context['brand_ids'],
                 'date_from' => $context['date_from'],
@@ -133,6 +134,10 @@ class ShipmentController extends Controller
                 ['value' => Shipment::PAYMENT_PAID, 'label' => 'Оплачена'],
                 ['value' => Shipment::PAYMENT_OVERPAID, 'label' => 'Переплата'],
             ] : [],
+            'companies' => $user->companies()
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn (\App\Models\Company $c) => ['value' => (string) $c->id, 'label' => $c->name]),
             'exportEnabled' => (bool) config('search-cabinet.export'),
             'suggestion' => $suggestion,
         ]);
@@ -308,6 +313,13 @@ class ShipmentController extends Controller
             $query->whereHas('items.product', fn ($p) => $p->whereIn('brand_id', $brandIds));
         }
 
+        // Контрагент: у клиента их может быть несколько юрлиц, и бухгалтерия
+        // сверяет отгрузки по каждому отдельно.
+        $companyId = $request->integer('company_id') ?: null;
+        if ($companyId !== null) {
+            $query->where('company_id', $companyId);
+        }
+
         // Статус оплаты (v15.11.0) — мультивыбор по индексу
         // shipments_user_payment_status_index.
         $paymentStatuses = array_values(array_intersect(
@@ -352,6 +364,7 @@ class ShipmentController extends Controller
             'search' => $search,
             'selected_statuses' => $selectedStatuses,
             'payment_statuses' => $paymentStatuses,
+            'company_id' => $companyId,
             'order_uuid' => $orderUuid,
             'brand_ids' => $brandIds,
             'date_from' => $dateFrom,

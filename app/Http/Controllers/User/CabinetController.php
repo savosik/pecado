@@ -133,27 +133,36 @@ class CabinetController extends Controller
             return [];
         }
 
-        return \App\Models\ContractorOrganizationBalance::query()
+        $rows = \App\Models\ContractorOrganizationBalance::query()
             ->where('user_id', $user->id)
             ->where(fn ($q) => $q->where('current_balance', '!=', 0)->orWhere('overdue_debt', '!=', 0))
             ->with(['organization', 'company:id,name'])
             ->get()
-            ->filter(fn ($row) => $row->organization && ! $row->organization->is_stub)
-            ->map(fn ($row) => [
-                'organization_name' => $row->organization->name,
-                'contractor_name' => $row->company?->name,
-                'current_balance' => $row->current_balance,
-                'overdue_debt' => $row->overdue_debt,
-                'requisites' => array_filter([
-                    'legal_name' => $row->organization->legal_name,
-                    'tax_id' => $row->organization->tax_id,
-                    'tax_code' => $row->organization->tax_code,
-                    'bank_name' => $row->organization->bank_name,
-                    'bank_bik' => $row->organization->bank_bik,
-                    'account_number' => $row->organization->account_number,
-                    'correspondent_account' => $row->organization->correspondent_account,
-                ]),
-            ])
+            ->filter(fn ($row) => $row->organization && ! $row->organization->is_stub);
+
+        // Разрез по юрлицам клиента показываем, только когда их несколько:
+        // единственный контрагент в карточке — шум.
+        $splitByCompany = $rows->pluck('company_id')->filter()->unique()->count() > 1;
+
+        return $rows
+            ->groupBy('organization_id')
+            ->map(function ($group) use ($splitByCompany) {
+                $contractors = $group
+                    ->map(fn ($row) => [
+                        'name' => $row->company?->name ?? 'Контрагент не указан',
+                        'current_balance' => round((float) $row->current_balance, 2),
+                        'overdue_debt' => round((float) $row->overdue_debt, 2),
+                    ])
+                    ->sortBy('name')
+                    ->values();
+
+                return \App\Services\Settlements\CabinetSettlementFinance::organizationCard(
+                    $group->first()->organization,
+                    $contractors,
+                    $splitByCompany,
+                );
+            })
+            ->sortBy('organization_name')
             ->values()
             ->all();
     }

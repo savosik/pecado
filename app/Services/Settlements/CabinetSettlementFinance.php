@@ -2,6 +2,7 @@
 
 namespace App\Services\Settlements;
 
+use App\Models\Company;
 use App\Models\Organization;
 use App\Models\SettlementEntry;
 use App\Models\User;
@@ -84,53 +85,134 @@ class CabinetSettlementFinance
     /**
      * Долг перед каждым нашим юрлицом с реквизитами для оплаты.
      *
+     * Карточка на организацию, реквизиты в ней один раз. Когда у клиента
+     * несколько собственных юрлиц, внутри карточки появляется список
+     * `contractors` — платёжку выставляет конкретное юрлицо клиента, и без
+     * этого списка бухгалтер не поймёт, чью оплату ждут. `due_total` и
+     * `advance_total` считаются без взаимозачёта: переплата одного юрлица
+     * клиента не гасит долг другого — зачёт делает только 1С.
+     *
      * @return list<array<string, mixed>>
      */
     public function balanceByOrganization(User $user): array
     {
         $today = CarbonImmutable::today()->toDateString();
 
-        $balances = DB::table('settlement_entries')
+        $facts = DB::table('settlement_entries')
             ->where('nature', SettlementEntry::NATURE_FACT)
             ->where('user_id', $user->id)
             ->whereNotNull('organization_id')
-            ->groupBy('organization_id')
-            ->select('organization_id')
+            ->groupBy('organization_id', 'company_id')
+            ->select('organization_id', 'company_id')
             ->selectRaw('SUM(COALESCE(amount_rub, amount)) as balance')
-            ->pluck('balance', 'organization_id');
+            ->get();
 
         $overdue = $this->outstandingPlans($user)
             ->whereNotNull('organization_id')
             ->whereDate('date', '<', $today)
-            ->groupBy('organization_id')
-            ->select('organization_id')
+            ->groupBy('organization_id', 'company_id')
+            ->select('organization_id', 'company_id')
             ->selectRaw('SUM(amount - settled_amount) as overdue')
-            ->pluck('overdue', 'organization_id');
+            ->get();
 
-        if ($balances->isEmpty()) {
+        // Пары «организация × контрагент» собираются из фактов И просрочки:
+        // плановая строка может приехать раньше первого факта, и её просрочка
+        // обязана быть видимой. NULL-контрагент хранится под ключом 0.
+        $pairs = [];
+        foreach ($facts as $row) {
+            $pairs[$row->organization_id][$row->company_id ?? 0]['balance'] = (float) $row->balance;
+        }
+        foreach ($overdue as $row) {
+            $pairs[$row->organization_id][$row->company_id ?? 0]['overdue'] = (float) $row->overdue;
+        }
+
+        if ($pairs === []) {
             return [];
         }
 
-        return Organization::query()
-            ->whereIn('id', $balances->keys())
+        // Пока юрлицо у клиента одно, разрез — шум: карточка остаётся плоской.
+        $companyIds = collect($pairs)
+            ->flatMap(static fn (array $byCompany): array => array_keys($byCompany))
+            ->filter()
+            ->unique();
+        $splitByCompany = $companyIds->count() > 1;
+
+        // Имя нужно и удалённому контрагенту: долг переживает архивацию карточки.
+        $companies = $splitByCompany
+            ? Company::withTrashed()->whereIn('id', $companyIds)->pluck('name', 'id')
+            : collect();
+
+        $organizations = Organization::query()
+            ->whereIn('id', array_keys($pairs))
             ->where('is_stub', false)
             ->get()
-            ->map(fn (Organization $organization): array => [
-                'organization_name' => $organization->name,
-                'current_balance' => round((float) $balances[$organization->id], 2),
-                'overdue_debt' => round((float) ($overdue[$organization->id] ?? 0), 2),
-                'requisites' => array_filter([
-                    'legal_name' => $organization->legal_name,
-                    'tax_id' => $organization->tax_id,
-                    'tax_code' => $organization->tax_code,
-                    'bank_name' => $organization->bank_name,
-                    'bank_bik' => $organization->bank_bik,
-                    'account_number' => $organization->account_number,
-                    'correspondent_account' => $organization->correspondent_account,
-                ]),
-            ])
+            ->keyBy('id');
+
+        return collect($pairs)
+            ->map(function (array $byCompany, int $organizationId) use ($organizations, $companies, $splitByCompany): ?array {
+                $organization = $organizations->get($organizationId);
+
+                if ($organization === null) {
+                    return null;
+                }
+
+                $contractors = collect($byCompany)
+                    ->map(static fn (array $sums, int $companyId): array => [
+                        'name' => $companyId !== 0
+                            ? ($companies->get($companyId) ?? 'Контрагент не указан')
+                            : 'Контрагент не указан',
+                        'current_balance' => round($sums['balance'] ?? 0.0, 2),
+                        'overdue_debt' => round($sums['overdue'] ?? 0.0, 2),
+                    ])
+                    // Полностью закрытые пары не показываем — так же вёл себя
+                    // старый расчёт на contractor_balances: переключение
+                    // источника не должно добавлять клиенту строк «0 ₽».
+                    ->filter(static fn (array $c): bool => $c['current_balance'] !== 0.0 || $c['overdue_debt'] !== 0.0)
+                    ->sortBy('name')
+                    ->values();
+
+                if ($contractors->isEmpty()) {
+                    return null;
+                }
+
+                return self::organizationCard($organization, $contractors, $splitByCompany);
+            })
+            ->filter()
+            ->sortBy('organization_name')
             ->values()
             ->all();
+    }
+
+    /**
+     * Карточка организации из строк её контрагентов — общая для ленты регистра
+     * и старого расчёта на contractor_balances: обе ветки обязаны отдавать
+     * фронту одну и ту же форму.
+     *
+     * @param  \Illuminate\Support\Collection<int, array{name: string, current_balance: float, overdue_debt: float}>  $contractors
+     * @return array<string, mixed>
+     */
+    public static function organizationCard(Organization $organization, \Illuminate\Support\Collection $contractors, bool $splitByCompany): array
+    {
+        $balances = $contractors->pluck('current_balance');
+
+        return [
+            'organization_name' => $organization->name,
+            'current_balance' => round((float) $balances->sum(), 2),
+            'overdue_debt' => round((float) $contractors->sum('overdue_debt'), 2),
+            // Долги и авансы разных юрлиц клиента НЕ сворачиваются друг с другом.
+            'due_total' => round(-(float) $balances->filter(static fn (float $b): bool => $b < 0)->sum(), 2),
+            'advance_total' => round((float) $balances->filter(static fn (float $b): bool => $b > 0)->sum(), 2),
+            'contractors' => $splitByCompany ? $contractors->all() : [],
+            'requisites' => array_filter([
+                'legal_name' => $organization->legal_name,
+                'tax_id' => $organization->tax_id,
+                'tax_code' => $organization->tax_code,
+                'bank_name' => $organization->bank_name,
+                'bank_bik' => $organization->bank_bik,
+                'account_number' => $organization->account_number,
+                'correspondent_account' => $organization->correspondent_account,
+            ]),
+        ];
     }
 
     /**
@@ -138,11 +220,14 @@ class CabinetSettlementFinance
      *
      * @return array{entries: list<array<string, mixed>>, overdue: list<array<string, mixed>>, summary: array<string, mixed>}
      */
-    public function calendar(User $user, CarbonImmutable $month): array
+    public function calendar(User $user, CarbonImmutable $month, ?int $companyId = null): array
     {
         $today = CarbonImmutable::today();
 
-        $monthly = $this->outstandingPlans($user)
+        $plans = fn () => $this->outstandingPlans($user)
+            ->when($companyId !== null, fn ($query) => $query->where('company_id', $companyId));
+
+        $monthly = $plans()
             ->whereBetween(DB::raw('DATE(date)'), [
                 $month->startOfMonth()->toDateString(),
                 $month->endOfMonth()->toDateString(),
@@ -152,13 +237,13 @@ class CabinetSettlementFinance
 
         // Просрочка не привязана к показываемому месяцу: клиент должен видеть её
         // всегда, в каком бы месяце календаря ни находился.
-        $overdue = $this->outstandingPlans($user)
+        $overdue = $plans()
             ->whereDate('date', '<', $today->toDateString())
             ->orderBy('date')
             ->limit(200)
             ->get();
 
-        $weekAhead = (float) $this->outstandingPlans($user)
+        $weekAhead = (float) $plans()
             ->whereBetween(DB::raw('DATE(date)'), [$today->toDateString(), $today->addDays(7)->toDateString()])
             ->sum(DB::raw('amount - settled_amount'));
 
@@ -205,6 +290,31 @@ class CabinetSettlementFinance
                     : null,
             ],
         ];
+    }
+
+    /**
+     * Контрагенты клиента, встречающиеся в ленте, — для фильтра календаря.
+     *
+     * Без разбора nature: плановая строка может приехать раньше первого факта,
+     * и её контрагент обязан быть выбираемым — иначе фильтр спрячет строку,
+     * которую календарь показывает.
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    public function companiesOf(User $user): array
+    {
+        return SettlementEntry::query()
+            ->where('settlement_entries.user_id', $user->id)
+            ->whereNotNull('settlement_entries.company_id')
+            ->join('companies as c', 'c.id', '=', 'settlement_entries.company_id')
+            // Join в обход модели, поэтому SoftDeletes отфильтровываем руками.
+            ->whereNull('c.deleted_at')
+            ->distinct()
+            ->orderBy('c.name')
+            ->pluck('c.name', 'c.id')
+            ->map(static fn (string $name, int $id): array => ['id' => $id, 'name' => $name])
+            ->values()
+            ->all();
     }
 
     /**

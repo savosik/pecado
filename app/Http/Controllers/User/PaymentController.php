@@ -64,6 +64,7 @@ class PaymentController extends Controller
             'filters' => [
                 'search' => $context['search'],
                 'direction' => $context['directions'],
+                'company_id' => $context['company_id'] ? (string) $context['company_id'] : '',
                 'allocation_status' => $context['allocation_statuses'],
                 'date_from' => $context['date_from'],
                 'date_to' => $context['date_to'],
@@ -75,6 +76,10 @@ class PaymentController extends Controller
             ],
             'directions' => $this->options(self::DIRECTION_LABELS),
             'allocationStatuses' => $this->options(self::ALLOCATION_LABELS),
+            'companies' => $user->companies()
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn (\App\Models\Company $c) => ['value' => (string) $c->id, 'label' => $c->name]),
             'exportEnabled' => (bool) config('search-cabinet.export'),
         ]);
     }
@@ -176,7 +181,7 @@ class PaymentController extends Controller
         // самим больше не нужно. Ветвление здесь одно на весь календарь —
         // ниже начинается старый расчёт, который снимается в fin-11.
         if (config('settlements.ledger_enabled')) {
-            return $this->ledgerCalendar($user, $month, $today, $currency);
+            return $this->ledgerCalendar($user, $month, $today, $currency, $request->integer('company_id') ?: null);
         }
 
         $monthly = $this->scheduleQuery($user)
@@ -248,10 +253,13 @@ class PaymentController extends Controller
                 organizationId: $request->integer('organization_id') ?: null,
                 from: (string) $request->string('date_from', $period['from']),
                 to: (string) $request->string('date_to', $period['to']),
+                companyId: $request->integer('company_id') ?: null,
             ),
             'organizations' => $service->organizationsOf($user),
+            'companies' => $service->companiesOf($user),
             'form' => [
                 'organization_id' => $request->integer('organization_id') ?: null,
+                'company_id' => $request->integer('company_id') ?: null,
                 'date_from' => (string) $request->string('date_from', $period['from']),
                 'date_to' => (string) $request->string('date_to', $period['to']),
             ],
@@ -265,11 +273,13 @@ class PaymentController extends Controller
      * источника не должно менять его разметку — иначе при включении флага
      * поедут не только цифры, но и вёрстка, и отличить одно от другого станет нельзя.
      */
-    private function ledgerCalendar(User $user, Carbon $month, Carbon $today, ?Currency $currency): InertiaResponse
+    private function ledgerCalendar(User $user, Carbon $month, Carbon $today, ?Currency $currency, ?int $companyId = null): InertiaResponse
     {
-        $data = app(CabinetSettlementFinance::class)->calendar(
+        $finance = app(CabinetSettlementFinance::class);
+        $data = $finance->calendar(
             $user,
             \Carbon\CarbonImmutable::parse($month->toDateString()),
+            $companyId,
         );
 
         return Inertia::render('User/Cabinet/Payments/Calendar', [
@@ -281,6 +291,11 @@ class PaymentController extends Controller
             'entries' => $data['entries'],
             'overdueEntries' => $data['overdue'],
             'summary' => $data['summary'],
+            // Старый расчёт по графикам разреза по контрагентам не имеет,
+            // поэтому справочник отдаёт только ветка регистра: пустой список
+            // прячет селектор на фронте.
+            'companies' => $finance->companiesOf($user),
+            'companyId' => $companyId,
             'currencyCode' => $currency?->code ?? 'RUB',
         ]);
     }
@@ -492,6 +507,11 @@ class PaymentController extends Controller
             $query->whereIn('direction', $directions);
         }
 
+        $companyId = $request->integer('company_id') ?: null;
+        if ($companyId !== null) {
+            $query->where('company_id', $companyId);
+        }
+
         $allocationStatuses = $this->multi($request, 'allocation_status', array_keys(self::ALLOCATION_LABELS));
         if ($allocationStatuses !== []) {
             $query->where(function ($inner) use ($allocationStatuses) {
@@ -535,6 +555,7 @@ class PaymentController extends Controller
         return [$query, [
             'search' => $search,
             'directions' => $directions,
+            'company_id' => $companyId,
             'allocation_statuses' => $allocationStatuses,
             'date_from' => $dateFrom,
             'date_to' => $dateTo,

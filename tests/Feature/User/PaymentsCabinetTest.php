@@ -63,6 +63,31 @@ class PaymentsCabinetTest extends TestCase
                 ->where('payments.data.0.number', 'СВОЙ'));
     }
 
+    /**
+     * У клиента бывает несколько юрлиц-контрагентов; платежи сверяются
+     * по каждому отдельно.
+     */
+    #[Test]
+    public function payments_filter_by_company(): void
+    {
+        $first = \App\Models\Company::factory()->create(['user_id' => $this->client->id]);
+        $second = \App\Models\Company::factory()->create(['user_id' => $this->client->id]);
+
+        $this->paymentFor($this->client, ['number' => 'ПЕРВЫЙ', 'company_id' => $first->id]);
+        $this->paymentFor($this->client, ['number' => 'ВТОРОЙ', 'company_id' => $second->id]);
+
+        $this->actingAs($this->client)
+            ->get(route('cabinet.payments.index', ['company_id' => $first->id]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('payments.data', 1)
+                ->where('payments.data.0.number', 'ПЕРВЫЙ')
+                // Снимок отбора обязан вернуть выбор — иначе селект на фронте
+                // рендерится пустым и фильтр «слетает» следующим запросом.
+                ->where('filters.company_id', (string) $first->id)
+                ->has('companies', 2));
+    }
+
     #[Test]
     public function foreign_payment_card_is_forbidden(): void
     {

@@ -71,6 +71,25 @@ class ShipmentSearchTest extends TestCase
         return [$shipment, $item, $product];
     }
 
+    /**
+     * У клиента бывает несколько юрлиц-контрагентов; накладные сверяются
+     * по каждому отдельно.
+     */
+    #[Test]
+    public function company_filter_narrows_shipments(): void
+    {
+        $first = \App\Models\Company::factory()->create(['user_id' => $this->user->id]);
+        $second = \App\Models\Company::factory()->create(['user_id' => $this->user->id]);
+
+        [$own] = $this->makeShipment(['company_id' => $first->id]);
+        [$other] = $this->makeShipment(['company_id' => $second->id]);
+
+        $ids = $this->fetchShipmentIds('company_id='.$first->id);
+
+        $this->assertContains($own->id, $ids);
+        $this->assertNotContains($other->id, $ids);
+    }
+
     #[Test]
     public function partial_number_finds_shipment(): void
     {

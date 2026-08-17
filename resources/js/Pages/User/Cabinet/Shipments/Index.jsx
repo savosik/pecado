@@ -31,7 +31,7 @@ const PAYMENT_STATUS_COLORS = {
     overpaid: 'purple',
 };
 
-export default function ShipmentsIndex({ filters, statuses, paymentStatuses = [], exportEnabled = false, suggestion = null }) {
+export default function ShipmentsIndex({ filters, statuses, paymentStatuses = [], companies = [], exportEnabled = false, suggestion = null }) {
     const { shipments, currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
 
@@ -46,6 +46,7 @@ export default function ShipmentsIndex({ filters, statuses, paymentStatuses = []
     const [localFilters, setLocalFilters] = useState({
         status: initialStatus,
         payment_status: initialPaymentStatus,
+        company_id: filters?.company_id || '',
         date_from: filters?.date_from || '',
         date_to: filters?.date_to || '',
         amount_from: filters?.amount_from || '',
@@ -86,10 +87,15 @@ export default function ShipmentsIndex({ filters, statuses, paymentStatuses = []
         navigateWithParams({ sort_by: field, sort_order: direction });
     };
 
-    const handleApplyFilters = () => navigateWithParams({ ...localFilters, page: 1 });
+    // search уходит вместе с фильтрами: если нажать «Применить» раньше, чем
+    // сработал debounce, набранный текст иначе откатился бы.
+    const handleApplyFilters = () => {
+        lastSubmittedSearch.current = search;
+        navigateWithParams({ ...localFilters, search, page: 1 });
+    };
 
     const handleResetFilters = () => {
-        const reset = { status: [], payment_status: [], date_from: '', date_to: '', amount_from: '', amount_to: '' };
+        const reset = { status: [], payment_status: [], company_id: '', date_from: '', date_to: '', amount_from: '', amount_to: '' };
         setLocalFilters(reset);
         navigateWithParams({ ...reset, search: '', order_uuid: null, brand_ids: [], page: 1 });
         setSearch('');
@@ -117,7 +123,7 @@ export default function ShipmentsIndex({ filters, statuses, paymentStatuses = []
         let count = 0;
         const status = filters?.status;
         if (Array.isArray(status) ? status.length > 0 : !!status) count++;
-        for (const k of ['date_from', 'date_to', 'amount_from', 'amount_to', 'order_uuid']) {
+        for (const k of ['company_id', 'date_from', 'date_to', 'amount_from', 'amount_to', 'order_uuid']) {
             if (filters?.[k] !== null && filters?.[k] !== undefined && filters?.[k] !== '') count++;
         }
         if (Array.isArray(filters?.brand_ids) && filters.brand_ids.length > 0) count++;
@@ -134,17 +140,25 @@ export default function ShipmentsIndex({ filters, statuses, paymentStatuses = []
         [statuses]
     );
 
+    const companyCollection = useMemo(
+        () => createListCollection({
+            items: [{ label: 'Все контрагенты', value: '' }, ...(companies?.map((c) => ({ label: c.label, value: String(c.value) })) ?? [])],
+        }),
+        [companies],
+    );
+
     const filterFields = useMemo(() => [
         { key: 'search', label: 'Поиск', formatter: (v) => `«${v}»` },
         { key: 'status', label: 'Статус', formatter: (v) => statuses?.find((s) => s.value === v)?.label || v },
         { key: 'payment_status', label: 'Оплата', formatter: (v) => paymentStatuses?.find((s) => s.value === v)?.label || v },
+        { key: 'company_id', label: 'Контрагент', formatter: (v) => companies?.find((c) => String(c.value) === String(v))?.label || `#${v}` },
         { key: 'date_from', label: 'Дата от' },
         { key: 'date_to', label: 'Дата до' },
         { key: 'amount_from', label: 'Сумма от' },
         { key: 'amount_to', label: 'Сумма до' },
         { key: 'order_uuid', label: 'Заказ', formatter: (v) => `#${String(v).slice(0, 8)}` },
         { key: 'brand_ids', label: 'Бренд', formatter: (v) => `#${v}` },
-    ], [statuses, paymentStatuses]);
+    ], [statuses, paymentStatuses, companies]);
 
     const handleRemoveFilter = (key, value) => {
         const current = filters?.[key];
@@ -307,6 +321,25 @@ export default function ShipmentsIndex({ filters, statuses, paymentStatuses = []
                                         </Select.Content>
                                     </Select.Root>
                                 </Field>
+                                )}
+
+                                {companies.length > 0 && (
+                                    <Field label="Контрагент" flex="1">
+                                        <Select.Root
+                                            collection={companyCollection}
+                                            value={localFilters.company_id ? [localFilters.company_id] : []}
+                                            onValueChange={(e) => setLocalFilters({ ...localFilters, company_id: e.value[0] || '' })}
+                                        >
+                                            <Select.Trigger>
+                                                <Select.ValueText placeholder="Все контрагенты" />
+                                            </Select.Trigger>
+                                            <Select.Content>
+                                                {companyCollection.items.map((c) => (
+                                                    <Select.Item key={c.value} item={c}>{c.label}</Select.Item>
+                                                ))}
+                                            </Select.Content>
+                                        </Select.Root>
+                                    </Field>
                                 )}
 
                                 <Field label="Дата от" flex="1">

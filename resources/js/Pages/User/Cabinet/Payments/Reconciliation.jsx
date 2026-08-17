@@ -19,9 +19,10 @@ const money = (value) => `${Number(value || 0).toLocaleString('ru-RU', {
  *
  * Выбора клиента здесь нет — скоуп задаёт сессия, а не параметр адреса.
  */
-export default function CabinetReconciliation({ act = null, organizations = [], form = {} }) {
+export default function CabinetReconciliation({ act = null, organizations = [], companies = [], form = {} }) {
     const [state, setState] = useState({
         organization_id: form.organization_id ?? '',
+        company_id: form.company_id ?? '',
         date_from: form.date_from ?? '',
         date_to: form.date_to ?? '',
     });
@@ -30,6 +31,7 @@ export default function CabinetReconciliation({ act = null, organizations = [], 
 
     const apply = () => router.get('/cabinet/payments/reconciliation', {
         ...(state.organization_id ? { organization_id: state.organization_id } : {}),
+        ...(state.company_id ? { company_id: state.company_id } : {}),
         date_from: state.date_from,
         date_to: state.date_to,
     }, { preserveState: false });
@@ -65,6 +67,27 @@ export default function CabinetReconciliation({ act = null, organizations = [], 
                 <Card.Root>
                     <Card.Body>
                         <HStack gap={3} wrap="wrap" align="flex-end">
+                            {companies.length > 1 && (
+                                <VStack align="stretch" gap={1}>
+                                    <Text fontSize="xs" color="fg.muted">Контрагент</Text>
+                                    {/*
+                                        Нативный select, как и «Продавец» ниже: контрол
+                                        формы акта, который обязан работать без сюрпризов
+                                        портала/коллекции Chakra-селекта.
+                                    */}
+                                    <select
+                                        value={state.company_id}
+                                        onChange={(e) => set({ company_id: e.target.value })}
+                                        style={{ padding: '6px 8px', borderRadius: 6, borderWidth: 1 }}
+                                    >
+                                        <option value="">Все</option>
+                                        {companies.map((c) => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                </VStack>
+                            )}
+
                             {organizations.length > 1 && (
                                 <VStack align="stretch" gap={1}>
                                     <Text fontSize="xs" color="fg.muted">Продавец</Text>

@@ -25,7 +25,7 @@ const ALLOCATION_COLORS = {
 /**
  * Оплаты клиента. Только чтение: платёж заводит 1С.
  */
-export default function PaymentsIndex({ filters, directions = [], allocationStatuses = [], exportEnabled = false }) {
+export default function PaymentsIndex({ filters, directions = [], allocationStatuses = [], companies = [], exportEnabled = false }) {
     const { payments, currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
 
@@ -37,6 +37,7 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
     const [localFilters, setLocalFilters] = useState({
         direction: asArray(filters?.direction),
         allocation_status: asArray(filters?.allocation_status),
+        company_id: filters?.company_id || '',
         date_from: filters?.date_from || '',
         date_to: filters?.date_to || '',
         amount_from: filters?.amount_from || '',
@@ -77,21 +78,34 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
         [allocationStatuses],
     );
 
+    const companyCollection = useMemo(
+        () => createListCollection({
+            items: [{ label: 'Все контрагенты', value: '' }, ...companies.map((c) => ({ label: c.label, value: String(c.value) }))],
+        }),
+        [companies],
+    );
+
     const filterFields = useMemo(() => [
         { key: 'search', label: 'Поиск', formatter: (v) => `«${v}»` },
         { key: 'direction', label: 'Направление', formatter: (v) => directions.find((d) => d.value === v)?.label || v },
         { key: 'allocation_status', label: 'Разнесение', formatter: (v) => allocationStatuses.find((a) => a.value === v)?.label || v },
+        { key: 'company_id', label: 'Контрагент', formatter: (v) => companies.find((c) => String(c.value) === String(v))?.label || `#${v}` },
         { key: 'date_from', label: 'Дата от' },
         { key: 'date_to', label: 'Дата до' },
         { key: 'amount_from', label: 'Сумма от' },
         { key: 'amount_to', label: 'Сумма до' },
-    ], [directions, allocationStatuses]);
+    ], [directions, allocationStatuses, companies]);
 
-    const handleApplyFilters = () => navigateWithParams({ ...localFilters, page: 1 });
+    // search уходит вместе с фильтрами: если нажать «Применить» раньше, чем
+    // сработал debounce, набранный текст иначе откатился бы.
+    const handleApplyFilters = () => {
+        lastSubmittedSearch.current = search;
+        navigateWithParams({ ...localFilters, search, page: 1 });
+    };
 
     const handleResetFilters = () => {
         const reset = {
-            direction: [], allocation_status: [],
+            direction: [], allocation_status: [], company_id: '',
             date_from: '', date_to: '', amount_from: '', amount_to: '',
         };
         setLocalFilters(reset);
@@ -108,10 +122,14 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
 
         if (key === 'direction' || key === 'allocation_status') {
             setLocalFilters({ ...localFilters, [key]: Array.isArray(nextValue) ? nextValue : [] });
-        }
-        if (key === 'search') {
+        } else if (key === 'search') {
             setSearch('');
             lastSubmittedSearch.current = '';
+        } else if (Object.prototype.hasOwnProperty.call(localFilters, key)) {
+            // Скалярные фильтры (контрагент, даты, суммы) тоже чистим в черновике:
+            // preserveState сохраняет стейт, и снятый чип иначе вернулся бы
+            // следующим нажатием «Применить».
+            setLocalFilters({ ...localFilters, [key]: nextValue });
         }
 
         navigateWithParams({ [key]: nextValue, page: 1 });
@@ -120,7 +138,7 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
     const activeFiltersCount = [
         localFilters.direction, localFilters.allocation_status,
     ].reduce((sum, list) => sum + list.length, 0)
-        + ['date_from', 'date_to', 'amount_from', 'amount_to'].filter((key) => filters?.[key]).length;
+        + ['company_id', 'date_from', 'date_to', 'amount_from', 'amount_to'].filter((key) => filters?.[key]).length;
 
     const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -168,7 +186,9 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
                         )}
                     </Button>
 
-                    {exportEnabled && <ExportMenu baseUrl="/cabinet/payments/export" params={filters} />}
+                    {/* Пропы именно basePath/filters: с baseUrl/params меню вело
+                        на /cabinet/undefined и выгружало без фильтров. */}
+                    {exportEnabled && <ExportMenu basePath="/cabinet/payments/export" filters={filters} />}
                 </HStack>
             </Flex>
 
@@ -216,6 +236,25 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
                                         </Select.Content>
                                     </Select.Root>
                                 </Field>
+
+                                {companies.length > 0 && (
+                                    <Field label="Контрагент" flex="1">
+                                        <Select.Root
+                                            collection={companyCollection}
+                                            value={localFilters.company_id ? [localFilters.company_id] : []}
+                                            onValueChange={(e) => setLocalFilters({ ...localFilters, company_id: e.value[0] || '' })}
+                                        >
+                                            <Select.Trigger>
+                                                <Select.ValueText placeholder="Все контрагенты" />
+                                            </Select.Trigger>
+                                            <Select.Content>
+                                                {companyCollection.items.map((c) => (
+                                                    <Select.Item key={c.value} item={c}>{c.label}</Select.Item>
+                                                ))}
+                                            </Select.Content>
+                                        </Select.Root>
+                                    </Field>
+                                )}
 
                                 <Field label="Дата от" flex="1">
                                     <Input type="date" size="sm" value={localFilters.date_from}
