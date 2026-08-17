@@ -39,7 +39,9 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
     const [localFilters, setLocalFilters] = useState({
         status: selectedStatuses,
         type: filters?.type || '',
-        company_id: filters?.company_id || '',
+        // String(): значения коллекции — строки, а из старых ссылок id может
+        // приехать числом; без приведения селект выглядит сброшенным.
+        company_id: filters?.company_id ? String(filters.company_id) : '',
         date_from: filters?.date_from || '',
         date_to: filters?.date_to || '',
         amount_from: filters?.amount_from || '',
@@ -86,7 +88,10 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
     };
 
     const handleApplyFilters = () => {
-        navigateWithParams({ ...localFilters, page: 1 });
+        // search уходит вместе с фильтрами: если нажать «Применить» раньше,
+        // чем сработал debounce, набранный текст иначе откатился бы.
+        lastSubmittedSearch.current = search;
+        navigateWithParams({ ...localFilters, search, page: 1 });
     };
 
     const handleResetFilters = () => {

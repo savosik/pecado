@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { router, Link } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton, TrashedFilter } from '@/Admin/Components';
 import {
     Box, Text, Badge, IconButton, HStack, VStack, Card,
-    Input, Stack, Button, Flex,
+    Input, Stack, Button, Flex, createListCollection,
 } from '@chakra-ui/react';
 import { LuEye, LuFilter, LuX, LuTrash2 } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -84,6 +84,43 @@ export default function Index({ shipments, filters, statuses, organizations, war
         date_to: filters?.date_to ?? '',
         currency_code: filters?.currency_code ?? '',
     });
+
+    // Коллекции для селектов фильтров: Chakra v3 требует collection у Select.Root
+    // и объект (а не строку) в item — иначе выпадающий список не выбирается.
+    const statusCollection = useMemo(() => createListCollection({
+        items: [
+            { label: 'Все статусы', value: '' },
+            ...(statuses ?? []).map((s) => ({ label: s.label, value: String(s.value) })),
+        ],
+    }), [statuses]);
+
+    const currencyCollection = useMemo(() => createListCollection({
+        items: [
+            { label: 'Все валюты', value: '' },
+            { label: 'RUB (₽)', value: 'RUB' },
+            { label: 'KZT (₸)', value: 'KZT' },
+            { label: 'BYN (Br)', value: 'BYN' },
+        ],
+    }), []);
+
+    const organizationCollection = useMemo(() => createListCollection({
+        items: [
+            { label: 'Все организации', value: '' },
+            { label: 'Не указана', value: 'none' },
+            ...(organizations ?? []).map((organization) => ({
+                label: organization.is_stub ? `${organization.name} (не заведена)` : organization.name,
+                value: String(organization.id),
+            })),
+        ],
+    }), [organizations]);
+
+    const warehouseCollection = useMemo(() => createListCollection({
+        items: [
+            { label: 'Все склады', value: '' },
+            { label: 'Не указан', value: 'none' },
+            ...(warehouses ?? []).map((warehouse) => ({ label: warehouse.name, value: String(warehouse.id) })),
+        ],
+    }), [warehouses]);
 
     const navigateWithParams = (params) => {
         router.get(route('admin.shipments.index'), {
@@ -311,6 +348,7 @@ export default function Index({ shipments, filters, statuses, organizations, war
                             <Flex gap={4} direction={{ base: 'column', md: 'row' }}>
                                 <Field label="Статус" flex="1">
                                     <Select.Root
+                                        collection={statusCollection}
                                         value={localFilters.status ? [localFilters.status] : []}
                                         onValueChange={(e) => setLocalFilters({ ...localFilters, status: e.value[0] || '' })}
                                     >
@@ -318,9 +356,8 @@ export default function Index({ shipments, filters, statuses, organizations, war
                                             <Select.ValueText placeholder="Все статусы" />
                                         </Select.Trigger>
                                         <Select.Content>
-                                            <Select.Item item="">Все статусы</Select.Item>
-                                            {statuses?.map((s) => (
-                                                <Select.Item key={s.value} item={s.value}>{s.label}</Select.Item>
+                                            {statusCollection.items.map((s) => (
+                                                <Select.Item key={s.value} item={s}>{s.label}</Select.Item>
                                             ))}
                                         </Select.Content>
                                     </Select.Root>
@@ -328,6 +365,7 @@ export default function Index({ shipments, filters, statuses, organizations, war
 
                                 <Field label="Валюта" flex="1">
                                     <Select.Root
+                                        collection={currencyCollection}
                                         value={localFilters.currency_code ? [localFilters.currency_code] : []}
                                         onValueChange={(e) => setLocalFilters({ ...localFilters, currency_code: e.value[0] || '' })}
                                     >
@@ -335,10 +373,9 @@ export default function Index({ shipments, filters, statuses, organizations, war
                                             <Select.ValueText placeholder="Все валюты" />
                                         </Select.Trigger>
                                         <Select.Content>
-                                            <Select.Item item="">Все валюты</Select.Item>
-                                            <Select.Item item="RUB">RUB (₽)</Select.Item>
-                                            <Select.Item item="KZT">KZT (₸)</Select.Item>
-                                            <Select.Item item="BYN">BYN (Br)</Select.Item>
+                                            {currencyCollection.items.map((option) => (
+                                                <Select.Item key={option.value} item={option}>{option.label}</Select.Item>
+                                            ))}
                                         </Select.Content>
                                     </Select.Root>
                                 </Field>
@@ -346,6 +383,7 @@ export default function Index({ shipments, filters, statuses, organizations, war
                                 {organizationsEnabled && (
                                     <Field label="Организация" flex="1">
                                         <Select.Root
+                                            collection={organizationCollection}
                                             value={localFilters.organization_id ? [String(localFilters.organization_id)] : []}
                                             onValueChange={(e) => setLocalFilters({ ...localFilters, organization_id: e.value[0] || '' })}
                                         >
@@ -353,11 +391,9 @@ export default function Index({ shipments, filters, statuses, organizations, war
                                                 <Select.ValueText placeholder="Все организации" />
                                             </Select.Trigger>
                                             <Select.Content>
-                                                <Select.Item item="">Все организации</Select.Item>
-                                                <Select.Item item="none">Не указана</Select.Item>
-                                                {organizations?.map((organization) => (
-                                                    <Select.Item key={organization.id} item={String(organization.id)}>
-                                                        {organization.is_stub ? `${organization.name} (не заведена)` : organization.name}
+                                                {organizationCollection.items.map((option) => (
+                                                    <Select.Item key={option.value} item={option}>
+                                                        {option.label}
                                                     </Select.Item>
                                                 ))}
                                             </Select.Content>
@@ -368,6 +404,7 @@ export default function Index({ shipments, filters, statuses, organizations, war
                                 {organizationsEnabled && (
                                     <Field label="Склад отгрузки" flex="1">
                                         <Select.Root
+                                            collection={warehouseCollection}
                                             value={localFilters.warehouse_id ? [String(localFilters.warehouse_id)] : []}
                                             onValueChange={(e) => setLocalFilters({ ...localFilters, warehouse_id: e.value[0] || '' })}
                                         >
@@ -375,11 +412,9 @@ export default function Index({ shipments, filters, statuses, organizations, war
                                                 <Select.ValueText placeholder="Все склады" />
                                             </Select.Trigger>
                                             <Select.Content>
-                                                <Select.Item item="">Все склады</Select.Item>
-                                                <Select.Item item="none">Не указан</Select.Item>
-                                                {warehouses?.map((warehouse) => (
-                                                    <Select.Item key={warehouse.id} item={String(warehouse.id)}>
-                                                        {warehouse.name}
+                                                {warehouseCollection.items.map((option) => (
+                                                    <Select.Item key={option.value} item={option}>
+                                                        {option.label}
                                                     </Select.Item>
                                                 ))}
                                             </Select.Content>

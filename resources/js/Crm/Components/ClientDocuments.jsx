@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Badge, Box, HStack, Spinner, Table, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, HStack, Spinner, Table, Text, VStack, createListCollection } from '@chakra-ui/react';
 import { LuExternalLink } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
@@ -34,12 +34,26 @@ export default function ClientDocuments({ clientId, type, organizations = [], or
 
     const isOrder = type === 'order';
 
+    // Коллекция для селекта: Chakra v3 требует collection у Select.Root
+    // и объект (а не строку) в item — иначе выпадающий список не выбирается.
+    const organizationCollection = useMemo(() => createListCollection({
+        items: [
+            { label: 'Все организации', value: '' },
+            { label: 'Не указана', value: 'none' },
+            ...(organizations ?? []).map((organization) => ({
+                label: organization.name,
+                value: String(organization.id),
+            })),
+        ],
+    }), [organizations]);
+
     const filter = organizationsEnabled ? (
         <HStack gap={2} align="center">
             <Text fontSize="xs" color="fg.muted" flexShrink="0">Организация</Text>
             <Box maxW="260px" w="full">
                 <Select.Root
                     size="sm"
+                    collection={organizationCollection}
                     value={organizationId ? [organizationId] : []}
                     onValueChange={(e) => setOrganizationId(e.value[0] || '')}
                 >
@@ -47,11 +61,9 @@ export default function ClientDocuments({ clientId, type, organizations = [], or
                         <Select.ValueText placeholder="Все организации" />
                     </Select.Trigger>
                     <Select.Content>
-                        <Select.Item item="">Все организации</Select.Item>
-                        <Select.Item item="none">Не указана</Select.Item>
-                        {organizations?.map((organization) => (
-                            <Select.Item key={organization.id} item={String(organization.id)}>
-                                {organization.name}
+                        {organizationCollection.items.map((organization) => (
+                            <Select.Item key={organization.value} item={organization}>
+                                {organization.label}
                             </Select.Item>
                         ))}
                     </Select.Content>

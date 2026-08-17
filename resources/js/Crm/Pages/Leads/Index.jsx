@@ -145,9 +145,11 @@ export default function Index({
 
     // Один переход на все фильтры: undefined убирает параметр из адреса,
     // поэтому «сбросить» — это просто передать undefined.
+    // page сбрасывается: смена фильтра на 3-й странице иначе показывает
+    // пустой список — выборка сузилась, а номер страницы остался.
     const go = (patch) => router.get(
         route('crm.leads.index'),
-        { ...filters, ...patch, lead: undefined },
+        { ...filters, page: undefined, ...patch, lead: undefined },
         { preserveState: true, preserveScroll: true, replace: true },
     );
 

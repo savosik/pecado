@@ -58,8 +58,10 @@ export default function DocumentsIndex({
         : (filters?.type ? [filters.type] : []);
 
     const [localFilters, setLocalFilters] = useState({
-        company_id: Array.isArray(filters?.company_id) ? filters.company_id : [],
-        organization_id: Array.isArray(filters?.organization_id) ? filters.organization_id : [],
+        // map(String): значения коллекции — строки, а бэкенд отдаёт id числами;
+        // без приведения выбранные пункты не подсвечиваются после перезагрузки.
+        company_id: Array.isArray(filters?.company_id) ? filters.company_id.map(String) : [],
+        organization_id: Array.isArray(filters?.organization_id) ? filters.organization_id.map(String) : [],
         date_from: filters?.date_from || '',
         date_to: filters?.date_to || '',
     });
@@ -269,7 +271,13 @@ export default function DocumentsIndex({
                                 <Flex gap="4" wrap="wrap">
                                     {companies.length > 0 && (
                                         <Field label="Контрагент" flex="1" minW="220px">
-                                            <Select
+                                            {/*
+                                                Select из обёртки — это объект {Root, Trigger, …},
+                                                а не компонент: <Select …/> роняет страницу
+                                                («Element type is invalid»). Только полная
+                                                разметка Root/Trigger/Content/Item.
+                                            */}
+                                            <Select.Root
                                                 multiple
                                                 collection={companyCollection}
                                                 value={localFilters.company_id}
@@ -277,14 +285,26 @@ export default function DocumentsIndex({
                                                     ...prev,
                                                     company_id: e.value,
                                                 }))}
-                                                placeholder="Все контрагенты"
-                                            />
+                                            >
+                                                <Select.Trigger>
+                                                    <Select.ValueText placeholder="Все контрагенты">
+                                                        {localFilters.company_id.length === 0
+                                                            ? 'Все контрагенты'
+                                                            : `Выбрано: ${localFilters.company_id.length}`}
+                                                    </Select.ValueText>
+                                                </Select.Trigger>
+                                                <Select.Content>
+                                                    {companyCollection.items.map((item) => (
+                                                        <Select.Item key={item.value} item={item}>{item.label}</Select.Item>
+                                                    ))}
+                                                </Select.Content>
+                                            </Select.Root>
                                         </Field>
                                     )}
 
                                     {organizationsEnabled && organizations.length > 0 && (
                                         <Field label="Продавец" flex="1" minW="220px">
-                                            <Select
+                                            <Select.Root
                                                 multiple
                                                 collection={organizationCollection}
                                                 value={localFilters.organization_id}
@@ -292,8 +312,20 @@ export default function DocumentsIndex({
                                                     ...prev,
                                                     organization_id: e.value,
                                                 }))}
-                                                placeholder="Все организации"
-                                            />
+                                            >
+                                                <Select.Trigger>
+                                                    <Select.ValueText placeholder="Все организации">
+                                                        {localFilters.organization_id.length === 0
+                                                            ? 'Все организации'
+                                                            : `Выбрано: ${localFilters.organization_id.length}`}
+                                                    </Select.ValueText>
+                                                </Select.Trigger>
+                                                <Select.Content>
+                                                    {organizationCollection.items.map((item) => (
+                                                        <Select.Item key={item.value} item={item}>{item.label}</Select.Item>
+                                                    ))}
+                                                </Select.Content>
+                                            </Select.Root>
                                         </Field>
                                     )}
 

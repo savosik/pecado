@@ -619,9 +619,16 @@ class DocumentController extends CrmController
                 : null,
         ]);
 
+        $options = $this->listOptions($request, 'printed_documents', $clients, $sortBy, $sortOrder, $perPage, $search);
+        // Снимок отбора обязан включать все ключи, которые читает страница:
+        // отсутствующий ключ фронт трактует как «ничего не выбрано», и чекбоксы
+        // вида документа/состояния файла сбрасывались после каждого запроса.
+        $options['filters']['types'] = $this->values($request, 'types');
+        $options['filters']['file_statuses'] = $this->values($request, 'file_statuses');
+
         return Inertia::render('Crm/Pages/Documents/PrintedDocuments', array_merge(
             ['documents' => $documents],
-            $this->listOptions($request, 'printed_documents', $clients, $sortBy, $sortOrder, $perPage, $search),
+            $options,
             [
                 'types' => PrintedDocumentType::options(),
                 'fileStatuses' => array_map(

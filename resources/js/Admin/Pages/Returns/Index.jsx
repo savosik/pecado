@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { HStack, Badge, Button, Input, Box, VStack, Text, IconButton } from "@chakra-ui/react";
+import React, { useMemo, useState } from "react";
+import { HStack, Badge, Button, Input, Box, VStack, Text, IconButton, createListCollection } from "@chakra-ui/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Head, usePage, router } from "@inertiajs/react";
 import { LuPlus, LuFilter, LuX, LuTrash2 } from "react-icons/lu";
@@ -35,6 +35,27 @@ const ReturnsIndex = ({ filters, statuses, reasons, trashedCount }) => {
         amount_from: filters?.amount_from || "",
         amount_to: filters?.amount_to || "",
     });
+
+    // Коллекции для селектов: Chakra v3 требует collection у Select.Root
+    // и объект (а не строку) в item — иначе выпадающий список не выбирается.
+    const statusFilterCollection = useMemo(() => createListCollection({
+        items: [
+            { label: "Все статусы", value: "" },
+            ...(statuses ?? []).map((status) => ({ label: status.label, value: String(status.value) })),
+        ],
+    }), [statuses]);
+
+    const reasonCollection = useMemo(() => createListCollection({
+        items: [
+            { label: "Все причины", value: "" },
+            ...(reasons ?? []).map((reason) => ({ label: reason.label, value: String(reason.value) })),
+        ],
+    }), [reasons]);
+
+    // Для массовой смены статуса пункта «Все» нет: пустой выбор ловится тостом.
+    const bulkStatusCollection = useMemo(() => createListCollection({
+        items: (statuses ?? []).map((status) => ({ label: status.label, value: String(status.value) })),
+    }), [statuses]);
 
     const isTrashed = !!filters?.trashed;
 
@@ -287,6 +308,7 @@ const ReturnsIndex = ({ filters, statuses, reasons, trashedCount }) => {
                         <HStack align="end" gap={4}>
                             <Field label="Статус">
                                 <Select.Root
+                                    collection={statusFilterCollection}
                                     value={localFilters.status ? [localFilters.status] : []}
                                     onValueChange={(e) => setLocalFilters({ ...localFilters, status: e.value[0] || "" })}
                                 >
@@ -294,9 +316,8 @@ const ReturnsIndex = ({ filters, statuses, reasons, trashedCount }) => {
                                         <Select.ValueText placeholder="Все статусы" />
                                     </Select.Trigger>
                                     <Select.Content>
-                                        <Select.Item item="">Все статусы</Select.Item>
-                                        {statuses?.map((status) => (
-                                            <Select.Item key={status.value} item={status.value}>
+                                        {statusFilterCollection.items.map((status) => (
+                                            <Select.Item key={status.value} item={status}>
                                                 {status.label}
                                             </Select.Item>
                                         ))}
@@ -306,6 +327,7 @@ const ReturnsIndex = ({ filters, statuses, reasons, trashedCount }) => {
 
                             <Field label="Причина возврата">
                                 <Select.Root
+                                    collection={reasonCollection}
                                     value={localFilters.reason ? [localFilters.reason] : []}
                                     onValueChange={(e) => setLocalFilters({ ...localFilters, reason: e.value[0] || "" })}
                                 >
@@ -313,9 +335,8 @@ const ReturnsIndex = ({ filters, statuses, reasons, trashedCount }) => {
                                         <Select.ValueText placeholder="Все причины" />
                                     </Select.Trigger>
                                     <Select.Content>
-                                        <Select.Item item="">Все причины</Select.Item>
-                                        {reasons?.map((reason) => (
-                                            <Select.Item key={reason.value} item={reason.value}>
+                                        {reasonCollection.items.map((reason) => (
+                                            <Select.Item key={reason.value} item={reason}>
                                                 {reason.label}
                                             </Select.Item>
                                         ))}
@@ -375,6 +396,7 @@ const ReturnsIndex = ({ filters, statuses, reasons, trashedCount }) => {
                     <HStack>
                         <span>Выбрано: {selectedReturns.length}</span>
                         <Select.Root
+                            collection={bulkStatusCollection}
                             value={bulkStatus ? [bulkStatus] : []}
                             onValueChange={(e) => setBulkStatus(e.value[0])}
                         >
@@ -382,8 +404,8 @@ const ReturnsIndex = ({ filters, statuses, reasons, trashedCount }) => {
                                 <Select.ValueText placeholder="Выберите статус" />
                             </Select.Trigger>
                             <Select.Content>
-                                {statuses?.map((status) => (
-                                    <Select.Item key={status.value} item={status.value}>
+                                {bulkStatusCollection.items.map((status) => (
+                                    <Select.Item key={status.value} item={status}>
                                         {status.label}
                                     </Select.Item>
                                 ))}

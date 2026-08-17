@@ -49,8 +49,12 @@ function presetRange(key) {
     }
 }
 
-function MultiSelect({ label, options, selectedIds, onChange, idKey = 'id', labelKey = 'name' }) {
-    const selectedSet = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
+function MultiSelect({ label, options, selectedIds: selectedIdsProp, onChange, idKey = 'id', labelKey = 'name' }) {
+    // Нормализация обязательна: пресет или initial.filters могут прислать null
+    // вместо массива (дефолт параметра ловит только undefined), и без неё
+    // падает вся панель фильтров.
+    const selectedIds = selectedIdsProp ?? [];
+    const selectedSet = useMemo(() => new Set((selectedIdsProp ?? []).map(String)), [selectedIdsProp]);
     const summary = selectedIds.length === 0
         ? 'Все'
         : selectedIds.length === 1

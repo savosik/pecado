@@ -148,6 +148,22 @@ class CrmPrintedDocumentTest extends TestCase
     }
 
     #[Test]
+    public function filter_snapshot_round_trips_types_and_file_statuses(): void
+    {
+        // Регресс: страница читает выбранные значения из props.filters, и если
+        // сервер не возвращает types/file_statuses, чекбоксы «Вид документа» и
+        // «Файл» сбрасываются после каждого запроса, а снять выбор невозможно.
+        $this->documentFor($this->client);
+
+        $this->actingAs($this->manager)
+            ->get('/crm/printed-documents?types[]=invoice&file_statuses[]=missing')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('filters.types', ['invoice'])
+                ->where('filters.file_statuses', ['missing']));
+    }
+
+    #[Test]
     public function export_is_scoped_the_same_way(): void
     {
         $this->documentFor($this->client);

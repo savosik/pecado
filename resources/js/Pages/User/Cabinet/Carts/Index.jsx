@@ -78,8 +78,18 @@ export default function Index({ carts = { data: [], current_page: 1, last_page: 
         navigateWithParams({ search, page: 1 });
     };
 
+    // false в query уезжает строкой «only_empty=false», которую сервер читает
+    // как активный фильтр, — снятый чекбокс должен убирать параметр целиком.
+    const boolParams = (state) => ({
+        only_empty: state.only_empty || undefined,
+        only_active: state.only_active || undefined,
+    });
+
     const handleApplyFilters = () => {
-        navigateWithParams({ ...localFilters, page: 1 });
+        // search уходит вместе с фильтрами: если нажать «Применить» раньше,
+        // чем сработал debounce, набранный текст иначе откатился бы.
+        lastSubmittedSearch.current = search;
+        navigateWithParams({ ...localFilters, ...boolParams(localFilters), search, page: 1 });
     };
 
     const handleResetFilters = () => {
@@ -91,7 +101,10 @@ export default function Index({ carts = { data: [], current_page: 1, last_page: 
         setLocalFilters(reset);
         setSearch('');
         lastSubmittedSearch.current = '';
-        navigateWithParams({ search: '', sort_by: 'updated_at', sort_order: 'desc', ...reset, page: 1 });
+        navigateWithParams({
+            search: '', sort_by: 'updated_at', sort_order: 'desc',
+            ...reset, ...boolParams(reset), page: 1,
+        });
     };
 
     const handleSort = (field) => {

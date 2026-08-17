@@ -6,6 +6,7 @@ import { DataTable } from '@/Admin/Components/DataTable';
 import { SearchInput } from '@/Admin/Components/SearchInput';
 import { Button } from '@/components/ui/button';
 import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
+import AmountFilterInput from '@/Crm/Components/AmountFilterInput';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { useDocumentFilters } from '@/Crm/hooks/useDocumentFilters';
 
@@ -273,20 +274,16 @@ export default function PaymentList({
 
                     <HStack gap={2}>
                         <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">Сумма от</Text>
-                        <Input
-                            size="sm"
-                            type="number"
+                        <AmountFilterInput
                             width="120px"
-                            value={filters.amount_from ?? ''}
-                            onChange={(e) => apply({ amount_from: e.target.value || undefined })}
+                            value={filters.amount_from}
+                            onCommit={(value) => apply({ amount_from: value })}
                         />
                         <Text fontSize="xs" color="fg.muted">до</Text>
-                        <Input
-                            size="sm"
-                            type="number"
+                        <AmountFilterInput
                             width="120px"
-                            value={filters.amount_to ?? ''}
-                            onChange={(e) => apply({ amount_to: e.target.value || undefined })}
+                            value={filters.amount_to}
+                            onCommit={(value) => apply({ amount_to: value })}
                         />
                     </HStack>
 

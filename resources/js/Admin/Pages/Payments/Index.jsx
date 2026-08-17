@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { router, Link } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog, TrashedFilter } from '@/Admin/Components';
 import {
     Box, Text, Badge, IconButton, HStack, Card,
-    Input, Stack, Button, Flex,
+    Input, Stack, Button, Flex, createListCollection,
 } from '@chakra-ui/react';
 import { LuEye, LuFilter, LuX, LuTrash2, LuRotateCcw } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -73,6 +73,50 @@ export default function Index({ payments, filters, directions, allocationStatuse
         amount_from: filters?.amount_from ?? '',
         amount_to: filters?.amount_to ?? '',
     });
+
+    // Коллекции для селектов фильтров: Chakra v3 требует collection у Select.Root
+    // и объект (а не строку) в item — иначе выпадающий список не выбирается.
+    const directionCollection = useMemo(() => createListCollection({
+        items: [
+            { label: 'Все направления', value: '' },
+            ...(directions ?? []).map((option) => ({ label: option.label, value: String(option.value) })),
+        ],
+    }), [directions]);
+
+    const allocationCollection = useMemo(() => createListCollection({
+        items: [
+            { label: 'Любое', value: '' },
+            ...(allocationStatuses ?? []).map((option) => ({ label: option.label, value: String(option.value) })),
+        ],
+    }), [allocationStatuses]);
+
+    const bankConfirmedCollection = useMemo(() => createListCollection({
+        items: [
+            { label: 'Неважно', value: '' },
+            { label: 'Проведён', value: '1' },
+            { label: 'Не проведён', value: '0' },
+        ],
+    }), []);
+
+    const currencyCollection = useMemo(() => createListCollection({
+        items: [
+            { label: 'Все валюты', value: '' },
+            { label: 'RUB (₽)', value: 'RUB' },
+            { label: 'KZT (₸)', value: 'KZT' },
+            { label: 'BYN (Br)', value: 'BYN' },
+        ],
+    }), []);
+
+    const organizationCollection = useMemo(() => createListCollection({
+        items: [
+            { label: 'Все организации', value: '' },
+            { label: 'Не указана', value: 'none' },
+            ...(organizations ?? []).map((organization) => ({
+                label: organization.is_stub ? `${organization.name} (не заведена)` : organization.name,
+                value: String(organization.id),
+            })),
+        ],
+    }), [organizations]);
 
     const navigateWithParams = (params) => {
         router.get(route('admin.payments.index'), { ...filters, ...params }, { preserveState: true, replace: true });
@@ -279,6 +323,7 @@ export default function Index({ payments, filters, directions, allocationStatuse
                             <Flex gap={4} direction={{ base: 'column', md: 'row' }}>
                                 <Field label="Направление" flex="1">
                                     <Select.Root
+                                        collection={directionCollection}
                                         value={localFilters.direction ? [localFilters.direction] : []}
                                         onValueChange={(e) => setLocalFilters({ ...localFilters, direction: e.value[0] || '' })}
                                     >
@@ -286,9 +331,8 @@ export default function Index({ payments, filters, directions, allocationStatuse
                                             <Select.ValueText placeholder="Все направления" />
                                         </Select.Trigger>
                                         <Select.Content>
-                                            <Select.Item item="">Все направления</Select.Item>
-                                            {directions?.map((option) => (
-                                                <Select.Item key={option.value} item={option.value}>{option.label}</Select.Item>
+                                            {directionCollection.items.map((option) => (
+                                                <Select.Item key={option.value} item={option}>{option.label}</Select.Item>
                                             ))}
                                         </Select.Content>
                                     </Select.Root>
@@ -296,6 +340,7 @@ export default function Index({ payments, filters, directions, allocationStatuse
 
                                 <Field label="Разнесение" flex="1">
                                     <Select.Root
+                                        collection={allocationCollection}
                                         value={localFilters.allocation_status ? [localFilters.allocation_status] : []}
                                         onValueChange={(e) => setLocalFilters({ ...localFilters, allocation_status: e.value[0] || '' })}
                                     >
@@ -303,9 +348,8 @@ export default function Index({ payments, filters, directions, allocationStatuse
                                             <Select.ValueText placeholder="Любое" />
                                         </Select.Trigger>
                                         <Select.Content>
-                                            <Select.Item item="">Любое</Select.Item>
-                                            {allocationStatuses?.map((option) => (
-                                                <Select.Item key={option.value} item={option.value}>{option.label}</Select.Item>
+                                            {allocationCollection.items.map((option) => (
+                                                <Select.Item key={option.value} item={option}>{option.label}</Select.Item>
                                             ))}
                                         </Select.Content>
                                     </Select.Root>
@@ -313,6 +357,7 @@ export default function Index({ payments, filters, directions, allocationStatuse
 
                                 <Field label="Проведён банком" flex="1">
                                     <Select.Root
+                                        collection={bankConfirmedCollection}
                                         value={localFilters.bank_confirmed !== '' ? [String(localFilters.bank_confirmed)] : []}
                                         onValueChange={(e) => setLocalFilters({ ...localFilters, bank_confirmed: e.value[0] ?? '' })}
                                     >
@@ -320,15 +365,16 @@ export default function Index({ payments, filters, directions, allocationStatuse
                                             <Select.ValueText placeholder="Неважно" />
                                         </Select.Trigger>
                                         <Select.Content>
-                                            <Select.Item item="">Неважно</Select.Item>
-                                            <Select.Item item="1">Проведён</Select.Item>
-                                            <Select.Item item="0">Не проведён</Select.Item>
+                                            {bankConfirmedCollection.items.map((option) => (
+                                                <Select.Item key={option.value} item={option}>{option.label}</Select.Item>
+                                            ))}
                                         </Select.Content>
                                     </Select.Root>
                                 </Field>
 
                                 <Field label="Валюта" flex="1">
                                     <Select.Root
+                                        collection={currencyCollection}
                                         value={localFilters.currency_code ? [localFilters.currency_code] : []}
                                         onValueChange={(e) => setLocalFilters({ ...localFilters, currency_code: e.value[0] || '' })}
                                     >
@@ -336,10 +382,9 @@ export default function Index({ payments, filters, directions, allocationStatuse
                                             <Select.ValueText placeholder="Все валюты" />
                                         </Select.Trigger>
                                         <Select.Content>
-                                            <Select.Item item="">Все валюты</Select.Item>
-                                            <Select.Item item="RUB">RUB (₽)</Select.Item>
-                                            <Select.Item item="KZT">KZT (₸)</Select.Item>
-                                            <Select.Item item="BYN">BYN (Br)</Select.Item>
+                                            {currencyCollection.items.map((option) => (
+                                                <Select.Item key={option.value} item={option}>{option.label}</Select.Item>
+                                            ))}
                                         </Select.Content>
                                     </Select.Root>
                                 </Field>
@@ -347,6 +392,7 @@ export default function Index({ payments, filters, directions, allocationStatuse
                                 {organizationsEnabled && (
                                     <Field label="Организация" flex="1">
                                         <Select.Root
+                                            collection={organizationCollection}
                                             value={localFilters.organization_id ? [String(localFilters.organization_id)] : []}
                                             onValueChange={(e) => setLocalFilters({ ...localFilters, organization_id: e.value[0] || '' })}
                                         >
@@ -354,11 +400,9 @@ export default function Index({ payments, filters, directions, allocationStatuse
                                                 <Select.ValueText placeholder="Все организации" />
                                             </Select.Trigger>
                                             <Select.Content>
-                                                <Select.Item item="">Все организации</Select.Item>
-                                                <Select.Item item="none">Не указана</Select.Item>
-                                                {organizations?.map((organization) => (
-                                                    <Select.Item key={organization.id} item={String(organization.id)}>
-                                                        {organization.is_stub ? `${organization.name} (не заведена)` : organization.name}
+                                                {organizationCollection.items.map((option) => (
+                                                    <Select.Item key={option.value} item={option}>
+                                                        {option.label}
                                                     </Select.Item>
                                                 ))}
                                             </Select.Content>

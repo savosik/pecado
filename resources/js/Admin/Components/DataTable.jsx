@@ -151,10 +151,11 @@ export const DataTable = ({
                             <Table.Row>
                                 {selectable && (
                                     <Table.ColumnHeader width="40px">
+                                        {/* Пропа indeterminate в v3 нет — частичный выбор
+                                            передаётся значением checked='indeterminate'. */}
                                         <Checkbox
-                                            checked={isAllSelected}
-                                            indeterminate={isSomeSelected ? true : undefined}
-                                            onCheckedChange={(e) => handleSelectAll(e.checked)}
+                                            checked={isAllSelected ? true : (isSomeSelected ? 'indeterminate' : false)}
+                                            onCheckedChange={(e) => handleSelectAll(!!e.checked)}
                                         />
                                     </Table.ColumnHeader>
                                 )}

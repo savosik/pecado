@@ -74,7 +74,10 @@ export default function ReturnsIndex({ filters, statuses, reasons, exportEnabled
     };
 
     const handleApplyFilters = () => {
-        navigateWithParams({ ...localFilters, page: 1 });
+        // search уходит вместе с фильтрами: если нажать «Применить» раньше,
+        // чем сработал debounce, набранный текст иначе откатился бы.
+        lastSubmittedSearch.current = search;
+        navigateWithParams({ ...localFilters, search, page: 1 });
     };
 
     const handleResetFilters = () => {
