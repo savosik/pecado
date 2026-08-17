@@ -504,7 +504,13 @@ class OrderController extends Controller
                 ->latest('id')
                 ->first();
 
-            if ($offer !== null && $offer->isOpen() && ! $offer->expires_at->isPast()) {
+            // Баннер живой подборки — только если менеджер отправил её сам
+            // либо явно включён автопоказ: клиент не должен увидеть подборку
+            // раньше, чем её проверил менеджер.
+            $offerVisible = $offer !== null
+                && ($offer->sent_at !== null || (bool) config('substitutions.client_auto_enabled'));
+
+            if ($offerVisible && $offer->isOpen() && ! $offer->expires_at->isPast()) {
                 $substitution = [
                     'state' => 'offered',
                     'lines_count' => $order->items->where('cancelled', true)->count(),

@@ -156,6 +156,10 @@ class SubstitutionOfferService
      */
     private function ensureTask(Order $order, SubstitutionOffer $offer, array $cancelledItems, ?User $manager): void
     {
+        if (! config('substitutions.manager_tasks_enabled')) {
+            return;
+        }
+
         $assignee = $manager ?? $this->fallbackAssignee();
 
         if ($assignee === null) {

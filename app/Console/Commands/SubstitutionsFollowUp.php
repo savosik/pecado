@@ -59,6 +59,12 @@ class SubstitutionsFollowUp extends Command
      */
     private function remindUnopened(bool $dryRun): int
     {
+        // Напоминание уходит клиенту без действия менеджера, поэтому у него
+        // отдельный флаг: reminded_at не проставляется, пока канал выключен.
+        if (! config('substitutions.client_auto_enabled')) {
+            return 0;
+        }
+
         $threshold = now()->subHours((int) config('substitutions.follow_up.remind_after_hours', 24));
 
         $offers = SubstitutionOffer::query()
@@ -92,6 +98,12 @@ class SubstitutionsFollowUp extends Command
      */
     private function scheduleCalls(bool $dryRun): int
     {
+        // call_task_at при выключенных задачах не отмечается: после включения
+        // всё ещё актуальные подборки (VIEWED, не истёкшие) задачу получат.
+        if (! config('substitutions.manager_tasks_enabled')) {
+            return 0;
+        }
+
         $threshold = now()->subHours((int) config('substitutions.follow_up.call_task_after_hours', 48));
 
         $offers = SubstitutionOffer::query()
@@ -153,6 +165,12 @@ class SubstitutionsFollowUp extends Command
 
     private function createTask(SubstitutionOffer $offer, string $title, TaskPriority $priority): void
     {
+        // Просрочка офферу проставляется в любом случае, задача — только
+        // при включённых задачах менеджеру.
+        if (! config('substitutions.manager_tasks_enabled')) {
+            return;
+        }
+
         $assignee = $offer->manager ?? \App\Models\User::role('sales-head')->orderBy('id')->first();
 
         if ($assignee === null) {

@@ -35,6 +35,7 @@ class ShortageOfferDetectionTest extends TestCase
         parent::setUp();
 
         config()->set('substitutions.enabled', true);
+        config()->set('substitutions.manager_tasks_enabled', true);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
         Log::shouldReceive('warning')->zeroOrMoreTimes();
@@ -150,6 +151,21 @@ class ShortageOfferDetectionTest extends TestCase
         $this->assertStringContainsString('Недобор по заказу 29УТ-011777', $task->title);
         $this->assertTrue($task->due_at->is('2026-08-14 18:00:00'));
         $this->assertSame($order->id, (int) $task->related_id);
+    }
+
+    #[Test]
+    public function disabled_manager_tasks_keep_the_offer_but_create_no_task(): void
+    {
+        config()->set('substitutions.manager_tasks_enabled', false);
+
+        ['order' => $order] = $this->makeOrderWithManager('11111111-0000-4000-a000-0000000000fe');
+
+        $this->makeJob($this->orderUpdatedMessage($order->uuid, [
+            $this->line(1, cancelled: true),
+        ], 'msg-shortage-no-task'))->fire();
+
+        $this->assertSame(1, SubstitutionOffer::count());
+        $this->assertSame(0, CrmTask::count());
     }
 
     #[Test]

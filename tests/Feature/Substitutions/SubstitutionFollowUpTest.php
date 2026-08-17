@@ -31,7 +31,11 @@ class SubstitutionFollowUpTest extends TestCase
     {
         parent::setUp();
 
-        config(['substitutions.enabled' => true]);
+        config([
+            'substitutions.enabled' => true,
+            'substitutions.manager_tasks_enabled' => true,
+            'substitutions.client_auto_enabled' => true,
+        ]);
         Notification::fake();
     }
 
@@ -168,6 +172,40 @@ class SubstitutionFollowUpTest extends TestCase
         $this->assertNull($offer->fresh()->reminded_at);
         $this->assertSame(OfferStatus::PENDING, $expired->fresh()->status);
         $this->assertSame(0, CrmTask::count());
+    }
+
+    #[Test]
+    public function reminder_is_suppressed_while_the_client_auto_channel_is_off(): void
+    {
+        config(['substitutions.client_auto_enabled' => false]);
+        Carbon::setTestNow('2026-08-14 12:00:00');
+
+        $offer = $this->makeOffer(['sent_at' => now()->subHours(25)]);
+
+        $this->artisan('substitutions:follow-up')->assertSuccessful();
+
+        Notification::assertNothingSent();
+        // Отметка не ставится: после включения канала напоминание ещё уйдёт.
+        $this->assertNull($offer->fresh()->reminded_at);
+    }
+
+    #[Test]
+    public function disabled_manager_tasks_suppress_tasks_but_offers_still_expire(): void
+    {
+        config(['substitutions.manager_tasks_enabled' => false]);
+        Carbon::setTestNow('2026-08-14 12:00:00');
+
+        $viewed = $this->makeOffer([
+            'status' => OfferStatus::VIEWED,
+            'viewed_at' => now()->subHours(49),
+        ]);
+        $expired = $this->makeOffer(['expires_at' => now()->subHour()]);
+
+        $this->artisan('substitutions:follow-up')->assertSuccessful();
+
+        $this->assertSame(0, CrmTask::count());
+        $this->assertNull($viewed->fresh()->call_task_at);
+        $this->assertSame(OfferStatus::EXPIRED, $expired->fresh()->status);
     }
 
     #[Test]
