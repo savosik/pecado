@@ -57,21 +57,7 @@ class TaskController extends CrmController
         $filters = $this->validateFilters($request);
         $scope = CrmScope::fromRequest($request, $actor);
 
-        $query = $this->tasks->visibleTo($actor, $scope)
-            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'])
-            ->withCount([
-                'media as attachments_count' => fn ($media) => $media->where(
-                    'collection_name',
-                    CrmAttachments::COLLECTION,
-                ),
-                'checklistItems as checklist_total',
-                'checklistItems as checklist_done' => fn ($items) => $items->where('is_done', true),
-            ]);
-
-        $this->applyFilters($query, $filters, $actor);
-        $this->applySort($query, $filters);
-
-        $paginator = $query->paginate($filters['per_page'])->withQueryString();
+        $paginator = $this->filteredPage($actor, $filters, $scope);
 
         return Inertia::render('Crm/Pages/Tasks/Index', [
             'tasks' => $paginator->through(fn (CrmTask $task) => $this->tasks->payload($task, $actor)),
@@ -82,6 +68,80 @@ class TaskController extends CrmController
             // Ссылка из ленты партнёра ведёт сюда с ?task=ID — список откроет карточку.
             'openTaskId' => $request->integer('task') ?: null,
         ]);
+    }
+
+    /**
+     * Следующие порции для бесконечной прокрутки — JSON с теми же фильтрами.
+     *
+     * Отдельный эндпоинт, а не Inertia-визит: догрузка не должна перерисовывать
+     * страницу и сбрасывать позицию прокрутки.
+     */
+    public function data(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('viewAny', CrmTask::class);
+
+        $filters = $this->validateFilters($request);
+        $scope = CrmScope::fromRequest($request, $actor);
+
+        $paginator = $this->filteredPage($actor, $filters, $scope);
+
+        return response()->json(
+            $paginator->through(fn (CrmTask $task) => $this->tasks->payload($task, $actor))
+        );
+    }
+
+    /**
+     * Общий конвейер списка: скоуп → фильтры → сортировка → страница.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return \Illuminate\Pagination\LengthAwarePaginator<int, CrmTask>
+     */
+    private function filteredPage(User $actor, array $filters, CrmScope $scope): \Illuminate\Pagination\LengthAwarePaginator
+    {
+        $query = $this->tasks->visibleTo($actor, $scope)
+            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'])
+            ->withCount([
+                'media as attachments_count' => fn ($media) => $media->where(
+                    'collection_name',
+                    CrmAttachments::COLLECTION,
+                ),
+                'checklistItems as checklist_total',
+                'checklistItems as checklist_done' => fn ($items) => $items->where('is_done', true),
+            ])
+            ->withExists(['pinnedBy as is_pinned' => fn (Builder $users) => $users->whereKey((int) $actor->getKey())]);
+
+        $this->applyFilters($query, $filters, $actor);
+        $this->applySort($query, $filters);
+
+        return $query->paginate($filters['per_page'])->withQueryString();
+    }
+
+    /**
+     * Закрепить задачу у себя. Личное действие — достаточно видеть задачу.
+     */
+    public function pin(Request $request, CrmTask $task): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('view', $task);
+
+        $task->pinnedBy()->syncWithoutDetaching([(int) $actor->getKey()]);
+        $task->setAttribute('is_pinned', true);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+
+        return response()->json($this->tasks->payload($task, $actor));
+    }
+
+    public function unpin(Request $request, CrmTask $task): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('view', $task);
+
+        $task->pinnedBy()->detach((int) $actor->getKey());
+        $task->setAttribute('is_pinned', false);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+
+        return response()->json($this->tasks->payload($task, $actor));
     }
 
     /**
@@ -522,7 +582,7 @@ class TaskController extends CrmController
     private function validateFilters(Request $request): array
     {
         $validated = $request->validate([
-            'preset' => ['nullable', Rule::in(['mine', 'authored', 'watching', 'overdue', 'unlinked', 'all'])],
+            'preset' => ['nullable', Rule::in(['mine', 'authored', 'watching', 'overdue', 'unlinked', 'completed', 'all'])],
             'status' => ['nullable', Rule::enum(TaskStatus::class)],
             'outcome' => ['nullable', Rule::enum(TaskOutcome::class)],
             'priority' => ['nullable', Rule::enum(TaskPriority::class)],
@@ -550,7 +610,7 @@ class TaskController extends CrmController
             'search' => $validated['search'] ?? null,
             'sort_by' => $validated['sort_by'] ?? 'due_at',
             'sort_order' => $validated['sort_order'] ?? 'asc',
-            'per_page' => min(max((int) ($validated['per_page'] ?? 20), 5), 100),
+            'per_page' => min(max((int) ($validated['per_page'] ?? 50), 5), 100),
         ];
     }
 
@@ -570,6 +630,8 @@ class TaskController extends CrmController
                 ->whereIn('status', TaskStatus::activeValues()),
             'overdue' => $query->overdue(),
             'unlinked' => $query->whereNull('related_type'),
+            // Завершённые — отдельная лента: в группировке по сроку им не место.
+            'completed' => $query->whereNotIn('status', TaskStatus::activeValues()),
             default => $query,
         };
 
@@ -619,6 +681,19 @@ class TaskController extends CrmController
     private function applySort(Builder $query, array $filters): void
     {
         $direction = $filters['sort_order'] === 'desc' ? 'desc' : 'asc';
+
+        // Закреплённые — всегда сверху выдачи: секция «Закреплённые» собирается
+        // из тех же порций, и пин на пятой странице иначе появился бы с опозданием.
+        if ($filters['preset'] !== 'completed') {
+            $query->orderByDesc('is_pinned');
+        }
+
+        // Лента завершённых читается от свежезакрытых к старым.
+        if ($filters['preset'] === 'completed' && $filters['sort_by'] === 'due_at') {
+            $query->orderByRaw('done_at is null')->orderByDesc('done_at')->orderByDesc('id');
+
+            return;
+        }
 
         if ($filters['sort_by'] === 'priority') {
             // В БД приоритет — строка, и алфавитный порядок ('high','low','normal')

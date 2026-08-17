@@ -449,6 +449,10 @@ class CrmTaskService
             'due_at_label' => $task->due_at?->format('d.m.Y H:i'),
             'done_at_label' => $task->done_at?->format('d.m.Y H:i'),
             'is_overdue' => $task->isOverdue(),
+            'due_bucket' => self::dueBucket($task),
+            // withExists() в списках; на одиночных путях — точечный запрос.
+            'is_pinned' => (bool) ($task->getAttribute('is_pinned')
+                ?? $task->pinnedBy()->whereKey((int) $viewer->getKey())->exists()),
             'created_at_label' => $task->created_at?->format('d.m.Y H:i'),
             'author' => [
                 'id' => (int) $task->author_id,
@@ -501,6 +505,42 @@ class CrmTaskService
                 'watch' => $viewer->can('watch', $task),
             ],
         ];
+    }
+
+    /**
+     * Корзина срока для группировки раздела: секции считает сервер, чтобы
+     * граница «сегодня/завтра» жила в таймзоне приложения, а не браузера.
+     */
+    public static function dueBucket(CrmTask $task): string
+    {
+        if (! $task->status->isOpen()) {
+            return 'closed';
+        }
+
+        if ($task->due_at === null) {
+            return 'none';
+        }
+
+        $due = $task->due_at;
+
+        if ($due->isPast() && ! $due->isToday()) {
+            return 'overdue';
+        }
+
+        if ($due->isToday()) {
+            // Просроченное «сегодня в 10:00» остаётся в «Сегодня»: день ещё не кончился.
+            return 'today';
+        }
+
+        if ($due->isTomorrow()) {
+            return 'tomorrow';
+        }
+
+        if ($due->lte(now()->addDays(7)->endOfDay())) {
+            return 'week';
+        }
+
+        return 'later';
     }
 
     /**

@@ -248,6 +248,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     Route::middleware('permission:crm-tasks.view')->group(function () {
         Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
         // До /tasks/{task}: иначе «list» и «options» ушли бы в биндинг модели.
+        Route::get('/tasks/data', [TaskController::class, 'data'])->name('tasks.data');
         Route::get('/tasks/list', [TaskController::class, 'list'])->name('tasks.list');
         Route::get('/tasks/options', [TaskController::class, 'options'])->name('tasks.options');
         Route::get('/tasks/entities', [TaskController::class, 'entities'])->name('tasks.entities');
@@ -261,6 +262,13 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
             ->whereNumber('task');
         Route::delete('/tasks/{task}/watch', [TaskController::class, 'unwatch'])
             ->name('tasks.unwatch')
+            ->whereNumber('task');
+        // Закрепление личное: достаточно видеть задачу, право edit не нужно.
+        Route::post('/tasks/{task}/pin', [TaskController::class, 'pin'])
+            ->name('tasks.pin')
+            ->whereNumber('task');
+        Route::delete('/tasks/{task}/pin', [TaskController::class, 'unpin'])
+            ->name('tasks.unpin')
             ->whereNumber('task');
     });
 

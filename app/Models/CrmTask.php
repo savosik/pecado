@@ -119,6 +119,14 @@ class CrmTask extends Model implements HasMedia
                 $task->outcome = null;
             }
         });
+
+        // Закрытая или отменённая задача не «горит» — закрепления снимаются у всех:
+        // иначе секция «Закреплённые» копила бы мёртвые строки.
+        static::saved(function (self $task) {
+            if ($task->wasChanged('status') && ! $task->status->isOpen()) {
+                $task->pinnedBy()->detach();
+            }
+        });
     }
 
     public function related(): MorphTo
@@ -158,6 +166,17 @@ class CrmTask extends Model implements HasMedia
     public function watchers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'crm_task_watchers', 'task_id', 'user_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Кто закрепил задачу у себя в разделе. Личное: у каждого свой набор.
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function pinnedBy(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'crm_task_pins', 'task_id', 'user_id')
             ->withTimestamps();
     }
 
