@@ -21,7 +21,8 @@ return new class extends Migration
                 ->constrained('users')->cascadeOnDelete();
             $table->foreignId('task_id')->comment('Задача (crm_tasks.id)')
                 ->constrained('crm_tasks')->cascadeOnDelete();
-            $table->timestamps();
+            $table->timestamp('created_at')->nullable()->comment('Когда запись создана');
+            $table->timestamp('updated_at')->nullable()->comment('Когда запись менялась');
             $table->unique(['user_id', 'task_id']);
         });
     }

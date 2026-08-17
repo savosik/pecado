@@ -24,7 +24,8 @@ return new class extends Migration
                 ->comment("Скоуп фида: 'mine' — задачи владельца, 'department' — весь отдел (только для РОПа)");
             $table->timestamp('last_fetched_at')->nullable()
                 ->comment('Когда календарь последний раз забирал фид — видно, живая ли подписка');
-            $table->timestamps();
+            $table->timestamp('created_at')->nullable()->comment('Когда запись создана');
+            $table->timestamp('updated_at')->nullable()->comment('Когда запись менялась');
             $table->unique(['user_id', 'scope']);
         });
     }

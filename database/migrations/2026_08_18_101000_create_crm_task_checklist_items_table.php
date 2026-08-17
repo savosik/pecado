@@ -25,7 +25,8 @@ return new class extends Migration
             $table->foreignId('done_by_id')->nullable()->comment('Кто отметил (users.id)')
                 ->constrained('users')->nullOnDelete();
             $table->timestamp('done_at')->nullable()->comment('Когда отмечен');
-            $table->timestamps();
+            $table->timestamp('created_at')->nullable()->comment('Когда запись создана');
+            $table->timestamp('updated_at')->nullable()->comment('Когда запись менялась');
             $table->index(['task_id', 'position']);
         });
 

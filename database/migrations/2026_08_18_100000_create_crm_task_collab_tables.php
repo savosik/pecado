@@ -21,7 +21,8 @@ return new class extends Migration
                 ->constrained('crm_tasks')->cascadeOnDelete();
             $table->foreignId('user_id')->comment('Соисполнитель (users.id)')
                 ->constrained('users')->cascadeOnDelete();
-            $table->timestamps();
+            $table->timestamp('created_at')->nullable()->comment('Когда запись создана');
+            $table->timestamp('updated_at')->nullable()->comment('Когда запись менялась');
             $table->unique(['task_id', 'user_id']);
             // Обратный обход «задачи, где я соисполнитель» — для пресета «Мне».
             $table->index(['user_id', 'task_id']);
@@ -34,7 +35,8 @@ return new class extends Migration
                 ->constrained('crm_tasks')->cascadeOnDelete();
             $table->foreignId('user_id')->comment('Контролёр (users.id)')
                 ->constrained('users')->cascadeOnDelete();
-            $table->timestamps();
+            $table->timestamp('created_at')->nullable()->comment('Когда запись создана');
+            $table->timestamp('updated_at')->nullable()->comment('Когда запись менялась');
             $table->unique(['task_id', 'user_id']);
             $table->index(['user_id', 'task_id']);
         });

@@ -27,7 +27,8 @@ return new class extends Migration
             $table->string('public_key')->nullable()->comment('Ключ p256dh подписки — шифрование payload');
             $table->string('auth_token')->nullable()->comment('Секрет auth подписки');
             $table->string('content_encoding')->nullable()->comment("Кодирование payload: обычно 'aes128gcm'");
-            $table->timestamps();
+            $table->timestamp('created_at')->nullable()->comment('Когда подписка создана');
+            $table->timestamp('updated_at')->nullable()->comment('Когда подписка обновлялась');
         });
 
         // morphs() не даёт повесить комментарии — доводим отдельно (только MySQL).
