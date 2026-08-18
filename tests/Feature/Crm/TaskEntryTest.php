@@ -27,6 +27,10 @@ class TaskEntryTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
         $this->restrictManagersToOwnClients();
 
+        // Границы групп «сегодня/просрочено» зависят от времени суток: после 23:00
+        // задача «endOfDay − час» уже в прошлом, и ночной CI ловил лишнюю просрочку.
+        $this->travelTo(now()->startOfDay()->addHours(12));
+
         $this->manager = User::factory()->create();
         $this->manager->assignRole('sales-manager');
         PersonalManager::factory()->create(['user_id' => $this->manager->id]);
