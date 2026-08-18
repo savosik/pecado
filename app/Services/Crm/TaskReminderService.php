@@ -61,7 +61,7 @@ class TaskReminderService
             ->where(fn (Builder $inner) => $inner
                 ->where('assignee_id', $actorId)
                 ->orWhereHas('coAssignees', fn (Builder $users) => $users->whereKey($actorId)))
-            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'tags', 'related']);
 
         // Срок наступил: due_at уже позади, но не глубже суток — древнюю просрочку
         // при первом входе после отпуска не вываливаем стеной тостов.

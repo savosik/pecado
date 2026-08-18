@@ -51,6 +51,14 @@ class CrmTask extends Model implements HasMedia
     /** @use HasFactory<\Database\Factories\CrmTaskFactory> */
     use HasCrmAttachments, HasFactory, RecordsCrmSource, SoftDeletes;
 
+    use \Spatie\Tags\HasTags;
+
+    /**
+     * Тип тегов задач в общем справочнике spatie/laravel-tags — чтобы теги
+     * задач не смешивались с товарными и интересами партнёров.
+     */
+    public const TAG_TYPE = 'crm_task';
+
     protected $fillable = [
         'title',
         'description',

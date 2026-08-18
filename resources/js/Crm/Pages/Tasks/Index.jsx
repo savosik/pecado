@@ -240,7 +240,7 @@ export default function Index({ tasks, filters, counters, options, openTaskId, c
         return buckets;
     }, [rows]);
 
-    const hasActiveFilters = ['status', 'outcome', 'priority', 'assignee_id', 'author_id', 'client_id', 'entity_type', 'due', 'search']
+    const hasActiveFilters = ['status', 'outcome', 'priority', 'assignee_id', 'author_id', 'client_id', 'entity_type', 'due', 'tag', 'search']
         .some((key) => filters[key]);
 
     const totalEstimate = (list) => {
@@ -352,6 +352,15 @@ export default function Index({ tasks, filters, counters, options, openTaskId, c
                         items={DUE_OPTIONS}
                     />
 
+                    {(options?.tags || []).length > 0 && (
+                        <FilterSelect
+                            value={filters.tag || ''}
+                            onChange={(value) => apply({ tag: value || undefined })}
+                            placeholder="Любой тег"
+                            items={(options?.tags || []).map((tag) => ({ value: tag, label: tag }))}
+                        />
+                    )}
+
                     <FilterSelect
                         value={filters.entity_type || ''}
                         onChange={(value) => apply({ entity_type: value || undefined })}
@@ -372,6 +381,7 @@ export default function Index({ tasks, filters, counters, options, openTaskId, c
                                 client_id: undefined,
                                 entity_type: undefined,
                                 due: undefined,
+                                tag: undefined,
                                 search: undefined,
                             })}
                         >
@@ -519,7 +529,7 @@ function FilterSelect({ value, onChange, items, placeholder }) {
 function cleanFilters(filters) {
     const clean = {};
 
-    ['preset', 'status', 'outcome', 'priority', 'assignee_id', 'author_id', 'client_id', 'entity_type', 'due', 'search', 'sort_by', 'sort_order', 'scope']
+    ['preset', 'status', 'outcome', 'priority', 'assignee_id', 'author_id', 'client_id', 'entity_type', 'due', 'tag', 'search', 'sort_by', 'sort_order', 'scope']
         .forEach((key) => {
             if (filters[key] !== null && filters[key] !== undefined && filters[key] !== '') {
                 clean[key] = filters[key];

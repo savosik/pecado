@@ -147,10 +147,44 @@ class CrmTaskService
 
         $added = $this->syncCoAssignees($task, $data['co_assignee_ids'] ?? null);
 
+        // Чек-лист прямо при постановке: «обзвонить пятерых» заводится одной формой.
+        foreach (array_values($data['checklist'] ?? []) as $index => $itemTitle) {
+            $title = trim((string) $itemTitle);
+
+            if ($title !== '') {
+                $task->checklistItems()->create(['title' => $title, 'position' => $index + 1]);
+            }
+        }
+
+        $this->syncTags($task, $data['tags'] ?? null);
+
         $this->notifyAssignee($task, $actor);
         $this->notifyCoAssignees($task, $actor, $added);
 
         return $task;
+    }
+
+    /**
+     * Теги задачи — общий справочник spatie с собственным типом.
+     *
+     * @param  list<string>|null  $tags  null — не трогаем
+     */
+    private function syncTags(CrmTask $task, ?array $tags): void
+    {
+        if ($tags === null) {
+            return;
+        }
+
+        $clean = collect($tags)
+            ->map(fn ($tag): string => trim((string) $tag))
+            ->filter()
+            ->unique()
+            ->take(10)
+            ->values()
+            ->all();
+
+        $task->syncTagsWithType($clean, CrmTask::TAG_TYPE);
+        $task->unsetRelation('tags');
     }
 
     /**
@@ -217,6 +251,10 @@ class CrmTaskService
         }
 
         $task->save();
+
+        if (array_key_exists('tags', $data)) {
+            $this->syncTags($task, $data['tags'] ?? []);
+        }
 
         if ((int) $task->assignee_id !== $previousAssignee) {
             $this->notifyAssignee($task, $actor);
@@ -480,6 +518,10 @@ class CrmTaskService
                 ->values()
                 ->all(),
             'is_watched' => $task->isWatchedBy((int) $viewer->getKey()),
+            'tags' => $task->tags
+                ->map(fn ($tag): string => (string) $tag->name)
+                ->values()
+                ->all(),
             'estimate_minutes' => $task->estimate_minutes,
             'estimate_label' => self::estimateLabel($task->estimate_minutes),
             // Счётчики приходят из withCount() в списках; на одиночных путях

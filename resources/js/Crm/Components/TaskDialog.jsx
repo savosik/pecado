@@ -5,6 +5,7 @@ import {
     Box,
     Dialog,
     HStack,
+    IconButton,
     Input,
     NativeSelectField,
     NativeSelectRoot,
@@ -14,18 +15,19 @@ import {
     VStack,
 } from '@chakra-ui/react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import VoiceInput from '@/shared/voice/VoiceInput';
 import VoiceTextarea from '@/shared/voice/VoiceTextarea';
 import { EntitySelector } from '@/Admin/Components/EntitySelector';
+import PeoplePicker from '@/Crm/Components/PeoplePicker';
+import TagPicker from '@/Crm/Components/TagPicker';
 import { useTaskOptions } from '@/Crm/Components/useTaskOptions';
 import CommentThread from '@/Crm/Components/CommentThread';
 import TaskChecklist from '@/Crm/Components/TaskChecklist';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
 import VoiceNotes from '@/Crm/Components/VoiceNotes';
 import { usePermission } from '@/shared/Panel/usePermission';
-import { LuChevronDown, LuChevronUp, LuEye } from 'react-icons/lu';
+import { LuChevronDown, LuChevronUp, LuEye, LuX } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 // Последний выбранный режим формы переживает перезагрузку: кто работает
@@ -37,6 +39,7 @@ const EMPTY = {
     description: '',
     assignee_id: '',
     co_assignee_ids: [],
+    tags: [],
     status: 'open',
     priority: 'normal',
     due_at: '',
@@ -99,6 +102,11 @@ export default function TaskDialog({
     const [watchBusy, setWatchBusy] = useState(false);
     // Упрощённый режим: что сделать + исполнитель + срок. Полный — всё остальное.
     const [expanded, setExpanded] = useState(false);
+    // Чек-лист новой задачи: копится локально, уходит одним запросом с созданием.
+    const [draftChecklist, setDraftChecklist] = useState([]);
+    const [draftItem, setDraftItem] = useState('');
+    // Привязка спрятана за спойлер «Относится к» внизу формы.
+    const [linkOpen, setLinkOpen] = useState(false);
 
     // Задача либо передана целиком, либо догружена по идентификатору.
     const current = task ?? loadedTask;
@@ -130,12 +138,16 @@ export default function TaskDialog({
         setErrors({});
         setLinkType('');
         setLinkEntity(null);
+        setLinkOpen(false);
+        setDraftChecklist([]);
+        setDraftItem('');
         setForm(current
             ? {
                 title: current.title || '',
                 description: current.description || '',
                 assignee_id: current.assignee?.id ?? '',
                 co_assignee_ids: (current.co_assignees || []).map((user) => Number(user.id)),
+                tags: current.tags || [],
                 status: current.status || 'open',
                 priority: current.priority || 'normal',
                 due_at: current.due_at || '',
@@ -220,6 +232,7 @@ export default function TaskDialog({
                 priority: form.priority,
                 due_at: form.due_at || null,
                 estimate_minutes: form.estimate_minutes ? Number(form.estimate_minutes) : null,
+                tags: form.tags,
             };
 
             if (canReassign && form.assignee_id) {
@@ -245,6 +258,11 @@ export default function TaskDialog({
                 } else if (linkType && linkEntity) {
                     payload.entity_type = linkType;
                     payload.entity_id = linkEntity.id;
+                }
+
+                // Черновой чек-лист уезжает вместе с созданием — одним запросом.
+                if (draftChecklist.length > 0) {
+                    payload.checklist = draftChecklist;
                 }
                 saved = await axios.post('/crm/tasks', payload);
             }
@@ -305,61 +323,6 @@ export default function TaskDialog({
                                             ? <>Будет привязана: {entity.label || 'Партнёр'} — <Text as="span" fontWeight="600">{entity.title}</Text></>
                                             : 'Задача будет привязана к текущей записи.'}
                                     </Text>
-                                )}
-
-                                {/* Привязка выбирается только у новой задачи и только когда
-                                    диалог открыт не из карточки сущности. Перепривязка
-                                    существующей задачи — отдельная история, её API не умеет. */}
-                                {!isEdit && !entity && expanded && (
-                                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                        <Field
-                                            label="К чему привязать"
-                                            helperText="Необязательно — задача может жить сама по себе"
-                                            errorText={error('entity_type')}
-                                            invalid={!!error('entity_type')}
-                                        >
-                                            <NativeSelectRoot>
-                                                <NativeSelectField
-                                                    value={linkType}
-                                                    onChange={(e) => {
-                                                        setLinkType(e.target.value);
-                                                        setLinkEntity(null);
-                                                    }}
-                                                >
-                                                    <option value="">Без привязки</option>
-                                                    {(options?.entity_types || []).map((item) => (
-                                                        <option key={item.value} value={item.value}>{item.label}</option>
-                                                    ))}
-                                                </NativeSelectField>
-                                            </NativeSelectRoot>
-                                        </Field>
-
-                                        {linkType && (
-                                            <Field
-                                                label="Запись"
-                                                errorText={error('entity_id')}
-                                                invalid={!!error('entity_id')}
-                                            >
-                                                <EntitySelector
-                                                    value={linkEntity}
-                                                    onChange={setLinkEntity}
-                                                    searchUrl={route('crm.tasks.entities')}
-                                                    searchParams={{ type: linkType }}
-                                                    placeholder={linkType === 'client'
-                                                        ? 'Имя, email или телефон партнёра'
-                                                        : 'Номер документа'}
-                                                    renderItem={(item) => (
-                                                        <Box>
-                                                            <Text fontSize="sm">{item.label}</Text>
-                                                            {item.sublabel && (
-                                                                <Text fontSize="xs" color="fg.muted">{item.sublabel}</Text>
-                                                            )}
-                                                        </Box>
-                                                    )}
-                                                />
-                                            </Field>
-                                        )}
-                                    </SimpleGrid>
                                 )}
 
                                 <Field label="Что сделать" required errorText={error('title')} invalid={!!error('title')}>
@@ -458,44 +421,140 @@ export default function TaskDialog({
                                 </SimpleGrid>
 
                                 {/* Соисполнители работают вместе с ответственным, но за срок
-                                    отвечает он один — поэтому отдельный блок, а не мультиселект
-                                    на месте исполнителя.
-
-                                    Намеренно НЕ внутри <Field>: Field раздаёт всем контролам
-                                    внутри один id, и клик по любому чекбоксу тогглил бы первый. */}
+                                    отвечает он один — поэтому отдельное поле, а не мультиселект
+                                    на месте исполнителя. */}
                                 {expanded && canReassign && (options?.assignees || []).length > 1 && (
                                     <Box>
                                         <Text fontSize="sm" fontWeight="500" mb={1}>
                                             Соисполнители{form.co_assignee_ids.length ? ` (${form.co_assignee_ids.length})` : ''}
                                         </Text>
-                                        <Box
-                                            borderWidth="1px"
-                                            borderRadius="md"
-                                            p={2}
-                                            maxH="140px"
-                                            overflowY="auto"
-                                            w="100%"
-                                        >
-                                            <VStack align="stretch" gap={1}>
-                                                {(options?.assignees || [])
-                                                    .filter((user) => String(user.id) !== String(form.assignee_id))
-                                                    .map((user) => (
-                                                        <Checkbox
-                                                            key={user.id}
-                                                            size="sm"
-                                                            checked={form.co_assignee_ids.includes(Number(user.id))}
-                                                            onCheckedChange={(e) => set(
-                                                                'co_assignee_ids',
-                                                                e.checked
-                                                                    ? [...form.co_assignee_ids, Number(user.id)]
-                                                                    : form.co_assignee_ids.filter((id) => id !== Number(user.id)),
-                                                            )}
+                                        <PeoplePicker
+                                            options={options?.assignees || []}
+                                            value={form.co_assignee_ids}
+                                            onChange={(ids) => set('co_assignee_ids', ids)}
+                                            excludeId={form.assignee_id}
+                                        />
+                                    </Box>
+                                )}
+
+                                {expanded && (
+                                    <Box>
+                                        <Text fontSize="sm" fontWeight="500" mb={1}>
+                                            Теги{form.tags.length ? ` (${form.tags.length})` : ''}
+                                        </Text>
+                                        <TagPicker
+                                            value={form.tags}
+                                            onChange={(tags) => set('tags', tags)}
+                                            suggestions={options?.tags || []}
+                                            disabled={!canEditFields}
+                                        />
+                                    </Box>
+                                )}
+
+                                {/* Чек-лист будущей задачи: копится локально и уезжает
+                                    одним запросом с созданием. У сохранённой задачи ниже
+                                    работает обычный серверный чек-лист. */}
+                                {!isEdit && (
+                                    <Box>
+                                        <Text fontSize="sm" fontWeight="500" mb={1}>
+                                            Чек-лист{draftChecklist.length ? ` (${draftChecklist.length})` : ''}
+                                        </Text>
+                                        <VStack align="stretch" gap={1}>
+                                            {draftChecklist.map((item, index) => (
+                                                <HStack key={`${item}-${index}`} justify="space-between" px={1}>
+                                                    <Text fontSize="sm">• {item}</Text>
+                                                    <IconButton
+                                                        size="2xs"
+                                                        variant="ghost"
+                                                        colorPalette="red"
+                                                        aria-label="Убрать пункт"
+                                                        onClick={() => setDraftChecklist((prev) => prev.filter((_, i) => i !== index))}
+                                                    >
+                                                        <LuX size={12} />
+                                                    </IconButton>
+                                                </HStack>
+                                            ))}
+                                            <Input
+                                                size="sm"
+                                                value={draftItem}
+                                                placeholder="Новый пункт — Enter для добавления"
+                                                onChange={(e) => setDraftItem(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        const clean = draftItem.trim();
+
+                                                        if (clean) {
+                                                            setDraftChecklist((prev) => [...prev, clean]);
+                                                            setDraftItem('');
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        </VStack>
+                                    </Box>
+                                )}
+
+                                {/* Привязка — внизу за спойлером: нужна не каждой задаче,
+                                    а из карточки сущности проставляется сама. */}
+                                {!isEdit && !entity && (
+                                    <Box borderTopWidth="1px" pt={2}>
+                                        <Button size="xs" variant="ghost" onClick={() => setLinkOpen((prev) => !prev)}>
+                                            {linkOpen ? <LuChevronUp /> : <LuChevronDown />}
+                                            Относится к{linkEntity ? `: ${linkEntity.label}` : '…'}
+                                        </Button>
+
+                                        {linkOpen && (
+                                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mt={2}>
+                                                <Field
+                                                    label="К чему привязать"
+                                                    helperText="Необязательно — задача может жить сама по себе"
+                                                    errorText={error('entity_type')}
+                                                    invalid={!!error('entity_type')}
+                                                >
+                                                    <NativeSelectRoot>
+                                                        <NativeSelectField
+                                                            value={linkType}
+                                                            onChange={(e) => {
+                                                                setLinkType(e.target.value);
+                                                                setLinkEntity(null);
+                                                            }}
                                                         >
-                                                            {user.name}
-                                                        </Checkbox>
-                                                    ))}
-                                            </VStack>
-                                        </Box>
+                                                            <option value="">Без привязки</option>
+                                                            {(options?.entity_types || []).map((item) => (
+                                                                <option key={item.value} value={item.value}>{item.label}</option>
+                                                            ))}
+                                                        </NativeSelectField>
+                                                    </NativeSelectRoot>
+                                                </Field>
+
+                                                {linkType && (
+                                                    <Field
+                                                        label="Запись"
+                                                        errorText={error('entity_id')}
+                                                        invalid={!!error('entity_id')}
+                                                    >
+                                                        <EntitySelector
+                                                            value={linkEntity}
+                                                            onChange={setLinkEntity}
+                                                            searchUrl={route('crm.tasks.entities')}
+                                                            searchParams={{ type: linkType }}
+                                                            placeholder={linkType === 'client'
+                                                                ? 'Имя, email или телефон партнёра'
+                                                                : 'Номер документа'}
+                                                            renderItem={(item) => (
+                                                                <Box>
+                                                                    <Text fontSize="sm">{item.label}</Text>
+                                                                    {item.sublabel && (
+                                                                        <Text fontSize="xs" color="fg.muted">{item.sublabel}</Text>
+                                                                    )}
+                                                                </Box>
+                                                            )}
+                                                        />
+                                                    </Field>
+                                                )}
+                                            </SimpleGrid>
+                                        )}
                                     </Box>
                                 )}
 

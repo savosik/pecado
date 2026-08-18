@@ -94,7 +94,7 @@ class DashboardController extends CrmController
         $group = function (callable $constrain, int $limit = 6) use ($tasks, $actor, $actorId): array {
             $query = $tasks->visibleTo($actor)
                 ->assignedTo($actorId)
-                ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+                ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'tags', 'related']);
 
             $constrain($query);
 

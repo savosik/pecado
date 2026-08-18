@@ -141,6 +141,10 @@ export default function TaskRow({
                     {task.is_watched && (
                         <Box color="purple.fg" title="У вас на личном контроле"><LuEye size={13} /></Box>
                     )}
+
+                    {(task.tags || []).map((tag) => (
+                        <Badge key={tag} variant="outline" colorPalette="purple" size="sm">{tag}</Badge>
+                    ))}
                 </HStack>
 
                 <HStack gap={3} mt={0.5} flexWrap="wrap">

@@ -114,7 +114,7 @@ class TaskController extends CrmController
         $query = $this->tasks->visibleTo($actor, $scope)
             ->whereIn('status', TaskStatus::activeValues())
             ->whereBetween('due_at', [$from, $to])
-            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'])
+            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'tags', 'related'])
             ->withCount([
                 'checklistItems as checklist_total',
                 'checklistItems as checklist_done' => fn ($items) => $items->where('is_done', true),
@@ -166,7 +166,7 @@ class TaskController extends CrmController
     private function filteredPage(User $actor, array $filters, CrmScope $scope): \Illuminate\Pagination\LengthAwarePaginator
     {
         $query = $this->tasks->visibleTo($actor, $scope)
-            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'])
+            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'tags', 'related'])
             ->withCount([
                 'media as attachments_count' => fn ($media) => $media->where(
                     'collection_name',
@@ -193,7 +193,7 @@ class TaskController extends CrmController
 
         $task->pinnedBy()->syncWithoutDetaching([(int) $actor->getKey()]);
         $task->setAttribute('is_pinned', true);
-        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'tags', 'related']);
 
         return response()->json($this->tasks->payload($task, $actor));
     }
@@ -205,7 +205,7 @@ class TaskController extends CrmController
 
         $task->pinnedBy()->detach((int) $actor->getKey());
         $task->setAttribute('is_pinned', false);
-        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'tags', 'related']);
 
         return response()->json($this->tasks->payload($task, $actor));
     }
@@ -232,7 +232,7 @@ class TaskController extends CrmController
         $paginator = $this->tasks->visibleTo($actor)
             ->where('related_type', $entity::class)
             ->where('related_id', $entity->getKey())
-            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related'])
+            ->with(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'tags', 'related'])
             ->withCount([
                 'media as attachments_count' => fn ($media) => $media->where(
                     'collection_name',
@@ -422,6 +422,12 @@ class TaskController extends CrmController
     {
         return [
             'assignees' => $this->tasks->assignableUsers(),
+            // Существующие теги задач — подсказки в форме и фильтр списка.
+            'tags' => \Spatie\Tags\Tag::getWithType(CrmTask::TAG_TYPE)
+                ->map(fn ($tag): string => (string) $tag->name)
+                ->sort(SORT_NATURAL | SORT_FLAG_CASE)
+                ->values()
+                ->all(),
             'statuses' => TaskStatus::optionsWithColor(),
             'outcomes' => TaskOutcome::optionsWithColor(),
             'priorities' => TaskPriority::optionsWithColor(),
@@ -483,7 +489,7 @@ class TaskController extends CrmController
             : null;
 
         $task = $this->tasks->create($actor, $request->validated(), $related);
-        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'tags', 'related']);
 
         return response()->json($this->tasks->payload($task, $actor), 201);
     }
@@ -494,7 +500,7 @@ class TaskController extends CrmController
         Gate::authorize('update', $task);
 
         $this->tasks->update($task, $request->validated(), $actor);
-        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'tags', 'related']);
 
         return response()->json($this->tasks->payload($task, $actor));
     }
@@ -524,9 +530,9 @@ class TaskController extends CrmController
             $outcome,
         );
 
-        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'tags', 'related']);
         $followUp = $result['follow_up'];
-        $followUp?->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+        $followUp?->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'tags', 'related']);
 
         return response()->json([
             'task' => $this->tasks->payload($task, $actor),
@@ -561,7 +567,7 @@ class TaskController extends CrmController
             $validated['reason'] ?? null,
         );
 
-        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'tags', 'related']);
 
         return response()->json($this->tasks->payload($task, $actor));
     }
@@ -601,7 +607,7 @@ class TaskController extends CrmController
         }
 
         $this->tasks->watch($task, $watcher);
-        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'tags', 'related']);
 
         return response()->json($this->tasks->payload($task, $actor));
     }
@@ -615,7 +621,7 @@ class TaskController extends CrmController
         Gate::authorize('watch', $task);
 
         $this->tasks->unwatch($task, $actor);
-        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'related']);
+        $task->load(['author:id,name', 'assignee:id,name', 'coAssignees:id,name', 'watchers:id,name', 'tags', 'related']);
 
         return response()->json($this->tasks->payload($task, $actor));
     }
@@ -657,6 +663,7 @@ class TaskController extends CrmController
             'client_id' => ['nullable', 'integer'],
             'entity_type' => ['nullable', Rule::in(CrmEntityMap::taskableTypes())],
             'due' => ['nullable', Rule::in(['overdue', 'today', 'week', 'none'])],
+            'tag' => ['nullable', 'string', 'max:50'],
             'search' => ['nullable', 'string', 'max:255'],
             'sort_by' => ['nullable', Rule::in(['due_at', 'created_at', 'priority'])],
             'sort_order' => ['nullable', Rule::in(['asc', 'desc'])],
@@ -673,6 +680,7 @@ class TaskController extends CrmController
             'client_id' => $validated['client_id'] ?? null,
             'entity_type' => $validated['entity_type'] ?? null,
             'due' => $validated['due'] ?? null,
+            'tag' => $validated['tag'] ?? null,
             'search' => $validated['search'] ?? null,
             'sort_by' => $validated['sort_by'] ?? 'due_at',
             'sort_order' => $validated['sort_order'] ?? 'asc',
@@ -707,6 +715,10 @@ class TaskController extends CrmController
 
         if ($filters['outcome'] !== null) {
             $query->where('outcome', $filters['outcome']);
+        }
+
+        if ($filters['tag'] !== null && $filters['tag'] !== '') {
+            $query->withAnyTags([$filters['tag']], CrmTask::TAG_TYPE);
         }
 
         if ($filters['priority'] !== null) {

@@ -32,6 +32,11 @@ class StoreCrmTaskRequest extends FormRequest
             'estimate_minutes' => ['nullable', 'integer', 'min:1', 'max:4800'],
             'co_assignee_ids' => ['nullable', 'array', 'max:20'],
             'co_assignee_ids.*' => ['integer', 'exists:users,id', $this->crmAccessRule()],
+            // Чек-лист при постановке: «обзвонить пятерых» заводится одной формой.
+            'checklist' => ['nullable', 'array', 'max:50'],
+            'checklist.*' => ['nullable', 'string', 'max:500'],
+            'tags' => ['nullable', 'array', 'max:10'],
+            'tags.*' => ['nullable', 'string', 'max:50'],
             // Привязки может не быть вовсе: «позвонить в пятницу» живёт в списке само по себе.
             // Но половина пары бессмысленна — тип без ID и наоборот.
             'entity_type' => ['nullable', 'required_with:entity_id', 'string', Rule::in(CrmEntityMap::taskableTypes())],

@@ -36,6 +36,8 @@ class UpdateCrmTaskRequest extends FormRequest
             'estimate_minutes' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:4800'],
             'co_assignee_ids' => ['sometimes', 'nullable', 'array', 'max:20'],
             'co_assignee_ids.*' => ['integer', 'exists:users,id', $this->crmAccessRule()],
+            'tags' => ['sometimes', 'nullable', 'array', 'max:10'],
+            'tags.*' => ['nullable', 'string', 'max:50'],
         ];
     }
 
