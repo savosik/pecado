@@ -457,6 +457,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
         Route::post('/agent-topics', [\App\Http\Controllers\Admin\AgentTopicController::class, 'store'])->name('agent-topics.store');
     });
     Route::middleware('permission:agent-topics.edit')->group(function () {
+        Route::put('/agent-topics/{agentTopic}', [\App\Http\Controllers\Admin\AgentTopicController::class, 'update'])->name('agent-topics.update');
         Route::post('/agent-topics/{agentTopic}/messages', [\App\Http\Controllers\Admin\AgentTopicController::class, 'storeMessage'])->name('agent-topics.messages.store');
         Route::post('/agent-topics/{agentTopic}/pass-turn', [\App\Http\Controllers\Admin\AgentTopicController::class, 'passTurn'])->name('agent-topics.pass-turn');
         Route::post('/agent-topics/{agentTopic}/close', [\App\Http\Controllers\Admin\AgentTopicController::class, 'close'])->name('agent-topics.close');

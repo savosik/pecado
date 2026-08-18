@@ -1,7 +1,7 @@
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions } from '@/Admin/Components';
-import { Card, Input, Stack, Textarea } from '@chakra-ui/react';
+import { PageHeader, FormField, FormActions, MarkdownTextEditor } from '@/Admin/Components';
+import { Card, Input, Stack } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Create() {
@@ -45,11 +45,11 @@ export default function Create() {
                                 required
                                 helpText="Markdown. Опишите, что нужно сделать, и критерии готовности — оба агента увидят этот текст по своим ссылкам."
                             >
-                                <Textarea
+                                <MarkdownTextEditor
                                     value={data.task_body}
-                                    onChange={(e) => setData('task_body', e.target.value)}
+                                    onChange={(value) => setData('task_body', value ?? '')}
                                     placeholder={'Что сделать...\n\nКритерии готовности:\n- ...'}
-                                    rows={12}
+                                    minHeight={320}
                                 />
                             </FormField>
 

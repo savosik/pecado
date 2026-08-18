@@ -82,6 +82,42 @@ class AgentTopicsAdminTest extends TestCase
     }
 
     #[Test]
+    public function task_edit_updates_body_and_notifies_agents(): void
+    {
+        $topic = AgentTopic::factory()->create(['task_body' => 'Старая постановка.']);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.agent-topics.update', $topic), [
+                'title' => $topic->title,
+                'task_body' => 'Новая постановка с **уточнением**.',
+            ])
+            ->assertRedirect();
+
+        $topic->refresh();
+        $this->assertSame('Новая постановка с **уточнением**.', $topic->task_body);
+
+        // Агенты узнают об изменении: в тред ушло системное сообщение, seq вырос
+        $message = $topic->messages()->sole();
+        $this->assertSame('system', $message->author);
+        $this->assertSame(1, $topic->last_seq);
+    }
+
+    #[Test]
+    public function task_edit_without_changes_stays_silent(): void
+    {
+        $topic = AgentTopic::factory()->create(['task_body' => 'Как было.']);
+
+        $this->actingAs($this->admin())
+            ->put(route('admin.agent-topics.update', $topic), [
+                'title' => 'Новое имя, текст тот же',
+                'task_body' => 'Как было.',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(0, $topic->fresh()->messages()->count());
+    }
+
+    #[Test]
     public function moderator_message_does_not_pass_turn(): void
     {
         $topic = AgentTopic::factory()->create();

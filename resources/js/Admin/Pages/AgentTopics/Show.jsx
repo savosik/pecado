@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { router, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, FormField, ConfirmDialog, MarkdownTextEditor, MarkdownView } from '@/Admin/Components';
 import { Badge, Box, Card, Flex, HStack, Input, Stack, Text, Textarea } from '@chakra-ui/react';
 import { Button } from '@/components/ui/button';
 import { toaster } from '@/components/ui/toaster';
@@ -39,19 +39,21 @@ export default function Show({ topic, messages }) {
     const finished = topic.status === 'resolved' || topic.status === 'closed';
 
     const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+    const [editingTask, setEditingTask] = useState(false);
     const { data, setData, post, processing, reset } = useForm({ body: '' });
+    const taskForm = useForm({ title: topic.title, task_body: topic.task_body });
 
-    // Диалог живёт без вебсокетов: пока топик активен, страница
-    // раз в 5 секунд подтягивает свежие сообщения и статус.
+    // Диалог живёт без вебсокетов: пока топик активен, страница раз в 5 секунд
+    // подтягивает свежие сообщения. На время правки задачи опрос замирает.
     useEffect(() => {
-        if (finished) return undefined;
+        if (finished || editingTask) return undefined;
 
         const id = setInterval(() => {
             router.reload({ only: ['topic', 'messages'] });
         }, 5000);
 
         return () => clearInterval(id);
-    }, [finished]);
+    }, [finished, editingTask]);
 
     const copyLink = (url, label) => {
         navigator.clipboard.writeText(url).then(() => {
@@ -64,6 +66,20 @@ export default function Show({ topic, messages }) {
         post(route('admin.agent-topics.messages.store', topic.id), {
             preserveScroll: true,
             onSuccess: () => reset(),
+        });
+    };
+
+    const startTaskEdit = () => {
+        taskForm.setData({ title: topic.title, task_body: topic.task_body });
+        taskForm.clearErrors();
+        setEditingTask(true);
+    };
+
+    const saveTask = (e) => {
+        e.preventDefault();
+        taskForm.put(route('admin.agent-topics.update', topic.id), {
+            preserveScroll: true,
+            onSuccess: () => setEditingTask(false),
         });
     };
 
@@ -112,10 +128,50 @@ export default function Show({ topic, messages }) {
 
                 <Card.Root>
                     <Card.Header>
-                        <Text fontWeight="semibold">Задача</Text>
+                        <Flex justify="space-between" align="center" gap={3}>
+                            <Text fontWeight="semibold">Задача</Text>
+                            {canModerate && !editingTask && (
+                                <Button size="xs" variant="outline" onClick={startTaskEdit}>
+                                    Редактировать
+                                </Button>
+                            )}
+                        </Flex>
                     </Card.Header>
                     <Card.Body>
-                        <Text whiteSpace="pre-wrap" fontSize="sm">{topic.task_body}</Text>
+                        {editingTask ? (
+                            <form onSubmit={saveTask}>
+                                <Stack gap={4}>
+                                    <FormField label="Название" error={taskForm.errors.title} required>
+                                        <Input
+                                            value={taskForm.data.title}
+                                            onChange={(e) => taskForm.setData('title', e.target.value)}
+                                        />
+                                    </FormField>
+                                    <FormField
+                                        label="Постановка задачи"
+                                        error={taskForm.errors.task_body}
+                                        required
+                                        helpText="Markdown. Агенты увидят изменение: в тред уйдёт системное сообщение."
+                                    >
+                                        <MarkdownTextEditor
+                                            value={taskForm.data.task_body}
+                                            onChange={(value) => taskForm.setData('task_body', value ?? '')}
+                                            minHeight={320}
+                                        />
+                                    </FormField>
+                                    <HStack gap={2}>
+                                        <Button type="submit" size="sm" loading={taskForm.processing}>
+                                            Сохранить
+                                        </Button>
+                                        <Button size="sm" variant="ghost" onClick={() => setEditingTask(false)}>
+                                            Отмена
+                                        </Button>
+                                    </HStack>
+                                </Stack>
+                            </form>
+                        ) : (
+                            <MarkdownView source={topic.task_body} />
+                        )}
                     </Card.Body>
                 </Card.Root>
 
@@ -152,7 +208,7 @@ export default function Show({ topic, messages }) {
                             <Text fontWeight="semibold">Итог</Text>
                         </Card.Header>
                         <Card.Body>
-                            <Text whiteSpace="pre-wrap" fontSize="sm">{topic.resolution}</Text>
+                            <MarkdownView source={topic.resolution} />
                         </Card.Body>
                     </Card.Root>
                 )}
@@ -187,7 +243,11 @@ export default function Show({ topic, messages }) {
                                             <Text fontSize="xs" color="fg.muted">#{message.seq}</Text>
                                             <Text fontSize="xs" color="fg.muted">{message.created_at}</Text>
                                         </HStack>
-                                        <Text whiteSpace="pre-wrap" fontSize="sm">{message.body}</Text>
+                                        {message.author === 'system' ? (
+                                            <Text fontSize="sm" color="fg.muted">{message.body}</Text>
+                                        ) : (
+                                            <MarkdownView source={message.body} />
+                                        )}
                                         {message.payload && (
                                             <Box
                                                 as="pre"

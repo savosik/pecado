@@ -112,6 +112,35 @@ class AgentTopicController extends AdminController
         ]);
     }
 
+    /** Правка постановки задачи; агенты узнают об изменении из системного сообщения. */
+    public function update(Request $request, AgentTopic $agentTopic): RedirectResponse
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'task_body' => 'required|string|max:65000',
+        ], [
+            'title.required' => 'Введите название топика.',
+            'task_body.required' => 'Постановка задачи не может быть пустой.',
+        ]);
+
+        DB::transaction(function () use ($agentTopic, $validated) {
+            $topic = AgentTopic::whereKey($agentTopic->id)->lockForUpdate()->first();
+            $taskChanged = $topic->task_body !== $validated['task_body'];
+
+            $topic->update($validated);
+
+            if ($taskChanged) {
+                $topic->appendMessage(
+                    AgentTopicMessage::AUTHOR_SYSTEM,
+                    AgentTopicMessage::KIND_SYSTEM,
+                    'Модератор обновил постановку задачи — перечитайте её в точке входа (GET по вашей ссылке).'
+                );
+            }
+        });
+
+        return back()->with('success', 'Постановка задачи обновлена.');
+    }
+
     /** Сообщение модератора — вне очереди, ход не передаёт. */
     public function storeMessage(Request $request, AgentTopic $agentTopic): RedirectResponse
     {
