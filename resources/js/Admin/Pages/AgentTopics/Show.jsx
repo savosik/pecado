@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { router, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, ConfirmDialog, MarkdownTextEditor, MarkdownView } from '@/Admin/Components';
@@ -45,11 +45,22 @@ export default function Show({ topic, messages }) {
 
     // Диалог живёт без вебсокетов: пока топик активен, страница раз в 5 секунд
     // подтягивает свежие сообщения. На время правки задачи опрос замирает.
+    // Пока предыдущий reload не завершился, новый не запускается — иначе при
+    // медленном сервере запросы стекаются и занимают все php-fpm воркеры.
+    const reloadInFlight = useRef(false);
+
     useEffect(() => {
         if (finished || editingTask) return undefined;
 
         const id = setInterval(() => {
-            router.reload({ only: ['topic', 'messages'] });
+            if (reloadInFlight.current) return;
+            reloadInFlight.current = true;
+            router.reload({
+                only: ['topic', 'messages'],
+                onFinish: () => {
+                    reloadInFlight.current = false;
+                },
+            });
         }, 5000);
 
         return () => clearInterval(id);

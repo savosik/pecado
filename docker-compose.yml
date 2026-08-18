@@ -9,6 +9,7 @@ services:
     volumes:
       - ./:/var/www
       - ./docker/php/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+      - ./docker/php/zz-www-pool.conf:/usr/local/etc/php-fpm.d/zz-www-pool.conf
     networks:
       - pecado-network
     depends_on:
