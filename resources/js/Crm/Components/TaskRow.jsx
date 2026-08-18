@@ -1,6 +1,10 @@
-import { Badge, Box, HStack, IconButton, Text } from '@chakra-ui/react';
+import { useState } from 'react';
+import { Badge, Box, HStack, IconButton, Text, VStack } from '@chakra-ui/react';
+import TaskChecklist from '@/Crm/Components/TaskChecklist';
 import {
     LuCheck,
+    LuChevronDown,
+    LuChevronUp,
     LuClock,
     LuEye,
     LuListChecks,
@@ -27,25 +31,41 @@ export default function TaskRow({
     onOpen,
     onPin,
     onDelete,
+    // Обновлённые счётчики чек-листа после отметки в развёрнутой строке.
+    onChecklistChanged,
 }) {
     const closed = task.status === 'done' || task.status === 'canceled';
+    // Чек-лист разворачивается прямо в строке: отметить галочку не должно
+    // стоить открытия карточки.
+    const [checklistOpen, setChecklistOpen] = useState(false);
+    const [counts, setCounts] = useState(null);
+
+    const checklistTotal = counts?.checklist_total ?? task.checklist_total ?? 0;
+    const checklistDone = counts?.checklist_done ?? task.checklist_done ?? 0;
 
     return (
+        <VStack
+            gap={0}
+            align="stretch"
+            borderWidth="1px"
+            borderRadius="md"
+            opacity={closed ? 0.75 : 1}
+        >
         <HStack
             gap={3}
             px={3}
             py={2}
-            borderWidth="1px"
-            borderRadius="md"
             align="center"
             _hover={{ bg: 'bg.muted' }}
-            opacity={closed ? 0.75 : 1}
         >
             {onToggleDone && task.can?.update && (
+                // Нейтральная «пустая» кнопка: зелёной она становится только под
+                // курсором — иначе список открытых задач выглядит уже выполненным.
                 <IconButton
                     size="xs"
                     variant={closed ? 'ghost' : 'outline'}
-                    colorPalette={closed ? undefined : 'green'}
+                    color={closed ? undefined : 'transparent'}
+                    _hover={closed ? undefined : { color: 'green.fg', borderColor: 'green.fg', bg: 'green.subtle' }}
                     aria-label={closed ? 'Вернуть в работу' : 'Завершить'}
                     title={closed ? 'Вернуть в работу' : 'Завершить'}
                     disabled={busy}
@@ -84,10 +104,37 @@ export default function TaskRow({
                         </Badge>
                     )}
 
-                    {task.checklist_total > 0 && (
-                        <HStack gap={1} color={task.checklist_done === task.checklist_total ? 'green.fg' : 'fg.muted'}>
+                    {checklistTotal > 0 && (
+                        // Кликабельный прогресс: разворачивает чек-лист под строкой.
+                        <HStack
+                            gap={1}
+                            color={checklistDone === checklistTotal ? 'green.fg' : 'fg.muted'}
+                            cursor="pointer"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setChecklistOpen((prev) => !prev);
+                            }}
+                            title={checklistOpen ? 'Свернуть чек-лист' : 'Развернуть чек-лист'}
+                            _hover={{ color: 'fg' }}
+                        >
                             <LuListChecks size={13} />
-                            <Text fontSize="xs">{task.checklist_done}/{task.checklist_total}</Text>
+                            <Text fontSize="xs">{checklistDone}/{checklistTotal}</Text>
+                            <Box
+                                w="46px"
+                                h="4px"
+                                borderRadius="full"
+                                bg="bg.muted"
+                                borderWidth="1px"
+                                overflow="hidden"
+                            >
+                                <Box
+                                    h="100%"
+                                    w={`${checklistTotal ? Math.round((checklistDone / checklistTotal) * 100) : 0}%`}
+                                    bg={checklistDone === checklistTotal ? 'green.solid' : 'blue.solid'}
+                                    transition="width 0.2s"
+                                />
+                            </Box>
+                            {checklistOpen ? <LuChevronUp size={12} /> : <LuChevronDown size={12} />}
                         </HStack>
                     )}
 
@@ -167,5 +214,23 @@ export default function TaskRow({
                 )}
             </HStack>
         </HStack>
+
+        {checklistOpen && (
+            <Box px={3} pb={2} pt={1} borderTopWidth="1px" bg="bg.subtle" borderBottomRadius="md">
+                <TaskChecklist
+                    taskId={task.id}
+                    items={null}
+                    canEdit={!!task.can?.update && !closed}
+                    onChanged={(data) => {
+                        setCounts({
+                            checklist_total: data.checklist_total,
+                            checklist_done: data.checklist_done,
+                        });
+                        onChecklistChanged?.(task, data);
+                    }}
+                />
+            </Box>
+        )}
+        </VStack>
     );
 }

@@ -25,8 +25,12 @@ import TaskChecklist from '@/Crm/Components/TaskChecklist';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
 import VoiceNotes from '@/Crm/Components/VoiceNotes';
 import { usePermission } from '@/shared/Panel/usePermission';
-import { LuEye } from 'react-icons/lu';
+import { LuChevronDown, LuChevronUp, LuEye } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
+
+// Последний выбранный режим формы переживает перезагрузку: кто работает
+// в полном режиме, не должен раскрывать его на каждой задаче заново.
+const EXPANDED_KEY = 'crm-task-dialog-expanded';
 
 const EMPTY = {
     title: '',
@@ -93,6 +97,8 @@ export default function TaskDialog({
     // Личный контроль: локальное состояние, чтобы кнопка отвечала мгновенно.
     const [watched, setWatched] = useState(false);
     const [watchBusy, setWatchBusy] = useState(false);
+    // Упрощённый режим: что сделать + исполнитель + срок. Полный — всё остальное.
+    const [expanded, setExpanded] = useState(false);
 
     // Задача либо передана целиком, либо догружена по идентификатору.
     const current = task ?? loadedTask;
@@ -159,6 +165,26 @@ export default function TaskDialog({
     useEffect(() => {
         setWatched(!!current?.is_watched);
     }, [current]);
+
+    // Правка всегда открывается полной (там уже есть что смотреть),
+    // новая задача — в последнем выбранном режиме.
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        setExpanded(isEdit || localStorage.getItem(EXPANDED_KEY) === '1');
+    }, [open, isEdit]);
+
+    const toggleExpanded = () => {
+        setExpanded((prev) => {
+            try {
+                localStorage.setItem(EXPANDED_KEY, prev ? '0' : '1');
+            } catch { /* приватный режим */ }
+
+            return !prev;
+        });
+    };
 
     const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -284,7 +310,7 @@ export default function TaskDialog({
                                 {/* Привязка выбирается только у новой задачи и только когда
                                     диалог открыт не из карточки сущности. Перепривязка
                                     существующей задачи — отдельная история, её API не умеет. */}
-                                {!isEdit && !entity && (
+                                {!isEdit && !entity && expanded && (
                                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                         <Field
                                             label="К чему привязать"
@@ -346,15 +372,17 @@ export default function TaskDialog({
                                     />
                                 </Field>
 
-                                <Field label="Описание" errorText={error('description')} invalid={!!error('description')}>
-                                    <VoiceTextarea
-                                        value={form.description}
-                                        onChange={(value) => set('description', value)}
-                                        rows={3}
-                                        placeholder="Подробности, если нужны"
-                                        disabled={!canEditFields}
-                                    />
-                                </Field>
+                                {expanded && (
+                                    <Field label="Описание" errorText={error('description')} invalid={!!error('description')}>
+                                        <VoiceTextarea
+                                            value={form.description}
+                                            onChange={(value) => set('description', value)}
+                                            rows={3}
+                                            placeholder="Подробности, если нужны"
+                                            disabled={!canEditFields}
+                                        />
+                                    </Field>
+                                )}
 
                                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                     <Field label="Исполнитель" required errorText={error('assignee_id')} invalid={!!error('assignee_id')}>
@@ -380,56 +408,66 @@ export default function TaskDialog({
                                         />
                                     </Field>
 
-                                    <Field label="Статус">
-                                        <NativeSelectRoot disabled={!canEditFields}>
-                                            <NativeSelectField
-                                                value={form.status}
-                                                onChange={(e) => set('status', e.target.value)}
-                                            >
-                                                {(options?.statuses || []).map((item) => (
-                                                    <option key={item.value} value={item.value}>{item.label}</option>
-                                                ))}
-                                            </NativeSelectField>
-                                        </NativeSelectRoot>
-                                    </Field>
+                                    {expanded && (
+                                        <>
+                                            <Field label="Статус">
+                                                <NativeSelectRoot disabled={!canEditFields}>
+                                                    <NativeSelectField
+                                                        value={form.status}
+                                                        onChange={(e) => set('status', e.target.value)}
+                                                    >
+                                                        {(options?.statuses || []).map((item) => (
+                                                            <option key={item.value} value={item.value}>{item.label}</option>
+                                                        ))}
+                                                    </NativeSelectField>
+                                                </NativeSelectRoot>
+                                            </Field>
 
-                                    <Field label="Приоритет">
-                                        <NativeSelectRoot disabled={!canEditFields}>
-                                            <NativeSelectField
-                                                value={form.priority}
-                                                onChange={(e) => set('priority', e.target.value)}
-                                            >
-                                                {(options?.priorities || []).map((item) => (
-                                                    <option key={item.value} value={item.value}>{item.label}</option>
-                                                ))}
-                                            </NativeSelectField>
-                                        </NativeSelectRoot>
-                                    </Field>
+                                            <Field label="Приоритет">
+                                                <NativeSelectRoot disabled={!canEditFields}>
+                                                    <NativeSelectField
+                                                        value={form.priority}
+                                                        onChange={(e) => set('priority', e.target.value)}
+                                                    >
+                                                        {(options?.priorities || []).map((item) => (
+                                                            <option key={item.value} value={item.value}>{item.label}</option>
+                                                        ))}
+                                                    </NativeSelectField>
+                                                </NativeSelectRoot>
+                                            </Field>
 
-                                    <Field
-                                        label="Трудоёмкость"
-                                        helperText="Плановая оценка, необязательно"
-                                        errorText={error('estimate_minutes')}
-                                        invalid={!!error('estimate_minutes')}
-                                    >
-                                        <NativeSelectRoot disabled={!canEditFields}>
-                                            <NativeSelectField
-                                                value={form.estimate_minutes}
-                                                onChange={(e) => set('estimate_minutes', e.target.value)}
+                                            <Field
+                                                label="Трудоёмкость"
+                                                helperText="Плановая оценка, необязательно"
+                                                errorText={error('estimate_minutes')}
+                                                invalid={!!error('estimate_minutes')}
                                             >
-                                                {estimateOptions(form.estimate_minutes).map((item) => (
-                                                    <option key={item.value} value={item.value}>{item.label}</option>
-                                                ))}
-                                            </NativeSelectField>
-                                        </NativeSelectRoot>
-                                    </Field>
+                                                <NativeSelectRoot disabled={!canEditFields}>
+                                                    <NativeSelectField
+                                                        value={form.estimate_minutes}
+                                                        onChange={(e) => set('estimate_minutes', e.target.value)}
+                                                    >
+                                                        {estimateOptions(form.estimate_minutes).map((item) => (
+                                                            <option key={item.value} value={item.value}>{item.label}</option>
+                                                        ))}
+                                                    </NativeSelectField>
+                                                </NativeSelectRoot>
+                                            </Field>
+                                        </>
+                                    )}
                                 </SimpleGrid>
 
                                 {/* Соисполнители работают вместе с ответственным, но за срок
                                     отвечает он один — поэтому отдельный блок, а не мультиселект
-                                    на месте исполнителя. */}
-                                {canReassign && (options?.assignees || []).length > 1 && (
-                                    <Field label={`Соисполнители${form.co_assignee_ids.length ? ` (${form.co_assignee_ids.length})` : ''}`}>
+                                    на месте исполнителя.
+
+                                    Намеренно НЕ внутри <Field>: Field раздаёт всем контролам
+                                    внутри один id, и клик по любому чекбоксу тогглил бы первый. */}
+                                {expanded && canReassign && (options?.assignees || []).length > 1 && (
+                                    <Box>
+                                        <Text fontSize="sm" fontWeight="500" mb={1}>
+                                            Соисполнители{form.co_assignee_ids.length ? ` (${form.co_assignee_ids.length})` : ''}
+                                        </Text>
                                         <Box
                                             borderWidth="1px"
                                             borderRadius="md"
@@ -458,8 +496,15 @@ export default function TaskDialog({
                                                     ))}
                                             </VStack>
                                         </Box>
-                                    </Field>
+                                    </Box>
                                 )}
+
+                                <Box>
+                                    <Button size="xs" variant="ghost" onClick={toggleExpanded}>
+                                        {expanded ? <LuChevronUp /> : <LuChevronDown />}
+                                        {expanded ? 'Свернуть до простой формы' : 'Все параметры'}
+                                    </Button>
+                                </Box>
 
                                 {isEdit && !canReassign && (current.co_assignees || []).length > 0 && (
                                     <Text fontSize="xs" color="fg.muted">

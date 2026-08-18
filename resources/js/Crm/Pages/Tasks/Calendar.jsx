@@ -98,18 +98,6 @@ export default function Calendar({ options, canSeeDepartment = false, scope }) {
         return Object.fromEntries(ids.map((id, index) => [id, MANAGER_PALETTE[index % MANAGER_PALETTE.length]]));
     }, [tasks]);
 
-    const managersInView = useMemo(() => {
-        const seen = new Map();
-
-        tasks.forEach((task) => {
-            if (task.assignee?.id && !seen.has(task.assignee.id)) {
-                seen.set(task.assignee.id, task.assignee.name);
-            }
-        });
-
-        return [...seen.entries()].map(([id, name]) => ({ id, name }));
-    }, [tasks]);
-
     const byDay = useMemo(() => {
         const map = {};
 
@@ -240,32 +228,44 @@ export default function Calendar({ options, canSeeDepartment = false, scope }) {
                     </HStack>
                 </HStack>
 
-                {/* Легенда менеджеров — только в режиме отдела и когда их больше одного. */}
-                {managersInView.length > 1 && (
-                    <HStack gap={3} flexWrap="wrap">
-                        {managersInView.map((manager) => (
+                {/* Фильтр сотрудников с мультивыбором — весь справочник, а не только
+                    те, кто попал в текущий диапазон. Пустой выбор = все. */}
+                {(options?.assignees || []).length > 1 && (
+                    <HStack gap={3} flexWrap="wrap" align="center">
+                        <Text fontSize="xs" color="fg.muted">Сотрудники:</Text>
+                        {(options?.assignees || []).map((manager) => (
                             <Checkbox
                                 key={manager.id}
                                 size="sm"
-                                checked={!managerFilter.length || managerFilter.includes(manager.id)}
+                                checked={!managerFilter.length || managerFilter.includes(Number(manager.id))}
                                 onCheckedChange={(e) => {
                                     setManagerFilter((prev) => {
-                                        const base = prev.length ? prev : managersInView.map((item) => item.id);
+                                        const all = (options?.assignees || []).map((item) => Number(item.id));
+                                        const base = prev.length ? prev : all;
+                                        const next = e.checked
+                                            ? [...new Set([...base, Number(manager.id)])]
+                                            : base.filter((id) => id !== Number(manager.id));
 
-                                        return e.checked
-                                            ? [...new Set([...base, manager.id])]
-                                            : base.filter((id) => id !== manager.id);
+                                        // Выбраны все — это то же, что «без фильтра».
+                                        return next.length === all.length ? [] : next;
                                     });
                                 }}
                             >
                                 <HStack gap={1}>
-                                    <Box w="10px" h="10px" borderRadius="full" bg={`${managerColors[manager.id] || 'gray'}.solid`} />
+                                    <Box
+                                        w="10px"
+                                        h="10px"
+                                        borderRadius="full"
+                                        bg={managerColors[manager.id] ? `${managerColors[manager.id]}.solid` : 'bg.muted'}
+                                        borderWidth={managerColors[manager.id] ? undefined : '1px'}
+                                        title={managerColors[manager.id] ? undefined : 'В выбранном периоде задач нет'}
+                                    />
                                     <Text fontSize="xs">{manager.name}</Text>
                                 </HStack>
                             </Checkbox>
                         ))}
                         {managerFilter.length > 0 && (
-                            <Button size="xs" variant="ghost" onClick={() => setManagerFilter([])}>Все менеджеры</Button>
+                            <Button size="xs" variant="ghost" onClick={() => setManagerFilter([])}>Все</Button>
                         )}
                     </HStack>
                 )}

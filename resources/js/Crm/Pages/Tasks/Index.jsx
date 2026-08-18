@@ -429,6 +429,11 @@ export default function Index({ tasks, filters, counters, options, openTaskId, c
                                             onOpen={openDialog}
                                             onPin={togglePin}
                                             onDelete={(task) => setPendingDelete(task.id)}
+                                            onChecklistChanged={(task, data) => patchRow({
+                                                id: task.id,
+                                                checklist_total: data.checklist_total,
+                                                checklist_done: data.checklist_done,
+                                            })}
                                         />
                                     ))}
                                 </VStack>

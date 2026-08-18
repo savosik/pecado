@@ -149,7 +149,10 @@ export default function TaskRecurrenceDialog({ open, onClose, onSaved }) {
                                     </select>
                                 </Field>
 
-                                <Field label="Дни недели" required invalid={!! firstError('weekdays')} errorText={firstError('weekdays')}>
+                                {/* Не внутри <Field>: Field раздаёт всем контролам один id,
+                                    и клик по любому дню тогглил бы понедельник. */}
+                                <Box>
+                                    <Text fontSize="sm" fontWeight="500" mb={1}>Дни недели</Text>
                                     <VStack align="stretch" gap={2}>
                                         <HStack gap={3} wrap="wrap">
                                             {WEEKDAYS.map((day) => (
@@ -168,8 +171,11 @@ export default function TaskRecurrenceDialog({ open, onClose, onSaved }) {
                                                 Каждый будний день
                                             </Button>
                                         </Box>
+                                        {firstError('weekdays') && (
+                                            <Text fontSize="xs" color="red.fg">{firstError('weekdays')}</Text>
+                                        )}
                                     </VStack>
-                                </Field>
+                                </Box>
 
                                 <HStack gap={4} align="start">
                                     <Field label="Время" required invalid={!! firstError('due_time')} errorText={firstError('due_time')}>
