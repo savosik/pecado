@@ -100,14 +100,18 @@ class HandleBalanceUpdated
                     unset($updateData['contractor_uuid']);
                 }
 
+                // Без глобального scope: если 1С всё же пришлёт баланс исключённого
+                // контрагента, надо обновить существующую строку, а не создать дубль.
                 /** @var ContractorBalance $balance */
-                $balance = ContractorBalance::updateOrCreate(
-                    [
-                        'user_id' => $user->id,
-                        'tax_id' => $contractorInn,
-                    ],
-                    $updateData
-                );
+                $balance = ContractorBalance::query()
+                    ->withoutGlobalScope(ContractorBalance::SCOPE_WITHOUT_EXCLUDED)
+                    ->updateOrCreate(
+                        [
+                            'user_id' => $user->id,
+                            'tax_id' => $contractorInn,
+                        ],
+                        $updateData
+                    );
 
                 // v15.8.0: разрез по нашим организациям. Пишем до деталей просрочки,
                 // чтобы уметь проставить в них организацию.
@@ -251,18 +255,21 @@ class HandleBalanceUpdated
                 continue;
             }
 
-            ContractorOrganizationBalance::updateOrCreate(
-                [
-                    'company_id' => $company->id,
-                    'organization_id' => $organization->id,
-                ],
-                [
-                    'user_id' => $user->id,
-                    'current_balance' => $row['current_balance'] ?? 0,
-                    'overdue_debt' => $row['overdue_debt'] ?? 0,
-                    'balance_erp_updated_at' => $updatedAt,
-                ],
-            );
+            // Без глобального scope — по той же причине, что и агрегат выше.
+            ContractorOrganizationBalance::query()
+                ->withoutGlobalScope(ContractorBalance::SCOPE_WITHOUT_EXCLUDED)
+                ->updateOrCreate(
+                    [
+                        'company_id' => $company->id,
+                        'organization_id' => $organization->id,
+                    ],
+                    [
+                        'user_id' => $user->id,
+                        'current_balance' => $row['current_balance'] ?? 0,
+                        'overdue_debt' => $row['overdue_debt'] ?? 0,
+                        'balance_erp_updated_at' => $updatedAt,
+                    ],
+                );
 
             $map[$uuid] = $organization->id;
             $touchedOrganizationIds[] = $organization->id;
@@ -271,7 +278,9 @@ class HandleBalanceUpdated
         // Организация исчезла из массива — расчётов с ней больше нет. Строку
         // обнуляем, но НЕ удаляем: иначе погашенный долг пропадёт из истории
         // и отчёты задним числом изменятся.
-        ContractorOrganizationBalance::where('company_id', $company->id)
+        ContractorOrganizationBalance::query()
+            ->withoutGlobalScope(ContractorBalance::SCOPE_WITHOUT_EXCLUDED)
+            ->where('company_id', $company->id)
             ->when($touchedOrganizationIds !== [], fn ($q) => $q->whereNotIn('organization_id', $touchedOrganizationIds))
             ->update([
                 'current_balance' => 0,

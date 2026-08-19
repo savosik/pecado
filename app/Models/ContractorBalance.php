@@ -43,6 +43,25 @@ class ContractorBalance extends Model
 {
     use HasFactory;
 
+    /**
+     * Имя глобального scope, скрывающего исключённых из обмена контрагентов.
+     * Балансы маркетплейсов из erp.excluded_contractor_tax_ids 1С не обновляет
+     * (они вырезаны из settlement.* и balance.updated), поэтому их снимки
+     * заморожены и в витрине/CRM выглядят как вечный «долг» без расшифровки.
+     */
+    public const SCOPE_WITHOUT_EXCLUDED = 'withoutExcludedContractors';
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(self::SCOPE_WITHOUT_EXCLUDED, function ($query): void {
+            $excluded = config('erp.excluded_contractor_tax_ids', []);
+
+            if ($excluded !== []) {
+                $query->whereNotIn('tax_id', $excluded);
+            }
+        });
+    }
+
     protected $fillable = [
         'user_id',
         'company_id',

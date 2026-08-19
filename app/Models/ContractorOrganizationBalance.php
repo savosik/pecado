@@ -27,6 +27,25 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ContractorOrganizationBalance extends Model
 {
+    /**
+     * Как и агрегат ContractorBalance, разрез по организациям скрывает
+     * контрагентов из erp.excluded_contractor_tax_ids: 1С их балансы не шлёт,
+     * снимки заморожены. Ключа tax_id здесь нет — фильтруем через companies.
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope(ContractorBalance::SCOPE_WITHOUT_EXCLUDED, function ($query): void {
+            $excluded = config('erp.excluded_contractor_tax_ids', []);
+
+            if ($excluded !== []) {
+                $query->whereNotIn(
+                    'company_id',
+                    Company::query()->select('id')->whereIn('tax_id', $excluded),
+                );
+            }
+        });
+    }
+
     protected $fillable = [
         'user_id',
         'company_id',

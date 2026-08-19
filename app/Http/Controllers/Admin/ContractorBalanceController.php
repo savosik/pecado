@@ -13,7 +13,10 @@ class ContractorBalanceController extends Controller
 {
     public function index(Request $request)
     {
+        // Админский реестр — единственное место, где видны и исключённые из
+        // обмена контрагенты (маркетплейсы): их снимки нужны для отладки обмена.
         $query = ContractorBalance::query()
+            ->withoutGlobalScope(ContractorBalance::SCOPE_WITHOUT_EXCLUDED)
             ->with(['user', 'company']);
 
         // Поиск по пользователю / ИНН / компании

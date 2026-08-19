@@ -117,9 +117,15 @@ class BulkDeleteJob implements ShouldQueue
 
         $this->updateProgress($cacheKey, 'running', "Удаление: 0 / {$total}", 0, $total);
 
-        // Удаляем чанками без транзакции — каждый чанк атомарен
+        // Удаляем чанками без транзакции — каждый чанк атомарен.
+        // «Удалить все» означает буквально все записи: снимаем scope скрытия
+        // исключённых контрагентов (для прочих моделей это имя — no-op),
+        // а SoftDeletes-scope не трогаем, иначе цикл никогда не закончится.
         while (true) {
-            $records = $modelClass::query()->limit($chunkSize)->get();
+            $records = $modelClass::query()
+                ->withoutGlobalScope(\App\Models\ContractorBalance::SCOPE_WITHOUT_EXCLUDED)
+                ->limit($chunkSize)
+                ->get();
 
             if ($records->isEmpty()) {
                 break;
