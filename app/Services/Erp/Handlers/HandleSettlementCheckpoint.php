@@ -87,6 +87,9 @@ class HandleSettlementCheckpoint
             'amount_rub' => is_numeric($payload['amount_rub'] ?? null)
                 ? (float) $payload['amount_rub']
                 : ($currency === 'RUB' ? $amount : null),
+            'paying_amount' => is_numeric($payload['paying_amount'] ?? null)
+                ? (float) $payload['paying_amount']
+                : null,
             'is_verified' => (bool) ($payload['is_verified'] ?? false),
             'erp_updated_at' => $payload['erp_updated_at'] ?? null,
         ])->save();

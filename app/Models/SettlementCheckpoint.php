@@ -57,6 +57,7 @@ class SettlementCheckpoint extends Model
         'currency_code',
         'amount',
         'amount_rub',
+        'paying_amount',
         'is_verified',
         'erp_updated_at',
     ];
@@ -74,6 +75,7 @@ class SettlementCheckpoint extends Model
             'as_of_date' => 'date',
             'amount' => 'decimal:2',
             'amount_rub' => 'decimal:2',
+            'paying_amount' => 'decimal:2',
             'is_verified' => 'boolean',
             'erp_updated_at' => 'datetime',
         ];

@@ -152,6 +152,12 @@ class HandleSettlementPosted
             'amount' => $amount,
             'currency_code' => $currency,
             'amount_rub' => $this->resolveAmountRub($entry, $amount, $currency, $uuid),
+            // Ресурс «Оплачивается» (v16.4): NULL, если сообщение старее — «нет данных»
+            // и «ноль» здесь разные вещи, иначе старые движения выдали бы себя
+            // за полностью неоплаченные.
+            'paying_amount' => is_numeric($entry['paying_amount'] ?? null)
+                ? (float) $entry['paying_amount']
+                : null,
             'movement_kind' => $this->stringOrNull($entry['movement_kind'] ?? null),
             'document_uuid' => $documentUuid,
             'document_kind' => $this->stringOrNull($payload['document_kind'] ?? null),
