@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 16.3.0
+  version: 16.4.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -5558,6 +5558,15 @@ components:
         amount_rub:
           type: [number, 'null']
           description: Рублёвый эквивалент со знаком — ресурс СуммаРегл, зафиксированный учётом на дату операции.
+        paying_amount:
+          type: [number, 'null']
+          minimum: 0
+          description: |
+            Ресурс «Оплачивается» строки регистра, в валюте взаиморасчётов, всегда ≥ 0
+            либо null. Живой долг пары в 1С считается как Σ(amount) − Σ(paying_amount):
+            без этого поля определения «лента» и «долг» расходятся системно (круг 11).
+            Опционально с v16.4 — старые сообщения без поля валидны, отсутствие
+            означает «ресурс пуст».
         currency_code:
           type: [string, 'null']
         movement_kind:
@@ -5754,6 +5763,13 @@ components:
           type: number
         amount_rub:
           type: [number, 'null']
+        paying_amount:
+          type: [number, 'null']
+          minimum: 0
+          description: |
+            Σ ресурса «Оплачивается» по паре на as_of_date, в валюте взаиморасчётов,
+            ≥ 0 либо null. Живой нетто-остаток пары = amount − paying_amount: сверка
+            получает оба определения долга одним сообщением. Опционально с v16.4.
         currency_code:
           type: [string, 'null']
           description: Часть ключа контрольной точки — сверка идёт в валюте движений, чтобы курсовое расхождение не выдавалось за учётное.
