@@ -3,6 +3,7 @@
 namespace App\Services\Erp\Handlers;
 
 use App\Models\Company;
+use App\Models\SettlementCheckpoint;
 use App\Models\SettlementEntry;
 use Illuminate\Support\Facades\Log;
 
@@ -36,11 +37,22 @@ trait RelinksOrphanSettlementEntries
                 ->update(['user_id' => $company->user_id]);
         }
 
-        if ($linked > 0) {
+        // Контрольные точки сироты по той же причине: точка, снятая до прихода
+        // карточки, не участвует в сверке пар — доливаем и её.
+        $linkedCheckpoints = SettlementCheckpoint::query()
+            ->whereNull('company_id')
+            ->where('contractor_uuid', $company->erp_id)
+            ->update(array_filter([
+                'company_id' => $company->id,
+                'user_id' => $company->user_id,
+            ], fn ($value) => $value !== null));
+
+        if ($linked > 0 || $linkedCheckpoints > 0) {
             Log::info("{$event}: осиротевшие строки взаиморасчётов привязаны к контрагенту", [
                 'company_id' => $company->id,
                 'erp_id' => $company->erp_id,
-                'linked' => $linked,
+                'linked_entries' => $linked,
+                'linked_checkpoints' => $linkedCheckpoints,
             ]);
         }
     }
