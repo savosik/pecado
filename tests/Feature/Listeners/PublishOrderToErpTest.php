@@ -676,6 +676,197 @@ class PublishOrderToErpTest extends TestCase
         });
     }
 
+    // v16.5.0: режим стопки складов — фиксация склада сайтом
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function order_with_assigned_warehouse_sends_single_warehouse_uuid(): void
+    {
+        Queue::fake();
+
+        config()->set('erp.stack_warehouse_pinning.enabled', true);
+
+        $region = Region::factory()->create(['stock_stack_enabled' => true]);
+        $top = Warehouse::factory()->create(['external_id' => 'stack-wh-top']);
+        $bottom = Warehouse::factory()->create(['external_id' => 'stack-wh-bottom']);
+        $region->primaryWarehouses()->attach([
+            $top->id => ['type' => 'primary', 'priority' => 1],
+            $bottom->id => ['type' => 'primary', 'priority' => 2],
+        ]);
+
+        $user = User::factory()->create(['erp_id' => 'stack-single-erp', 'region_id' => $region->id]);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'type' => \App\Enums\OrderType::ORDER,
+            'assigned_warehouse_id' => $bottom->id,
+        ]);
+
+        Queue::fake();
+
+        (new \App\Listeners\PublishOrderToErp)->handle(new OrderCreated($order));
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            return $job->payload['warehouse_uuids'] === ['stack-wh-bottom'];
+        });
+    }
+
+    /**
+     * Переходная легаси-совместимость: пока флаг фиксации выключен (default),
+     * заказ с зафиксированным складом уходит в прежнем формате — перечисление
+     * складов региона, 1С выбирает сама. Легаси-приёмник ничего не замечает.
+     */
+    #[Test]
+    public function pinning_disabled_by_default_keeps_legacy_warehouse_list(): void
+    {
+        Queue::fake();
+
+        $region = Region::factory()->create(['stock_stack_enabled' => true]);
+        $top = Warehouse::factory()->create(['external_id' => 'legacy-wh-top']);
+        $bottom = Warehouse::factory()->create(['external_id' => 'legacy-wh-bottom']);
+        $region->primaryWarehouses()->attach([
+            $top->id => ['type' => 'primary', 'priority' => 1],
+            $bottom->id => ['type' => 'primary', 'priority' => 2],
+        ]);
+
+        $user = User::factory()->create(['erp_id' => 'legacy-mode-erp', 'region_id' => $region->id]);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'type' => \App\Enums\OrderType::ORDER,
+            'assigned_warehouse_id' => $bottom->id,
+        ]);
+
+        Queue::fake();
+
+        (new \App\Listeners\PublishOrderToErp)->handle(new OrderCreated($order));
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            $uuids = $job->payload['warehouse_uuids'] ?? [];
+
+            return count($uuids) === 2
+                && in_array('legacy-wh-top', $uuids, true)
+                && in_array('legacy-wh-bottom', $uuids, true);
+        });
+    }
+
+    #[Test]
+    public function assigned_warehouse_without_external_id_falls_back_to_region_warehouses(): void
+    {
+        Queue::fake();
+
+        config()->set('erp.stack_warehouse_pinning.enabled', true);
+
+        $region = Region::factory()->create(['stock_stack_enabled' => true]);
+        $noExternal = Warehouse::factory()->create(['external_id' => null]);
+        $regular = Warehouse::factory()->create(['external_id' => 'stack-wh-regular']);
+        $region->primaryWarehouses()->attach([
+            $noExternal->id => ['type' => 'primary', 'priority' => 1],
+            $regular->id => ['type' => 'primary', 'priority' => 2],
+        ]);
+
+        $user = User::factory()->create(['erp_id' => 'stack-fallback-erp', 'region_id' => $region->id]);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'type' => \App\Enums\OrderType::ORDER,
+            'assigned_warehouse_id' => $noExternal->id,
+        ]);
+
+        Queue::fake();
+
+        (new \App\Listeners\PublishOrderToErp)->handle(new OrderCreated($order));
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            return $job->payload['warehouse_uuids'] === ['stack-wh-regular'];
+        });
+    }
+
+    #[Test]
+    public function order_without_assigned_warehouse_keeps_region_warehouse_list(): void
+    {
+        Queue::fake();
+
+        $region = Region::factory()->create();
+        $w1 = Warehouse::factory()->create(['external_id' => 'no-stack-wh-1']);
+        $w2 = Warehouse::factory()->create(['external_id' => 'no-stack-wh-2']);
+        $region->primaryWarehouses()->attach([
+            $w1->id => ['type' => 'primary'],
+            $w2->id => ['type' => 'primary'],
+        ]);
+
+        $user = User::factory()->create(['erp_id' => 'no-stack-erp', 'region_id' => $region->id]);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'type' => \App\Enums\OrderType::ORDER,
+            'assigned_warehouse_id' => null,
+        ]);
+
+        Queue::fake();
+
+        (new \App\Listeners\PublishOrderToErp)->handle(new OrderCreated($order));
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            $uuids = $job->payload['warehouse_uuids'] ?? [];
+
+            return count($uuids) === 2
+                && in_array('no-stack-wh-1', $uuids, true)
+                && in_array('no-stack-wh-2', $uuids, true);
+        });
+    }
+
+    #[Test]
+    public function stack_order_payload_passes_outbound_schema_validation(): void
+    {
+        Queue::fake();
+
+        config()->set('erp.stack_warehouse_pinning.enabled', true);
+
+        $region = Region::factory()->create(['stock_stack_enabled' => true]);
+        $warehouse = Warehouse::factory()->create(['external_id' => 'stack-schema-wh']);
+        $region->primaryWarehouses()->attach($warehouse->id, ['type' => 'primary', 'priority' => 1]);
+
+        $user = User::factory()->create(['erp_id' => 'stack-schema-erp', 'region_id' => $region->id]);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+        $product = Product::factory()->create(['external_id' => 'stack-schema-prod']);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'type' => \App\Enums\OrderType::ORDER,
+            'assigned_warehouse_id' => $warehouse->id,
+        ]);
+
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'name' => $product->name,
+            'quantity' => 2,
+            'price' => 500.00,
+            'subtotal' => 1000.00,
+        ]);
+
+        Queue::fake();
+
+        (new \App\Listeners\PublishOrderToErp)->handle(new OrderCreated($order));
+
+        $validator = app(\App\Services\Erp\ErpMessageValidator::class);
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) use ($validator) {
+            return $validator->validateOutbound('order.created', $job->payload)['valid'] === true
+                && $job->payload['warehouse_uuids'] === ['stack-schema-wh'];
+        });
+    }
+
     // v15: manager_comment / warehouse_comment
     // ──────────────────────────────────────────────
 

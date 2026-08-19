@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Http\Controllers\Controller;
+use App\Models\Organization;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -44,7 +45,9 @@ class WarehouseController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Admin/Pages/Warehouses/Create');
+        return Inertia::render('Admin/Pages/Warehouses/Create', [
+            'organizations' => Organization::active()->ordered()->get(['id', 'name']),
+        ]);
     }
 
     /**
@@ -64,6 +67,8 @@ class WarehouseController extends Controller
      */
     public function show(Warehouse $warehouse): \Inertia\Response
     {
+        $warehouse->load('organization');
+
         return Inertia::render('Admin/Pages/Warehouses/Show', [
             'warehouse' => [
                 'id' => $warehouse->id,
@@ -71,6 +76,7 @@ class WarehouseController extends Controller
                 'external_id' => $warehouse->external_id,
                 'is_defect' => $warehouse->is_defect,
                 'is_promo_sample' => $warehouse->is_promo_sample,
+                'organization' => $warehouse->organization?->only(['id', 'name']),
                 'created_at' => $warehouse->created_at?->format('d.m.Y H:i'),
                 'updated_at' => $warehouse->updated_at?->format('d.m.Y H:i'),
             ],
@@ -84,6 +90,7 @@ class WarehouseController extends Controller
     {
         return Inertia::render('Admin/Pages/Warehouses/Edit', [
             'warehouse' => $warehouse,
+            'organizations' => Organization::active()->ordered()->get(['id', 'name']),
         ]);
     }
 
@@ -127,6 +134,7 @@ class WarehouseController extends Controller
         return [
             'name' => 'required|string|max:255',
             'external_id' => 'nullable|string|max:255|'.$unique,
+            'organization_id' => 'nullable|exists:organizations,id',
             'is_defect' => 'boolean',
             'is_promo_sample' => [
                 'boolean',

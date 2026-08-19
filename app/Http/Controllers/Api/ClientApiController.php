@@ -690,7 +690,16 @@ class ClientApiController extends Controller
             company: $company,
             deliveryMethod: DeliveryMethod::from($deliveryMethod),
             groups: [
-                OrderType::ORDER->value => $this->linesFromApiItems($instockItems),
+                // Режим стопки складов: строки наличия несут склад-победитель —
+                // сборщик разобьёт их на отдельные заказы, как в чекауте.
+                // Для регионов без стопки карта — null-ы, поведение прежнее.
+                OrderType::ORDER->value => $this->linesFromApiItems(
+                    $instockItems,
+                    $this->stockService->getWinningWarehouseMap(
+                        array_map(static fn (array $item) => (int) $item['product']->id, $instockItems),
+                        $user,
+                    ),
+                ),
                 OrderType::PREORDER->value => $this->linesFromApiItems($preorderItems),
                 OrderType::PROMO->value => $promoResult?->groups[OrderType::PROMO->value] ?? [],
                 OrderType::PROMO_SAMPLE->value => $promoResult?->groups[OrderType::PROMO_SAMPLE->value] ?? [],
@@ -799,14 +808,21 @@ class ClientApiController extends Controller
      * Разрешённые к заказу позиции → строки для сборщика.
      *
      * Цену считает сборщик по прайсу клиента — так же, как в чекауте.
+     * $winnerMap (product_id → warehouse_id победителя стопки) передаётся
+     * только для строк наличия.
      *
      * @param  array<int, array{product: \App\Models\Product, quantity: int}>  $items
+     * @param  array<int, int|null>|null  $winnerMap
      * @return list<OrderLine>
      */
-    private function linesFromApiItems(array $items): array
+    private function linesFromApiItems(array $items, ?array $winnerMap = null): array
     {
         return array_map(
-            static fn (array $item) => new OrderLine($item['product'], $item['quantity']),
+            static fn (array $item) => new OrderLine(
+                $item['product'],
+                $item['quantity'],
+                warehouseId: $winnerMap[$item['product']->id] ?? null,
+            ),
             array_values($items),
         );
     }

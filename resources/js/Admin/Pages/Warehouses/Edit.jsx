@@ -5,14 +5,16 @@ import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { FormField } from "@/Admin/Components/FormField";
 import { FormActions } from "@/Admin/Components/FormActions";
+import { SelectRelation } from "@/Admin/Components/SelectRelation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Text } from "@chakra-ui/react";
 import { toaster } from "@/components/ui/toaster";
 
-const WarehousesEdit = ({ warehouse }) => {
+const WarehousesEdit = ({ warehouse, organizations = [] }) => {
     const { data, setData, put, processing, errors , transform } = useForm({
         name: warehouse.name || "",
         external_id: warehouse.external_id || "",
+        organization_id: warehouse.organization_id || "",
         is_defect: !!warehouse.is_defect,
         is_promo_sample: !!warehouse.is_promo_sample,
     });
@@ -69,6 +71,21 @@ const WarehousesEdit = ({ warehouse }) => {
                                     placeholder="ID во внешней системе (опционально)"
                                 />
                             </FormField>
+
+                            <SelectRelation
+                                label="Организация"
+                                value={data.organization_id}
+                                onChange={(value) => setData('organization_id', value)}
+                                options={[
+                                    { value: '', label: 'Не задана — определяет 1С' },
+                                    ...organizations.map((o) => ({ value: o.id, label: o.name })),
+                                ]}
+                                placeholder="Выберите организацию"
+                                error={errors.organization_id}
+                            />
+                            <Text fontSize="xs" color="fg.muted" mt={-2}>
+                                Наше юрлицо, торгующее с этого склада. Справочно на сайте; в 1С передаётся только после включения на сервере.
+                            </Text>
 
                             <FormField label="Склад некондиции" error={errors.is_defect}>
                                 <Checkbox

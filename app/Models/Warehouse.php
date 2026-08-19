@@ -39,6 +39,7 @@ class Warehouse extends Model
         'external_id',
         'is_defect',
         'is_promo_sample',
+        'organization_id',
     ];
 
     protected function casts(): array
@@ -101,5 +102,19 @@ class Warehouse extends Model
         return $this->belongsToMany(Region::class, 'region_warehouse')
             ->wherePivot('type', 'preorder')
             ->withTimestamps();
+    }
+
+    /**
+     * Наша организация, фактически торгующая с этого склада — например,
+     * ООО Пекадо — Москва основной, ИП Елисеев — Москва персональный.
+     * Справочная привязка на сайте (эпик org-00). В исходящий протокол 1С
+     * передаётся опционально, только под флагом
+     * config('erp.organization_uuid_publishing.enabled').
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<Organization, $this>
+     */
+    public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
     }
 }

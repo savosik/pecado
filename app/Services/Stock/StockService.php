@@ -25,10 +25,20 @@ class StockService implements StockServiceInterface
 {
     /**
      * Мемо складов по региону на время запроса: region_id → списки складов.
+     * primary отсортирован по позиции в стопке (priority, NULL — в конце);
+     * stack — включён ли у региона режим стопки (строгое замещение).
      *
-     * @var array<int, array{primary: list<int>, preorder: list<int>}>
+     * @var array<int, array{primary: list<int>, preorder: list<int>, stack: bool}>
      */
     private array $regionWarehouses = [];
+
+    /**
+     * Мемо выигравших складов в режиме стопки: region_id → product_id → warehouse_id.
+     * null — товара нет в наличии ни на одном складе стопки.
+     *
+     * @var array<int, array<int, int|null>>
+     */
+    private array $winnerCache = [];
 
     /**
      * Мемо региона по умолчанию: Region::defaultId() дёргается для каждого
@@ -150,15 +160,42 @@ class StockService implements StockServiceInterface
         $primaryIds = array_flip($warehouses['primary']);
         $preorderIds = array_flip($warehouses['preorder']);
 
+        $primaryByProduct = [];
+
         foreach ($rows as $row) {
             $productId = (int) $row->product_id;
+            $warehouseId = (int) $row->warehouse_id;
 
-            if (isset($primaryIds[$row->warehouse_id])) {
-                $available[$productId] += (int) $row->quantity;
+            if (isset($primaryIds[$warehouseId])) {
+                if ($warehouses['stack']) {
+                    $primaryByProduct[$productId][$warehouseId] = (int) $row->quantity;
+                } else {
+                    $available[$productId] += (int) $row->quantity;
+                }
             }
 
-            if (isset($preorderIds[$row->warehouse_id])) {
+            if (isset($preorderIds[$warehouseId])) {
                 $preorder[$productId] += (int) $row->quantity;
+            }
+        }
+
+        // Режим стопки: строгое замещение — действует остаток верхнего склада
+        // с наличием, нижние — фолбэк по позициям, которых нет выше.
+        // Победитель выбирается по сырому остатку (это склад, с которого
+        // физически отгрузит 1С), буфер ниже вычитается уже из его количества.
+        if ($warehouses['stack']) {
+            $resolved = app(WarehouseStackResolver::class)
+                ->resolve($warehouses['primary'], $primaryByProduct);
+
+            $regionId = $this->resolveRegionId($user);
+
+            foreach (array_keys($available) as $productId) {
+                $winner = $resolved[$productId] ?? ['warehouse_id' => null, 'quantity' => 0];
+                $available[$productId] = $winner['quantity'];
+
+                if ($regionId !== null) {
+                    $this->winnerCache[$regionId][$productId] = $winner['warehouse_id'];
+                }
             }
         }
 
@@ -206,31 +243,36 @@ class StockService implements StockServiceInterface
         $warehouses = $this->regionWarehouseIds($user);
 
         if ($warehouses['primary'] !== []) {
+            // Режим стопки: вместо суммы — остаток верхнего склада стопки
+            // с наличием (строгое замещение), тем же правилом, что батч-карты.
+            if ($warehouses['stack']) {
+                $winnerSql = $this->stackWinnerSubquery($warehouses['primary']);
+                $stockExpr = 'COALESCE(('.$winnerSql->toSql().'), 0)';
+                $stockBindings = $winnerSql->getBindings();
+            } else {
+                $sumSql = DB::table('product_warehouse')
+                    ->selectRaw('COALESCE(SUM(quantity), 0)')
+                    ->whereColumn('product_warehouse.product_id', 'products.id')
+                    ->whereIn('product_warehouse.warehouse_id', $warehouses['primary']);
+                $stockExpr = '('.$sumSql->toSql().')';
+                $stockBindings = $sumSql->getBindings();
+            }
+
             if ($this->buffersApplyTo($user)) {
                 // Страховой буфер (buf-04): сортировка «в наличии первыми»
                 // не должна поднимать товар, который карточка уже показывает
                 // нулевым. GREATEST есть только в MySQL, в SQLite (тесты)
                 // двухаргументный MAX — скалярный аналог.
-                $stockSql = DB::table('product_warehouse')
-                    ->selectRaw('COALESCE(SUM(quantity), 0)')
-                    ->whereColumn('product_warehouse.product_id', 'products.id')
-                    ->whereIn('product_warehouse.warehouse_id', $warehouses['primary']);
-
                 $greatest = DB::connection()->getDriverName() === 'sqlite' ? 'MAX' : 'GREATEST';
                 $bufferSql = 'SELECT '.$greatest.'(COALESCE(manual_qty, buffer_qty), 0)'
                     .' FROM product_stock_buffers WHERE product_stock_buffers.product_id = products.id';
 
                 $query->selectRaw(
-                    $greatest.'(('.$stockSql->toSql().') - COALESCE(('.$bufferSql.'), 0), 0) as primary_stock',
-                    $stockSql->getBindings(),
+                    $greatest.'('.$stockExpr.' - COALESCE(('.$bufferSql.'), 0), 0) as primary_stock',
+                    $stockBindings,
                 );
             } else {
-                $query->addSelect([
-                    'primary_stock' => DB::table('product_warehouse')
-                        ->selectRaw('COALESCE(SUM(quantity), 0)')
-                        ->whereColumn('product_warehouse.product_id', 'products.id')
-                        ->whereIn('product_warehouse.warehouse_id', $warehouses['primary']),
-                ]);
+                $query->selectRaw($stockExpr.' as primary_stock', $stockBindings);
             }
         } else {
             $query->selectRaw('0 as primary_stock');
@@ -249,35 +291,124 @@ class StockService implements StockServiceInterface
     }
 
     /**
+     * Коррелированный подзапрос «остаток выигравшего склада стопки» для
+     * applyStockSubselects: первый по порядку стопки склад с quantity > 0.
+     * Порядок задаётся CASE-выражением (портабельно между MySQL и SQLite;
+     * ID складов — целые из БД, интерполяция безопасна).
+     *
+     * @param  list<int>  $orderedWarehouseIds  склады стопки сверху вниз
+     */
+    private function stackWinnerSubquery(array $orderedWarehouseIds): \Illuminate\Database\Query\Builder
+    {
+        $cases = [];
+        foreach (array_values($orderedWarehouseIds) as $index => $warehouseId) {
+            $cases[] = 'WHEN '.(int) $warehouseId.' THEN '.$index;
+        }
+
+        return DB::table('product_warehouse')
+            ->select('quantity')
+            ->whereColumn('product_warehouse.product_id', 'products.id')
+            ->whereIn('product_warehouse.warehouse_id', $orderedWarehouseIds)
+            ->where('quantity', '>', 0)
+            ->orderByRaw('CASE product_warehouse.warehouse_id '.implode(' ', $cases).' END')
+            ->limit(1);
+    }
+
+    /**
      * Склады региона пользователя (primary и preorder) с мемоизацией
      * на время запроса. Гость и пользователь без региона — регион по
      * умолчанию, как в каталоге.
      *
-     * @return array{primary: list<int>, preorder: list<int>}
+     * primary упорядочен по позиции в стопке (priority, NULL — в конце,
+     * затем по id) — для регионов без стопки это тот же набор складов,
+     * стабильно отсортированный. stack — режим стопки региона.
+     *
+     * @return array{primary: list<int>, preorder: list<int>, stack: bool}
      */
     public function regionWarehouseIds(?User $user = null): array
     {
         $regionId = $this->resolveRegionId($user);
 
         if ($regionId === null) {
-            return ['primary' => [], 'preorder' => []];
+            return ['primary' => [], 'preorder' => [], 'stack' => false];
         }
 
         if (isset($this->regionWarehouses[$regionId])) {
             return $this->regionWarehouses[$regionId];
         }
 
+        // Join к regions ради флага стопки: тот же один запрос, что и раньше
+        // (см. тест на константное число запросов). Регион без складов режима
+        // стопки иметь не может — пустой результат означает stack=false.
         $rows = DB::table('region_warehouse')
-            ->where('region_id', $regionId)
-            ->select('warehouse_id', 'type')
+            ->join('regions', 'regions.id', '=', 'region_warehouse.region_id')
+            ->where('region_warehouse.region_id', $regionId)
+            ->select('region_warehouse.warehouse_id', 'region_warehouse.type', 'regions.stock_stack_enabled')
+            ->orderByRaw('region_warehouse.priority IS NULL, region_warehouse.priority, region_warehouse.warehouse_id')
             ->get();
+
+        $stack = (bool) ($rows->first()->stock_stack_enabled ?? false);
 
         return $this->regionWarehouses[$regionId] = [
             'primary' => $rows->where('type', 'primary')
                 ->pluck('warehouse_id')->map(fn ($id) => (int) $id)->values()->all(),
             'preorder' => $rows->where('type', 'preorder')
                 ->pluck('warehouse_id')->map(fn ($id) => (int) $id)->values()->all(),
+            'stack' => $stack,
         ];
+    }
+
+    /**
+     * Карта выигравших складов в режиме стопки: product_id → warehouse_id
+     * склада, чей остаток действует для товара (null — товара нет в наличии
+     * ни на одном складе стопки). Для регионов без стопки все значения null —
+     * складского разреза у цены/остатка нет.
+     *
+     * Результат мемоизируется на запрос: карточка, корзина и checkout в одном
+     * запросе не пересчитывают победителей повторно.
+     *
+     * @param  list<int>  $productIds
+     * @return array<int, int|null>
+     */
+    public function getWinningWarehouseMap(array $productIds, ?User $user = null): array
+    {
+        $map = [];
+        foreach ($productIds as $id) {
+            $map[(int) $id] = null;
+        }
+
+        if ($map === []) {
+            return [];
+        }
+
+        $warehouses = $this->regionWarehouseIds($user);
+
+        if (! $warehouses['stack']) {
+            return $map;
+        }
+
+        $regionId = $this->resolveRegionId($user);
+        $cached = $this->winnerCache[$regionId] ?? [];
+
+        $missing = [];
+        foreach (array_keys($map) as $productId) {
+            if (array_key_exists($productId, $cached)) {
+                $map[$productId] = $cached[$productId];
+            } else {
+                $missing[] = $productId;
+            }
+        }
+
+        if ($missing !== []) {
+            // getStockMapsByIds в режиме стопки заполняет winnerCache.
+            $this->getStockMapsByIds($missing, $user);
+
+            foreach ($missing as $productId) {
+                $map[$productId] = $this->winnerCache[$regionId][$productId] ?? null;
+            }
+        }
+
+        return $map;
     }
 
     /**

@@ -30,6 +30,7 @@ import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
 export default function CheckoutIndex({
     cart,
     instockItems = [],
+    instockGroups = [],
     preorderItems = [],
     defectItems = [],
     promoItems = [],
@@ -164,18 +165,23 @@ export default function CheckoutIndex({
 
                 <form onSubmit={handleSubmit}>
                     <Stack gap="4">
-                        {/* ═══ Таблица: Товары со склада ═══ */}
-                        {instockItems.length > 0 && (
+                        {/* ═══ Таблицы: Товары со склада ═══
+                            Регион со стопкой складов: по таблице на склад-победитель,
+                            каждая группа уедет отдельным заказом. Обычный регион —
+                            одна группа без названия склада. */}
+                        {(instockGroups.length > 0 ? instockGroups : (instockItems.length > 0 ? [{ warehouse_id: null, warehouse_name: null, items: instockItems, totals: instockTotals }] : [])).map((group) => (
                             <ItemTable
-                                title="Товары со склада"
+                                key={group.warehouse_id ?? 'default'}
+                                title={group.warehouse_name ? `Товары со склада «${group.warehouse_name}»` : 'Товары со склада'}
                                 icon={<LuWarehouse size={20} />}
-                                items={instockItems}
-                                totals={instockTotals}
+                                items={group.items}
+                                totals={group.totals}
                                 currencySymbol={currencySymbol}
                                 colorPalette="green"
                                 fmt={fmt}
+                                note={instockGroups.length > 1 ? 'Будет оформлено отдельным заказом' : undefined}
                             />
-                        )}
+                        ))}
 
                         {/* ═══ Таблица: Товары по предзаказу ═══ */}
                         {preorderItems.length > 0 && (
@@ -231,8 +237,9 @@ export default function CheckoutIndex({
                             />
                         )}
 
-                        {/* ═══ Общий итог — только если непустых групп больше одной ═══ */}
-                        {[instockItems, preorderItems, defectItems, promoItems, sampleItems].filter((g) => g.length > 0).length > 1 && (
+                        {/* ═══ Общий итог — только если непустых групп больше одной
+                            (складские группы стопки считаются по отдельности) ═══ */}
+                        {[...(instockGroups.length > 0 ? instockGroups.map((g) => g.items) : [instockItems]), preorderItems, defectItems, promoItems, sampleItems].filter((g) => g.length > 0).length > 1 && (
                         <Box
                             bg="bg"
                             borderWidth="1px"

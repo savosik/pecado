@@ -23,7 +23,7 @@ class PublishOrderToErp
         }
 
         // Load relationships to include in the payload
-        $order->load(['items.product', 'user', 'company.bankAccounts', 'user.region']);
+        $order->load(['items.product', 'user', 'company.bankAccounts', 'user.region', 'assignedWarehouse.organization']);
 
         // ⚠️ БЛОКЕР: заказ уценки нельзя публиковать, пока склад некондиции не получил
         // external_id от 1С — иначе warehouse_uuids уйдёт пустым и 1С не поймёт, откуда
@@ -77,6 +77,14 @@ class PublishOrderToErp
             'delivery_method' => $order->delivery_method?->value ?? 'delivery',
             'timestamp' => now()->toIso8601String(),
         ];
+
+        // v16.5.0: organization_uuid — независимый переходный флаг от стопки
+        // складов (1С может подтвердить одно раньше другого). Выключен по
+        // умолчанию: ключ в payload вообще не появляется, легаси-приёмник
+        // его не видит.
+        if ((bool) config('erp.organization_uuid_publishing.enabled')) {
+            $payload['organization_uuid'] = $this->resolveOrganizationUuid($order);
+        }
 
         // v16.2.0: машинная связь заказа-замены с исходным заказом недобора.
         // Ключ добавляется только у заказов-замен и только под флагом — до
@@ -165,6 +173,35 @@ class PublishOrderToErp
     {
         $type = $order->type?->value ?? $order->type ?? 'order';
 
+        // Режим стопки складов (v16.5.0): склад зафиксирован сайтом при
+        // оформлении — уходит ровно один UUID, 1С проводит строго по нему.
+        // Затрагивает только type=order; ветки preorder/defect/promo_sample
+        // ниже не меняются. Если у склада нет external_id — конфигурация
+        // неполная: пишем warning и падаем в прежнее перечисление складов
+        // региона, чтобы заказ не застрял на сайте.
+        //
+        // Переходный флаг легаси-совместимости: пока 1С не подтвердила новую
+        // семантику, фиксация в исходящих сообщениях выключена — уходит
+        // прежнее перечисление складов региона, и легаси-приёмник работает
+        // как раньше. assigned_warehouse_id при этом сохранён в БД.
+        if ($order->assigned_warehouse_id !== null
+            && $type === 'order'
+            && (bool) config('erp.stack_warehouse_pinning.enabled')) {
+            $uuid = $order->assignedWarehouse?->external_id;
+
+            if ($uuid) {
+                return [$uuid];
+            }
+
+            \Illuminate\Support\Facades\Log::warning(
+                'Стопка складов: у назначенного склада нет external_id, фолбэк на склады региона',
+                [
+                    'order_uuid' => $order->uuid,
+                    'assigned_warehouse_id' => $order->assigned_warehouse_id,
+                ]
+            );
+        }
+
         // Уценка отгружается со склада некондиции — он один и в регионы не входит,
         // поэтому регион здесь не участвует (в отличие от order/preorder).
         if ($type === 'defect') {
@@ -204,6 +241,41 @@ class PublishOrderToErp
         }
 
         return $uuids;
+    }
+
+    /**
+     * Наша организация для заказа — только если определена однозначно.
+     *
+     * Для стопочного заказа (`assigned_warehouse_id` задан, `type=order`) —
+     * организация конкретного зафиксированного склада; известна сайту всегда,
+     * независимо от флага `stack_warehouse_pinning` (тот гейтит только состав
+     * `warehouse_uuids`, а не эту привязку).
+     *
+     * Для остальных случаев (в т.ч. стопка не сработала или не включена) —
+     * организация всех складов, с которых физически может уйти заказ этого
+     * типа: если она везде одна и та же, отдаём её; при нескольких разных
+     * организациях или отсутствии привязки — null (1С выбирает как раньше).
+     */
+    private function resolveOrganizationUuid(\App\Models\Order $order): ?string
+    {
+        $type = $order->type?->value ?? $order->type ?? 'order';
+
+        if ($order->assigned_warehouse_id !== null && $type === 'order') {
+            return $order->assignedWarehouse?->organization?->external_id;
+        }
+
+        $warehouses = match ($type) {
+            'defect' => \App\Models\Warehouse::query()->where('is_defect', true)->get(),
+            'promo_sample' => \App\Models\Warehouse::query()->promoSample()->get(),
+            'preorder' => $order->user?->region?->preorderWarehouses()->get() ?? collect(),
+            default => $order->user?->region?->primaryWarehouses()->get() ?? collect(),
+        };
+
+        $organizationIds = $warehouses->pluck('organization_id')->filter()->unique();
+
+        return $organizationIds->count() === 1
+            ? \App\Models\Organization::find($organizationIds->first())?->external_id
+            : null;
     }
 
     /**

@@ -16,10 +16,12 @@ use Illuminate\Support\Collection;
  * складов полный остаток, а в `user_stock_available` заниженный, и перестал
  * бы верить обоим числам.
  *
- * Буфер «выедается» из primary-складов региона клиента по порядку — с первого
- * склада с остатком, — чтобы сумма по складам сходилась с
- * `user_stock_available` до штуки. Preorder-склады не трогаются.
- * Мутируются только загруженные в память pivot-ы; в БД ничего не пишется.
+ * Буфер «выедается» из primary-складов региона клиента по порядку стопки
+ * (regionWarehouseIds: приоритет, затем id) — с первого склада с остатком, —
+ * чтобы сумма по складам сходилась с `user_stock_available` до штуки, а в
+ * регионах со стопкой буфер занижал именно склад-победитель. Preorder-склады
+ * не трогаются. Мутируются только загруженные в память pivot-ы; в БД ничего
+ * не пишется.
  */
 trait AppliesStockBufferToWarehouses
 {
@@ -44,6 +46,9 @@ trait AppliesStockBufferToWarehouses
         $buffers = app(StockBufferService::class)
             ->bufferMap($loaded->pluck('id')->all());
 
+        // Позиция склада в стопке региона (для регионов без стопки — стабильный
+        // порядок по id). Выедаем буфер в этом порядке, а не в порядке загрузки
+        // связи: в режиме стопки занижаться должен склад-победитель.
         $primaryIds = array_flip(
             app(StockService::class)->regionWarehouseIds($clientUser)['primary'],
         );
@@ -55,7 +60,11 @@ trait AppliesStockBufferToWarehouses
                 continue;
             }
 
-            foreach ($product->warehouses as $warehouse) {
+            $orderedWarehouses = $product->warehouses
+                ->sortBy(fn ($warehouse) => $primaryIds[$warehouse->id] ?? PHP_INT_MAX)
+                ->values();
+
+            foreach ($orderedWarehouses as $warehouse) {
                 if ($left <= 0) {
                     break;
                 }

@@ -48,16 +48,26 @@ class OrderAssembler
         $checkoutUuid = (string) \Illuminate\Support\Str::uuid();
 
         foreach ($draft->filledGroups() as $type => $lines) {
-            $order = Order::create($this->baseData($draft, $type) + ['checkout_uuid' => $checkoutUuid]);
+            // Режим стопки складов: строки с зафиксированным складом уходят
+            // отдельными документами — по заказу на склад. Практически склад
+            // несут только строки наличия (type=order) регионов со стопкой,
+            // у остальных warehouseId всегда null — подгруппа одна, поведение
+            // прежнее.
+            foreach ($this->splitByWarehouse($lines) as $warehouseId => $warehouseLines) {
+                $order = Order::create($this->baseData($draft, $type) + [
+                    'checkout_uuid' => $checkoutUuid,
+                    'assigned_warehouse_id' => $warehouseId === 0 ? null : $warehouseId,
+                ]);
 
-            $order->total_amount = $this->createItems($order, $lines, $draft->user);
+                $order->total_amount = $this->createItems($order, $warehouseLines, $draft->user);
 
-            // Только saveQuietly: Order::$dispatchesEvents['updated'] выпустил бы
-            // OrderUpdated сразу после создания, и в шину ушёл бы order.updated
-            // по документу, о котором 1С ещё не знает
-            $order->saveQuietly();
+                // Только saveQuietly: Order::$dispatchesEvents['updated'] выпустил бы
+                // OrderUpdated сразу после создания, и в шину ушёл бы order.updated
+                // по документу, о котором 1С ещё не знает
+                $order->saveQuietly();
 
-            $orders->push($order);
+                $orders->push($order);
+            }
         }
 
         // Единый порядок для всех каналов. Вне транзакции колбэк выполняется
@@ -74,6 +84,27 @@ class OrderAssembler
         }
 
         return $orders;
+    }
+
+    /**
+     * Разложить строки группы по зафиксированному складу стопки.
+     *
+     * Ключ 0 — строки без склада (регион без стопки / нет наличия в стопке):
+     * php-массив не допускает null-ключей. Порядок подгрупп — порядок первого
+     * появления склада в строках, то есть порядок корзины.
+     *
+     * @param  list<OrderLine>  $lines
+     * @return array<int, list<OrderLine>>
+     */
+    private function splitByWarehouse(array $lines): array
+    {
+        $groups = [];
+
+        foreach ($lines as $line) {
+            $groups[$line->warehouseId ?? 0][] = $line;
+        }
+
+        return $groups;
     }
 
     /**
@@ -177,7 +208,10 @@ class OrderAssembler
             return [$line->price, $base, round((1 - $line->price / $base) * 100, 2)];
         }
 
-        $result = $this->priceService->getPriceResult($line->product, $user);
+        // Склад строки зафиксирован при оформлении (стопка складов) — цена
+        // считается строго по нему. Без склада PriceService сам разрешит
+        // победителя стопки (или возьмёт цену без складского разреза).
+        $result = $this->priceService->getPriceResult($line->product, $user, $line->warehouseId);
         $price = $result->getDisplayPrice();
 
         return [$price, (float) $result->basePrice, (float) $result->discountPercent];

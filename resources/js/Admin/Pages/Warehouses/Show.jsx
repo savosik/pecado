@@ -46,6 +46,7 @@ export default function Show() {
                             <InfoRow label="Название" value={warehouse.name} />
                             <InfoRow label="Внешний ID" value={warehouse.external_id} />
                             <InfoRow label="Тип" value={getWarehouseTypeLabel(warehouse)} />
+                            <InfoRow label="Организация" value={warehouse.organization?.name || 'Не задана — определяет 1С'} />
                             <InfoRow label="Создан" value={warehouse.created_at} />
                             <InfoRow label="Обновлён" value={warehouse.updated_at} />
                         </SimpleGrid>

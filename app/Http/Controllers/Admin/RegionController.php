@@ -59,15 +59,19 @@ class RegionController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'currency_id' => 'nullable|exists:currencies,id',
-            'primary_warehouse_ids' => 'nullable|array',
+            'stock_stack_enabled' => 'boolean',
+            'primary_warehouse_ids' => 'nullable|array|required_if_accepted:stock_stack_enabled',
             'primary_warehouse_ids.*' => 'exists:warehouses,id',
             'preorder_warehouse_ids' => 'nullable|array',
             'preorder_warehouse_ids.*' => 'exists:warehouses,id',
+        ], [
+            'primary_warehouse_ids.required_if_accepted' => 'Для режима стопки нужен хотя бы один склад наличия.',
         ]);
 
         $region = Region::create([
             'name' => $validated['name'],
             'currency_id' => $validated['currency_id'] ?? null,
+            'stock_stack_enabled' => $validated['stock_stack_enabled'] ?? false,
         ]);
 
         $this->syncWarehouses($region, $request->input('primary_warehouse_ids', []), 'primary');
@@ -93,7 +97,8 @@ class RegionController extends Controller
                     'name' => $region->currency->name,
                     'symbol' => $region->currency->symbol,
                 ] : null,
-                'primary_warehouses' => $region->primaryWarehouses->map(fn ($w) => ['id' => $w->id, 'name' => $w->name])->toArray(),
+                'stock_stack_enabled' => $region->stock_stack_enabled,
+                'primary_warehouses' => $region->primaryWarehouses->map(fn ($w) => ['id' => $w->id, 'name' => $w->name, 'priority' => $w->pivot->priority])->toArray(),
                 'preorder_warehouses' => $region->preorderWarehouses->map(fn ($w) => ['id' => $w->id, 'name' => $w->name])->toArray(),
                 'created_at' => $region->created_at?->format('d.m.Y H:i'),
                 'updated_at' => $region->updated_at?->format('d.m.Y H:i'),
@@ -123,15 +128,19 @@ class RegionController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'currency_id' => 'nullable|exists:currencies,id',
-            'primary_warehouse_ids' => 'nullable|array',
+            'stock_stack_enabled' => 'boolean',
+            'primary_warehouse_ids' => 'nullable|array|required_if_accepted:stock_stack_enabled',
             'primary_warehouse_ids.*' => 'exists:warehouses,id',
             'preorder_warehouse_ids' => 'nullable|array',
             'preorder_warehouse_ids.*' => 'exists:warehouses,id',
+        ], [
+            'primary_warehouse_ids.required_if_accepted' => 'Для режима стопки нужен хотя бы один склад наличия.',
         ]);
 
         $region->update([
             'name' => $validated['name'],
             'currency_id' => $validated['currency_id'] ?? null,
+            'stock_stack_enabled' => $validated['stock_stack_enabled'] ?? false,
         ]);
 
         $this->syncWarehouses($region, $request->input('primary_warehouse_ids', []), 'primary');
@@ -167,10 +176,20 @@ class RegionController extends Controller
                 ->detach($idsToDetach);
         }
 
-        // Attach new ones with the type
+        // Attach new ones with the type.
+        // Для primary-складов порядок массива = позиция в стопке региона (1 — верхний);
+        // приоритет хранится всегда, а действует только при включённом stock_stack_enabled.
         if (! empty($warehouseIds)) {
+            $attach = [];
+            foreach (array_values($warehouseIds) as $index => $warehouseId) {
+                $attach[$warehouseId] = [
+                    'type' => $type,
+                    'priority' => $type === 'primary' ? $index + 1 : null,
+                ];
+            }
+
             $region->belongsToMany(Warehouse::class, 'region_warehouse')
-                ->attach($warehouseIds, ['type' => $type]);
+                ->attach($attach);
         }
     }
 }

@@ -43,6 +43,31 @@ trait ResolvesDocumentOrganization
     }
 
     /**
+     * Режим стопки складов: сайт зафиксировал склад при оформлении, а 1С
+     * провела документ с другого. Заказ не трогаем (факт проведения
+     * авторитетен), но расхождение — сигнал о рассинхронизации остатков
+     * или о невыполненной договорённости «проводить строго по указанному».
+     *
+     * @param  array<string, int|null>  $organizationFields
+     */
+    protected function warnOnAssignedWarehouseMismatch(\App\Models\Order $order, array $organizationFields, string $context): void
+    {
+        $postedWarehouseId = $organizationFields['warehouse_id'] ?? null;
+
+        if ($order->assigned_warehouse_id === null || $postedWarehouseId === null) {
+            return;
+        }
+
+        if ((int) $postedWarehouseId !== (int) $order->assigned_warehouse_id) {
+            Log::warning($context.': 1С провела заказ с другого склада, чем зафиксировал сайт (стопка складов)', [
+                'order_uuid' => $order->uuid,
+                'assigned_warehouse_id' => $order->assigned_warehouse_id,
+                'posted_warehouse_id' => $postedWarehouseId,
+            ]);
+        }
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      * @return int|null|false `false` — поля в payload нет, значение не трогаем
      */

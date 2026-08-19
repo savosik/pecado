@@ -45,4 +45,33 @@ interface StockServiceInterface
      * @return array<int, int>
      */
     public function getPreorderStockMap(iterable $products, ?User $user = null): array;
+
+    /**
+     * Вариант getStock-карт по голым product_id — для товаров из кеша (главная,
+     * подборки), где моделей нет. Отдаёт обе карты одним запросом.
+     *
+     * @param  list<int>  $productIds
+     * @return array{available: array<int, int>, preorder: array<int, int>}
+     */
+    public function getStockMapsByIds(array $productIds, ?User $user = null): array;
+
+    /**
+     * Склады региона пользователя. primary упорядочен по позиции в стопке
+     * (для регионов без стопки — стабильный порядок по id), stack — включён
+     * ли режим стопки.
+     *
+     * @return array{primary: list<int>, preorder: list<int>, stack: bool}
+     */
+    public function regionWarehouseIds(?User $user = null): array;
+
+    /**
+     * Карта выигравших складов в режиме стопки складов региона:
+     * product_id → warehouse_id склада, чей остаток действует для товара
+     * (null — нет в наличии ни на одном складе стопки). Для регионов без
+     * стопки все значения null.
+     *
+     * @param  list<int>  $productIds
+     * @return array<int, int|null>
+     */
+    public function getWinningWarehouseMap(array $productIds, ?User $user = null): array;
 }

@@ -97,6 +97,10 @@ class CheckoutController extends Controller
                 'name' => $cart->name,
             ],
             'instockItems' => $instockItems,
+            // Режим стопки складов: строки наличия сгруппированы по складу-
+            // победителю — каждая группа уедет отдельным заказом. Для регионов
+            // без стопки — одна группа без названия склада.
+            'instockGroups' => $this->buildInstockGroups($instockItems, $user),
             'preorderItems' => $preorderItems,
             'defectItems' => $defectItems,
             'promoItems' => $promoItems,
@@ -120,6 +124,63 @@ class CheckoutController extends Controller
                 'label' => $c->label(),
             ]),
         ]);
+    }
+
+    /**
+     * Группы строк наличия по складу-победителю стопки региона.
+     *
+     * Порядок групп — порядок стопки (сверху вниз); строки без склада
+     * (регион без стопки) — одной группой без названия. Группировка
+     * информационная, авторитетная фиксация склада — в CheckoutService
+     * внутри транзакции оформления.
+     *
+     * @param  array<int, array<string, mixed>>  $instockItems
+     * @return list<array{warehouse_id: int|null, warehouse_name: string|null, items: array, totals: array}>
+     */
+    private function buildInstockGroups(array $instockItems, User $user): array
+    {
+        if ($instockItems === []) {
+            return [];
+        }
+
+        $productIds = array_values(array_unique(array_map(
+            static fn (array $it) => (int) ($it['product']['id'] ?? 0),
+            $instockItems,
+        )));
+
+        $winnerMap = $this->stockService->getWinningWarehouseMap($productIds, $user);
+
+        $warehouseIds = array_values(array_unique(array_filter($winnerMap)));
+        $names = $warehouseIds === []
+            ? collect()
+            : \App\Models\Warehouse::whereIn('id', $warehouseIds)->pluck('name', 'id');
+
+        $groups = [];
+        foreach ($instockItems as $item) {
+            $warehouseId = $winnerMap[(int) ($item['product']['id'] ?? 0)] ?? null;
+            $key = $warehouseId ?? 0;
+
+            if (! isset($groups[$key])) {
+                $groups[$key] = [
+                    'warehouse_id' => $warehouseId,
+                    'warehouse_name' => $warehouseId !== null ? ($names[$warehouseId] ?? null) : null,
+                    'items' => [],
+                ];
+            }
+
+            $groups[$key]['items'][] = $item;
+        }
+
+        // Порядок групп = порядок стопки региона; группа без склада — в конце.
+        $stackOrder = array_flip($this->stockService->regionWarehouseIds($user)['primary'] ?? []);
+        uksort($groups, static fn ($a, $b) => ($a === 0 ? PHP_INT_MAX : ($stackOrder[$a] ?? PHP_INT_MAX - 1))
+            <=> ($b === 0 ? PHP_INT_MAX : ($stackOrder[$b] ?? PHP_INT_MAX - 1)));
+
+        foreach ($groups as &$group) {
+            $group['totals'] = $this->groupTotals($group['items']);
+        }
+
+        return array_values($groups);
     }
 
     /**

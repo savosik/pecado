@@ -5,14 +5,16 @@ import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { FormField } from "@/Admin/Components/FormField";
 import { FormActions } from "@/Admin/Components/FormActions";
+import { SelectRelation } from "@/Admin/Components/SelectRelation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Text } from "@chakra-ui/react";
 import { toaster } from "@/components/ui/toaster";
 
-const WarehousesCreate = () => {
+const WarehousesCreate = ({ organizations = [] }) => {
     const { data, setData, post, processing, errors , transform } = useForm({
         name: "",
         external_id: "",
+        organization_id: "",
         is_defect: false,
         is_promo_sample: false,
     });
@@ -66,6 +68,21 @@ const WarehousesCreate = () => {
                                     placeholder="ID во внешней системе (опционально)"
                                 />
                             </FormField>
+
+                            <SelectRelation
+                                label="Организация"
+                                value={data.organization_id}
+                                onChange={(value) => setData('organization_id', value)}
+                                options={[
+                                    { value: '', label: 'Не задана — определяет 1С' },
+                                    ...organizations.map((o) => ({ value: o.id, label: o.name })),
+                                ]}
+                                placeholder="Выберите организацию"
+                                error={errors.organization_id}
+                            />
+                            <Text fontSize="xs" color="fg.muted" mt={-2}>
+                                Наше юрлицо, торгующее с этого склада. Справочно на сайте; в 1С передаётся только после включения на сервере.
+                            </Text>
 
                             <FormField label="Склад некондиции" error={errors.is_defect}>
                                 <Checkbox

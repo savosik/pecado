@@ -113,6 +113,7 @@ class Order extends Model implements HasMedia
         'company_id',
         'organization_id',
         'warehouse_id',
+        'assigned_warehouse_id',
         'cart_id',
         'checkout_uuid',
         'status',
@@ -233,6 +234,18 @@ class Order extends Model implements HasMedia
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
+    }
+
+    /**
+     * Склад, зафиксированный сайтом при оформлении (режим стопки складов
+     * региона). Заполняет только сайт; 1С это поле не присылает и roundtrip
+     * его не затирает. NULL — регион без стопки.
+     *
+     * @return BelongsTo<Warehouse, $this>
+     */
+    public function assignedWarehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class, 'assigned_warehouse_id');
     }
 
     public function cart(): BelongsTo

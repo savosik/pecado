@@ -6,12 +6,14 @@ import { PageHeader } from "@/Admin/Components/PageHeader";
 import { FormField } from "@/Admin/Components/FormField";
 import { FormActions } from "@/Admin/Components/FormActions";
 import { SelectRelation } from "@/Admin/Components/SelectRelation";
+import { WarehouseStackEditor } from "@/Admin/Components/WarehouseStackEditor";
 import { toaster } from "@/components/ui/toaster";
 
 const RegionsCreate = ({ warehouses, currencies }) => {
     const { data, setData, post, processing, errors , transform } = useForm({
         name: "",
         currency_id: "",
+        stock_stack_enabled: false,
         primary_warehouse_ids: [],
         preorder_warehouse_ids: [],
     });
@@ -82,6 +84,14 @@ const RegionsCreate = ({ warehouses, currencies }) => {
                                 multiple
                                 error={errors.primary_warehouse_ids}
                                 placeholder="Выберите основные склады"
+                            />
+
+                            <WarehouseStackEditor
+                                enabled={data.stock_stack_enabled}
+                                onToggle={(value) => setData("stock_stack_enabled", value)}
+                                warehouseIds={data.primary_warehouse_ids}
+                                warehouses={warehouses}
+                                onReorder={(ids) => setData("primary_warehouse_ids", ids)}
                             />
 
                             <SelectRelation

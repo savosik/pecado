@@ -112,6 +112,15 @@ class CheckoutService implements CheckoutServiceInterface
             $preorderCartItems = $cart->items->filter(fn ($item) => $item->item_type === 'preorder')->values();
             $defectCartItems = $cart->items->filter(fn ($item) => $item->item_type === 'defect')->values();
 
+            // Режим стопки складов: склад строки фиксируется здесь, внутри
+            // транзакции, а не при добавлении в корзину — между добавлением
+            // и оформлением остатки могли уехать. Для регионов без стопки
+            // карта — null-ы, разбиения по складам не будет.
+            $winnerMap = $this->stockService->getWinningWarehouseMap(
+                $inStockCartItems->pluck('product_id')->map(fn ($id) => (int) $id)->all(),
+                $user,
+            );
+
             $warehouseComments = [];
 
             // Кладовщик собирает по печатному документу 1С и в WMS заходит редко —
@@ -145,7 +154,7 @@ class CheckoutService implements CheckoutServiceInterface
                 company: $company,
                 deliveryMethod: $deliveryMethod,
                 groups: [
-                    OrderType::ORDER->value => $this->linesFromCart($inStockCartItems),
+                    OrderType::ORDER->value => $this->linesFromCart($inStockCartItems, $winnerMap),
                     OrderType::PREORDER->value => $this->linesFromCart($preorderCartItems),
                     OrderType::DEFECT->value => $this->defectLinesFromCart($defectCartItems),
                     OrderType::PROMO->value => $promoGroups[PromoKind::ACCOUNTABLE->value],
@@ -265,13 +274,21 @@ class CheckoutService implements CheckoutServiceInterface
     /**
      * Обычные строки корзины: цену считает сборщик по прайсу клиента.
      *
+     * $winnerMap (product_id → warehouse_id победителя стопки) передаётся
+     * только для строк наличия — предзаказ режим стопки не затрагивает.
+     *
      * @param  Collection<int, CartItem>  $cartItems
+     * @param  array<int, int|null>|null  $winnerMap
      * @return list<OrderLine>
      */
-    private function linesFromCart(Collection $cartItems): array
+    private function linesFromCart(Collection $cartItems, ?array $winnerMap = null): array
     {
         return $cartItems
-            ->map(fn (CartItem $item) => new OrderLine($item->product, $item->quantity))
+            ->map(fn (CartItem $item) => new OrderLine(
+                $item->product,
+                $item->quantity,
+                warehouseId: $winnerMap[$item->product_id] ?? null,
+            ))
             ->all();
     }
 

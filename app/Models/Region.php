@@ -39,6 +39,11 @@ class Region extends Model
     protected $fillable = [
         'name',
         'currency_id',
+        'stock_stack_enabled',
+    ];
+
+    protected $casts = [
+        'stock_stack_enabled' => 'boolean',
     ];
 
     /**
@@ -59,12 +64,25 @@ class Region extends Model
 
     /**
      * Get the primary warehouses for the region.
+     * Порядок: по позиции в стопке (NULL — в конце), затем по id — стабилен
+     * и для регионов без стопки.
      */
     public function primaryWarehouses(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Warehouse::class, 'region_warehouse')
             ->wherePivot('type', 'primary')
-            ->withTimestamps();
+            ->withPivot('priority')
+            ->withTimestamps()
+            ->orderByRaw('region_warehouse.priority IS NULL, region_warehouse.priority, warehouses.id');
+    }
+
+    /**
+     * Регион работает в режиме стопки складов (строгое замещение остатков и цен
+     * по приоритету вместо суммирования).
+     */
+    public function usesWarehouseStack(): bool
+    {
+        return (bool) $this->stock_stack_enabled;
     }
 
     /**

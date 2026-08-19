@@ -33,10 +33,15 @@ interface PriceServiceInterface
      * Получить карту PriceResult для коллекции товаров одним батч-запросом.
      * Ключ массива — product_id, значение — PriceResult с учётом индивидуальной цены пользователя.
      *
+     * $warehouseMap (product_id → warehouse_id склада-победителя стопки региона)
+     * по умолчанию резолвится автоматически через StockService; передавайте явно,
+     * только если победители уже зафиксированы (например, в заказе).
+     *
      * @param  iterable<Product>  $products
+     * @param  array<int, int|null>|null  $warehouseMap
      * @return array<int, PriceResult>
      */
-    public function getPriceMapForProducts(iterable $products, ?User $user = null, ?int $warehouseId = null): array;
+    public function getPriceMapForProducts(iterable $products, ?User $user = null, ?array $warehouseMap = null): array;
 
     /**
      * Get the price of the product in a specific currency.

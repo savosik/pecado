@@ -232,6 +232,8 @@ class HandleOrderCreated
             // Обновляем сумму заказа
             $order->updateQuietly(['total_amount' => $totalAmount]);
 
+            $this->warnOnAssignedWarehouseMismatch($order, $organizationFields, 'HandleOrderCreated');
+
             // v15.16.0: предоплата по заказу могла приехать раньше самого заказа —
             // платежи идут своей очередью. Пересчитываем агрегат от строк расшифровки.
             $this->refreshOrderPrepayment($order);

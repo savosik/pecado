@@ -64,6 +64,8 @@ class IndividualPrice extends Model
 
     /**
      * Получить индивидуальную цену для конкретного партнёра и товара.
+     * Без склада — детерминированно минимальный warehouse_id (то же правило,
+     * что в IndividualPriceProxy::findPrice / loadPriceMap).
      */
     public static function findPrice(int $partnerId, int $productId, ?int $warehouseId = null): ?self
     {
@@ -72,6 +74,8 @@ class IndividualPrice extends Model
 
         if ($warehouseId) {
             $query->where('warehouse_id', $warehouseId);
+        } else {
+            $query->orderBy('warehouse_id');
         }
 
         return $query->first();

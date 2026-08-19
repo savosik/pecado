@@ -113,9 +113,12 @@ class HandleOrderUpdated
         // v15.8.0: организация и склад проведения. Отсутствие поля не сбрасывает
         // сохранённое значение; смена организации попадёт в OrderChangeLog ниже —
         // менеджер должен видеть, что документ переехал между юрлицами.
-        foreach ($this->resolveOrganizationFields($payload, 'HandleOrderUpdated') as $field => $value) {
+        $organizationFields = $this->resolveOrganizationFields($payload, 'HandleOrderUpdated');
+        foreach ($organizationFields as $field => $value) {
             $order->{$field} = $value;
         }
+
+        $this->warnOnAssignedWarehouseMismatch($order, $organizationFields, 'HandleOrderUpdated');
 
         $order->fromErp = true;
 

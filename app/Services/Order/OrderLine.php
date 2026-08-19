@@ -13,6 +13,10 @@ use App\Models\Product;
  *
  * Второй случай — уценка и промо: цена зафиксирована (партией или наградой акции),
  * и пересчитывать её по прайсу нельзя.
+ *
+ * `$warehouseId` — склад-победитель стопки региона, зафиксированный при
+ * оформлении (только для строк наличия в регионах со стопкой). Сборщик
+ * разбивает группу по нему на отдельные заказы; null — без разбиения.
  */
 final readonly class OrderLine
 {
@@ -24,6 +28,7 @@ final readonly class OrderLine
         public ?string $defectDescription = null,
         public ?int $promotionRuleId = null,
         public ?string $promoKind = null,
+        public ?int $warehouseId = null,
     ) {}
 
     /**

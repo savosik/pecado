@@ -352,8 +352,13 @@ class ProductQueryService
             return collect();
         }
 
+        // Регион со стопкой складов: действует цена склада-победителя по остаткам
+        // (для регионов без стопки карта — нули-null, поведение прежнее).
+        $warehouseMap = app(\App\Contracts\Stock\StockServiceInterface::class)
+            ->getWinningWarehouseMap($productIds, $user);
+
         // Запрос по числовым ID — в 3-5x быстрее чем по UUID
-        return \App\Services\Pricing\IndividualPriceProxy::loadPriceMap($user->id, $productIds);
+        return \App\Services\Pricing\IndividualPriceProxy::loadPriceMap($user->id, $productIds, $warehouseMap);
     }
 
     /**

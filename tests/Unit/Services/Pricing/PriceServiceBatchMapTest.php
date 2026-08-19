@@ -118,9 +118,14 @@ class PriceServiceBatchMapTest extends TestCase
             }
         }
 
+        // Connection::listen() регистрирует колбэк на общий диспетчер событий,
+        // поэтому без фильтра сюда попадали бы запросы всех соединений
+        // (например, резолв региона в основной БД) — считаем только prices.
         $queryCount = 0;
-        DB::connection('prices')->listen(function () use (&$queryCount) {
-            $queryCount++;
+        DB::connection('prices')->listen(function ($query) use (&$queryCount) {
+            if ($query->connectionName === 'prices') {
+                $queryCount++;
+            }
         });
 
         $this->makeService()->getPriceMapForProducts($products, $user);

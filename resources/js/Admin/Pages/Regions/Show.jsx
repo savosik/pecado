@@ -44,6 +44,8 @@ export default function Show() {
                             <InfoRow label="ID" value={region.id?.toString()} />
                             <InfoRow label="Название" value={region.name} />
                             <InfoRow label="Валюта" value={region.currency ? `${region.currency.code} — ${region.currency.name} (${region.currency.symbol})` : null} />
+                            <InfoRow label="Режим стопки складов" value={region.stock_stack_enabled ? 'Включён' : 'Выключен'} />
+
                             <InfoRow label="Создан" value={region.created_at} />
                             <InfoRow label="Обновлён" value={region.updated_at} />
                         </SimpleGrid>
@@ -53,12 +55,16 @@ export default function Show() {
                 {region.primary_warehouses?.length > 0 && (
                     <Card.Root>
                         <Card.Header>
-                            <Text fontWeight="semibold" fontSize="lg">Основные склады</Text>
+                            <Text fontWeight="semibold" fontSize="lg">
+                                {region.stock_stack_enabled ? 'Основные склады — стопка (сверху вниз)' : 'Основные склады'}
+                            </Text>
                         </Card.Header>
                         <Card.Body>
                             <HStack gap={2} flexWrap="wrap">
-                                {region.primary_warehouses.map((w) => (
-                                    <Badge key={w.id} variant="outline">{w.name}</Badge>
+                                {region.primary_warehouses.map((w, index) => (
+                                    <Badge key={w.id} variant="outline">
+                                        {region.stock_stack_enabled ? `${index + 1}. ${w.name}` : w.name}
+                                    </Badge>
                                 ))}
                             </HStack>
                         </Card.Body>
