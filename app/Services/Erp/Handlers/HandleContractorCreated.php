@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Log;
 class HandleContractorCreated
 {
     use NormalizesCountry;
+    use RelinksOrphanSettlementEntries;
 
     public function handle(array $payload): void
     {
@@ -140,6 +141,8 @@ class HandleContractorCreated
                 }
             });
         }
+
+        $this->relinkOrphanSettlementEntries($company, 'contractor.created');
 
         $action = $company->wasRecentlyCreated ? 'создан' : 'обновлён';
 

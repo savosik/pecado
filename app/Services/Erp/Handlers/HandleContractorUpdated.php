@@ -31,6 +31,7 @@ use Illuminate\Support\Facades\Log;
 class HandleContractorUpdated
 {
     use NormalizesCountry;
+    use RelinksOrphanSettlementEntries;
 
     public function handle(array $payload): void
     {
@@ -97,6 +98,8 @@ class HandleContractorUpdated
         $rebindUserId = ($user && $company->user_id !== $user->id) ? $user->id : null;
 
         $this->updateCompany($company, $payload, $bindErpId, $rebindUserId);
+
+        $this->relinkOrphanSettlementEntries($company->refresh(), 'contractor.updated');
 
         Log::info('contractor.updated: контрагент обновлён', [
             'company_id' => $company->id,
