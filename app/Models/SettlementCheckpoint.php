@@ -47,6 +47,7 @@ class SettlementCheckpoint extends Model
 
     protected $fillable = [
         'user_id',
+        'partner_uuid',
         'company_id',
         'organization_id',
         'contractor_uuid',

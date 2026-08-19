@@ -465,4 +465,42 @@ class SettlementLedgerIntegrationTest extends TestCase
         // Контрольная точка — не движение: в ленту она попасть не должна.
         $this->assertSame(0, SettlementEntry::query()->count());
     }
+
+    #[Test]
+    public function точки_разных_партнёров_по_одному_контрагенту_не_затирают_друг_друга(): void
+    {
+        // Круг 11: один контрагент бывает привязан к двум партнёрам 1С, и точка
+        // приходит на каждого своя. Раньше вторая затирала первую, и сверка
+        // ловила расхождение на живых данных (Войдаков Д.Е.).
+        $message = [
+            'event' => 'settlement.checkpoint',
+            'message_id' => 'msg-checkpoint-partner-1',
+            'as_of_date' => '2026-08-19',
+            'amount' => -13647.75,
+            'contractor_uuid' => self::CONTRACTOR_UUID,
+            'organization_uuid' => self::ORGANIZATION_UUID,
+            'partner_uuid' => '00000000-0000-4000-a000-0000000000a1',
+            'currency_code' => 'RUB',
+        ];
+
+        $this->dispatch($message);
+        $this->dispatch([
+            'message_id' => 'msg-checkpoint-partner-2',
+            'amount' => -4955.00,
+            'partner_uuid' => '00000000-0000-4000-a000-0000000000a2',
+        ] + $message);
+
+        $checkpoints = SettlementCheckpoint::query()
+            ->whereDate('as_of_date', '2026-08-19')
+            ->get();
+
+        $this->assertCount(2, $checkpoints);
+        $this->assertEqualsWithDelta(-18602.75, (float) $checkpoints->sum('amount'), 0.01);
+
+        // Повтор того же партнёра по-прежнему обновляет, а не добавляет третью строку.
+        $this->dispatch(['message_id' => 'msg-checkpoint-partner-3', 'amount' => -5000.00,
+            'partner_uuid' => '00000000-0000-4000-a000-0000000000a2'] + $message);
+
+        $this->assertSame(2, SettlementCheckpoint::query()->whereDate('as_of_date', '2026-08-19')->count());
+    }
 }

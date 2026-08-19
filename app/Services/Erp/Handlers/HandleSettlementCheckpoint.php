@@ -56,9 +56,11 @@ class HandleSettlementCheckpoint
         // Пустая строка вместо NULL: уникальный индекс MySQL считает NULL-ы
         // различными, и точка без организации задвоилась бы при повторе.
         $organizationUuid = $this->stringOrNull($payload['organization_uuid'] ?? null) ?? '';
+        $partnerUuid = $this->stringOrNull($payload['partner_uuid'] ?? null) ?? '';
 
         $keys = [
             'contractor_uuid' => $contractorUuid,
+            'partner_uuid' => $partnerUuid,
             'organization_uuid' => $organizationUuid,
             'currency_code' => $currency,
             'as_of_date' => $asOfDate,
@@ -70,6 +72,7 @@ class HandleSettlementCheckpoint
         // бы в уникальный индекс — на MySQL всё работало бы, а тесты падали.
         $checkpoint = SettlementCheckpoint::query()
             ->where('contractor_uuid', $contractorUuid)
+            ->where('partner_uuid', $partnerUuid)
             ->where('organization_uuid', $organizationUuid)
             ->where('currency_code', $currency)
             ->whereDate('as_of_date', $asOfDate)
