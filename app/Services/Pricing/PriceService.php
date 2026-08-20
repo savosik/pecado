@@ -91,6 +91,10 @@ class PriceService implements PriceServiceInterface
      * Без user или без erp_id — все товары без скидки. Если loadPriceMap отдала пусто
      * (нет индивидуальных цен или prices DB недоступна) — все товары без скидки.
      *
+     * $warehouseId фильтрует цены по складу так же, как в getPriceResult (раньше
+     * параметр принимался, но в запрос не доходил); без него на товар с ценами
+     * на нескольких складах действует минимальный warehouse_id.
+     *
      * @param  iterable<Product>  $products
      * @return array<int, PriceResult>
      */
@@ -108,7 +112,7 @@ class PriceService implements PriceServiceInterface
         }
 
         $priceMap = ($user && $user->erp_id)
-            ? IndividualPriceProxy::loadPriceMap($user->id, $productIds)
+            ? IndividualPriceProxy::loadPriceMap($user->id, $productIds, $warehouseId)
             : collect();
 
         $result = [];

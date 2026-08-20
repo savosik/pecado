@@ -17,6 +17,11 @@ class IndividualPriceProxy
     /**
      * Получить индивидуальную цену партнёра по товару (и складу).
      * При недоступности prices DB — возвращает null (базовая цена).
+     *
+     * С указанным складом — строгий фильтр по нему. Без склада, когда у товара
+     * есть цены на нескольких складах, — детерминированное правило «минимальный
+     * warehouse_id»: то же, что в loadPriceMap. Иначе карточка товара и каталог
+     * показывали клиенту разные цены на один товар.
      */
     public static function findPrice(int $partnerId, int $productId, ?int $warehouseId = null): ?IndividualPrice
     {
@@ -26,6 +31,8 @@ class IndividualPriceProxy
 
             if ($warehouseId) {
                 $query->where('warehouse_id', $warehouseId);
+            } else {
+                $query->orderBy('warehouse_id');
             }
 
             return $query->first();
@@ -60,23 +67,47 @@ class IndividualPriceProxy
      * Загрузить карту индивидуальных цен [product_id => price] для партнёра.
      * При недоступности prices DB — возвращает пустую коллекцию (базовые цены).
      *
+     * Цены приходят из 1С в разрезе складов, поэтому на один товар их может быть
+     * несколько. С указанным складом — строгий фильтр по нему (нет строки → товара
+     * нет в карте, действует базовая цена). Без склада — «минимальный warehouse_id»,
+     * то же правило, что в findPrice: раньше mapWithKeys оставлял произвольную
+     * строку набора, и каталог мог показать не ту цену, что карточка товара.
+     *
      * @param  int[]  $productIds
      * @return Collection<int, float>
      */
-    public static function loadPriceMap(int $partnerId, array $productIds): Collection
+    public static function loadPriceMap(int $partnerId, array $productIds, ?int $warehouseId = null): Collection
     {
         if (empty($productIds)) {
             return collect();
         }
 
         try {
-            return DB::connection('prices')
+            $query = DB::connection('prices')
                 ->table('individual_prices')
                 ->where('partner_id', $partnerId)
-                ->whereIn('product_id', $productIds)
-                ->select('product_id', 'price')
-                ->get()
-                ->mapWithKeys(fn ($row) => [(int) $row->product_id => (float) $row->price]);
+                ->whereIn('product_id', $productIds);
+
+            if ($warehouseId) {
+                $query->where('warehouse_id', $warehouseId);
+            }
+
+            $rows = $query->select('product_id', 'warehouse_id', 'price')->get();
+
+            $chosen = [];
+            $chosenWarehouse = [];
+
+            foreach ($rows as $row) {
+                $productId = (int) $row->product_id;
+                $rowWarehouseId = (int) $row->warehouse_id;
+
+                if (! isset($chosenWarehouse[$productId]) || $rowWarehouseId < $chosenWarehouse[$productId]) {
+                    $chosenWarehouse[$productId] = $rowWarehouseId;
+                    $chosen[$productId] = (float) $row->price;
+                }
+            }
+
+            return collect($chosen);
         } catch (\Illuminate\Database\QueryException $e) {
             Log::warning('IndividualPriceProxy: prices DB недоступна при загрузке карты цен', [
                 'error' => $e->getMessage(),
