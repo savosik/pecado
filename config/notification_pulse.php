@@ -1,6 +1,7 @@
 <?php
 
 use App\Notifications\Pulse\Events\Documents;
+use App\Notifications\Pulse\Events\Finance;
 use App\Notifications\Pulse\Events\Orders;
 
 return [
@@ -89,6 +90,11 @@ return [
 
         Documents\DocumentPublishedEvent::class,
         Documents\DocumentDeletedEvent::class,
+
+        Finance\PaymentDueSoonEvent::class,
+        Finance\OverdueStartedEvent::class,
+        Finance\OverdueGrewEvent::class,
+        Finance\OverdueClearedEvent::class,
     ],
 
     /*

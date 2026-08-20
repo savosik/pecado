@@ -41,6 +41,10 @@ Schedule::command('promo:rebuild-rule-products')->dailyAt('02:40')->withoutOverl
 Schedule::command('crm:lifecycle-hints')->dailyAt('06:10')->withoutOverlapping(); // подсказки по жизненному статусу клиентов — статусы НЕ меняет
 Schedule::command('crm:back-in-stock-drafts')->dailyAt('07:20')->withoutOverlapping(); // черновики писем о вернувшихся в продажу товарах; ничего не отправляет
 Schedule::command('crm:tasks-recur')->dailyAt('05:40')->withoutOverlapping(); // задачи по расписанию: материализация на сутки вперёд, до утренних напоминаний
+// Финансовые поводы для пульта уведомлений: срок оплаты, просрочка, погашение.
+// Плановый обход, а не реакция на balance.updated: 1С шлёт снимок баланса часто
+// и не по порядку, и письмо на каждый пересчёт было бы шумом.
+Schedule::command('notifications:finance-scan')->dailyAt('07:00')->withoutOverlapping();
 Schedule::command('crm:tasks-remind')->dailyAt('08:30')->withoutOverlapping(); // напоминания о завтрашних дедлайнах и о просрочке за сутки (за флагом MAIL_FEATURE_CRM_TASKS)
 Schedule::command('shortages:daily-notice')->weekdays()->at('17:00')->withoutOverlapping(); // вечерняя сводка неразнесённых недоборов менеджеру (за флагом MAIL_FEATURE_SHORTAGE_NOTICE); в выходные склад не собирает
 Schedule::command('crm:tasks-push')->everyTenMinutes()->withoutOverlapping(); // push-напоминания подписанным браузерам (за флагом CRM_PUSH_ENABLED; без VAPID молчит)

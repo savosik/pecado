@@ -112,16 +112,41 @@ class NotificationEventRegistry
     /**
      * Поля, доступные условиям правила с таким event_key.
      *
-     * У маски полей конкретного события быть не может — остаются только общие.
+     * Для маски раздела берутся поля всех его событий: правило «всё по этому
+     * контрагенту» должно уметь условие вроде «просрочка больше 60 дней».
+     * У событий, где такого поля нет, условие просто не совпадёт — это честнее,
+     * чем запрещать маску вместе с условиями.
      *
      * @return array<string, FieldSpec>
      */
     public function fieldsFor(string $key): array
     {
         $common = AbstractNotificationEvent::commonFields();
+
         $event = $this->get($key);
 
-        return $event === null ? $common : array_merge($common, $event->fields());
+        if ($event !== null) {
+            return array_merge($common, $event->fields());
+        }
+
+        if ($key === '*') {
+            return $common;
+        }
+
+        if (! str_ends_with($key, '.*')) {
+            return $common;
+        }
+
+        $domain = substr($key, 0, -2);
+        $fields = $common;
+
+        foreach ($this->all() as $candidate) {
+            if ($candidate->domain() === $domain) {
+                $fields = array_merge($fields, $candidate->fields());
+            }
+        }
+
+        return $fields;
     }
 
     /**

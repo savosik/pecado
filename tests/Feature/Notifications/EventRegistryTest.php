@@ -77,11 +77,26 @@ class EventRegistryTest extends TestCase
     }
 
     #[Test]
-    #[TestDox('У маски доступны только общие поля')]
-    public function mask_exposes_common_fields_only(): void
+    #[TestDox('Маска раздела отдаёт поля всех своих событий')]
+    public function mask_exposes_domain_fields(): void
     {
         $fields = $this->registry->fieldsFor('orders.*');
 
+        // Правило «всё по этому контрагенту» должно уметь условие по полю
+        // конкретного события: у событий без такого поля оно просто не совпадёт,
+        // и это честнее, чем запрещать маску вместе с условиями.
+        $this->assertArrayHasKey('status', $fields, 'поле события статуса');
+        $this->assertArrayHasKey('shortfall_items_count', $fields, 'поле события недобора');
+        $this->assertArrayHasKey('company_tax_id', $fields, 'общее поле сигнала');
+    }
+
+    #[Test]
+    #[TestDox('Маска «все события» отдаёт только общие поля')]
+    public function global_mask_exposes_common_fields_only(): void
+    {
+        $fields = $this->registry->fieldsFor('*');
+
+        // Здесь домена нет вовсе, поэтому полей конкретных событий быть не может
         $this->assertArrayNotHasKey('status', $fields);
         $this->assertArrayHasKey('company_tax_id', $fields);
     }
