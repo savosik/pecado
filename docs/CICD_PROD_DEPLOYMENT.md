@@ -1,6 +1,6 @@
 # CI/CD: Деплой ветки `main` на Production-сервер
 
-> **Статус:** ✅ **Production LIVE** с 2026-05-09. Сайт работает на https://pecado.ru, CI/CD активен (push в main → manual approve в Environment `production` → автодеплой). Self-hosted runner `prod-server` (systemd, uid=1000). Branch Protection для main включена.
+> **Статус:** ✅ **Production LIVE** с 2026-05-09. Сайт работает на https://pecado.ru, CI/CD активен (push в main → тесты и сборка → автодеплой; ручной approve снят 2026-08-20). Self-hosted runner `prod-server` (systemd, uid=1000). Branch Protection для main включена.
 > Prod (`m-s-web`, локальный `10.2.2.101`) — внешний IP `93.94.150.16` (`pecado.ru`). Dev (`m-s-site`, локальный `10.2.2.100`) — свой внешний IP `93.94.150.74` (`dev.pecado.ru`). Оба на стандартных портах `22/80/443/15672`.
 > **Стек:** Laravel 12 · PHP 8.3-FPM · Vite/Node 20 · MySQL 8 (×2: main + prices) · Redis · RabbitMQ 3 · MeiliSearch · MinIO · Supervisor · Docker Compose
 > **Связанные документы:** [PROD_WORKFLOW.md](./PROD_WORKFLOW.md) · [PROD_SERVER_CREDENTIALS.md](./PROD_SERVER_CREDENTIALS.md) · [DEV_SERVER_CREDENTIALS.md](./DEV_SERVER_CREDENTIALS.md) (приостановлен) · [CICD_DEV_DEPLOYMENT.md](./CICD_DEV_DEPLOYMENT.md)
@@ -966,7 +966,7 @@ tail -5 /var/log/pecado-backup.log                          # последний
 4. Создать PR: dev → main
 5. Code review → approve PR → merge
 6. CI: тесты (без fast-lane!) + сборка → ожидание approval в Environment 'production'
-7. Approve в GitHub → деплой на PROD с maintenance mode
+7. Зелёный CI → деплой на PROD с maintenance mode (без подтверждения)
 8. Health check → если упал → revert PR в main → новый деплой = откат
 ```
 
@@ -1054,7 +1054,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml restart app work
 | 🟡 P1 | `docker-compose.prod.yml` | Override-файл с усилением безопасности |
 | 🟡 P1 | `docker/nginx/prod.conf` | Nginx с SSL, security headers, gzip |
 | 🟡 P1 | `deploy-prod.yml` | GitHub Actions workflow |
-| 🟡 P1 | GitHub Environment `production` | Ручной approve |
+| 🟡 P1 | GitHub Environment `production` | Branch policy: деплой только с `main` (ручной approve снят 2026-08-20) |
 | 🟡 P1 | Self-hosted runner prod | Лейбл `prod-server` |
 | ✅ P2 | Бэкапы БД | Ежедневный cron + retention 30 дней. Offsite в Yandex Object Storage (ICE) с 2026-07-16 |
 | 🟢 P2 | Telegram уведомления | Оповещения о деплое |

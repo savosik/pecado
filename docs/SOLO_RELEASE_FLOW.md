@@ -1,7 +1,7 @@
 # Soло-flow: как выкатывать изменения на prod (без PR)
 
 > **Аудитория:** разработчик, работающий один.
-> **Контекст:** PR-flow для соло избыточен. Прод защищён через GitHub Environment `production` (manual approve) + ruleset (block force-push). Этого достаточно — случайно ничего не задеплоится.
+> **Контекст:** PR-flow для соло избыточен. Прод защищён branch policy Environment `production` (деплой только с `main`) + ruleset (block force-push). Ручной approve снят 2026-08-20: единственным ревьюером был сам автор, кнопка ничего не проверяла и лишь тормозила релиз. Цена решения — `push origin dev:main` теперь выкатывает на боевой сайт без окна на отмену.
 > **Связанные документы:** [PROD_WORKFLOW.md](./PROD_WORKFLOW.md), [CICD_PROD_DEPLOYMENT.md](./CICD_PROD_DEPLOYMENT.md), [CICD_DEV_DEPLOYMENT.md](./CICD_DEV_DEPLOYMENT.md).
 
 ---
@@ -31,11 +31,13 @@ git push origin dev:main
 
 1. Открой https://github.com/savosik/pecado/actions
 2. Найди свежий run **«Deploy to Production»**
-3. Жди до **approve gate** (~2–3 мин с `[fast]`, ~5–7 мин без)
-4. Жми **«Start all waiting jobs»** → подтверди deploy в `production`
-5. Ещё ~5 мин — прод обновлён, проверяй на https://pecado.ru
+3. Ждать нечего — сборка, тесты и выкатка идут подряд, без подтверждений
+4. Проверь, что прод реально поднялся: `curl -s -o /dev/null -w '%{http_code}' https://pecado.ru/up` → 200
 
-Total: **~10–15 мин** от push до прода.
+Total: **~10 мин** от push до прода.
+
+> Передумать после `push origin dev:main` можно только успев нажать **Cancel run**
+> в Actions, пока идут сборка и тесты. Дальше — только откатом (см. ниже).
 
 ---
 
@@ -115,7 +117,7 @@ Conventional Commits — обязательно:
 
 | Защита | Где | Что делает |
 |---|---|---|
-| **GitHub Environment `production`** | Settings → Environments | Требует ручной approve перед каждым деплоем |
+| **GitHub Environment `production`** | Settings → Environments | Branch policy: деплоить можно только с ветки `main`. Ручного approve **нет** (снят 2026-08-20) |
 | **Ruleset «main: block force-push & deletion»** | Settings → Rules | Запрещает `git push --force` в main, запрещает удаление ветки |
 | **CI test jobs** | `.github/workflows/deploy-prod.yml` | Деплой не идёт без зелёных Lint & Tests + Build Frontend |
 | **Pre-deploy backup БД** | в workflow | snapshot main + prices DBs в `/media/backups/mysql/pre-deploy/` (отдельный диск `sdb`) — **когда релиз содержит неприменённые миграции или изменённые сидеры**; иначе точка отката это ночной бэкап 03:00 + бинлог (PITR). Форсировать снимок можно маркером `[backup]` в сообщении коммита. Retention: основная БД — 10 последних, цены — 5 последних |
@@ -132,7 +134,7 @@ Conventional Commits — обязательно:
 # В ветке dev (мы всегда там сидим)
 git revert HEAD              # создаст НОВЫЙ коммит, отменяющий последний
 git push origin dev          # CI на dev (быстро, fast-lane по [fast] если только code-revert)
-git push origin dev:main     # CI на main → approve → откат на проде
+git push origin dev:main     # CI на main → откат уезжает на прод автоматически
 ```
 
 `git revert` — это **не** force-push, а обычный новый коммит сверху. История чистая, ruleset не возражает.
@@ -154,7 +156,7 @@ git checkout -b hotfix/critical-bug
 # ... минимальная правка ...
 git add . && git commit -m "fix(scope): срочный фикс"
 git push -u origin hotfix/critical-bug
-# через GitHub UI или gh: PR hotfix/critical-bug → main → merge → CI → approve
+# через GitHub UI или gh: PR hotfix/critical-bug → main → merge → CI → автодеплой
 
 # ВАЖНО: после merge — обязательно слить main обратно в dev,
 # чтобы dev не отстал
@@ -261,7 +263,7 @@ docker exec pecado-app composer analyse
 |---|---|
 | **`Lint & Tests` упал на main** | Скачать лог через `gh run view <id> --log-failed`. Чаще всего — забыл закоммитить миграцию или composer.lock. Фиксим в dev → push → push в main снова. |
 | **`Build Frontend` упал** | Опечатка в JSX, проблема с npm deps. Проверить локально: `docker exec pecado-node npm run build`. |
-| **`Deploy to Production` зависло на approve** | Ты не в Environment `production` reviewers, либо ты не нажал кнопку. Проверь https://github.com/savosik/pecado/settings/environments/production. |
+| **`Deploy to Production` ждёт подтверждения** | Approve снят 2026-08-20 — если run всё же висит, кто-то вернул required reviewers. Проверь https://github.com/savosik/pecado/settings/environments/production. |
 | **`Deploy` упал на rsync** | self-hosted runner offline. Проверь: `ssh ladmin@93.94.150.16 'sudo /home/ladmin/actions-runner/svc.sh status'`. |
 | **`Health Check` упал** | Прод не отдаёт 200. Возможно: контейнеры не поднялись, конфиг nginx сломан, миграция упала. Войти на prod: `docker compose ps` и `docker compose logs app`. |
 
@@ -309,7 +311,7 @@ docker ps | wc -l                # >= 11 контейнеров
 ## Главное запомнить
 
 1. **Сижу на `dev`, не переключаюсь на `main`.** Всё через `dev`.
-2. **`git push origin dev:main` = релиз.** Одна команда. Дальше approve в браузере.
-3. **Прод защищён** Environment'ом и ruleset'ом — случайно ничего не сломается.
+2. **`git push origin dev:main` = релиз.** Одна команда — и через ~10 минут это на боевом сайте, подтверждать нечего.
+3. **Прод защищён** branch policy и ruleset'ом, но не от опечатки в самой команде: `dev:main` выкатывается без спроса.
 4. **Откат = `git revert HEAD && push`**, никаких force-push.
 5. **На сервере по SSH — только чтение.** Правки кода → через git.

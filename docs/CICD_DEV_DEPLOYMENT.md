@@ -480,7 +480,7 @@ main ─────────────────────────
 - [ ] **Telegram/Slack уведомления**: добавить шаг в workflow для нотификаций об успехе/неудаче
 - [ ] **Docker Registry**: публиковать образы в GitHub Container Registry (GHCR) для ускорения деплоя
 - [ ] **Rollback**: хранить последние N версий кода для быстрого отката (`git reset --hard HEAD~1`)
-- [ ] **Prod окружение**: аналогичный workflow для ветки `main` с обязательным approve через GitHub Environments
+- [x] **Prod окружение**: workflow для ветки `main` через GitHub Environments (branch policy «только main»; обязательный approve снят 2026-08-20)
 - [ ] **Кэш Docker layers**: использовать `cache-from` в `docker build` для ускорения сборки образов
 - [ ] **Health checks**: расширить проверку — RabbitMQ, Redis, MeiliSearch доступность
 
