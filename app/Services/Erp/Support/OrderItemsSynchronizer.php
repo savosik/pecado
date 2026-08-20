@@ -3,12 +3,10 @@
 namespace App\Services\Erp\Support;
 
 use App\Enums\PromoKind;
-use App\Events\OrderItemsCancelled;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -65,7 +63,6 @@ class OrderItemsSynchronizer
         [$byLine, $orphans] = $this->indexExisting($existing);
 
         $matchedIds = [];
-        $newlyCancelledIds = [];
         $total = 0.0;
 
         foreach ($rows as $row) {
@@ -77,7 +74,7 @@ class OrderItemsSynchronizer
 
             // Строка стала отменённой этим сообщением: была активной и отменилась,
             // либо появилась сразу отменённой. Уже отменённая повторно не считается —
-            // повторная доставка payload не должна рождать событие.
+            // повторная доставка payload не должна сдвигать дату отмены в журнале.
             $becameCancelled = $row['cancelled'] && ($match === null || ! $match->cancelled);
 
             $links = $this->resolveLinks($row, $match, $linksByProduct);
@@ -100,15 +97,24 @@ class OrderItemsSynchronizer
                 'promo_kind' => $links['promo_kind'],
             ];
 
-            if ($match !== null) {
-                $match->update($fields);
-                $itemId = $match->id;
-            } else {
-                $itemId = $order->items()->create($fields)->id;
+            // Журнал недоборов: дату отмены ставим в момент, когда сайт её увидел —
+            // времени отмены строки в протоколе нет. Возврат строки в работу
+            // (1С сняла признак) стирает и дату, и разметку менеджера: это уже
+            // не недобор, и в журнале ему делать нечего.
+            if ($becameCancelled) {
+                $fields['cancelled_at'] = now();
+            } elseif ($match !== null && $match->cancelled && ! $row['cancelled']) {
+                $fields['cancelled_at'] = null;
+                $fields['cancel_source'] = null;
+                $fields['cancel_source_user_id'] = null;
+                $fields['cancel_source_at'] = null;
+                $fields['cancel_note'] = null;
             }
 
-            if ($becameCancelled) {
-                $newlyCancelledIds[] = $itemId;
+            if ($match !== null) {
+                $match->update($fields);
+            } else {
+                $order->items()->create($fields);
             }
 
             // Отменённая строка хранится и показывается клиенту, но заказ
@@ -119,19 +125,6 @@ class OrderItemsSynchronizer
         }
 
         $this->deleteMissing($order, $existing, $matchedIds);
-
-        if ($newlyCancelledIds !== []) {
-            // После коммита обработчика: слушатели (подборка замен, задача
-            // менеджеру) должны видеть уже сохранённое состояние заказа.
-            $orderId = $order->id;
-            DB::afterCommit(static function () use ($orderId, $newlyCancelledIds) {
-                $order = Order::withTrashed()->find($orderId);
-
-                if ($order !== null) {
-                    OrderItemsCancelled::dispatch($order, $newlyCancelledIds);
-                }
-            });
-        }
 
         return round($total, 2);
     }

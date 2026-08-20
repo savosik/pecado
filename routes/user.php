@@ -26,7 +26,6 @@ use App\Http\Controllers\User\ReturnController;
 use App\Http\Controllers\User\SearchController;
 use App\Http\Controllers\User\ShipmentController;
 use App\Http\Controllers\User\SubscriptionController;
-use App\Http\Controllers\User\SubstitutionOfferController;
 use App\Http\Controllers\User\UserQuestionController;
 use Illuminate\Support\Facades\Route;
 
@@ -141,16 +140,6 @@ Route::prefix('api')->middleware('auth')->group(function () {
 // Публичная отписка по токену из письма (без авторизации).
 Route::get('/subscriptions/unsubscribe/{token}', [SubscriptionController::class, 'unsubscribe'])
     ->name('subscriptions.unsubscribe');
-
-// Замена по заказу с недобором: просмотр — по подписанной ссылке из письма без входа
-// (`signed:login` игнорирует ?login=1 — служебный параметр редиректа на вход),
-// согласование — только под авторизацией владельца заказа.
-Route::get('/substitutions/{offer}', [SubstitutionOfferController::class, 'show'])
-    ->name('substitutions.show')
-    ->middleware('signed:login');
-Route::post('/substitutions/{offer}/confirm', [SubstitutionOfferController::class, 'confirm'])
-    ->name('substitutions.confirm')
-    ->middleware('auth');
 
 Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function () {
     Route::get('/dashboard', [CabinetController::class, 'dashboard'])->name('dashboard');

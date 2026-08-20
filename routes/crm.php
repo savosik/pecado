@@ -523,7 +523,6 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     });
 
     Route::middleware('permission:crm-analytics.view')->group(function () {
-        Route::get('/analytics/shortages', [ShortageController::class, 'analytics'])->name('analytics.shortages');
         Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
         Route::get('/analytics/data', [AnalyticsController::class, 'data'])->name('analytics.data');
         Route::get('/analytics/abc-xyz', [AnalyticsController::class, 'abcXyz'])->name('analytics.abc-xyz');
@@ -554,23 +553,15 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/finance/reconciliation', [FinanceController::class, 'reconciliation'])->name('finance.reconciliation');
     });
 
-    // Недоборы: подборки замен по отменам строк 1С. view — очередь и карточка,
-    // edit — кандидаты, письмо и исходы. Поиск товара — свой роут под правом
-    // раздела (crm.products.search закрыт правом аналитики, которого у рядового
-    // менеджера может не быть). Статические сегменты — до /{offer}.
+    // Недоборы: журнал отменённых строк заказов. view — журнал и сводки,
+    // edit — метка «кто отменил» и комментарий к строке. Замен сайт не предлагает:
+    // отмену делает и склад при сборке, и сам клиент через менеджера.
     Route::middleware('permission:crm-shortages.view')->group(function () {
-        Route::get('/shortages/products/search', [ShortageController::class, 'searchProducts'])->name('shortages.products.search');
-        Route::get('/shortages/links', [ShortageController::class, 'links'])->name('shortages.links');
         Route::get('/shortages', [ShortageController::class, 'index'])->name('shortages.index');
-        Route::get('/shortages/{offer}', [ShortageController::class, 'show'])->name('shortages.show')->whereNumber('offer');
     });
     Route::middleware('permission:crm-shortages.edit')->group(function () {
-        Route::post('/shortages/links/{link}/approve', [ShortageController::class, 'approveLink'])->name('shortages.links.approve')->whereNumber('link');
-        Route::post('/shortages/links/{link}/reject', [ShortageController::class, 'rejectLink'])->name('shortages.links.reject')->whereNumber('link');
-        Route::post('/shortages/{offer}/candidates', [ShortageController::class, 'storeCandidate'])->name('shortages.candidates.store')->whereNumber('offer');
-        Route::delete('/shortages/{offer}/candidates/{item}', [ShortageController::class, 'removeCandidate'])->name('shortages.candidates.remove')->whereNumber('offer')->whereNumber('item');
-        Route::post('/shortages/{offer}/candidates/{item}/restore', [ShortageController::class, 'restoreCandidate'])->name('shortages.candidates.restore')->whereNumber('offer')->whereNumber('item');
-        Route::post('/shortages/{offer}/draft/refresh', [ShortageController::class, 'refreshDraft'])->name('shortages.draft.refresh')->whereNumber('offer');
-        Route::post('/shortages/{offer}/outcome', [ShortageController::class, 'outcome'])->name('shortages.outcome')->whereNumber('offer');
+        Route::post('/shortages/{item}/source', [ShortageController::class, 'setSource'])
+            ->name('shortages.source')
+            ->whereNumber('item');
     });
 });

@@ -496,47 +496,7 @@ class OrderController extends Controller
             'shipments',
         ]);
 
-        // Замены недоборов: живая подборка — баннер со ссылкой, согласованная — плашка.
-        $substitution = null;
-        if ((bool) config('substitutions.enabled')) {
-            $offer = \App\Models\SubstitutionOffer::query()
-                ->where('order_id', $order->id)
-                ->latest('id')
-                ->first();
-
-            // Баннер живой подборки — только если менеджер отправил её сам
-            // либо явно включён автопоказ: клиент не должен увидеть подборку
-            // раньше, чем её проверил менеджер.
-            $offerVisible = $offer !== null
-                && ($offer->sent_at !== null || (bool) config('substitutions.client_auto_enabled'));
-
-            if ($offerVisible && $offer->isOpen() && ! $offer->expires_at->isPast()) {
-                $substitution = [
-                    'state' => 'offered',
-                    'lines_count' => $order->items->where('cancelled', true)->count(),
-                    'url' => \Illuminate\Support\Facades\URL::temporarySignedRoute(
-                        'substitutions.show',
-                        $offer->expires_at,
-                        ['offer' => $offer->uuid],
-                    ),
-                ];
-            } elseif ($offer !== null && $offer->status === \App\Enums\Substitution\OfferStatus::CONFIRMED) {
-                $substitution = [
-                    'state' => 'confirmed',
-                    'orders' => \App\Models\Order::query()
-                        ->whereIn('id', $offer->result_order_ids ?? [])
-                        ->get()
-                        ->map(fn ($replacement) => [
-                            'id' => $replacement->id,
-                            'number' => $replacement->erp_number ?: $replacement->number,
-                        ])
-                        ->values(),
-                ];
-            }
-        }
-
         return Inertia::render('User/Cabinet/Orders/Show', [
-            'substitution' => $substitution,
             'order' => [
                 'id' => $order->id,
                 'number' => $order->erp_number ?? $order->number ?? ('#'.$order->id),

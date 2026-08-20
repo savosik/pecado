@@ -126,7 +126,6 @@ class Order extends Model implements HasMedia
         'rate_coefficient',
         'currency_code',
         'parent_id',
-        'replacement_for_order_id',
         'type',
         'erp_created_at',
         'erp_updated_at',
@@ -253,30 +252,6 @@ class Order extends Model implements HasMedia
     public function children(): HasMany
     {
         return $this->hasMany(Order::class, 'parent_id');
-    }
-
-    /**
-     * Исходный заказ с недобором, который закрывает этот заказ-замена.
-     */
-    public function replacementFor(): BelongsTo
-    {
-        return $this->belongsTo(Order::class, 'replacement_for_order_id');
-    }
-
-    /**
-     * Заказы-замены, созданные по недоборам этого заказа.
-     */
-    public function replacements(): HasMany
-    {
-        return $this->hasMany(Order::class, 'replacement_for_order_id');
-    }
-
-    /**
-     * Подборки замен по недоборам этого заказа.
-     */
-    public function substitutionOffers(): HasMany
-    {
-        return $this->hasMany(SubstitutionOffer::class);
     }
 
     /**

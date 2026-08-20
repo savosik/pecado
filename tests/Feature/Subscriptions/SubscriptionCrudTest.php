@@ -184,7 +184,7 @@ class SubscriptionCrudTest extends TestCase
             ->assertOk()
             ->assertJsonPath('events.0.value', 'items_updated')
             ->assertJsonPath('events.0.label', 'Изменение состава заказа')
-            ->assertJsonCount(4, 'events');
+            ->assertJsonCount(3, 'events');
     }
 
     #[Test]
@@ -223,7 +223,7 @@ class SubscriptionCrudTest extends TestCase
         $this->actingAs($this->user)
             ->postJson('/cabinet/subscriptions/orders', [
                 'email' => 'every@example.ru',
-                'events' => ['items_updated', 'attributes_updated', 'api_shortfall', 'substitution_offered'],
+                'events' => ['items_updated', 'attributes_updated', 'api_shortfall'],
             ])
             ->assertCreated()
             ->assertJsonPath('data.events', null);

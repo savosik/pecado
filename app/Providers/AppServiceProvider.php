@@ -207,12 +207,6 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\PublishOrderToErp::class,
         );
 
-        // 1С отменила строки при сборке (недобор) → подборка замен + задача менеджеру
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\OrderItemsCancelled::class,
-            \App\Listeners\CreateSubstitutionOfferForCancelledItems::class,
-        );
-
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\ReturnCreated::class,
             \App\Listeners\PublishReturnToErp::class,

@@ -31,7 +31,7 @@ const SHIPMENT_STATUS_COLORS = {
     cancelled: 'red',
 };
 
-export default function OrderShow({ order, substitution = null }) {
+export default function OrderShow({ order }) {
     const { currency, config } = usePage().props;
     const documentsEnabled = !!config?.documents_enabled;
     const currencySymbol = currency?.symbol ?? '₽';
@@ -149,56 +149,6 @@ export default function OrderShow({ order, substitution = null }) {
             />
 
             <Stack gap="5">
-                {/* ═══ Замена недоборов: живая подборка или согласованный результат ═══ */}
-                {substitution?.state === 'offered' && (
-                    <Flex
-                        align="center"
-                        justify="space-between"
-                        gap="3"
-                        flexWrap="wrap"
-                        borderWidth="1px"
-                        borderRadius="lg"
-                        borderColor="orange.emphasized"
-                        bg="orange.subtle"
-                        p="4"
-                    >
-                        <Box>
-                            <Text fontWeight="semibold">
-                                По {substitution.lines_count} отменённым позициям подобрана замена
-                            </Text>
-                            <Text fontSize="sm" color="fg.muted">
-                                Цены — ваши, реквизиты и доставка — как в этом заказе.
-                            </Text>
-                        </Box>
-                        <a href={substitution.url}>
-                            <Button colorPalette="orange">Посмотреть замену</Button>
-                        </a>
-                    </Flex>
-                )}
-                {substitution?.state === 'confirmed' && (substitution.orders || []).length > 0 && (
-                    <Flex
-                        align="center"
-                        gap="2"
-                        flexWrap="wrap"
-                        borderWidth="1px"
-                        borderRadius="lg"
-                        borderColor="green.emphasized"
-                        bg="green.subtle"
-                        p="3"
-                    >
-                        <Text fontSize="sm">
-                            Замена по недобору согласована — заказ{substitution.orders.length > 1 ? 'ы' : ''}:
-                        </Text>
-                        {substitution.orders.map((o) => (
-                            <Link key={o.id} href={`/cabinet/orders/${o.id}`}>
-                                <Text as="span" fontSize="sm" fontWeight="semibold" textDecoration="underline">
-                                    {o.number}
-                                </Text>
-                            </Link>
-                        ))}
-                    </Flex>
-                )}
-
                 {/* ═══ Тип заказа + статус ═══ */}
                 <Flex align="center" gap="3" flexWrap="wrap">
                     <Badge

@@ -2,37 +2,36 @@
 
 namespace Tests\Feature\Crm;
 
-use App\Enums\Crm\TaskStatus;
-use App\Enums\Substitution\LinkSource;
-use App\Enums\Substitution\OfferStatus;
-use App\Enums\Substitution\SignalEvent;
-use App\Jobs\SendCrmEmailJob;
-use App\Models\CrmTask;
-use App\Models\EntitySubscription;
+use App\Enums\Order\CancelSource;
+use App\Models\GoodsIssue;
+use App\Models\GoodsIssueItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PersonalManager;
 use App\Models\Product;
-use App\Models\ProductSubstitution;
-use App\Models\SubstitutionEvent;
-use App\Models\SubstitutionOffer;
-use App\Models\SubstitutionOfferItem;
 use App\Models\User;
+use App\Services\Shortage\CancellationHintResolver;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Bus;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
 use Tests\TestCase;
 
 /**
- * CRM-раздел «Недоборы»: очередь, карточка, кандидаты, исходы (sub-03).
+ * CRM-раздел «Недоборы»: журнал отменённых строк заказов.
+ *
+ * Предмет проверок — то, ради чего раздел переделан из подборок замен: строки
+ * видно по скоупу менеджера, фильтры возвращаются в снимке (иначе экран
+ * «забывает» отбор при переходе по страницам), сводки сходятся с журналом,
+ * а метку «кто отменил» ставит человек — автоматика только подсказывает.
  */
 class ShortagesTest extends TestCase
 {
     use RefreshDatabase, RestrictsManagersToOwnClients;
 
     private User $manager;
+
+    private PersonalManager $managerProfile;
 
     private User $client;
 
@@ -43,52 +42,58 @@ class ShortagesTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
         $this->restrictManagersToOwnClients();
 
-        config(['substitutions.enabled' => true]);
-
         $this->manager = User::factory()->create(['email' => 'manager@pecado.ru']);
         $this->manager->assignRole('sales-manager');
-        $managerProfile = PersonalManager::factory()->create(['user_id' => $this->manager->id]);
+        $this->managerProfile = PersonalManager::factory()->create(['user_id' => $this->manager->id]);
         $this->client = User::factory()->create([
-            'personal_manager_id' => $managerProfile->id,
-            'email' => 'client@example.com',
+            'personal_manager_id' => $this->managerProfile->id,
+            'erp_name' => 'ООО «Ромашка»',
         ]);
     }
 
     /**
-     * @return array{offer: SubstitutionOffer, order: Order, line: OrderItem}
+     * Отменённая строка заказа — запись журнала.
+     *
+     * @return array{order: Order, line: OrderItem, product: Product}
      */
-    private function makeOffer(?User $client = null, ?User $manager = null): array
-    {
+    private function makeCancelledLine(
+        ?User $client = null,
+        int $quantity = 5,
+        float $subtotal = 500.0,
+        string $cancelledAt = '-3 days',
+        ?Product $product = null,
+    ): array {
         $client ??= $this->client;
-        $manager ??= $this->manager;
+        $product ??= Product::factory()->create();
 
         $order = Order::factory()->create([
             'user_id' => $client->id,
             'erp_number' => '29УТ-011777',
         ]);
 
-        $product = Product::factory()->create();
-
         $line = OrderItem::factory()->create([
             'order_id' => $order->id,
             'product_id' => $product->id,
             'cancelled' => true,
-            'quantity' => 5,
-            'final_price' => 100,
-            'subtotal' => 500,
+            'cancelled_at' => now()->modify($cancelledAt),
+            'quantity' => $quantity,
+            'final_price' => $subtotal / max($quantity, 1),
+            'subtotal' => $subtotal,
         ]);
 
-        $offer = SubstitutionOffer::factory()->create([
-            'order_id' => $order->id,
-            'user_id' => $client->id,
-            'manager_user_id' => $manager->id,
-        ]);
+        return ['order' => $order, 'line' => $line, 'product' => $product];
+    }
 
-        return ['offer' => $offer, 'order' => $order, 'line' => $line];
+    /**
+     * @return array<string, mixed>
+     */
+    private function props($response): array
+    {
+        return $response->viewData('page')['props'];
     }
 
     #[Test]
-    public function queue_is_gated_by_permission(): void
+    public function journal_is_gated_by_permission(): void
     {
         $stranger = User::factory()->create();
 
@@ -96,272 +101,206 @@ class ShortagesTest extends TestCase
     }
 
     #[Test]
-    public function manager_sees_only_own_offers_in_the_queue(): void
+    public function manager_sees_only_cancellations_of_own_partners(): void
     {
-        ['offer' => $mine] = $this->makeOffer();
+        ['line' => $mine] = $this->makeCancelledLine();
 
-        // Чужая подборка: другой менеджер и его клиент.
-        $otherManagerAccount = User::factory()->create();
-        $otherProfile = PersonalManager::factory()->create(['user_id' => $otherManagerAccount->id]);
+        // Чужой партнёр другого менеджера.
+        $otherProfile = PersonalManager::factory()->create();
         $otherClient = User::factory()->create(['personal_manager_id' => $otherProfile->id]);
-        $this->makeOffer($otherClient, $otherManagerAccount);
+        $this->makeCancelledLine($otherClient);
 
         $response = $this->actingAs($this->manager)->get('/crm/shortages');
 
         $response->assertOk();
-        $offers = $response->viewData('page')['props']['offers']['data'];
-        $this->assertCount(1, $offers);
-        $this->assertSame($mine->id, $offers[0]['id']);
+        $rows = $this->props($response)['rows']['data'];
+
+        $this->assertCount(1, $rows);
+        $this->assertSame($mine->id, $rows[0]['id']);
+        $this->assertSame('ООО «Ромашка»', $rows[0]['client']);
     }
 
     #[Test]
-    public function card_shows_cancelled_lines_and_draft(): void
+    public function head_of_sales_sees_the_whole_department_and_can_filter_by_manager(): void
     {
-        ['offer' => $offer] = $this->makeOffer();
+        $head = User::factory()->create();
+        $head->assignRole('sales-head');
 
-        $response = $this->actingAs($this->manager)->get("/crm/shortages/{$offer->id}");
+        $this->makeCancelledLine();
 
-        $response->assertOk();
-        $props = $response->viewData('page')['props'];
-        $this->assertCount(1, $props['offer']['lines']);
-        $this->assertSame(5, $props['offer']['lines'][0]['quantity']);
-        $this->assertStringContainsString('29УТ-011777', $props['draft']['subject']);
+        $otherProfile = PersonalManager::factory()->create();
+        $otherClient = User::factory()->create(['personal_manager_id' => $otherProfile->id]);
+        ['line' => $foreign] = $this->makeCancelledLine($otherClient);
+
+        $all = $this->actingAs($head)->get('/crm/shortages?scope=department');
+        $this->assertCount(2, $this->props($all)['rows']['data']);
+
+        $filtered = $this->actingAs($head)->get("/crm/shortages?scope=department&manager_id={$otherProfile->id}");
+        $rows = $this->props($filtered)['rows']['data'];
+
+        $this->assertCount(1, $rows);
+        $this->assertSame($foreign->id, $rows[0]['id']);
+        // Фильтр обязан вернуться в снимке: иначе пагинация и вкладки его теряют.
+        $this->assertSame($otherProfile->id, $this->props($filtered)['filters']['manager_id']);
     }
 
     #[Test]
-    public function manual_candidate_creates_manual_link_in_the_reference(): void
+    public function filters_come_back_in_the_snapshot(): void
     {
-        ['offer' => $offer, 'line' => $line] = $this->makeOffer();
-        $candidateProduct = Product::factory()->create();
+        $this->makeCancelledLine();
 
-        $this->actingAs($this->manager)
-            ->postJson("/crm/shortages/{$offer->id}/candidates", [
-                'source_order_item_id' => $line->id,
-                'product_id' => $candidateProduct->id,
-            ])
-            ->assertOk();
-
-        $this->assertDatabaseHas('substitution_offer_items', [
-            'offer_id' => $offer->id,
-            'source_order_item_id' => $line->id,
-            'product_id' => $candidateProduct->id,
-            'kind' => 'manual',
-        ]);
-
-        $link = ProductSubstitution::sole();
-        $this->assertSame($line->product_id, $link->from_product_id);
-        $this->assertSame($candidateProduct->id, $link->to_product_id);
-        $this->assertSame(LinkSource::MANUAL, $link->source);
-        $this->assertNotNull($link->confirmed_at);
-    }
-
-    #[Test]
-    public function removing_a_candidate_records_the_negative_signal(): void
-    {
-        ['offer' => $offer, 'line' => $line] = $this->makeOffer();
-
-        $item = SubstitutionOfferItem::factory()->create([
-            'offer_id' => $offer->id,
-            'source_order_item_id' => $line->id,
-        ]);
-
-        $this->actingAs($this->manager)
-            ->deleteJson("/crm/shortages/{$offer->id}/candidates/{$item->id}")
-            ->assertOk();
-
-        $this->assertNotNull($item->fresh()->removed_by_manager_at);
-        $this->assertSame(SignalEvent::MANAGER_REMOVED, SubstitutionEvent::sole()->event);
-    }
-
-    #[Test]
-    public function dismiss_outcome_requires_reason_and_closes_the_task(): void
-    {
-        ['offer' => $offer, 'order' => $order] = $this->makeOffer();
-
-        $task = CrmTask::factory()->create([
-            'title' => 'Недобор по заказу 29УТ-011777 — тест',
-            'assignee_id' => $this->manager->id,
-            'author_id' => $this->manager->id,
-            'status' => TaskStatus::OPEN,
-        ]);
-        $task->related()->associate($order)->save();
-
-        $this->actingAs($this->manager)
-            ->postJson("/crm/shortages/{$offer->id}/outcome", ['type' => 'dismiss'])
-            ->assertStatus(422);
-
-        $this->actingAs($this->manager)
-            ->postJson("/crm/shortages/{$offer->id}/outcome", [
-                'type' => 'dismiss',
-                'reason' => 'Клиент отказался, вернём деньги',
-            ])
-            ->assertOk();
-
-        $this->assertSame(OfferStatus::DISMISSED, $offer->fresh()->status);
-        $this->assertSame(TaskStatus::DONE, $task->fresh()->status);
-    }
-
-    #[Test]
-    public function send_outcome_fails_politely_when_outbound_is_disabled(): void
-    {
-        config(['notifications.mail.features.crm_outbound' => false]);
-
-        ['offer' => $offer] = $this->makeOffer();
-
-        $this->actingAs($this->manager)
-            ->postJson("/crm/shortages/{$offer->id}/outcome", [
-                'type' => 'send',
-                'subject' => 'Тест',
-                'body_html' => '<p>Тест</p>',
-            ])
-            ->assertStatus(422);
-
-        $this->assertNull($offer->fresh()->sent_at);
-    }
-
-    #[Test]
-    public function send_outcome_sends_the_letter_and_stamps_sent_at(): void
-    {
-        Bus::fake([SendCrmEmailJob::class]);
-        config(['notifications.mail.features.crm_outbound' => true]);
-
-        ['offer' => $offer] = $this->makeOffer();
-
-        $this->actingAs($this->manager)
-            ->postJson("/crm/shortages/{$offer->id}/outcome", [
-                'type' => 'send',
-                'subject' => 'Заказ 29УТ-011777: подборка замен',
-                'body_html' => '<p>Здравствуйте!</p>',
-            ])
-            ->assertOk();
-
-        Bus::assertDispatched(SendCrmEmailJob::class);
-
-        $offer->refresh();
-        $this->assertNotNull($offer->sent_at);
-        $this->assertNotNull($offer->crm_email_id);
-        $this->assertSame([$this->client->email], $offer->draftEmail->to);
-        $this->assertSame($this->manager->email, $offer->draftEmail->reply_to);
-    }
-
-    /**
-     * ProductSelector рендерит ответ напрямую через suggestions.map() и шлёт
-     * параметр `query` — обёртка {data: []} роняла карточку на проде.
-     */
-    #[Test]
-    public function product_search_returns_flat_array_for_the_selector(): void
-    {
-        $response = $this->actingAs($this->manager)
-            ->getJson('/crm/shortages/products/search?query=вибро');
-
-        $response->assertOk();
-        $this->assertIsList($response->json());
-
-        // Короткий запрос — тоже плоский массив, а не {data: []}.
-        $this->actingAs($this->manager)
-            ->getJson('/crm/shortages/products/search?query=а')
-            ->assertOk()
-            ->assertExactJson([]);
-    }
-
-    #[Test]
-    public function draft_prefills_client_email_and_order_subscription_addresses(): void
-    {
-        ['offer' => $offer] = $this->makeOffer();
-
-        EntitySubscription::create([
-            'user_id' => $this->client->id,
-            'section' => 'orders',
-            'channel' => 'email',
-            'destination' => 'buyer@example.com',
-            'is_active' => true,
-        ]);
-
-        // Неактивная подписка и чужой раздел в поле «Кому» не попадают.
-        EntitySubscription::create([
-            'user_id' => $this->client->id,
-            'section' => 'orders',
-            'channel' => 'email',
-            'destination' => 'inactive@example.com',
-            'is_active' => false,
-        ]);
-
-        $response = $this->actingAs($this->manager)->get("/crm/shortages/{$offer->id}");
-
-        $response->assertOk();
-        $props = $response->viewData('page')['props'];
-        $this->assertSame(['client@example.com', 'buyer@example.com'], $props['draft']['to']);
-
-        $optionEmails = array_column($props['recipientOptions'], 'email');
-        $this->assertContains('buyer@example.com', $optionEmails);
-        $this->assertContains('manager@pecado.ru', $optionEmails);
-        $this->assertNotContains('inactive@example.com', $optionEmails);
-    }
-
-    #[Test]
-    public function refreshing_the_draft_puts_the_chosen_candidate_into_the_letter(): void
-    {
-        ['offer' => $offer, 'line' => $line] = $this->makeOffer();
-        $candidateProduct = Product::factory()->create(['name' => 'Замена-Кандидат-123']);
-
-        $this->actingAs($this->manager)
-            ->postJson("/crm/shortages/{$offer->id}/candidates", [
-                'source_order_item_id' => $line->id,
-                'product_id' => $candidateProduct->id,
-            ])
-            ->assertOk();
-
-        $response = $this->actingAs($this->manager)
-            ->postJson("/crm/shortages/{$offer->id}/draft/refresh");
-
-        $response->assertOk();
-        $this->assertStringContainsString('Замена-Кандидат-123', $response->json('body_html'));
-        $this->assertStringContainsString('Предлагаем на замену', $response->json('body_html'));
-    }
-
-    #[Test]
-    public function send_outcome_delivers_to_the_addresses_picked_by_the_manager(): void
-    {
-        Bus::fake([SendCrmEmailJob::class]);
-        config(['notifications.mail.features.crm_outbound' => true]);
-
-        ['offer' => $offer] = $this->makeOffer();
-
-        $this->actingAs($this->manager)
-            ->postJson("/crm/shortages/{$offer->id}/outcome", [
-                'type' => 'send',
-                'subject' => 'Заказ 29УТ-011777: подборка замен',
-                'body_html' => '<p>Здравствуйте!</p>',
-                'to' => ['client@example.com', 'buyer@example.com', 'client@example.com'],
-            ])
-            ->assertOk();
-
-        Bus::assertDispatched(SendCrmEmailJob::class);
-
-        // Дубликат схлопнут, порядок сохранён.
-        $this->assertSame(
-            ['client@example.com', 'buyer@example.com'],
-            $offer->refresh()->draftEmail->to,
+        $response = $this->actingAs($this->manager)->get(
+            '/crm/shortages?from=2026-01-01&to=2026-12-31&source=none&search=Ромашка&tab=products'
         );
+
+        $filters = $this->props($response)['filters'];
+
+        $this->assertSame('2026-01-01', $filters['from']);
+        $this->assertSame('2026-12-31', $filters['to']);
+        $this->assertSame('none', $filters['source']);
+        $this->assertSame('Ромашка', $filters['search']);
+        $this->assertSame('products', $filters['tab']);
     }
 
     #[Test]
-    public function send_outcome_rejects_a_malformed_address(): void
+    public function period_filter_cuts_off_old_cancellations(): void
     {
-        config(['notifications.mail.features.crm_outbound' => true]);
+        $this->makeCancelledLine(cancelledAt: '-2 days');
+        $this->makeCancelledLine(cancelledAt: '-200 days');
 
-        ['offer' => $offer] = $this->makeOffer();
+        // Период по умолчанию — 90 дней.
+        $default = $this->actingAs($this->manager)->get('/crm/shortages');
+        $this->assertCount(1, $this->props($default)['rows']['data']);
+
+        $wide = $this->actingAs($this->manager)->get('/crm/shortages?from='.now()->subYear()->format('Y-m-d'));
+        $this->assertCount(2, $this->props($wide)['rows']['data']);
+    }
+
+    #[Test]
+    public function totals_and_summaries_add_up(): void
+    {
+        $product = Product::factory()->create(['name' => 'Смазка «Аква»']);
+
+        $this->makeCancelledLine(quantity: 5, subtotal: 500.0, product: $product);
+        ['line' => $second] = $this->makeCancelledLine(quantity: 2, subtotal: 300.0, product: $product);
+
+        $second->forceFill([
+            'cancel_source' => CancelSource::WAREHOUSE,
+            'cancel_source_user_id' => $this->manager->id,
+            'cancel_source_at' => now(),
+        ])->save();
+
+        $response = $this->actingAs($this->manager)->get('/crm/shortages?tab=products');
+        $props = $this->props($response);
+
+        $this->assertSame(2, $props['totals']['lines_count']);
+        $this->assertSame(7, $props['totals']['quantity']);
+        $this->assertSame(800.0, $props['totals']['amount']);
+        $this->assertSame(1, $props['totals']['warehouse_count']);
+        $this->assertSame(1, $props['totals']['unmarked_count']);
+
+        $this->assertCount(1, $props['products']);
+        $this->assertSame('Смазка «Аква»', $props['products'][0]['name']);
+        $this->assertSame(2, $props['products'][0]['lines_count']);
+        $this->assertSame(800.0, $props['products'][0]['amount']);
+
+        $partners = $this->props($this->actingAs($this->manager)->get('/crm/shortages?tab=partners'))['partners'];
+
+        $this->assertCount(1, $partners);
+        $this->assertSame('ООО «Ромашка»', $partners[0]['name']);
+        $this->assertSame(2, $partners[0]['lines_count']);
+        $this->assertSame(2, $partners[0]['orders_count']);
+    }
+
+    #[Test]
+    public function manager_marks_who_cancelled_the_line(): void
+    {
+        ['line' => $line] = $this->makeCancelledLine();
 
         $this->actingAs($this->manager)
-            ->postJson("/crm/shortages/{$offer->id}/outcome", [
-                'type' => 'send',
-                'subject' => 'Тест',
-                'body_html' => '<p>Тест</p>',
-                'to' => ['не-адрес'],
+            ->post("/crm/shortages/{$line->id}/source", [
+                'source' => 'warehouse',
+                'note' => 'мятая упаковка',
             ])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['to.0']);
+            ->assertRedirect();
 
-        $this->assertNull($offer->fresh()->sent_at);
+        $line->refresh();
+
+        $this->assertSame(CancelSource::WAREHOUSE, $line->cancel_source);
+        $this->assertSame('мятая упаковка', $line->cancel_note);
+        $this->assertSame($this->manager->id, $line->cancel_source_user_id);
+        $this->assertNotNull($line->cancel_source_at);
+    }
+
+    #[Test]
+    public function mark_can_be_removed(): void
+    {
+        ['line' => $line] = $this->makeCancelledLine();
+
+        $line->forceFill([
+            'cancel_source' => CancelSource::CLIENT,
+            'cancel_source_user_id' => $this->manager->id,
+            'cancel_source_at' => now(),
+        ])->save();
+
+        $this->actingAs($this->manager)
+            ->post("/crm/shortages/{$line->id}/source", ['source' => null, 'note' => null])
+            ->assertRedirect();
+
+        $line->refresh();
+
+        $this->assertNull($line->cancel_source);
+        $this->assertNull($line->cancel_source_user_id);
+        $this->assertNull($line->cancel_source_at);
+    }
+
+    #[Test]
+    public function manager_cannot_mark_a_line_of_another_managers_partner(): void
+    {
+        $otherProfile = PersonalManager::factory()->create();
+        $otherClient = User::factory()->create(['personal_manager_id' => $otherProfile->id]);
+        ['line' => $foreign] = $this->makeCancelledLine($otherClient);
+
+        $this->actingAs($this->manager)
+            ->post("/crm/shortages/{$foreign->id}/source", ['source' => 'client'])
+            ->assertNotFound();
+
+        $this->assertNull($foreign->fresh()->cancel_source);
+    }
+
+    #[Test]
+    public function goods_issue_by_the_order_hints_at_the_warehouse(): void
+    {
+        ['line' => $line, 'order' => $order, 'product' => $product] = $this->makeCancelledLine();
+
+        $issue = GoodsIssue::factory()->create([
+            'number' => 'УТ-00009419',
+            'status' => GoodsIssue::STATUS_SHIPPED,
+        ]);
+        GoodsIssueItem::factory()->create([
+            'goods_issue_id' => $issue->id,
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+        ]);
+
+        $response = $this->actingAs($this->manager)->get('/crm/shortages');
+        $row = $this->props($response)['rows']['data'][0];
+
+        // Тот же товар в расходном ордере — строку дробили при сборке.
+        $this->assertSame(CancellationHintResolver::HINT_WAREHOUSE_STRONG, $row['hint']['kind']);
+        $this->assertSame('УТ-00009419', $row['hint']['issues'][0]['number']);
+        $this->assertSame($line->id, $row['id']);
+    }
+
+    #[Test]
+    public function without_goods_issue_the_hint_says_there_is_no_warehouse_trace(): void
+    {
+        $this->makeCancelledLine();
+
+        $response = $this->actingAs($this->manager)->get('/crm/shortages');
+        $row = $this->props($response)['rows']['data'][0];
+
+        $this->assertSame(CancellationHintResolver::HINT_NONE, $row['hint']['kind']);
+        $this->assertSame([], $row['hint']['issues']);
     }
 }

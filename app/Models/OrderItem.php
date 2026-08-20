@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Order\CancelSource;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,11 @@ use Laravel\Scout\Searchable;
  * @property int $order_id
  * @property int|null $line_number Номер строки в табличной части «Товары» документа 1С — ключ сопоставления при обновлении заказа (v15.16.0)
  * @property bool $cancelled Строка отменена в 1С при недоборе: показывается клиенту, но не входит в сумму заказа (v15.16.0)
+ * @property \Illuminate\Support\Carbon|null $cancelled_at Когда сайт принял отмену строки из 1С — дата в журнале недоборов
+ * @property CancelSource|null $cancel_source Метка менеджера: склад снял при сборке или клиент отказался
+ * @property int|null $cancel_source_user_id Кто поставил метку источника отмены
+ * @property \Illuminate\Support\Carbon|null $cancel_source_at Когда поставлена метка
+ * @property string|null $cancel_note Комментарий менеджера к отмене
  * @property int|null $product_id
  * @property int|null $product_defect_id
  * @property string|null $defect_description
@@ -28,6 +34,7 @@ use Laravel\Scout\Searchable;
  * @property-read \App\Models\Order|null $order
  * @property-read \App\Models\Product|null $product
  * @property-read \App\Models\ProductDefect|null $productDefect
+ * @property-read \App\Models\User|null $cancelSourceUser
  *
  * @method static \Database\Factories\OrderItemFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderItem newModelQuery()
@@ -70,7 +77,11 @@ class OrderItem extends Model
         'final_price',
         'quantity',
         'subtotal',
-        'replaces_order_item_id',
+        'cancelled_at',
+        'cancel_source',
+        'cancel_source_user_id',
+        'cancel_source_at',
+        'cancel_note',
     ];
 
     protected $casts = [
@@ -82,6 +93,9 @@ class OrderItem extends Model
         'quantity' => 'integer',
         'line_number' => 'integer',
         'cancelled' => 'boolean',
+        'cancelled_at' => 'datetime',
+        'cancel_source' => CancelSource::class,
+        'cancel_source_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -136,11 +150,11 @@ class OrderItem extends Model
     }
 
     /**
-     * Отменённая строка исходного заказа, которую закрывает эта строка-замена.
+     * Сотрудник, разметивший источник отмены строки в журнале недоборов.
      */
-    public function replacesOrderItem(): BelongsTo
+    public function cancelSourceUser(): BelongsTo
     {
-        return $this->belongsTo(OrderItem::class, 'replaces_order_item_id');
+        return $this->belongsTo(User::class, 'cancel_source_user_id');
     }
 
     /**

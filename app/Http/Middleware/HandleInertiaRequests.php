@@ -105,9 +105,6 @@ class HandleInertiaRequests extends Middleware
                 // сверяют печатные формы раньше, чем их увидит клиент.
                 'documents_enabled' => (bool) config('documents.enabled'),
                 'documents_crm_enabled' => (bool) config('documents.crm_enabled'),
-                // Замены недоборов: пункт меню CRM и клиентские баннеры прячутся
-                // здесь, данные — в контроллерах за тем же флагом.
-                'shortage_offers_enabled' => (bool) config('substitutions.enabled'),
             ],
         ];
     }

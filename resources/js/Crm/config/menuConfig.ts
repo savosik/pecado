@@ -64,8 +64,9 @@ export const menuConfig: MenuGroup[] = [
             { label: "Планы продаж", icon: LuTarget, path: "/crm/plans", permission: "crm-plans.view" },
             { label: "Возможности", icon: LuLightbulb, path: "/crm/opportunities", permission: "crm-opportunities.view" },
             { label: "Грядки", icon: LuSprout, path: "/crm/beds", permission: "crm-beds.view" },
-            // Недоборы: отмены строк 1С на сборке → подборка замен клиенту.
-            { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", feature: "shortage_offers_enabled", counter: "shortages" },
+            // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
+            // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
+            { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", counter: "shortages" },
             { label: "Отчёты продаж", icon: LuChartLine, path: "/crm/analytics", permission: "crm-analytics.view" },
             { label: "Команда", icon: LuUsersRound, path: "/crm/team", permission: "crm-team.view" },
             // Отсутствия видит весь отдел: кто кого замещает — рабочая информация.

@@ -50,31 +50,19 @@ class HandleCrmInertiaRequests extends Middleware
     }
 
     /**
+     * Неразмеченные отмены в журнале недоборов — то, из-за чего стоит зайти
+     * в раздел: строка отменилась, а причину («склад» или «клиент») ещё
+     * никто не проставил.
+     *
      * @return array<string, int>
      */
     private function shortagesCounter(\App\Models\User $user): array
     {
-        if (! config('substitutions.enabled') || ! $user->can('crm-shortages.view')) {
+        if (! $user->can('crm-shortages.view')) {
             return [];
         }
 
-        $query = \App\Models\SubstitutionOffer::query()
-            ->where('status', \App\Enums\Substitution\OfferStatus::PENDING);
-
-        // Менеджер видит счётчик по своим подборкам, отдел — по всем.
-        if (! $user->can('crm-department.view')) {
-            $managerId = $user->managerProfile?->id;
-
-            $query->where(function ($q) use ($user, $managerId) {
-                $q->where('manager_user_id', $user->id);
-
-                if ($managerId !== null) {
-                    $q->orWhereHas('user', fn ($u) => $u->where('personal_manager_id', $managerId));
-                }
-            });
-        }
-
-        return ['shortages' => $query->count()];
+        return ['shortages' => app(\App\Services\Shortage\ShortageLogQuery::class)->unmarkedCount($user)];
     }
 
     /**
