@@ -161,6 +161,17 @@ class Company extends Model
     }
 
     /**
+     * Контактные лица этого юрлица — адресаты правил пульта уведомлений.
+     *
+     * Контакты партнёра с пустым company_id сюда не попадают: они годятся
+     * для любого его юрлица и подбираются резолвером получателей отдельно.
+     */
+    public function contacts(): HasMany
+    {
+        return $this->hasMany(ClientContact::class);
+    }
+
+    /**
      * Get the primary bank account for the company.
      */
     public function primaryBankAccount(): HasMany

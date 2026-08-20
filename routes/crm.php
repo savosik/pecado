@@ -7,6 +7,7 @@ use App\Http\Controllers\Crm\AttachmentController;
 use App\Http\Controllers\Crm\BedsController;
 use App\Http\Controllers\Crm\CalendarFeedController;
 use App\Http\Controllers\Crm\CallController;
+use App\Http\Controllers\Crm\ClientContactController;
 use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientProfileController;
 use App\Http\Controllers\Crm\CommentController;
@@ -563,5 +564,21 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/shortages/{item}/source', [ShortageController::class, 'setSource'])
             ->name('shortages.source')
             ->whereNumber('item');
+    });
+    // Адресная книга контрагентов: контактные лица, которые становятся адресатами
+    // правил пульта уведомлений. Право отдельное от crm-clients: контакты правит
+    // тот, кто настраивает уведомления, а это может быть не владелец карточки.
+    Route::middleware('permission:crm-notification-contacts.view')->group(function () {
+        Route::get('/contacts', [ClientContactController::class, 'index'])->name('contacts.index');
+    });
+    Route::middleware('permission:crm-notification-contacts.create')->group(function () {
+        Route::post('/contacts', [ClientContactController::class, 'store'])->name('contacts.store');
+        Route::post('/contacts/import-from-profile', [ClientContactController::class, 'importFromProfile'])->name('contacts.import');
+    });
+    Route::middleware('permission:crm-notification-contacts.edit')->group(function () {
+        Route::patch('/contacts/{contact}', [ClientContactController::class, 'update'])->name('contacts.update')->whereNumber('contact');
+    });
+    Route::middleware('permission:crm-notification-contacts.delete')->group(function () {
+        Route::delete('/contacts/{contact}', [ClientContactController::class, 'destroy'])->name('contacts.destroy')->whereNumber('contact');
     });
 });
