@@ -594,6 +594,13 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // Журнал и трасса: отвечают на «почему клиенту не пришло» без разработчика
         Route::get('/notifications/journal', [NotificationJournalController::class, 'index'])->name('notifications.journal');
         Route::get('/notifications/signals/{uuid}', [NotificationJournalController::class, 'signal'])->name('notifications.signal');
+        // Пресеты и покрытие: настройка типового контрагента одной кнопкой
+        // и цифра о том, где адресной книги не хватает.
+        Route::get('/notifications/presets', [NotificationRuleController::class, 'presets'])->name('notifications.presets');
+        Route::get('/notifications/coverage', [NotificationRuleController::class, 'coverage'])->name('notifications.coverage');
+    });
+    Route::middleware('permission:crm-notifications.create')->group(function () {
+        Route::post('/notifications/presets/apply', [NotificationRuleController::class, 'applyPreset'])->name('notifications.presets.apply');
     });
     Route::middleware('permission:crm-notifications.create')->group(function () {
         Route::post('/notifications/rules', [NotificationRuleController::class, 'store'])->name('notifications.store');

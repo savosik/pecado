@@ -319,6 +319,76 @@ class NotificationRuleController extends CrmController
         return back()->with('success', 'Проверочное письмо отправлено на '.$actor->email);
     }
 
+    /**
+     * Каталог пресетов и предпросмотр применения к контрагенту.
+     */
+    public function presets(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        $applier = app(\App\Services\Notifications\Pulse\PresetApplier::class);
+
+        $data = $request->validate([
+            'company_id' => ['nullable', 'integer'],
+            'preset' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        $payload = ['catalog' => $applier->catalog()];
+
+        if (filled($data['company_id'] ?? null) && filled($data['preset'] ?? null)) {
+            $company = Company::query()->visibleInCrm($actor)->findOrFail($data['company_id']);
+            $payload['preview'] = $applier->preview($data['preset'], $company);
+        }
+
+        return response()->json($payload);
+    }
+
+    /**
+     * Применить пресет к контрагенту — та самая «одна кнопка».
+     */
+    public function applyPreset(Request $request): RedirectResponse
+    {
+        $actor = $this->crmActor($request);
+
+        $data = $request->validate([
+            'company_id' => ['required', 'integer'],
+            'preset' => ['required', 'string', 'max:64'],
+        ], [], ['company_id' => 'контрагент', 'preset' => 'пресет']);
+
+        $company = Company::query()->visibleInCrm($actor)->findOrFail($data['company_id']);
+
+        $result = app(\App\Services\Notifications\Pulse\PresetApplier::class)
+            ->apply($data['preset'], $company, $actor);
+
+        $message = "Создано правил: {$result['created']}.";
+
+        if ($result['skipped'] > 0) {
+            $message .= " Пропущено: {$result['skipped']}.";
+        }
+
+        // Недостающие роли называются вслух: молчаливый пропуск оставил бы
+        // менеджера в уверенности, что настроено, а письмо бы не ушло.
+        if ($result['missing'] !== []) {
+            $roles = collect($result['missing'])->pluck('role_label')->unique()->implode(', ');
+            $message .= " У контрагента нет контактов с ролями: {$roles} — добавьте их на вкладке «Контакты».";
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * Покрытие политики отдела: где адресной книги не хватает.
+     */
+    public function coverage(Request $request): Response
+    {
+        $actor = $this->crmActor($request);
+
+        return Inertia::render('Crm/Pages/Notifications/Coverage', [
+            'rows' => app(\App\Services\Notifications\Pulse\PresetApplier::class)->coverage($actor),
+            'contactsTotal' => \App\Models\ClientContact::query()->visibleInCrm($actor)->deliverable()->count(),
+            'companiesTotal' => Company::query()->visibleInCrm($actor)->count(),
+        ]);
+    }
+
     private function assertEditable(NotificationRule $rule, User $actor): void
     {
         abort_unless($rule->isEditableBy($actor), 403,

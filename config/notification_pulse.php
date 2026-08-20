@@ -133,6 +133,138 @@ return [
         'max_self_rules_per_domain' => 5,
     ],
 
+    /*
+    | Пресеты — готовые наборы правил под типовые нужды контрагента.
+    |
+    | Живут в конфиге, а не в базе: набор правил это решение команды о том,
+    | как ведётся клиент, а не пользовательские данные. Версионируются
+    | вместе с релизом.
+    |
+    | Получатели заданы ролями: одно применение покрывает контрагента целиком,
+    | а нового бухгалтера правило подхватит само.
+    */
+    'presets' => [
+
+        'orders_control' => [
+            'label' => 'Полный контроль заказов',
+            'description' => 'Недоборы закупщику, статусы клиенту, закрытие заказа директору.',
+            'rules' => [
+                [
+                    'name' => 'Недобор по заказу — закупщику',
+                    'event_key' => 'orders.shortfall',
+                    'priority' => 100,
+                    'recipients' => [['kind' => 'contact_role', 'value' => 'buyer']],
+                ],
+                [
+                    'name' => 'Изменился состав заказа — закупщику',
+                    'event_key' => 'orders.items_updated',
+                    'priority' => 110,
+                    'throttle_seconds' => 300,
+                    'recipients' => [['kind' => 'contact_role', 'value' => 'buyer']],
+                ],
+                [
+                    'name' => 'Заказ закрыт — директору',
+                    'event_key' => 'orders.status_changed',
+                    'priority' => 50,
+                    'stop_processing' => true,
+                    'conditions' => ['field' => 'status', 'op' => 'in', 'value' => ['closed']],
+                    'recipients' => [['kind' => 'contact_role', 'value' => 'director']],
+                ],
+                [
+                    'name' => 'Смена статуса — клиенту',
+                    'event_key' => 'orders.status_changed',
+                    'priority' => 120,
+                    'recipients' => [['kind' => 'client_user']],
+                ],
+            ],
+        ],
+
+        'accounting' => [
+            'label' => 'Бухгалтерия',
+            'description' => 'Акты сверки и УПД бухгалтеру, срок оплаты и просрочка ему же, тяжёлая просрочка — директору.',
+            'rules' => [
+                [
+                    'name' => 'Акты сверки — бухгалтеру',
+                    'event_key' => 'documents.published',
+                    'priority' => 100,
+                    'conditions' => ['field' => 'document_type', 'op' => 'in', 'value' => ['reconciliation_act', 'act']],
+                    'recipients' => [['kind' => 'contact_role', 'value' => 'accountant']],
+                ],
+                [
+                    'name' => 'Счета и УПД — бухгалтеру',
+                    'event_key' => 'documents.published',
+                    'priority' => 110,
+                    'conditions' => ['field' => 'document_type', 'op' => 'in', 'value' => ['invoice', 'upd', 'tax_invoice']],
+                    'recipients' => [['kind' => 'contact_role', 'value' => 'accountant']],
+                ],
+                [
+                    'name' => 'Подходит срок оплаты — бухгалтеру',
+                    'event_key' => 'finance.payment_due_soon',
+                    'priority' => 100,
+                    'attach_documents' => true,
+                    'recipients' => [['kind' => 'contact_role', 'value' => 'accountant']],
+                ],
+                [
+                    'name' => 'Просрочка — бухгалтеру',
+                    'event_key' => 'finance.overdue_started',
+                    'priority' => 100,
+                    'recipients' => [['kind' => 'contact_role', 'value' => 'accountant']],
+                ],
+                [
+                    'name' => 'Просрочка от 60 дней — директору',
+                    'event_key' => 'finance.overdue_grew',
+                    'priority' => 90,
+                    'conditions' => ['field' => 'days_overdue', 'op' => '>=', 'value' => 60],
+                    'recipients' => [
+                        ['kind' => 'contact_role', 'value' => 'director'],
+                        ['kind' => 'contact_role', 'value' => 'accountant'],
+                    ],
+                ],
+            ],
+        ],
+
+        'logistics' => [
+            'label' => 'Логистика',
+            'description' => 'Отгрузки и товаросопроводительные документы логисту.',
+            'rules' => [
+                [
+                    'name' => 'Отгрузка по заказу — логисту',
+                    'event_key' => 'orders.shipped',
+                    'priority' => 100,
+                    'recipients' => [['kind' => 'contact_role', 'value' => 'logist']],
+                ],
+                [
+                    'name' => 'Накладные — логисту',
+                    'event_key' => 'documents.published',
+                    'priority' => 120,
+                    'conditions' => ['field' => 'document_type', 'op' => 'in', 'value' => ['waybill', 'consignment_note']],
+                    'recipients' => [['kind' => 'contact_role', 'value' => 'logist']],
+                ],
+            ],
+        ],
+
+        'critical_only' => [
+            'label' => 'Только критичное',
+            'description' => 'Недоборы и тяжёлая просрочка. Для клиентов, которые просят не заваливать почту.',
+            'rules' => [
+                [
+                    'name' => 'Недобор по заказу — закупщику',
+                    'event_key' => 'orders.shortfall',
+                    'priority' => 100,
+                    'recipients' => [['kind' => 'contact_role', 'value' => 'buyer']],
+                ],
+                [
+                    'name' => 'Просрочка от 90 дней — директору',
+                    'event_key' => 'finance.overdue_grew',
+                    'priority' => 100,
+                    'conditions' => ['field' => 'days_overdue', 'op' => '>=', 'value' => 90],
+                    'recipients' => [['kind' => 'contact_role', 'value' => 'director']],
+                ],
+            ],
+        ],
+
+    ],
+
     'retention' => [
         /* Сигналы — оперативная трасса, нужна недолго. */
         'signals_days' => (int) env('PULSE_SIGNAL_RETENTION_DAYS', 30),
