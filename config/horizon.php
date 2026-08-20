@@ -211,6 +211,24 @@ return [
             'timeout' => 60,
             'nice' => 0,
         ],
+        /*
+        | Отдельная очередь для писем пульта уведомлений. Без неё рассылка
+        | конкурирует в `default` с ERP-джобами и выгрузками: всплеск писем
+        | задержал бы обработку шины, а задержка шины — работу склада.
+        */
+        'supervisor-notifications' => [
+            'connection' => 'redis',
+            'queue' => ['notifications'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'timeout' => 120,
+            'nice' => 0,
+        ],
         'supervisor-heavy' => [
             'connection' => 'redis',
             'queue' => ['heavy'],
@@ -238,6 +256,9 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'supervisor-notifications' => [
+                'maxProcesses' => 3,
+            ],
         ],
 
         'local' => [
@@ -247,6 +268,9 @@ return [
             'supervisor-heavy' => [
                 'maxProcesses' => 2,
             ],
+            'supervisor-notifications' => [
+                'maxProcesses' => 2,
+            ],
         ],
 
         'dev' => [
@@ -254,6 +278,9 @@ return [
                 'maxProcesses' => 3,
             ],
             'supervisor-heavy' => [
+                'maxProcesses' => 2,
+            ],
+            'supervisor-notifications' => [
                 'maxProcesses' => 2,
             ],
         ],

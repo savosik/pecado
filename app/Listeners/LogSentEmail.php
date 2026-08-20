@@ -4,6 +4,7 @@ namespace App\Listeners;
 
 use App\Enums\UserKind;
 use App\Mail\CrmManagerMail;
+use App\Models\NotificationDelivery;
 use App\Models\SentEmail;
 use App\Models\User;
 use App\Support\Notifications\MailClientTag;
@@ -77,6 +78,20 @@ class LogSentEmail
         $source = $this->source($event);
         $messageId = $message->getHeaders()->get('Message-ID')?->getBodyAsString();
         $sentAt = now();
+        $deliveryId = $this->deliveryId($message);
+
+        // Решение пульта помечается отправленным здесь, а не в момент постановки
+        // в очередь: журнал доставок должен отвечать за факт, а не за намерение.
+        if ($deliveryId !== null) {
+            NotificationDelivery::query()
+                ->whereKey($deliveryId)
+                ->update([
+                    'status' => NotificationDelivery::STATUS_SENT,
+                    'sent_at' => $sentAt,
+                    'message_id' => $this->cut($messageId, 512),
+                    'updated_at' => $sentAt,
+                ]);
+        }
 
         // Один запрос на всех получателей письма вместо запроса на адрес:
         // рассылка на отдел иначе давала бы по обращению к users на строку.
@@ -105,9 +120,24 @@ class LogSentEmail
                 'client_user_id' => $clientId ?? $fallbackClientId,
                 'recipient_user_id' => $user?->getKey(),
                 'message_id' => $this->cut($messageId, 512),
+                'notification_delivery_id' => $deliveryId,
                 'sent_at' => $sentAt,
             ]);
         }
+    }
+
+    /**
+     * Решение пульта, породившее письмо.
+     *
+     * Заголовок ставит PulseNotification — тем же приёмом, что и пометка
+     * клиента: связка двух журналов позволяет пройти путь целиком, от письма
+     * в почтовом логе до правила, которое его отправило.
+     */
+    private function deliveryId(\Symfony\Component\Mime\Email $message): ?int
+    {
+        $header = $message->getHeaders()->get('X-Pecado-Delivery')?->getBodyAsString();
+
+        return filled($header) && ctype_digit(trim($header)) ? (int) trim($header) : null;
     }
 
     private function cut(?string $value, int $limit): ?string
