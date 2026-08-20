@@ -6,6 +6,9 @@ use App\Enums\OrderType;
 use App\Events\OrdersPlaced;
 use App\Models\Order;
 use App\Notifications\Orders\NewOrderForManagerNotification;
+use App\Notifications\Pulse\Support\PulseSignal;
+use App\Services\Notifications\Pulse\NotificationPulse;
+use App\Services\Notifications\Pulse\PulseMode;
 use App\Support\Notifications\OrderManagerRouting;
 use Illuminate\Support\Facades\Notification;
 
@@ -19,15 +22,28 @@ use Illuminate\Support\Facades\Notification;
  */
 class NotifyManagersAboutNewOrder
 {
+    /** Ключ события пульта, которым это письмо заменяется при переходе. */
+    private const PULSE_EVENT = 'orders.created';
+
     public function handle(OrdersPlaced $event): void
     {
-        if (! config('notifications.mail.features.manager_new_order')) {
-            return;
-        }
-
         $primary = $this->primaryOrder($event->orders);
 
         if (! $primary) {
+            return;
+        }
+
+        // Сигнал пульту идёт всегда: в теневом режиме он только считает
+        // получателей для сверки со старой маршрутизацией.
+        $this->signalPulse($primary, $event->orders);
+
+        // Событие переведено на пульт — здесь молчим. Один флаг на обе стороны,
+        // поэтому двойного письма быть не может.
+        if (PulseMode::handles(self::PULSE_EVENT)) {
+            return;
+        }
+
+        if (! config('notifications.mail.features.manager_new_order')) {
             return;
         }
 
@@ -54,6 +70,42 @@ class NotifyManagersAboutNewOrder
      *
      * @param  \Illuminate\Support\Collection<int, Order>  $orders
      */
+    /**
+     * Сообщить пульту об оформлении покупки.
+     *
+     * Сигнал один на покупку, а не на документ — по той же причине, по которой
+     * листенер слушает OrdersPlaced: пять писем об одной покупке это шум.
+     *
+     * @param  \Illuminate\Support\Collection<int, Order>  $orders
+     */
+    private function signalPulse(Order $primary, $orders): void
+    {
+        $number = $primary->erp_number ?: $primary->number;
+
+        app(NotificationPulse::class)->signal(new PulseSignal(
+            eventKey: self::PULSE_EVENT,
+            clientUserId: $primary->user_id,
+            companyId: $primary->company_id,
+            subject: $primary,
+            data: [
+                'order_number' => $number,
+                'order_type' => $primary->type?->value,
+                'orders_count' => $orders->count(),
+                'total' => (float) $orders->sum('total'),
+                'items_count' => (int) $primary->items->count(),
+                'channel' => $primary->fromErp ? 'erp' : 'site',
+                'has_preorder' => $orders->contains(fn (Order $o) => $o->type === OrderType::PREORDER),
+                'is_first_order' => Order::query()->where('user_id', $primary->user_id)->count() <= $orders->count(),
+            ],
+            view: [
+                'title' => sprintf('Заказ %s принят', $number),
+                'body' => sprintf('Оформлен заказ %s на сумму %s ₽.', $number, number_format((float) $orders->sum('total'), 2, ',', ' ')),
+                'url' => url(route('cabinet.orders.show', $primary, false)),
+                'entity_label' => "Заказ {$number}",
+            ],
+        ));
+    }
+
     private function primaryOrder($orders): ?Order
     {
         foreach ([OrderType::ORDER, OrderType::PREORDER] as $type) {

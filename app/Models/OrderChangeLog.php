@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Events\EntityChanged;
+use App\Notifications\Pulse\Support\PulseSignal;
+use App\Services\Notifications\Pulse\NotificationPulse;
 use App\Subscriptions\EntityChangeNotice;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -85,7 +87,96 @@ class OrderChangeLog extends Model
                 rows: self::buildNoticeRows($log),
                 event: (string) $log->type,
             ));
+
+            self::signalPulse($log, $order, $number);
         });
+    }
+
+    /**
+     * Сигнал пульту уведомлений о том же изменении.
+     *
+     * Пока идёт миграция, сигнал живёт рядом с EntityChanged: пульт в теневом
+     * режиме считает получателей, а письма шлёт прежний механизм. Что именно
+     * отправляет, решает PulseMode — один флаг на обе стороны.
+     */
+    private static function signalPulse(self $log, Order $order, string $number): void
+    {
+        $eventKey = match ($log->type) {
+            'items_updated' => 'orders.items_updated',
+            'attributes_updated' => 'orders.attributes_updated',
+            'api_shortfall' => 'orders.shortfall',
+            default => null,
+        };
+
+        if ($eventKey === null) {
+            return;
+        }
+
+        app(NotificationPulse::class)->signal(new PulseSignal(
+            eventKey: $eventKey,
+            clientUserId: (int) $order->user_id,
+            companyId: $order->company_id,
+            subject: $order,
+            data: self::buildSignalData($log, $order, $number),
+            view: [
+                'title' => sprintf('Изменение по заказу %s', $number),
+                'body' => (string) $log->summary,
+                'url' => url(route('cabinet.orders.show', $order, false)),
+                'entity_label' => "Заказ {$number}",
+                'rows' => self::buildNoticeRows($log),
+            ],
+            occurredAt: $log->created_at,
+        ));
+    }
+
+    /**
+     * Числа изменения для условий правил.
+     *
+     * Считаются из тех же `changes`, что и блоки письма, — второго источника
+     * правды для одного и того же изменения быть не должно.
+     *
+     * @return array<string, mixed>
+     */
+    private static function buildSignalData(self $log, Order $order, string $number): array
+    {
+        $c = $log->changes ?? [];
+
+        $notAccepted = count($c['not_accepted'] ?? []);
+        $partial = count($c['partial'] ?? []);
+        $removed = count($c['removed'] ?? []);
+
+        $data = [
+            'order_number' => $number,
+            'order_type' => $order->type?->value,
+            'source' => $log->source,
+            'total' => (float) ($order->total ?? 0),
+        ];
+
+        if ($log->type === 'items_updated') {
+            $data += [
+                'added_count' => count($c['added'] ?? []),
+                'removed_count' => $removed,
+                'modified_count' => count($c['modified'] ?? []),
+                'old_total' => (float) ($log->old_total ?? 0),
+                'new_total' => (float) ($log->new_total ?? 0),
+                'total_delta' => (float) ($log->new_total ?? 0) - (float) ($log->old_total ?? 0),
+                'has_removed' => $removed > 0,
+            ];
+        }
+
+        if ($log->type === 'attributes_updated') {
+            $data['changed_fields'] = array_keys($c['attributes'] ?? []);
+        }
+
+        if ($log->type === 'api_shortfall') {
+            $data += [
+                'shortfall_items_count' => $notAccepted + $partial,
+                'is_full_cancel' => $notAccepted > 0 && $partial === 0 && count($c['accepted'] ?? []) === 0,
+                'source' => 'api',
+            ];
+        }
+
+        return $data;
     }
 
     /**

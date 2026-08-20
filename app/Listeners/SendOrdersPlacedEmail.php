@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Events\OrdersPlaced;
 use App\Notifications\Orders\OrderCreatedNotification;
 use App\Notifications\Orders\OrdersPlacedNotification;
+use App\Services\Notifications\Pulse\PulseMode;
 
 /**
  * Одно оформление — одно письмо клиенту.
@@ -20,6 +21,13 @@ class SendOrdersPlacedEmail
 {
     public function handle(OrdersPlaced $event): void
     {
+        // Событие переведено на пульт — здесь молчим. Сигнал порождает
+        // NotifyManagersAboutNewOrder: он один на покупку, и дублировать
+        // его вторым листенером той же покупки незачем.
+        if (PulseMode::handles('orders.created')) {
+            return;
+        }
+
         if (! config('notifications.mail.features.order_created')) {
             return;
         }
