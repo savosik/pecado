@@ -19,6 +19,7 @@ use App\Http\Controllers\Crm\FinanceController;
 use App\Http\Controllers\Crm\ImpersonationController;
 use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
+use App\Http\Controllers\Crm\NotificationJournalController;
 use App\Http\Controllers\Crm\NotificationRuleController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
@@ -590,6 +591,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/notifications/rules/meta', [NotificationRuleController::class, 'meta'])->name('notifications.meta');
         Route::get('/notifications/rules/contacts', [NotificationRuleController::class, 'contacts'])->name('notifications.contacts');
         Route::post('/notifications/rules/preview', [NotificationRuleController::class, 'preview'])->name('notifications.preview');
+        // Журнал и трасса: отвечают на «почему клиенту не пришло» без разработчика
+        Route::get('/notifications/journal', [NotificationJournalController::class, 'index'])->name('notifications.journal');
+        Route::get('/notifications/signals/{uuid}', [NotificationJournalController::class, 'signal'])->name('notifications.signal');
     });
     Route::middleware('permission:crm-notifications.create')->group(function () {
         Route::post('/notifications/rules', [NotificationRuleController::class, 'store'])->name('notifications.store');

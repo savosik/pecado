@@ -24,6 +24,7 @@ import {
     LuFileDown,
     LuPackageX,
     LuBellRing,
+    LuHistory,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -63,6 +64,7 @@ export const menuConfig: MenuGroup[] = [
             { label: "Задачи", icon: LuListChecks, path: "/crm/tasks", permission: "crm-tasks.view", counter: "tasks" },
             { label: "Письма", icon: LuMail, path: "/crm/emails", permission: "crm-emails.view" },
             { label: "Пульт уведомлений", icon: LuBellRing, path: "/crm/notifications/rules", permission: "crm-notifications.view" },
+            { label: "Журнал уведомлений", icon: LuHistory, path: "/crm/notifications/journal", permission: "crm-notifications.view" },
             { label: "Планы продаж", icon: LuTarget, path: "/crm/plans", permission: "crm-plans.view" },
             { label: "Возможности", icon: LuLightbulb, path: "/crm/opportunities", permission: "crm-opportunities.view" },
             { label: "Грядки", icon: LuSprout, path: "/crm/beds", permission: "crm-beds.view" },

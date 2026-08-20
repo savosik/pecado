@@ -27,7 +27,14 @@ Schedule::command('stock:cleanup-availability')->dailyAt('04:50')->withoutOverla
 Schedule::command('stock:buffers:recompute')->dailyAt('02:20')->withoutOverlapping(); // страховой буфер по рисковым SKU (отмены/брак/срок годности); показ занижает только флаг STOCK_BUFFER_ENABLED (buf-04)
 Schedule::command('erp:cleanup-messages')->dailyAt('05:00')->withoutOverlapping(); // лог шины ERP: архив в холодное хранилище + удаление старше ERP_BUS_RETENTION_DAYS
 Schedule::command('erp:cleanup-processed')->dailyAt('05:20')->withoutOverlapping(); // журнал дедупликации входящих: ретенция ERP_PROCESSED_RETENTION_DAYS
-Schedule::command('model:prune', ['--model' => [\App\Models\SentEmail::class]])->dailyAt('05:10'); // журнал исходящих писем: ретенция MAIL_JOURNAL_RETENTION_DAYS
+Schedule::command('model:prune', ['--model' => [
+    \App\Models\SentEmail::class,
+    // Пульт уведомлений: сигналы — оперативная трасса (30 дней), доставки живут
+    // дольше журнала писем (365): «когда мы перестали слать этому бухгалтеру»
+    // спрашивают и через год, а строка компактная — тела письма в ней нет.
+    \App\Models\NotificationSignal::class,
+    \App\Models\NotificationDelivery::class,
+]])->dailyAt('05:10'); // журнал исходящих писем: ретенция MAIL_JOURNAL_RETENTION_DAYS
 Schedule::command('sitemap:generate')->dailyAt('03:30'); // после search:sync
 Schedule::command('feed:build-yandex')->hourly()->withoutOverlapping(); // публичный YML-фид Яндекс.Маркета
 Schedule::command('promo:rebuild-rule-products')->dailyAt('02:40')->withoutOverlapping(); // участники правил акций: состав категорий и теги меняются массово
