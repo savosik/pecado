@@ -45,4 +45,14 @@ interface StockServiceInterface
      * @return array<int, int>
      */
     public function getPreorderStockMap(iterable $products, ?User $user = null): array;
+
+    /**
+     * Обе карты остатков (available и preorder) по списку id — за один проход
+     * по product_warehouse, когда модели товаров не нужны. Как и остальные
+     * методы, вычитает страховой буфер из available (buf-04), preorder не трогает.
+     *
+     * @param  array<int, int>  $productIds
+     * @return array{available: array<int,int>, preorder: array<int,int>}
+     */
+    public function getStockMapsByIds(array $productIds, ?User $user = null): array;
 }

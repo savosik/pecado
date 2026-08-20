@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\User;
 
 use App\Contracts\Cart\CartServiceInterface;
+use App\Contracts\Stock\StockServiceInterface;
 use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\Favorite;
 use App\Models\Product;
-use App\Models\Region;
 use App\Support\Search\FuzzyProductMatcher;
 use App\Support\Search\QueryRouter;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,13 +16,13 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class CabinetCartController extends Controller
 {
     public function __construct(
         protected CartServiceInterface $cartService,
+        protected StockServiceInterface $stockService,
     ) {}
 
     private const SORT_FIELDS = ['updated_at', 'created_at', 'name', 'total_amount', 'items_count'];
@@ -347,51 +347,20 @@ class CabinetCartController extends Controller
     }
 
     /**
-     * Считает остатки по складам региона пользователя одним SQL-запросом
-     * на каждый тип склада. Возвращает ['available' => [productId => qty], 'preorder' => [...]].
+     * Остатки по складам региона пользователя — через StockService: единая точка
+     * агрегации, которая вычитает страховой буфер (buf-04). Раньше здесь была
+     * своя SUM-копия мимо буфера, и клиент сегмента `stock_buffer_enabled`
+     * видел в кабинетных корзинах больше, чем в каталоге и карточке товара.
      *
      * @param  array<int, int>  $productIds
      * @return array{available: array<int,int>, preorder: array<int,int>}
      */
     private function resolveStockMap(?\App\Models\User $user, array $productIds): array
     {
-        $empty = ['available' => [], 'preorder' => []];
-
         if (empty($productIds)) {
-            return $empty;
+            return ['available' => [], 'preorder' => []];
         }
 
-        $regionId = $user?->region_id ?? Region::defaultId();
-        if (! $regionId) {
-            return $empty;
-        }
-
-        $warehouseTypes = DB::table('region_warehouse')
-            ->where('region_id', $regionId)
-            ->whereIn('type', ['primary', 'preorder'])
-            ->select('warehouse_id', 'type')
-            ->get()
-            ->groupBy('type')
-            ->map(fn ($rows) => $rows->pluck('warehouse_id')->all());
-
-        $sumStock = function (array $warehouseIds) use ($productIds): array {
-            if (empty($warehouseIds)) {
-                return [];
-            }
-
-            return DB::table('product_warehouse')
-                ->whereIn('product_id', $productIds)
-                ->whereIn('warehouse_id', $warehouseIds)
-                ->selectRaw('product_id, SUM(quantity) as total')
-                ->groupBy('product_id')
-                ->pluck('total', 'product_id')
-                ->map(fn ($v) => (int) $v)
-                ->all();
-        };
-
-        return [
-            'available' => $sumStock($warehouseTypes['primary'] ?? []),
-            'preorder' => $sumStock($warehouseTypes['preorder'] ?? []),
-        ];
+        return $this->stockService->getStockMapsByIds(array_values($productIds), $user);
     }
 }
