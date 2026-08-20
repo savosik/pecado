@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\PrintedDocumentFormat;
 use App\Models\PrintedDocument;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -13,11 +14,12 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Перенос PDF печатной формы из обменного бакета в хранилище сайта (v16.1.0).
+ * Перенос файла печатной формы из обменного бакета в хранилище сайта (v16.6.0).
  *
  * 1С кладёт файл в `documents-exchange` и присылает по шине только запись
  * о документе. Задача забирает объект, кладёт его в приватный диск сайта
- * и удаляет исходник.
+ * и удаляет исходник. Принимаются PDF, XLSX и XLS — формат определяется
+ * по сигнатуре содержимого, а не по тому, что заявлено в сообщении.
  *
  * Почему копируем, а не читаем из обменного бакета при каждом скачивании:
  * обменный бакет обязан чиститься (иначе туда осядут файлы отвалившихся
@@ -109,15 +111,32 @@ class StorePrintedDocumentFile implements ShouldQueue
             return;
         }
 
-        if (! $this->looksLikePdf($exchange, $sourcePath)) {
-            $this->reject($document, $exchange, $sourcePath, 'файл не является PDF');
+        $format = $this->detectFormat($exchange, $sourcePath);
+
+        if (! $format) {
+            $this->reject($document, $exchange, $sourcePath, 'формат файла не распознан (ожидались PDF, XLSX или XLS)');
 
             return;
         }
 
+        // Расхождение с mime из сообщения не отклоняет документ: 1С могла забыть
+        // поменять строку в коде, а клиенту нужен акт. Верим содержимому, но пишем
+        // предупреждение — иначе разъехавшийся контракт останется незамеченным.
+        if ($document->mime_type && $document->mime_type !== $format->mime()) {
+            Log::warning('StorePrintedDocumentFile: mime_type из 1С не совпал с содержимым файла', [
+                'printed_document_id' => $document->id,
+                'uuid' => $document->uuid,
+                'declared' => $document->mime_type,
+                'actual' => $format->mime(),
+            ]);
+        }
+
+        $document->mime_type = $format->mime();
+
         $checksum = $this->checksum($exchange, $sourcePath);
         $targetDisk = config('documents.disk');
-        $targetPath = $this->targetPath($document);
+        $previousPath = $document->path;
+        $targetPath = $this->targetPath($document, $format);
 
         // Тот же файл уже лежит на месте — перевыставили реквизиты, не содержимое.
         // Перекладывать мегабайты незачем: на первичной выгрузке этого набирается много.
@@ -142,6 +161,20 @@ class StorePrintedDocumentFile implements ShouldQueue
             }
 
             $document->version = $document->version + 1;
+        }
+
+        // Смена формата у той же формы (PDF-акт стал XLSX) меняет расширение, а значит
+        // и ключ хранения: старый объект больше ничем не адресуется и остался бы
+        // сиротой в приватном бакете навсегда — его никто не найдёт и не удалит.
+        if ($previousPath && $previousPath !== $targetPath && $document->disk === $targetDisk) {
+            Storage::disk($targetDisk)->delete($previousPath);
+
+            Log::info('StorePrintedDocumentFile: удалён прежний файл формы после смены формата', [
+                'printed_document_id' => $document->id,
+                'uuid' => $document->uuid,
+                'previous_path' => $previousPath,
+                'path' => $targetPath,
+            ]);
         }
 
         $document->disk = $targetDisk;
@@ -178,17 +211,17 @@ class StorePrintedDocumentFile implements ShouldQueue
     }
 
     /**
-     * Ключ в хранилище сайта: `<ГГГГ>/<ММ>/<uuid>.pdf`.
+     * Ключ в хранилище сайта: `<ГГГГ>/<ММ>/<uuid>.<расширение>`.
      *
      * Детерминирован по uuid, поэтому перевыставление перезаписывает тот же объект
      * и мусор не копится. Год и месяц берутся из даты документа — по ним удобно
      * оценивать объём и разбирать хранилище руками.
      */
-    private function targetPath(PrintedDocument $document): string
+    private function targetPath(PrintedDocument $document, PrintedDocumentFormat $format): string
     {
         $prefix = ($document->date ?? $document->created_at ?? now())->format('Y/m');
 
-        return $prefix.'/'.$document->uuid.'.pdf';
+        return $prefix.'/'.$document->uuid.'.'.$format->extension();
     }
 
     /**
@@ -211,19 +244,21 @@ class StorePrintedDocumentFile implements ShouldQueue
     }
 
     /**
-     * Проверка по сигнатуре, а не по расширению и не по mime_type из сообщения:
+     * Формат по сигнатуре, а не по расширению и не по mime_type из сообщения:
      * и то и другое задаёт 1С, а нам важно, что клиент реально сможет открыть файл.
      */
-    private function looksLikePdf(\Illuminate\Contracts\Filesystem\Filesystem $disk, string $path): bool
+    private function detectFormat(\Illuminate\Contracts\Filesystem\Filesystem $disk, string $path): ?PrintedDocumentFormat
     {
         $stream = $disk->readStream($path);
 
         if (! $stream) {
-            return false;
+            return null;
         }
 
         try {
-            return fread($stream, 5) === '%PDF-';
+            $head = fread($stream, PrintedDocumentFormat::SIGNATURE_LENGTH);
+
+            return $head === false ? null : PrintedDocumentFormat::detect($head);
         } finally {
             fclose($stream);
         }

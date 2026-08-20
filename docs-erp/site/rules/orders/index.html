@@ -787,6 +787,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Отмена строки при недоборе">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Причину отмены протокол не передаёт
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -829,7 +846,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Маппинг статусов
@@ -890,7 +907,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
+  <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -2296,6 +2313,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Отмена строки при недоборе">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Причину отмены протокол не передаёт
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -2338,7 +2372,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Маппинг статусов
@@ -2399,7 +2433,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
+  <a href="#_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -2616,21 +2650,6 @@
 <li>При <code>pickup</code> поле <code>delivery_address</code> = <code>null</code> — 1С <strong>не должна требовать</strong> адрес доставки</li>
 </ul>
 </li>
-<li><strong>(v16.2.0)</strong> <strong>Заказ-замена</strong> — заказ, созданный из подборки замен по недобору
-  (1С отменила строки при сборке → сайт предложил клиенту замены → клиент согласовал):<ul>
-<li>Для 1С это <strong>обычный <code>order.created</code></strong>: реквизиты, доставка и контрагент унаследованы
-  от исходного заказа, состав — согласованные замены. Исходный заказ <strong>не редактируется</strong></li>
-<li>В <code>manager_comment</code> сайт пишет текстовую пометку «Замена недоборов по заказу N»</li>
-<li>Поле <code>replaces_order_uuid</code> — UUID исходного заказа с недобором. <strong>Опциональное
-  и обратно совместимое</strong>: присутствует только у заказов-замен; 1С, не знающая поле,
-  игнорирует его. Что 1С может с ним делать (по желанию): показывать «замена по
-  документу №…», строить свою аналитику недоборов</li>
-<li>Смешанный выбор клиента (обычные товары + уценка) даёт <strong>два</strong> заказа-замены:
-  <code>type: "order"</code> и <code>type: "defect"</code>, оба со ссылкой на один исходный</li>
-<li>До подтверждения от стороны 1С, что незнакомое поле не роняет приёмник, сайт
-  держит отправку поля выключенной флагом — в payload его нет</li>
-</ul>
-</li>
 </ul>
 <h3 id="1">Сторона 1С<a class="headerlink" href="#1" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2738,6 +2757,21 @@
 <li><strong>не входит в сумму заказа</strong>: <code>total_amount</code> по примеру выше равен 7 635,00.</li>
 </ul>
 <p>Отсутствие поля и <code>null</code> означают «строка не отменена».</p>
+<h4 id="_5">Причину отмены протокол не передаёт<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h4>
+<p>Строку снимает не только склад. Два разных случая приезжают одинаковым
+<code>order.updated</code> с <code>cancelled: true</code>:</p>
+<ol>
+<li><strong>Склад при сборке</strong> — товара не хватило, позиция мятая, пересорт. Косвенный
+   признак: по заказу уже заведён расходный ордер (<code>goods_issue.*</code>).</li>
+<li><strong>Отказ клиента</strong> — клиент попросил менеджера убрать позицию, и тот снял её
+   в 1С. Расходного ордера по такому заказу может не быть вовсе.</li>
+</ol>
+<p>Сайт ведёт <strong>журнал недоборов</strong> (раздел CRM «Недоборы»): фиксирует дату отмены,
+заказ, партнёра, товар и сумму. Метку «отменил склад / отменил клиент» ставит
+менеджер вручную — сайт лишь подсказывает по наличию расходного ордера.
+Автоматических предложений замены клиенту сайт <strong>не делает</strong> (v16.5.0).</p>
+<p>Если в 1С появится признак причины отмены строки — это лучший кандидат
+на расширение <code>items[]</code>: он снимет ручную разметку целиком.</p>
 <div class="admonition warning">
 <p class="admonition-title">Что было до v15.16.0</p>
 <p>Признак <code>cancelled</code> 1С присылала, но сайт его <strong>не читал</strong>, а строки
@@ -2802,7 +2836,7 @@
 <li>Восстановленный заказ <strong>не публикуется обратно</strong> в 1С — событий в <code>erp_out.orders</code> не возникает</li>
 <li>Самовосстановление — это страховка, а не штатный путь. <strong>1С обязана присылать <code>order.created</code></strong> на каждый новый заказ. Записи <code>recovered</code> в админке означают, что на стороне 1С событие потерялось, и это повод разбираться</li>
 </ul>
-<h3 id="_5">Маппинг статусов<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<h3 id="_6">Маппинг статусов<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -2891,7 +2925,7 @@
 <li>Заказ перестаёт отображаться в активных заказах ЛК и админки, но остаётся доступным в админке через фильтр «Удалённые»</li>
 </ul>
 <hr />
-<h2 id="_6">Критерии приёмки<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<h2 id="_7">Критерии приёмки<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[ ] <strong>(v15)</strong> <code>manager_comment</code> и <code>warehouse_comment</code> включаются в payload <code>order.created</code> / <code>order.updated</code></li>
 <li>[ ] <strong>(v15)</strong> Оба поля хранятся в <code>orders.manager_comment</code> / <code>orders.warehouse_comment</code></li>

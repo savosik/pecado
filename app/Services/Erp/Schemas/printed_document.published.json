@@ -44,7 +44,17 @@
         "date": {
             "type": "string",
             "format": "date",
-            "description": "Дата документа-основания. Ось фильтра и сортировки в кабинете."
+            "description": "Дата документа-основания. Ось фильтра и сортировки в кабинете. Для акта сверки — дата окончания периода акта."
+        },
+        "period_from": {
+            "type": ["string", "null"],
+            "format": "date",
+            "description": "Начало периода, за который построена форма. Заполняется у форм за период — прежде всего у акта сверки; у форм по документу-основанию не передаётся."
+        },
+        "period_to": {
+            "type": ["string", "null"],
+            "format": "date",
+            "description": "Конец периода, за который построена форма. У акта сверки совпадает с date."
         },
         "title": {
             "type": "string",
@@ -70,7 +80,7 @@
         },
         "mime_type": {
             "type": "string",
-            "description": "MIME-тип файла. Принимается только application/pdf."
+            "description": "MIME-тип файла. Принимаются application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet (XLSX) и application/vnd.ms-excel (XLS). Enum намеренно не задан: неизвестный тип не должен ронять сообщение в очередь недоставленных — формат сайт определяет по сигнатуре содержимого, а несовпадение помечает документ как rejected."
         },
         "partner_uuid": {
             "type": ["string", "null"],

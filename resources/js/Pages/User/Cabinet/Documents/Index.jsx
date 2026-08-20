@@ -409,9 +409,17 @@ export default function DocumentsIndex({
                                             {document.date && (
                                                 <Text fontSize="sm" color="fg.muted">от {document.date}</Text>
                                             )}
+                                            {/* Формат подписан только у не-PDF: почти все формы
+                                                приходят в PDF, и бейдж на каждой строке был бы шумом. */}
+                                            {document.format && document.format !== 'pdf' && (
+                                                <Badge colorPalette="green" variant="subtle">
+                                                    {document.format_label}
+                                                </Badge>
+                                            )}
                                         </HStack>
 
                                         <HStack gap="3" wrap="wrap" fontSize="sm" color="fg.muted">
+                                            {document.period && <Text>Период: {document.period}</Text>}
                                             {document.company && <Text>{document.company}</Text>}
                                             {document.organization && <Text>Продавец: {document.organization}</Text>}
                                             {document.base && (

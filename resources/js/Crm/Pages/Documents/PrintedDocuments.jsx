@@ -74,7 +74,16 @@ export default function PrintedDocuments({
             key: 'date',
             label: 'Дата',
             sortable: true,
-            render: (_, row) => <Text fontSize="sm" whiteSpace="nowrap">{row.date_label || '—'}</Text>,
+            render: (_, row) => (
+                <VStack align="start" gap={0}>
+                    <Text fontSize="sm" whiteSpace="nowrap">{row.date_label || '—'}</Text>
+                    {/* Период есть только у форм за период: у акта сверки одна дата
+                        ничего не говорит — два акта одного клиента различает именно он. */}
+                    {row.period_label && (
+                        <Text fontSize="10px" color="fg.muted" whiteSpace="nowrap">{row.period_label}</Text>
+                    )}
+                </VStack>
+            ),
         },
         {
             key: 'client',
@@ -140,8 +149,10 @@ export default function PrintedDocuments({
                     >
                         {row.file_status_label}
                     </Badge>
-                    {row.size_label && (
-                        <Text fontSize="10px" color="fg.muted">{row.size_label}</Text>
+                    {(row.size_label || row.format_label) && (
+                        <Text fontSize="10px" color="fg.muted">
+                            {[row.format_label, row.size_label].filter(Boolean).join(' · ')}
+                        </Text>
                     )}
                 </VStack>
             ),
@@ -177,7 +188,7 @@ export default function PrintedDocuments({
             <Head title="CRM — Печатные формы" />
             <PageHeader
                 title="Печатные формы"
-                description="Готовые PDF из 1С: счета, счета-фактуры, УПД, акты сверки. Здесь только читаются"
+                description="Готовые печатные формы из 1С: счета, счета-фактуры, УПД, акты сверки в Excel. Здесь только читаются"
             />
 
             <VStack align="stretch" gap={3} mb={4}>

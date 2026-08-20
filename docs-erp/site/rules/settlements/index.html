@@ -885,10 +885,43 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#1630" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Начальное сальдо не применяется (с 16.3.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1631" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Внутренние организации исключаются (с 16.3.1)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Две даты сальдо
+        Контрольная точка — единственный эталон
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#paying_amount-1640" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Два определения долга и paying_amount (с 16.4.0)
       
     </span>
   </a>
@@ -2086,10 +2119,43 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#1630" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Начальное сальдо не применяется (с 16.3.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1631" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Внутренние организации исключаются (с 16.3.1)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Две даты сальдо
+        Контрольная точка — единственный эталон
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#paying_amount-1640" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Два определения долга и paying_amount (с 16.4.0)
       
     </span>
   </a>
@@ -2204,11 +2270,11 @@
 </tr>
 <tr>
 <td><code>settlement.opening_balance</code></td>
-<td>Сальдо на дату отсечки (01.01.2026), несверенное</td>
+<td>~~Сальдо на дату отсечки~~ <strong>устарело с 16.3.0, в ленту не попадает</strong></td>
 </tr>
 <tr>
 <td><code>settlement.checkpoint</code></td>
-<td>Сверенное сальдо на дату закрытия периода (01.07.2026 и далее)</td>
+<td>Сверенное сальдо на дату закрытия периода — единственный эталон</td>
 </tr>
 </tbody>
 </table>
@@ -2276,9 +2342,9 @@
 </thead>
 <tbody>
 <tr>
-<td>01.01.2026</td>
-<td>Начальное сальдо</td>
-<td><code>opening_balance</code></td>
+<td>31.12.2025</td>
+<td>Долг прошлых периодов</td>
+<td><code>adjustment</code></td>
 <td>−50 000,00</td>
 </tr>
 <tr>
@@ -2343,34 +2409,81 @@
   обязаны приезжать движения; исключён контрагент — исключён везде. Промежуточных состояний
   быть не должно, иначе акт сверки не сможет объяснить баланс.</li>
 </ul>
-<h2 id="_6">Две даты сальдо<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
-<p>Дата отсечки — <strong>01.01.2026</strong>, но период на неё в 1С <strong>не закрыт</strong>: даты запрета изменения
-стоят на 31.03, 30.04 и 30.06.2026. Поэтому точек две:</p>
+<h2 id="1630">Начальное сальдо не применяется (с 16.3.0)<a class="headerlink" href="#1630" title="Permanent link">&para;</a></h2>
+<p>Лента приходит от 1С <strong>целиком, с самого начала истории</strong> — первые движения датированы
+2025 годом. <code>settlement.opening_balance</code> описывает ту же историю, свёрнутую в одну строку,
+то есть дублирует ленту.</p>
+<p>Пока сальдо прибавлялось, баланс был задвоен на 13,7 млн ₽. Проверка на контрольной точке
+01.08.2026:</p>
 <table>
 <thead>
 <tr>
-<th>Событие</th>
-<th>Дата</th>
-<th>Роль</th>
+<th>Как считаем</th>
+<th>Расхождение с эталоном 1С</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>settlement.opening_balance</code></td>
-<td>01.01.2026</td>
-<td>Начало ленты, <code>is_verified: false</code></td>
+<td>Лента <strong>со</strong> строками <code>opening_balance</code></td>
+<td>13 899 656,86 ₽</td>
 </tr>
 <tr>
-<td><code>settlement.checkpoint</code></td>
-<td>01.07.2026</td>
-<td>Сверенная цифра, <code>is_verified: true</code></td>
+<td>Лента <strong>без</strong> них</td>
+<td>177 925,32 ₽ (140 пар из 150 сходятся точно)</td>
 </tr>
 </tbody>
 </table>
-<p>Инвариант: <strong>сальдо на 01.01 + движения за первое полугодие = checkpoint на 01.07</strong>. Сойдётся —
-история первого полугодия достоверна. Нет — расхождение известно точной величиной, и решение
-«показывать ли H1» принимается осознанно, а не по умолчанию.</p>
+<p>Событие продолжает приниматься и логироваться — 1С может слать его по инерции, — но
+движение не создаёт. Правило простое: <strong>баланс на любую дату = <code>SUM(amount)</code> по ленте,
+ничего не прибавлять</strong>.</p>
+<h2 id="1631">Внутренние организации исключаются (с 16.3.1)<a class="headerlink" href="#1631" title="Permanent link">&para;</a></h2>
+<p>В 1С существует техническая организация <strong>«Реклама»</strong> (<code>f3070b58-327d-11e4-ac24-001e6711ed1d</code>):
+на неё проводятся внутренние рекламные операции, к расчётам с партнёрами и контрагентами
+они отношения не имеют. Фигурировать во взаиморасчётах она не должна — ни в акте сверки,
+ни в календаре оплат, ни в реквизитах долга.</p>
+<p>Сайт отбрасывает данные таких организаций <strong>на входе</strong> (флаг
+<code>organizations.is_settlements_excluded</code> в справочнике сайта):</p>
+<ul>
+<li>строки <code>settlement.posted</code>, чья <code>organization_uuid</code> принадлежит исключённой организации,
+  не сохраняются; delete-and-recreate при этом выполняется, поэтому перепроведение
+  документа заодно вычищает ранее принятые движения;</li>
+<li><code>payment_schedule.updated</code> исключённой организации не создаёт плановых строк;</li>
+<li><code>settlement.checkpoint</code> исключённой организации не сохраняется — сверять его не с чем;</li>
+<li>в <code>balance.updated</code> пропускаются её строка разреза <code>organizations[]</code> и строки
+  <code>overdue_details[]</code>.</li>
+</ul>
+<p><strong>Контракт не меняется</strong>: 1С может продолжать присылать эти данные, сообщения остаются
+валидными и в DLQ не попадают. Но агрегаты contractor-уровня (<code>current_balance</code>,
+<code>overdue_debt</code>) 1С считает у себя, и если в них входят суммы «Рекламы» — вычесть их
+сайт не может. Желательно исключить организацию из выгрузки на стороне 1С.</p>
+<h2 id="_6">Контрольная точка — единственный эталон<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<p><code>settlement.checkpoint</code> — сверенное сальдо на дату закрытия периода, <code>is_verified: true</code>.
+Инвариант: <strong>сумма ленты до даты точки = сумма точки</strong>. Обе стороны равенства приходят
+из регистра 1С, поэтому расхождение означает дырку в истории, а не спор двух каналов.</p>
+<p>Текущий эталон — <strong>01.08.2026</strong> (итог по 31.07, 150 пар, −6 639 322,54 ₽).</p>
+<p>Точку на текущую дату эталоном брать нельзя: 1С снимала её дважды за час, и она уехала
+на 1,6 млн — вчерашним днём в базу продолжают вводить документы. Свежий эталон снимается
+только в согласованный момент без активности в базе.</p>
 <p>Это тот же принцип, что и во всём разделе: расхождение — сигнал, а не повод считать по-своему.</p>
+<h2 id="paying_amount-1640">Два определения долга и <code>paying_amount</code> (с 16.4.0)<a class="headerlink" href="#paying_amount-1640" title="Permanent link">&para;</a></h2>
+<p>Круг 11 сверки показал: лента и баланс отвечают на разные вопросы. Движения несут
+только ресурс <code>Сумма</code> (<code>amount</code>), а «сколько клиент должен сейчас» 1С считает как
+<code>Сумма − Оплачивается</code>. Пока ресурс «Оплачивается» не попадал в обмен, равенство
+«лента = долг» не сходилось <strong>системно</strong> — даже при идеально доставленной истории.</p>
+<p>С 16.4.0 ресурс передаётся опциональным полем <code>paying_amount</code> (<code>≥ 0</code> либо <code>null</code>):</p>
+<ul>
+<li><code>settlement.posted</code> → <code>entries[].paying_amount</code> — по строке движения;</li>
+<li><code>settlement.checkpoint</code> → <code>paying_amount</code> — сумма по паре; живой нетто-остаток
+  пары = <code>amount − paying_amount</code>.</li>
+</ul>
+<p>Правила использования:</p>
+<ul>
+<li><strong>баланс ленты</strong> (акт сверки) по-прежнему <code>SUM(amount)</code> — <code>paying_amount</code>
+  в него не входит;</li>
+<li><strong>долг клиента в моменте</strong> — определение 1С: <code>SUM(amount) − SUM(paying_amount)</code>;</li>
+<li>сообщения без поля валидны: до подтверждения схемы стороной 1С поле
+  не публикуется, клиент видит долг по <code>balance.updated</code>.</li>
+</ul>
 <h2 id="_7">Что считается из регистра<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

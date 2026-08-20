@@ -1299,17 +1299,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#22-ordercreated-replaces_order_uuid-v1620" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.2а — Заказ-замена по недобору (order.created + replaces_order_uuid, v16.2.0)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#23-ordercreated-type-preorder" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2030,17 +2019,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#22-ordercreated-replaces_order_uuid-v1620" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.2а — Заказ-замена по недобору (order.created + replaces_order_uuid, v16.2.0)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#23-ordercreated-type-preorder" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2157,23 +2135,6 @@
 <li>[ ] 1С сопоставляет контрагента: приоритет <code>contractor.uuid</code>, fallback <code>tax_id</code> (v13.2)</li>
 <li>[ ] Если склад не найден — <code>ОсновнойСклад</code></li>
 <li>[ ] <strong>Эхо-фикс (2026-04-23):</strong> при оформлении нового заказа в очереди публикуется только <code>order.created</code>; <code>order.updated</code> НЕ предшествует <code>order.created</code></li>
-</ul>
-<hr />
-<h2 id="22-ordercreated-replaces_order_uuid-v1620">2.2а — Заказ-замена по недобору (<code>order.created</code> + <code>replaces_order_uuid</code>, v16.2.0)<a class="headerlink" href="#22-ordercreated-replaces_order_uuid-v1620" title="Permanent link">&para;</a></h2>
-<p><strong>Зависимости:</strong> 2.2 (заказ), обмен <code>order.updated</code> с <code>cancelled: true</code> (недобор)</p>
-<p>🟢 <strong>Разработчик сайта</strong> воспроизводит цепочку: 1С отменяет строки заказа при сборке →
-на сайте клиент согласовывает подборку замен → сайт создаёт заказ-замену.</p>
-<blockquote>
-<p>Структура payload → <a href="/docs/erp/schemas/order.created.to_erp.json">JSON Schema</a></p>
-</blockquote>
-<p><strong>Проверка (1С-ник):</strong></p>
-<ul>
-<li>[ ] В <code>erp_out.orders</code> появился обычный <code>order.created</code> — как в 2.2, все проверки применимы</li>
-<li>[ ] <code>manager_comment</code> содержит текст «Замена недоборов по заказу N»</li>
-<li>[ ] При включённом на сайте флаге отправки поля: <code>replaces_order_uuid</code> = UUID исходного заказа</li>
-<li>[ ] Незнакомое поле <code>replaces_order_uuid</code> <strong>не роняет</strong> приёмник 1С (главная проверка перед включением)</li>
-<li>[ ] У обычных заказов (2.2, 2.3) поле отсутствует — payload не изменился байт-в-байт</li>
-<li>[ ] Смешанный выбор клиента (обычный товар + уценка) даёт два заказа-замены: <code>type: "order"</code> и <code>type: "defect"</code>, оба с одним <code>replaces_order_uuid</code></li>
 </ul>
 <hr />
 <h2 id="23-ordercreated-type-preorder">2.3 — Предзаказ (<code>order.created</code>, <code>type: "preorder"</code>)<a class="headerlink" href="#23-ordercreated-type-preorder" title="Permanent link">&para;</a></h2>

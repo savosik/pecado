@@ -90,6 +90,10 @@ class HandlePrintedDocumentPublished
             'erp_type_name' => $this->stringOrNull($payload['type_name'] ?? null),
             'number' => $this->stringOrNull($payload['number'] ?? null),
             'date' => $this->stringOrNull($payload['date'] ?? null),
+            // Период есть только у форм за период (акт сверки). У форм по документу-
+            // основанию поля не передаются, и перезаписывать их нечем — храним как есть.
+            'period_from' => $this->stringOrNull($payload['period_from'] ?? null),
+            'period_to' => $this->stringOrNull($payload['period_to'] ?? null),
             'title' => $this->stringOrNull($payload['title'] ?? null),
             'user_id' => $userId,
             'company_id' => $companyId,
@@ -105,6 +109,9 @@ class HandlePrintedDocumentPublished
             'base_document_kind' => $this->stringOrNull($payload['base_document_kind'] ?? null),
             'source_url' => $fileUrl,
             'original_filename' => $this->stringOrNull($payload['file_name'] ?? null),
+            // Заявленный 1С тип — предварительный: при переносе файла он заменяется
+            // фактическим, определённым по сигнатуре. Фолбэк на PDF оставлен для
+            // совместимости: до v16.6.0 других форматов не было и поле часто не слали.
             'mime_type' => $this->stringOrNull($payload['mime_type'] ?? null) ?? 'application/pdf',
             'revision' => $this->intOrNull($payload['revision'] ?? null),
             'erp_created_at' => $payload['erp_created_at'] ?? null,

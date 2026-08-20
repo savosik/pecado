@@ -45,6 +45,11 @@ class PrintedDocumentController extends Controller
             'type_color' => $document->type->color(),
             'number' => $document->number,
             'date' => $document->date?->format('d.m.Y'),
+            // Период показывается только у форм за период (акт сверки): у остальных
+            // он пуст, и лишняя строка в карточке сбивала бы с толку.
+            'period' => $document->period_label,
+            'format' => $document->format->value,
+            'format_label' => $document->format->label(),
             'company' => $document->company?->name,
             'organization' => $organizationsEnabled && $document->organization && ! $document->organization->is_stub
                 ? $document->organization->name

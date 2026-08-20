@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 16.5.0
+  version: 16.6.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -6021,9 +6021,31 @@ components:
         date:
           type: string
           format: date
-          description: Дата документа-основания. Ось фильтра и сортировки в кабинете
+          description: |
+            Дата документа-основания. Ось фильтра и сортировки в кабинете.
+            Для формы за период (акт сверки) — дата окончания периода.
           examples:
             - '2026-08-12'
+        period_from:
+          type:
+            - string
+            - 'null'
+          format: date
+          description: |
+            Начало периода, за который построена форма. Заполняется у форм за период —
+            прежде всего у акта сверки (`reconciliation_act`); у форм по документу-основанию
+            не передаётся. Без этой пары клиент видит период только внутри файла,
+            а фильтровать в кабинете нечем.
+          examples:
+            - '2026-01-01'
+        period_to:
+          type:
+            - string
+            - 'null'
+          format: date
+          description: Конец периода, за который построена форма. У акта сверки совпадает с `date`
+          examples:
+            - '2026-08-19'
         title:
           type: string
           description: Готовый заголовок для показа клиенту. Если не передан — сайт соберёт его из вида, номера и даты
@@ -6053,9 +6075,20 @@ components:
           description: SHA-256 содержимого. Позволяет пропустить повторное копирование, если файл не изменился
         mime_type:
           type: string
-          description: Принимается только `application/pdf`
+          description: |
+            MIME-тип файла. Принимаются:
+
+            - `application/pdf` — печатные формы по документам-основаниям;
+            - `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` — XLSX;
+            - `application/vnd.ms-excel` — XLS.
+
+            `enum` намеренно не задан: неизвестный тип не должен ронять сообщение
+            в очередь недоставленных. Формат сайт определяет по **сигнатуре содержимого**
+            (`%PDF-`, `PK` для XLSX, OLE-заголовок для XLS), а расхождение mime
+            с содержимым помечает документ `rejected`. Поле просим передавать всегда:
+            без него сайт считает файл PDF.
           examples:
-            - 'application/pdf'
+            - 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         partner_uuid:
           type:
             - string

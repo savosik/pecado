@@ -241,15 +241,123 @@ class PrintedDocumentIngestTest extends TestCase
     }
 
     #[Test]
-    public function non_pdf_is_rejected_and_source_removed(): void
+    public function unknown_format_is_rejected_and_source_removed(): void
     {
-        $this->publish(content: "PK\x03\x04zip content");
+        // RTF: офисный формат, который сайт не принимает. С v16.6.0 сигнатура ZIP
+        // означает XLSX, поэтому «не тот файл» приходится изображать иначе.
+        $this->publish(content: '{\rtf1\ansi обычный текст');
 
         $document = PrintedDocument::firstOrFail();
 
         $this->assertSame(PrintedDocument::FILE_REJECTED, $document->file_status);
         Storage::disk('printed-documents')->assertMissing('2026/08/'.self::UUID.'.pdf');
         Storage::disk('documents-exchange')->assertMissing('2026/08/'.self::UUID.'.pdf');
+    }
+
+    /**
+     * Акт сверки за период приезжает в XLSX (v16.6.0): и формат, и период
+     * должны дойти до клиента — по ним он отличает суточные ревизии друг от друга.
+     */
+    #[Test]
+    public function xlsx_reconciliation_act_is_stored_with_period(): void
+    {
+        $this->publish([
+            'type_code' => 'reconciliation_act',
+            'type_name' => 'Акт сверки взаимных расчетов',
+            'number' => '29УТ-000242',
+            'date' => '2026-08-19',
+            'period_from' => '2026-01-01',
+            'period_to' => '2026-08-19',
+            'base_document_kind' => null,
+            'file_url' => 's3://documents-exchange/2026/08/'.self::UUID.'.xlsx',
+            'file_name' => 'Акт сверки_29УТ-000242.xlsx',
+            'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ], content: "PK\x03\x04".str_repeat('x', 64));
+
+        $document = PrintedDocument::where('uuid', self::UUID)->firstOrFail();
+
+        $this->assertSame(PrintedDocumentType::RECONCILIATION_ACT, $document->type);
+        $this->assertSame(PrintedDocument::FILE_STORED, $document->file_status);
+        $this->assertSame('2026/08/'.self::UUID.'.xlsx', $document->path);
+        Storage::disk('printed-documents')->assertExists($document->path);
+
+        $this->assertSame(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            $document->mime_type,
+        );
+        $this->assertSame('2026-01-01', $document->period_from->toDateString());
+        $this->assertSame('2026-08-19', $document->period_to->toDateString());
+        $this->assertSame('01.01.2026 — 19.08.2026', $document->period_label);
+        $this->assertStringEndsWith('.xlsx', $document->download_name);
+        $this->assertStringContainsString('01.01.2026-19.08.2026', $document->download_name);
+    }
+
+    #[Test]
+    public function legacy_xls_is_accepted(): void
+    {
+        $this->publish([
+            'type_code' => 'reconciliation_act',
+            'mime_type' => 'application/vnd.ms-excel',
+        ], content: "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1".str_repeat('x', 64));
+
+        $document = PrintedDocument::firstOrFail();
+
+        $this->assertSame(PrintedDocument::FILE_STORED, $document->file_status);
+        $this->assertSame('2026/08/'.self::UUID.'.xls', $document->path);
+        $this->assertSame('application/vnd.ms-excel', $document->mime_type);
+    }
+
+    /**
+     * mime из 1С — заявление, сигнатура — факт. Забытая строка в коде 1С не должна
+     * лишать клиента акта, поэтому документ принимается по содержимому.
+     */
+    #[Test]
+    public function mime_mismatch_does_not_lose_document(): void
+    {
+        $this->publish([
+            'type_code' => 'reconciliation_act',
+            'mime_type' => 'application/pdf',
+        ], content: "PK\x03\x04".str_repeat('x', 64));
+
+        $document = PrintedDocument::firstOrFail();
+
+        $this->assertSame(PrintedDocument::FILE_STORED, $document->file_status);
+        $this->assertSame(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            $document->mime_type,
+        );
+        $this->assertSame('2026/08/'.self::UUID.'.xlsx', $document->path);
+    }
+
+    /**
+     * Переход акта сверки с PDF на XLSX идёт по тому же `uuid`: расширение меняется,
+     * а значит меняется и ключ хранения. Старый объект после этого не адресуется
+     * ничем и остался бы в приватном бакете навсегда.
+     */
+    #[Test]
+    public function format_change_removes_orphaned_file(): void
+    {
+        $this->publish([
+            'type_code' => 'reconciliation_act',
+            'revision' => 1,
+        ]);
+
+        $this->assertSame('2026/08/'.self::UUID.'.pdf', PrintedDocument::firstOrFail()->path);
+        Storage::disk('printed-documents')->assertExists('2026/08/'.self::UUID.'.pdf');
+
+        $this->publish([
+            'type_code' => 'reconciliation_act',
+            'revision' => 2,
+            'file_url' => 's3://documents-exchange/2026/08/'.self::UUID.'.xlsx',
+            'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ], content: "PK\x03\x04".str_repeat('x', 64));
+
+        $document = PrintedDocument::firstOrFail();
+
+        $this->assertSame('2026/08/'.self::UUID.'.xlsx', $document->path);
+        Storage::disk('printed-documents')->assertExists('2026/08/'.self::UUID.'.xlsx');
+        Storage::disk('printed-documents')->assertMissing('2026/08/'.self::UUID.'.pdf');
+        $this->assertSame(1, PrintedDocument::count());
     }
 
     #[Test]

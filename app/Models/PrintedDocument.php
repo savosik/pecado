@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Casts\ErpDatetime;
+use App\Enums\PrintedDocumentFormat;
 use App\Enums\PrintedDocumentType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,10 +13,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 /**
- * Печатная форма документа (PDF), сформированная 1С (v16.1.0).
+ * Печатная форма документа, сформированная 1С (v16.6.0).
  *
- * Сайт форм не рисует: 1С кладёт готовый PDF в обменный бакет S3 и присылает по шине
+ * Сайт форм не рисует: 1С кладёт готовый файл в обменный бакет S3 и присылает по шине
  * запись о документе, а сайт переносит файл в собственное приватное хранилище.
+ * Формы по документу-основанию приезжают в PDF, акт сверки — в Excel.
  *
  * `uuid` идентифицирует **печатную форму**, а не документ-основание: у одной реализации
  * бывают и УПД, и счёт-фактура. Он стабилен между перевыставлениями — по нему форма
@@ -30,6 +32,8 @@ use Illuminate\Support\Str;
  * @property string|null $erp_type_name
  * @property string|null $number
  * @property \Illuminate\Support\Carbon|null $date
+ * @property \Illuminate\Support\Carbon|null $period_from
+ * @property \Illuminate\Support\Carbon|null $period_to
  * @property string|null $title
  * @property int|null $user_id
  * @property int|null $company_id
@@ -64,6 +68,8 @@ use Illuminate\Support\Str;
  * @property-read \App\Models\Shipment|null $shipment
  * @property-read string $type_label
  * @property-read string $display_title
+ * @property-read string|null $period_label
+ * @property-read PrintedDocumentFormat $format
  * @property-read string $download_name
  *
  * @method static \Database\Factories\PrintedDocumentFactory factory($count = null, $state = [])
@@ -84,7 +90,7 @@ class PrintedDocument extends Model
     /** 1С не выложила файл в обменный бакет либо ключ указан неверно. */
     public const FILE_MISSING = 'missing';
 
-    /** Не PDF или превышен лимит размера. */
+    /** Формат не распознан (не PDF, не XLSX, не XLS) либо превышен лимит размера. */
     public const FILE_REJECTED = 'rejected';
 
     /**
@@ -107,6 +113,8 @@ class PrintedDocument extends Model
         'erp_type_name',
         'number',
         'date',
+        'period_from',
+        'period_to',
         'title',
         'user_id',
         'company_id',
@@ -141,6 +149,8 @@ class PrintedDocument extends Model
         return [
             'type' => PrintedDocumentType::class,
             'date' => 'date',
+            'period_from' => 'date',
+            'period_to' => 'date',
             'stored_at' => 'datetime',
             'size_bytes' => 'integer',
             'version' => 'integer',
@@ -243,6 +253,29 @@ class PrintedDocument extends Model
     }
 
     /**
+     * Период формы одной строкой: «01.01.2026 — 19.08.2026». null — формы за период нет.
+     */
+    public function getPeriodLabelAttribute(): ?string
+    {
+        if (! $this->period_from || ! $this->period_to) {
+            return null;
+        }
+
+        return $this->period_from->format('d.m.Y').' — '.$this->period_to->format('d.m.Y');
+    }
+
+    /**
+     * Формат файла: по фактическому mime, записанному при переносе, иначе PDF.
+     *
+     * Фолбэк на PDF, а не null: до v16.6.0 других форматов не было, и у всех
+     * накопленных документов mime либо пуст, либо `application/pdf`.
+     */
+    public function getFormatAttribute(): PrintedDocumentFormat
+    {
+        return PrintedDocumentFormat::fromMime($this->mime_type) ?? PrintedDocumentFormat::PDF;
+    }
+
+    /**
      * Имя файла при скачивании.
      *
      * Собирается из вида и номера, а не берётся из `original_filename`: 1С называет
@@ -257,7 +290,12 @@ class PrintedDocument extends Model
             $parts[] = $this->number;
         }
 
-        if ($this->date) {
+        // У формы за период дата — это конец периода, и она одна и та же у всех
+        // суточных ревизий за день. Пишем период целиком, иначе в папке загрузок
+        // окажется несколько одноимённых актов, различить которые нечем.
+        if ($this->period_from && $this->period_to) {
+            $parts[] = $this->period_from->format('d.m.Y').'-'.$this->period_to->format('d.m.Y');
+        } elseif ($this->date) {
             $parts[] = $this->date->format('d.m.Y');
         }
 
@@ -271,6 +309,6 @@ class PrintedDocument extends Model
             $name = 'Документ '.Str::limit($this->uuid, 8, '');
         }
 
-        return $name.'.pdf';
+        return $name.'.'.$this->format->extension();
     }
 }

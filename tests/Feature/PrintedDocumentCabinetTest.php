@@ -173,6 +173,42 @@ class PrintedDocumentCabinetTest extends TestCase
         $this->assertStringContainsString('29', rawurldecode($disposition));
     }
 
+    /**
+     * Акт сверки приезжает в XLSX и за период (v16.6.0). Клиент должен увидеть
+     * и период, и формат: суточные ревизии различаются именно периодом, а Excel
+     * от PDF — тем, что откроется не в браузере.
+     */
+    #[Test]
+    public function excel_act_shows_period_and_format(): void
+    {
+        $document = $this->document([
+            'type' => PrintedDocumentType::RECONCILIATION_ACT,
+            'number' => '29УТ-000242',
+            'date' => '2026-08-19',
+            'period_from' => '2026-01-01',
+            'period_to' => '2026-08-19',
+            'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'path' => '2026/08/act.xlsx',
+        ]);
+
+        $this->actingAs($this->user)
+            ->get('/cabinet/documents')
+            ->assertInertia(fn ($page) => $page
+                ->where('documents.data.0.period', '01.01.2026 — 19.08.2026')
+                ->where('documents.data.0.format', 'xlsx')
+                ->where('documents.data.0.format_label', 'Excel (XLSX)')
+            );
+
+        $disposition = $this->actingAs($this->user)
+            ->get("/cabinet/documents/{$document->id}/download")
+            ->assertOk()
+            ->headers->get('content-disposition');
+
+        // Расширение обязано соответствовать содержимому: файл с именем *.pdf
+        // Excel открыть откажется, а клиент решит, что сайт прислал битый документ.
+        $this->assertStringContainsString('.xlsx', rawurldecode($disposition));
+    }
+
     #[Test]
     public function type_filter_and_counts_work(): void
     {

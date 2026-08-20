@@ -598,6 +598,8 @@ class DocumentController extends CrmController
             'type_color' => $document->type->color(),
             'number' => $document->number,
             'date_label' => $document->date?->format('d.m.Y'),
+            'period_label' => $document->period_label,
+            'format_label' => $document->format->label(),
             'file_status' => $document->file_status,
             'file_status_label' => PrintedDocument::FILE_STATUS_LABELS[$document->file_status] ?? $document->file_status,
             'size_label' => $document->size_bytes === null
@@ -652,7 +654,7 @@ class DocumentController extends CrmController
             ->with(['user:id,name,erp_name,email', 'company:id,name,tax_id', 'organization:id,name'])
             ->orderBy($sortBy, $sortOrder);
 
-        $headers = ['Тип', 'Номер', 'Дата', 'Клиент', 'Контрагент', 'ИНН', 'Продавец', 'Основание', 'Файл', 'Размер, МБ'];
+        $headers = ['Тип', 'Номер', 'Дата', 'Период', 'Клиент', 'Контрагент', 'ИНН', 'Продавец', 'Основание', 'Файл', 'Формат', 'Размер, МБ'];
 
         $rows = (function () use ($query): \Generator {
             foreach ($query->cursor() as $document) {
@@ -660,12 +662,16 @@ class DocumentController extends CrmController
                     $document->type_label,
                     $document->number,
                     $document->date?->format('d.m.Y'),
+                    // Без периода строки актов сверки одного контрагента в реестре
+                    // неразличимы: у них совпадает всё, кроме содержимого файла.
+                    $document->period_label,
                     $document->user?->display_name,
                     $document->company?->getAttribute('name'),
                     $document->company?->getAttribute('tax_id'),
                     $document->organization?->getAttribute('name'),
                     $this->printedDocumentBase($document)['label'] ?? null,
                     PrintedDocument::FILE_STATUS_LABELS[$document->file_status] ?? $document->file_status,
+                    $document->format->label(),
                     $document->size_bytes === null ? null : round($document->size_bytes / 1024 / 1024, 2),
                 ];
             }
