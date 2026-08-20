@@ -73,6 +73,46 @@ class NotificationPulseDemoSeeder extends Seeder
             );
 
             $this->ensureRule(
+                name: 'Акты сверки — бухгалтеру',
+                description: 'Второй кейс заказчика: акты сверки уходят бухгалтеру контрагента, а не на общий адрес.',
+                eventKey: 'documents.published',
+                company: $company,
+                priority: 100,
+                stop: false,
+                conditions: ['field' => 'document_type', 'op' => '=', 'value' => 'reconciliation_act'],
+                recipients: [
+                    ['kind' => NotificationRuleRecipient::KIND_CONTACT_ROLE, 'value' => ClientContactRole::ACCOUNTANT->value],
+                ],
+            );
+
+            $this->ensureRule(
+                name: 'Реализации и накладные — логисту',
+                description: 'Тот же кейс, вторая половина: УПД и товарные накладные идут на другой адрес.',
+                eventKey: 'documents.published',
+                company: $company,
+                priority: 110,
+                stop: false,
+                conditions: ['field' => 'document_type', 'op' => 'in', 'value' => ['upd', 'waybill']],
+                recipients: [
+                    ['kind' => NotificationRuleRecipient::KIND_CONTACT_ROLE, 'value' => ClientContactRole::LOGIST->value],
+                ],
+            );
+
+            $this->ensureRule(
+                name: 'Просрочка от 30 дней — бухгалтеру и директору',
+                description: 'Третий кейс: порог задан условием правила, а не кодом. У другого клиента он может быть иным.',
+                eventKey: 'finance.*',
+                company: $company,
+                priority: 100,
+                stop: false,
+                conditions: ['field' => 'days_overdue', 'op' => '>=', 'value' => 30],
+                recipients: [
+                    ['kind' => NotificationRuleRecipient::KIND_CONTACT_ROLE, 'value' => ClientContactRole::ACCOUNTANT->value],
+                    ['kind' => NotificationRuleRecipient::KIND_CONTACT, 'contact_id' => $contacts['director']->id],
+                ],
+            );
+
+            $this->ensureRule(
                 name: 'Смена статуса — клиенту',
                 description: 'Кейс заказчика: обычная смена статуса уходит на почту самого клиента. Закрытие сюда не доходит — его перехватывает правило с приоритетом 50.',
                 eventKey: 'orders.status_changed',
@@ -111,6 +151,7 @@ class NotificationPulseDemoSeeder extends Seeder
             'buyer_one' => ['Жопкин Анатолий Сергеевич', ClientContactRole::BUYER, 'demo-buyer1@example.test', 'Менеджер по закупкам'],
             'buyer_two' => ['Петров Иван Иванович', ClientContactRole::BUYER, 'demo-buyer2@example.test', 'Старший закупщик'],
             'accountant' => ['Сидорова Анна Львовна', ClientContactRole::ACCOUNTANT, 'demo-buh@example.test', 'Главный бухгалтер'],
+            'logist' => ['Кузнецов Олег Дмитриевич', ClientContactRole::LOGIST, 'demo-logist@example.test', 'Начальник склада'],
         ];
 
         $contacts = [];
