@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\PrintedDocumentFormat;
 use App\Models\PrintedDocument;
+use App\Services\Notifications\Pulse\DocumentSignalDispatcher;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -184,6 +185,11 @@ class StorePrintedDocumentFile implements ShouldQueue
         $document->file_status = PrintedDocument::FILE_STORED;
         $document->stored_at = now();
         $document->save();
+
+        // Сигнал пульту уведомлений именно здесь: только теперь файл лежит
+        // в хранилище и ссылка в письме откроется. Если контрагент ещё
+        // не привязан, диспетчер промолчит — сигнал выставит documents:relink.
+        app(DocumentSignalDispatcher::class)->published($document);
 
         // Исходник удаляется всегда: обменный бакет — транспорт, а не хранилище.
         $exchange->delete($sourcePath);

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\PrintedDocument;
+use App\Services\Notifications\Pulse\DocumentSignalDispatcher;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -106,9 +107,36 @@ class RelinkPrintedDocuments extends Command
                 $linked += PrintedDocument::withTrashed()
                     ->whereIn('id', $documentIds)
                     ->update([$column => $foreignId]);
+
+                // Контрагент появился только сейчас — значит и уведомить по правилам
+                // контрагента можно только сейчас. Пока связи не было, сигнал
+                // промахнулся бы мимо правил, ради которых домен и заводился.
+                if ($column === 'company_id') {
+                    $this->signalLinkedDocuments($documentIds);
+                }
             }
         }
 
         return $linked;
+    }
+
+    /**
+     * Сигнал пульту по документам, у которых контрагент доклеился только что.
+     *
+     * Возрастной ценз движка сам отсечёт старьё: массовая доклейка истории
+     * не должна превращаться в рассылку.
+     *
+     * @param  array<int, int>  $documentIds
+     */
+    private function signalLinkedDocuments(array $documentIds): void
+    {
+        $dispatcher = app(DocumentSignalDispatcher::class);
+
+        PrintedDocument::query()
+            ->whereIn('id', $documentIds)
+            ->where('file_status', PrintedDocument::FILE_STORED)
+            ->each(function (PrintedDocument $document) use ($dispatcher): void {
+                $dispatcher->published($document);
+            });
     }
 }

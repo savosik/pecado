@@ -1,5 +1,6 @@
 <?php
 
+use App\Notifications\Pulse\Events\Documents;
 use App\Notifications\Pulse\Events\Orders;
 
 return [
@@ -85,6 +86,9 @@ return [
         Orders\OrderShortfallEvent::class,
         Orders\SubstitutionOfferedEvent::class,
         Orders\OrderShippedEvent::class,
+
+        Documents\DocumentPublishedEvent::class,
+        Documents\DocumentDeletedEvent::class,
     ],
 
     /*
