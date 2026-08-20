@@ -109,6 +109,7 @@ class OrderItemsSynchronizer
                 $fields['cancel_source_user_id'] = null;
                 $fields['cancel_source_at'] = null;
                 $fields['cancel_note'] = null;
+                $fields['cancel_archived_at'] = null;
             }
 
             if ($match !== null) {

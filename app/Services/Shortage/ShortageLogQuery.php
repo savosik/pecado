@@ -55,9 +55,13 @@ class ShortageLogQuery
         }
 
         $source = (string) ($input['source'] ?? '');
+        $state = (string) ($input['state'] ?? '');
 
         return [
             'scope' => $scope->value,
+            // Состояние строки: 'active' — в работе (по умолчанию), 'archived' —
+            // выведенные из работы без разметки, 'all' — и те и другие.
+            'state' => in_array($state, ['archived', 'all'], true) ? $state : 'active',
             'from' => $from->format('Y-m-d'),
             'to' => $to->format('Y-m-d'),
             'source' => in_array($source, ['warehouse', 'client', 'none'], true) ? $source : '',
@@ -91,6 +95,12 @@ class ShortageLogQuery
                 Carbon::parse($filters['from'])->startOfDay(),
                 Carbon::parse($filters['to'])->endOfDay(),
             ]);
+
+        if ($filters['state'] === 'archived') {
+            $query->whereNotNull('order_items.cancel_archived_at');
+        } elseif ($filters['state'] !== 'all') {
+            $query->whereNull('order_items.cancel_archived_at');
+        }
 
         if ($filters['source'] === 'none') {
             $query->whereNull('order_items.cancel_source');
@@ -287,6 +297,7 @@ class ShortageLogQuery
     {
         return $this->visible($actor, $actor->can('crm-department.view'))
             ->whereNull('order_items.cancel_source')
+            ->whereNull('order_items.cancel_archived_at')
             ->where(DB::raw(self::EVENT_DATE), '>=', Carbon::today()->subDays(self::DEFAULT_PERIOD_DAYS))
             ->count();
     }

@@ -303,4 +303,28 @@ class ShortagesTest extends TestCase
         $this->assertSame(CancellationHintResolver::HINT_NONE, $row['hint']['kind']);
         $this->assertSame([], $row['hint']['issues']);
     }
+
+    #[Test]
+    public function archived_lines_leave_the_working_list_but_stay_under_the_filter(): void
+    {
+        ['line' => $active] = $this->makeCancelledLine();
+        ['line' => $archived] = $this->makeCancelledLine();
+        $archived->forceFill(['cancel_archived_at' => now()])->save();
+
+        $working = $this->actingAs($this->manager)->get('/crm/shortages');
+        $rows = $this->props($working)['rows']['data'];
+
+        $this->assertCount(1, $rows);
+        $this->assertSame($active->id, $rows[0]['id']);
+
+        $archive = $this->actingAs($this->manager)->get('/crm/shortages?state=archived');
+        $archivedRows = $this->props($archive)['rows']['data'];
+
+        $this->assertCount(1, $archivedRows);
+        $this->assertSame($archived->id, $archivedRows[0]['id']);
+        $this->assertNotNull($archivedRows[0]['archived_at']);
+
+        $all = $this->actingAs($this->manager)->get('/crm/shortages?state=all');
+        $this->assertCount(2, $this->props($all)['rows']['data']);
+    }
 }

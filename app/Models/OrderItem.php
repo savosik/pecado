@@ -18,6 +18,7 @@ use Laravel\Scout\Searchable;
  * @property int|null $cancel_source_user_id Кто поставил метку источника отмены
  * @property \Illuminate\Support\Carbon|null $cancel_source_at Когда поставлена метка
  * @property string|null $cancel_note Комментарий менеджера к отмене
+ * @property \Illuminate\Support\Carbon|null $cancel_archived_at Отмена выведена из работы без разметки (архив журнала)
  * @property int|null $product_id
  * @property int|null $product_defect_id
  * @property string|null $defect_description
@@ -82,6 +83,7 @@ class OrderItem extends Model
         'cancel_source_user_id',
         'cancel_source_at',
         'cancel_note',
+        'cancel_archived_at',
     ];
 
     protected $casts = [
@@ -96,6 +98,7 @@ class OrderItem extends Model
         'cancelled_at' => 'datetime',
         'cancel_source' => CancelSource::class,
         'cancel_source_at' => 'datetime',
+        'cancel_archived_at' => 'datetime',
     ];
 
     protected static function booted(): void

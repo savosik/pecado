@@ -122,6 +122,7 @@ class ShortageController extends CrmController
             'slug' => $item->product?->slug,
             'quantity' => (int) $item->quantity,
             'amount' => (float) $item->subtotal,
+            'archived_at' => $item->cancel_archived_at?->format('d.m.Y'),
             'source' => $item->cancel_source?->value,
             'source_label' => $item->cancel_source?->shortLabel(),
             'source_color' => $item->cancel_source?->color(),

@@ -114,6 +114,13 @@ return [
             'crm_outbound' => filter_var(env('MAIL_FEATURE_CRM_OUTBOUND', false), FILTER_VALIDATE_BOOLEAN),
 
             /*
+            | Вечерняя сводка недоборов менеджеру (команда shortages:daily-notice,
+            | будни 17:00). Письмо уходит, только если за день были отмены строк,
+            | которые менеджер ещё не разнёс.
+            */
+            'shortage_daily_notice' => filter_var(env('MAIL_FEATURE_SHORTAGE_NOTICE', false), FILTER_VALIDATE_BOOLEAN),
+
+            /*
             | Универсальные подписки на изменения сущностей разделов кабинета
             | (email). Общий гейт рассылки — см. config/subscriptions.php для
             | пофазного включения отдельных разделов.

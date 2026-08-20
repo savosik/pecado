@@ -27,6 +27,12 @@ const TABS = [
     { value: 'products', label: 'По товарам' },
 ];
 
+const STATES = [
+    { value: 'active', label: 'В работе' },
+    { value: 'archived', label: 'Архив' },
+    { value: 'all', label: 'Все' },
+];
+
 const PERIODS = [
     { days: 30, label: '30 дней' },
     { days: 90, label: '90 дней' },
@@ -172,7 +178,7 @@ export default function Index({
     };
 
     const reset = () => {
-        router.get('/crm/shortages', { tab: filters.tab, scope: filters.scope }, { replace: true });
+        router.get('/crm/shortages', { tab: filters.tab, scope: filters.scope, state: filters.state }, { replace: true });
     };
 
     const logColumns = [
@@ -241,6 +247,9 @@ export default function Index({
             label: 'Кто отменил',
             render: (_value, row) => (
                 <VStack align="start" gap={1}>
+                    {row.archived_at && (
+                        <Badge colorPalette="gray" variant="outline">архив от {row.archived_at}</Badge>
+                    )}
                     <SourceCell row={row} options={sourceOptions} canEdit={canEdit} onSet={setSource} />
                     {row.source_user && (
                         <Text fontSize="xs" color="fg.muted">{row.source_user}, {row.source_at}</Text>
@@ -413,17 +422,34 @@ export default function Index({
                     <Badge colorPalette="gray" variant="subtle">Без метки: {totals.unmarked_count}</Badge>
                 </HStack>
 
-                <HStack gap={2}>
-                    {TABS.map((tab) => (
-                        <Button
-                            key={tab.value}
-                            size="xs"
-                            variant={filters.tab === tab.value ? 'solid' : 'outline'}
-                            onClick={() => apply({ tab: tab.value })}
-                        >
-                            {tab.label}
-                        </Button>
-                    ))}
+                <HStack gap={2} wrap="wrap" justify="space-between">
+                    <HStack gap={2}>
+                        {TABS.map((tab) => (
+                            <Button
+                                key={tab.value}
+                                size="xs"
+                                variant={filters.tab === tab.value ? 'solid' : 'outline'}
+                                onClick={() => apply({ tab: tab.value })}
+                            >
+                                {tab.label}
+                            </Button>
+                        ))}
+                    </HStack>
+
+                    {/* Архив — отмены, выведенные из работы без разметки: разбирать
+                        их задним числом никто не будет, но в сводках они остаются. */}
+                    <HStack gap={1}>
+                        {STATES.map((state) => (
+                            <Button
+                                key={state.value}
+                                size="xs"
+                                variant={filters.state === state.value ? 'subtle' : 'ghost'}
+                                onClick={() => apply({ state: state.value })}
+                            >
+                                {state.label}
+                            </Button>
+                        ))}
+                    </HStack>
                 </HStack>
 
                 {filters.tab === 'log' && (
