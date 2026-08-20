@@ -128,6 +128,36 @@ class AgentHubApiTest extends TestCase
     }
 
     #[Test]
+    public function resolution_works_after_long_conversation(): void
+    {
+        // Регрессия: связь messages() отсортирована по seq ASC, и добавленный
+        // orderByDesc оказывался второй сортировкой — проверка «последнее сообщение
+        // партнёра» брала САМОЕ РАННЕЕ. На живом топике с историей переписки
+        // resolution отбивался с 422, и закрыть топик было невозможно.
+        $this->postJson($this->url($this->topic->site_token, '/messages'), [
+            'body' => 'Первое сообщение: описываю расхождения.',
+        ])->assertCreated();
+
+        $this->postJson($this->url($this->topic->erp_token, '/messages'), [
+            'body' => 'Проверил у себя, отвечаю.',
+        ])->assertCreated();
+
+        $this->postJson($this->url($this->topic->site_token, '/messages'), [
+            'body' => 'Сверка сошлась. Предлагаю закрыть круг.',
+            'kind' => 'proposal',
+        ])->assertCreated();
+
+        $this->postJson($this->url($this->topic->erp_token, '/messages'), [
+            'body' => 'Подтверждаю итог, закрываем.',
+            'kind' => 'resolution',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('status', 'resolved');
+
+        $this->assertSame(AgentTopic::STATUS_RESOLVED, $this->topic->fresh()->status);
+    }
+
+    #[Test]
     public function proposal_resolution_handshake_resolves_topic(): void
     {
         $this->postJson($this->url($this->topic->site_token, '/messages'), [

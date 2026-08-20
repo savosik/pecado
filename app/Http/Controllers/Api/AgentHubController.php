@@ -146,9 +146,13 @@ class AgentHubController extends Controller
             }
 
             if ($kind === AgentTopicMessage::KIND_RESOLUTION) {
+                // reorder, а не orderByDesc: связь messages() уже отсортирована по seq
+                // возрастанию, и добавленная сортировка оказалась бы второй по счёту —
+                // MySQL брал первую, а сюда возвращалось самое РАННЕЕ сообщение партнёра.
+                // Из-за этого resolution отбивался с 422 на любом живом топике.
                 $lastPartner = $topic->messages()
                     ->where('author', AgentTopic::otherRole($role))
-                    ->orderByDesc('seq')
+                    ->reorder('seq', 'desc')
                     ->first();
 
                 if (! $lastPartner || $lastPartner->kind !== AgentTopicMessage::KIND_PROPOSAL) {
