@@ -19,6 +19,7 @@ use App\Http\Controllers\Crm\FinanceController;
 use App\Http\Controllers\Crm\ImpersonationController;
 use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
+use App\Http\Controllers\Crm\NotificationRuleController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
@@ -580,5 +581,26 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     });
     Route::middleware('permission:crm-notification-contacts.delete')->group(function () {
         Route::delete('/contacts/{contact}', [ClientContactController::class, 'destroy'])->name('contacts.destroy')->whereNumber('contact');
+    });
+    // Пульт уведомлений: правила маршрутизации писем клиентам и их контрагентам.
+    // Статические сегменты — до /{rule}. Правила «для всех партнёров»
+    // и системные защищены отдельным правом внутри контроллера.
+    Route::middleware('permission:crm-notifications.view')->group(function () {
+        Route::get('/notifications/rules', [NotificationRuleController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/rules/meta', [NotificationRuleController::class, 'meta'])->name('notifications.meta');
+        Route::get('/notifications/rules/contacts', [NotificationRuleController::class, 'contacts'])->name('notifications.contacts');
+        Route::post('/notifications/rules/preview', [NotificationRuleController::class, 'preview'])->name('notifications.preview');
+    });
+    Route::middleware('permission:crm-notifications.create')->group(function () {
+        Route::post('/notifications/rules', [NotificationRuleController::class, 'store'])->name('notifications.store');
+        Route::post('/notifications/rules/{rule}/override', [NotificationRuleController::class, 'override'])->name('notifications.override')->whereNumber('rule');
+    });
+    Route::middleware('permission:crm-notifications.edit')->group(function () {
+        Route::patch('/notifications/rules/{rule}', [NotificationRuleController::class, 'update'])->name('notifications.update')->whereNumber('rule');
+        Route::post('/notifications/rules/{rule}/toggle', [NotificationRuleController::class, 'toggle'])->name('notifications.toggle')->whereNumber('rule');
+        Route::post('/notifications/rules/{rule}/test-send', [NotificationRuleController::class, 'testSend'])->name('notifications.test-send')->whereNumber('rule');
+    });
+    Route::middleware('permission:crm-notifications.delete')->group(function () {
+        Route::delete('/notifications/rules/{rule}', [NotificationRuleController::class, 'destroy'])->name('notifications.destroy')->whereNumber('rule');
     });
 });
