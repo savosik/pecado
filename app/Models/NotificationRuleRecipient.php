@@ -92,6 +92,10 @@ class NotificationRuleRecipient extends Model
         'value',
         'copy_type',
         'is_fallback',
+        // Задаётся только при переносе подписок кабинета: токен из уже
+        // разосланных писем обязан продолжать работать. В обычной жизни
+        // создаётся лениво — см. ensureUnsubscribeToken().
+        'unsubscribe_token',
     ];
 
     protected function casts(): array

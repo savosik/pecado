@@ -3,7 +3,11 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\ClientContact;
 use App\Models\EntitySubscription;
+use App\Models\NotificationRule;
+use App\Models\NotificationRuleRecipient;
+use App\Models\NotificationSuppression;
 use App\Services\Subscriptions\SubscriptionRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -188,6 +192,24 @@ class SubscriptionController extends Controller
      */
     public function unsubscribe(string $token): \Illuminate\Http\Response
     {
+        // Токен ищется в трёх местах: правило пульта, карточка контакта
+        // и старые подписки кабинета. Ссылки из уже разосланных писем
+        // обязаны работать, чем бы письмо ни было отправлено.
+        $pulseRecipient = NotificationRuleRecipient::query()
+            ->with('rule')
+            ->where('unsubscribe_token', $token)
+            ->first();
+
+        if ($pulseRecipient !== null) {
+            return $this->unsubscribeFromRule($pulseRecipient);
+        }
+
+        $contact = ClientContact::query()->where('unsubscribe_token', $token)->first();
+
+        if ($contact !== null) {
+            return $this->unsubscribeContact($contact);
+        }
+
         $subscription = EntitySubscription::query()
             ->where('unsubscribe_token', $token)
             ->first();
@@ -204,6 +226,95 @@ class SubscriptionController extends Controller
             'found' => (bool) $subscription,
             'sectionLabel' => $sectionLabel,
             'destination' => $subscription?->destination,
+        ]);
+    }
+
+    /**
+     * Отписка от конкретного правила: адресат вычёркивается, само правило
+     * продолжает работать для остальных получателей.
+     */
+    private function unsubscribeFromRule(NotificationRuleRecipient $recipient): \Illuminate\Http\Response
+    {
+        $email = $recipient->kind === NotificationRuleRecipient::KIND_CONTACT
+            ? $recipient->contact?->email
+            : $recipient->value;
+
+        if (filled($email)) {
+            NotificationSuppression::updateOrCreate(
+                ['email' => mb_strtolower(trim($email)), 'scope' => $recipient->rule?->event_key ?? NotificationSuppression::SCOPE_ALL],
+                [
+                    'reason' => NotificationSuppression::REASON_UNSUBSCRIBED,
+                    'contact_id' => $recipient->contact_id,
+                    'note' => 'Отписка по ссылке из письма',
+                ],
+            );
+        }
+
+        // Подписка кабинета могла разложиться на несколько правил (клиент выбрал
+        // два типа событий). Токен достался одному, но отписка должна гасить
+        // всю группу: для клиента это была одна подписка.
+        $this->removeSiblingRecipients($recipient, $email);
+
+        $recipient->delete();
+
+        return response()->view('subscriptions.unsubscribed', [
+            'found' => true,
+            'sectionLabel' => $recipient->rule?->name,
+            'destination' => $email,
+        ]);
+    }
+
+    /**
+     * Вычеркнуть тот же адрес из правил, выросших из той же подписки кабинета.
+     */
+    private function removeSiblingRecipients(NotificationRuleRecipient $recipient, ?string $email): void
+    {
+        $rule = $recipient->rule;
+
+        if ($rule === null || blank($rule->preset_key) || blank($email)) {
+            return;
+        }
+
+        $siblingRuleIds = NotificationRule::query()
+            ->where('preset_key', $rule->preset_key)
+            ->where('scope_user_id', $rule->scope_user_id)
+            ->whereKeyNot($rule->getKey())
+            ->pluck('id');
+
+        if ($siblingRuleIds->isEmpty()) {
+            return;
+        }
+
+        NotificationRuleRecipient::query()
+            ->whereIn('notification_rule_id', $siblingRuleIds)
+            ->where('value', $email)
+            ->delete();
+    }
+
+    /**
+     * Глобальный отказ контакта: письма не идут ни по одному правилу.
+     */
+    private function unsubscribeContact(ClientContact $contact): \Illuminate\Http\Response
+    {
+        if ($contact->unsubscribed_at === null) {
+            $contact->update(['unsubscribed_at' => now()]);
+        }
+
+        if (filled($contact->email)) {
+            NotificationSuppression::updateOrCreate(
+                ['email' => $contact->email, 'scope' => NotificationSuppression::SCOPE_ALL],
+                [
+                    'reason' => NotificationSuppression::REASON_UNSUBSCRIBED,
+                    'contact_id' => $contact->id,
+                    'note' => 'Отписка по ссылке из письма',
+                ],
+            );
+        }
+
+        return response()->view('subscriptions.unsubscribed', [
+            'found' => true,
+            'sectionLabel' => null,
+            'destination' => $contact->email,
         ]);
     }
 
