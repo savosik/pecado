@@ -1,0 +1,88 @@
+# notif-09 · Миграция подписок кабинета в правила
+
+**Приоритет:** средний
+**Создано:** 2026-08-20
+**Эпик:** [notif-00](2026-08-20_notif-00-epic.md)
+**Волна:** 2 (документы и наследие)
+**Зависимости:** [notif-05](2026-08-20_notif-05-ui.md)
+**Оценка:** ~2 дня
+
+## Описание
+
+`entity_subscriptions` — работающий механизм, но это вторая модель маршрутизации рядом с пультом.
+Держать обе параллельно нельзя: это ровно та «маршрутизация в двух местах», от которой уходит
+эпик. Подписки переезжают в правила, таблица остаётся read-only на релиз и удаляется в `notif-15`.
+
+Данных мало — «практически никто не подписался», — поэтому миграция дешёвая. Дорогое здесь одно:
+**ссылки отписки из уже разосланных писем должны продолжать работать**.
+
+## Что делаем
+
+### Команда `notifications:import-subscriptions`
+
+Идемпотентна по `preset_key = 'imported.entity_subscription'` + `(scope_user_id, event_key, destination)`.
+
+| Подписка | Правило |
+|---|---|
+| активная запись | `scope_type='user'`, `scope_user_id = user_id`, получатель `kind='email', value = destination`, `priority = 200`, `is_active` из подписки |
+| `events = null` (все типы, включая будущие) | **одно** правило с маской `orders.*` — ради этого маска и заводилась в `notif-02` |
+| `events = ['items_updated','api_shortfall']` | два правила (по одному на событие), связанные общим `preset_key`, название «Подписка кабинета: {email}» |
+
+### Токены отписки — критичный пункт
+
+`entity_subscriptions.unsubscribe_token` переносится **один в один** в
+`notification_rule_recipients.unsubscribe_token` созданного правила. Иначе после удаления
+таблицы в `notif-15` ссылки из писем, разосланных за последние месяцы, отдадут 404.
+
+Маршрут `/subscriptions/unsubscribe/{token}` (`routes/user.php:142`, вне auth-группы) остаётся
+тем же. Контроллер ищет токен в трёх местах по порядку:
+
+1. `notification_rule_recipients.unsubscribe_token` — персональная отписка от правила;
+2. `client_contacts.unsubscribe_token` — глобальный отказ контакта от всего;
+3. `entity_subscriptions.unsubscribe_token` — пока таблица жива.
+
+Отписка пишет строку в `notification_suppressions` и деактивирует получателя правила.
+Страница `resources/views/subscriptions/unsubscribed.blade.php` переиспользуется как есть.
+
+### Переписывание контроллера кабинета
+
+`app/Http/Controllers/User/SubscriptionController.php` работает поверх правил:
+`scope_type='user'`, `scope_user_id = auth()->id()`, `preset_key='self_service'`,
+только `kind='email'`, без условий и без `stop`.
+
+**JSON-контракт панели сохраняется побайтово** (`{data, max, events}`), фронт
+`resources/js/components/cabinet/SubscriptionPanel.jsx` **не трогается вовсе** — клиенту незачем
+видеть переезд.
+
+`MAX_PER_SECTION = 5` становится `notification_pulse.limits.max_self_rules_per_domain`.
+
+**Критерий совместимости:** существующий `tests/Feature/Subscriptions/SubscriptionCrudTest.php`
+(20 тестов) проходит **без единой правки**. Если тест пришлось менять — контракт сломан.
+
+### Правила, заведённые клиентом
+
+В пульте видны с бейджем «Завёл клиент». Менеджеру доступен только тумблер — удалить нельзя,
+иначе он молча отпишет клиента от того, на что тот подписался сам.
+
+### Отключение старого механизма
+
+`app/Listeners/SendEntitySubscriptionNotifications.php` перестаёт слать: гейт `PulseMode`
+по домену. Сам листенер и `EntityChanged` удаляются в `notif-14`.
+
+Два существующих диспатча `EntityChanged` (`OrderChangeLog:78` и
+`ShortageEmailDraftService:297`) к этому моменту уже дублированы сигналами пульта из `notif-04` —
+проверить, что писем не стало два.
+
+## Критерии готовности
+
+- [ ] `notifications:import-subscriptions` идемпотентна; повторный запуск не создаёт дублей
+- [ ] `events = null` → одно правило с маской `orders.*`
+- [ ] Токены отписки перенесены один в один; тест: старый токен из письма деактивирует правило
+- [ ] Отписка ищет токен в трёх местах; страница отписки та же
+- [ ] `SubscriptionController` работает поверх правил; JSON-контракт панели не изменился
+- [ ] **`SubscriptionCrudTest` зелёный без правок** — главный критерий карточки
+- [ ] `SubscriptionPanel.jsx` не изменён (проверить `git diff --stat`)
+- [ ] Правила клиента в пульте с бейджем «Завёл клиент», удаление недоступно
+- [ ] `SendEntitySubscriptionNotifications` не отправляет; писем не стало два
+- [ ] Отчёт: сколько подписок перенесено, сколько активных осталось (для `notif-15`)
+- [ ] `make lint` и `make test` зелёные
