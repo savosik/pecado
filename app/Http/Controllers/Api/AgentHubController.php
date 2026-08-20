@@ -146,16 +146,21 @@ class AgentHubController extends Controller
             }
 
             if ($kind === AgentTopicMessage::KIND_RESOLUTION) {
+                // Ищем последнее ПРЕДЛОЖЕНИЕ партнёра, а не последнее его сообщение:
+                // предложение остаётся в силе, пока автор его не отозвал, и любая
+                // реплика после него (уточнение, досылка) не должна лишать партнёра
+                // возможности подтвердить итог.
+                //
                 // reorder, а не orderByDesc: связь messages() уже отсортирована по seq
                 // возрастанию, и добавленная сортировка оказалась бы второй по счёту —
-                // MySQL брал первую, а сюда возвращалось самое РАННЕЕ сообщение партнёра.
-                // Из-за этого resolution отбивался с 422 на любом живом топике.
-                $lastPartner = $topic->messages()
+                // MySQL брал первую, а сюда возвращалось самое РАННЕЕ сообщение.
+                $partnerProposal = $topic->messages()
                     ->where('author', AgentTopic::otherRole($role))
+                    ->where('kind', AgentTopicMessage::KIND_PROPOSAL)
                     ->reorder('seq', 'desc')
                     ->first();
 
-                if (! $lastPartner || $lastPartner->kind !== AgentTopicMessage::KIND_PROPOSAL) {
+                if (! $partnerProposal) {
                     return response()->json([
                         'error' => 'Подтвердить итог (kind=resolution) можно только в ответ на предложение партнёра (kind=proposal).',
                     ], 422);

@@ -158,6 +158,35 @@ class AgentHubApiTest extends TestCase
     }
 
     #[Test]
+    public function resolution_survives_extra_messages_after_proposal(): void
+    {
+        // Предложение остаётся в силе, пока автор его не отозвал: реплика после
+        // proposal (уточнение, досылка) не должна лишать партнёра возможности
+        // подтвердить итог. Нашёл агент 1С на живом круге.
+        $this->postJson($this->url($this->topic->site_token, '/messages'), [
+            'body' => 'Сверка сошлась. Предлагаю закрыть круг.',
+            'kind' => 'proposal',
+        ])->assertCreated();
+
+        $this->postJson($this->url($this->topic->erp_token, '/messages'), [
+            'body' => 'Уточняющий вопрос перед подтверждением.',
+        ])->assertCreated();
+
+        $this->postJson($this->url($this->topic->site_token, '/messages'), [
+            'body' => 'Отвечаю на уточнение, предложение в силе.',
+        ])->assertCreated();
+
+        $this->postJson($this->url($this->topic->erp_token, '/messages'), [
+            'body' => 'Подтверждаю итог.',
+            'kind' => 'resolution',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('status', 'resolved');
+
+        $this->assertSame(AgentTopic::STATUS_RESOLVED, $this->topic->fresh()->status);
+    }
+
+    #[Test]
     public function proposal_resolution_handshake_resolves_topic(): void
     {
         $this->postJson($this->url($this->topic->site_token, '/messages'), [
