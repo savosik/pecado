@@ -4,8 +4,8 @@ namespace App\Models;
 
 use App\Events\EntityChanged;
 use App\Notifications\Pulse\Support\PulseSignal;
-use App\Services\Notifications\Pulse\NotificationPulse;
 use App\Subscriptions\EntityChangeNotice;
+use App\Support\Notifications\SignalBus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -112,7 +112,7 @@ class OrderChangeLog extends Model
             return;
         }
 
-        app(NotificationPulse::class)->signal(new PulseSignal(
+        app(SignalBus::class)->publish(new PulseSignal(
             eventKey: $eventKey,
             clientUserId: (int) $order->user_id,
             companyId: $order->company_id,
@@ -139,7 +139,11 @@ class OrderChangeLog extends Model
      */
     private static function buildSignalData(self $log, Order $order, string $number): array
     {
-        $c = $log->changes ?? [];
+        // getAttribute, а не $log->changes: `changes` — имя protected-свойства
+        // самого Eloquent (список изменённых при сохранении атрибутов), и внутри
+        // класса обращение к свойству побеждает магический доступ к колонке.
+        // Из-за этого блоки письма и числа для условий приходили пустыми.
+        $c = (array) $log->getAttribute('changes');
 
         $notAccepted = count($c['not_accepted'] ?? []);
         $partial = count($c['partial'] ?? []);
@@ -188,7 +192,11 @@ class OrderChangeLog extends Model
     private static function buildNoticeRows(self $log): array
     {
         $rows = [];
-        $c = $log->changes ?? [];
+        // getAttribute, а не $log->changes: `changes` — имя protected-свойства
+        // самого Eloquent (список изменённых при сохранении атрибутов), и внутри
+        // класса обращение к свойству побеждает магический доступ к колонке.
+        // Из-за этого блоки письма и числа для условий приходили пустыми.
+        $c = (array) $log->getAttribute('changes');
 
         switch ($log->type) {
             case 'attributes_updated':
@@ -205,11 +213,11 @@ class OrderChangeLog extends Model
             case 'items_updated':
                 foreach (($c['added'] ?? []) as $i) {
                     $rows[] = ['type' => 'action', 'kind' => 'added', 'label' => 'Добавлен',
-                        'text' => "«{$i['product_name']}» (кол-во: {$i['quantity']}, цена: ".self::money($i['price'] ?? 0).' ₽)'];
+                        'text' => '«'.($i['product_name'] ?? '—').'» (кол-во: '.($i['quantity'] ?? '—').', цена: '.self::money($i['price'] ?? 0).' ₽)'];
                 }
                 foreach (($c['removed'] ?? []) as $i) {
                     $rows[] = ['type' => 'action', 'kind' => 'removed', 'label' => 'Удалён',
-                        'text' => "«{$i['product_name']}»"];
+                        'text' => '«'.($i['product_name'] ?? '—').'»'];
                 }
                 foreach (($c['modified'] ?? []) as $i) {
                     $parts = [];
@@ -224,7 +232,7 @@ class OrderChangeLog extends Model
                         $parts[] = 'цена: '.self::money($ch['final_price']['old']).' → '.self::money($ch['final_price']['new']).' ₽';
                     }
                     $rows[] = ['type' => 'action', 'kind' => 'modified', 'label' => 'Изменён',
-                        'text' => "«{$i['product_name']}» — ".implode(', ', $parts)];
+                        'text' => '«'.($i['product_name'] ?? '—').'» — '.implode(', ', $parts)];
                 }
                 if ($log->old_total !== null && $log->new_total !== null
                     && abs((float) $log->old_total - (float) $log->new_total) > 0.01) {
@@ -239,11 +247,11 @@ class OrderChangeLog extends Model
                 foreach (($c['not_accepted'] ?? []) as $i) {
                     $reason = $i['message'] ?? $i['reason'] ?? 'нет в наличии';
                     $rows[] = ['type' => 'action', 'kind' => 'shortfall', 'label' => 'Не принят',
-                        'text' => "«{$i['product_name']}» — запрошено {$i['requested']} ({$reason})"];
+                        'text' => '«'.($i['product_name'] ?? '—').'» — запрошено '.($i['requested'] ?? '—')." ({$reason})"];
                 }
                 foreach (($c['partial'] ?? []) as $i) {
                     $rows[] = ['type' => 'action', 'kind' => 'partial', 'label' => 'Частично',
-                        'text' => "«{$i['product_name']}» — запрошено {$i['requested']}, принято {$i['fulfilled']}"];
+                        'text' => '«'.($i['product_name'] ?? '—').'» — запрошено '.($i['requested'] ?? '—').', принято '.($i['fulfilled'] ?? '—')];
                 }
                 break;
         }

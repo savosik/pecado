@@ -6,8 +6,8 @@ use App\Events\OrderUpdated;
 use App\Models\Order;
 use App\Notifications\Orders\OrderStatusChangedNotification;
 use App\Notifications\Pulse\Support\PulseSignal;
-use App\Services\Notifications\Pulse\NotificationPulse;
 use App\Services\Notifications\Pulse\PulseMode;
+use App\Support\Notifications\SignalBus;
 
 class SendOrderStatusChangedEmail
 {
@@ -69,7 +69,7 @@ class SendOrderStatusChangedEmail
     {
         $number = $order->erp_number ?: $order->number;
 
-        app(NotificationPulse::class)->signal(new PulseSignal(
+        app(SignalBus::class)->publish(new PulseSignal(
             eventKey: self::PULSE_EVENT,
             clientUserId: $order->user_id,
             companyId: $order->company_id,

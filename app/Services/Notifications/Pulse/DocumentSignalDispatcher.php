@@ -4,6 +4,7 @@ namespace App\Services\Notifications\Pulse;
 
 use App\Models\PrintedDocument;
 use App\Notifications\Pulse\Support\PulseSignal;
+use App\Support\Notifications\SignalBus;
 
 /**
  * Сигнал пульту о печатной форме.
@@ -21,7 +22,7 @@ use App\Notifications\Pulse\Support\PulseSignal;
  */
 class DocumentSignalDispatcher
 {
-    public function __construct(private readonly NotificationPulse $pulse) {}
+    public function __construct(private readonly SignalBus $bus) {}
 
     public function published(PrintedDocument $document): void
     {
@@ -29,7 +30,7 @@ class DocumentSignalDispatcher
             return;
         }
 
-        $this->pulse->signal(new PulseSignal(
+        $this->bus->publish(new PulseSignal(
             eventKey: 'documents.published',
             clientUserId: $document->user_id,
             companyId: $document->company_id,
@@ -62,7 +63,7 @@ class DocumentSignalDispatcher
             return;
         }
 
-        $this->pulse->signal(new PulseSignal(
+        $this->bus->publish(new PulseSignal(
             eventKey: 'documents.deleted',
             clientUserId: $document->user_id,
             companyId: $document->company_id,

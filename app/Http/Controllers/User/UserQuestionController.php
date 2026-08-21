@@ -9,8 +9,8 @@ use App\Models\UserQuestion;
 use App\Notifications\Pulse\Support\PulseSignal;
 use App\Notifications\UserQuestions\NewQuestionAdminNotification;
 use App\Notifications\UserQuestions\QuestionReceivedNotification;
-use App\Services\Notifications\Pulse\NotificationPulse;
 use App\Services\Notifications\Pulse\PulseMode;
+use App\Support\Notifications\SignalBus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
@@ -48,7 +48,7 @@ class UserQuestionController extends Controller
 
         // Сигнал пульту идёт всегда: в теневом режиме он только считает
         // получателей для сверки со старой адресацией.
-        app(NotificationPulse::class)->signal(new PulseSignal(
+        app(SignalBus::class)->publish(new PulseSignal(
             eventKey: 'system.question_received',
             clientUserId: $user?->id,
             subject: $question,

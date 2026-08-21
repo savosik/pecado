@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Crm;
 
 use App\Enums\Crm\CrmScope;
 use App\Enums\Crm\EmailStatus;
+use App\Enums\Crm\MailFolder;
 use App\Http\Requests\Crm\StoreCrmEmailRequest;
 use App\Http\Requests\Crm\UpdateCrmEmailRequest;
 use App\Models\CrmEmail;
@@ -11,6 +12,7 @@ use App\Models\CrmEmailTemplate;
 use App\Models\User;
 use App\Services\Crm\CrmEmailService;
 use App\Services\Crm\CrmEntityResolver;
+use App\Services\Notifications\Pulse\NotificationEventRegistry;
 use App\Support\Crm\CrmAttachments;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
@@ -42,18 +44,168 @@ class EmailController extends CrmController
 
         $filters = $this->validateFilters($request);
         $scope = CrmScope::fromRequest($request, $actor);
+        $folder = MailFolder::tryFrom((string) $filters['folder']) ?? MailFolder::DRAFTS;
 
         $query = $this->emails->visibleTo($actor, $scope)
-            ->with(['author:id,name', 'related'])
+            ->inFolder($folder)
+            ->with(['author:id,name', 'related', 'autoSentRule:id,name'])
             ->withCount(['media as attachments_count' => fn ($media) => $media->where(
                 'collection_name',
                 CrmAttachments::COLLECTION,
             )]);
 
-        if ($filters['status'] !== null) {
-            $query->where('status', $filters['status']);
+        $this->applyFilters($query, $filters);
+
+        $paginator = $query->latest('id')->paginate($filters['per_page'])->withQueryString();
+
+        return Inertia::render('Crm/Pages/Emails/Index', [
+            'emails' => $paginator->through(fn (CrmEmail $email) => $this->emails->payload($email, $actor)),
+            'filters' => [...$filters, 'folder' => $folder->value, 'scope' => $scope->value],
+            'folders' => $this->folders($actor, $scope, $filters),
+            'canSeeDepartment' => $this->seesDepartment($request),
+            'statuses' => EmailStatus::optionsWithColor(),
+            'templates' => $this->templates(),
+            'outboundEnabled' => $this->emails->outboundEnabled(),
+            // Сводка непойманного — не отчёт ради отчёта: по ней видно, чего
+            // система умеет больше, чем от неё сейчас берут.
+            'unmatchedSummary' => $folder === MailFolder::UNMATCHED
+                ? $this->unmatchedSummary($actor, $scope)
+                : null,
+            'canManageRules' => $actor->can('crm-emails.edit'),
+            // Ссылка из ленты партнёра ведёт сюда с ?email=ID — журнал откроет письмо.
+            'openEmailId' => $request->integer('email') ?: null,
+        ]);
+    }
+
+    /**
+     * Массовая отправка выбранных писем — рабочая операция «Черновиков».
+     */
+    public function bulkSend(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+
+        $ids = $this->validateIds($request);
+        $sent = 0;
+        $failed = [];
+
+        foreach ($this->lettersByIds($actor, $ids) as $email) {
+            if (! Gate::forUser($actor)->allows('send', $email)) {
+                continue;
+            }
+
+            try {
+                $this->emails->send($email);
+                $sent++;
+            } catch (RuntimeException $exception) {
+                $failed[] = $exception->getMessage();
+            }
         }
 
+        return response()->json([
+            'sent' => $sent,
+            'message' => $failed === []
+                ? 'Отправлено писем: '.$sent
+                : 'Отправлено: '.$sent.'. Не удалось: '.implode('; ', array_unique($failed)),
+        ]);
+    }
+
+    /**
+     * Массовое удаление выбранных черновиков.
+     */
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+
+        $ids = $this->validateIds($request);
+        $deleted = 0;
+
+        foreach ($this->lettersByIds($actor, $ids) as $email) {
+            if (! Gate::forUser($actor)->allows('delete', $email)) {
+                continue;
+            }
+
+            $email->delete();
+            $deleted++;
+        }
+
+        return response()->json([
+            'deleted' => $deleted,
+            'message' => 'Удалено писем: '.$deleted,
+        ]);
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function validateIds(Request $request): array
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:200'],
+            'ids.*' => ['integer', 'min:1'],
+        ]);
+
+        return array_map('intval', $validated['ids']);
+    }
+
+    /**
+     * @param  array<int, int>  $ids
+     * @return \Illuminate\Support\Collection<int, CrmEmail>
+     */
+    private function lettersByIds(User $actor, array $ids)
+    {
+        return $this->emails->visibleTo($actor)->whereIn('id', $ids)->get();
+    }
+
+    /**
+     * Папки со счётчиками. Счётчик считается в том же охвате и с теми же
+     * фильтрами, что и список, — иначе цифра в папке и число строк в ней
+     * расходятся, и доверие к обеим пропадает.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<int, array<string, mixed>>
+     */
+    private function folders(User $actor, CrmScope $scope, array $filters): array
+    {
+        return array_map(function (array $option) use ($actor, $scope, $filters): array {
+            $folder = MailFolder::from($option['value']);
+
+            $query = $this->emails->visibleTo($actor, $scope)->inFolder($folder);
+            $this->applyFilters($query, $filters);
+
+            return [...$option, 'count' => $query->count()];
+        }, MailFolder::options());
+    }
+
+    /**
+     * Что прошло мимо фильтров за время хранения — с разбивкой по поводам.
+     *
+     * @return array<string, mixed>
+     */
+    private function unmatchedSummary(User $actor, CrmScope $scope): array
+    {
+        $rows = $this->emails->visibleTo($actor, $scope)
+            ->inFolder(MailFolder::UNMATCHED)
+            ->selectRaw('origin_event, count(*) as total')
+            ->groupBy('origin_event')
+            ->orderByDesc('total')
+            ->get();
+
+        return [
+            'retention_days' => (int) config('mail_stream.unmatched_retention_days', 14),
+            'rows' => $rows->map(fn ($row): array => [
+                'event' => $row->origin_event,
+                'label' => app(NotificationEventRegistry::class)->label((string) $row->origin_event),
+                'total' => (int) $row->total,
+            ])->all(),
+        ];
+    }
+
+    /**
+     * @param  Builder<CrmEmail>  $query
+     * @param  array<string, mixed>  $filters
+     */
+    private function applyFilters(Builder $query, array $filters): void
+    {
         if ($filters['client_id'] !== null) {
             $query->where('client_user_id', $filters['client_id']);
         }
@@ -62,25 +214,17 @@ class EmailController extends CrmController
             $query->where('user_id', $filters['author_id']);
         }
 
+        if ($filters['origin'] !== null) {
+            $query->where('origin', $filters['origin']);
+        }
+
         if ($filters['search'] !== null && $filters['search'] !== '') {
             $search = $filters['search'];
             $query->where(fn (Builder $inner) => $inner
                 ->where('subject', 'like', "%{$search}%")
-                ->orWhere('body_html', 'like', "%{$search}%"));
+                ->orWhere('body_html', 'like', "%{$search}%")
+                ->orWhere('to', 'like', "%{$search}%"));
         }
-
-        $paginator = $query->latest('id')->paginate($filters['per_page'])->withQueryString();
-
-        return Inertia::render('Crm/Pages/Emails/Index', [
-            'emails' => $paginator->through(fn (CrmEmail $email) => $this->emails->payload($email, $actor)),
-            'filters' => [...$filters, 'scope' => $scope->value],
-            'canSeeDepartment' => $this->seesDepartment($request),
-            'statuses' => EmailStatus::optionsWithColor(),
-            'templates' => $this->templates(),
-            'outboundEnabled' => $this->emails->outboundEnabled(),
-            // Ссылка из ленты партнёра ведёт сюда с ?email=ID — журнал откроет письмо.
-            'openEmailId' => $request->integer('email') ?: null,
-        ]);
     }
 
     /**
@@ -247,7 +391,8 @@ class EmailController extends CrmController
     private function validateFilters(Request $request): array
     {
         $validated = $request->validate([
-            'status' => ['nullable', Rule::enum(EmailStatus::class)],
+            'folder' => ['nullable', Rule::enum(MailFolder::class)],
+            'origin' => ['nullable', Rule::in([CrmEmail::ORIGIN_MANUAL, CrmEmail::ORIGIN_SYSTEM])],
             'client_id' => ['nullable', 'integer'],
             'author_id' => ['nullable', 'integer'],
             'search' => ['nullable', 'string', 'max:255'],
@@ -255,7 +400,8 @@ class EmailController extends CrmController
         ]);
 
         return [
-            'status' => $validated['status'] ?? null,
+            'folder' => $validated['folder'] ?? MailFolder::DRAFTS->value,
+            'origin' => $validated['origin'] ?? null,
             'client_id' => $validated['client_id'] ?? null,
             'author_id' => $validated['author_id'] ?? null,
             'search' => $validated['search'] ?? null,

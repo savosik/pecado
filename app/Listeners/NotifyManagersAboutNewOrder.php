@@ -7,9 +7,9 @@ use App\Events\OrdersPlaced;
 use App\Models\Order;
 use App\Notifications\Orders\NewOrderForManagerNotification;
 use App\Notifications\Pulse\Support\PulseSignal;
-use App\Services\Notifications\Pulse\NotificationPulse;
 use App\Services\Notifications\Pulse\PulseMode;
 use App\Support\Notifications\OrderManagerRouting;
+use App\Support\Notifications\SignalBus;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -82,7 +82,7 @@ class NotifyManagersAboutNewOrder
     {
         $number = $primary->erp_number ?: $primary->number;
 
-        app(NotificationPulse::class)->signal(new PulseSignal(
+        app(SignalBus::class)->publish(new PulseSignal(
             eventKey: self::PULSE_EVENT,
             clientUserId: $primary->user_id,
             companyId: $primary->company_id,

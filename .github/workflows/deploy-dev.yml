@@ -342,21 +342,38 @@ jobs:
           fi
 
           echo "==> [0.7/7] Пульт уведомлений: включение движка..."
-          # Движок маршрутизации писем (эпик notif-00). Режим shadow: пульт
-          # считает получателей и пишет журнал, но НЕ отправляет — письма
-          # по-прежнему шлют прежние листенеры. Так сверяется совпадение
-          # с текущим поведением до перевода в боевой режим.
-          #
-          # Перевод в live делается заменой shadow на live ниже, пособытийно
-          # через NOTIFICATION_PULSE_LIVE_EVENTS. Раньше времени не трогать:
-          # в live старые листенеры замолкают, и если системные правила
-          # выключены, письма перестанут уходить вовсе.
+          # Пульт (эпик notif-00) остаётся в режиме shadow: он ничего не шлёт,
+          # но его сборщики данных и состояние просрочки ещё используются.
+          # Заменён эпиком mail-00 и будет демонтирован карточкой mail-10.
           for pair in \
             "NOTIFICATION_PULSE_ENABLED=true" \
             "NOTIFICATION_PULSE_MODE=shadow" \
             "PULSE_DOMAIN_ORDERS=true" \
             "PULSE_DOMAIN_DOCUMENTS=true" \
             "PULSE_DOMAIN_FINANCE=true" \
+          ; do
+            key="${pair%%=*}"
+            if grep -q "^${key}=" /srv/pecado/.env; then
+              sed -i "s|^${key}=.*|${pair}|" /srv/pecado/.env
+            else
+              echo "${pair}" >> /srv/pecado/.env
+            fi
+          done
+
+          echo "==> [0.8/7] Поток писем: сборка писем по поводам..."
+          # Эпик mail-00. Система складывает письма в те же «Письма», где лежит
+          # переписка менеджеров. Пока правил нет, всё уходит в папку «Мимо
+          # фильтров» и никуда не отправляется.
+          #
+          # MAIL_STREAM_AUTOSEND держим выключенным даже на dev: автоотправка
+          # включается галочкой на конкретном правиле, и общий рубильник —
+          # последняя возможность остановить поток одной переменной.
+          for pair in \
+            "MAIL_STREAM_ENABLED=true" \
+            "MAIL_STREAM_ORDERS=true" \
+            "MAIL_STREAM_DOCUMENTS=true" \
+            "MAIL_STREAM_FINANCE=true" \
+            "MAIL_STREAM_AUTOSEND=false" \
           ; do
             key="${pair%%=*}"
             if grep -q "^${key}=" /srv/pecado/.env; then

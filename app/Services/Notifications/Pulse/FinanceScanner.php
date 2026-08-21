@@ -7,6 +7,7 @@ use App\Models\NotificationSignal;
 use App\Models\PrintedDocument;
 use App\Models\ShipmentPaymentSchedule;
 use App\Notifications\Pulse\Support\PulseSignal;
+use App\Support\Notifications\SignalBus;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
 
@@ -30,7 +31,7 @@ class FinanceScanner
     /** Ступени, пересечение которых считается ухудшением. */
     private const STEPS = [30, 60, 90];
 
-    public function __construct(private readonly NotificationPulse $pulse) {}
+    public function __construct(private readonly SignalBus $bus) {}
 
     /**
      * @return array{due_soon: int, started: int, grew: int, cleared: int}
@@ -67,7 +68,7 @@ class FinanceScanner
 
             $dueDate = Carbon::parse($row->due_date);
 
-            $this->pulse->signal(new PulseSignal(
+            $this->bus->publish(new PulseSignal(
                 eventKey: 'finance.payment_due_soon',
                 clientUserId: $shipment->user_id,
                 companyId: $shipment->company_id,
@@ -76,6 +77,7 @@ class FinanceScanner
                     'days_left' => $today->diffInDays($dueDate, false),
                     'amount' => round($this->unpaid($row), 2),
                     'due_date' => $dueDate->toDateString(),
+                    'shipment_id' => $shipment->id,
                     'shipment_number' => $shipment->erp_number ?? $shipment->number ?? null,
                     'organization_id' => $shipment->organization_id,
                     'has_invoice_document' => $this->hasInvoice($shipment->id),
@@ -130,7 +132,7 @@ class FinanceScanner
 
             [$eventKey, $data, $view] = $transition;
 
-            $this->pulse->signal(new PulseSignal(
+            $this->bus->publish(new PulseSignal(
                 eventKey: $eventKey,
                 clientUserId: $balance->user_id,
                 companyId: $balance->company_id,

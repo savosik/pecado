@@ -69,9 +69,19 @@ class CrmEmailPolicy
             && $this->ownsOrLeads($user, $email);
     }
 
+    /**
+     * Своё письмо или письмо системы.
+     *
+     * Письмо, собранное системой, ничьё: оно приписано персональному менеджеру
+     * клиента только затем, чтобы попасть в его папку и получить обратный адрес.
+     * Запрещать по нему работать замещающему менеджеру было бы вредно — именно
+     * в отсутствие персонального и нужно, чтобы клиенту кто-то ответил.
+     */
     private function ownsOrLeads(User $user, CrmEmail $email): bool
     {
-        return $email->user_id === $user->id || $user->can('crm-department.edit');
+        return $email->isSystem()
+            || $email->user_id === $user->id
+            || $user->can('crm-department.edit');
     }
 
     private function clientAccessible(User $user, CrmEmail $email): bool

@@ -19,6 +19,7 @@ use App\Http\Controllers\Crm\FinanceController;
 use App\Http\Controllers\Crm\ImpersonationController;
 use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
+use App\Http\Controllers\Crm\MailRuleController;
 use App\Http\Controllers\Crm\NotificationCampaignController;
 use App\Http\Controllers\Crm\NotificationJournalController;
 use App\Http\Controllers\Crm\NotificationRuleController;
@@ -379,9 +380,14 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     // черновики создаются и при выключенном.
     Route::middleware('permission:crm-emails.view')->group(function () {
         Route::get('/emails', [EmailController::class, 'index'])->name('emails.index');
-        // До /emails/{email}: иначе «list» и «options» ушли бы в биндинг модели.
+        // До /emails/{email}: иначе «list», «options» и «rules» ушли бы в биндинг модели.
         Route::get('/emails/list', [EmailController::class, 'list'])->name('emails.list');
         Route::get('/emails/options', [EmailController::class, 'options'])->name('emails.options');
+        // Правила — вкладка внутри «Писем», а не отдельный раздел меню:
+        // именно дробление на разделы сделало прошлый подход непонятным.
+        Route::get('/emails/rules', [MailRuleController::class, 'index'])->name('emails.rules.index');
+        Route::post('/emails/rules/preview', [MailRuleController::class, 'preview'])
+            ->name('emails.rules.preview');
         Route::get('/emails/{email}', [EmailController::class, 'show'])
             ->name('emails.show')
             ->whereNumber('email');
@@ -389,6 +395,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
 
     Route::middleware('permission:crm-emails.create')->group(function () {
         Route::post('/emails', [EmailController::class, 'store'])->name('emails.store');
+        Route::post('/emails/bulk-send', [EmailController::class, 'bulkSend'])->name('emails.bulk-send');
         Route::post('/emails/{email}/send', [EmailController::class, 'send'])
             ->name('emails.send')
             ->whereNumber('email');
@@ -398,12 +405,23 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     });
 
     Route::middleware('permission:crm-emails.edit')->group(function () {
+        Route::post('/emails/rules', [MailRuleController::class, 'store'])->name('emails.rules.store');
+        Route::patch('/emails/rules/{rule}', [MailRuleController::class, 'update'])
+            ->name('emails.rules.update')
+            ->whereNumber('rule');
+        Route::post('/emails/rules/{rule}/toggle', [MailRuleController::class, 'toggle'])
+            ->name('emails.rules.toggle')
+            ->whereNumber('rule');
+        Route::delete('/emails/rules/{rule}', [MailRuleController::class, 'destroy'])
+            ->name('emails.rules.destroy')
+            ->whereNumber('rule');
         Route::patch('/emails/{email}', [EmailController::class, 'update'])
             ->name('emails.update')
             ->whereNumber('email');
     });
 
     Route::middleware('permission:crm-emails.delete')->group(function () {
+        Route::post('/emails/bulk-delete', [EmailController::class, 'bulkDestroy'])->name('emails.bulk-delete');
         Route::delete('/emails/{email}', [EmailController::class, 'destroy'])
             ->name('emails.destroy')
             ->whereNumber('email');

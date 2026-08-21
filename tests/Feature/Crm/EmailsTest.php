@@ -216,7 +216,9 @@ class EmailsTest extends TestCase
         $head->assignRole('sales-head');
         $email = CrmEmail::factory()->by($head)->on($this->client)->sent()->create();
 
-        $ids = array_column($this->journalFor($this->manager), 'id');
+        // Письмо отправлено, поэтому смотрим в папку «Отправленные»:
+        // по умолчанию открываются «Черновики» — рабочая папка.
+        $ids = array_column($this->journalFor($this->manager, 'sent'), 'id');
 
         $this->assertContains($email->id, $ids);
     }
@@ -284,9 +286,9 @@ class EmailsTest extends TestCase
     /**
      * @return list<array<string, mixed>>
      */
-    private function journalFor(User $actor): array
+    private function journalFor(User $actor, string $folder = 'drafts'): array
     {
-        $response = $this->actingAs($actor)->get(route('crm.emails.index'));
+        $response = $this->actingAs($actor)->get(route('crm.emails.index', ['folder' => $folder]));
 
         return $response->viewData('page')['props']['emails']['data'];
     }

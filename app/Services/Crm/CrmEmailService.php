@@ -8,6 +8,7 @@ use App\Jobs\SendCrmEmailJob;
 use App\Models\CrmEmail;
 use App\Models\CrmEmailTemplate;
 use App\Models\User;
+use App\Services\Crm\Mail\MailStream;
 use App\Support\Crm\CrmAttachments;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
@@ -74,7 +75,12 @@ class CrmEmailService
         $email->user_id = (int) $actor->getKey();
         $email->save();
 
-        return $email;
+        // Письмо менеджера тоже часть общего потока: правило «всё по этому
+        // контрагенту» обязано его видеть, иначе поток был бы общим на словах.
+        // Получателей правило ему не проставляет — их выбрал человек.
+        app(MailStream::class)->tagManualLetter($email);
+
+        return $email->refresh();
     }
 
     /**
@@ -196,9 +202,18 @@ class CrmEmailService
             'created_at_label' => $email->created_at?->format('d.m.Y H:i'),
             'message_id' => $email->message_id,
             'error' => $email->error,
+            // Кем составлено: менеджером или системой по поводу. Колонка нужна
+            // и тогда, когда автоматических писем ещё нет, — чтобы менеджеру
+            // не пришлось переучиваться, когда они появятся.
+            'origin' => $email->origin,
+            'origin_label' => $email->isSystem() ? 'Система' : 'Менеджер',
+            'origin_event' => $email->origin_event,
+            'tags' => $email->tagList(),
+            'skip_reason' => $email->skip_reason,
+            'auto_sent_rule' => $email->autoSentRule?->name,
             'author' => [
                 'id' => (int) $email->user_id,
-                'name' => $email->author->name,
+                'name' => $email->isSystem() ? 'Система' : ($email->author?->name ?? '—'),
             ],
             'client_id' => $email->client_user_id === null ? null : (int) $email->client_user_id,
             'entity' => $related instanceof Model

@@ -20,6 +20,14 @@ enum EmailStatus: string
     case SENT = 'sent';
     case FAILED = 'failed';
 
+    /**
+     * Собрано системой, но ни одно правило его не поймало.
+     *
+     * Отдельно от черновика намеренно: иначе рабочая папка менеджера
+     * забилась бы поводами, которые никого не интересуют.
+     */
+    case UNMATCHED = 'unmatched';
+
     public function label(): string
     {
         return match ($this) {
@@ -27,6 +35,7 @@ enum EmailStatus: string
             self::QUEUED => 'В очереди',
             self::SENT => 'Отправлено',
             self::FAILED => 'Ошибка',
+            self::UNMATCHED => 'Мимо фильтров',
         };
     }
 
@@ -40,6 +49,7 @@ enum EmailStatus: string
             self::QUEUED => 'blue',
             self::SENT => 'green',
             self::FAILED => 'red',
+            self::UNMATCHED => 'orange',
         };
     }
 
@@ -48,7 +58,7 @@ enum EmailStatus: string
      */
     public function isEditable(): bool
     {
-        return $this === self::DRAFT || $this === self::FAILED;
+        return $this === self::DRAFT || $this === self::FAILED || $this === self::UNMATCHED;
     }
 
     /**

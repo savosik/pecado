@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Crm\EmailStatus;
+use App\Enums\Crm\MailFolder;
 use App\Models\Concerns\HasCrmAttachments;
 use App\Models\Concerns\RecordsCrmSource;
 use App\Support\Crm\CrmEntityMap;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Spatie\MediaLibrary\HasMedia;
 
@@ -29,6 +31,13 @@ use Spatie\MediaLibrary\HasMedia;
  * @property EmailStatus $status
  * @property \Illuminate\Support\Carbon|null $sent_at
  * @property string|null $message_id
+ * @property string $origin
+ * @property string|null $origin_event
+ * @property string|null $origin_key
+ * @property array<string, mixed>|null $origin_data
+ * @property array<int, string>|null $tags
+ * @property int|null $auto_sent_rule_id
+ * @property string|null $skip_reason
  * @property string|null $error
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -45,6 +54,11 @@ class CrmEmail extends Model implements HasMedia
     protected $fillable = [
         'user_id',
         'client_user_id',
+        'origin',
+        'origin_event',
+        'origin_key',
+        'origin_data',
+        'tags',
         'related_type',
         'related_id',
         'to',
@@ -60,6 +74,8 @@ class CrmEmail extends Model implements HasMedia
         return [
             'to' => 'array',
             'cc' => 'array',
+            'origin_data' => 'array',
+            'tags' => 'array',
             'status' => EmailStatus::class,
             'sent_at' => 'datetime',
         ];
@@ -70,7 +86,14 @@ class CrmEmail extends Model implements HasMedia
      */
     protected $attributes = [
         'status' => 'draft',
+        'origin' => 'manual',
     ];
+
+    /** Письмо написал менеджер руками. */
+    public const ORIGIN_MANUAL = 'manual';
+
+    /** Письмо собрала система по поводу — заказ, документ, просрочка. */
+    public const ORIGIN_SYSTEM = 'system';
 
     /**
      * Партнёр письма выводится из привязки — единой точкой на все пути создания,
@@ -99,6 +122,49 @@ class CrmEmail extends Model implements HasMedia
     public function client(): BelongsTo
     {
         return $this->belongsTo(User::class, 'client_user_id');
+    }
+
+    /**
+     * Правило, отправившее письмо само. Нужно в списке «Отправленных»:
+     * менеджер должен видеть, что ушло без него и по какому фильтру.
+     */
+    public function autoSentRule(): BelongsTo
+    {
+        return $this->belongsTo(CrmMailRule::class, 'auto_sent_rule_id');
+    }
+
+    public function hits(): HasMany
+    {
+        return $this->hasMany(CrmMailRuleHit::class, 'crm_email_id');
+    }
+
+    public function isSystem(): bool
+    {
+        return $this->origin === self::ORIGIN_SYSTEM;
+    }
+
+    /**
+     * Метки письма — то, за что цепляются правила-фильтры.
+     *
+     * @return array<int, string>
+     */
+    public function tagList(): array
+    {
+        return array_values(array_filter(array_map(
+            fn ($tag): string => (string) $tag,
+            (array) ($this->tags ?? []),
+        )));
+    }
+
+    /**
+     * Письма одной папки.
+     *
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeInFolder(Builder $query, MailFolder $folder): Builder
+    {
+        return $query->whereIn('status', $folder->statuses());
     }
 
     /**

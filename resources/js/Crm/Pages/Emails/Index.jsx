@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import axios from 'axios';
-import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, HStack, Text, VStack, Wrap } from '@chakra-ui/react';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
@@ -12,7 +12,7 @@ import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import { usePermission } from '@/shared/Panel/usePermission';
-import { LuMail, LuPaperclip, LuPencil, LuSend, LuTrash2 } from 'react-icons/lu';
+import { LuBot, LuFilter, LuMail, LuPaperclip, LuPencil, LuSend, LuTrash2, LuUser } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 const selectStyle = {
@@ -23,12 +23,25 @@ const selectStyle = {
 };
 
 /**
- * Журнал писем: что кому отправляли и чем закончилось.
+ * Письма: один поток и папки поверх него.
+ *
+ * Здесь лежит и то, что написал менеджер, и то, что собрала система по поводу —
+ * изменился заказ, выложен акт сверки, подошёл срок оплаты. Разницы в работе нет:
+ * тот же список, тот же самолётик. Кому уйдёт письмо, решают правила-фильтры.
  *
  * Отправленное письмо неизменяемо — журнал, который можно переписать задним числом,
- * бесполезен как журнал. Править и удалять можно только черновики и то, что не ушло.
+ * бесполезен как журнал.
  */
-export default function Index({ emails, filters, statuses, outboundEnabled, openEmailId, canSeeDepartment = false }) {
+export default function Index({
+    emails,
+    filters,
+    folders = [],
+    outboundEnabled,
+    openEmailId,
+    unmatchedSummary = null,
+    canManageRules = false,
+    canSeeDepartment = false,
+}) {
     const { can } = usePermission();
     const [dialogEmail, setDialogEmail] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -56,7 +69,7 @@ export default function Index({ emails, filters, statuses, outboundEnabled, open
         });
     };
 
-    const reload = () => router.reload({ only: ['emails'] });
+    const reload = () => router.reload();
 
     const send = async (email) => {
         setBusy(true);
@@ -85,10 +98,49 @@ export default function Index({ emails, filters, statuses, outboundEnabled, open
         }
     };
 
+    const bulk = async (url, ids, fallback) => {
+        if (!ids.length) {
+            return;
+        }
+
+        setBusy(true);
+        try {
+            const res = await axios.post(url, { ids });
+            toastSuccess(res.data?.message || fallback);
+            reload();
+        } catch (e) {
+            toastError('Не получилось', e?.response?.data?.message || 'Попробуйте ещё раз.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
     const openDialog = (email = null) => {
         setDialogEmail(email);
         setDialogOpen(true);
     };
+
+    const folder = filters.folder || 'drafts';
+    const isWorkFolder = folder === 'drafts' || folder === 'unmatched';
+
+    const bulkActions = isWorkFolder
+        ? [
+            ...(outboundEnabled && can('crm-emails.create')
+                ? [{
+                    label: 'Отправить выбранные',
+                    colorPalette: 'blue',
+                    action: (ids) => bulk(route('crm.emails.bulk-send'), ids, 'Отправлено'),
+                }]
+                : []),
+            ...(can('crm-emails.delete')
+                ? [{
+                    label: 'Удалить выбранные',
+                    colorPalette: 'red',
+                    action: (ids) => bulk(route('crm.emails.bulk-delete'), ids, 'Удалено'),
+                }]
+                : []),
+        ]
+        : [];
 
     const columns = [
         {
@@ -105,8 +157,35 @@ export default function Index({ emails, filters, statuses, outboundEnabled, open
                             </HStack>
                         )}
                     </HStack>
-                    <Text fontSize="xs" color="fg.muted">Кому: {row.to.join(', ')}</Text>
+                    <Text fontSize="xs" color="fg.muted">
+                        {row.to?.length ? `Кому: ${row.to.join(', ')}` : 'Получатели не проставлены'}
+                    </Text>
+                    {row.tags?.length > 0 && (
+                        <Wrap gap={1}>
+                            {row.tags.slice(0, 6).map((tag) => (
+                                <Badge key={tag} size="sm" variant="outline" colorPalette="gray">{tag}</Badge>
+                            ))}
+                            {row.tags.length > 6 && (
+                                <Text fontSize="xs" color="fg.muted">+{row.tags.length - 6}</Text>
+                            )}
+                        </Wrap>
+                    )}
                 </VStack>
+            ),
+        },
+        {
+            key: 'origin',
+            label: 'Кем создано',
+            render: (_, row) => (
+                <HStack gap={2} color={row.origin === 'system' ? 'purple.500' : 'fg.muted'}>
+                    {row.origin === 'system' ? <LuBot size={14} /> : <LuUser size={14} />}
+                    <VStack align="start" gap={0}>
+                        <Text fontSize="sm">{row.origin_label}</Text>
+                        {row.origin !== 'system' && (
+                            <Text fontSize="xs" color="fg.muted">{row.author?.name}</Text>
+                        )}
+                    </VStack>
+                </HStack>
             ),
         },
         {
@@ -124,17 +203,18 @@ export default function Index({ emails, filters, statuses, outboundEnabled, open
                 : <Text fontSize="sm" color="fg.muted">—</Text>),
         },
         {
-            key: 'author',
-            label: 'Автор',
-            render: (_, row) => <Text fontSize="sm">{row.author?.name}</Text>,
-        },
-        {
             key: 'status',
-            label: 'Статус',
+            label: 'Состояние',
             render: (_, row) => (
                 <VStack align="start" gap={1}>
                     <Badge colorPalette={row.status_color} variant="subtle">{row.status_label}</Badge>
                     {row.sent_at_label && <Text fontSize="xs" color="fg.muted">{row.sent_at_label}</Text>}
+                    {row.auto_sent_rule && (
+                        <Text fontSize="xs" color="purple.500">Правило «{row.auto_sent_rule}»</Text>
+                    )}
+                    {row.skip_reason && (
+                        <Text fontSize="xs" color="orange.600" maxW="220px">{row.skip_reason}</Text>
+                    )}
                     {row.error && <Text fontSize="xs" color="red.500" maxW="220px">{row.error}</Text>}
                 </VStack>
             ),
@@ -166,7 +246,7 @@ export default function Index({ emails, filters, statuses, outboundEnabled, open
                             colorPalette="red"
                             disabled={busy}
                             onClick={() => setPendingDelete(row.id)}
-                            title="Удалить черновик"
+                            title="Удалить письмо"
                         >
                             <LuTrash2 />
                         </Button>
@@ -181,10 +261,19 @@ export default function Index({ emails, filters, statuses, outboundEnabled, open
             <Head title="CRM — Письма" />
             <PageHeader
                 title="Письма"
-                description="Что отправляли партнёрам и чем это закончилось"
-                actions={can('crm-emails.create')
-                    ? <Button size="sm" onClick={() => openDialog(null)}><LuMail /> Написать письмо</Button>
-                    : null}
+                description="Один поток: что написали сами и что собрала система"
+                actions={(
+                    <HStack gap={2}>
+                        {canManageRules && (
+                            <Link href={route('crm.emails.rules.index')}>
+                                <Button size="sm" variant="outline"><LuFilter /> Правила</Button>
+                            </Link>
+                        )}
+                        {can('crm-emails.create') && (
+                            <Button size="sm" onClick={() => openDialog(null)}><LuMail /> Написать письмо</Button>
+                        )}
+                    </HStack>
+                )}
             />
 
             <VStack align="stretch" gap={4}>
@@ -195,24 +284,64 @@ export default function Index({ emails, filters, statuses, outboundEnabled, open
                     </Alert>
                 )}
 
+                {/* Папки. Это не новая сущность, а другой показ того же списка:
+                    состояние письма и есть папка. */}
+                <Wrap gap={2}>
+                    {folders.map((item) => (
+                        <Button
+                            key={item.value}
+                            size="sm"
+                            variant={folder === item.value ? 'solid' : 'outline'}
+                            colorPalette={folder === item.value ? 'blue' : 'gray'}
+                            title={item.hint}
+                            onClick={() => apply({ folder: item.value })}
+                        >
+                            {item.label}
+                            <Badge ml={2} variant="subtle" colorPalette={folder === item.value ? 'blue' : 'gray'}>
+                                {item.count}
+                            </Badge>
+                        </Button>
+                    ))}
+                </Wrap>
+
+                {unmatchedSummary && unmatchedSummary.rows.length > 0 && (
+                    <Alert status="info" title="Это система умеет, но никто не забирает">
+                        <VStack align="start" gap={1} mt={2}>
+                            {unmatchedSummary.rows.map((row) => (
+                                <Text key={row.event} fontSize="sm">
+                                    {row.label} — {row.total}
+                                </Text>
+                            ))}
+                            <Text fontSize="xs" color="fg.muted">
+                                Ни одно правило их не ловит. Письма хранятся {unmatchedSummary.retention_days} дн.
+                                и удаляются.
+                            </Text>
+                            {canManageRules && (
+                                <Link href={route('crm.emails.rules.index')}>
+                                    <Button size="xs" variant="outline" mt={1}><LuFilter /> Настроить правило</Button>
+                                </Link>
+                            )}
+                        </VStack>
+                    </Alert>
+                )}
+
                 <HStack gap={3} align="center" flexWrap="wrap">
                     <Box flex="1" minW="240px">
                         <SearchInput
                             value={filters.search || ''}
                             onChange={(value) => apply({ search: value || undefined })}
-                            placeholder="Поиск по теме и тексту..."
+                            placeholder="Поиск по теме, тексту и адресу..."
                         />
                     </Box>
 
                     <select
-                        value={filters.status || ''}
-                        onChange={(e) => apply({ status: e.target.value || undefined })}
+                        value={filters.origin || ''}
+                        onChange={(e) => apply({ origin: e.target.value || undefined })}
                         style={selectStyle}
                     >
-                        <option value="">Любой статус</option>
-                        {statuses.map((item) => (
-                            <option key={item.value} value={item.value}>{item.label}</option>
-                        ))}
+                        <option value="">Кем угодно</option>
+                        <option value="manual">Написал менеджер</option>
+                        <option value="system">Собрала система</option>
                     </select>
 
                     <ScopeToggle
@@ -222,7 +351,14 @@ export default function Index({ emails, filters, statuses, outboundEnabled, open
                     />
                 </HStack>
 
-                <DataTable data={emails.data} columns={columns} pagination={emails} />
+                <DataTable
+                    data={emails.data}
+                    columns={columns}
+                    pagination={emails}
+                    selectable={bulkActions.length > 0}
+                    bulkActions={bulkActions}
+                    emptyMessage="В этой папке пусто"
+                />
             </VStack>
 
             <EmailComposeDialog
@@ -236,7 +372,7 @@ export default function Index({ emails, filters, statuses, outboundEnabled, open
                 open={pendingDelete !== null}
                 onClose={() => setPendingDelete(null)}
                 onConfirm={() => remove(pendingDelete)}
-                title="Удалить черновик?"
+                title="Удалить письмо?"
                 description="Неотправленное письмо будет удалено безвозвратно."
                 confirmLabel="Удалить"
                 cancelLabel="Отмена"

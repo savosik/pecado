@@ -110,6 +110,7 @@ class ConditionEvaluator
             'between' => $this->between($actual, $expected),
             'contains' => $this->contains($actual, $expected),
             'not_contains' => ! $this->contains($actual, $expected),
+            'regex' => $this->regex($actual, $expected),
             'is_empty' => blank($actual),
             'not_empty' => filled($actual),
             default => false,
@@ -186,6 +187,38 @@ class ConditionEvaluator
         }
 
         return str_contains(mb_strtolower((string) $actual), mb_strtolower((string) $expected));
+    }
+
+    /**
+     * Регулярное выражение — продвинутый режим фильтра.
+     *
+     * Выражение набирает человек и хранится в базе, поэтому исполняется
+     * с обеих сторон осторожно: разделители ставим сами (иначе пользователь
+     * обязан знать про `~`), а кривой шаблон даёт «не совпало», а не падение
+     * всего разбора писем.
+     */
+    private function regex(mixed $actual, mixed $expected): bool
+    {
+        if ($actual === null || ! is_string($expected) || $expected === '') {
+            return false;
+        }
+
+        if (is_array($actual)) {
+            $actual = implode(' ', array_map(fn ($item): string => (string) $item, $actual));
+        }
+
+        $result = @preg_match('~'.str_replace('~', '\~', $expected).'~iu', (string) $actual);
+
+        return $result === 1;
+    }
+
+    /**
+     * Валиден ли шаблон — чтобы форма могла сказать об ошибке до сохранения,
+     * а не после того, как правило молча перестало ловить.
+     */
+    public static function isValidRegex(string $pattern): bool
+    {
+        return @preg_match('~'.str_replace('~', '\~', $pattern).'~iu', '') !== false;
     }
 
     private function numeric(mixed $value): ?float

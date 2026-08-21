@@ -6,8 +6,8 @@ use App\Events\ReturnCreated;
 use App\Models\ProductReturn;
 use App\Notifications\Pulse\Support\PulseSignal;
 use App\Notifications\Returns\ReturnCreatedNotification;
-use App\Services\Notifications\Pulse\NotificationPulse;
 use App\Services\Notifications\Pulse\PulseMode;
+use App\Support\Notifications\SignalBus;
 
 class SendReturnCreatedEmail
 {
@@ -41,7 +41,7 @@ class SendReturnCreatedEmail
     {
         $number = $return->erp_number ?: $return->number ?: (string) $return->id;
 
-        app(NotificationPulse::class)->signal(new PulseSignal(
+        app(SignalBus::class)->publish(new PulseSignal(
             eventKey: self::PULSE_EVENT,
             clientUserId: $return->user_id,
             subject: $return,
