@@ -2,20 +2,21 @@
 
 namespace App\Listeners;
 
-use App\Models\ClientContact;
-use App\Models\NotificationDelivery;
 use App\Models\NotificationSuppression;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Отметка неудачной отправки письма пульта.
+ * Стоп-лист по отказам почтового сервера.
  *
  * Мотив прикладной: адрес уволившегося бухгалтера отбивается сервером на каждом
  * письме, а репутация отправителя падает для всех писем домена, включая заказы.
  *
  * Жёсткий отказ (адреса не существует) кладёт адрес в стоп-лист; мягкий
- * (ящик переполнен, временная недоступность) — только отмечается в доставке:
- * такой адрес завтра может заработать, и вычёркивать его насовсем нельзя.
+ * (ящик переполнен, временная недоступность) не кладёт: такой адрес завтра
+ * может заработать, и вычёркивать его насовсем нельзя.
+ *
+ * Вызывается из `SendCrmEmailJob::failed()` — то есть с настоящего пути
+ * отправки, а не с гипотетического.
  */
 class RecordMailBounce
 {
@@ -34,43 +35,31 @@ class RecordMailBounce
         '553',
     ];
 
-    public function handleFailure(int $deliveryId, string $error): void
+    /**
+     * @param  array<int, string>  $recipients  адреса письма, которое не ушло
+     */
+    public function handleFailure(array $recipients, string $error): void
     {
-        $delivery = NotificationDelivery::find($deliveryId);
-
-        if ($delivery === null) {
-            return;
-        }
-
-        $delivery->update([
-            'status' => NotificationDelivery::STATUS_FAILED,
-            'error' => mb_substr($error, 0, 2000),
-        ]);
-
         if (! $this->isHardBounce($error)) {
             return;
         }
 
-        NotificationSuppression::updateOrCreate(
-            ['email' => $delivery->recipient, 'scope' => NotificationSuppression::SCOPE_ALL],
-            [
-                'reason' => NotificationSuppression::REASON_BOUNCE,
-                'contact_id' => $delivery->contact_id,
-                'note' => mb_substr($error, 0, 500),
-            ],
-        );
+        foreach ($recipients as $recipient) {
+            $email = mb_strtolower(trim((string) $recipient));
 
-        Log::warning('Пульт уведомлений: адрес отвергнут почтовым сервером', [
-            'recipient' => $delivery->recipient,
-            'delivery_id' => $delivery->id,
-        ]);
+            if ($email === '') {
+                continue;
+            }
 
-        // Контакт с битым адресом подсвечивается в адресной книге: менеджер
-        // видит причину и может обновить адрес.
-        if ($delivery->contact_id !== null) {
-            ClientContact::query()
-                ->whereKey($delivery->contact_id)
-                ->update(['notes' => 'Почтовый сервер отвергает адрес — проверьте его актуальность']);
+            NotificationSuppression::updateOrCreate(
+                ['email' => $email, 'scope' => NotificationSuppression::SCOPE_ALL],
+                [
+                    'reason' => NotificationSuppression::REASON_BOUNCE,
+                    'note' => mb_substr($error, 0, 500),
+                ],
+            );
+
+            Log::warning('Почта: адрес отвергнут почтовым сервером', ['recipient' => $email]);
         }
     }
 

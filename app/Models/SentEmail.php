@@ -31,7 +31,6 @@ class SentEmail extends Model
         'client_user_id',
         'recipient_user_id',
         'message_id',
-        'notification_delivery_id',
         'sent_at',
     ];
 

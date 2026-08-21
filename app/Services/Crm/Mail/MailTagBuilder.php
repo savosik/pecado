@@ -230,6 +230,17 @@ class MailTagBuilder
     }
 
     /**
+     * Метки повода без меток клиента — то, за что имеет смысл зацепить
+     * правило, когда настраиваешь его по сводке непойманного.
+     *
+     * @return array<int, string>
+     */
+    public function occasionTags(string $eventKey): array
+    {
+        return self::EVENT_TAGS[$eventKey] ?? [];
+    }
+
+    /**
      * Все метки, встречавшиеся в потоке за последнее время, — для подсказки
      * в конструкторе правила.
      *

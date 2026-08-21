@@ -9,7 +9,6 @@ import {
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { usePermission } from '@/shared/Panel/usePermission';
-import ContactsPanel from '@/Crm/Components/ContactsPanel';
 import CommentThread from '@/Crm/Components/CommentThread';
 import TaskPanel from '@/Crm/Components/TaskPanel';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
@@ -74,7 +73,6 @@ export default function Show({ contractor, documents, canSeeDocuments = false })
     const canViewComments = can('crm-comments.view');
     const canViewTasks = can('crm-tasks.view');
     const canViewFiles = can('crm-attachments.view');
-    const canViewContacts = can('crm-notification-contacts.view') && Boolean(contractor.partner?.id);
 
     const defaultTab = canViewComments ? 'comments' : (canViewTasks ? 'tasks' : 'files');
     const balance = contractor.balance;
@@ -180,7 +178,7 @@ export default function Show({ contractor, documents, canSeeDocuments = false })
                     </AccordionItem>
                 </AccordionRoot>
 
-                {(canViewComments || canViewTasks || canViewFiles || canSeeDocuments || canViewContacts) && (
+                {(canViewComments || canViewTasks || canViewFiles || canSeeDocuments) && (
                     <Card.Root>
                         <Card.Body>
                             <Tabs.Root defaultValue={defaultTab} lazyMount>
@@ -190,7 +188,6 @@ export default function Show({ contractor, documents, canSeeDocuments = false })
                                     {canSeeDocuments && <Tabs.Trigger value="orders">Заказы</Tabs.Trigger>}
                                     {canSeeDocuments && <Tabs.Trigger value="shipments">Реализации</Tabs.Trigger>}
                                     {canViewFiles && <Tabs.Trigger value="files">Файлы</Tabs.Trigger>}
-                                    {canViewContacts && <Tabs.Trigger value="contacts">Контакты</Tabs.Trigger>}
                                 </Tabs.List>
 
                                 {canViewComments && (
@@ -237,17 +234,6 @@ export default function Show({ contractor, documents, canSeeDocuments = false })
                                             entityId={contractor.id}
                                             canUpload={can('crm-attachments.create')}
                                             label="Файлы по контрагенту"
-                                        />
-                                    </Tabs.Content>
-                                )}
-                                {canViewContacts && (
-                                    <Tabs.Content value="contacts">
-                                        <ContactsPanel
-                                            userId={contractor.partner?.id}
-                                            companyId={contractor.id}
-                                            canEdit={can('crm-notification-contacts.edit')}
-                                            canDelete={can('crm-notification-contacts.delete')}
-                                            canImport={can('crm-notification-contacts.create')}
                                         />
                                     </Tabs.Content>
                                 )}

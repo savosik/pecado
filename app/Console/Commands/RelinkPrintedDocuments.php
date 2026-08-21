@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\PrintedDocument;
-use App\Services\Notifications\Pulse\DocumentSignalDispatcher;
+use App\Services\Crm\Mail\Sources\DocumentOccasions;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -130,7 +130,7 @@ class RelinkPrintedDocuments extends Command
      */
     private function signalLinkedDocuments(array $documentIds): void
     {
-        $dispatcher = app(DocumentSignalDispatcher::class);
+        $dispatcher = app(DocumentOccasions::class);
 
         PrintedDocument::query()
             ->whereIn('id', $documentIds)

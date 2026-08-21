@@ -5,14 +5,13 @@ namespace App\Listeners;
 use App\Events\OrderUpdated;
 use App\Models\Order;
 use App\Notifications\Orders\OrderStatusChangedNotification;
-use App\Notifications\Pulse\Support\PulseSignal;
-use App\Services\Notifications\Pulse\PulseMode;
-use App\Support\Notifications\SignalBus;
+use App\Services\Crm\Mail\MailStream;
+use App\Support\Notifications\Occasion;
 
 class SendOrderStatusChangedEmail
 {
     /** Ключ события пульта, которым это письмо заменяется при переходе. */
-    private const PULSE_EVENT = 'orders.status_changed';
+    private const OCCASION = 'orders.status_changed';
 
     public function handle(OrderUpdated $event): void
     {
@@ -22,16 +21,9 @@ class SendOrderStatusChangedEmail
             return;
         }
 
-        // Сигнал пульту идёт всегда: в теневом режиме он только считает
-        // получателей для сверки, а отправляет по-прежнему код ниже.
-        $this->signalPulse($order);
-
-        // Событие переведено на пульт — здесь молчим, иначе клиент получил бы
-        // два письма об одном и том же. Флаг общий для обеих сторон, поэтому
-        // дубль невозможен по конструкции, а не по внимательности.
-        if (PulseMode::handles(self::PULSE_EVENT)) {
-            return;
-        }
+        // Письмо в поток собирается всегда: кому оно уйдёт, решают
+        // правила-фильтры, а клиенту отправляет по-прежнему код ниже.
+        $this->composeLetter($order);
 
         if (! config('notifications.mail.features.order_status_changes')) {
             return;
@@ -65,12 +57,12 @@ class SendOrderStatusChangedEmail
      * здесь как поведение старого листенера, но пульту передаются данными:
      * там это условие системного правила, которое можно менять в интерфейсе.
      */
-    private function signalPulse(Order $order): void
+    private function composeLetter(Order $order): void
     {
         $number = $order->erp_number ?: $order->number;
 
-        app(SignalBus::class)->publish(new PulseSignal(
-            eventKey: self::PULSE_EVENT,
+        app(MailStream::class)->captureQuietly(new Occasion(
+            key: self::OCCASION,
             clientUserId: $order->user_id,
             companyId: $order->company_id,
             subject: $order,

@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Crm;
 
+use App\Services\Crm\Mail\ConditionEvaluator;
 use App\Services\Crm\Mail\MailFieldCatalog;
-use App\Services\Notifications\Pulse\ConditionEvaluator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;

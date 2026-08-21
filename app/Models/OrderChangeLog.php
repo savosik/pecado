@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use App\Events\EntityChanged;
-use App\Notifications\Pulse\Support\PulseSignal;
+use App\Services\Crm\Mail\MailStream;
 use App\Subscriptions\EntityChangeNotice;
-use App\Support\Notifications\SignalBus;
+use App\Support\Notifications\Occasion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -88,18 +88,18 @@ class OrderChangeLog extends Model
                 event: (string) $log->type,
             ));
 
-            self::signalPulse($log, $order, $number);
+            self::composeLetter($log, $order, $number);
         });
     }
 
     /**
-     * Сигнал пульту уведомлений о том же изменении.
+     * Письмо в поток о том же изменении.
      *
-     * Пока идёт миграция, сигнал живёт рядом с EntityChanged: пульт в теневом
-     * режиме считает получателей, а письма шлёт прежний механизм. Что именно
-     * отправляет, решает PulseMode — один флаг на обе стороны.
+     * Живёт рядом с EntityChanged: подписка кабинета шлёт письмо владельцу
+     * заказа, а поток собирает письмо, которое правила-фильтры могут отправить
+     * кому угодно ещё — бухгалтеру, закупщику, директору.
      */
-    private static function signalPulse(self $log, Order $order, string $number): void
+    private static function composeLetter(self $log, Order $order, string $number): void
     {
         $eventKey = match ($log->type) {
             'items_updated' => 'orders.items_updated',
@@ -112,12 +112,12 @@ class OrderChangeLog extends Model
             return;
         }
 
-        app(SignalBus::class)->publish(new PulseSignal(
-            eventKey: $eventKey,
+        app(MailStream::class)->captureQuietly(new Occasion(
+            key: $eventKey,
             clientUserId: (int) $order->user_id,
             companyId: $order->company_id,
             subject: $order,
-            data: self::buildSignalData($log, $order, $number),
+            data: self::buildOccasionData($log, $order, $number),
             view: [
                 'title' => sprintf('Изменение по заказу %s', $number),
                 'body' => (string) $log->summary,
@@ -137,7 +137,7 @@ class OrderChangeLog extends Model
      *
      * @return array<string, mixed>
      */
-    private static function buildSignalData(self $log, Order $order, string $number): array
+    private static function buildOccasionData(self $log, Order $order, string $number): array
     {
         // getAttribute, а не $log->changes: `changes` — имя protected-свойства
         // самого Eloquent (список изменённых при сохранении атрибутов), и внутри

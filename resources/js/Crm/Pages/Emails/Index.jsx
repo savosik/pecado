@@ -306,21 +306,21 @@ export default function Index({
 
                 {unmatchedSummary && unmatchedSummary.rows.length > 0 && (
                     <Alert status="info" title="Это система умеет, но никто не забирает">
-                        <VStack align="start" gap={1} mt={2}>
+                        <VStack align="stretch" gap={1} mt={2}>
                             {unmatchedSummary.rows.map((row) => (
-                                <Text key={row.event} fontSize="sm">
-                                    {row.label} — {row.total}
-                                </Text>
+                                <HStack key={row.event} gap={3}>
+                                    <Text fontSize="sm" flex="1">{row.label} — {row.total}</Text>
+                                    {canManageRules && row.tag && (
+                                        <Link href={route('crm.emails.rules.index', { tag: row.tag })}>
+                                            <Button size="xs" variant="outline"><LuFilter /> Настроить</Button>
+                                        </Link>
+                                    )}
+                                </HStack>
                             ))}
                             <Text fontSize="xs" color="fg.muted">
                                 Ни одно правило их не ловит. Письма хранятся {unmatchedSummary.retention_days} дн.
                                 и удаляются.
                             </Text>
-                            {canManageRules && (
-                                <Link href={route('crm.emails.rules.index')}>
-                                    <Button size="xs" variant="outline" mt={1}><LuFilter /> Настроить правило</Button>
-                                </Link>
-                            )}
                         </VStack>
                     </Alert>
                 )}

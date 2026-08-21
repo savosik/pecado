@@ -46,6 +46,9 @@ class MailRuleController extends CrmController
             'autoSendEnabled' => (bool) config('mail_stream.autosend'),
             'streamEnabled' => (bool) config('mail_stream.enabled'),
             'canManage' => $actor->can('crm-emails.edit'),
+            // Переход из сводки «Мимо фильтров»: форма открывается с уже
+            // набранным условием, чтобы менеджер не переписывал метку руками.
+            'prefillTag' => $request->string('tag')->value() ?: null,
         ]);
     }
 

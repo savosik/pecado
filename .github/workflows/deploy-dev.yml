@@ -341,26 +341,11 @@ jobs:
             echo "CABINET_SEARCH_EXPORT=true" >> /srv/pecado/.env
           fi
 
-          echo "==> [0.7/7] Пульт уведомлений: включение движка..."
-          # Пульт (эпик notif-00) остаётся в режиме shadow: он ничего не шлёт,
-          # но его сборщики данных и состояние просрочки ещё используются.
-          # Заменён эпиком mail-00 и будет демонтирован карточкой mail-10.
-          for pair in \
-            "NOTIFICATION_PULSE_ENABLED=true" \
-            "NOTIFICATION_PULSE_MODE=shadow" \
-            "PULSE_DOMAIN_ORDERS=true" \
-            "PULSE_DOMAIN_DOCUMENTS=true" \
-            "PULSE_DOMAIN_FINANCE=true" \
-          ; do
-            key="${pair%%=*}"
-            if grep -q "^${key}=" /srv/pecado/.env; then
-              sed -i "s|^${key}=.*|${pair}|" /srv/pecado/.env
-            else
-              echo "${pair}" >> /srv/pecado/.env
-            fi
-          done
+          # Пульт уведомлений демонтирован (mail-10): переменные больше ни на что
+          # не влияют и только путают того, кто читает .env.
+          sed -i '/^NOTIFICATION_PULSE_/d; /^PULSE_DOMAIN_/d' /srv/pecado/.env
 
-          echo "==> [0.8/7] Поток писем: сборка писем по поводам..."
+          echo "==> [0.7/7] Поток писем: сборка писем по поводам..."
           # Эпик mail-00. Система складывает письма в те же «Письма», где лежит
           # переписка менеджеров. Пока правил нет, всё уходит в папку «Мимо
           # фильтров» и никуда не отправляется.
@@ -445,13 +430,6 @@ jobs:
 
           echo "==> [4.1/7] Юридические страницы и пункты меню (идемпотентно)..."
           sg docker -c 'docker compose exec -T app php artisan db:seed --class=LegalPagesSeeder --force'
-
-          echo "==> [4.2/7] Системные правила пульта уведомлений (идемпотентно)..."
-          # Заводит правила, воспроизводящие текущую зашитую маршрутизацию.
-          # Включённость берётся из актуальных MAIL_FEATURE_*: выключенное
-          # письмо остаётся выключенным. Ручные правки (тумблер, приоритет,
-          # получатели) повторный запуск НЕ перетирает.
-          sg docker -c 'docker compose exec -T app php artisan notifications:sync-system-rules'
 
           echo "==> [5/7] Применение актуальной конфигурации RabbitMQ (плагины shovel, persistent volume)..."
           sg docker -c 'docker compose up -d rabbitmq'

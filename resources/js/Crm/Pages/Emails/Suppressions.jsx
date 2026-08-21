@@ -1,0 +1,168 @@
+import { useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
+import axios from 'axios';
+import { Badge, Box, HStack, Input, Text, VStack } from '@chakra-ui/react';
+import CrmLayout from '@/Crm/Layouts/CrmLayout';
+import { PageHeader } from '@/Admin/Components/PageHeader';
+import { DataTable } from '@/Admin/Components/DataTable';
+import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
+import { LuFilter, LuMail, LuTrash2 } from 'react-icons/lu';
+import { toastError, toastSuccess } from '@/utils/toast';
+
+/**
+ * Стоп-лист адресов.
+ *
+ * Отвечает на единственный вопрос: почему на этот адрес не уходят письма.
+ * Отдельным разделом меню не заводится — это настройка внутри «Писем».
+ */
+export default function Suppressions({ suppressions, canManage }) {
+    const [email, setEmail] = useState('');
+    const [note, setNote] = useState('');
+    const [busy, setBusy] = useState(false);
+
+    const reload = () => router.reload();
+
+    const add = async () => {
+        setBusy(true);
+        try {
+            const res = await axios.post(route('crm.emails.suppressions.store'), { email, note });
+            toastSuccess(res.data?.message || 'Добавлено');
+            setEmail('');
+            setNote('');
+            reload();
+        } catch (e) {
+            toastError('Не получилось', e?.response?.data?.message || 'Проверьте адрес.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const remove = async (id) => {
+        setBusy(true);
+        try {
+            await axios.delete(route('crm.emails.suppressions.destroy', id));
+            toastSuccess('Адрес снова получает письма');
+            reload();
+        } catch (e) {
+            toastError('Не получилось', e?.response?.data?.message || 'Попробуйте ещё раз.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const columns = [
+        {
+            key: 'email',
+            label: 'Адрес',
+            render: (_, row) => (
+                <VStack align="start" gap={0}>
+                    <Text fontSize="sm" fontWeight="600">{row.email}</Text>
+                    {row.note && <Text fontSize="xs" color="fg.muted" maxW="380px">{row.note}</Text>}
+                </VStack>
+            ),
+        },
+        {
+            key: 'reason',
+            label: 'Почему',
+            render: (_, row) => <Text fontSize="sm">{row.reason_label}</Text>,
+        },
+        {
+            key: 'scope',
+            label: 'Что не уходит',
+            render: (_, row) => <Badge variant="subtle">{row.scope_label}</Badge>,
+        },
+        {
+            key: 'created',
+            label: 'Когда',
+            render: (_, row) => (
+                <VStack align="start" gap={0}>
+                    <Text fontSize="xs" color="fg.muted">{row.created_at_label}</Text>
+                    {row.expires_at_label && (
+                        <Text fontSize="xs" color="fg.muted">до {row.expires_at_label}</Text>
+                    )}
+                </VStack>
+            ),
+        },
+        {
+            key: 'actions',
+            label: '',
+            render: (_, row) => (canManage ? (
+                <Button
+                    size="xs"
+                    variant="ghost"
+                    colorPalette="red"
+                    disabled={busy}
+                    onClick={() => remove(row.id)}
+                    title="Убрать из стоп-листа"
+                >
+                    <LuTrash2 />
+                </Button>
+            ) : null),
+        },
+    ];
+
+    return (
+        <>
+            <Head title="CRM — Стоп-лист писем" />
+            <PageHeader
+                title="Стоп-лист"
+                description="Адреса, на которые письма не уходят, и почему"
+                actions={(
+                    <HStack gap={2}>
+                        <Link href={route('crm.emails.index')}>
+                            <Button size="sm" variant="outline"><LuMail /> К письмам</Button>
+                        </Link>
+                        <Link href={route('crm.emails.rules.index')}>
+                            <Button size="sm" variant="outline"><LuFilter /> Правила</Button>
+                        </Link>
+                    </HStack>
+                )}
+            />
+
+            <VStack align="stretch" gap={4}>
+                <Alert status="info" title="Как адрес сюда попадает">
+                    Человек нажал «отписаться» в письме, почтовый сервер отверг адрес как
+                    несуществующий, либо сотрудник внёс адрес руками. Пока адрес здесь,
+                    автоматическая отправка на него отказывается работать и пишет причину
+                    в карточке письма.
+                </Alert>
+
+                {canManage && (
+                    <Box borderWidth="1px" borderRadius="lg" p={4}>
+                        <HStack gap={2} flexWrap="wrap" align="end">
+                            <Box>
+                                <Text fontSize="sm" fontWeight="600" mb={1}>Адрес</Text>
+                                <Input
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="buh@romashka.ru"
+                                    minW="260px"
+                                />
+                            </Box>
+                            <Box flex="1" minW="240px">
+                                <Text fontSize="sm" fontWeight="600" mb={1}>Пояснение</Text>
+                                <Input
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                    placeholder="Клиент попросил не писать на этот адрес"
+                                />
+                            </Box>
+                            <Button size="sm" onClick={add} loading={busy} disabled={!email}>
+                                Добавить
+                            </Button>
+                        </HStack>
+                    </Box>
+                )}
+
+                <DataTable
+                    data={suppressions}
+                    columns={columns}
+                    emptyMessage="Стоп-лист пуст — письма уходят на все адреса"
+                />
+            </VStack>
+        </>
+    );
+}
+
+Suppressions.layout = (page) => <CrmLayout>{page}</CrmLayout>;

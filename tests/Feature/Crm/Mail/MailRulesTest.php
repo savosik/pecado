@@ -7,9 +7,9 @@ use App\Models\CrmEmail;
 use App\Models\CrmMailRule;
 use App\Models\PersonalManager;
 use App\Models\User;
-use App\Notifications\Pulse\Support\PulseSignal;
 use App\Services\Crm\Mail\MailRuleEngine;
 use App\Services\Crm\Mail\MailStream;
+use App\Support\Notifications\Occasion;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -50,8 +50,8 @@ class MailRulesTest extends TestCase
 
     private function documentLetter(string $type = 'reconciliation_act', string $taxId = '7701234567'): CrmEmail
     {
-        return app(MailStream::class)->capture(new PulseSignal(
-            eventKey: 'documents.published',
+        return app(MailStream::class)->capture(new Occasion(
+            key: 'documents.published',
             clientUserId: $this->client->id,
             data: [
                 'document_type' => $type,

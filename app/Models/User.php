@@ -466,16 +466,6 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
-     * Адресная книга партнёра: контактные лица его контрагентов.
-     *
-     * Адресаты правил пульта уведомлений — бухгалтер, закупщик, директор.
-     */
-    public function contacts(): HasMany
-    {
-        return $this->hasMany(ClientContact::class);
-    }
-
-    /**
      * Личные пресеты фильтров отчёта продаж CRM.
      */
     public function crmAnalyticsFilterPresets(): HasMany

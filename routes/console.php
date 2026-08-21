@@ -29,11 +29,6 @@ Schedule::command('erp:cleanup-messages')->dailyAt('05:00')->withoutOverlapping(
 Schedule::command('erp:cleanup-processed')->dailyAt('05:20')->withoutOverlapping(); // журнал дедупликации входящих: ретенция ERP_PROCESSED_RETENTION_DAYS
 Schedule::command('model:prune', ['--model' => [
     \App\Models\SentEmail::class,
-    // Пульт уведомлений: сигналы — оперативная трасса (30 дней), доставки живут
-    // дольше журнала писем (365): «когда мы перестали слать этому бухгалтеру»
-    // спрашивают и через год, а строка компактная — тела письма в ней нет.
-    \App\Models\NotificationSignal::class,
-    \App\Models\NotificationDelivery::class,
 ]])->dailyAt('05:10'); // журнал исходящих писем: ретенция MAIL_JOURNAL_RETENTION_DAYS
 Schedule::command('sitemap:generate')->dailyAt('03:30'); // после search:sync
 Schedule::command('feed:build-yandex')->hourly()->withoutOverlapping(); // публичный YML-фид Яндекс.Маркета
@@ -41,14 +36,10 @@ Schedule::command('promo:rebuild-rule-products')->dailyAt('02:40')->withoutOverl
 Schedule::command('crm:lifecycle-hints')->dailyAt('06:10')->withoutOverlapping(); // подсказки по жизненному статусу клиентов — статусы НЕ меняет
 Schedule::command('crm:back-in-stock-drafts')->dailyAt('07:20')->withoutOverlapping(); // черновики писем о вернувшихся в продажу товарах; ничего не отправляет
 Schedule::command('crm:tasks-recur')->dailyAt('05:40')->withoutOverlapping(); // задачи по расписанию: материализация на сутки вперёд, до утренних напоминаний
-// Финансовые поводы для пульта уведомлений: срок оплаты, просрочка, погашение.
+// Финансовые поводы для потока писем: срок оплаты, просрочка, погашение.
 // Плановый обход, а не реакция на balance.updated: 1С шлёт снимок баланса часто
 // и не по порядку, и письмо на каждый пересчёт было бы шумом.
-// Сведение накопленных уведомлений: серия правок заказа из 1С уходит одним
-// письмом вместо десятка. Ежедневное — утром, чтобы не тревожить ночью.
-Schedule::command('notifications:send-digests --period=hourly')->hourly()->withoutOverlapping();
-Schedule::command('notifications:send-digests --period=daily')->dailyAt('09:00')->withoutOverlapping();
-Schedule::command('notifications:finance-scan')->dailyAt('07:00')->withoutOverlapping();
+Schedule::command('mail:finance-scan')->dailyAt('07:00')->withoutOverlapping();
 // Поток писем: непойманное правилами живёт MAIL_STREAM_UNMATCHED_DAYS и удаляется —
 // иначе папка «Мимо фильтров» превратится в бесконечно растущую свалку.
 Schedule::command('mail:prune-unmatched')->dailyAt('04:40')->withoutOverlapping();

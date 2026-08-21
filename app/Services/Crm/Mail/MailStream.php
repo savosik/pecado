@@ -10,9 +10,8 @@ use App\Models\CrmEmailTemplate;
 use App\Models\PersonalManager;
 use App\Models\PrintedDocument;
 use App\Models\User;
-use App\Notifications\Pulse\Support\PulseSignal;
-use App\Services\Notifications\Pulse\NotificationEventRegistry;
 use App\Support\Crm\CrmAttachments;
+use App\Support\Notifications\Occasion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 
@@ -29,7 +28,7 @@ use Illuminate\Support\Facades\Log;
 class MailStream
 {
     public function __construct(
-        private readonly NotificationEventRegistry $registry,
+        private readonly MailOccasions $occasions,
         private readonly MailTagBuilder $tags,
         private readonly MailRuleEngine $rules,
     ) {}
@@ -40,45 +39,45 @@ class MailStream
      * Возвращает null, когда письма быть не должно: поток выключен, домен
      * не включён, повод слишком стар или уже есть письмо про то же самое.
      */
-    public function capture(PulseSignal $signal): ?CrmEmail
+    public function capture(Occasion $occasion): ?CrmEmail
     {
-        if (! $this->accepts($signal)) {
+        if (! $this->accepts($occasion)) {
             return null;
         }
 
-        $client = $signal->clientUserId === null
+        $client = $occasion->clientUserId === null
             ? null
-            : User::query()->with('crmProfile')->find($signal->clientUserId);
+            : User::query()->with('crmProfile')->find($occasion->clientUserId);
 
-        $data = $this->enrich($signal, $client);
-        $tags = $this->tags->build($signal->eventKey, $data, $client);
-        $originKey = $this->originKey($signal, $data);
+        $data = $this->enrich($occasion, $client);
+        $tags = $this->tags->build($occasion->key, $data, $client);
+        $originKey = $this->originKey($occasion, $data);
 
-        if ($this->alreadyToldAbout($originKey, $signal->eventKey)) {
+        if ($this->alreadyToldAbout($originKey, $occasion->key)) {
             return null;
         }
 
         $existing = $this->findForCoalescing($originKey);
 
         if ($existing !== null) {
-            return $this->coalesce($existing, $signal, $data, $tags);
+            return $this->coalesce($existing, $occasion, $data, $tags);
         }
 
         $letter = new CrmEmail([
-            'client_user_id' => $signal->clientUserId,
+            'client_user_id' => $occasion->clientUserId,
             'origin' => CrmEmail::ORIGIN_SYSTEM,
-            'origin_event' => $signal->eventKey,
+            'origin_event' => $occasion->key,
             'origin_key' => $originKey,
             'origin_data' => $data,
             'tags' => $tags,
             'to' => [],
-            'subject' => $this->subject($signal, $data),
-            'body_html' => $this->body($signal),
+            'subject' => $this->subject($occasion, $data),
+            'body_html' => $this->body($occasion),
             'status' => EmailStatus::UNMATCHED->value,
         ]);
 
-        if ($signal->subject instanceof Model) {
-            $letter->related()->associate($signal->subject);
+        if ($occasion->subject instanceof Model) {
+            $letter->related()->associate($occasion->subject);
         }
 
         $author = $this->author($client);
@@ -88,8 +87,8 @@ class MailStream
             // нельзя: письмо перестало бы быть видимым в списке. Молчим и пишем
             // в лог: это состояние настройки, а не ошибка данных.
             Log::warning('Поток писем: некому приписать письмо', [
-                'event' => $signal->eventKey,
-                'client_user_id' => $signal->clientUserId,
+                'event' => $occasion->key,
+                'client_user_id' => $occasion->clientUserId,
             ]);
 
             return null;
@@ -104,6 +103,26 @@ class MailStream
         $this->rules->apply($letter);
 
         return $letter->refresh();
+    }
+
+    /**
+     * То же, но без права уронить то, что повод породило.
+     *
+     * Заказ приезжает из 1С в транзакции, и исключение при составлении письма
+     * откатило бы сам заказ. Данные важнее уведомления о них — поэтому доменный
+     * код зовёт именно этот метод, а не `capture()`.
+     */
+    public function captureQuietly(Occasion $occasion): void
+    {
+        try {
+            $this->capture($occasion);
+        } catch (\Throwable $exception) {
+            Log::error('Поток писем: не удалось собрать письмо', [
+                'occasion' => $occasion->key,
+                'client_user_id' => $occasion->clientUserId,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -138,17 +157,17 @@ class MailStream
     /**
      * Собирает ли система письма по этому поводу.
      */
-    private function accepts(PulseSignal $signal): bool
+    private function accepts(Occasion $occasion): bool
     {
         if (! config('mail_stream.enabled')) {
             return false;
         }
 
-        if (! $this->registry->exists($signal->eventKey)) {
+        if (! $this->occasions->exists($occasion->key)) {
             return false;
         }
 
-        $domain = explode('.', $signal->eventKey)[0];
+        $domain = explode('.', $occasion->key)[0];
 
         if (! config('mail_stream.domains.'.$domain, false)) {
             return false;
@@ -159,7 +178,7 @@ class MailStream
         // автоотправке — и почтовые ящики клиентов.
         $maxAge = (int) config('mail_stream.max_age_minutes', 180);
 
-        return $signal->occurredAtOrNow()->greaterThanOrEqualTo(now()->subMinutes($maxAge));
+        return $occasion->occurredAtOrNow()->greaterThanOrEqualTo(now()->subMinutes($maxAge));
     }
 
     /**
@@ -171,9 +190,9 @@ class MailStream
      *
      * @param  array<string, mixed>  $data
      */
-    private function originKey(PulseSignal $signal, array $data): string
+    private function originKey(Occasion $occasion, array $data): string
     {
-        $parts = [$signal->eventKey, 'c'.($signal->clientUserId ?? 0)];
+        $parts = [$occasion->key, 'c'.($occasion->clientUserId ?? 0)];
 
         if (filled($data['order_number'] ?? null)) {
             $parts[] = 'o'.$data['order_number'];
@@ -187,7 +206,7 @@ class MailStream
             $parts[] = 's'.$data['shipment_number'];
         }
 
-        if (str_starts_with($signal->eventKey, 'finance.overdue')) {
+        if (str_starts_with($occasion->key, 'finance.overdue')) {
             $parts[] = 'step'.$this->overdueStep((int) ($data['days_overdue'] ?? 0));
         }
 
@@ -253,12 +272,12 @@ class MailStream
      * @param  array<string, mixed>  $data
      * @param  array<int, string>  $tags
      */
-    private function coalesce(CrmEmail $letter, PulseSignal $signal, array $data, array $tags): CrmEmail
+    private function coalesce(CrmEmail $letter, Occasion $occasion, array $data, array $tags): CrmEmail
     {
         $letter->origin_data = array_merge((array) $letter->origin_data, $data);
         $letter->tags = array_values(array_unique(array_merge($letter->tagList(), $tags)));
-        $letter->body_html = $this->body($signal);
-        $letter->subject = $this->subject($signal, $data);
+        $letter->body_html = $this->body($occasion);
+        $letter->subject = $this->subject($occasion, $data);
         $letter->save();
 
         $this->rules->apply($letter);
@@ -271,13 +290,10 @@ class MailStream
      *
      * @param  array<string, mixed>  $data
      */
-    private function subject(PulseSignal $signal, array $data): string
+    private function subject(Occasion $occasion, array $data): string
     {
-        $event = $this->registry->get($signal->eventKey);
-        $template = $event?->defaultSubject() ?: $this->registry->label($signal->eventKey);
-
-        $subject = CrmEmailTemplate::render($template, [
-            'order_number' => (string) ($data['order_number'] ?? $signal->view['entity_label'] ?? ''),
+        $subject = CrmEmailTemplate::render($this->occasions->subjectTemplate($occasion->key), [
+            'order_number' => (string) ($data['order_number'] ?? $occasion->view['entity_label'] ?? ''),
             'status_label' => (string) ($data['status_label'] ?? ''),
             'client_name' => (string) ($data['client_name'] ?? ''),
             'company_name' => (string) ($data['company_name'] ?? ''),
@@ -285,21 +301,21 @@ class MailStream
             'amount' => (string) ($data['total'] ?? $data['amount'] ?? ''),
         ]);
 
-        return trim($subject) !== '' ? $subject : (string) ($signal->view['title'] ?? 'Уведомление');
+        return trim($subject) !== '' ? $subject : (string) ($occasion->view['title'] ?? 'Уведомление');
     }
 
     /**
      * Тело письма — тот же фрагмент, что и у письма менеджера, поэтому
      * менеджер может его дописать перед отправкой.
      */
-    private function body(PulseSignal $signal): string
+    private function body(Occasion $occasion): string
     {
         return trim(view('mail.stream.body', [
-            'title' => $signal->view['title'] ?? null,
-            'body' => $signal->view['body'] ?? null,
-            'entityLabel' => $signal->view['entity_label'] ?? null,
-            'rows' => $signal->view['rows'] ?? [],
-            'url' => $signal->view['url'] ?? null,
+            'title' => $occasion->view['title'] ?? null,
+            'body' => $occasion->view['body'] ?? null,
+            'entityLabel' => $occasion->view['entity_label'] ?? null,
+            'rows' => $occasion->view['rows'] ?? [],
+            'url' => $occasion->view['url'] ?? null,
         ])->render());
     }
 
@@ -370,11 +386,11 @@ class MailStream
      *
      * @return array<string, mixed>
      */
-    private function enrich(PulseSignal $signal, ?User $client): array
+    private function enrich(Occasion $occasion, ?User $client): array
     {
-        $data = $signal->data;
-        $data['event'] = $signal->eventKey;
-        $data['event_domain'] = explode('.', $signal->eventKey)[0];
+        $data = $occasion->data;
+        $data['event'] = $occasion->key;
+        $data['event_domain'] = explode('.', $occasion->key)[0];
 
         if ($client !== null) {
             $data['client_user_id'] = $client->id;
@@ -386,9 +402,9 @@ class MailStream
             $data['manager_id'] = $client->personal_manager_id;
         }
 
-        $company = $signal->companyId === null
+        $company = $occasion->companyId === null
             ? $this->companyOf($client)
-            : Company::query()->withoutGlobalScopes()->find($signal->companyId);
+            : Company::query()->withoutGlobalScopes()->find($occasion->companyId);
 
         if ($company !== null) {
             $data['company_id'] = $company->id;

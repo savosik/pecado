@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\Crm\EmailStatus;
+use App\Listeners\RecordMailBounce;
 use App\Mail\CrmManagerMail;
 use App\Models\CrmEmail;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -48,13 +49,20 @@ class SendCrmEmailJob implements ShouldQueue
 
     public function failed(?Throwable $exception): void
     {
+        $error = $exception === null
+            ? 'Неизвестная ошибка отправки'
+            : mb_substr($exception->getMessage(), 0, 2000);
+
         CrmEmail::query()
             ->whereKey($this->email->getKey())
             ->update([
                 'status' => EmailStatus::FAILED->value,
-                'error' => $exception === null
-                    ? 'Неизвестная ошибка отправки'
-                    : mb_substr($exception->getMessage(), 0, 2000),
+                'error' => $error,
             ]);
+
+        // Несуществующий адрес попадает в стоп-лист: иначе он отбивается
+        // на каждом письме, а репутация отправителя падает для всей почты
+        // домена, включая письма о заказах.
+        app(RecordMailBounce::class)->handleFailure((array) $this->email->to, $error);
     }
 }

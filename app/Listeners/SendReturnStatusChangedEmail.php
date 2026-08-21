@@ -3,25 +3,18 @@
 namespace App\Listeners;
 
 use App\Events\ReturnStatusChanged;
-use App\Notifications\Pulse\Support\PulseSignal;
 use App\Notifications\Returns\ReturnStatusChangedNotification;
-use App\Services\Notifications\Pulse\PulseMode;
-use App\Support\Notifications\SignalBus;
+use App\Services\Crm\Mail\MailStream;
+use App\Support\Notifications\Occasion;
 
 class SendReturnStatusChangedEmail
 {
     /** Ключ события пульта, которым это письмо заменяется при переходе. */
-    private const PULSE_EVENT = 'system.return_status_changed';
+    private const OCCASION = 'system.return_status_changed';
 
     public function handle(ReturnStatusChanged $event): void
     {
-        $this->signalPulse($event);
-
-        // Событие переведено на пульт — здесь молчим. Один флаг на обе стороны,
-        // поэтому двойного письма быть не может.
-        if (PulseMode::handles(self::PULSE_EVENT)) {
-            return;
-        }
+        $this->composeLetter($event);
 
         if (! config('notifications.mail.features.return_status_changes')) {
             return;
@@ -39,13 +32,13 @@ class SendReturnStatusChangedEmail
         ));
     }
 
-    private function signalPulse(ReturnStatusChanged $event): void
+    private function composeLetter(ReturnStatusChanged $event): void
     {
         $return = $event->productReturn;
         $number = $return->erp_number ?: $return->number ?: (string) $return->id;
 
-        app(SignalBus::class)->publish(new PulseSignal(
-            eventKey: self::PULSE_EVENT,
+        app(MailStream::class)->captureQuietly(new Occasion(
+            key: self::OCCASION,
             clientUserId: $return->user_id,
             subject: $return,
             data: [

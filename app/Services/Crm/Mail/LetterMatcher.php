@@ -4,7 +4,6 @@ namespace App\Services\Crm\Mail;
 
 use App\Models\CrmEmail;
 use App\Models\CrmMailRule;
-use App\Services\Notifications\Pulse\ConditionEvaluator;
 
 /**
  * Подходит ли письмо под условия правила.

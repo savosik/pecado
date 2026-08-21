@@ -6,8 +6,8 @@ use App\Enums\Crm\EmailStatus;
 use App\Models\CrmEmail;
 use App\Models\PersonalManager;
 use App\Models\User;
-use App\Notifications\Pulse\Support\PulseSignal;
 use App\Services\Crm\Mail\MailStream;
+use App\Support\Notifications\Occasion;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -57,8 +57,8 @@ class MailFoldersTest extends TestCase
 
     private function systemLetter(string $number = '1023'): CrmEmail
     {
-        return app(MailStream::class)->capture(new PulseSignal(
-            eventKey: 'documents.published',
+        return app(MailStream::class)->capture(new Occasion(
+            key: 'documents.published',
             clientUserId: $this->client->id,
             data: ['document_type' => 'reconciliation_act', 'document_number' => $number, 'document_title' => 'Акт сверки'],
             view: ['title' => 'Акт сверки', 'body' => 'Документ выложен'],
@@ -155,6 +155,19 @@ class MailFoldersTest extends TestCase
         $this->assertSame(2, $summary['rows'][0]['total']);
         $this->assertSame('documents.published', $summary['rows'][0]['event']);
         $this->assertSame(14, $summary['retention_days']);
+        // Кнопка «настроить» ведёт в форму с уже набранным условием: иначе
+        // менеджер, увидевший сводку, переписывал бы метку руками.
+        $this->assertSame('документы', $summary['rows'][0]['tag']);
+    }
+
+    #[Test]
+    public function rule_form_opens_with_the_condition_from_the_summary(): void
+    {
+        $props = $this->actingAs($this->manager)
+            ->get(route('crm.emails.rules.index', ['tag' => 'документы']))
+            ->viewData('page')['props'];
+
+        $this->assertSame('документы', $props['prefillTag']);
     }
 
     #[Test]

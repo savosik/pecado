@@ -7,7 +7,6 @@ use App\Http\Controllers\Crm\AttachmentController;
 use App\Http\Controllers\Crm\BedsController;
 use App\Http\Controllers\Crm\CalendarFeedController;
 use App\Http\Controllers\Crm\CallController;
-use App\Http\Controllers\Crm\ClientContactController;
 use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientProfileController;
 use App\Http\Controllers\Crm\CommentController;
@@ -20,10 +19,7 @@ use App\Http\Controllers\Crm\ImpersonationController;
 use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\MailRuleController;
-use App\Http\Controllers\Crm\NotificationCampaignController;
-use App\Http\Controllers\Crm\NotificationJournalController;
-use App\Http\Controllers\Crm\NotificationRuleController;
-use App\Http\Controllers\Crm\NotificationSuppressionController;
+use App\Http\Controllers\Crm\MailSuppressionController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
@@ -386,6 +382,10 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // Правила — вкладка внутри «Писем», а не отдельный раздел меню:
         // именно дробление на разделы сделало прошлый подход непонятным.
         Route::get('/emails/rules', [MailRuleController::class, 'index'])->name('emails.rules.index');
+        // Стоп-лист — не раздел, а настройка внутри «Писем»: отвечает
+        // на единственный вопрос «почему на этот адрес не уходят письма».
+        Route::get('/emails/suppressions', [MailSuppressionController::class, 'index'])
+            ->name('emails.suppressions.index');
         Route::post('/emails/rules/preview', [MailRuleController::class, 'preview'])
             ->name('emails.rules.preview');
         Route::get('/emails/{email}', [EmailController::class, 'show'])
@@ -405,6 +405,11 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     });
 
     Route::middleware('permission:crm-emails.edit')->group(function () {
+        Route::post('/emails/suppressions', [MailSuppressionController::class, 'store'])
+            ->name('emails.suppressions.store');
+        Route::delete('/emails/suppressions/{suppression}', [MailSuppressionController::class, 'destroy'])
+            ->name('emails.suppressions.destroy')
+            ->whereNumber('suppression');
         Route::post('/emails/rules', [MailRuleController::class, 'store'])->name('emails.rules.store');
         Route::patch('/emails/rules/{rule}', [MailRuleController::class, 'update'])
             ->name('emails.rules.update')
@@ -586,71 +591,5 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/shortages/{item}/source', [ShortageController::class, 'setSource'])
             ->name('shortages.source')
             ->whereNumber('item');
-    });
-    // Адресная книга контрагентов: контактные лица, которые становятся адресатами
-    // правил пульта уведомлений. Право отдельное от crm-clients: контакты правит
-    // тот, кто настраивает уведомления, а это может быть не владелец карточки.
-    Route::middleware('permission:crm-notification-contacts.view')->group(function () {
-        Route::get('/contacts', [ClientContactController::class, 'index'])->name('contacts.index');
-    });
-    Route::middleware('permission:crm-notification-contacts.create')->group(function () {
-        Route::post('/contacts', [ClientContactController::class, 'store'])->name('contacts.store');
-        Route::post('/contacts/import-from-profile', [ClientContactController::class, 'importFromProfile'])->name('contacts.import');
-    });
-    Route::middleware('permission:crm-notification-contacts.edit')->group(function () {
-        Route::patch('/contacts/{contact}', [ClientContactController::class, 'update'])->name('contacts.update')->whereNumber('contact');
-    });
-    Route::middleware('permission:crm-notification-contacts.delete')->group(function () {
-        Route::delete('/contacts/{contact}', [ClientContactController::class, 'destroy'])->name('contacts.destroy')->whereNumber('contact');
-    });
-    // Пульт уведомлений: правила маршрутизации писем клиентам и их контрагентам.
-    // Статические сегменты — до /{rule}. Правила «для всех партнёров»
-    // и системные защищены отдельным правом внутри контроллера.
-    Route::middleware('permission:crm-notifications.view')->group(function () {
-        Route::get('/notifications/rules', [NotificationRuleController::class, 'index'])->name('notifications.index');
-        Route::get('/notifications/rules/meta', [NotificationRuleController::class, 'meta'])->name('notifications.meta');
-        Route::get('/notifications/rules/contacts', [NotificationRuleController::class, 'contacts'])->name('notifications.contacts');
-        Route::post('/notifications/rules/preview', [NotificationRuleController::class, 'preview'])->name('notifications.preview');
-        // Журнал и трасса: отвечают на «почему клиенту не пришло» без разработчика
-        Route::get('/notifications/journal', [NotificationJournalController::class, 'index'])->name('notifications.journal');
-        Route::get('/notifications/signals/{uuid}', [NotificationJournalController::class, 'signal'])->name('notifications.signal');
-        // Пресеты и покрытие: настройка типового контрагента одной кнопкой
-        // и цифра о том, где адресной книги не хватает.
-        Route::get('/notifications/presets', [NotificationRuleController::class, 'presets'])->name('notifications.presets');
-        Route::get('/notifications/coverage', [NotificationRuleController::class, 'coverage'])->name('notifications.coverage');
-        // Стоп-лист: почему на адрес не уходят письма
-        Route::get('/notifications/suppressions', [NotificationSuppressionController::class, 'index'])->name('notifications.suppressions');
-        // Рассылки: аудитория собирается заранее и показывается с разбивкой
-        // «кому уйдёт, кого отсеяли» — до отправки, а не после.
-        Route::get('/notifications/campaigns', [NotificationCampaignController::class, 'index'])->name('notifications.campaigns');
-        Route::get('/notifications/campaigns/{campaign}/audience', [NotificationCampaignController::class, 'audience'])->name('notifications.campaigns.audience')->whereNumber('campaign');
-    });
-    Route::middleware('permission:crm-notifications.create')->group(function () {
-        Route::post('/notifications/campaigns', [NotificationCampaignController::class, 'store'])->name('notifications.campaigns.store');
-    });
-    Route::middleware('permission:crm-notifications.edit')->group(function () {
-        Route::patch('/notifications/campaigns/{campaign}', [NotificationCampaignController::class, 'update'])->name('notifications.campaigns.update')->whereNumber('campaign');
-        Route::post('/notifications/campaigns/{campaign}/audience', [NotificationCampaignController::class, 'buildAudience'])->name('notifications.campaigns.build')->whereNumber('campaign');
-        Route::post('/notifications/campaigns/{campaign}/send', [NotificationCampaignController::class, 'send'])->name('notifications.campaigns.send')->whereNumber('campaign');
-        Route::post('/notifications/campaigns/{campaign}/cancel', [NotificationCampaignController::class, 'cancel'])->name('notifications.campaigns.cancel')->whereNumber('campaign');
-    });
-    Route::middleware('permission:crm-notifications.edit')->group(function () {
-        Route::post('/notifications/suppressions', [NotificationSuppressionController::class, 'store'])->name('notifications.suppressions.store');
-        Route::delete('/notifications/suppressions/{suppression}', [NotificationSuppressionController::class, 'destroy'])->name('notifications.suppressions.destroy')->whereNumber('suppression');
-    });
-    Route::middleware('permission:crm-notifications.create')->group(function () {
-        Route::post('/notifications/presets/apply', [NotificationRuleController::class, 'applyPreset'])->name('notifications.presets.apply');
-    });
-    Route::middleware('permission:crm-notifications.create')->group(function () {
-        Route::post('/notifications/rules', [NotificationRuleController::class, 'store'])->name('notifications.store');
-        Route::post('/notifications/rules/{rule}/override', [NotificationRuleController::class, 'override'])->name('notifications.override')->whereNumber('rule');
-    });
-    Route::middleware('permission:crm-notifications.edit')->group(function () {
-        Route::patch('/notifications/rules/{rule}', [NotificationRuleController::class, 'update'])->name('notifications.update')->whereNumber('rule');
-        Route::post('/notifications/rules/{rule}/toggle', [NotificationRuleController::class, 'toggle'])->name('notifications.toggle')->whereNumber('rule');
-        Route::post('/notifications/rules/{rule}/test-send', [NotificationRuleController::class, 'testSend'])->name('notifications.test-send')->whereNumber('rule');
-    });
-    Route::middleware('permission:crm-notifications.delete')->group(function () {
-        Route::delete('/notifications/rules/{rule}', [NotificationRuleController::class, 'destroy'])->name('notifications.destroy')->whereNumber('rule');
     });
 });

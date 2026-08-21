@@ -9,7 +9,7 @@ import { Alert } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import RuleForm from '@/Crm/Pages/Emails/components/RuleForm';
-import { LuMail, LuPlus, LuTrash2 } from 'react-icons/lu';
+import { LuBan, LuMail, LuPlus, LuTrash2 } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 /**
@@ -27,8 +27,14 @@ export default function Rules({
     autoSendEnabled,
     streamEnabled,
     canManage,
+    prefillTag = null,
 }) {
-    const [editing, setEditing] = useState(null);
+    // Переход из сводки «Мимо фильтров»: форма открывается сразу и с набранным
+    // условием — иначе менеджер, увидевший «недоборы: 340», попадал бы на пустой
+    // экран и переписывал метку руками.
+    const [editing, setEditing] = useState(() => (prefillTag && canManage
+        ? { conditions: [{ field: 'tag', op: 'has_tag', value: prefillTag }] }
+        : null));
     const [pendingDelete, setPendingDelete] = useState(null);
     const [busy, setBusy] = useState(false);
 
@@ -80,6 +86,9 @@ export default function Rules({
                         <Link href={route('crm.emails.index')}>
                             <Button size="sm" variant="outline"><LuMail /> К письмам</Button>
                         </Link>
+                        <Link href={route('crm.emails.suppressions.index')}>
+                            <Button size="sm" variant="outline"><LuBan /> Стоп-лист</Button>
+                        </Link>
                         {canManage && (
                             <Button size="sm" onClick={() => setEditing({})}><LuPlus /> Новое правило</Button>
                         )}
@@ -98,7 +107,7 @@ export default function Rules({
 
                 {editing && (
                     <RuleForm
-                        rule={editing.id ? editing : null}
+                        rule={editing.id || editing.conditions ? editing : null}
                         fieldGroups={fieldGroups}
                         operators={operators}
                         unaryOperators={unaryOperators}

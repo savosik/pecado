@@ -8,8 +8,8 @@ use App\Models\CrmMailRule;
 use App\Models\NotificationSuppression;
 use App\Models\PersonalManager;
 use App\Models\User;
-use App\Notifications\Pulse\Support\PulseSignal;
 use App\Services\Crm\Mail\MailStream;
+use App\Support\Notifications\Occasion;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -54,8 +54,8 @@ class MailAutoSendTest extends TestCase
 
     private function letter(): CrmEmail
     {
-        return app(MailStream::class)->capture(new PulseSignal(
-            eventKey: 'documents.published',
+        return app(MailStream::class)->capture(new Occasion(
+            key: 'documents.published',
             clientUserId: $this->client->id,
             data: ['document_type' => 'reconciliation_act', 'document_number' => '1023', 'document_title' => 'Акт сверки'],
             view: ['title' => 'Акт сверки', 'body' => 'Документ выложен'],
@@ -127,8 +127,8 @@ class MailAutoSendTest extends TestCase
         $this->assertSame(EmailStatus::SENT, $first->status);
 
         // Второй повод по другому документу — письмо новое, но адрес тот же.
-        $second = app(MailStream::class)->capture(new PulseSignal(
-            eventKey: 'documents.published',
+        $second = app(MailStream::class)->capture(new Occasion(
+            key: 'documents.published',
             clientUserId: $this->client->id,
             data: ['document_type' => 'reconciliation_act', 'document_number' => '1024', 'document_title' => 'Акт сверки'],
             view: ['title' => 'Акт сверки', 'body' => 'Документ выложен'],
@@ -145,8 +145,8 @@ class MailAutoSendTest extends TestCase
 
         CrmMailRule::factory()->byTag('акт-сверки')->to(['менеджер'])->auto()->create();
 
-        $letter = app(MailStream::class)->capture(new PulseSignal(
-            eventKey: 'documents.published',
+        $letter = app(MailStream::class)->capture(new Occasion(
+            key: 'documents.published',
             clientUserId: $orphan->id,
             data: ['document_type' => 'reconciliation_act', 'document_number' => '77', 'document_title' => 'Акт сверки'],
             view: ['title' => 'Акт сверки', 'body' => 'Документ выложен'],
@@ -155,6 +155,33 @@ class MailAutoSendTest extends TestCase
         $this->assertNotNull($letter);
         $this->assertSame(EmailStatus::DRAFT, $letter->status);
         $this->assertStringContainsString('получателя', (string) $letter->skip_reason);
+    }
+
+    #[Test]
+    public function unsubscribe_link_from_an_old_letter_still_stops_the_stream(): void
+    {
+        // Ссылка из уже разосланного письма обязана работать и после демонтажа
+        // пульта. Больше того: отписавшийся адрес должен замолчать и в новом
+        // потоке — иначе человек нажал «отписаться», а письма идут дальше.
+        $subscription = \App\Models\EntitySubscription::query()->create([
+            'user_id' => $this->client->id,
+            'section' => 'orders',
+            'channel' => 'email',
+            'destination' => 'buh@romashka.ru',
+            'is_active' => true,
+        ]);
+
+        $this->get(route('subscriptions.unsubscribe', $subscription->unsubscribe_token))
+            ->assertOk();
+
+        $this->assertFalse($subscription->refresh()->is_active);
+
+        CrmMailRule::factory()->byTag('акт-сверки')->to(['buh@romashka.ru'])->auto()->create();
+
+        $letter = $this->letter();
+
+        $this->assertSame(EmailStatus::DRAFT, $letter->status);
+        $this->assertStringContainsString('стоп-листе', (string) $letter->skip_reason);
     }
 
     #[Test]

@@ -6,10 +6,9 @@ use App\Enums\OrderType;
 use App\Events\OrdersPlaced;
 use App\Models\Order;
 use App\Notifications\Orders\NewOrderForManagerNotification;
-use App\Notifications\Pulse\Support\PulseSignal;
-use App\Services\Notifications\Pulse\PulseMode;
+use App\Services\Crm\Mail\MailStream;
+use App\Support\Notifications\Occasion;
 use App\Support\Notifications\OrderManagerRouting;
-use App\Support\Notifications\SignalBus;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -23,7 +22,7 @@ use Illuminate\Support\Facades\Notification;
 class NotifyManagersAboutNewOrder
 {
     /** Ключ события пульта, которым это письмо заменяется при переходе. */
-    private const PULSE_EVENT = 'orders.created';
+    private const OCCASION = 'orders.created';
 
     public function handle(OrdersPlaced $event): void
     {
@@ -33,15 +32,9 @@ class NotifyManagersAboutNewOrder
             return;
         }
 
-        // Сигнал пульту идёт всегда: в теневом режиме он только считает
-        // получателей для сверки со старой маршрутизацией.
-        $this->signalPulse($primary, $event->orders);
-
-        // Событие переведено на пульт — здесь молчим. Один флаг на обе стороны,
-        // поэтому двойного письма быть не может.
-        if (PulseMode::handles(self::PULSE_EVENT)) {
-            return;
-        }
+        // Письмо в поток собирается всегда: уйдёт ли оно и кому — решают
+        // правила-фильтры, а не это место.
+        $this->composeLetter($primary, $event->orders);
 
         if (! config('notifications.mail.features.manager_new_order')) {
             return;
@@ -78,12 +71,12 @@ class NotifyManagersAboutNewOrder
      *
      * @param  \Illuminate\Support\Collection<int, Order>  $orders
      */
-    private function signalPulse(Order $primary, $orders): void
+    private function composeLetter(Order $primary, $orders): void
     {
         $number = $primary->erp_number ?: $primary->number;
 
-        app(SignalBus::class)->publish(new PulseSignal(
-            eventKey: self::PULSE_EVENT,
+        app(MailStream::class)->captureQuietly(new Occasion(
+            key: self::OCCASION,
             clientUserId: $primary->user_id,
             companyId: $primary->company_id,
             subject: $primary,

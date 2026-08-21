@@ -7,8 +7,8 @@ use App\Models\CrmEmail;
 use App\Models\Order;
 use App\Models\PersonalManager;
 use App\Models\User;
-use App\Notifications\Pulse\Support\PulseSignal;
 use App\Services\Crm\Mail\MailStream;
+use App\Support\Notifications\Occasion;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -46,8 +46,8 @@ class MailStreamTest extends TestCase
 
     private function capture(array $overrides = []): ?CrmEmail
     {
-        $signal = new PulseSignal(
-            eventKey: $overrides['eventKey'] ?? 'orders.items_updated',
+        $signal = new Occasion(
+            key: $overrides['eventKey'] ?? 'orders.items_updated',
             clientUserId: $this->client->id,
             data: $overrides['data'] ?? [
                 'order_number' => 'П-100',

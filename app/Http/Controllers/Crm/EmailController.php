@@ -12,7 +12,8 @@ use App\Models\CrmEmailTemplate;
 use App\Models\User;
 use App\Services\Crm\CrmEmailService;
 use App\Services\Crm\CrmEntityResolver;
-use App\Services\Notifications\Pulse\NotificationEventRegistry;
+use App\Services\Crm\Mail\MailOccasions;
+use App\Services\Crm\Mail\MailTagBuilder;
 use App\Support\Crm\CrmAttachments;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
@@ -194,8 +195,11 @@ class EmailController extends CrmController
             'retention_days' => (int) config('mail_stream.unmatched_retention_days', 14),
             'rows' => $rows->map(fn ($row): array => [
                 'event' => $row->origin_event,
-                'label' => app(NotificationEventRegistry::class)->label((string) $row->origin_event),
+                'label' => app(MailOccasions::class)->label((string) $row->origin_event),
                 'total' => (int) $row->total,
+                // Метка, с которой имеет смысл начать правило: по ней кнопка
+                // «настроить» открывает форму с уже набранным условием.
+                'tag' => app(MailTagBuilder::class)->occasionTags((string) $row->origin_event)[0] ?? null,
             ])->all(),
         ];
     }

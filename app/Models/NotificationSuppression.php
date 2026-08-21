@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Стоп-лист адресов.
@@ -36,7 +35,6 @@ class NotificationSuppression extends Model
         'email',
         'scope',
         'reason',
-        'contact_id',
         'user_id',
         'note',
         'expires_at',
@@ -45,11 +43,6 @@ class NotificationSuppression extends Model
     protected function casts(): array
     {
         return ['expires_at' => 'datetime'];
-    }
-
-    public function contact(): BelongsTo
-    {
-        return $this->belongsTo(ClientContact::class, 'contact_id');
     }
 
     /**

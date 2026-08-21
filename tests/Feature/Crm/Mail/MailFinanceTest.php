@@ -9,7 +9,7 @@ use App\Models\CrmEmail;
 use App\Models\CrmMailRule;
 use App\Models\PersonalManager;
 use App\Models\User;
-use App\Services\Notifications\Pulse\FinanceScanner;
+use App\Services\Crm\Mail\Sources\FinanceScanner;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;

@@ -4,25 +4,18 @@ namespace App\Listeners;
 
 use App\Events\ReturnCreated;
 use App\Models\ProductReturn;
-use App\Notifications\Pulse\Support\PulseSignal;
 use App\Notifications\Returns\ReturnCreatedNotification;
-use App\Services\Notifications\Pulse\PulseMode;
-use App\Support\Notifications\SignalBus;
+use App\Services\Crm\Mail\MailStream;
+use App\Support\Notifications\Occasion;
 
 class SendReturnCreatedEmail
 {
     /** Ключ события пульта, которым это письмо заменяется при переходе. */
-    private const PULSE_EVENT = 'system.return_created';
+    private const OCCASION = 'system.return_created';
 
     public function handle(ReturnCreated $event): void
     {
-        $this->signalPulse($event->productReturn);
-
-        // Событие переведено на пульт — здесь молчим, иначе клиент получил бы
-        // два письма. Один флаг на обе стороны.
-        if (PulseMode::handles(self::PULSE_EVENT)) {
-            return;
-        }
+        $this->composeLetter($event->productReturn);
 
         if (! config('notifications.mail.features.return_created')) {
             return;
@@ -37,12 +30,12 @@ class SendReturnCreatedEmail
         $user->notify(new ReturnCreatedNotification($event->productReturn));
     }
 
-    private function signalPulse(ProductReturn $return): void
+    private function composeLetter(ProductReturn $return): void
     {
         $number = $return->erp_number ?: $return->number ?: (string) $return->id;
 
-        app(SignalBus::class)->publish(new PulseSignal(
-            eventKey: self::PULSE_EVENT,
+        app(MailStream::class)->captureQuietly(new Occasion(
+            key: self::OCCASION,
             clientUserId: $return->user_id,
             subject: $return,
             data: [
