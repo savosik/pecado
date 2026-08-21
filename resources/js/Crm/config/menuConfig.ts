@@ -25,6 +25,7 @@ import {
     LuPackageX,
     LuBellRing,
     LuHistory,
+    LuMegaphone,
 } from "react-icons/lu";
 
 export interface MenuItem {
