@@ -48,7 +48,7 @@ class ShipmentController extends Controller
 
         $shipments = $query->paginate($perPage)->withQueryString();
         $currency = $this->getUserCurrency($request);
-        $financeEnabled = (bool) config('cabinet.finance_enabled');
+        $financeEnabled = \App\Support\Cabinet\CabinetFinance::enabledFor($request->user());
 
         $shipments->getCollection()->transform(function ($shipment) use ($currency, $search, $financeEnabled) {
             $totalConverted = $this->convertAmount((float) $shipment->total_amount, $shipment->currency_code, $currency);
@@ -189,7 +189,7 @@ class ShipmentController extends Controller
         $withSeller = (bool) config('erp.organizations.enabled');
         // Колонки оплаты — под тем же флагом, что и экран: выгрузка не должна быть
         // обходным путём к цифрам, которые мы решили клиенту не показывать.
-        $financeEnabled = (bool) config('cabinet.finance_enabled');
+        $financeEnabled = \App\Support\Cabinet\CabinetFinance::enabledFor($request->user());
 
         $headers = array_merge(
             ['Номер', 'Статус', 'Дата отгрузки', 'Контрагент'],
@@ -397,7 +397,7 @@ class ShipmentController extends Controller
         ]);
 
         $currency = $this->getUserCurrency($request);
-        $financeEnabled = (bool) config('cabinet.finance_enabled');
+        $financeEnabled = \App\Support\Cabinet\CabinetFinance::enabledFor($request->user());
 
         $orderUuids = $shipment->items()
             ->whereNotNull('order_uuid')

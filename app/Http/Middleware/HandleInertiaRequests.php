@@ -100,7 +100,7 @@ class HandleInertiaRequests extends Middleware
                 'yandex_maps_api_key' => (string) config('services.yandex_maps.api_key', ''),
                 // Показывать ли клиенту его долги. Флаг нужен и на фронте: пункт меню
                 // и денежные блоки прячутся здесь, а данные — в контроллерах.
-                'cabinet_finance_enabled' => (bool) config('cabinet.finance_enabled'),
+                'cabinet_finance_enabled' => \App\Support\Cabinet\CabinetFinance::enabledFor($request->user()),
                 // Раздел «Документы» (v16.1.0). Два флага, а не один: менеджеры
                 // сверяют печатные формы раньше, чем их увидит клиент.
                 'documents_enabled' => (bool) config('documents.enabled'),

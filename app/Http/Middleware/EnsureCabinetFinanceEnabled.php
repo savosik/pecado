@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\Cabinet\CabinetFinance;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -14,12 +15,15 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Маршруты при этом остаются зарегистрированными — иначе `route('cabinet.payments.*')`
  * в шаблонах и редиректах падал бы с RouteNotFoundException вместо аккуратной 404.
+ *
+ * debt-01: до глобального включения раздел открыт пилотной группе сверенных
+ * клиентов — см. CabinetFinance::enabledFor().
  */
 class EnsureCabinetFinanceEnabled
 {
     public function handle(Request $request, Closure $next): Response
     {
-        abort_unless((bool) config('cabinet.finance_enabled'), 404);
+        abort_unless(CabinetFinance::enabledFor($request->user()), 404);
 
         return $next($request);
     }
