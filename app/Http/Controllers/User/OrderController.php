@@ -513,7 +513,7 @@ class OrderController extends Controller
                 // Накладную не гасит — по ней ещё нет реализации
                 // Предоплата закрыта флагом cabinet.finance_enabled вместе с остальными
                 // денежными данными кабинета: остаток «к доплате» считается от неё.
-                ...(config('cabinet.finance_enabled') ? [
+                ...(\App\Support\Cabinet\CabinetFinance::enabledFor($request->user()) ? [
                     'prepaid_amount' => (float) $order->prepaid_amount,
                     'prepaid_converted' => $this->convertAmount((float) $order->prepaid_amount, $order->currency_code, $this->getUserCurrency($request)),
                 ] : []),

@@ -26,7 +26,7 @@ class CabinetController extends Controller
 
         // Баланс закрыт флагом, пока цифры долга не сверены с 1С: показать клиенту
         // завышенную задолженность хуже, чем не показать никакой.
-        $financeEnabled = (bool) config('cabinet.finance_enabled');
+        $financeEnabled = \App\Support\Cabinet\CabinetFinance::enabledFor($user);
 
         // v16.0.0: на регистре главное число другое. Раньше показывали сальдо,
         // но в него входят обязательства, срок которых ещё не наступил, и клиент

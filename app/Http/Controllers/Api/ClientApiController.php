@@ -266,7 +266,7 @@ class ClientApiController extends Controller
             'per_page.min' => 'Количество на странице не может быть меньше 1',
         ]);
 
-        $financeEnabled = (bool) config('cabinet.finance_enabled');
+        $financeEnabled = \App\Support\Cabinet\CabinetFinance::enabledFor($user);
         $withItems = $request->boolean('with_items');
 
         $query = Shipment::query()
@@ -377,7 +377,7 @@ class ClientApiController extends Controller
         $apiToken = $this->resolveToken($token);
         $user = $apiToken->user;
 
-        $financeEnabled = (bool) config('cabinet.finance_enabled');
+        $financeEnabled = \App\Support\Cabinet\CabinetFinance::enabledFor($user);
 
         $found = $this->resolveShipment($shipment, $user->id);
 
