@@ -26,6 +26,7 @@ import {
     LuBellRing,
     LuHistory,
     LuMegaphone,
+    LuBan,
 } from "react-icons/lu";
 
 export interface MenuItem {
