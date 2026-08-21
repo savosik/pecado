@@ -1,0 +1,18 @@
+{
+    // Узкая проверка .ts-файлов фронтенда: ESLint выключает для них no-undef
+    // (типы стираются и ложно срабатывают), поэтому необъявленные идентификаторы
+    // — например, иконка в menuConfig без импорта — ловит tsc --noEmit.
+    // Запуск: npm run lint:ts (входит в npm run lint:js через package.json).
+    "compilerOptions": {
+        "noEmit": true,
+        "target": "esnext",
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "jsx": "react-jsx",
+        "allowJs": false,
+        "skipLibCheck": true,
+        "strict": false,
+        "types": ["react"]
+    },
+    "include": ["resources/js/**/*.ts", "resources/js/**/*.tsx"]
+}

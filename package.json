@@ -4,7 +4,8 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "lint:js": "eslint resources/js",
+        "lint:js": "eslint resources/js && npm run lint:ts",
+        "lint:ts": "tsc --noEmit -p tsconfig.lint.json",
         "dev": "vite",
         "asyncapi:validate": "npx -y @asyncapi/cli validate docs/asyncapi/pecado-erp-integration.yaml",
         "asyncapi:bundle": "npx -y @asyncapi/cli bundle docs/asyncapi/pecado-erp-integration.yaml -o docs/asyncapi/pecado-erp-bundled.yaml",
@@ -27,6 +28,7 @@
         "js-yaml": "^4.1.1",
         "laravel-vite-plugin": "^2.0.0",
         "tailwindcss": "^4.0.0",
+        "typescript": "^6.0.3",
         "vite": "^7.0.7",
         "vite-jsconfig-paths": "^2.0.1"
     },
