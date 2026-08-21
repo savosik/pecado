@@ -120,6 +120,53 @@ class SystemRulesSynchronizer
                 ],
             ],
             [
+                'system_key' => 'sys.returns.created.client',
+                'name' => 'Оформлен возврат — клиенту',
+                'description' => 'Подтверждение приёма заявки на возврат. Заменяет прежний листенер SendReturnCreatedEmail.',
+                'event_key' => 'system.return_created',
+                'conditions' => null,
+                'active_when' => 'notifications.mail.features.return_created',
+                'recipients' => [
+                    ['kind' => NotificationRuleRecipient::KIND_CLIENT_USER],
+                ],
+            ],
+            [
+                'system_key' => 'sys.returns.created.manager',
+                'name' => 'Оформлен возврат — персональному менеджеру',
+                'description' => 'Менеджер узнаёт о возврате своего клиента, чтобы разобраться с причиной.',
+                'event_key' => 'system.return_created',
+                'conditions' => null,
+                'active_when' => null,
+                'recipients' => [
+                    ['kind' => NotificationRuleRecipient::KIND_PERSONAL_MANAGER],
+                ],
+            ],
+            [
+                'system_key' => 'sys.returns.status_changed.client',
+                'name' => 'Смена статуса возврата — клиенту',
+                'description' => 'Заменяет прежний листенер SendReturnStatusChangedEmail.',
+                'event_key' => 'system.return_status_changed',
+                'conditions' => null,
+                'active_when' => 'notifications.mail.features.return_status_changes',
+                'recipients' => [
+                    ['kind' => NotificationRuleRecipient::KIND_CLIENT_USER],
+                ],
+            ],
+            [
+                'system_key' => 'sys.questions.received.staff',
+                'name' => 'Вопрос с сайта — на общий адрес',
+                'description' => 'У вопроса нет владельца в данных, поэтому адресат задан списком из настроек — как это было до пульта.',
+                'event_key' => 'system.question_received',
+                'conditions' => null,
+                'active_when' => null,
+                'recipients' => [
+                    [
+                        'kind' => NotificationRuleRecipient::KIND_CONFIG_LIST,
+                        'value' => 'notifications.mail.user_question_recipients',
+                    ],
+                ],
+            ],
+            [
                 'system_key' => 'sys.orders.items_updated.client',
                 'name' => 'Изменился состав заказа — клиенту',
                 'description' => 'Ограничение частоты: 1С правит заказ построчно, и без него клиент получил бы десяток писем об одном изменении.',

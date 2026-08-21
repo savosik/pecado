@@ -4,6 +4,7 @@ use App\Notifications\Pulse\Events\Campaigns;
 use App\Notifications\Pulse\Events\Documents;
 use App\Notifications\Pulse\Events\Finance;
 use App\Notifications\Pulse\Events\Orders;
+use App\Notifications\Pulse\Events\System;
 
 return [
 
@@ -98,6 +99,10 @@ return [
         Finance\OverdueClearedEvent::class,
 
         Campaigns\BroadcastEvent::class,
+
+        System\ReturnCreatedEvent::class,
+        System\ReturnStatusChangedEvent::class,
+        System\QuestionReceivedEvent::class,
     ],
 
     /*
