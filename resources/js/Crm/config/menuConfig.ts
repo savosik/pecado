@@ -55,7 +55,9 @@ export const menuConfig: MenuGroup[] = [
         ],
     },
     {
-        title: "Продажи",
+        // Картотека: с кем работаем. Справочники людей и юрлиц, а не ежедневная
+        // очередь дел — та живёт в «Продажах».
+        title: "Клиенты",
         icon: LuUsers,
         items: [
             { label: "Мои партнёры", icon: LuUsers, path: "/crm/partners", permission: "crm-clients.view" },
@@ -63,25 +65,43 @@ export const menuConfig: MenuGroup[] = [
             // Контрагенты — юрлица партнёров. Отдельный пункт, потому что переписка
             // о реквизитах и сверках идёт по юрлицу, а у партнёра их может быть несколько.
             { label: "Контрагенты", icon: LuBuilding2, path: "/crm/contractors", permission: "crm-contractors.view" },
+        ],
+    },
+    {
+        // Ежедневная работа менеджера: что сделать сегодня и на чём заработать.
+        title: "Продажи",
+        icon: LuListChecks,
+        items: [
             { label: "Задачи", icon: LuListChecks, path: "/crm/tasks", permission: "crm-tasks.view", counter: "tasks" },
+            { label: "Планы продаж", icon: LuTarget, path: "/crm/plans", permission: "crm-plans.view" },
+            // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
+            // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
+            { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", counter: "shortages" },
+        ],
+    },
+    {
+        // Исходящая почта: переписка менеджеров, правила пульта, журнал
+        // фактических отправок, кампании и стоп-лист.
+        title: "Уведомления",
+        icon: LuBellRing,
+        items: [
             { label: "Письма", icon: LuMail, path: "/crm/emails", permission: "crm-emails.view" },
             { label: "Пульт уведомлений", icon: LuBellRing, path: "/crm/notifications/rules", permission: "crm-notifications.view" },
             { label: "Журнал уведомлений", icon: LuHistory, path: "/crm/notifications/journal", permission: "crm-notifications.view" },
             { label: "Покрытие уведомлений", icon: LuUsersRound, path: "/crm/notifications/coverage", permission: "crm-notifications.view" },
             { label: "Рассылки", icon: LuMegaphone, path: "/crm/notifications/campaigns", permission: "crm-notifications.view" },
             { label: "Стоп-лист писем", icon: LuBan, path: "/crm/notifications/suppressions", permission: "crm-notifications.view" },
-            { label: "Планы продаж", icon: LuTarget, path: "/crm/plans", permission: "crm-plans.view" },
-            { label: "Возможности", icon: LuLightbulb, path: "/crm/opportunities", permission: "crm-opportunities.view" },
-            { label: "Грядки", icon: LuSprout, path: "/crm/beds", permission: "crm-beds.view" },
-            // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
-            // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
-            { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", counter: "shortages" },
+        ],
+    },
+    {
+        // Осмысление продаж: факт по отгрузкам и инструменты поиска точек
+        // роста — что докупить клиенту и как засеян план периода.
+        title: "Аналитика",
+        icon: LuChartLine,
+        items: [
             { label: "Отчёты продаж", icon: LuChartLine, path: "/crm/analytics", permission: "crm-analytics.view" },
-            { label: "Команда", icon: LuUsersRound, path: "/crm/team", permission: "crm-team.view" },
-            // Отсутствия видит весь отдел: кто кого замещает — рабочая информация.
-            { label: "Отсутствия", icon: LuCalendarOff, path: "/crm/absences", permission: "crm-absences.view" },
-            { label: "Табель", icon: LuCalendarCheck, path: "/crm/timesheet", permission: "crm-timesheet.view" },
-            { label: "Токены ИИ-агентов", icon: LuKeyRound, path: "/crm/agent-tokens", permission: "crm-agent-tokens.view" },
+            { label: "Грядки", icon: LuSprout, path: "/crm/beds", permission: "crm-beds.view" },
+            { label: "Возможности", icon: LuLightbulb, path: "/crm/opportunities", permission: "crm-opportunities.view" },
         ],
     },
     {
@@ -114,6 +134,27 @@ export const menuConfig: MenuGroup[] = [
             // что и у журналов выше: «вижу партнёра, но не вижу его документы»
             // это состояние, которого быть не должно.
             { label: "Печатные формы", icon: LuFileDown, path: "/crm/printed-documents", permission: "crm-clients.view", feature: "documents_crm_enabled" },
+        ],
+    },
+    {
+        // Отдел как люди: состав, кто на месте и учёт времени. Видна в основном
+        // РОП-у — у рядового менеджера остаются «Отсутствия».
+        title: "Команда",
+        icon: LuUsersRound,
+        items: [
+            { label: "Команда", icon: LuUsersRound, path: "/crm/team", permission: "crm-team.view" },
+            // Отсутствия видит весь отдел: кто кого замещает — рабочая информация.
+            { label: "Отсутствия", icon: LuCalendarOff, path: "/crm/absences", permission: "crm-absences.view" },
+            { label: "Табель", icon: LuCalendarCheck, path: "/crm/timesheet", permission: "crm-timesheet.view" },
+        ],
+    },
+    {
+        // Технические настройки, а не продажи. Группа скрывается целиком,
+        // если у сотрудника нет права на её единственный пункт.
+        title: "Сервис",
+        icon: LuKeyRound,
+        items: [
+            { label: "Токены ИИ-агентов", icon: LuKeyRound, path: "/crm/agent-tokens", permission: "crm-agent-tokens.view" },
         ],
     },
 ];
