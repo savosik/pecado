@@ -53,6 +53,18 @@ class PulseNotification extends Notification implements ShouldQueue
         };
     }
 
+    /**
+     * Отправка не удалась после всех попыток.
+     *
+     * Жёсткий отказ сервера кладёт адрес в стоп-лист, чтобы он не отбивался
+     * на каждом следующем письме и не портил репутацию отправителя.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        app(\App\Listeners\RecordMailBounce::class)
+            ->handleFailure($this->delivery->id, $exception->getMessage());
+    }
+
     public function toMail(object $notifiable): MailMessage
     {
         $view = $this->signal->view;

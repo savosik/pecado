@@ -21,6 +21,7 @@ use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\NotificationJournalController;
 use App\Http\Controllers\Crm\NotificationRuleController;
+use App\Http\Controllers\Crm\NotificationSuppressionController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
@@ -598,6 +599,12 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // и цифра о том, где адресной книги не хватает.
         Route::get('/notifications/presets', [NotificationRuleController::class, 'presets'])->name('notifications.presets');
         Route::get('/notifications/coverage', [NotificationRuleController::class, 'coverage'])->name('notifications.coverage');
+        // Стоп-лист: почему на адрес не уходят письма
+        Route::get('/notifications/suppressions', [NotificationSuppressionController::class, 'index'])->name('notifications.suppressions');
+    });
+    Route::middleware('permission:crm-notifications.edit')->group(function () {
+        Route::post('/notifications/suppressions', [NotificationSuppressionController::class, 'store'])->name('notifications.suppressions.store');
+        Route::delete('/notifications/suppressions/{suppression}', [NotificationSuppressionController::class, 'destroy'])->name('notifications.suppressions.destroy')->whereNumber('suppression');
     });
     Route::middleware('permission:crm-notifications.create')->group(function () {
         Route::post('/notifications/presets/apply', [NotificationRuleController::class, 'applyPreset'])->name('notifications.presets.apply');

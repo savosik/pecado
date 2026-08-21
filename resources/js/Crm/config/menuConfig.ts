@@ -66,6 +66,7 @@ export const menuConfig: MenuGroup[] = [
             { label: "Пульт уведомлений", icon: LuBellRing, path: "/crm/notifications/rules", permission: "crm-notifications.view" },
             { label: "Журнал уведомлений", icon: LuHistory, path: "/crm/notifications/journal", permission: "crm-notifications.view" },
             { label: "Покрытие уведомлений", icon: LuUsersRound, path: "/crm/notifications/coverage", permission: "crm-notifications.view" },
+            { label: "Стоп-лист писем", icon: LuBan, path: "/crm/notifications/suppressions", permission: "crm-notifications.view" },
             { label: "Планы продаж", icon: LuTarget, path: "/crm/plans", permission: "crm-plans.view" },
             { label: "Возможности", icon: LuLightbulb, path: "/crm/opportunities", permission: "crm-opportunities.view" },
             { label: "Грядки", icon: LuSprout, path: "/crm/beds", permission: "crm-beds.view" },

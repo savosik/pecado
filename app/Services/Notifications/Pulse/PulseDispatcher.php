@@ -59,6 +59,14 @@ class PulseDispatcher
                 continue;
             }
 
+            // Правило со сведением или в тихих часах: доставка остаётся
+            // в очереди, письмо уйдёт дайджестом. Не отказ — отсрочка.
+            if ($this->guard->shouldDefer($recipient)) {
+                $queued++;
+
+                continue;
+            }
+
             $this->send($signal, $recipient, $delivery);
             $this->guard->registerSent();
             $queued++;

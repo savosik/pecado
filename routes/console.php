@@ -44,6 +44,10 @@ Schedule::command('crm:tasks-recur')->dailyAt('05:40')->withoutOverlapping(); //
 // Финансовые поводы для пульта уведомлений: срок оплаты, просрочка, погашение.
 // Плановый обход, а не реакция на balance.updated: 1С шлёт снимок баланса часто
 // и не по порядку, и письмо на каждый пересчёт было бы шумом.
+// Сведение накопленных уведомлений: серия правок заказа из 1С уходит одним
+// письмом вместо десятка. Ежедневное — утром, чтобы не тревожить ночью.
+Schedule::command('notifications:send-digests --period=hourly')->hourly()->withoutOverlapping();
+Schedule::command('notifications:send-digests --period=daily')->dailyAt('09:00')->withoutOverlapping();
 Schedule::command('notifications:finance-scan')->dailyAt('07:00')->withoutOverlapping();
 Schedule::command('crm:tasks-remind')->dailyAt('08:30')->withoutOverlapping(); // напоминания о завтрашних дедлайнах и о просрочке за сутки (за флагом MAIL_FEATURE_CRM_TASKS)
 Schedule::command('shortages:daily-notice')->weekdays()->at('17:00')->withoutOverlapping(); // вечерняя сводка неразнесённых недоборов менеджеру (за флагом MAIL_FEATURE_SHORTAGE_NOTICE); в выходные склад не собирает

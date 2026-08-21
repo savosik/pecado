@@ -54,6 +54,49 @@ class DeliveryGuard
     }
 
     /**
+     * Отложить ли отправку: правило со сведением копит письма, тихие часы
+     * переносят отправку на конец окна.
+     *
+     * Отличается от отказа: письмо не теряется, а уходит позже. Поэтому
+     * доставка остаётся в статусе «в очереди», а не «пропущено».
+     */
+    public function shouldDefer(ResolvedRecipient $recipient): bool
+    {
+        $rule = $recipient->rule;
+
+        if (($rule->digest ?? 'none') !== 'none') {
+            return true;
+        }
+
+        return $this->inQuietHours($rule->quiet_hours);
+    }
+
+    /**
+     * Ночное окно, когда письма не тревожат.
+     *
+     * Часовой пояс — проекта, а не получателя: пояса контакта в системе нет,
+     * и заводить его ради этого не стоит.
+     *
+     * @param  array<string, mixed>|null  $window
+     */
+    private function inQuietHours(?array $window): bool
+    {
+        $from = $window['from'] ?? null;
+        $to = $window['to'] ?? null;
+
+        if (blank($from) || blank($to)) {
+            return false;
+        }
+
+        $now = now()->format('H:i');
+
+        // Окно через полночь (22:00–08:00) сравнивается иначе, чем дневное
+        return $from <= $to
+            ? ($now >= $from && $now < $to)
+            : ($now >= $from || $now < $to);
+    }
+
+    /**
      * Сигнал слишком стар, чтобы о нём писать.
      *
      * Главный предохранитель домена: первичная выгрузка истории из 1С или
