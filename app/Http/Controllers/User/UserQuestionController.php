@@ -6,8 +6,11 @@ use App\Enums\UserQuestionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreUserQuestionRequest;
 use App\Models\UserQuestion;
+use App\Notifications\Pulse\Support\PulseSignal;
 use App\Notifications\UserQuestions\NewQuestionAdminNotification;
 use App\Notifications\UserQuestions\QuestionReceivedNotification;
+use App\Services\Notifications\Pulse\NotificationPulse;
+use App\Services\Notifications\Pulse\PulseMode;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
@@ -43,13 +46,35 @@ class UserQuestionController extends Controller
                 ->notify(new QuestionReceivedNotification($question));
         }
 
+        // Сигнал пульту идёт всегда: в теневом режиме он только считает
+        // получателей для сверки со старой адресацией.
+        app(NotificationPulse::class)->signal(new PulseSignal(
+            eventKey: 'system.question_received',
+            clientUserId: $user?->id,
+            subject: $question,
+            data: [
+                'is_guest' => $user === null,
+                'question_id' => $question->id,
+            ],
+            view: [
+                'title' => 'Новый вопрос с сайта',
+                'body' => (string) $question->question,
+                'entity_label' => 'Вопрос №'.$question->id,
+            ],
+        ));
+
         // Адресаты заданы явным списком, а не выборкой по ролям: роль раздаёт
         // права, а не почту, и любая новая роль у сотрудника молча подписывала бы
         // его на переписку с клиентами. Пустой список — письма не уходят, вопрос
         // всё равно виден в админке.
-        foreach (config('notifications.mail.user_question_recipients', []) as $recipient) {
-            Notification::route('mail', $recipient)
-                ->notify(new NewQuestionAdminNotification($question));
+        //
+        // Событие переведено на пульт — здесь молчим, иначе отдел получил бы
+        // два письма об одном вопросе.
+        if (! PulseMode::handles('system.question_received')) {
+            foreach (config('notifications.mail.user_question_recipients', []) as $recipient) {
+                Notification::route('mail', $recipient)
+                    ->notify(new NewQuestionAdminNotification($question));
+            }
         }
 
         return back()
