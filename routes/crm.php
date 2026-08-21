@@ -19,6 +19,7 @@ use App\Http\Controllers\Crm\FinanceController;
 use App\Http\Controllers\Crm\ImpersonationController;
 use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
+use App\Http\Controllers\Crm\NotificationCampaignController;
 use App\Http\Controllers\Crm\NotificationJournalController;
 use App\Http\Controllers\Crm\NotificationRuleController;
 use App\Http\Controllers\Crm\NotificationSuppressionController;
@@ -601,6 +602,19 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/notifications/coverage', [NotificationRuleController::class, 'coverage'])->name('notifications.coverage');
         // Стоп-лист: почему на адрес не уходят письма
         Route::get('/notifications/suppressions', [NotificationSuppressionController::class, 'index'])->name('notifications.suppressions');
+        // Рассылки: аудитория собирается заранее и показывается с разбивкой
+        // «кому уйдёт, кого отсеяли» — до отправки, а не после.
+        Route::get('/notifications/campaigns', [NotificationCampaignController::class, 'index'])->name('notifications.campaigns');
+        Route::get('/notifications/campaigns/{campaign}/audience', [NotificationCampaignController::class, 'audience'])->name('notifications.campaigns.audience')->whereNumber('campaign');
+    });
+    Route::middleware('permission:crm-notifications.create')->group(function () {
+        Route::post('/notifications/campaigns', [NotificationCampaignController::class, 'store'])->name('notifications.campaigns.store');
+    });
+    Route::middleware('permission:crm-notifications.edit')->group(function () {
+        Route::patch('/notifications/campaigns/{campaign}', [NotificationCampaignController::class, 'update'])->name('notifications.campaigns.update')->whereNumber('campaign');
+        Route::post('/notifications/campaigns/{campaign}/audience', [NotificationCampaignController::class, 'buildAudience'])->name('notifications.campaigns.build')->whereNumber('campaign');
+        Route::post('/notifications/campaigns/{campaign}/send', [NotificationCampaignController::class, 'send'])->name('notifications.campaigns.send')->whereNumber('campaign');
+        Route::post('/notifications/campaigns/{campaign}/cancel', [NotificationCampaignController::class, 'cancel'])->name('notifications.campaigns.cancel')->whereNumber('campaign');
     });
     Route::middleware('permission:crm-notifications.edit')->group(function () {
         Route::post('/notifications/suppressions', [NotificationSuppressionController::class, 'store'])->name('notifications.suppressions.store');
