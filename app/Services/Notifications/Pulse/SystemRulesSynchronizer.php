@@ -158,7 +158,10 @@ class SystemRulesSynchronizer
                 'description' => 'У вопроса нет владельца в данных, поэтому адресат задан списком из настроек — как это было до пульта.',
                 'event_key' => 'system.question_received',
                 'conditions' => null,
-                'active_when' => null,
+                // Гейта-флага у вопросов никогда не было: письмо уходило, если
+                // список адресов непуст. Правило воспроизводит это же условие,
+                // иначе после перехода отдел перестал бы получать вопросы.
+                'active_when_filled' => 'notifications.mail.user_question_recipients',
                 'recipients' => [
                     [
                         'kind' => NotificationRuleRecipient::KIND_CONFIG_LIST,
@@ -215,7 +218,10 @@ class SystemRulesSynchronizer
             $rule = NotificationRule::create($structural + [
                 'system_key' => $definition['system_key'],
                 'priority' => self::PRIORITY,
-                'is_active' => $this->initialActiveState($definition['active_when'] ?? null),
+                'is_active' => $this->initialActiveState(
+                    $definition['active_when'] ?? null,
+                    $definition['active_when_filled'] ?? null,
+                ),
                 'throttle_seconds' => $definition['throttle_seconds'] ?? null,
                 'channel' => 'email',
                 'digest' => 'none',
@@ -234,9 +240,17 @@ class SystemRulesSynchronizer
      *
      * Берём текущее значение feature-флага: выключенное письмо остаётся
      * выключенным, включение — осознанное действие человека.
+     *
+     * У части писем флага нет вовсе — они уходили, если непуст список
+     * получателей. Для них проверяется наполненность конфига, иначе после
+     * перехода такое письмо молча пропало бы.
      */
-    private function initialActiveState(?string $configKey): bool
+    private function initialActiveState(?string $configKey, ?string $filledKey = null): bool
     {
+        if ($filledKey !== null) {
+            return filled(config($filledKey, []));
+        }
+
         if ($configKey === null) {
             return false;
         }

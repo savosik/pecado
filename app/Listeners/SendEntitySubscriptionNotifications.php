@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Events\EntityChanged;
 use App\Models\EntitySubscription;
 use App\Notifications\EntityChangedNotification;
+use App\Services\Notifications\Pulse\PulseMode;
 use App\Services\Subscriptions\SubscriptionRegistry;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Notification;
@@ -29,14 +30,38 @@ class SendEntitySubscriptionNotifications implements ShouldQueue
         private readonly SubscriptionRegistry $registry,
     ) {}
 
+    /**
+     * Раздел кабинета и тип события → ключ события пульта.
+     *
+     * Тот же маппинг, что в notifications:import-subscriptions: подписки
+     * переезжают в правила именно по нему.
+     */
+    private const PULSE_EVENTS = [
+        'orders' => [
+            'items_updated' => 'orders.items_updated',
+            'attributes_updated' => 'orders.attributes_updated',
+            'api_shortfall' => 'orders.shortfall',
+            'substitution_offered' => 'orders.substitution_offered',
+        ],
+        'documents' => [],
+    ];
+
     public function handle(EntityChanged $event): void
     {
+        $notice = $event->notice;
+
+        // Событие переведено на пульт — здесь молчим. Подписчик кабинета
+        // получит письмо по правилу, в которое его подписка перенесена
+        // командой notifications:import-subscriptions; без этого гейта
+        // ему пришло бы два письма об одном изменении.
+        if ($this->handledByPulse($notice)) {
+            return;
+        }
+
         // Общий гейт email-рассылки подписок (на prod по умолчанию выключен).
         if (! config('notifications.mail.features.entity_subscriptions')) {
             return;
         }
-
-        $notice = $event->notice;
 
         // Раздел должен быть зарегистрирован и включён в реестре.
         if (! $this->registry->isEnabled($notice->section)) {
@@ -58,6 +83,25 @@ class SendEntitySubscriptionNotifications implements ShouldQueue
 
             $this->deliver($subscription, $notice);
         }
+    }
+
+    /**
+     * Отвечает ли пульт за это изменение.
+     *
+     * Для подписки «все типы» (event = null) смотрим на маску раздела:
+     * такая подписка переносится одним правилом orders.*, и молчать надо
+     * ровно тогда, когда пульт обрабатывает раздел целиком.
+     */
+    private function handledByPulse(\App\Subscriptions\EntityChangeNotice $notice): bool
+    {
+        $map = self::PULSE_EVENTS[$notice->section] ?? [];
+
+        if ($notice->event !== null && isset($map[$notice->event])) {
+            return PulseMode::handles($map[$notice->event]);
+        }
+
+        // Раздел без градации или незнакомый тип: ориентируемся на маску домена
+        return PulseMode::handles($notice->section.'.*');
     }
 
     private function deliver(EntitySubscription $subscription, \App\Subscriptions\EntityChangeNotice $notice): void
