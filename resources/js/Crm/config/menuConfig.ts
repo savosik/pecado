@@ -85,12 +85,12 @@ export const menuConfig: MenuGroup[] = [
         title: "Уведомления",
         icon: LuBellRing,
         items: [
-            { label: "Письма", icon: LuMail, path: "/crm/emails", permission: "crm-emails.view" },
-            { label: "Пульт уведомлений", icon: LuBellRing, path: "/crm/notifications/rules", permission: "crm-notifications.view" },
-            { label: "Журнал уведомлений", icon: LuHistory, path: "/crm/notifications/journal", permission: "crm-notifications.view" },
-            { label: "Покрытие уведомлений", icon: LuUsersRound, path: "/crm/notifications/coverage", permission: "crm-notifications.view" },
-            { label: "Рассылки", icon: LuMegaphone, path: "/crm/notifications/campaigns", permission: "crm-notifications.view" },
-            { label: "Стоп-лист писем", icon: LuBan, path: "/crm/notifications/suppressions", permission: "crm-notifications.view" },
+            // Две разные вещи, и их легко спутать:
+            //   «Письма» — переписка, которую менеджер пишет руками конкретному человеку;
+            //   «Уведомления» — автоматика: система шлёт сама, когда что-то произошло.
+            // Поэтому подписи в меню называют не механику, а кто отправитель.
+            { label: "Письма (пишу сам)", icon: LuMail, path: "/crm/emails", permission: "crm-emails.view" },
+            { label: "Уведомления (шлёт система)", icon: LuBellRing, path: "/crm/notifications/rules", permission: "crm-notifications.view" },
         ],
     },
     {

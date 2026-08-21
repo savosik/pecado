@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { router } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { Badge, Box, Flex, HStack, Input, Table, Text, VStack } from '@chakra-ui/react';
 import { LuPlus, LuTrash2, LuUserPlus, LuX } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
@@ -106,11 +106,19 @@ export default function ContactsPanel({ userId, companyId = null, canEdit = fals
 
     return (
         <VStack align="stretch" gap={4}>
-            <Text fontSize="xs" color="fg.muted">
-                Контактные лица контрагента. На них ссылаются правила уведомлений: если правило адресовано
-                роли «бухгалтер», письмо уйдёт тому, кто указан здесь. Сменился человек — достаточно
-                поправить карточку, правила менять не нужно.
-            </Text>
+            <Box borderWidth="1px" borderRadius="md" p={3} bg="bg.subtle">
+                <Text fontSize="sm">
+                    Это адресная книга: люди со стороны клиента, которым система может писать сама.
+                    Правило вида «недобор — закупщику» найдёт нужного человека именно здесь, поэтому
+                    при смене сотрудника достаточно поправить карточку, а правила менять не нужно.
+                </Text>
+                <Text fontSize="sm" color="fg.muted" mt={2}>
+                    Сами правила — что и при каком событии уходит — живут в разделе{' '}
+                    <Link href="/crm/notifications/rules" style={{ textDecoration: 'underline' }}>
+                        «Уведомления (шлёт система)»
+                    </Link>. Пока там нет правила, письма по этим контактам не пойдут.
+                </Text>
+            </Box>
 
             {drafts.length > 0 && (
                 <Box borderWidth="1px" borderColor="orange.300" borderRadius="md" p={3} bg="orange.50" _dark={{ bg: 'orange.950' }}>

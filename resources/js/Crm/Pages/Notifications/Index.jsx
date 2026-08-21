@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { Badge, Box, Card, Flex, HStack, Heading, Input, Text, VStack } from '@chakra-ui/react';
-import { LuBellRing, LuCirclePlus, LuOctagonX, LuPencil, LuSend, LuTrash2 } from 'react-icons/lu';
+import { LuCirclePlus, LuOctagonX, LuPencil, LuSend, LuTrash2 } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
+import SectionHeader from './components/SectionHeader';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import RuleFormDialog from './components/RuleFormDialog';
@@ -63,24 +64,20 @@ export default function Index({ rules, filters, events, canManageAll, counts }) 
 
     return (
         <CrmLayout>
-            <Head title="Пульт уведомлений" />
+            <Head title="Уведомления — правила" />
 
             <VStack align="stretch" gap={5}>
-                <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
-                    <HStack gap={3}>
-                        <LuBellRing size={22} />
-                        <Heading size="lg">Пульт уведомлений</Heading>
-                    </HStack>
-                    <Button size="sm" onClick={() => setEditing({})}>
-                        <LuCirclePlus /> Новое правило
-                    </Button>
-                </Flex>
-
-                <Text fontSize="sm" color="fg.muted" maxW="4xl">
-                    Правила разбираются сверху вниз в порядке приоритета. Срабатывают все подходящие,
-                    но правило с отметкой «остановка» прерывает разбор — так задаётся «вместо», а не «вдобавок».
-                    Один и тот же адрес получит письмо один раз.
-                </Text>
+                <SectionHeader
+                    title="Правила"
+                    purpose="Список того, при каком событии и кому уходит письмо. Строки сгруппированы по событию и идут в том порядке, в котором система их разбирает."
+                    control="Заводите правила: «когда случилось вот это — написать вот этим людям». Правило с отметкой «остановка» прерывает разбор, поэтому им задаётся «вместо», а не «вдобавок»."
+                >
+                    <Flex justify="flex-end">
+                        <Button size="sm" onClick={() => setEditing({})}>
+                            <LuCirclePlus /> Новое правило
+                        </Button>
+                    </Flex>
+                </SectionHeader>
 
                 <HStack gap={2} wrap="wrap">
                     {tabs.map((item) => (

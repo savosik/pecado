@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { Badge, Box, Card, Flex, HStack, Heading, Input, Table, Text, VStack } from '@chakra-ui/react';
-import { LuBan, LuPlus, LuTrash2 } from 'react-icons/lu';
+import { Badge, Card, Flex, HStack, Input, Table, Text, VStack } from '@chakra-ui/react';
+import { LuPlus, LuTrash2 } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
+import SectionHeader from './components/SectionHeader';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
@@ -39,26 +40,22 @@ export default function Suppressions({ rows, filters, canRemove }) {
 
     return (
         <CrmLayout>
-            <Head title="Стоп-лист уведомлений" />
+            <Head title="Уведомления — не писать" />
 
             <VStack align="stretch" gap={5}>
-                <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
-                    <HStack gap={3}>
-                        <LuBan size={22} />
-                        <Heading size="lg">Стоп-лист уведомлений</Heading>
-                    </HStack>
+                <SectionHeader
+                    title="Не писать"
+                    purpose="Адреса, на которые письма не уходят: человек отписался, почтовый сервер отверг адрес как несуществующий или его внёс сотрудник."
+                    control="Смотрите, почему на конкретный адрес ничего не приходит, и при необходимости снимаете запрет. Отписка от рассылок и запрет на всё — разные записи."
+                >
                     {canRemove && (
-                        <Button size="sm" variant="outline" onClick={() => setAdding(!adding)}>
-                            <LuPlus /> Добавить адрес
-                        </Button>
+                        <Flex justify="flex-end">
+                            <Button size="sm" variant="outline" onClick={() => setAdding(!adding)}>
+                                <LuPlus /> Добавить адрес
+                            </Button>
+                        </Flex>
                     )}
-                </Flex>
-
-                <Text fontSize="sm" color="fg.muted" maxW="4xl">
-                    На эти адреса письма не уходят. Адрес попадает сюда, когда человек отписался
-                    по ссылке, когда почтовый сервер отверг его как несуществующий, или когда его
-                    внёс сотрудник. Отписка от рассылок не отключает уведомления о заказах.
-                </Text>
+                </SectionHeader>
 
                 {adding && canRemove && (
                     <Card.Root>

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import { Badge, Box, Card, Flex, HStack, Heading, Input, Table, Text, VStack } from '@chakra-ui/react';
-import { LuHistory, LuMail, LuSearch } from 'react-icons/lu';
+import { Badge, Box, Card, Flex, HStack, Input, Table, Text, VStack } from '@chakra-ui/react';
+import { LuSearch } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
+import SectionHeader from './components/SectionHeader';
 import { Button } from '@/components/ui/button';
 import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
 
@@ -30,24 +31,14 @@ export default function Journal({ deliveries, filters, events }) {
 
     return (
         <CrmLayout>
-            <Head title="Журнал уведомлений" />
+            <Head title="Уведомления — что уходило" />
 
             <VStack align="stretch" gap={5}>
-                <HStack gap={3}>
-                    <LuHistory size={22} />
-                    <Heading size="lg">Журнал уведомлений</Heading>
-                </HStack>
-
-                <Box borderWidth="1px" borderRadius="md" p={3} bg="bg.subtle">
-                    <HStack gap={2}>
-                        <LuMail size={16} />
-                        <Text fontSize="sm">
-                            Здесь — письма, отправленные системой по правилам пульта. Переписка,
-                            которую менеджеры пишут руками, живёт в разделе{' '}
-                            <Link href="/crm/emails" style={{ textDecoration: 'underline' }}>Письма</Link>.
-                        </Text>
-                    </HStack>
-                </Box>
+                <SectionHeader
+                    title="Что уходило"
+                    purpose="История отправок: кто получил письмо, а кто не получил и почему. Отрицательные исходы показаны наравне с успешными."
+                    control="Проверяете жалобы вида «мы ничего не получали»: находите событие и видите точную причину — адрес отписан, сработало ограничение частоты или не подошло ни одно правило."
+                />
 
                 <Card.Root>
                     <Card.Body>

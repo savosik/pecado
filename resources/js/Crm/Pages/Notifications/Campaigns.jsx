@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import axios from 'axios';
 import { Badge, Box, Card, Flex, HStack, Heading, Input, Table, Text, Textarea, VStack } from '@chakra-ui/react';
-import { LuMegaphone, LuPlus, LuSend, LuUsers, LuX } from 'react-icons/lu';
+import { LuPlus, LuSend, LuUsers, LuX } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
+import SectionHeader from './components/SectionHeader';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
@@ -78,24 +79,20 @@ export default function Campaigns({ campaigns, templates, roles, canSend }) {
 
     return (
         <CrmLayout>
-            <Head title="Рассылки" />
+            <Head title="Уведомления — рассылки" />
 
             <VStack align="stretch" gap={5}>
-                <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
-                    <HStack gap={3}>
-                        <LuMegaphone size={22} />
-                        <Heading size="lg">Рассылки</Heading>
-                    </HStack>
-                    <Button size="sm" onClick={() => setCreating(!creating)}>
-                        <LuPlus /> Новая рассылка
-                    </Button>
-                </Flex>
-
-                <Text fontSize="sm" color="fg.muted" maxW="4xl">
-                    Письмо уходит только тем контактам, кто дал согласие на рассылки, и минует
-                    стоп-лист. Отписка от рассылок не отключает уведомления о заказах и документах —
-                    это разные вещи.
-                </Text>
+                <SectionHeader
+                    title="Рассылки"
+                    purpose="Разовое письмо по группе клиентов: акция, новость, предложение. В отличие от правил, здесь вы сами решаете, когда отправить."
+                    control="Пишете текст, выбираете, кому он пойдёт, и смотрите список получателей до отправки. Письмо уходит только тем, кто дал согласие на рассылки; отписка от них не отключает уведомления о заказах."
+                >
+                    <Flex justify="flex-end">
+                        <Button size="sm" onClick={() => setCreating(!creating)}>
+                            <LuPlus /> Новая рассылка
+                        </Button>
+                    </Flex>
+                </SectionHeader>
 
                 {creating && (
                     <Card.Root>

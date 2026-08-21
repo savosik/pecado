@@ -1,7 +1,8 @@
 import { Head, Link } from '@inertiajs/react';
 import { Badge, Box, Card, Flex, HStack, Heading, Progress, Table, Text, VStack } from '@chakra-ui/react';
-import { LuTriangleAlert, LuUsers } from 'react-icons/lu';
+import { LuTriangleAlert } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
+import SectionHeader from './components/SectionHeader';
 
 /**
  * Покрытие адресной книги.
@@ -15,19 +16,14 @@ export default function Coverage({ rows, contactsTotal, companiesTotal }) {
 
     return (
         <CrmLayout>
-            <Head title="Покрытие уведомлений" />
+            <Head title="Уведомления — кому некому писать" />
 
             <VStack align="stretch" gap={5}>
-                <HStack gap={3}>
-                    <LuUsers size={22} />
-                    <Heading size="lg">Покрытие уведомлений</Heading>
-                </HStack>
-
-                <Text fontSize="sm" color="fg.muted" maxW="4xl">
-                    Правило, адресованное роли, работает только там, где такой контакт заведён.
-                    Здесь видно, скольким контрагентам по каждому правилу политики реально есть
-                    кому писать.
-                </Text>
+                <SectionHeader
+                    title="Кому некому писать"
+                    purpose="Правило вида «бухгалтеру этого контрагента» работает только там, где бухгалтер заведён. Здесь видно, у скольких контрагентов такого контакта нет."
+                    control="Находите дыры в адресной книге. Пустая строка означает: правило есть, оно исправно работает, но письмо уходить некому — и без этого экрана вы узнали бы об этом от клиента."
+                />
 
                 <Flex gap={4} wrap="wrap">
                     <Card.Root flex="1 1 220px">
