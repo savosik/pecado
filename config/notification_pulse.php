@@ -1,5 +1,6 @@
 <?php
 
+use App\Notifications\Pulse\Events\Campaigns;
 use App\Notifications\Pulse\Events\Documents;
 use App\Notifications\Pulse\Events\Finance;
 use App\Notifications\Pulse\Events\Orders;
@@ -95,6 +96,8 @@ return [
         Finance\OverdueStartedEvent::class,
         Finance\OverdueGrewEvent::class,
         Finance\OverdueClearedEvent::class,
+
+        Campaigns\BroadcastEvent::class,
     ],
 
     /*

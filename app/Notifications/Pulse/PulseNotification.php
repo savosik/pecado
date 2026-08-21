@@ -87,6 +87,14 @@ class PulseNotification extends Notification implements ShouldQueue
         // По этому заголовку LogSentEmail связывает письмо с решением пульта
         $mail->withSymfonyMessage(function ($message): void {
             $message->getHeaders()->addTextHeader('X-Pecado-Delivery', (string) $this->delivery->id);
+
+            // Рекламное письмо обязано нести машиночитаемую отписку: почтовые
+            // клиенты показывают по ней кнопку, и без неё жалоба на спам
+            // становится единственным способом прекратить рассылку.
+            if ($this->unsubscribeUrl !== null && str_starts_with($this->signal->eventKey, 'campaigns.')) {
+                $message->getHeaders()->addTextHeader('List-Unsubscribe', '<'.$this->unsubscribeUrl.'>');
+                $message->getHeaders()->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
+            }
         });
 
         return $mail;
