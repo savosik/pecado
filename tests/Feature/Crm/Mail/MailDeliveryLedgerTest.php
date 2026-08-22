@@ -140,6 +140,31 @@ class MailDeliveryLedgerTest extends TestCase
     }
 
     #[Test]
+    public function refused_by_the_server_letter_can_be_sent_again(): void
+    {
+        // Сбой SMTP означает, что письмо не уходило. Если оставить адрес
+        // занятым, повторная попытка объявит письмо отправленным, не отправив
+        // ничего, — а менеджер узнает об этом от клиента.
+        $letter = CrmEmail::factory()->by($this->manager)->on($this->client)->create([
+            'to' => ['buh@romashka.ru'],
+            'status' => EmailStatus::QUEUED,
+        ]);
+
+        $ledger = app(\App\Services\Crm\Mail\MailDeliveryLedger::class);
+
+        Mail::shouldReceive('to->send')->andThrow(new \RuntimeException('SMTP недоступен'));
+
+        try {
+            (new SendCrmEmailJob($letter))->handle($ledger);
+            $this->fail('Ожидали, что сбой транспорта прорастёт наружу');
+        } catch (\Throwable) {
+            // ожидаемо
+        }
+
+        $this->assertSame(0, CrmEmailDelivery::query()->where('crm_email_id', $letter->id)->count());
+    }
+
+    #[Test]
     public function nothing_left_to_send_is_success_not_failure(): void
     {
         $letter = CrmEmail::factory()->by($this->manager)->on($this->client)->create([

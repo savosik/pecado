@@ -10,6 +10,7 @@ use App\Models\CrmEmailTemplate;
 use App\Models\Order;
 use App\Models\PersonalManager;
 use App\Models\User;
+use App\Services\Crm\Mail\MailDeliveryLedger;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -135,7 +136,7 @@ class EmailsTest extends TestCase
         Mail::shouldReceive('to->send')->andThrow(new \RuntimeException('SMTP недоступен'));
 
         try {
-            (new SendCrmEmailJob($email))->handle();
+            (new SendCrmEmailJob($email))->handle(app(MailDeliveryLedger::class));
         } catch (\Throwable $exception) {
             (new SendCrmEmailJob($email))->failed($exception);
         }

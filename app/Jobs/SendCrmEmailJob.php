@@ -56,7 +56,16 @@ class SendCrmEmailJob implements ShouldQueue
             return;
         }
 
-        Mail::to($recipients)->send(new CrmManagerMail($email));
+        try {
+            Mail::to($recipients)->send(new CrmManagerMail($email));
+        } catch (Throwable $exception) {
+            // Транспорт письмо не принял — значит, оно не уходило, и адреса
+            // надо освободить: иначе повторная попытка объявит письмо
+            // отправленным, не отправив ничего.
+            $ledger->release($email, $recipients);
+
+            throw $exception;
+        }
 
         $ledger->markSent($email, $recipients);
 

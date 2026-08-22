@@ -94,6 +94,34 @@ class MailDeliveryLedger
     }
 
     /**
+     * Освободить адреса, если транспорт письмо не принял.
+     *
+     * Вызывается только тогда, когда отправка **точно** не состоялась —
+     * почтовый сервер ответил ошибкой. Иначе повторная попытка задания нашла бы
+     * адреса занятыми и объявила письмо отправленным, хотя оно не уходило.
+     *
+     * Падение после успешной сдачи транспорту сюда не попадает: там занятость
+     * и должна сохраниться, иначе клиент получит письмо дважды.
+     *
+     * @param  array<int, string>  $recipients
+     */
+    public function release(CrmEmail $email, array $recipients): void
+    {
+        if ($recipients === []) {
+            return;
+        }
+
+        CrmEmailDelivery::query()
+            ->where('crm_email_id', $email->getKey())
+            ->whereNull('sent_at')
+            ->whereIn('recipient', array_map(
+                fn (string $recipient): string => mb_strtolower(trim($recipient)),
+                $recipients,
+            ))
+            ->delete();
+    }
+
+    /**
      * Кому это письмо уже уходило — для карточки письма.
      *
      * @return array<int, string>
