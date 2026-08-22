@@ -6,6 +6,7 @@ use App\Enums\Crm\EmailStatus;
 use App\Listeners\RecordMailBounce;
 use App\Mail\CrmManagerMail;
 use App\Models\CrmEmail;
+use App\Services\Crm\Mail\MailDeliveryLedger;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
@@ -29,7 +30,7 @@ class SendCrmEmailJob implements ShouldQueue
 
     public function __construct(public CrmEmail $email) {}
 
-    public function handle(): void
+    public function handle(MailDeliveryLedger $ledger): void
     {
         // Письмо могли удалить, пока задание ждало очереди.
         $email = CrmEmail::query()->find($this->email->getKey());
@@ -38,7 +39,26 @@ class SendCrmEmailJob implements ShouldQueue
             return;
         }
 
-        Mail::to($email->to)->send(new CrmManagerMail($email));
+        // Адреса занимаются до отправки. Это единственное место, где решается
+        // «уже отправляли»: повторная попытка задания, второй клик по самолётику
+        // и правило, поймавшее письмо вслед за другим, приходят сюда одинаково,
+        // а клиент не должен получить два одинаковых письма ни в одном случае.
+        $recipients = $ledger->claim($email, (array) $email->to);
+
+        if ($recipients === []) {
+            // Всем адресам письмо уже уходило — задание отработало вхолостую,
+            // и это успех, а не ошибка.
+            $email->status = EmailStatus::SENT;
+            $email->sent_at ??= now();
+            $email->error = null;
+            $email->save();
+
+            return;
+        }
+
+        Mail::to($recipients)->send(new CrmManagerMail($email));
+
+        $ledger->markSent($email, $recipients);
 
         // message_id дописывает слушатель MessageSent — здесь его ещё нет.
         $email->status = EmailStatus::SENT;

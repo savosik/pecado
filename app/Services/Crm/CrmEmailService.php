@@ -210,6 +210,11 @@ class CrmEmailService
             'origin_event' => $email->origin_event,
             'tags' => $email->tagList(),
             'skip_reason' => $email->skip_reason,
+            // Кому письмо уже ушло: адрес, попавший сюда, второго письма
+            // не получит, даже если его назовёт ещё одно правило.
+            'delivered_to' => $email->relationLoaded('deliveries')
+                ? $email->deliveries->whereNotNull('sent_at')->pluck('recipient')->values()->all()
+                : [],
             'auto_sent_rule' => $email->autoSentRule?->name,
             'author' => [
                 'id' => (int) $email->user_id,

@@ -133,6 +133,15 @@ class CrmEmail extends Model implements HasMedia
         return $this->belongsTo(CrmMailRule::class, 'auto_sent_rule_id');
     }
 
+    /**
+     * Кому это письмо уже уходило. Слой, гарантирующий, что один адрес
+     * не получит одно письмо дважды, сколько бы правил его ни поймало.
+     */
+    public function deliveries(): HasMany
+    {
+        return $this->hasMany(CrmEmailDelivery::class, 'crm_email_id');
+    }
+
     public function hits(): HasMany
     {
         return $this->hasMany(CrmMailRuleHit::class, 'crm_email_id');

@@ -49,7 +49,7 @@ class EmailController extends CrmController
 
         $query = $this->emails->visibleTo($actor, $scope)
             ->inFolder($folder)
-            ->with(['author:id,name', 'related', 'autoSentRule:id,name'])
+            ->with(['author:id,name', 'related', 'autoSentRule:id,name', 'deliveries'])
             ->withCount(['media as attachments_count' => fn ($media) => $media->where(
                 'collection_name',
                 CrmAttachments::COLLECTION,
@@ -304,7 +304,7 @@ class EmailController extends CrmController
         $actor = $this->crmActor($request);
         Gate::authorize('view', $email);
 
-        $email->load(['author:id,name', 'related']);
+        $email->load(['author:id,name', 'related', 'deliveries']);
 
         return response()->json($this->emails->payload($email, $actor));
     }

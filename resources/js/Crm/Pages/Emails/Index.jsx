@@ -160,6 +160,11 @@ export default function Index({
                     <Text fontSize="xs" color="fg.muted">
                         {row.to?.length ? `Кому: ${row.to.join(', ')}` : 'Получатели не проставлены'}
                     </Text>
+                    {row.delivered_to?.length > 0 && (
+                        <Text fontSize="xs" color="green.600">
+                            Уже ушло: {row.delivered_to.join(', ')}
+                        </Text>
+                    )}
                     {row.tags?.length > 0 && (
                         <Wrap gap={1}>
                             {row.tags.slice(0, 6).map((tag) => (
