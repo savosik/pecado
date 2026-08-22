@@ -466,6 +466,17 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
+     * Адресная книга партнёра: все люди, заведённые под него.
+     *
+     * Сюда попадают и контакты его юрлиц: у карточки человека партнёр один,
+     * а привязок к юрлицам может быть несколько.
+     */
+    public function contacts(): HasMany
+    {
+        return $this->hasMany(Contact::class, 'client_user_id');
+    }
+
+    /**
      * Личные пресеты фильтров отчёта продаж CRM.
      */
     public function crmAnalyticsFilterPresets(): HasMany

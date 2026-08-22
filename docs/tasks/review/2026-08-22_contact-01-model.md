@@ -2,7 +2,7 @@
 
 **Приоритет:** высокий
 **Создано:** 2026-08-22
-**Эпик:** [contact-00](2026-08-22_contact-00-epic.md)
+**Эпик:** [contact-00](../backlog/2026-08-22_contact-00-epic.md)
 **Зависимости:** нет — стартовая карточка
 **Оценка:** ~2 дня
 
@@ -110,3 +110,25 @@ UNIQUE `(contact_id, subject_type, subject_id, role)` — один челове�
 - [ ] Unit-тесты: генерация токена, заполнение `phone_digits`, уникальность привязки, скоуп видимости
 - [ ] Фабрики `ContactFactory`, `ContactLinkFactory`
 - [ ] `php artisan bi:sync-grants` прогнан — новые таблицы видны BI-агенту, `unsubscribe_token` скрыт
+
+---
+
+## Сделано 22.08.2026
+
+- `database/migrations/2026_08_22_120000_create_contacts_tables.php` — обе таблицы,
+  все колонки прокомментированы, `deleted_at` — отдельным `DB::statement`;
+- `database/migrations/2026_08_22_120100_grant_crm_contact_permissions.php` — права на прод;
+- `app/Enums/{ContactRole,ContactSource}.php`, `app/Models/{Contact,ContactLink}.php`,
+  `app/Policies/ContactPolicy.php`, фабрики;
+- связи `User::contacts()` и `Company::contactLinks()`.
+
+Три реестра прав синхронны, `PermissionNamingTest` зелёный. `db:comments:audit` — полное
+покрытие. Миграции откатываются и накатываются заново. `bi:sync-grants` завёл вьюху `v_contacts`
+со скрытым токеном отписки и **сам снёс протухшую `v_client_contacts`** от старой адресной книги.
+
+Тесты: `tests/Feature/Crm/ContactModelTest.php` — 11 штук. Главные:
+один человек в двух ролях остаётся одной карточкой; повторная привязка той же роли к той же
+сущности отбивается уникальным индексом, а другая роль проходит; телефон хранится как введён,
+а ищется по цифрам; чужой контакт менеджеру не виден, человек без партнёра — только тому,
+кто видит всю базу.
+

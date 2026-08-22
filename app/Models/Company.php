@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -158,6 +159,17 @@ class Company extends Model
     public function bankAccounts(): HasMany
     {
         return $this->hasMany(CompanyBankAccount::class);
+    }
+
+    /**
+     * Роли людей при этом юрлице: бухгалтер, директор, закупщик.
+     *
+     * Связь идёт на привязки, а не на людей: один и тот же человек бывает
+     * бухгалтером двух юрлиц, и карточка у него одна.
+     */
+    public function contactLinks(): MorphMany
+    {
+        return $this->morphMany(ContactLink::class, 'subject');
     }
 
     /**
