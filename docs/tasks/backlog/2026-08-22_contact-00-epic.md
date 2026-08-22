@@ -82,10 +82,10 @@ email**. День рождения ЛПР некуда положить. Выг�
 
 | Карточка | Что даёт |
 |---|---|
-| [contact-07](2026-08-22_contact-07-profile-migration.md) | Перенос данных из анкет CRM |
-| [contact-08](2026-08-22_contact-08-seed-from-corpus.md) | Мастер наполнения из данных сайта |
-| [contact-09](2026-08-22_contact-09-dedupe-merge.md) | Дубли и слияние |
-| [contact-10](2026-08-22_contact-10-agent-api.md) | Агентское API и MCP |
+| [contact-07](../review/2026-08-22_contact-07-profile-migration.md) | Перенос данных из анкет CRM |
+| [contact-08](../review/2026-08-22_contact-08-seed-from-corpus.md) | Мастер наполнения из данных сайта |
+| [contact-09](../review/2026-08-22_contact-09-dedupe-merge.md) | Дубли и слияние |
+| [contact-10](../review/2026-08-22_contact-10-agent-api.md) | Агентское API и MCP |
 
 ### Волна 3 — наращивание
 

@@ -379,6 +379,8 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.index');
         Route::get('/contacts/for-entity', [ContactController::class, 'forEntity'])->name('contacts.for-entity');
         Route::get('/contacts/vcf', [ContactController::class, 'vcardBatch'])->name('contacts.vcf');
+        Route::get('/contacts/duplicates', [ContactController::class, 'duplicates'])->name('contacts.duplicates');
+        Route::get('/contacts/duplicate-pairs', [ContactController::class, 'duplicatePairs'])->name('contacts.duplicate-pairs');
         Route::get('/contacts/{contact}/vcf', [ContactController::class, 'vcard'])
             ->name('contacts.vcard')
             ->whereNumber('contact');
@@ -403,6 +405,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
             ->whereNumber('contact');
         Route::delete('/contacts/{contact}/avatar', [ContactController::class, 'deleteAvatar'])
             ->name('contacts.avatar.destroy')
+            ->whereNumber('contact');
+        Route::post('/contacts/{contact}/merge', [ContactController::class, 'merge'])
+            ->name('contacts.merge')
             ->whereNumber('contact');
         Route::post('/contacts/{contact}/links', [ContactController::class, 'link'])
             ->name('contacts.link')

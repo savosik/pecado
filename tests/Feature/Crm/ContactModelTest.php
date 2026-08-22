@@ -99,6 +99,11 @@ class ContactModelTest extends TestCase
         $this->assertSame('+7 (912) 345-67-89', $contact->phone);
         $this->assertSame('79123456789', $contact->phone_digits);
 
+        // Восьмёрка и семёрка — один и тот же номер: люди пишут то так, то так,
+        // и без приведения человек оказался бы в базе дважды.
+        $eight = Contact::factory()->forClient($this->client)->create(['phone' => '8 912 345 67 89']);
+        $this->assertSame('79123456789', $eight->phone_digits);
+
         $found = Contact::query()->where('phone_digits', 'like', '%3456789')->first();
         $this->assertTrue($found?->is($contact));
     }

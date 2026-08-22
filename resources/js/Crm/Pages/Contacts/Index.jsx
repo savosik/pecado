@@ -9,7 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import ContactForm from '@/Crm/Components/ContactForm';
-import { LuCake, LuDownload, LuMail, LuPhone, LuUserPlus } from 'react-icons/lu';
+import SeedWizard from '@/Crm/Pages/Contacts/components/SeedWizard';
+import DuplicatesPanel from '@/Crm/Pages/Contacts/components/DuplicatesPanel';
+import { LuCake, LuCopy, LuDownload, LuMail, LuPhone, LuSparkles, LuUserPlus } from 'react-icons/lu';
 
 const selectStyle = {
     padding: '0.5rem',
@@ -35,6 +37,7 @@ export default function Index({
     canSeeDepartment = false,
 }) {
     const [creating, setCreating] = useState(false);
+    const [panel, setPanel] = useState(null);
 
     const apply = (patch) => {
         router.get(route('crm.contacts.index'), { ...filters, ...patch, page: undefined }, {
@@ -140,13 +143,29 @@ export default function Index({
                             <Button size="sm" variant="outline"><LuDownload /> В телефон</Button>
                         </a>
                         {can.create && (
-                            <Button size="sm" onClick={() => setCreating((v) => !v)}><LuUserPlus /> Новый контакт</Button>
+                            <>
+                                <Button size="sm" variant="outline" onClick={() => setPanel(panel === 'seed' ? null : 'seed')}>
+                                    <LuSparkles /> Собрать
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => setPanel(panel === 'dupes' ? null : 'dupes')}>
+                                    <LuCopy /> Дубли
+                                </Button>
+                                <Button size="sm" onClick={() => setCreating((v) => !v)}><LuUserPlus /> Новый контакт</Button>
+                            </>
                         )}
                     </HStack>
                 )}
             />
 
             <VStack align="stretch" gap={4}>
+                {panel === 'seed' && (
+                    <SeedWizard onDone={() => { setPanel(null); router.reload(); }} onCancel={() => setPanel(null)} />
+                )}
+
+                {panel === 'dupes' && (
+                    <DuplicatesPanel onDone={() => router.reload()} onCancel={() => setPanel(null)} />
+                )}
+
                 {creating && (
                     <Box borderWidth="1px" borderRadius="lg" p={4}>
                         <ContactForm

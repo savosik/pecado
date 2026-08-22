@@ -6,6 +6,7 @@ use App\Mcp\Tools\Crm\CrmAddComment;
 use App\Mcp\Tools\Crm\CrmCall;
 use App\Mcp\Tools\Crm\CrmCatalog;
 use App\Mcp\Tools\Crm\CrmClientCard;
+use App\Mcp\Tools\Crm\CrmContactLookup;
 use App\Mcp\Tools\Crm\CrmCreateTask;
 use App\Mcp\Tools\Crm\CrmDescribe;
 use App\Mcp\Tools\Crm\CrmPlanProgress;
@@ -86,6 +87,7 @@ class CrmServer extends Server
         CrmDescribe::class,
         CrmCall::class,
         CrmClientCard::class,
+        CrmContactLookup::class,
         CrmPlanProgress::class,
         CrmAddComment::class,
         CrmCreateTask::class,

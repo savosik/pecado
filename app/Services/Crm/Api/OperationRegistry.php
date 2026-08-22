@@ -2,6 +2,7 @@
 
 namespace App\Services\Crm\Api;
 
+use App\Enums\ContactRole;
 use App\Enums\Crm\CallDirection;
 use App\Enums\Crm\CallResult;
 use App\Enums\Crm\ClientLifecycleStatus;
@@ -17,6 +18,7 @@ use App\Services\Crm\Api\Operations\AttachmentOperations;
 use App\Services\Crm\Api\Operations\CallOperations;
 use App\Services\Crm\Api\Operations\ClientOperations;
 use App\Services\Crm\Api\Operations\CommentOperations;
+use App\Services\Crm\Api\Operations\ContactOperations;
 use App\Services\Crm\Api\Operations\EmailOperations;
 use App\Services\Crm\Api\Operations\OpportunityOperations;
 use App\Services\Crm\Api\Operations\PaymentOperations;
@@ -72,6 +74,7 @@ class OperationRegistry
             $this->tasks(),
             $this->calls(),
             $this->emails(),
+            $this->contacts(),
             $this->plans(),
             $this->opportunities(),
             $this->attachments(),
@@ -827,6 +830,137 @@ class OperationRegistry
                 ],
                 handler: [CallOperations::class, 'create'],
                 mutating: true,
+            ),
+        ];
+    }
+
+    /**
+     * Справочник людей.
+     *
+     * Ключевая операция — `contact.by_email`: разбирая письмо, агент спрашивает
+     * «чей это адрес», и при промахе заводит карточку. Со следующего письма
+     * подшивка к человеку идёт сама.
+     *
+     * @return list<Operation>
+     */
+    private function contacts(): array
+    {
+        return [
+            new Operation(
+                id: 'contact.list',
+                section: 'contacts',
+                method: 'GET',
+                uri: 'contacts',
+                permission: 'crm-contacts.view',
+                summary: 'Справочник контактных лиц',
+                description: 'Поиск по ФИО, телефону, почте и должности. Телефон ищется по цифрам, '
+                    .'поэтому «8 912…» и «+7 912…» находят одного и того же человека.',
+                params: [
+                    Param::string('search', 'ФИО, телефон, почта или должность'),
+                    Param::string('role', 'Роль при сущности', enum: ContactRole::values()),
+                    Param::integer('client_id', 'Контакты одного партнёра', rules: ['min:1']),
+                    Param::string('activity', 'Активность', enum: ['active', 'inactive', 'all']),
+                    Param::integer('per_page', 'Записей на странице (до 100)', rules: ['min:1', 'max:100']),
+                ],
+                handler: [ContactOperations::class, 'list'],
+            ),
+            new Operation(
+                id: 'contact.show',
+                section: 'contacts',
+                method: 'GET',
+                uri: 'contacts/{contact}',
+                permission: 'crm-contacts.view',
+                summary: 'Карточка человека',
+                description: 'Контакт вне скоупа актора даёт 404.',
+                params: [
+                    Param::integer('contact', 'Идентификатор контакта', required: true, rules: ['min:1']),
+                ],
+                handler: [ContactOperations::class, 'show'],
+            ),
+            new Operation(
+                id: 'contact.by_email',
+                section: 'contacts',
+                method: 'GET',
+                uri: 'contacts/by-email',
+                permission: 'crm-contacts.view',
+                summary: 'Чей это адрес',
+                description: 'Отдаёт карточку человека и партнёра. Партнёр находится и без карточки — '
+                    .'по аккаунту или почте юрлица, поэтому пустой ответ по контакту не значит «клиент неизвестен».',
+                params: [
+                    Param::string('email', 'Адрес электронной почты', required: true, rules: ['max:191']),
+                ],
+                handler: [ContactOperations::class, 'byEmail'],
+            ),
+            new Operation(
+                id: 'contact.create',
+                section: 'contacts',
+                method: 'POST',
+                uri: 'contacts',
+                permission: 'crm-contacts.create',
+                summary: 'Завести человека',
+                description: 'Партнёр вне скоупа актора молча не проставляется: приписать человека '
+                    .'чужому клиенту нельзя, даже зная его идентификатор.',
+                params: [
+                    Param::string('full_name', 'ФИО', required: true, rules: ['max:191']),
+                    Param::string('greeting_name', 'Как обращаться', rules: ['max:100']),
+                    Param::string('position', 'Должность', rules: ['max:191']),
+                    Param::string('email', 'Почта', rules: ['email', 'max:191']),
+                    Param::string('phone', 'Телефон', rules: ['max:50']),
+                    Param::string('telegram', 'Telegram', rules: ['max:100']),
+                    Param::integer('client_id', 'Партнёр, к которому относится человек', rules: ['min:1']),
+                ],
+                handler: [ContactOperations::class, 'create'],
+                mutating: true,
+            ),
+            new Operation(
+                id: 'contact.update',
+                section: 'contacts',
+                method: 'PATCH',
+                uri: 'contacts/{contact}',
+                permission: 'crm-contacts.edit',
+                summary: 'Дополнить карточку',
+                description: 'Обычный путь после разговора: узнали новый телефон — дописали.',
+                params: [
+                    Param::integer('contact', 'Идентификатор контакта', required: true, rules: ['min:1']),
+                    Param::string('full_name', 'ФИО', rules: ['max:191']),
+                    Param::string('greeting_name', 'Как обращаться', rules: ['max:100']),
+                    Param::string('position', 'Должность', rules: ['max:191']),
+                    Param::string('email', 'Почта', rules: ['email', 'max:191']),
+                    Param::string('phone', 'Телефон', rules: ['max:50']),
+                    Param::string('telegram', 'Telegram', rules: ['max:100']),
+                ],
+                handler: [ContactOperations::class, 'update'],
+                mutating: true,
+            ),
+            new Operation(
+                id: 'contact.link',
+                section: 'contacts',
+                method: 'POST',
+                uri: 'contacts/{contact}/links',
+                permission: 'crm-contacts.edit',
+                summary: 'Привязать человека к сущности с ролью',
+                description: 'Привязка к чужой сущности даёт 404.',
+                params: [
+                    Param::integer('contact', 'Идентификатор контакта', required: true, rules: ['min:1']),
+                    Param::string('entity_type', 'Тип сущности', required: true, enum: CrmEntityMap::contactLinkableTypes()),
+                    Param::integer('entity_id', 'Идентификатор сущности', required: true, rules: ['min:1']),
+                    Param::string('role', 'Роль', required: true, enum: ContactRole::values()),
+                ],
+                handler: [ContactOperations::class, 'link'],
+                mutating: true,
+            ),
+            new Operation(
+                id: 'client.contacts',
+                section: 'contacts',
+                method: 'GET',
+                uri: 'clients/{client}/contacts',
+                permission: 'crm-contacts.view',
+                summary: 'Адресная книга партнёра',
+                description: 'Все люди партнёра, включая привязанных к его юрлицам.',
+                params: [
+                    Param::integer('client', 'Идентификатор партнёра', required: true, rules: ['min:1']),
+                ],
+                handler: [ContactOperations::class, 'forClient'],
             ),
         ];
     }

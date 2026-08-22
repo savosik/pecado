@@ -11,6 +11,7 @@ use App\Http\Requests\Crm\UpdateContactRequest;
 use App\Models\Contact;
 use App\Models\ContactLink;
 use App\Models\User;
+use App\Services\Contacts\ContactDeduplicator;
 use App\Services\Contacts\ContactSeeder;
 use App\Services\Contacts\VCardExporter;
 use App\Services\Crm\ContactLinkService;
@@ -224,6 +225,82 @@ class ContactController extends CrmController
         return response()->json([
             'created' => $created,
             'message' => 'Заведено карточек: '.$created,
+        ]);
+    }
+
+    /**
+     * Похожие карточки — подсказка при создании.
+     *
+     * Подсказка, а не запрет: однофамильцы бывают, и решать должен человек.
+     */
+    public function duplicates(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('viewAny', Contact::class);
+
+        $validated = $request->validate([
+            'email' => ['nullable', 'string', 'max:191'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'full_name' => ['nullable', 'string', 'max:191'],
+            'client_id' => ['nullable', 'integer'],
+        ]);
+
+        $similar = app(ContactDeduplicator::class)
+            ->similarTo(
+                $validated['email'] ?? null,
+                $validated['phone'] ?? null,
+                $validated['full_name'] ?? null,
+                $this->resolveClientId($actor, $validated['client_id'] ?? null),
+            )
+            ->filter(fn (Contact $contact): bool => $actor->can('view', $contact));
+
+        return response()->json([
+            'data' => $similar->map(fn (Contact $contact): array => $this->contacts->row($contact))->values()->all(),
+        ]);
+    }
+
+    /**
+     * Экран «Возможные дубли».
+     */
+    public function duplicatePairs(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('viewAny', Contact::class);
+
+        $pairs = app(ContactDeduplicator::class)->pairs($actor);
+
+        return response()->json([
+            'data' => $pairs->map(fn (array $group): array => [
+                'winner' => $this->contacts->row($group['winner']),
+                'duplicates' => $group['duplicates']
+                    ->map(fn (Contact $contact): array => $this->contacts->row($contact))
+                    ->all(),
+            ])->all(),
+        ]);
+    }
+
+    /**
+     * Слить дубль в победителя.
+     */
+    public function merge(Request $request, Contact $contact): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        $this->assertVisible($actor, $contact);
+
+        $validated = $request->validate([
+            'duplicate_id' => ['required', 'integer', 'different:'.$contact->getKey()],
+        ], [
+            'duplicate_id.required' => 'Укажите, какую карточку слить.',
+        ]);
+
+        $duplicate = Contact::query()->findOrFail((int) $validated['duplicate_id']);
+        $this->assertVisible($actor, $duplicate);
+
+        app(ContactDeduplicator::class)->merge($contact, $duplicate);
+
+        return response()->json([
+            'contact' => $this->payload($contact->fresh(['client', 'links.subject'])),
+            'message' => 'Карточки слиты',
         ]);
     }
 

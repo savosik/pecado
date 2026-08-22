@@ -132,6 +132,10 @@ class Contact extends Model implements HasMedia
 
     /**
      * Только цифры номера — то, по чему ищут и сверяют дубли.
+     *
+     * Российская восьмёрка приводится к семёрке: «8 912 …» и «+7 912 …» — один
+     * и тот же номер, и люди пишут то так, то так. Без этого один человек
+     * оказался бы в базе дважды, и слияние его бы не нашло.
      */
     public static function digitsOf(?string $phone): ?string
     {
@@ -141,7 +145,15 @@ class Contact extends Model implements HasMedia
 
         $digits = preg_replace('/\D+/', '', $phone) ?? '';
 
-        return $digits === '' ? null : mb_substr($digits, -20);
+        if ($digits === '') {
+            return null;
+        }
+
+        if (mb_strlen($digits) === 11 && str_starts_with($digits, '8')) {
+            $digits = '7'.mb_substr($digits, 1);
+        }
+
+        return mb_substr($digits, -20);
     }
 
     public function links(): HasMany

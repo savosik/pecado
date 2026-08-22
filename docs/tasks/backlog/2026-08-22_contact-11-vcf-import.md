@@ -3,7 +3,7 @@
 **Приоритет:** низкий
 **Создано:** 2026-08-22
 **Эпик:** [contact-00](2026-08-22_contact-00-epic.md)
-**Зависимости:** [contact-04](../review/2026-08-22_contact-04-vcf-export.md), [contact-09](2026-08-22_contact-09-dedupe-merge.md)
+**Зависимости:** [contact-04](../review/2026-08-22_contact-04-vcf-export.md), [contact-09](../review/2026-08-22_contact-09-dedupe-merge.md)
 **Оценка:** ~2 дня
 
 ## Описание
@@ -22,7 +22,7 @@ Android-экспортов отдают quoted-printable поверх windows-12
 
 Экран «что приедет» до записи: сколько карточек в файле, сколько новых, сколько совпадает
 с имеющимися и по какому признаку. Разрешение конфликтов — через `ContactDeduplicator`
-из [contact-09](2026-08-22_contact-09-dedupe-merge.md).
+из [contact-09](../review/2026-08-22_contact-09-dedupe-merge.md).
 
 `UID` вида `pecado-contact-{id}` распознаётся как «уже наш» — такая карточка обновляется,
 а не дублируется. Именно ради этого `UID` проставляется при выгрузке.
