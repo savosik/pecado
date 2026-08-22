@@ -96,9 +96,16 @@ class MailRuleService
         $operators = $this->operatorLabels();
 
         $parts = array_map(function (array $leaf) use ($labels, $operators): string {
-            $field = $labels[$leaf['field']] ?? $leaf['field'];
             $op = $operators[$leaf['op']] ?? $leaf['op'];
             $value = is_array($leaf['value']) ? implode(', ', $leaf['value']) : (string) $leaf['value'];
+
+            // У меток название поля не печатаем: «Метка есть метка просрочка»
+            // читается как ошибка, хотя условие верное.
+            if ($leaf['field'] === 'tag') {
+                return trim($op.' '.$value);
+            }
+
+            $field = $labels[$leaf['field']] ?? $leaf['field'];
 
             return trim($field.' '.$op.' '.$value);
         }, $form['conditions']);
@@ -187,7 +194,7 @@ class MailRuleService
     }
 
     /**
-     * Подобрать письма, которые уже лежат «Мимо фильтров».
+     * Подобрать письма, которые ещё не ушли, — и «Мимо фильтров», и черновики.
      */
     public function reapply(CrmMailRule $rule): int
     {
@@ -195,7 +202,7 @@ class MailRuleService
             return 0;
         }
 
-        return $this->engine->reapplyToUnmatched($rule);
+        return $this->engine->reapplyToPending($rule);
     }
 
     /**

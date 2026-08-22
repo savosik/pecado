@@ -89,27 +89,36 @@ class MailRuleEngine
     }
 
     /**
-     * Пересобрать папку «Мимо фильтров» после появления или правки правила.
+     * Прогнать правило по письмам, которые ещё не ушли.
      *
      * Правило, заведённое сегодня, обязано подобрать вчерашние письма: иначе
      * менеджер настроит фильтр по сводке непойманного и не увидит ни одного
      * письма, ради которого настраивал.
      *
-     * @return int сколько писем перешло в «Черновики»
+     * Смотрим не только «Мимо фильтров», но и «Черновики». Разница неочевидна,
+     * но важна: письмо, которое уже поймало другое правило, лежит в черновиках,
+     * и новое правило его не увидело бы вовсе — а именно так и настраивают,
+     * когда одно письмо должно уйти нескольким адресатам по разным поводам.
+     *
+     * Письма менеджеров не трогаем: получателей там выбрал человек, и дописывать
+     * к ним адреса за его спиной нельзя.
+     *
+     * @return int сколько писем правило подобрало
      */
-    public function reapplyToUnmatched(?CrmMailRule $rule = null): int
+    public function reapplyToPending(?CrmMailRule $rule = null): int
     {
         $retention = (int) config('mail_stream.unmatched_retention_days', 14);
 
         $letters = CrmEmail::query()
-            ->where('status', EmailStatus::UNMATCHED->value)
+            ->where('origin', CrmEmail::ORIGIN_SYSTEM)
+            ->whereIn('status', [EmailStatus::UNMATCHED->value, EmailStatus::DRAFT->value])
             ->where('created_at', '>=', now()->subDays($retention))
             ->with(['client.crmProfile'])
             ->latest('id')
             ->limit(1000)
             ->get();
 
-        $moved = 0;
+        $picked = 0;
 
         foreach ($letters as $letter) {
             if ($rule !== null && ! $this->matcher->matches($rule, $letter)) {
@@ -117,11 +126,11 @@ class MailRuleEngine
             }
 
             if ($this->apply($letter) !== []) {
-                $moved++;
+                $picked++;
             }
         }
 
-        return $moved;
+        return $picked;
     }
 
     /**

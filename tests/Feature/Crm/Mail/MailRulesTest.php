@@ -152,11 +152,54 @@ class MailRulesTest extends TestCase
 
         $rule = CrmMailRule::factory()->byTag('акт-сверки')->to(['buh@romashka.ru'])->create();
 
-        $moved = app(MailRuleEngine::class)->reapplyToUnmatched($rule);
+        $moved = app(MailRuleEngine::class)->reapplyToPending($rule);
 
         $this->assertSame(1, $moved);
         $this->assertSame(EmailStatus::DRAFT, $letter->refresh()->status);
         $this->assertSame(['buh@romashka.ru'], $letter->to);
+    }
+
+    #[Test]
+    public function second_rule_picks_up_a_letter_already_claimed_by_the_first(): void
+    {
+        // Так и настраивают: одно правило шлёт всё по контрагенту директору,
+        // второе — только просрочку бухгалтеру. Второе правило заводится позже,
+        // когда письмо уже лежит в черновиках, и обязано его увидеть.
+        $letter = $this->documentLetter();
+
+        $first = CrmMailRule::factory()->byTag('документы')->to(['dir@romashka.ru'])->create();
+        app(MailRuleEngine::class)->reapplyToPending($first);
+
+        $this->assertSame(EmailStatus::DRAFT, $letter->refresh()->status);
+        $this->assertSame(['dir@romashka.ru'], $letter->to);
+
+        $second = CrmMailRule::factory()->byTag('акт-сверки')->to(['buh@romashka.ru'])->create();
+        $picked = app(MailRuleEngine::class)->reapplyToPending($second);
+
+        $this->assertSame(1, $picked);
+        $this->assertSame(['dir@romashka.ru', 'buh@romashka.ru'], $letter->refresh()->to);
+        $this->assertSame(1, $second->refresh()->matched_count);
+    }
+
+    #[Test]
+    public function manual_letter_keeps_the_recipients_a_human_chose(): void
+    {
+        // Правило не дописывает адреса в письмо менеджера за его спиной.
+        $order = \App\Models\Order::factory()->create(['user_id' => $this->client->id]);
+
+        $letter = app(\App\Services\Crm\CrmEmailService::class)->createDraft(
+            $this->manager,
+            ['to' => ['client@example.com'], 'subject' => 'Акт сверки', 'body_html' => '<p>Здравствуйте</p>'],
+            $order,
+        );
+
+        $rule = CrmMailRule::factory()->to(['dir@romashka.ru'])->create([
+            'conditions' => ['all' => [['field' => 'subject', 'op' => 'contains', 'value' => 'Акт']]],
+        ]);
+
+        app(MailRuleEngine::class)->reapplyToPending($rule);
+
+        $this->assertSame(['client@example.com'], $letter->refresh()->to);
     }
 
     #[Test]
@@ -186,7 +229,9 @@ class MailRulesTest extends TestCase
 
         $response->assertCreated()
             ->assertJsonPath('rule.name', 'Акты Афониной')
-            ->assertJsonPath('rule.conditions_text', 'Метка есть метка акт-сверки');
+            // Пересказ читается по-русски: «Метка есть метка …» выглядело
+            // как ошибка, хотя условие было верным.
+            ->assertJsonPath('rule.conditions_text', 'есть метка акт-сверки');
 
         $this->assertSame(1, CrmMailRule::query()->count());
     }
