@@ -11,6 +11,7 @@ use App\Http\Requests\Crm\UpdateContactRequest;
 use App\Models\Contact;
 use App\Models\ContactLink;
 use App\Models\User;
+use App\Services\Contacts\ContactSeeder;
 use App\Services\Contacts\VCardExporter;
 use App\Services\Crm\ContactLinkService;
 use App\Services\Crm\ContactListService;
@@ -173,6 +174,57 @@ class ContactController extends CrmController
             ->get();
 
         return app(VCardExporter::class)->many($contacts, $request->boolean('photos'));
+    }
+
+    /**
+     * Кандидаты в справочник из данных, которые в базе уже есть.
+     *
+     * Подтверждает менеджер, а не автоматика: часть почт контрагентов — общие
+     * ящики (info@, zakaz@), и человека за ними нет. Отличить может только тот,
+     * кто с этой компанией работает.
+     */
+    public function candidates(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('create', Contact::class);
+
+        $validated = $request->validate([
+            'client_id' => ['nullable', 'integer'],
+        ]);
+
+        $clientId = $this->resolveClientId($actor, $validated['client_id'] ?? null);
+
+        $candidates = app(ContactSeeder::class)
+            ->candidates($clientId, 300)
+            // Показываем только тех, чей партнёр актору виден: мастер не повод
+            // увидеть чужую базу.
+            ->filter(fn (array $row): bool => $this->clientVisible($actor, $row['client_id']))
+            ->values();
+
+        return response()->json([
+            'data' => $candidates->all(),
+            'total' => $candidates->count(),
+        ]);
+    }
+
+    public function acceptCandidates(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('create', Contact::class);
+
+        $validated = $request->validate([
+            'emails' => ['required', 'array', 'min:1', 'max:300'],
+            'emails.*' => ['required', 'string'],
+        ], [
+            'emails.required' => 'Отметьте хотя бы одного кандидата.',
+        ]);
+
+        $created = app(ContactSeeder::class)->accept($validated['emails'], $actor);
+
+        return response()->json([
+            'created' => $created,
+            'message' => 'Заведено карточек: '.$created,
+        ]);
     }
 
     public function store(StoreContactRequest $request): JsonResponse
@@ -344,6 +396,15 @@ class ContactController extends CrmController
     private function assertVisible(User $actor, Contact $contact): void
     {
         abort_unless($actor->can('view', $contact), 404);
+    }
+
+    private function clientVisible(User $actor, ?int $clientId): bool
+    {
+        if ($clientId === null) {
+            return $actor->can('crm-clients-all.view');
+        }
+
+        return User::query()->visibleInCrm($actor)->whereKey($clientId)->exists();
     }
 
     /**

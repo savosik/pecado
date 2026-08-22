@@ -389,6 +389,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
 
     Route::middleware('permission:crm-contacts.create')->group(function () {
         Route::post('/contacts', [ContactController::class, 'store'])->name('contacts.store');
+        // Мастер наполнения: кандидаты из данных, которые в базе уже есть.
+        Route::get('/contacts/candidates', [ContactController::class, 'candidates'])->name('contacts.candidates');
+        Route::post('/contacts/candidates', [ContactController::class, 'acceptCandidates'])->name('contacts.candidates.accept');
     });
 
     Route::middleware('permission:crm-contacts.edit')->group(function () {

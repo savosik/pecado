@@ -17,6 +17,7 @@ import ClientFeed from '@/Crm/Components/Feed/ClientFeed';
 import ClientDocuments from '@/Crm/Components/ClientDocuments';
 import CommentThread from '@/Crm/Components/CommentThread';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
+import ContactsPanel from '@/Crm/Components/ContactsPanel';
 import VoiceNotes from '@/Crm/Components/VoiceNotes';
 import ClientProfileForm from '@/Crm/Components/ClientProfileForm';
 import ClientLifecyclePanel from '@/Crm/Components/ClientLifecyclePanel';
@@ -54,6 +55,7 @@ export default function Show() {
     const canViewProfile = can('crm-profile.view') && !!profile;
     const canViewComments = can('crm-comments.view');
     const canViewFiles = can('crm-attachments.view');
+    const canViewContacts = can('crm-contacts.view');
     const canViewTasks = can('crm-tasks.view');
     const [composeOpen, setComposeOpen] = useState(false);
     const [kindOpen, setKindOpen] = useState(false);
@@ -227,7 +229,7 @@ export default function Show() {
                     </AccordionItem>
                 </AccordionRoot>
 
-                {(canViewComments || canViewFiles || canViewTasks || canSeeContractors) && (
+                {(canViewComments || canViewFiles || canViewTasks || canSeeContractors || canViewContacts) && (
                     <Card.Root>
                         <Card.Body>
                             {/* lazyMount без unmountOnExit: лента держит позицию скролла
@@ -247,6 +249,7 @@ export default function Show() {
                                     {canViewComments && <Tabs.Trigger value="orders">Заказы</Tabs.Trigger>}
                                     {canViewComments && <Tabs.Trigger value="shipments">Реализации</Tabs.Trigger>}
                                     {canViewFiles && <Tabs.Trigger value="files">Файлы</Tabs.Trigger>}
+                                    {canViewContacts && <Tabs.Trigger value="contacts">Контакты</Tabs.Trigger>}
                                 </Tabs.List>
 
                                 {canViewComments && (
@@ -322,6 +325,17 @@ export default function Show() {
                                             entityId={client.id}
                                             canUpload={can('crm-attachments.create')}
                                             label="Файлы по партнёру"
+                                        />
+                                    </Tabs.Content>
+                                )}
+
+                                {canViewContacts && (
+                                    <Tabs.Content value="contacts">
+                                        <ContactsPanel
+                                            entityType="client"
+                                            entityId={client.id}
+                                            canEdit={can('crm-contacts.edit')}
+                                            canCreate={can('crm-contacts.create')}
                                         />
                                     </Tabs.Content>
                                 )}
