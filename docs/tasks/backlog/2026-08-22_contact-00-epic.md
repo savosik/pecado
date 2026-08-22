@@ -74,9 +74,9 @@ email**. День рождения ЛПР некуда положить. Выг�
 | [contact-01](../review/2026-08-22_contact-01-model.md) | Таблицы, модели, перечисления, права |
 | [contact-02](../review/2026-08-22_contact-02-section.md) | Раздел `/crm/contacts` с пунктом меню |
 | [contact-03](../review/2026-08-22_contact-03-panel.md) | Врезка на карточках партнёра и контрагента |
-| [contact-04](2026-08-22_contact-04-vcf-export.md) | Выгрузка в телефон (.vcf) |
-| [contact-05](2026-08-22_contact-05-cabinet.md) | Кабинет партнёра |
-| [contact-06](2026-08-22_contact-06-mail-addressbook.md) | Письма цепляются к карточке человека |
+| [contact-04](../review/2026-08-22_contact-04-vcf-export.md) | Выгрузка в телефон (.vcf) |
+| [contact-05](../review/2026-08-22_contact-05-cabinet.md) | Кабинет партнёра |
+| [contact-06](../review/2026-08-22_contact-06-mail-addressbook.md) | Письма цепляются к карточке человека |
 
 ### Волна 2 — наполнение и уборка
 

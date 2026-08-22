@@ -54,6 +54,7 @@ class CrmEmail extends Model implements HasMedia
     protected $fillable = [
         'user_id',
         'client_user_id',
+        'contact_id',
         'origin',
         'origin_event',
         'origin_key',
@@ -140,6 +141,15 @@ class CrmEmail extends Model implements HasMedia
     public function deliveries(): HasMany
     {
         return $this->hasMany(CrmEmailDelivery::class, 'crm_email_id');
+    }
+
+    /**
+     * Человек, которому адресовано письмо. Благодаря ему переписка видна
+     * не только в ленте партнёра, но и в карточке конкретного бухгалтера.
+     */
+    public function contact(): BelongsTo
+    {
+        return $this->belongsTo(Contact::class);
     }
 
     public function hits(): HasMany

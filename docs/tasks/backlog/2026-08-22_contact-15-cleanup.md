@@ -34,7 +34,7 @@
 ## Заодно
 
 - Удалить парсинг анкет из `PartnerAddressBook`, если он не удалён в
-  [contact-06](2026-08-22_contact-06-mail-addressbook.md).
+  [contact-06](../review/2026-08-22_contact-06-mail-addressbook.md).
 - `php artisan bi:sync-grants` — перегенерация грантов; убедиться, что появилась вьюха по контактам
   и не осталось протухшей `v_client_contacts` от снесённой адресной книги.
 

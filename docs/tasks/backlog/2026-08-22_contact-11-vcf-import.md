@@ -3,7 +3,7 @@
 **Приоритет:** низкий
 **Создано:** 2026-08-22
 **Эпик:** [contact-00](2026-08-22_contact-00-epic.md)
-**Зависимости:** [contact-04](2026-08-22_contact-04-vcf-export.md), [contact-09](2026-08-22_contact-09-dedupe-merge.md)
+**Зависимости:** [contact-04](../review/2026-08-22_contact-04-vcf-export.md), [contact-09](2026-08-22_contact-09-dedupe-merge.md)
 **Оценка:** ~2 дня
 
 ## Описание

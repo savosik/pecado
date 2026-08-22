@@ -77,15 +77,26 @@ class CrmEmailService
         $email->save();
 
         // Письмо на адрес, который принадлежит партнёру (бухгалтеру, директору,
-        // закупщику), подшивается к его карточке. Иначе переписка с живым
-        // человеком висела бы письмом «в никуда», а в ленте партнёра её бы
-        // не было — при том что это и есть его переписка.
+        // закупщику), подшивается и к его карточке, и к карточке самого человека.
+        // Иначе переписка с живым человеком висела бы письмом «в никуда».
+        $book = app(PartnerAddressBook::class);
+        $contact = $book->resolveAnyContact($email->to ?? []);
+        $changes = [];
+
+        if ($contact !== null) {
+            $changes['contact_id'] = $contact->getKey();
+        }
+
         if ($email->client_user_id === null) {
-            $clientId = app(PartnerAddressBook::class)->resolveAny($email->to ?? []);
+            $clientId = $contact?->client_user_id ?? $book->resolveAny($email->to ?? []);
 
             if ($clientId !== null) {
-                $email->forceFill(['client_user_id' => $clientId])->save();
+                $changes['client_user_id'] = $clientId;
             }
+        }
+
+        if ($changes !== []) {
+            $email->forceFill($changes)->save();
         }
 
         // Письмо менеджера тоже часть общего потока: правило «всё по этому

@@ -99,9 +99,11 @@ class LogSentEmail
 
             // Письмо бухгалтеру партнёра уходит на его личный ящик, и по адресу
             // получателя пользователя сайта не найти. Но адрес известен —
-            // он записан в карточке контрагента или в анкете клиента, и письмо
-            // должно попасть в ленту того партнёра, о котором оно.
-            $fallbackClientId ??= app(PartnerAddressBook::class)->resolve($recipient);
+            // он есть в справочнике людей, — и письмо должно попасть и в ленту
+            // партнёра, и в карточку самого человека.
+            $book = app(PartnerAddressBook::class);
+            $contact = $book->resolveContact($recipient);
+            $fallbackClientId ??= $contact?->client_user_id ?? $book->resolve($recipient);
 
             SentEmail::create([
                 'recipient' => $recipient,
@@ -110,6 +112,7 @@ class LogSentEmail
                 'subject' => $this->cut($message->getSubject(), 512),
                 'source' => $source,
                 'client_user_id' => $clientId ?? $fallbackClientId,
+                'contact_id' => $contact?->getKey(),
                 'recipient_user_id' => $user?->getKey(),
                 'message_id' => $this->cut($messageId, 512),
                 'sent_at' => $sentAt,

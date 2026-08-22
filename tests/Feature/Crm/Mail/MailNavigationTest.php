@@ -184,6 +184,53 @@ class MailNavigationTest extends TestCase
     }
 
     #[Test]
+    public function letter_lands_in_the_contact_card_too(): void
+    {
+        // Ради этого справочник и связан с почтой: раньше письмо бухгалтеру
+        // подшивалось к партнёру, и открыть карточку человека было нельзя.
+        $contact = \App\Models\Contact::factory()
+            ->forClient($this->client)
+            ->create(['email' => 'buh@romashka.ru']);
+
+        $letter = app(CrmEmailService::class)->createDraft(
+            $this->manager,
+            ['to' => ['buh@romashka.ru'], 'subject' => 'Акт сверки', 'body_html' => '<p>Здравствуйте</p>'],
+            null,
+        );
+
+        $this->assertSame($this->client->id, $letter->client_user_id);
+        $this->assertSame($contact->id, $letter->contact_id);
+    }
+
+    #[Test]
+    public function directory_wins_over_the_contractor_email(): void
+    {
+        // Справочник — первый источник: там адрес заведён осознанно и привязан
+        // к человеку, а почта юрлица выведена из реквизитов.
+        $other = User::factory()->create();
+        \App\Models\Company::factory()->create(['user_id' => $other->id, 'email' => 'shared@romashka.ru']);
+
+        \App\Models\Contact::factory()->forClient($this->client)->create(['email' => 'shared@romashka.ru']);
+
+        $this->assertSame(
+            $this->client->id,
+            app(PartnerAddressBook::class)->resolve('shared@romashka.ru'),
+        );
+    }
+
+    #[Test]
+    public function retired_contact_stops_resolving(): void
+    {
+        // Уволившийся не должен получать письма и подтягивать к себе переписку.
+        \App\Models\Contact::factory()
+            ->forClient($this->client)
+            ->inactive()
+            ->create(['email' => 'former@romashka.ru']);
+
+        $this->assertNull(app(PartnerAddressBook::class)->resolveContact('former@romashka.ru'));
+    }
+
+    #[Test]
     public function similar_address_does_not_bind_a_foreign_letter(): void
     {
         // Догадки здесь означали бы чужую переписку в чужой карточке.

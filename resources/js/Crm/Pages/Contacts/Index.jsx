@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import ContactForm from '@/Crm/Components/ContactForm';
-import { LuCake, LuMail, LuPhone, LuUserPlus } from 'react-icons/lu';
+import { LuCake, LuDownload, LuMail, LuPhone, LuUserPlus } from 'react-icons/lu';
 
 const selectStyle = {
     padding: '0.5rem',
@@ -133,9 +133,17 @@ export default function Index({
             <PageHeader
                 title="Контакты"
                 description="Люди партнёров и контрагентов: кто, кем приходится и как связаться"
-                actions={can.create
-                    ? <Button size="sm" onClick={() => setCreating((v) => !v)}><LuUserPlus /> Новый контакт</Button>
-                    : null}
+                actions={(
+                    <HStack gap={2}>
+                        {/* Выгрузка ровно того, что видно на экране: фильтры те же. */}
+                        <a href={route('crm.contacts.vcf', filters)}>
+                            <Button size="sm" variant="outline"><LuDownload /> В телефон</Button>
+                        </a>
+                        {can.create && (
+                            <Button size="sm" onClick={() => setCreating((v) => !v)}><LuUserPlus /> Новый контакт</Button>
+                        )}
+                    </HStack>
+                )}
             />
 
             <VStack align="stretch" gap={4}>

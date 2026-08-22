@@ -3,7 +3,7 @@
 **Приоритет:** средний
 **Создано:** 2026-08-22
 **Эпик:** [contact-00](2026-08-22_contact-00-epic.md)
-**Зависимости:** [contact-06](2026-08-22_contact-06-mail-addressbook.md)
+**Зависимости:** [contact-06](../review/2026-08-22_contact-06-mail-addressbook.md)
 **Оценка:** ~1 день
 
 ## Описание

@@ -10,6 +10,7 @@ use App\Http\Controllers\User\CartController;
 use App\Http\Controllers\User\CertificateController;
 use App\Http\Controllers\User\CheckoutController;
 use App\Http\Controllers\User\CompanyController;
+use App\Http\Controllers\User\ContactController as CabinetContactController;
 use App\Http\Controllers\User\DeliveryAddressController;
 use App\Http\Controllers\User\FaqController;
 use App\Http\Controllers\User\FavoriteController;
@@ -183,6 +184,21 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/order-changes', [OrderChangeController::class, 'index'])->name('order-changes.index');
 
     // Delivery Addresses
+    // Контакты партнёра: люди его компании. Свои он правит и удаляет,
+    // заведённые менеджером — правит, но только гасит «больше не работает».
+    Route::get('/contacts', [CabinetContactController::class, 'index'])->name('contacts.index');
+    Route::get('/contacts/list', [CabinetContactController::class, 'list'])->name('contacts.list');
+    Route::get('/contacts/export.vcf', [CabinetContactController::class, 'vcard'])->name('contacts.vcf');
+    Route::post('/contacts', [CabinetContactController::class, 'store'])->name('contacts.store');
+    Route::patch('/contacts/{contact}', [CabinetContactController::class, 'update'])
+        ->name('contacts.update')->whereNumber('contact');
+    Route::post('/contacts/{contact}/avatar', [CabinetContactController::class, 'avatar'])
+        ->name('contacts.avatar')->whereNumber('contact');
+    Route::post('/contacts/{contact}/deactivate', [CabinetContactController::class, 'deactivate'])
+        ->name('contacts.deactivate')->whereNumber('contact');
+    Route::delete('/contacts/{contact}', [CabinetContactController::class, 'destroy'])
+        ->name('contacts.destroy')->whereNumber('contact');
+
     Route::get('/delivery-addresses', [DeliveryAddressController::class, 'index'])->name('delivery-addresses.index');
     Route::get('/delivery-addresses/create', [DeliveryAddressController::class, 'create'])->name('delivery-addresses.create');
     Route::post('/delivery-addresses', [DeliveryAddressController::class, 'store'])->name('delivery-addresses.store');

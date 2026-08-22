@@ -11,6 +11,7 @@ use App\Http\Requests\Crm\UpdateContactRequest;
 use App\Models\Contact;
 use App\Models\ContactLink;
 use App\Models\User;
+use App\Services\Contacts\VCardExporter;
 use App\Services\Crm\ContactLinkService;
 use App\Services\Crm\ContactListService;
 use App\Support\Crm\CrmEntityMap;
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Справочник людей.
@@ -70,6 +72,7 @@ class ContactController extends CrmController
 
         return Inertia::render('Crm/Pages/Contacts/Show', [
             'contact' => $this->payload($contact),
+            'letters' => $this->letters($contact),
             'roles' => ContactRole::options(),
             'channels' => PreferredChannel::options(),
             'linkableTypes' => $this->linkableTypes(),
@@ -137,6 +140,39 @@ class ContactController extends CrmController
                 ->all(),
             'roles' => ContactRole::options(),
         ]);
+    }
+
+    /**
+     * Выгрузка одной карточки в телефон.
+     */
+    public function vcard(Request $request, Contact $contact): StreamedResponse
+    {
+        $this->assertVisible($this->crmActor($request), $contact);
+
+        $contact->load(['client', 'links.subject']);
+
+        return app(VCardExporter::class)->one($contact);
+    }
+
+    /**
+     * Выгрузка текущей выборки списка.
+     *
+     * Отдаём ровно то, что менеджер видит на экране: фильтры те же, что у списка.
+     */
+    public function vcardBatch(Request $request): StreamedResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('viewAny', Contact::class);
+
+        $filters = $this->validateFilters($request);
+        $scope = CrmScope::fromRequest($request, $actor);
+
+        $contacts = $this->contacts
+            ->query($actor, [...$filters, 'scope' => $scope])
+            ->limit(VCardExporter::MAX_CONTACTS)
+            ->get();
+
+        return app(VCardExporter::class)->many($contacts, $request->boolean('photos'));
     }
 
     public function store(StoreContactRequest $request): JsonResponse
@@ -269,6 +305,33 @@ class ContactController extends CrmController
         $this->links->unlink($link);
 
         return response()->json($this->payload($contact->fresh(['client', 'links.subject'])));
+    }
+
+    /**
+     * Переписка с этим человеком.
+     *
+     * Ради этого справочник и связан с почтой: раньше письмо бухгалтеру
+     * подшивалось к партнёру, и открыть карточку человека, чтобы увидеть,
+     * что ему писали, было нельзя.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function letters(Contact $contact): array
+    {
+        return \App\Models\CrmEmail::query()
+            ->where('contact_id', $contact->getKey())
+            ->latest('id')
+            ->limit(20)
+            ->get(['id', 'subject', 'status', 'sent_at', 'created_at', 'to'])
+            ->map(fn ($letter): array => [
+                'id' => (int) $letter->getKey(),
+                'subject' => $letter->subject,
+                'status_label' => $letter->status->label(),
+                'status_color' => $letter->status->color(),
+                'date_label' => ($letter->sent_at ?? $letter->created_at)?->format('d.m.Y H:i'),
+                'url' => route('crm.emails.index', ['email' => $letter->getKey()]),
+            ])
+            ->all();
     }
 
     /**

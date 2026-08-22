@@ -8,7 +8,7 @@ import UserLayout from '../UserLayout';
 import CollapsibleFilterCard from '../Products/filters/CollapsibleFilterCard';
 import {
     LuLayoutDashboard, LuShoppingBag, LuShoppingCart,
-    LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin,
+    LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin, LuContact,
     LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuReceipt, LuLayoutGrid, LuWrench, LuCode,
     LuChartPie, LuMessageSquare, LuArrowRightLeft, LuFileText,
 } from 'react-icons/lu';
@@ -40,6 +40,7 @@ const menuGroups = [
         title: 'Организация',
         items: [
             { href: '/cabinet/companies', label: 'Мои компании', icon: LuBuilding2 },
+            { href: '/cabinet/contacts', label: 'Контакты', icon: LuContact },
             { href: '/cabinet/delivery-addresses', label: 'Адреса доставки', icon: LuMapPin },
         ],
     },

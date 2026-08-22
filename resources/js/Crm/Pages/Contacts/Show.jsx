@@ -11,7 +11,7 @@ import CommentThread from '@/Crm/Components/CommentThread';
 import TaskPanel from '@/Crm/Components/TaskPanel';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
 import { usePermission } from '@/shared/Panel/usePermission';
-import { LuArrowLeft, LuCake, LuPencil, LuTrash2, LuUpload } from 'react-icons/lu';
+import { LuArrowLeft, LuCake, LuDownload, LuPencil, LuTrash2, LuUpload } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 function InfoRow({ label, value }) {
@@ -30,7 +30,7 @@ function InfoRow({ label, value }) {
 /**
  * Карточка человека: кто он, как связаться, кем приходится и что с ним связано.
  */
-export default function Show({ contact, roles = [], channels = [], can = {} }) {
+export default function Show({ contact, letters = [], roles = [], channels = [], can = {} }) {
     const { can: hasPermission } = usePermission();
     const [editing, setEditing] = useState(false);
     const [pendingDelete, setPendingDelete] = useState(false);
@@ -87,7 +87,7 @@ export default function Show({ contact, roles = [], channels = [], can = {} }) {
     const canComment = hasPermission('crm-comments.view');
     const canTasks = hasPermission('crm-tasks.view');
     const canFiles = hasPermission('crm-attachments.view');
-    const defaultTab = canComment ? 'comments' : (canTasks ? 'tasks' : 'files');
+    const defaultTab = canComment ? 'comments' : (canTasks ? 'tasks' : (canFiles ? 'files' : 'letters'));
 
     return (
         <>
@@ -100,6 +100,9 @@ export default function Show({ contact, roles = [], channels = [], can = {} }) {
                         <Link href={route('crm.contacts.index')}>
                             <Button size="sm" variant="outline"><LuArrowLeft /> К списку</Button>
                         </Link>
+                        <a href={route('crm.contacts.vcard', contact.id)}>
+                            <Button size="sm" variant="outline"><LuDownload /> В телефон</Button>
+                        </a>
                         {can.edit && (
                             <Button size="sm" variant="outline" onClick={() => setEditing((v) => !v)}>
                                 <LuPencil /> {editing ? 'Закрыть' : 'Изменить'}
@@ -232,7 +235,7 @@ export default function Show({ contact, roles = [], channels = [], can = {} }) {
                     </Card.Body>
                 </Card.Root>
 
-                {(canComment || canTasks || canFiles) && (
+                {(
                     <Card.Root>
                         <Card.Body>
                             <Tabs.Root defaultValue={defaultTab} lazyMount>
@@ -240,6 +243,7 @@ export default function Show({ contact, roles = [], channels = [], can = {} }) {
                                     {canComment && <Tabs.Trigger value="comments">Комментарии</Tabs.Trigger>}
                                     {canTasks && <Tabs.Trigger value="tasks">Задачи</Tabs.Trigger>}
                                     {canFiles && <Tabs.Trigger value="files">Файлы</Tabs.Trigger>}
+                                    <Tabs.Trigger value="letters">Письма</Tabs.Trigger>
                                 </Tabs.List>
 
                                 {canComment && (
@@ -265,6 +269,25 @@ export default function Show({ contact, roles = [], channels = [], can = {} }) {
                                         />
                                     </Tabs.Content>
                                 )}
+                                <Tabs.Content value="letters">
+                                    {letters.length === 0 ? (
+                                        <Text fontSize="sm" color="fg.muted">
+                                            Этому человеку ещё не писали. Письмо на его адрес подошьётся сюда само.
+                                        </Text>
+                                    ) : (
+                                        <VStack align="stretch" gap={2}>
+                                            {letters.map((letter) => (
+                                                <HStack key={letter.id} justifyContent="space-between" borderWidth="1px" borderRadius="md" p={2}>
+                                                    <VStack align="start" gap={0}>
+                                                        <a href={letter.url}><Text fontSize="sm" fontWeight="600">{letter.subject}</Text></a>
+                                                        <Text fontSize="xs" color="fg.muted">{letter.date_label}</Text>
+                                                    </VStack>
+                                                    <Badge colorPalette={letter.status_color} variant="subtle">{letter.status_label}</Badge>
+                                                </HStack>
+                                            ))}
+                                        </VStack>
+                                    )}
+                                </Tabs.Content>
                             </Tabs.Root>
                         </Card.Body>
                     </Card.Root>

@@ -378,6 +378,10 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     Route::middleware('permission:crm-contacts.view')->group(function () {
         Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.index');
         Route::get('/contacts/for-entity', [ContactController::class, 'forEntity'])->name('contacts.for-entity');
+        Route::get('/contacts/vcf', [ContactController::class, 'vcardBatch'])->name('contacts.vcf');
+        Route::get('/contacts/{contact}/vcf', [ContactController::class, 'vcard'])
+            ->name('contacts.vcard')
+            ->whereNumber('contact');
         Route::get('/contacts/{contact}', [ContactController::class, 'show'])
             ->name('contacts.show')
             ->whereNumber('contact');

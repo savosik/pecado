@@ -19,23 +19,27 @@ class MailRelinkClients extends Command
 {
     protected $signature = 'mail:relink-clients
         {--days=180 : За какой период разбирать}
+        {--contacts : Заодно проставить человека из справочника}
         {--dry-run : Только показать, сколько нашлось}';
 
-    protected $description = 'Связать письма без партнёра с карточками по адресу получателя';
+    protected $description = 'Связать письма с карточками партнёров и людей по адресу получателя';
 
     public function handle(PartnerAddressBook $book): int
     {
         $since = now()->subDays((int) $this->option('days'));
         $dryRun = (bool) $this->option('dry-run');
 
+        $withContacts = (bool) $this->option('contacts');
         $letters = 0;
+        $letterContacts = 0;
 
         CrmEmail::query()
             ->whereNull('client_user_id')
             ->where('created_at', '>=', $since)
             ->chunkById(200, function ($chunk) use ($book, $dryRun, &$letters): void {
                 foreach ($chunk as $letter) {
-                    $clientId = $book->resolveAny((array) $letter->to);
+                    $contact = $book->resolveAnyContact((array) $letter->to);
+                    $clientId = $contact?->client_user_id ?? $book->resolveAny((array) $letter->to);
 
                     if ($clientId === null) {
                         continue;
@@ -44,10 +48,36 @@ class MailRelinkClients extends Command
                     $letters++;
 
                     if (! $dryRun) {
-                        $letter->forceFill(['client_user_id' => $clientId])->save();
+                        $letter->forceFill(array_filter([
+                            'client_user_id' => $clientId,
+                            'contact_id' => $contact?->getKey(),
+                        ]))->save();
                     }
                 }
             });
+
+        // Письмо могло быть подшито к партнёру ещё до появления справочника,
+        // а человека у него нет. Отдельным проходом — по прямой команде.
+        if ($withContacts) {
+            CrmEmail::query()
+                ->whereNull('contact_id')
+                ->where('created_at', '>=', $since)
+                ->chunkById(200, function ($chunk) use ($book, $dryRun, &$letterContacts): void {
+                    foreach ($chunk as $letter) {
+                        $contact = $book->resolveAnyContact((array) $letter->to);
+
+                        if ($contact === null) {
+                            continue;
+                        }
+
+                        $letterContacts++;
+
+                        if (! $dryRun) {
+                            $letter->forceFill(['contact_id' => $contact->getKey()])->save();
+                        }
+                    }
+                });
+        }
 
         $journal = 0;
 
@@ -56,7 +86,8 @@ class MailRelinkClients extends Command
             ->where('sent_at', '>=', $since)
             ->chunkById(500, function ($chunk) use ($book, $dryRun, &$journal): void {
                 foreach ($chunk as $row) {
-                    $clientId = $book->resolve((string) $row->recipient);
+                    $contact = $book->resolveContact((string) $row->recipient);
+                    $clientId = $contact?->client_user_id ?? $book->resolve((string) $row->recipient);
 
                     if ($clientId === null) {
                         continue;
@@ -65,7 +96,10 @@ class MailRelinkClients extends Command
                     $journal++;
 
                     if (! $dryRun) {
-                        $row->forceFill(['client_user_id' => $clientId])->save();
+                        $row->forceFill(array_filter([
+                            'client_user_id' => $clientId,
+                            'contact_id' => $contact?->getKey(),
+                        ]))->save();
                     }
                 }
             });
@@ -73,6 +107,10 @@ class MailRelinkClients extends Command
         $this->info($dryRun ? 'Пробный разбор:' : 'Разбор завершён:');
         $this->line("  писем CRM подшито: {$letters}");
         $this->line("  записей журнала подшито: {$journal}");
+
+        if ($withContacts) {
+            $this->line("  писем связано с человеком: {$letterContacts}");
+        }
 
         return self::SUCCESS;
     }

@@ -29,6 +29,7 @@ class SentEmail extends Model
         'subject',
         'source',
         'client_user_id',
+        'contact_id',
         'recipient_user_id',
         'message_id',
         'sent_at',
