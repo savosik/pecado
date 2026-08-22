@@ -9,7 +9,7 @@ import { Alert } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import RuleForm from '@/Crm/Pages/Emails/components/RuleForm';
-import { LuBan, LuMail, LuPlus, LuTrash2 } from 'react-icons/lu';
+import { LuBan, LuHistory, LuMail, LuPlus, LuTrash2 } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 /**
@@ -27,6 +27,7 @@ export default function Rules({
     autoSendEnabled,
     streamEnabled,
     canManage,
+    applyToOldDays = 14,
     prefillTag = null,
 }) {
     // Переход из сводки «Мимо фильтров»: форма открывается сразу и с набранным
@@ -40,13 +41,26 @@ export default function Rules({
 
     const reload = () => router.reload();
 
-    const saved = (data) => {
+    const saved = () => {
         setEditing(null);
         toastSuccess(
             'Правило сохранено',
-            data?.moved ? `Из «Мимо фильтров» перешло писем: ${data.moved}` : undefined,
+            'Оно ловит письма, которые система соберёт дальше. Чтобы поднять уже собранные — «Применить к старым».',
         );
         reload();
+    };
+
+    const applyToOld = async (rule) => {
+        setBusy(true);
+        try {
+            const res = await axios.post(route('crm.emails.rules.apply-to-old', rule.id));
+            toastSuccess('Готово', res.data?.message);
+            reload();
+        } catch (e) {
+            toastError('Не получилось', e?.response?.data?.message || 'Попробуйте ещё раз.');
+        } finally {
+            setBusy(false);
+        }
     };
 
     const toggle = async (rule) => {
@@ -122,7 +136,8 @@ export default function Rules({
                     <Alert status="info" title="Правил пока нет">
                         Пока правил нет, письма, собранные системой, лежат в папке «Мимо фильтров»
                         и никуда не уходят. Правило — это условие и адреса: «содержит акт-сверки
-                        и ИНН такой-то → отправить бухгалтеру».
+                        и ИНН такой-то → отправить бухгалтеру». Новое правило работает вперёд:
+                        ловит то, что система соберёт после его создания.
                     </Alert>
                 )}
 
@@ -141,7 +156,7 @@ export default function Rules({
                                     {rule.auto_send && (
                                         <Badge colorPalette="purple" variant="subtle">отправляет само</Badge>
                                     )}
-                                    {rule.matched_count === 0 && (
+                                    {rule.catches_nothing && (
                                         <Badge colorPalette="orange" variant="subtle">ничего не поймало</Badge>
                                     )}
                                 </HStack>
@@ -165,6 +180,17 @@ export default function Rules({
                                         disabled={busy}
                                         onCheckedChange={() => toggle(rule)}
                                     />
+                                )}
+                                {canManage && rule.is_active && (
+                                    <Button
+                                        size="xs"
+                                        variant="outline"
+                                        disabled={busy}
+                                        onClick={() => applyToOld(rule)}
+                                        title={`Разобрать письма, собранные за последние ${applyToOldDays} дн. до создания правила`}
+                                    >
+                                        <LuHistory /> Применить к старым
+                                    </Button>
                                 )}
                                 {canManage && (
                                     <Button size="xs" variant="outline" onClick={() => setEditing(rule)}>

@@ -417,6 +417,11 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/emails/rules/{rule}/toggle', [MailRuleController::class, 'toggle'])
             ->name('emails.rules.toggle')
             ->whereNumber('rule');
+        // Разовое действие: правило работает вперёд, а к уже собранным письмам
+        // применяется только по прямой команде.
+        Route::post('/emails/rules/{rule}/apply-to-old', [MailRuleController::class, 'applyToOld'])
+            ->name('emails.rules.apply-to-old')
+            ->whereNumber('rule');
         Route::delete('/emails/rules/{rule}', [MailRuleController::class, 'destroy'])
             ->name('emails.rules.destroy')
             ->whereNumber('rule');

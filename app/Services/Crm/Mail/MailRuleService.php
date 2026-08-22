@@ -176,6 +176,13 @@ class MailRuleService
             'throttle_minutes' => $rule->throttle_minutes,
             'matched_count' => (int) $rule->matched_count,
             'matched_last_month' => $this->matchesLastMonth($rule),
+            // «Ничего не поймало» — почти всегда опечатка в условии. Но у правила,
+            // заведённого пять минут назад, ловить ещё нечего, и пугать этим
+            // менеджера не за что.
+            'catches_nothing' => $rule->matched_count === 0
+                && $rule->created_at !== null
+                && $rule->created_at->lt(now()->subDay()),
+            'created_at_label' => $rule->created_at?->format('d.m.Y H:i'),
             'last_matched_at_label' => $rule->last_matched_at?->format('d.m.Y H:i'),
             'author' => $rule->author?->name,
         ];
@@ -194,15 +201,18 @@ class MailRuleService
     }
 
     /**
-     * Подобрать письма, которые ещё не ушли, — и «Мимо фильтров», и черновики.
+     * Применить правило к письмам, собранным до его создания.
+     *
+     * Только по кнопке. Без неё правило работает вперёд: ловит то, что система
+     * соберёт после его создания, и не поднимает переписку недельной давности.
      */
-    public function reapply(CrmMailRule $rule): int
+    public function applyToOld(CrmMailRule $rule): int
     {
         if (! $rule->is_active) {
             return 0;
         }
 
-        return $this->engine->reapplyToPending($rule);
+        return $this->engine->applyToOld($rule);
     }
 
     /**

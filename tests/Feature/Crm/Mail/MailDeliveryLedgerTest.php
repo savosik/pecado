@@ -111,7 +111,7 @@ class MailDeliveryLedgerTest extends TestCase
         $this->assertSame(EmailStatus::UNMATCHED, $letter->status);
 
         $first = CrmMailRule::factory()->byTag('документы')->to(['dir@romashka.ru'])->create();
-        app(MailRuleEngine::class)->reapplyToPending($first);
+        app(MailRuleEngine::class)->applyToOld($first);
 
         $ledger = app(\App\Services\Crm\Mail\MailDeliveryLedger::class);
         $letter->refresh();
@@ -121,7 +121,7 @@ class MailDeliveryLedgerTest extends TestCase
         $this->assertSame([], $ledger->claim($letter, $letter->to));
 
         $second = CrmMailRule::factory()->byTag('акт-сверки')->to(['buh@romashka.ru'])->create();
-        app(MailRuleEngine::class)->reapplyToPending($second);
+        app(MailRuleEngine::class)->applyToOld($second);
 
         $this->assertSame(['buh@romashka.ru'], $ledger->claim($letter->refresh(), $letter->to));
     }

@@ -44,6 +44,7 @@ class MailRuleController extends CrmController
             'unaryOperators' => MailFieldCatalog::unaryOperators(),
             'tagSuggestions' => app(MailTagBuilder::class)->suggestions(),
             'autoSendEnabled' => (bool) config('mail_stream.autosend'),
+            'applyToOldDays' => (int) config('mail_stream.apply_to_old_days', 14),
             'streamEnabled' => (bool) config('mail_stream.enabled'),
             'canManage' => $actor->can('crm-emails.edit'),
             // Переход из сводки «Мимо фильтров»: форма открывается с уже
@@ -81,14 +82,11 @@ class MailRuleController extends CrmController
         $rule->user_id = (int) $actor->getKey();
         $rule->save();
 
-        // Правило, заведённое сегодня, обязано подобрать вчерашние письма:
-        // иначе менеджер настроит фильтр по сводке непойманного и не увидит
-        // ни одного письма, ради которого настраивал.
-        $moved = $this->rules->reapply($rule);
-
+        // Задним числом ничего не подбираем: правило работает вперёд. Захочет
+        // менеджер поднять уже собранные письма — нажмёт «применить к старым»,
+        // увидев в превью, что именно ловится.
         return response()->json([
             'rule' => $this->rules->payload($rule->refresh()),
-            'moved' => $moved,
         ], 201);
     }
 
@@ -96,11 +94,8 @@ class MailRuleController extends CrmController
     {
         $rule->fill($this->attributes($request))->save();
 
-        $moved = $this->rules->reapply($rule);
-
         return response()->json([
             'rule' => $this->rules->payload($rule->refresh()),
-            'moved' => $moved,
         ]);
     }
 
@@ -109,11 +104,27 @@ class MailRuleController extends CrmController
         $rule->is_active = ! $rule->is_active;
         $rule->save();
 
-        $moved = $this->rules->reapply($rule);
+        return response()->json([
+            'rule' => $this->rules->payload($rule->refresh()),
+        ]);
+    }
+
+    /**
+     * Применить правило к письмам, собранным до его создания.
+     *
+     * Отдельным действием, а не автоматически при сохранении: менеджер видит
+     * в превью, что ловится, и сам решает, надо ли поднимать уже собранное.
+     */
+    public function applyToOld(Request $request, CrmMailRule $rule): JsonResponse
+    {
+        $picked = $this->rules->applyToOld($rule);
 
         return response()->json([
             'rule' => $this->rules->payload($rule->refresh()),
-            'moved' => $moved,
+            'picked' => $picked,
+            'message' => $picked === 0
+                ? 'Среди уже собранных писем под правило не подошло ни одно'
+                : 'Правило применено к письмам: '.$picked,
         ]);
     }
 

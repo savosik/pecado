@@ -29,15 +29,17 @@ class MailRuleEngine
     /**
      * Разобрать письмо: проставить получателей и решить, в какую папку оно ляжет.
      *
+     * @param  CrmMailRule|null  $force  правило, применяемое к письму задним числом
+     *                                   по прямой команде менеджера
      * @return array<int, CrmMailRule> сработавшие правила
      */
-    public function apply(CrmEmail $letter): array
+    public function apply(CrmEmail $letter, ?CrmMailRule $force = null): array
     {
         if ($letter->status === EmailStatus::SENT || $letter->status === EmailStatus::QUEUED) {
             return [];
         }
 
-        $matched = $this->match($letter);
+        $matched = $this->match($letter, $force);
 
         if ($matched === []) {
             // Ручное письмо остаётся черновиком: менеджер написал его сам,
@@ -78,41 +80,41 @@ class MailRuleEngine
     /**
      * Правила, под которые письмо подошло.
      *
+     * Правило работает с момента своего создания: письма, собранные раньше,
+     * оно не трогает. Так менеджер, заводя фильтр, не рассылает задним числом
+     * то, о чём давно забыли, — а если хочет, нажимает «применить к старым»,
+     * и тогда правило приходит сюда через $force.
+     *
      * @return array<int, CrmMailRule>
      */
-    public function match(CrmEmail $letter): array
+    public function match(CrmEmail $letter, ?CrmMailRule $force = null): array
     {
-        return $this->activeRules()
+        return $this->activeRules($letter, $force)
             ->filter(fn (CrmMailRule $rule): bool => $this->matcher->matches($rule, $letter))
             ->values()
             ->all();
     }
 
     /**
-     * Прогнать правило по письмам, которые ещё не ушли.
+     * Применить правило к письмам, собранным до его создания.
      *
-     * Правило, заведённое сегодня, обязано подобрать вчерашние письма: иначе
-     * менеджер настроит фильтр по сводке непойманного и не увидит ни одного
-     * письма, ради которого настраивал.
+     * Только по прямой команде менеджера: он видит в превью, что именно ловится,
+     * и решает, надо ли это разослать. Автоматически такого не происходит —
+     * иначе новый фильтр поднимал бы переписку недельной давности.
      *
-     * Смотрим не только «Мимо фильтров», но и «Черновики». Разница неочевидна,
-     * но важна: письмо, которое уже поймало другое правило, лежит в черновиках,
-     * и новое правило его не увидело бы вовсе — а именно так и настраивают,
-     * когда одно письмо должно уйти нескольким адресатам по разным поводам.
-     *
-     * Письма менеджеров не трогаем: получателей там выбрал человек, и дописывать
-     * к ним адреса за его спиной нельзя.
+     * Отправленных писем не касается: письмо, которое уже ушло, — это журнал,
+     * и переписывать его задним числом нельзя.
      *
      * @return int сколько писем правило подобрало
      */
-    public function reapplyToPending(?CrmMailRule $rule = null): int
+    public function applyToOld(CrmMailRule $rule, ?int $days = null): int
     {
-        $retention = (int) config('mail_stream.unmatched_retention_days', 14);
+        $days ??= (int) config('mail_stream.apply_to_old_days', 14);
 
         $letters = CrmEmail::query()
             ->where('origin', CrmEmail::ORIGIN_SYSTEM)
             ->whereIn('status', [EmailStatus::UNMATCHED->value, EmailStatus::DRAFT->value])
-            ->where('created_at', '>=', now()->subDays($retention))
+            ->where('created_at', '>=', now()->subDays($days))
             ->with(['client.crmProfile'])
             ->latest('id')
             ->limit(1000)
@@ -121,11 +123,11 @@ class MailRuleEngine
         $picked = 0;
 
         foreach ($letters as $letter) {
-            if ($rule !== null && ! $this->matcher->matches($rule, $letter)) {
+            if (! $this->matcher->matches($rule, $letter)) {
                 continue;
             }
 
-            if ($this->apply($letter) !== []) {
+            if ($this->apply($letter, $rule) !== []) {
                 $picked++;
             }
         }
@@ -259,10 +261,23 @@ class MailRuleEngine
     }
 
     /**
+     * Правила, действовавшие на момент появления письма, плюс то, которое
+     * менеджер применяет к старым письмам вручную.
+     *
      * @return Collection<int, CrmMailRule>
      */
-    private function activeRules(): Collection
+    private function activeRules(CrmEmail $letter, ?CrmMailRule $force = null): Collection
     {
-        return CrmMailRule::query()->active()->orderBy('id')->get();
+        return CrmMailRule::query()
+            ->active()
+            ->where(function ($query) use ($letter, $force) {
+                $query->where('created_at', '<=', $letter->created_at ?? now());
+
+                if ($force !== null) {
+                    $query->orWhere('id', $force->getKey());
+                }
+            })
+            ->orderBy('id')
+            ->get();
     }
 }

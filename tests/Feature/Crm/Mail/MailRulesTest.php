@@ -143,20 +143,54 @@ class MailRulesTest extends TestCase
     }
 
     #[Test]
-    public function rule_created_today_picks_up_yesterdays_letters(): void
+    public function new_rule_works_forward_and_leaves_old_letters_alone(): void
     {
-        // Иначе менеджер настроит фильтр по сводке непойманного и не увидит
-        // ни одного письма, ради которого настраивал.
+        // Иначе заведённый фильтр поднимал бы переписку недельной давности,
+        // о которой все давно забыли.
         $letter = $this->documentLetter();
         $this->assertSame(EmailStatus::UNMATCHED, $letter->status);
 
+        $this->travel(2)->seconds();
+        CrmMailRule::factory()->byTag('акт-сверки')->to(['buh@romashka.ru'])->create();
+
+        $this->assertSame(EmailStatus::UNMATCHED, $letter->refresh()->status);
+        $this->assertSame([], $letter->to);
+    }
+
+    #[Test]
+    public function apply_to_old_picks_up_letters_collected_earlier(): void
+    {
+        $letter = $this->documentLetter();
+        $this->travel(2)->seconds();
+
         $rule = CrmMailRule::factory()->byTag('акт-сверки')->to(['buh@romashka.ru'])->create();
 
-        $moved = app(MailRuleEngine::class)->reapplyToPending($rule);
+        $response = $this->actingAs($this->manager)
+            ->postJson(route('crm.emails.rules.apply-to-old', $rule));
 
-        $this->assertSame(1, $moved);
+        $response->assertOk()->assertJsonPath('picked', 1);
+
         $this->assertSame(EmailStatus::DRAFT, $letter->refresh()->status);
         $this->assertSame(['buh@romashka.ru'], $letter->to);
+    }
+
+    #[Test]
+    public function apply_to_old_does_not_drag_in_other_rules(): void
+    {
+        // Кнопку нажали у одного правила — второе, заведённое позже письма,
+        // своих адресов дописывать не должно: его об этом не просили.
+        $letter = $this->documentLetter();
+
+        // Правила заводятся позже письма — как это и бывает в жизни.
+        $this->travel(2)->seconds();
+
+        $quiet = CrmMailRule::factory()->byTag('документы')->to(['dir@romashka.ru'])->create();
+        $asked = CrmMailRule::factory()->byTag('акт-сверки')->to(['buh@romashka.ru'])->create();
+
+        app(MailRuleEngine::class)->applyToOld($asked);
+
+        $this->assertSame(['buh@romashka.ru'], $letter->refresh()->to);
+        $this->assertSame(0, $quiet->refresh()->matched_count);
     }
 
     #[Test]
@@ -168,13 +202,13 @@ class MailRulesTest extends TestCase
         $letter = $this->documentLetter();
 
         $first = CrmMailRule::factory()->byTag('документы')->to(['dir@romashka.ru'])->create();
-        app(MailRuleEngine::class)->reapplyToPending($first);
+        app(MailRuleEngine::class)->applyToOld($first);
 
         $this->assertSame(EmailStatus::DRAFT, $letter->refresh()->status);
         $this->assertSame(['dir@romashka.ru'], $letter->to);
 
         $second = CrmMailRule::factory()->byTag('акт-сверки')->to(['buh@romashka.ru'])->create();
-        $picked = app(MailRuleEngine::class)->reapplyToPending($second);
+        $picked = app(MailRuleEngine::class)->applyToOld($second);
 
         $this->assertSame(1, $picked);
         $this->assertSame(['dir@romashka.ru', 'buh@romashka.ru'], $letter->refresh()->to);
@@ -197,7 +231,7 @@ class MailRulesTest extends TestCase
             'conditions' => ['all' => [['field' => 'subject', 'op' => 'contains', 'value' => 'Акт']]],
         ]);
 
-        app(MailRuleEngine::class)->reapplyToPending($rule);
+        app(MailRuleEngine::class)->applyToOld($rule);
 
         $this->assertSame(['client@example.com'], $letter->refresh()->to);
     }
