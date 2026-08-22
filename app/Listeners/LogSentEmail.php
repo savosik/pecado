@@ -6,6 +6,7 @@ use App\Enums\UserKind;
 use App\Mail\CrmManagerMail;
 use App\Models\SentEmail;
 use App\Models\User;
+use App\Services\Crm\Mail\PartnerAddressBook;
 use App\Support\Notifications\MailClientTag;
 use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Support\Facades\Log;
@@ -95,6 +96,12 @@ class LogSentEmail
             $fallbackClientId = $user?->user_kind === UserKind::CLIENT
                 ? (int) $user->getKey()
                 : null;
+
+            // Письмо бухгалтеру партнёра уходит на его личный ящик, и по адресу
+            // получателя пользователя сайта не найти. Но адрес известен —
+            // он записан в карточке контрагента или в анкете клиента, и письмо
+            // должно попасть в ленту того партнёра, о котором оно.
+            $fallbackClientId ??= app(PartnerAddressBook::class)->resolve($recipient);
 
             SentEmail::create([
                 'recipient' => $recipient,

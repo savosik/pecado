@@ -36,6 +36,7 @@ export default function Index({
     emails,
     filters,
     folders = [],
+    topics = [],
     outboundEnabled,
     openEmailId,
     unmatchedSummary = null,
@@ -168,7 +169,17 @@ export default function Index({
                     {row.tags?.length > 0 && (
                         <Wrap gap={1}>
                             {row.tags.slice(0, 6).map((tag) => (
-                                <Badge key={tag} size="sm" variant="outline" colorPalette="gray">{tag}</Badge>
+                                <Badge
+                                    key={tag}
+                                    size="sm"
+                                    variant={filters.tag === tag ? 'solid' : 'outline'}
+                                    colorPalette={filters.tag === tag ? 'blue' : 'gray'}
+                                    cursor="pointer"
+                                    title="Показать письма с этой меткой"
+                                    onClick={() => apply({ tag: filters.tag === tag ? undefined : tag })}
+                                >
+                                    {tag}
+                                </Badge>
                             ))}
                             {row.tags.length > 6 && (
                                 <Text fontSize="xs" color="fg.muted">+{row.tags.length - 6}</Text>
@@ -330,6 +341,16 @@ export default function Index({
                     </Alert>
                 )}
 
+                {filters.tag && (
+                    <HStack gap={2}>
+                        <Text fontSize="sm" color="fg.muted">Метка:</Text>
+                        <Badge colorPalette="blue">{filters.tag}</Badge>
+                        <Button size="xs" variant="ghost" onClick={() => apply({ tag: undefined })}>
+                            сбросить
+                        </Button>
+                    </HStack>
+                )}
+
                 <HStack gap={3} align="center" flexWrap="wrap">
                     <Box flex="1" minW="240px">
                         <SearchInput
@@ -338,6 +359,17 @@ export default function Index({
                             placeholder="Поиск по теме, тексту и адресу..."
                         />
                     </Box>
+
+                    <select
+                        value={filters.topic || ''}
+                        onChange={(e) => apply({ topic: e.target.value || undefined })}
+                        style={selectStyle}
+                    >
+                        <option value="">Любая тема</option>
+                        {topics.map((item) => (
+                            <option key={item.value} value={item.value}>{item.label}</option>
+                        ))}
+                    </select>
 
                     <select
                         value={filters.origin || ''}

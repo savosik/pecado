@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Crm;
 use App\Enums\Crm\CrmScope;
 use App\Enums\Crm\EmailStatus;
 use App\Enums\Crm\MailFolder;
+use App\Enums\Crm\MailTopic;
 use App\Http\Requests\Crm\StoreCrmEmailRequest;
 use App\Http\Requests\Crm\UpdateCrmEmailRequest;
 use App\Models\CrmEmail;
@@ -65,6 +66,7 @@ class EmailController extends CrmController
             'folders' => $this->folders($actor, $scope, $filters),
             'canSeeDepartment' => $this->seesDepartment($request),
             'statuses' => EmailStatus::optionsWithColor(),
+            'topics' => MailTopic::options(),
             'templates' => $this->templates(),
             'outboundEnabled' => $this->emails->outboundEnabled(),
             // Сводка непойманного — не отчёт ради отчёта: по ней видно, чего
@@ -220,6 +222,24 @@ class EmailController extends CrmController
 
         if ($filters['origin'] !== null) {
             $query->where('origin', $filters['origin']);
+        }
+
+        $topic = MailTopic::tryFrom((string) $filters['topic']);
+
+        if ($topic !== null) {
+            $topic->apply($query);
+        }
+
+        // Отбор по метке — целиком, а не куском: метка и есть то, за что
+        // цепляется фильтр, и искать её подстрокой означало бы ловить чужое.
+        //
+        // Иголка кодируется тем же json_encode, что и сама колонка: кириллица
+        // лежит в базе экранированной (\u043e…), и поиск сырой строкой
+        // не нашёл бы ничего — молча и навсегда.
+        if ($filters['tag'] !== null && $filters['tag'] !== '') {
+            $needle = json_encode($filters['tag']);
+
+            $query->where('tags', 'like', '%'.$needle.'%');
         }
 
         if ($filters['search'] !== null && $filters['search'] !== '') {
@@ -396,6 +416,8 @@ class EmailController extends CrmController
     {
         $validated = $request->validate([
             'folder' => ['nullable', Rule::enum(MailFolder::class)],
+            'topic' => ['nullable', Rule::enum(MailTopic::class)],
+            'tag' => ['nullable', 'string', 'max:190'],
             'origin' => ['nullable', Rule::in([CrmEmail::ORIGIN_MANUAL, CrmEmail::ORIGIN_SYSTEM])],
             'client_id' => ['nullable', 'integer'],
             'author_id' => ['nullable', 'integer'],
@@ -405,6 +427,8 @@ class EmailController extends CrmController
 
         return [
             'folder' => $validated['folder'] ?? MailFolder::DRAFTS->value,
+            'topic' => $validated['topic'] ?? null,
+            'tag' => $validated['tag'] ?? null,
             'origin' => $validated['origin'] ?? null,
             'client_id' => $validated['client_id'] ?? null,
             'author_id' => $validated['author_id'] ?? null,

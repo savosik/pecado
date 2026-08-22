@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import axios from 'axios';
 import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
+import { SearchInput } from '@/Admin/Components/SearchInput';
+import { Checkbox } from '@/components/ui/checkbox';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -18,8 +20,17 @@ import { toastError, toastSuccess } from '@/utils/toast';
  * Отдельного пункта меню у правил нет: это вкладка внутри «Писем». Дробление
  * на разделы — ровно то, из-за чего предыдущий подход оказался непонятным.
  */
+const selectStyle = {
+    padding: '0.5rem',
+    borderRadius: '0.375rem',
+    border: '1px solid var(--chakra-colors-border)',
+    minWidth: '190px',
+};
+
 export default function Rules({
     rules,
+    filters = {},
+    authors = [],
     fieldGroups,
     operators,
     unaryOperators,
@@ -40,6 +51,14 @@ export default function Rules({
     const [busy, setBusy] = useState(false);
 
     const reload = () => router.reload();
+
+    // Правил станет много, и список без отбора быстро перестанет быть списком.
+    const apply = (patch) => {
+        router.get(route('crm.emails.rules.index'), { ...filters, ...patch }, {
+            preserveState: true,
+            replace: true,
+        });
+    };
 
     const saved = () => {
         setEditing(null);
@@ -119,6 +138,44 @@ export default function Rules({
                     </Alert>
                 )}
 
+                {!editing && (
+                    <HStack gap={3} flexWrap="wrap" align="center">
+                        <Box flex="1" minW="220px">
+                            <SearchInput
+                                value={filters.search || ''}
+                                onChange={(value) => apply({ search: value || undefined })}
+                                placeholder="Поиск по названию, условию и адресу..."
+                            />
+                        </Box>
+
+                        <Box minW="200px">
+                            <SearchInput
+                                value={filters.client || ''}
+                                onChange={(value) => apply({ client: value || undefined })}
+                                placeholder="Партнёр..."
+                            />
+                        </Box>
+
+                        <select
+                            value={filters.author_id || ''}
+                            onChange={(e) => apply({ author_id: e.target.value || undefined })}
+                            style={selectStyle}
+                        >
+                            <option value="">Кто угодно завёл</option>
+                            {authors.map((author) => (
+                                <option key={author.id} value={author.id}>{author.name}</option>
+                            ))}
+                        </select>
+
+                        <Checkbox
+                            checked={!!filters.only_auto}
+                            onCheckedChange={(e) => apply({ only_auto: e.checked ? 1 : undefined })}
+                        >
+                            Только автоматические
+                        </Checkbox>
+                    </HStack>
+                )}
+
                 {editing && (
                     <RuleForm
                         rule={editing.id || editing.conditions ? editing : null}
@@ -132,7 +189,14 @@ export default function Rules({
                     />
                 )}
 
-                {rules.length === 0 && !editing && (
+                {rules.length === 0 && !editing && (filters.search || filters.client || filters.author_id || filters.only_auto) && (
+                    <Alert status="info" title="Под отбор ничего не подошло">
+                        Отбор по партнёру показывает правила, которые действительно ловили его
+                        письма. Правило, ещё ничего не поймавшее, сюда не попадёт.
+                    </Alert>
+                )}
+
+                {rules.length === 0 && !editing && !(filters.search || filters.client || filters.author_id || filters.only_auto) && (
                     <Alert status="info" title="Правил пока нет">
                         Пока правил нет, письма, собранные системой, лежат в папке «Мимо фильтров»
                         и никуда не уходят. Правило — это условие и адреса: «содержит акт-сверки

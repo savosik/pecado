@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Crm;
 use App\Http\Requests\Crm\StoreMailRuleRequest;
 use App\Models\CrmEmail;
 use App\Models\CrmMailRule;
+use App\Models\CrmMailRuleHit;
+use App\Models\User;
 use App\Services\Crm\Mail\MailFieldCatalog;
 use App\Services\Crm\Mail\MailRuleService;
 use App\Services\Crm\Mail\MailTagBuilder;
@@ -29,8 +31,18 @@ class MailRuleController extends CrmController
         $actor = $this->crmActor($request);
         Gate::authorize('viewAny', CrmEmail::class);
 
-        $rules = CrmMailRule::query()
-            ->with('author:id,name')
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:190'],
+            'author_id' => ['nullable', 'integer'],
+            'client' => ['nullable', 'string', 'max:190'],
+            'only_auto' => ['nullable', 'boolean'],
+        ]);
+
+        $query = CrmMailRule::query()->with('author:id,name');
+
+        $this->applyRuleFilters($query, $filters);
+
+        $rules = $query
             ->orderByDesc('is_active')
             ->orderBy('name')
             ->get()
@@ -39,6 +51,13 @@ class MailRuleController extends CrmController
 
         return Inertia::render('Crm/Pages/Emails/Rules', [
             'rules' => $rules,
+            'filters' => [
+                'search' => $filters['search'] ?? null,
+                'author_id' => $filters['author_id'] ?? null,
+                'client' => $filters['client'] ?? null,
+                'only_auto' => (bool) ($filters['only_auto'] ?? false),
+            ],
+            'authors' => $this->authors(),
             'fieldGroups' => MailFieldCatalog::groups(),
             'operators' => MailFieldCatalog::operators(),
             'unaryOperators' => MailFieldCatalog::unaryOperators(),
@@ -51,6 +70,72 @@ class MailRuleController extends CrmController
             // набранным условием, чтобы менеджер не переписывал метку руками.
             'prefillTag' => $request->string('tag')->value() ?: null,
         ]);
+    }
+
+    /**
+     * Отбор правил. Их станет много, и список без фильтров быстро перестанет
+     * быть списком.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<CrmMailRule>  $query
+     * @param  array<string, mixed>  $filters
+     */
+    private function applyRuleFilters($query, array $filters): void
+    {
+        if (filled($filters['search'] ?? null)) {
+            $search = $filters['search'];
+
+            // Ищем и по названию, и по условиям, и по адресам: менеджер помнит
+            // правило по-разному — «то, что про акты», «то, что на буханову».
+            $query->where(function ($inner) use ($search) {
+                $inner->where('name', 'like', "%{$search}%")
+                    ->orWhere('recipients', 'like', '%'.trim(json_encode($search), '"').'%')
+                    ->orWhere('conditions', 'like', '%'.trim(json_encode($search), '"').'%');
+            });
+        }
+
+        if (filled($filters['author_id'] ?? null)) {
+            $query->where('user_id', (int) $filters['author_id']);
+        }
+
+        if (! empty($filters['only_auto'])) {
+            $query->where('auto_send', true);
+        }
+
+        // Отбор по партнёру — по факту, а не по замыслу: показываем правила,
+        // которые действительно ловили письма этого партнёра. Правило, ещё
+        // ничего не поймавшее, сюда не попадёт, и это честно: про партнёра
+        // оно пока никак себя не проявило.
+        if (filled($filters['client'] ?? null)) {
+            $name = $filters['client'];
+
+            $clientIds = User::query()
+                ->where(fn ($inner) => $inner
+                    ->where('name', 'like', "%{$name}%")
+                    ->orWhere('erp_name', 'like', "%{$name}%"))
+                ->limit(200)
+                ->pluck('id');
+
+            $query->whereIn('id', CrmMailRuleHit::query()
+                ->select('rule_id')
+                ->whereIn('crm_email_id', CrmEmail::query()
+                    ->select('id')
+                    ->whereIn('client_user_id', $clientIds)));
+        }
+    }
+
+    /**
+     * Кто заводил правила — для выпадающего списка отбора.
+     *
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function authors(): array
+    {
+        return User::query()
+            ->whereIn('id', CrmMailRule::query()->select('user_id')->whereNotNull('user_id'))
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (User $user): array => ['id' => (int) $user->getKey(), 'name' => $user->name])
+            ->all();
     }
 
     /**

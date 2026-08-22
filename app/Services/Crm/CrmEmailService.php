@@ -9,6 +9,7 @@ use App\Models\CrmEmail;
 use App\Models\CrmEmailTemplate;
 use App\Models\User;
 use App\Services\Crm\Mail\MailStream;
+use App\Services\Crm\Mail\PartnerAddressBook;
 use App\Support\Crm\CrmAttachments;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
@@ -74,6 +75,18 @@ class CrmEmailService
 
         $email->user_id = (int) $actor->getKey();
         $email->save();
+
+        // Письмо на адрес, который принадлежит партнёру (бухгалтеру, директору,
+        // закупщику), подшивается к его карточке. Иначе переписка с живым
+        // человеком висела бы письмом «в никуда», а в ленте партнёра её бы
+        // не было — при том что это и есть его переписка.
+        if ($email->client_user_id === null) {
+            $clientId = app(PartnerAddressBook::class)->resolveAny($email->to ?? []);
+
+            if ($clientId !== null) {
+                $email->forceFill(['client_user_id' => $clientId])->save();
+            }
+        }
 
         // Письмо менеджера тоже часть общего потока: правило «всё по этому
         // контрагенту» обязано его видеть, иначе поток был бы общим на словах.
