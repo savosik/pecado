@@ -3,6 +3,7 @@
 namespace App\Support\Crm;
 
 use App\Models\Company;
+use App\Models\Contact;
 use App\Models\CrmCall;
 use App\Models\CrmComment;
 use App\Models\CrmEmail;
@@ -66,6 +67,16 @@ final class CrmEntityMap
     public const LEAD = 'lead';
 
     /**
+     * Контакт — человек из справочника (эпик contact-00).
+     *
+     * В карте он нужен затем, чтобы на карточке человека бесплатно заработали
+     * задачи («поздравить 17 мая»), комментарии («сменила фамилию») и файлы
+     * (скан визитки). Партнёра контакт знает сам — той же денормализацией,
+     * что комментарии и задачи.
+     */
+    public const CONTACT = 'contact';
+
+    /**
      * Строковый тип для API → класс модели.
      *
      * @var array<string, class-string<Model>>
@@ -81,6 +92,7 @@ final class CrmEntityMap
         self::EMAIL => CrmEmail::class,
         self::CALL => CrmCall::class,
         self::LEAD => CrmLead::class,
+        self::CONTACT => Contact::class,
     ];
 
     /**
@@ -99,6 +111,7 @@ final class CrmEntityMap
         self::EMAIL => 'Письмо',
         self::CALL => 'Звонок',
         self::LEAD => 'Лид',
+        self::CONTACT => 'Контакт',
     ];
 
     /**
@@ -112,6 +125,23 @@ final class CrmEntityMap
     public static function taskableTypes(): array
     {
         return array_values(array_diff(self::types(), [self::COMMENT, self::TASK, self::EMAIL, self::CALL]));
+    }
+
+    /**
+     * Типы, к которым можно привязать человека из справочника.
+     *
+     * В первой волне это партнёр и контрагент — то, ради чего справочник
+     * затевался. Заказы, реализации и лиды добавляются карточкой contact-14,
+     * когда модель обкатана; схема полиморфная, менять её для этого не нужно.
+     *
+     * Платёж, комментарий, задача, письмо, звонок и сам контакт исключены:
+     * привязывать человека к платёжке бессмысленно.
+     *
+     * @return list<string>
+     */
+    public static function contactLinkableTypes(): array
+    {
+        return [self::CLIENT, self::CONTRACTOR];
     }
 
     /**
@@ -192,7 +222,7 @@ final class CrmEntityMap
             // в ленту партнёра не идёт — попадать ей некуда.
             self::CONTRACTOR, self::ORDER, self::SHIPMENT, self::PAYMENT => $entity->getAttribute('user_id'),
             // Комментарий и задача уже знают своего партнёра — денормализация из crm-01.
-            self::COMMENT, self::TASK, self::EMAIL, self::CALL => $entity->getAttribute('client_user_id'),
+            self::COMMENT, self::TASK, self::EMAIL, self::CALL, self::CONTACT => $entity->getAttribute('client_user_id'),
             // Лид сводится к партнёру только после конверсии: до неё
             // партнёра, в чью ленту писать, попросту нет.
             self::LEAD => $entity->getAttribute('converted_user_id'),
@@ -250,6 +280,7 @@ final class CrmEntityMap
             self::TASK => (string) $entity->getAttribute('title'),
             self::EMAIL => 'Письмо: '.$entity->getAttribute('subject'),
             self::CALL => 'Звонок от '.($entity->getAttribute('started_at')?->format('d.m.Y H:i') ?? '—'),
+            self::CONTACT => (string) $entity->getAttribute('full_name'),
             // Организация в скобках: лида заводят и по имени человека, и по названию
             // фирмы, и в списке задач одно без другого часто не узнаётся.
             self::LEAD => trim((string) $entity->getAttribute('name')).(
@@ -286,6 +317,10 @@ final class CrmEntityMap
         // и писем выше.
         if ($type === self::LEAD) {
             return route('crm.leads.index', ['lead' => $entity->getKey()]);
+        }
+
+        if ($type === self::CONTACT) {
+            return route('crm.contacts.show', $entity->getKey());
         }
 
         // Отдельного раздела звонков нет — звонок живёт в ленте своего партнёра.

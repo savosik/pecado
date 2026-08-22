@@ -10,6 +10,7 @@ use App\Http\Controllers\Crm\CallController;
 use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientProfileController;
 use App\Http\Controllers\Crm\CommentController;
+use App\Http\Controllers\Crm\ContactController;
 use App\Http\Controllers\Crm\ContractorController;
 use App\Http\Controllers\Crm\DashboardController;
 use App\Http\Controllers\Crm\DocumentController;
@@ -370,6 +371,45 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::delete('/calls/{call}', [CallController::class, 'destroy'])
             ->name('calls.destroy')
             ->whereNumber('call');
+    });
+
+    // Справочник людей: контактные лица партнёров и их контрагентов.
+    // Статические сегменты — до /{contact}, иначе уйдут в биндинг модели.
+    Route::middleware('permission:crm-contacts.view')->group(function () {
+        Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.index');
+        Route::get('/contacts/for-entity', [ContactController::class, 'forEntity'])->name('contacts.for-entity');
+        Route::get('/contacts/{contact}', [ContactController::class, 'show'])
+            ->name('contacts.show')
+            ->whereNumber('contact');
+    });
+
+    Route::middleware('permission:crm-contacts.create')->group(function () {
+        Route::post('/contacts', [ContactController::class, 'store'])->name('contacts.store');
+    });
+
+    Route::middleware('permission:crm-contacts.edit')->group(function () {
+        Route::patch('/contacts/{contact}', [ContactController::class, 'update'])
+            ->name('contacts.update')
+            ->whereNumber('contact');
+        Route::post('/contacts/{contact}/avatar', [ContactController::class, 'avatar'])
+            ->name('contacts.avatar')
+            ->whereNumber('contact');
+        Route::delete('/contacts/{contact}/avatar', [ContactController::class, 'deleteAvatar'])
+            ->name('contacts.avatar.destroy')
+            ->whereNumber('contact');
+        Route::post('/contacts/{contact}/links', [ContactController::class, 'link'])
+            ->name('contacts.link')
+            ->whereNumber('contact');
+        Route::delete('/contacts/{contact}/links/{link}', [ContactController::class, 'unlink'])
+            ->name('contacts.unlink')
+            ->whereNumber('contact')
+            ->whereNumber('link');
+    });
+
+    Route::middleware('permission:crm-contacts.delete')->group(function () {
+        Route::delete('/contacts/{contact}', [ContactController::class, 'destroy'])
+            ->name('contacts.destroy')
+            ->whereNumber('contact');
     });
 
     // Письма. Отправка гейтится фича-флагом MAIL_FEATURE_CRM_OUTBOUND,

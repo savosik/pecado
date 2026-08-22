@@ -3,6 +3,7 @@ import {
     LuUsers,
     LuUsersRound,
     LuBuilding2,
+    LuContact,
     LuChartLine,
     LuListChecks,
     LuMail,
@@ -65,6 +66,10 @@ export const menuConfig: MenuGroup[] = [
             // Контрагенты — юрлица партнёров. Отдельный пункт, потому что переписка
             // о реквизитах и сверках идёт по юрлицу, а у партнёра их может быть несколько.
             { label: "Контрагенты", icon: LuBuilding2, path: "/crm/contractors", permission: "crm-contractors.view" },
+            // Справочник людей: контактные лица партнёров и их юрлиц. Отдельным
+            // пунктом, а не вкладкой в карточке, — человек бывает у нескольких
+            // юрлиц сразу, и искать его надо в одном месте.
+            { label: "Контакты", icon: LuContact, path: "/crm/contacts", permission: "crm-contacts.view" },
         ],
     },
     {

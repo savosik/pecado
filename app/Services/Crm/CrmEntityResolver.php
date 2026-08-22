@@ -3,6 +3,7 @@
 namespace App\Services\Crm;
 
 use App\Models\Company;
+use App\Models\Contact;
 use App\Models\CrmComment;
 use App\Models\CrmLead;
 use App\Models\CrmTask;
@@ -82,6 +83,13 @@ class CrmEntityResolver
         // разрешал бы писать в карточку юрлица тому, кому раздел закрыт вовсе.
         if ($entity instanceof Company && ! $actor->can('crm-contractors.view')) {
             return false;
+        }
+
+        // У человека из справочника собственная политика: карточка без партнёра
+        // (водитель перевозчика) доступна только тому, кто видит всю базу,
+        // а правило ниже отдало бы её каждому, у кого есть видимость отдела.
+        if ($entity instanceof Contact) {
+            return $actor->can('view', $entity);
         }
 
         return $this->canAccessAttached($actor, CrmEntityMap::clientIdFor($entity), null);
