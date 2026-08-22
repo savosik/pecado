@@ -107,15 +107,26 @@ class StoreMailRuleRequest extends FormRequest
     }
 
     /**
-     * Спецзначения «клиент» и «менеджер» — не адреса, а указания, кого
-     * подставить: без них правило «на почту клиента» пришлось бы заводить
-     * отдельно на каждого из восьмисот.
+     * Спецзначения — не адреса, а указания, кого подставить: «клиент»,
+     * «менеджер» и любая роль контакта («бухгалтер», «директор»). Без них
+     * правило «бухгалтеру этого контрагента» пришлось бы заводить отдельно
+     * на каждого из восьмисот партнёров.
      */
     private function isValidRecipient(string $address): bool
     {
         $address = mb_strtolower(trim($address));
 
-        return in_array($address, ['клиент', 'менеджер'], true)
-            || filter_var($address, FILTER_VALIDATE_EMAIL) !== false;
+        if (in_array($address, ['клиент', 'менеджер'], true)) {
+            return true;
+        }
+
+        // Роль контакта: «бухгалтер» раскроется в адреса бухгалтеров партнёра.
+        foreach (\App\Enums\ContactRole::cases() as $role) {
+            if (mb_strtolower($role->label()) === $address || $role->value === $address) {
+                return true;
+            }
+        }
+
+        return filter_var($address, FILTER_VALIDATE_EMAIL) !== false;
     }
 }

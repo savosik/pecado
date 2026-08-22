@@ -266,8 +266,10 @@ export default function RuleForm({
                         maxW="620px"
                     />
                     <Text fontSize="xs" color="fg.muted" mt={1}>
-                        Можно написать «клиент» — письмо уйдёт на его адрес, или «менеджер» —
-                        персональному менеджеру этого клиента.
+                        Можно написать «клиент» — письмо уйдёт на его адрес, «менеджер» —
+                        персональному менеджеру, или роль из справочника контактов
+                        («бухгалтер», «директор», «закупщик») — тогда письмо уйдёт всем людям
+                        этой роли у партнёра письма.
                     </Text>
                     {errorOf('recipients') && <Text fontSize="xs" color="red.500" mt={1}>{errorOf('recipients')}</Text>}
                     {errorOf('recipients.0') && <Text fontSize="xs" color="red.500" mt={1}>{errorOf('recipients.0')}</Text>}

@@ -30,7 +30,7 @@ function InfoRow({ label, value }) {
 /**
  * Карточка человека: кто он, как связаться, кем приходится и что с ним связано.
  */
-export default function Show({ contact, letters = [], roles = [], channels = [], can = {} }) {
+export default function Show({ contact, letters = [], calls = [], roles = [], channels = [], can = {} }) {
     const { can: hasPermission } = usePermission();
     const [editing, setEditing] = useState(false);
     const [pendingDelete, setPendingDelete] = useState(false);
@@ -244,6 +244,7 @@ export default function Show({ contact, letters = [], roles = [], channels = [],
                                     {canTasks && <Tabs.Trigger value="tasks">Задачи</Tabs.Trigger>}
                                     {canFiles && <Tabs.Trigger value="files">Файлы</Tabs.Trigger>}
                                     <Tabs.Trigger value="letters">Письма</Tabs.Trigger>
+                                    <Tabs.Trigger value="calls">Звонки</Tabs.Trigger>
                                 </Tabs.List>
 
                                 {canComment && (
@@ -284,6 +285,22 @@ export default function Show({ contact, letters = [], roles = [], channels = [],
                                                     </VStack>
                                                     <Badge colorPalette={letter.status_color} variant="subtle">{letter.status_label}</Badge>
                                                 </HStack>
+                                            ))}
+                                        </VStack>
+                                    )}
+                                </Tabs.Content>
+                                <Tabs.Content value="calls">
+                                    {calls.length === 0 ? (
+                                        <Text fontSize="sm" color="fg.muted">
+                                            Разговоров пока не записано.
+                                        </Text>
+                                    ) : (
+                                        <VStack align="stretch" gap={2}>
+                                            {calls.map((call) => (
+                                                <Box key={call.id} borderWidth="1px" borderRadius="md" p={2}>
+                                                    <Text fontSize="xs" color="fg.muted">{call.date_label}</Text>
+                                                    <Text fontSize="sm">{call.summary || 'Без описания'}</Text>
+                                                </Box>
                                             ))}
                                         </VStack>
                                     )}

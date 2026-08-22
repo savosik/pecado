@@ -27,10 +27,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * @property int $id
  * @property int $user_id
- * @property string|null $decision_maker_name
- * @property string|null $decision_maker_role
- * @property string|null $decision_maker_contact
- * @property \Illuminate\Support\Carbon|null $decision_maker_birthday
  * @property string|null $decision_process
  * @property BusinessType|null $business_type
  * @property int|null $points_count
@@ -56,10 +52,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $taboo_categories
  * @property string|null $taboo_brands
  * @property string|null $competitors
- * @property string|null $accountant_name
- * @property string|null $accountant_contact
- * @property string|null $owner_name
- * @property string|null $owner_contact
  * @property NoveltyAttitude|null $novelty_attitude
  * @property Psychotype|null $psychotype
  * @property string|null $marketing_needs
@@ -92,10 +84,6 @@ class CrmClientProfile extends Model
 
     protected $fillable = [
         'user_id',
-        'decision_maker_name',
-        'decision_maker_role',
-        'decision_maker_contact',
-        'decision_maker_birthday',
         'decision_process',
         'payment_behavior',
         'payment_terms',
@@ -127,10 +115,6 @@ class CrmClientProfile extends Model
         'taboo_categories',
         'taboo_brands',
         'competitors',
-        'accountant_name',
-        'accountant_contact',
-        'owner_name',
-        'owner_contact',
         'novelty_attitude',
         'psychotype',
         'marketing_needs',
@@ -158,7 +142,6 @@ class CrmClientProfile extends Model
             'lifecycle_hint' => ClientLifecycleStatus::class,
             'lifecycle_changed_at' => 'datetime',
             'lifecycle_hint_at' => 'datetime',
-            'decision_maker_birthday' => 'date',
             'business_type' => BusinessType::class,
             'points_count' => 'integer',
             'has_offline_points' => 'boolean',

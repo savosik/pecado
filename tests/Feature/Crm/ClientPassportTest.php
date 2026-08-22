@@ -78,11 +78,6 @@ class ClientPassportTest extends TestCase
             'taboo_categories' => 'БДСМ',
             'taboo_brands' => 'Lovense — берёт у эксклюзива',
             'competitors' => 'Поставщик Х',
-            'decision_maker_birthday' => '1985-04-17',
-            'accountant_name' => 'Анна Петрова',
-            'accountant_contact' => '+7 900 111-22-33',
-            'owner_name' => 'Игорь Соколов',
-            'owner_contact' => 'owner@example.test',
             'novelty_attitude' => 'innovator',
             'psychotype' => 'discount_hunter',
             'marketing_needs' => 'Тестеры и обучение персонала',
@@ -105,7 +100,6 @@ class ClientPassportTest extends TestCase
         $this->assertSame('premium', $profile->price_segment->value);
         $this->assertSame(21, $profile->deferral_days);
         $this->assertSame('БДСМ', $profile->taboo_categories);
-        $this->assertSame('1985-04-17', $profile->decision_maker_birthday->format('Y-m-d'));
     }
 
     #[Test]

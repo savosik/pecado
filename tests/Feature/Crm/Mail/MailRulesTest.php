@@ -271,6 +271,62 @@ class MailRulesTest extends TestCase
     }
 
     #[Test]
+    public function role_of_a_contact_works_as_a_recipient(): void
+    {
+        // Ровно тот кейс, ради которого затевался отменённый пульт: «изменения
+        // по контрагенту приходят на почту его бухгалтера». Одно правило
+        // покрывает всю базу и подхватывает нового бухгалтера само.
+        $company = \App\Models\Company::factory()->create(['user_id' => $this->client->id]);
+
+        $accountant = \App\Models\Contact::factory()
+            ->forClient($this->client)
+            ->create(['email' => 'buh@romashka.ru']);
+        \App\Models\ContactLink::factory()
+            ->to($company, \App\Enums\ContactRole::ACCOUNTANT)
+            ->create(['contact_id' => $accountant->id]);
+
+        // Директор той же компании письма получать не должен — роль другая.
+        $director = \App\Models\Contact::factory()
+            ->forClient($this->client)
+            ->create(['email' => 'dir@romashka.ru']);
+        \App\Models\ContactLink::factory()
+            ->to($company, \App\Enums\ContactRole::DIRECTOR)
+            ->create(['contact_id' => $director->id]);
+
+        CrmMailRule::factory()->byTag('акт-сверки')->to(['бухгалтер'])->create();
+
+        $this->assertSame(['buh@romashka.ru'], $this->documentLetter()->to);
+    }
+
+    #[Test]
+    public function empty_role_does_not_break_the_rule(): void
+    {
+        // У контрагента может не быть бухгалтера — правило просто не даёт
+        // этого адресата, а письмо уходит остальным.
+        CrmMailRule::factory()->byTag('акт-сверки')->to(['бухгалтер', 'dir@romashka.ru'])->create();
+
+        $this->assertSame(['dir@romashka.ru'], $this->documentLetter()->to);
+    }
+
+    #[Test]
+    public function retired_contact_is_not_a_recipient(): void
+    {
+        $company = \App\Models\Company::factory()->create(['user_id' => $this->client->id]);
+
+        $former = \App\Models\Contact::factory()
+            ->forClient($this->client)
+            ->inactive()
+            ->create(['email' => 'former@romashka.ru']);
+        \App\Models\ContactLink::factory()
+            ->to($company, \App\Enums\ContactRole::ACCOUNTANT)
+            ->create(['contact_id' => $former->id]);
+
+        CrmMailRule::factory()->byTag('акт-сверки')->to(['бухгалтер'])->create();
+
+        $this->assertSame([], $this->documentLetter()->to);
+    }
+
+    #[Test]
     public function condition_by_client_profile_field(): void
     {
         // Отдельным условием, а не склейкой профиля в общую строку: иначе

@@ -64,6 +64,7 @@ class CrmCall extends Model implements HasMedia
         'direction',
         'result',
         'phone',
+        'contact_id',
         'contact_name',
         'summary',
         'started_at',
@@ -123,6 +124,15 @@ class CrmCall extends Model implements HasMedia
     public function client(): BelongsTo
     {
         return $this->belongsTo(User::class, 'client_user_id');
+    }
+
+    /**
+     * Человек, с которым говорили. Свободное поле contact_name остаётся рядом:
+     * звонить можно и тому, кого в справочнике нет.
+     */
+    public function contact(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Contact::class);
     }
 
     public function followUpTask(): BelongsTo

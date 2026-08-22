@@ -2,7 +2,9 @@
 
 namespace App\Services\Crm\Mail;
 
+use App\Enums\ContactRole;
 use App\Enums\Crm\EmailStatus;
+use App\Models\Contact;
 use App\Models\CrmEmail;
 use App\Models\CrmMailRule;
 use App\Models\CrmMailRuleHit;
@@ -203,7 +205,55 @@ class MailRuleEngine
             return $this->managerEmail($letter);
         }
 
+        // Роль вместо адреса: «бухгалтер» раскрывается в адреса бухгалтеров
+        // партнёра письма. Ровно тот кейс, ради которого затевался отменённый
+        // пульт, — но без отдельного раздела.
+        $role = ContactRole::tryFrom(mb_strtolower($address)) ?? $this->roleByLabel($address);
+
+        if ($role !== null) {
+            return $this->roleEmails($letter, $role);
+        }
+
         return [$address];
+    }
+
+    /**
+     * Адреса людей нужной роли у партнёра письма.
+     *
+     * Пустая роль — не ошибка: у контрагента может не быть бухгалтера, и правило
+     * просто не даёт этого адресата, а письмо уходит остальным.
+     *
+     * @return array<int, string>
+     */
+    private function roleEmails(CrmEmail $letter, ContactRole $role): array
+    {
+        if ($letter->client_user_id === null) {
+            return [];
+        }
+
+        return Contact::query()
+            ->deliverable()
+            ->where('client_user_id', $letter->client_user_id)
+            ->whereHas('links', fn ($links) => $links->where('role', $role->value))
+            ->pluck('email')
+            ->map(fn ($email): string => (string) $email)
+            ->all();
+    }
+
+    /**
+     * Роль, названная по-русски: менеджер пишет «бухгалтер», а не «accountant».
+     */
+    private function roleByLabel(string $address): ?ContactRole
+    {
+        $needle = mb_strtolower(trim($address));
+
+        foreach (ContactRole::cases() as $role) {
+            if (mb_strtolower($role->label()) === $needle) {
+                return $role;
+            }
+        }
+
+        return null;
     }
 
     /**

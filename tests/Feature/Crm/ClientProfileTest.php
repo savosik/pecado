@@ -42,9 +42,6 @@ class ClientProfileTest extends TestCase
     private function payload(array $overrides = []): array
     {
         return array_merge([
-            'decision_maker_name' => 'Пётр Смирнов',
-            'decision_maker_role' => 'Закупщик',
-            'decision_maker_contact' => '+7 900 000-00-00',
             'decision_process' => 'Согласует с владельцем, ответ через неделю',
             'payment_behavior' => 'deferred',
             'payment_terms' => 'Отсрочка 14 дней',
@@ -64,8 +61,6 @@ class ClientProfileTest extends TestCase
             ->assertRedirect();
 
         $profile = CrmClientProfile::query()->where('user_id', $this->client->id)->firstOrFail();
-
-        $this->assertSame('Пётр Смирнов', $profile->decision_maker_name);
         $this->assertSame('deferred', $profile->payment_behavior->value);
         $this->assertSame(30, $profile->order_cycle_days);
         $this->assertSame('telegram', $profile->preferred_channel->value);
@@ -138,7 +133,6 @@ class ClientProfileTest extends TestCase
             ->get(route('crm.clients.show', $this->client))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->where('profile.decision_maker_name', null)
                 ->where('profile.interests', [])
                 ->where('profile.revisions', [])
             );

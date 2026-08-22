@@ -38,7 +38,6 @@ final class ClientPassport
         'logistics' => 'География и логистика',
         'commercial' => 'Коммерческие условия',
         'limits' => 'Ограничения и конкуренты',
-        'contacts' => 'Контакты по ролям',
         'communication' => 'Как общаться',
         'marketing' => 'Маркетинг',
     ];
@@ -157,28 +156,6 @@ final class ClientPassport
             'competitors' => [
                 'type' => 'text', 'section' => 'limits', 'max' => 2000,
                 'label' => 'Альтернативные поставщики', 'hint' => 'С кем ещё работает, чьи бренды стоят рядом',
-            ],
-
-            // --- Контакты по ролям ---
-            'decision_maker_birthday' => [
-                'type' => 'date', 'section' => 'contacts',
-                'label' => 'День рождения ЛПР', 'hint' => 'Формат ГГГГ-ММ-ДД',
-            ],
-            'accountant_name' => [
-                'type' => 'string', 'section' => 'contacts', 'max' => 255,
-                'label' => 'Бухгалтер', 'hint' => 'ФИО — контакт по дебиторке',
-            ],
-            'accountant_contact' => [
-                'type' => 'string', 'section' => 'contacts', 'max' => 255,
-                'label' => 'Контакт бухгалтера', 'hint' => 'Телефон и почта',
-            ],
-            'owner_name' => [
-                'type' => 'string', 'section' => 'contacts', 'max' => 255,
-                'label' => 'Собственник', 'hint' => 'ФИО — для экстренной дебиторки и крупных сделок',
-            ],
-            'owner_contact' => [
-                'type' => 'string', 'section' => 'contacts', 'max' => 255,
-                'label' => 'Контакт собственника', 'hint' => 'Телефон и почта',
             ],
 
             // --- Как общаться ---

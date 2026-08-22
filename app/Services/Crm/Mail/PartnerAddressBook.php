@@ -5,7 +5,6 @@ namespace App\Services\Crm\Mail;
 use App\Enums\UserKind;
 use App\Models\Company;
 use App\Models\Contact;
-use App\Models\CrmClientProfile;
 use App\Models\User;
 
 /**
@@ -139,54 +138,6 @@ class PartnerAddressBook
             return (int) $companyOwner;
         }
 
-        return $this->fromProfileNotes($address);
-    }
-
-    /**
-     * Контактные лица из анкеты: там свободный текст вида
-     * «Афонина Мария, buh@romashka.ru, +7…».
-     *
-     * Совпадение проверяется по вхождению адреса целиком, а дальше — точной
-     * сверкой найденных в тексте адресов: LIKE-совпадения мало, иначе
-     * `buh@romashka.ru` нашёлся бы внутри `sbuh@romashka.ru`.
-     */
-    private function fromProfileNotes(string $address): ?int
-    {
-        $fields = ['accountant_contact', 'owner_contact', 'decision_maker_contact'];
-
-        $profiles = CrmClientProfile::query()
-            ->where(function ($query) use ($fields, $address) {
-                foreach ($fields as $field) {
-                    $query->orWhere($field, 'like', '%'.$address.'%');
-                }
-            })
-            ->get(['user_id', ...$fields]);
-
-        foreach ($profiles as $profile) {
-            foreach ($fields as $field) {
-                if ($this->containsAddress((string) $profile->{$field}, $address)) {
-                    return (int) $profile->user_id;
-                }
-            }
-        }
-
         return null;
-    }
-
-    private function containsAddress(string $text, string $address): bool
-    {
-        if ($text === '') {
-            return false;
-        }
-
-        preg_match_all('/[\w.+-]+@[\w-]+\.[\w.-]+/u', $text, $matches);
-
-        foreach ($matches[0] ?? [] as $found) {
-            if (mb_strtolower(rtrim($found, '.,;')) === $address) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

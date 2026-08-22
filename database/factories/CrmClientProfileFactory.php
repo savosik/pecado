@@ -23,8 +23,6 @@ class CrmClientProfileFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'decision_maker_name' => $this->faker->name(),
-            'decision_maker_role' => 'Закупщик',
             'payment_behavior' => PaymentBehavior::PREPAY,
             'preferred_channel' => PreferredChannel::PHONE,
             'sentiment' => ClientSentiment::NEUTRAL,

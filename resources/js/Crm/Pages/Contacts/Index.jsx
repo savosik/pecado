@@ -139,6 +139,9 @@ export default function Index({
                 actions={(
                     <HStack gap={2}>
                         {/* Выгрузка ровно того, что видно на экране: фильтры те же. */}
+                        <Link href={route('crm.contacts.birthdays')}>
+                            <Button size="sm" variant="outline"><LuCake /> Дни рождения</Button>
+                        </Link>
                         <a href={route('crm.contacts.vcf', filters)}>
                             <Button size="sm" variant="outline"><LuDownload /> В телефон</Button>
                         </a>

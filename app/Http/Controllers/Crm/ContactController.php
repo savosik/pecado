@@ -75,6 +75,7 @@ class ContactController extends CrmController
         return Inertia::render('Crm/Pages/Contacts/Show', [
             'contact' => $this->payload($contact),
             'letters' => $this->letters($contact),
+            'calls' => $this->calls($contact),
             'roles' => ContactRole::options(),
             'channels' => PreferredChannel::options(),
             'linkableTypes' => $this->linkableTypes(),
@@ -225,6 +226,22 @@ class ContactController extends CrmController
         return response()->json([
             'created' => $created,
             'message' => 'Заведено карточек: '.$created,
+        ]);
+    }
+
+    /**
+     * Ближайшие дни рождения.
+     *
+     * Поздравить бухгалтера контрагента дешевле любой скидки — и это одна
+     * из двух причин, по которым менеджеру выгодно завести карточку для себя.
+     */
+    public function birthdays(Request $request): Response
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('viewAny', Contact::class);
+
+        return Inertia::render('Crm/Pages/Contacts/Birthdays', [
+            'birthdays' => app(\App\Services\Contacts\BirthdayService::class)->upcoming($actor, 60)->all(),
         ]);
     }
 
@@ -459,6 +476,28 @@ class ContactController extends CrmController
                 'status_color' => $letter->status->color(),
                 'date_label' => ($letter->sent_at ?? $letter->created_at)?->format('d.m.Y H:i'),
                 'url' => route('crm.emails.index', ['email' => $letter->getKey()]),
+            ])
+            ->all();
+    }
+
+    /**
+     * Разговоры с этим человеком.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function calls(Contact $contact): array
+    {
+        return \App\Models\CrmCall::query()
+            ->where('contact_id', $contact->getKey())
+            ->latest('started_at')
+            ->limit(20)
+            ->get(['id', 'direction', 'result', 'summary', 'started_at', 'duration_sec'])
+            ->map(fn ($call): array => [
+                'id' => (int) $call->getKey(),
+                'summary' => $call->summary,
+                'date_label' => $call->started_at?->format('d.m.Y H:i'),
+                'direction' => $call->direction instanceof \BackedEnum ? $call->direction->value : $call->direction,
+                'result' => $call->result instanceof \BackedEnum ? $call->result->value : $call->result,
             ])
             ->all();
     }

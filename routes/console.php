@@ -43,6 +43,9 @@ Schedule::command('mail:finance-scan')->dailyAt('07:00')->withoutOverlapping();
 // Поток писем: непойманное правилами живёт MAIL_STREAM_UNMATCHED_DAYS и удаляется —
 // иначе папка «Мимо фильтров» превратится в бесконечно растущую свалку.
 Schedule::command('mail:prune-unmatched')->dailyAt('04:40')->withoutOverlapping();
+// Дни рождения контактов: задача «Поздравить» ставится персональному менеджеру
+// накануне. Идемпотентно — повторный прогон задачи не плодит.
+Schedule::command('contacts:birthday-tasks')->dailyAt('06:20')->withoutOverlapping();
 Schedule::command('crm:tasks-remind')->dailyAt('08:30')->withoutOverlapping(); // напоминания о завтрашних дедлайнах и о просрочке за сутки (за флагом MAIL_FEATURE_CRM_TASKS)
 Schedule::command('shortages:daily-notice')->weekdays()->at('17:00')->withoutOverlapping(); // вечерняя сводка неразнесённых недоборов менеджеру (за флагом MAIL_FEATURE_SHORTAGE_NOTICE); в выходные склад не собирает
 Schedule::command('crm:tasks-push')->everyTenMinutes()->withoutOverlapping(); // push-напоминания подписанным браузерам (за флагом CRM_PUSH_ENABLED; без VAPID молчит)

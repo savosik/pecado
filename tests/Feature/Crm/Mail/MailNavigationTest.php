@@ -3,7 +3,6 @@
 namespace Tests\Feature\Crm\Mail;
 
 use App\Models\Company;
-use App\Models\CrmClientProfile;
 use App\Models\CrmEmail;
 use App\Models\CrmMailRule;
 use App\Models\Order;
@@ -167,11 +166,11 @@ class MailNavigationTest extends TestCase
     public function letter_to_a_partner_contact_lands_in_the_partner_card(): void
     {
         // Письмо бухгалтеру уходит на его личный ящик, пользователя сайта
-        // по такому адресу не найти — но адрес записан в анкете, и переписка
+        // по такому адресу не найти — но человек есть в справочнике, и переписка
         // должна оказаться там, где её будут искать.
-        CrmClientProfile::query()->create([
-            'user_id' => $this->client->id,
-            'accountant_contact' => 'Афонина Мария, buh@romashka.ru, +7 900 000-00-00',
+        \App\Models\Contact::factory()->forClient($this->client)->create([
+            'full_name' => 'Афонина Мария',
+            'email' => 'buh@romashka.ru',
         ]);
 
         $letter = app(CrmEmailService::class)->createDraft(
@@ -234,10 +233,7 @@ class MailNavigationTest extends TestCase
     public function similar_address_does_not_bind_a_foreign_letter(): void
     {
         // Догадки здесь означали бы чужую переписку в чужой карточке.
-        CrmClientProfile::query()->create([
-            'user_id' => $this->client->id,
-            'accountant_contact' => 'buh@romashka.ru',
-        ]);
+        \App\Models\Contact::factory()->forClient($this->client)->create(['email' => 'buh@romashka.ru']);
 
         $this->assertNull(app(PartnerAddressBook::class)->resolve('sbuh@romashka.ru'));
         $this->assertSame($this->client->id, app(PartnerAddressBook::class)->resolve('BUH@Romashka.RU'));

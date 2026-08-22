@@ -92,10 +92,10 @@ email**. День рождения ЛПР некуда положить. Выг�
 | Карточка | Что даёт |
 |---|---|
 | [contact-11](2026-08-22_contact-11-vcf-import.md) | Импорт из телефона |
-| [contact-12](2026-08-22_contact-12-birthdays.md) | Дни рождения |
-| [contact-13](2026-08-22_contact-13-mail-rules-recipients.md) | Получатель правила по роли |
-| [contact-14](2026-08-22_contact-14-links-documents.md) | Привязки к заказам, реализациям, звонкам |
-| [contact-15](2026-08-22_contact-15-cleanup.md) | Уборка полей анкеты |
+| [contact-12](../review/2026-08-22_contact-12-birthdays.md) | Дни рождения |
+| [contact-13](../review/2026-08-22_contact-13-mail-rules-recipients.md) | Получатель правила по роли |
+| [contact-14](../review/2026-08-22_contact-14-links-documents.md) | Привязки к заказам, реализациям, звонкам |
+| [contact-15](../review/2026-08-22_contact-15-cleanup.md) | Уборка полей анкеты |
 
 Порядок: `01` → (`02` ∥ `04`) → `03` → `05` → `06` → волна 2 → волна 3 → `15`.
 
