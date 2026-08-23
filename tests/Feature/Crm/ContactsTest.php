@@ -250,6 +250,73 @@ class ContactsTest extends TestCase
     }
 
     #[Test]
+    public function author_does_not_lose_a_contact_created_without_a_partner(): void
+    {
+        // Карточка без партнёра видна тому, кто видит всю базу, — и своему автору.
+        // Без второго менеджер, заведший человека из справочника и не указавший
+        // партнёра, терял бы его в тот же миг.
+        $this->actingAs($this->manager)->postJson(route('crm.contacts.store'), [
+            'full_name' => 'Водитель перевозчика',
+            'phone' => '+79990000000',
+        ])->assertCreated();
+
+        $contact = Contact::query()->firstOrFail();
+
+        $this->assertNull($contact->client_user_id);
+        $this->assertContains($contact->id, array_column($this->props()['contacts']['data'], 'id'));
+        $this->actingAs($this->manager)->get(route('crm.contacts.show', $contact))->assertOk();
+    }
+
+    #[Test]
+    public function someone_elses_orphan_contact_stays_hidden(): void
+    {
+        $colleague = User::factory()->create();
+        $colleague->assignRole('sales-manager');
+        PersonalManager::factory()->create(['user_id' => $colleague->id]);
+
+        $this->actingAs($colleague)->postJson(route('crm.contacts.store'), [
+            'full_name' => 'Чужой водитель',
+            'phone' => '+79990000001',
+        ])->assertCreated();
+
+        $foreign = Contact::query()->firstOrFail();
+
+        $this->assertNotContains($foreign->id, array_column($this->props()['contacts']['data'], 'id'));
+        $this->actingAs($this->manager)->get(route('crm.contacts.show', $foreign))->assertNotFound();
+    }
+
+    #[Test]
+    public function contact_is_linked_from_its_own_card(): void
+    {
+        // Раньше привязку можно было завести только с карточки партнёра —
+        // из справочника человек оставался ничьим.
+        $company = Company::factory()->create(['user_id' => $this->client->id]);
+        $contact = Contact::factory()->create(['client_user_id' => null, 'created_by_user_id' => $this->manager->id]);
+
+        $this->actingAs($this->manager)->postJson(route('crm.contacts.link', $contact), [
+            'entity_type' => 'contractor',
+            'entity_id' => $company->id,
+            'role' => ContactRole::ACCOUNTANT->value,
+        ])->assertOk();
+
+        // Первая привязка проставляет партнёра: карточка перестаёт быть ничьей.
+        $this->assertSame($this->client->id, $contact->fresh()->client_user_id);
+    }
+
+    #[Test]
+    public function entity_search_is_gated_by_the_contacts_permission(): void
+    {
+        // Поиск живёт под правом контактов, а не задач: менеджер без задач
+        // обязан уметь привязать бухгалтера.
+        Company::factory()->create(['user_id' => $this->client->id, 'name' => 'Ромашка']);
+
+        $this->actingAs($this->manager)
+            ->getJson(route('crm.contacts.entities', ['type' => 'contractor', 'query' => 'Ромаш']))
+            ->assertOk()
+            ->assertJsonPath('0.label', 'Ромашка');
+    }
+
+    #[Test]
     public function without_permission_the_section_is_closed(): void
     {
         $this->manager->roles->first()->revokePermissionTo('crm-contacts.view');

@@ -51,6 +51,7 @@ class ContactController extends CrmController
         $scope = CrmScope::fromRequest($request, $actor);
 
         return Inertia::render('Crm/Pages/Contacts/Index', [
+            'linkableTypes' => $this->linkableTypes(),
             'contacts' => $this->contacts->paginate($actor, [...$filters, 'scope' => $scope]),
             'filters' => [...$filters, 'scope' => $scope->value],
             'roles' => ContactRole::options(),
@@ -84,6 +85,27 @@ class ContactController extends CrmController
                 'delete' => $actor->can('delete', $contact),
             ],
         ]);
+    }
+
+    /**
+     * Поиск сущности для привязки — с карточки контакта.
+     *
+     * Своя точка входа, а не заимствованная у задач: гейтить привязку контакта
+     * правом на задачи значило бы, что менеджер без задач не может привязать
+     * бухгалтера.
+     */
+    public function entities(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('viewAny', Contact::class);
+
+        $validated = $request->validate([
+            'type' => ['required', 'string', Rule::in(CrmEntityMap::contactLinkableTypes())],
+            'query' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        return response()->json(app(\App\Services\Crm\CrmEntitySearch::class)
+            ->search($actor, $validated['type'], (string) ($validated['query'] ?? '')));
     }
 
     /**

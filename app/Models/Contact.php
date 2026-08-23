@@ -199,8 +199,9 @@ class Contact extends Model implements HasMedia
     /**
      * Контакты, доступные сотруднику: те, чей партнёр ему виден.
      *
-     * Человек без партнёра (водитель перевозчика) виден только тому, кто видит
-     * всю базу, — иначе он всплывал бы у всех и путал.
+     * Человек без партнёра (водитель перевозчика) виден тому, кто видит всю базу,
+     * и своему автору. Второе — не поблажка: без него менеджер, заведший карточку
+     * из справочника и не указавший партнёра, терял бы её в тот же миг.
      *
      * @param  Builder<self>  $query
      * @return Builder<self>
@@ -210,9 +211,14 @@ class Contact extends Model implements HasMedia
         return $query->where(function (Builder $inner) use ($actor) {
             $inner->whereIn('client_user_id', User::query()->visibleInCrm($actor)->select('id'));
 
-            if ($actor->can('crm-clients-all.view')) {
-                $inner->orWhereNull('client_user_id');
-            }
+            $inner->orWhere(fn (Builder $orphan) => $orphan
+                ->whereNull('client_user_id')
+                ->where(fn (Builder $who) => $who
+                    ->when(
+                        $actor->can('crm-clients-all.view'),
+                        fn (Builder $all) => $all->whereNotNull('id'),
+                        fn (Builder $mine) => $mine->where('created_by_user_id', $actor->getKey()),
+                    )));
         });
     }
 
@@ -227,9 +233,14 @@ class Contact extends Model implements HasMedia
         return $query->where(function (Builder $inner) use ($actor, $scope) {
             $inner->whereIn('client_user_id', User::query()->inCrmScope($actor, $scope)->select('id'));
 
-            if ($actor->can('crm-clients-all.view')) {
-                $inner->orWhereNull('client_user_id');
-            }
+            $inner->orWhere(fn (Builder $orphan) => $orphan
+                ->whereNull('client_user_id')
+                ->where(fn (Builder $who) => $who
+                    ->when(
+                        $actor->can('crm-clients-all.view'),
+                        fn (Builder $all) => $all->whereNotNull('id'),
+                        fn (Builder $mine) => $mine->where('created_by_user_id', $actor->getKey()),
+                    )));
         });
     }
 

@@ -7,6 +7,7 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import ContactForm from '@/Crm/Components/ContactForm';
+import ContactLinkPicker from '@/Crm/Components/ContactLinkPicker';
 import CommentThread from '@/Crm/Components/CommentThread';
 import TaskPanel from '@/Crm/Components/TaskPanel';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
@@ -30,7 +31,7 @@ function InfoRow({ label, value }) {
 /**
  * Карточка человека: кто он, как связаться, кем приходится и что с ним связано.
  */
-export default function Show({ contact, letters = [], calls = [], roles = [], channels = [], can = {} }) {
+export default function Show({ contact, letters = [], calls = [], roles = [], channels = [], linkableTypes = [], can = {} }) {
     const { can: hasPermission } = usePermission();
     const [editing, setEditing] = useState(false);
     const [pendingDelete, setPendingDelete] = useState(false);
@@ -54,6 +55,19 @@ export default function Show({ contact, letters = [], calls = [], roles = [], ch
             reload();
         } catch (e) {
             toastError('Не удалось загрузить', e?.response?.data?.message || 'Попробуйте другой файл.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const link = async (payload) => {
+        setBusy(true);
+        try {
+            await axios.post(route('crm.contacts.link', contact.id), payload);
+            toastSuccess('Привязано');
+            reload();
+        } catch (e) {
+            toastError('Не получилось', e?.response?.data?.message || 'Попробуйте ещё раз.');
         } finally {
             setBusy(false);
         }
@@ -228,9 +242,21 @@ export default function Show({ contact, letters = [], calls = [], roles = [], ch
                                 ))}
                             </VStack>
                         ) : (
-                            <Text fontSize="sm" color="fg.muted">
-                                Пока ни к кому не привязан. Привязка заводится с карточки партнёра или контрагента.
+                            <Text fontSize="sm" color="fg.muted" mb={3}>
+                                Пока ни к кому не привязан. Без привязки человек виден только вам —
+                                укажите, кому он приходится.
                             </Text>
+                        )}
+
+                        {can.edit && (
+                            <Box mt={4} pt={3} borderTopWidth={contact.links?.length ? '1px' : '0'}>
+                                <ContactLinkPicker
+                                    types={linkableTypes}
+                                    roles={roles}
+                                    busy={busy}
+                                    onSubmit={link}
+                                />
+                            </Box>
                         )}
                     </Card.Body>
                 </Card.Root>

@@ -9,18 +9,14 @@ use App\Enums\Crm\TaskStatus;
 use App\Http\Requests\Crm\CloseCrmTaskRequest;
 use App\Http\Requests\Crm\StoreCrmTaskRequest;
 use App\Http\Requests\Crm\UpdateCrmTaskRequest;
-use App\Models\Company;
-use App\Models\CrmLead;
 use App\Models\CrmTask;
-use App\Models\Order;
-use App\Models\Shipment;
 use App\Models\User;
 use App\Services\Crm\CrmEntityResolver;
+use App\Services\Crm\CrmEntitySearch;
 use App\Services\Crm\CrmTaskService;
 use App\Support\Crm\CrmAttachments;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -280,139 +276,7 @@ class TaskController extends CrmController
 
         $search = trim((string) ($validated['query'] ?? ''));
 
-        return response()->json(match ($validated['type']) {
-            CrmEntityMap::CLIENT => $this->searchClients($actor, $search),
-            CrmEntityMap::CONTRACTOR => $actor->can('crm-contractors.view')
-                ? $this->searchContractors($actor, $search)
-                : [],
-            CrmEntityMap::ORDER => $this->searchDocuments($actor, Order::class, $search, 'Заказ'),
-            CrmEntityMap::SHIPMENT => $this->searchDocuments($actor, Shipment::class, $search, 'Реализация'),
-            CrmEntityMap::LEAD => $this->searchLeads($actor, $search),
-            default => [],
-        });
-    }
-
-    /**
-     * Лиды — по имени, организации и контактам.
-     *
-     * Скоуп берётся из самой модели, а не из партнёров: у лида партнёра ещё нет,
-     * а «ничей» лид намеренно виден всему отделу.
-     *
-     * @return list<array{id: int, label: string, sublabel: string|null}>
-     */
-    private function searchLeads(User $actor, string $search): array
-    {
-        return CrmLead::query()
-            ->visibleTo($actor)
-            ->select('id', 'name', 'company_name', 'phone', 'email')
-            ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $inner) => $inner
-                ->where('name', 'like', "%{$search}%")
-                ->orWhere('company_name', 'like', "%{$search}%")
-                ->orWhere('phone', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%")))
-            ->orderBy('name')
-            ->take(20)
-            ->get()
-            ->map(fn (CrmLead $lead): array => [
-                'id' => (int) $lead->getKey(),
-                'label' => (string) $lead->name,
-                // Организация различает одноимённых Иванов, контакт — одноимённые фирмы.
-                'sublabel' => $lead->company_name ?: $lead->primaryContact(),
-            ])
-            ->all();
-    }
-
-    /**
-     * @return list<array{id: int, label: string, sublabel: string|null}>
-     */
-    private function searchClients(User $actor, string $search): array
-    {
-        return User::query()
-            ->visibleInCrm($actor)
-            ->select('id', 'name', 'erp_name', 'email')
-            ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $inner) => $inner
-                ->where('name', 'like', "%{$search}%")
-                ->orWhere('erp_name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%")
-                ->orWhere('phone', 'like', "%{$search}%")))
-            ->orderByRaw("COALESCE(NULLIF(erp_name, ''), name)")
-            ->take(20)
-            ->get()
-            ->map(fn (User $client): array => [
-                'id' => (int) $client->getKey(),
-                'label' => (string) $client->display_name,
-                'sublabel' => $client->email,
-            ])
-            ->all();
-    }
-
-    /**
-     * Контрагенты — по наименованию, юрнаименованию и ИНН.
-     *
-     * @return list<array{id: int, label: string, sublabel: string|null}>
-     */
-    private function searchContractors(User $actor, string $search): array
-    {
-        return Company::query()
-            ->visibleInCrm($actor)
-            ->select('id', 'user_id', 'name', 'legal_name', 'tax_id')
-            ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $inner) => $inner
-                ->where('name', 'like', "%{$search}%")
-                ->orWhere('legal_name', 'like', "%{$search}%")
-                ->orWhere('tax_id', 'like', "%{$search}%")))
-            ->with('user:id,name,erp_name')
-            ->orderBy('name')
-            ->take(20)
-            ->get()
-            ->map(fn (Company $company): array => [
-                'id' => (int) $company->getKey(),
-                'label' => (string) ($company->name ?: $company->legal_name ?: 'Контрагент №'.$company->getKey()),
-                // Партнёр в подписи важнее ИНН: одноимённые юрлица у разных
-                // партнёров в выдаче иначе неразличимы.
-                'sublabel' => $company->user instanceof User
-                    ? (string) $company->user->display_name
-                    : ($company->tax_id === null ? null : 'ИНН '.$company->tax_id),
-            ])
-            ->all();
-    }
-
-    /**
-     * Заказы и реализации ищутся одинаково — по номеру, местному и из 1С.
-     *
-     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelClass
-     * @return list<array{id: int, label: string, sublabel: string|null}>
-     */
-    private function searchDocuments(User $actor, string $modelClass, string $search, string $label): array
-    {
-        return $modelClass::query()
-            // Документ без партнёра (партнёрский из 1С) доступен только тем, кто видит
-            // весь отдел, — то же правило, что в CrmEntityResolver::canAccess().
-            ->when(
-                ! $actor->can('crm-department.view'),
-                fn (Builder $query) => $query->whereIn(
-                    'user_id',
-                    User::query()->visibleInCrm($actor)->select('id'),
-                ),
-            )
-            ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $inner) => $inner
-                ->where('number', 'like', "%{$search}%")
-                ->orWhere('erp_number', 'like', "%{$search}%")))
-            ->with('user:id,name,erp_name')
-            ->latest('id')
-            ->take(20)
-            ->get()
-            // Через getAttribute(), а не свойствами: класс здесь обобщённый
-            // (заказ или реализация), и статический анализ его полей не знает.
-            ->map(function (Model $document) use ($label): array {
-                $client = $document->getAttribute('user');
-
-                return [
-                    'id' => (int) $document->getKey(),
-                    'label' => $label.' №'.($document->getAttribute('number') ?: $document->getKey()),
-                    'sublabel' => $client instanceof User ? (string) $client->display_name : null,
-                ];
-            })
-            ->all();
+        return response()->json(app(CrmEntitySearch::class)->search($actor, $validated['type'], $search));
     }
 
     /**

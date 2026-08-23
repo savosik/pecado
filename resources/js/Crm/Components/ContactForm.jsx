@@ -2,6 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { Box, HStack, Input, SimpleGrid, Text, Textarea, VStack } from '@chakra-ui/react';
 import { Button } from '@/components/ui/button';
+import ContactLinkPicker from '@/Crm/Components/ContactLinkPicker';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toastError, toastSuccess } from '@/utils/toast';
 
@@ -23,6 +24,7 @@ export default function ContactForm({
     contact = null,
     channels = [],
     roles = [],
+    linkableTypes = [],
     clientId = null,
     entity = null,
     onSaved,
@@ -48,6 +50,9 @@ export default function ContactForm({
     }));
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
+    // Человек без привязки виден только автору, и заводить его так — почти всегда
+    // недосмотр. Поэтому выбор «к кому» стоит прямо в форме создания.
+    const [link, setLink] = useState(null);
 
     const patch = (changes) => setForm((prev) => ({ ...prev, ...changes }));
     const errorOf = (key) => (errors[key] ? errors[key][0] : null);
@@ -66,6 +71,10 @@ export default function ContactForm({
         if (!contact && entity) {
             payload.entity_type = entity.type;
             payload.entity_id = entity.id;
+        } else if (!contact && link) {
+            payload.entity_type = link.entity_type;
+            payload.entity_id = link.entity_id;
+            payload.role = link.role;
         } else {
             delete payload.role;
         }
@@ -147,6 +156,23 @@ export default function ContactForm({
                     </Checkbox>
                 </Box>
             </SimpleGrid>
+
+            {!contact && !entity && linkableTypes.length > 0 && (
+                <Box>
+                    <Text fontSize="sm" fontWeight="600" mb={1}>Кому приходится</Text>
+                    <ContactLinkPicker
+                        types={linkableTypes}
+                        roles={roles}
+                        compact
+                        submitLabel={link ? 'Выбрано' : 'Выбрать'}
+                        onSubmit={setLink}
+                    />
+                    <Text fontSize="xs" color="fg.muted" mt={1}>
+                        Без привязки человек будет виден только вам. Привязать можно и позже,
+                        с его карточки.
+                    </Text>
+                </Box>
+            )}
 
             {!contact && entity && (
                 <Box>

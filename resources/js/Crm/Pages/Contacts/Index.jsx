@@ -33,6 +33,7 @@ export default function Index({
     roles = [],
     sources = [],
     channels = [],
+    linkableTypes = [],
     can = {},
     canSeeDepartment = false,
 }) {
@@ -174,6 +175,7 @@ export default function Index({
                         <ContactForm
                             channels={channels}
                             roles={roles}
+                            linkableTypes={linkableTypes}
                             onSaved={() => { setCreating(false); router.reload(); }}
                             onCancel={() => setCreating(false)}
                         />

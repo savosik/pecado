@@ -54,7 +54,8 @@ class ContactPolicy
     private function accessible(User $user, Contact $contact): bool
     {
         if ($contact->client_user_id === null) {
-            return $user->can('crm-clients-all.view');
+            return $user->can('crm-clients-all.view')
+                || (int) $contact->created_by_user_id === (int) $user->getKey();
         }
 
         return $this->resolver->clientVisible($user, $contact->client_user_id);
