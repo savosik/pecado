@@ -11,6 +11,7 @@ use App\Models\CrmLead;
 use App\Models\CrmTask;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\PrintedDocument;
 use App\Models\Shipment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -77,6 +78,15 @@ final class CrmEntityMap
     public const CONTACT = 'contact';
 
     /**
+     * Печатная форма из 1С: акт сверки, УПД, счёт.
+     *
+     * В карте она нужна затем, что письмо о выложенном документе на неё
+     * ссылается. Пока типа не было, такое письмо роняло весь список писем:
+     * describe() кидал исключение на первой же строке.
+     */
+    public const PRINTED_DOCUMENT = 'printed_document';
+
+    /**
      * Строковый тип для API → класс модели.
      *
      * @var array<string, class-string<Model>>
@@ -93,6 +103,7 @@ final class CrmEntityMap
         self::CALL => CrmCall::class,
         self::LEAD => CrmLead::class,
         self::CONTACT => Contact::class,
+        self::PRINTED_DOCUMENT => PrintedDocument::class,
     ];
 
     /**
@@ -112,6 +123,7 @@ final class CrmEntityMap
         self::CALL => 'Звонок',
         self::LEAD => 'Лид',
         self::CONTACT => 'Контакт',
+        self::PRINTED_DOCUMENT => 'Печатная форма',
     ];
 
     /**
@@ -124,7 +136,10 @@ final class CrmEntityMap
      */
     public static function taskableTypes(): array
     {
-        return array_values(array_diff(self::types(), [self::COMMENT, self::TASK, self::EMAIL, self::CALL]));
+        return array_values(array_diff(
+            self::types(),
+            [self::COMMENT, self::TASK, self::EMAIL, self::CALL, self::PRINTED_DOCUMENT],
+        ));
     }
 
     /**
@@ -155,7 +170,7 @@ final class CrmEntityMap
      */
     public static function commentableTypes(): array
     {
-        return array_values(array_diff(self::types(), [self::COMMENT]));
+        return array_values(array_diff(self::types(), [self::COMMENT, self::PRINTED_DOCUMENT]));
     }
 
     /**
@@ -221,7 +236,8 @@ final class CrmEntityMap
             // Контрагент без партнёра встречается: 1С присылает юрлицо раньше,
             // чем оно привязано к партнёру. Такой контрагент комментируется, но
             // в ленту партнёра не идёт — попадать ей некуда.
-            self::CONTRACTOR, self::ORDER, self::SHIPMENT, self::PAYMENT => $entity->getAttribute('user_id'),
+            self::CONTRACTOR, self::ORDER, self::SHIPMENT, self::PAYMENT,
+            self::PRINTED_DOCUMENT => $entity->getAttribute('user_id'),
             // Комментарий и задача уже знают своего партнёра — денормализация из crm-01.
             self::COMMENT, self::TASK, self::EMAIL, self::CALL, self::CONTACT => $entity->getAttribute('client_user_id'),
             // Лид сводится к партнёру только после конверсии: до неё
@@ -282,6 +298,10 @@ final class CrmEntityMap
             self::EMAIL => 'Письмо: '.$entity->getAttribute('subject'),
             self::CALL => 'Звонок от '.($entity->getAttribute('started_at')?->format('d.m.Y H:i') ?? '—'),
             self::CONTACT => (string) $entity->getAttribute('full_name'),
+            self::PRINTED_DOCUMENT => trim(
+                ($entity->getAttribute('type')?->label() ?? 'Документ')
+                .($entity->getAttribute('number') ? ' № '.$entity->getAttribute('number') : '')
+            ),
             // Организация в скобках: лида заводят и по имени человека, и по названию
             // фирмы, и в списке задач одно без другого часто не узнаётся.
             self::LEAD => trim((string) $entity->getAttribute('name')).(
@@ -322,6 +342,11 @@ final class CrmEntityMap
 
         if ($type === self::CONTACT) {
             return route('crm.contacts.show', $entity->getKey());
+        }
+
+        // Своей страницы у печатной формы нет — она живёт строкой в журнале.
+        if ($type === self::PRINTED_DOCUMENT) {
+            return route('crm.printed-documents.index');
         }
 
         // Отдельного раздела звонков нет — звонок живёт в ленте своего партнёра.

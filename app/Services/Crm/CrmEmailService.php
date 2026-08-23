@@ -14,6 +14,7 @@ use App\Support\Crm\CrmAttachments;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -181,6 +182,34 @@ class CrmEmailService
     }
 
     /**
+     * Описание привязки письма — с оглядкой на то, что тип может быть незнакомым.
+     *
+     * Урок с прода: письмо о выложенном документе ссылалось на печатную форму,
+     * которой не было в карте CRM, и `describe()` ронял **весь список писем**
+     * пятисоткой. Одна непонятная строка не имеет права уносить страницу:
+     * привязку показать не смогли — покажем письмо без неё.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function describeRelated(?Model $related, User $viewer): ?array
+    {
+        if (! $related instanceof Model) {
+            return null;
+        }
+
+        try {
+            return CrmEntityMap::describe($related, $viewer);
+        } catch (\Throwable $exception) {
+            Log::warning('Письмо ссылается на сущность вне карты CRM', [
+                'entity' => $related::class,
+                'id' => $related->getKey(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
      * Адреса из формы: пустые строки и дубликаты выбрасываем здесь, а не в валидации,
      * чтобы лишняя запятая в поле не превращалась в ошибку на весь запрос.
      *
@@ -245,9 +274,7 @@ class CrmEmailService
                 'name' => $email->isSystem() ? 'Система' : ($email->author?->name ?? '—'),
             ],
             'client_id' => $email->client_user_id === null ? null : (int) $email->client_user_id,
-            'entity' => $related instanceof Model
-                ? CrmEntityMap::describe($related, $viewer)
-                : null,
+            'entity' => $this->describeRelated($related, $viewer),
             'attachments_count' => (int) ($email->attachments_count
                 ?? $email->media()->where('collection_name', CrmAttachments::COLLECTION)->count()),
             'can' => [

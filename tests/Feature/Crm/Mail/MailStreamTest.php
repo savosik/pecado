@@ -178,6 +178,50 @@ class MailStreamTest extends TestCase
     }
 
     #[Test]
+    public function letter_about_a_printed_document_does_not_break_the_list(): void
+    {
+        // Разбор прода: письмо о выложенном документе ссылалось на печатную
+        // форму, которой не было в карте CRM, и describe() ронял весь список
+        // писем пятисоткой. Теперь тип в карте есть.
+        $document = \App\Models\PrintedDocument::factory()->create([
+            'user_id' => $this->client->id,
+            'number' => '1023',
+        ]);
+
+        $letter = app(MailStream::class)->capture(new Occasion(
+            key: 'documents.published',
+            clientUserId: $this->client->id,
+            subject: $document,
+            data: ['document_type' => 'reconciliation_act', 'document_number' => '1023', 'document_title' => 'Акт сверки'],
+            view: ['title' => 'Акт сверки', 'body' => 'Документ выложен'],
+        ));
+
+        $payload = app(\App\Services\Crm\CrmEmailService::class)->payload($letter->fresh(), $this->manager);
+
+        $this->assertSame('printed_document', $payload['entity']['type']);
+        $this->assertStringContainsString('1023', $payload['entity']['title']);
+    }
+
+    #[Test]
+    public function unknown_attachment_costs_the_binding_not_the_page(): void
+    {
+        // Одна непонятная строка не имеет права уносить страницу: привязку
+        // показать не смогли — показываем письмо без неё.
+        $letter = CrmEmail::factory()->by($this->manager)->on($this->client)->create();
+
+        // Тип, которого нет в карте CRM.
+        $letter->forceFill([
+            'related_type' => \App\Models\Media::class,
+            'related_id' => 1,
+        ])->save();
+
+        $payload = app(\App\Services\Crm\CrmEmailService::class)->payload($letter->fresh(), $this->manager);
+
+        $this->assertNull($payload['entity']);
+        $this->assertSame($letter->subject, $payload['subject']);
+    }
+
+    #[Test]
     public function manual_letter_is_part_of_the_same_stream(): void
     {
         $order = Order::factory()->create(['user_id' => $this->client->id]);
