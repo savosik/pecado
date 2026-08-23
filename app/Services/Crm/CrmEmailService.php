@@ -67,6 +67,7 @@ class CrmEmailService
             'reply_to' => $data['reply_to'] ?? $actor->email,
             'subject' => $data['subject'],
             'body_html' => $data['body_html'],
+            'tracking_enabled' => (bool) ($data['tracking_enabled'] ?? true),
             'status' => EmailStatus::DRAFT->value,
         ]);
 
@@ -113,6 +114,10 @@ class CrmEmailService
      */
     public function update(CrmEmail $email, array $data): CrmEmail
     {
+        if (array_key_exists('tracking_enabled', $data)) {
+            $email->tracking_enabled = (bool) $data['tracking_enabled'];
+        }
+
         foreach (['subject', 'body_html', 'reply_to'] as $field) {
             if (array_key_exists($field, $data)) {
                 $email->{$field} = $data[$field];
@@ -179,6 +184,37 @@ class CrmEmailService
             'subject' => CrmEmailTemplate::render($template->subject, $values),
             'body_html' => CrmEmailTemplate::render($template->body_html, $values),
         ];
+    }
+
+    /**
+     * Кто открыл письмо и кто перешёл по ссылке.
+     *
+     * Слово «открыл» здесь условное, и интерфейс об этом честно предупреждает:
+     * почтовые клиенты режут картинки, а Apple и Gmail, наоборот, подгружают их
+     * сами. Переход по ссылке — сигнал куда более честный, поэтому показывается
+     * отдельно, а не сливается с открытием.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function reads(CrmEmail $email): array
+    {
+        if (! $email->relationLoaded('deliveries')) {
+            return [];
+        }
+
+        return $email->deliveries
+            ->filter(fn ($delivery): bool => $delivery->sent_at !== null)
+            ->map(fn ($delivery): array => [
+                'recipient' => $delivery->recipient,
+                'channel' => $delivery->channel,
+                'sent_at_label' => $delivery->sent_at?->format('d.m.Y H:i'),
+                'opened_at_label' => $delivery->opened_at?->format('d.m.Y H:i'),
+                'opens_count' => (int) $delivery->opens_count,
+                'clicked_at_label' => $delivery->clicked_at?->format('d.m.Y H:i'),
+                'clicks_count' => (int) $delivery->clicks_count,
+            ])
+            ->values()
+            ->all();
     }
 
     /**
@@ -268,6 +304,8 @@ class CrmEmailService
             'delivered_to' => $email->relationLoaded('deliveries')
                 ? $email->deliveries->whereNotNull('sent_at')->pluck('recipient')->values()->all()
                 : [],
+            'tracking_enabled' => (bool) $email->tracking_enabled,
+            'reads' => $this->reads($email),
             'auto_sent_rule' => $email->autoSentRule?->name,
             'author' => [
                 'id' => (int) $email->user_id,

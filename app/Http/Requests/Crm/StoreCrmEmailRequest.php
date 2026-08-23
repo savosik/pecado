@@ -20,6 +20,7 @@ class StoreCrmEmailRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'tracking_enabled' => ['boolean'],
             'to' => ['required', 'array', 'min:1'],
             'to.*' => ['required', 'email'],
             'cc' => ['nullable', 'array'],

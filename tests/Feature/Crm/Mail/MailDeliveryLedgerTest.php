@@ -79,7 +79,24 @@ class MailDeliveryLedgerTest extends TestCase
 
         $this->assertSame(EmailStatus::SENT, $letter->status);
         $this->assertSame(2, CrmEmailDelivery::query()->where('crm_email_id', $letter->id)->count());
-        Mail::assertSent(CrmManagerMail::class, 1);
+
+        // Письмо уходит каждому адресату отдельным экземпляром (так различаются
+        // открытия), поэтому экземпляров два — по числу адресов, а не по числу
+        // правил. Суть проверки в другом: buh@ назван двумя правилами и обязан
+        // получить письмо ровно один раз.
+        Mail::assertSent(CrmManagerMail::class, 2);
+
+        $addressed = [];
+
+        Mail::assertSent(CrmManagerMail::class, function (CrmManagerMail $mail) use (&$addressed): bool {
+            $addressed[] = $mail->delivery?->recipient;
+
+            return true;
+        });
+
+        sort($addressed);
+
+        $this->assertSame(['buh@romashka.ru', 'dir@romashka.ru'], $addressed);
     }
 
     #[Test]

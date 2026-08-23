@@ -124,3 +124,18 @@ Route::middleware('throttle:30,1')->prefix('api/dadata')->group(function () {
     Route::post('/suggest/email', [\App\Http\Controllers\Api\DaDataController::class, 'suggestEmail'])
         ->name('dadata.suggest.email');
 });
+
+/*
+ * Отслеживание прочтения писем: пиксель и редирект по ссылке.
+ *
+ * Публичные и короткие — их дёргает почтовый клиент получателя. Вне групп
+ * с авторизацией сознательно: у адресата письма никакой сессии нет.
+ */
+Route::get('/e/o/{token}.gif', [\App\Http\Controllers\MailTrackingController::class, 'open'])
+    ->name('mail.track.open')
+    ->where('token', '[A-Za-z0-9]{10,40}');
+
+Route::get('/e/c/{token}', [\App\Http\Controllers\MailTrackingController::class, 'click'])
+    ->middleware('signed')
+    ->name('mail.track.click')
+    ->where('token', '[A-Za-z0-9]{10,40}');

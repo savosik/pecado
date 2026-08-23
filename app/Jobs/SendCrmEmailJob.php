@@ -57,7 +57,13 @@ class SendCrmEmailJob implements ShouldQueue
         }
 
         try {
-            Mail::to($recipients)->send(new CrmManagerMail($email));
+            // Каждому адресату свой экземпляр письма. Иначе пиксель один на всех,
+            // и «кто именно открыл» неразличимо. Побочный эффект полезный:
+            // получатели перестают видеть адреса друг друга — тот же принцип,
+            // что уже действует в письмах о заказах.
+            foreach ($ledger->deliveriesFor($email, $recipients) as $delivery) {
+                Mail::to($delivery->recipient)->send(new CrmManagerMail($email, $delivery));
+            }
         } catch (Throwable $exception) {
             // Транспорт письмо не принял — значит, оно не уходило, и адреса
             // надо освободить: иначе повторная попытка объявит письмо

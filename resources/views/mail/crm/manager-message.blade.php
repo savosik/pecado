@@ -14,5 +14,10 @@
     <div style="max-width:640px; margin:0 auto; background:#ffffff; border-radius:8px; padding:32px;">
         {!! $bodyHtml !!}
     </div>
+    @if (!empty($trackingPixel))
+        {{-- Пиксель отслеживания. Загрузился — письмо открывали; не загрузился —
+             это ничего не значит: почтовые клиенты часто режут картинки. --}}
+        <img src="{{ $trackingPixel }}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;">
+    @endif
 </body>
 </html>

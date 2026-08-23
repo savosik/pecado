@@ -20,6 +20,7 @@ class UpdateCrmEmailRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'tracking_enabled' => ['boolean'],
             'to' => ['sometimes', 'array', 'min:1'],
             'to.*' => ['required', 'email'],
             'cc' => ['sometimes', 'nullable', 'array'],

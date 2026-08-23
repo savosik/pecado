@@ -12,7 +12,7 @@ import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import { usePermission } from '@/shared/Panel/usePermission';
-import { LuBot, LuFilter, LuMail, LuPaperclip, LuPencil, LuSend, LuTrash2, LuUser } from 'react-icons/lu';
+import { LuBot, LuEye, LuFilter, LuMail, LuPaperclip, LuPencil, LuSend, LuTrash2, LuUser } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 const selectStyle = {
@@ -165,6 +165,14 @@ export default function Index({
                         <Text fontSize="xs" color="green.600">
                             Уже ушло: {row.delivered_to.join(', ')}
                         </Text>
+                    )}
+                    {row.reads?.some((read) => read.opened_at_label) && (
+                        <HStack gap={1} color="green.600">
+                            <LuEye size={12} />
+                            <Text fontSize="xs">
+                                {row.reads.filter((read) => read.opened_at_label).length} из {row.reads.length} открыли
+                            </Text>
+                        </HStack>
                     )}
                     {row.tags?.length > 0 && (
                         <Wrap gap={1}>

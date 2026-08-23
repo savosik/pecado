@@ -4,6 +4,7 @@ namespace App\Services\Crm\Mail;
 
 use App\Models\CrmEmail;
 use App\Models\CrmEmailDelivery;
+use Illuminate\Support\Str;
 
 /**
  * Реестр отправок: кому какое письмо уже уходило.
@@ -33,7 +34,7 @@ class MailDeliveryLedger
      * @param  array<int, string>  $recipients
      * @return array<int, string> адреса в исходном написании
      */
-    public function claim(CrmEmail $email, array $recipients): array
+    public function claim(CrmEmail $email, array $recipients, string $channel = CrmEmailDelivery::CHANNEL_TO): array
     {
         $normalized = [];
 
@@ -62,6 +63,10 @@ class MailDeliveryLedger
             $inserted = CrmEmailDelivery::query()->insertOrIgnore([
                 'crm_email_id' => $email->getKey(),
                 'recipient' => $key,
+                'channel' => $channel,
+                // Токен отслеживания рождается вместе с занятием адреса:
+                // он и есть то, чем адресат отличается от соседа по письму.
+                'track_token' => Str::random(40),
                 'created_at' => $now,
             ]);
 
@@ -71,6 +76,23 @@ class MailDeliveryLedger
         }
 
         return $claimed;
+    }
+
+    /**
+     * Занятые записи адресатов — по ним рассылка и идёт.
+     *
+     * @param  array<int, string>  $recipients
+     * @return \Illuminate\Support\Collection<int, CrmEmailDelivery>
+     */
+    public function deliveriesFor(CrmEmail $email, array $recipients)
+    {
+        return CrmEmailDelivery::query()
+            ->where('crm_email_id', $email->getKey())
+            ->whereIn('recipient', array_map(
+                fn (string $recipient): string => mb_strtolower(trim($recipient)),
+                $recipients,
+            ))
+            ->get();
     }
 
     /**

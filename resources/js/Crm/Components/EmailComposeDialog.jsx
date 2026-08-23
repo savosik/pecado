@@ -17,10 +17,11 @@ import { Field } from '@/components/ui/field';
 import { Alert } from '@/components/ui/alert';
 import SimpleWysiwyg from '@/Admin/Components/SimpleWysiwyg';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
+import { Checkbox } from '@/components/ui/checkbox';
 import { usePermission } from '@/shared/Panel/usePermission';
 import { toastError, toastSuccess } from '@/utils/toast';
 
-const EMPTY = { to: '', cc: '', subject: '', body_html: '' };
+const EMPTY = { to: '', cc: '', subject: '', body_html: '', tracking_enabled: true };
 
 /**
  * Составление письма партнёру.
@@ -57,6 +58,7 @@ export default function EmailComposeDialog({ open, onClose, email = null, entity
                 cc: (email.cc || []).join(', '),
                 subject: email.subject || '',
                 body_html: email.body_html || '',
+                tracking_enabled: email.tracking_enabled !== false,
             }
             : { ...EMPTY, to: defaultTo || '' });
 
@@ -236,6 +238,41 @@ export default function EmailComposeDialog({ open, onClose, email = null, entity
                                                     />
                                                 )}
                                         </Field>
+
+                                        {(draft?.reads || []).length > 0 && (
+                                            <Box borderWidth="1px" borderRadius="md" p={3}>
+                                                <Text fontSize="sm" fontWeight="600" mb={2}>Кто открыл</Text>
+                                                <VStack align="stretch" gap={1}>
+                                                    {draft.reads.map((read) => (
+                                                        <HStack key={read.recipient} justify="space-between" gap={2} flexWrap="wrap">
+                                                            <Text fontSize="sm">{read.recipient}</Text>
+                                                            <Text fontSize="xs" color={read.opened_at_label ? 'green.600' : 'fg.muted'}>
+                                                                {read.opened_at_label
+                                                                    ? `открыто ${read.opened_at_label}${read.opens_count > 1 ? ` · ${read.opens_count} раза` : ''}`
+                                                                    : 'открытия не зафиксировано'}
+                                                                {read.clicked_at_label ? ` · перешёл ${read.clicked_at_label}` : ''}
+                                                            </Text>
+                                                        </HStack>
+                                                    ))}
+                                                </VStack>
+                                                <Text fontSize="xs" color="fg.muted" mt={2}>
+                                                    Открытие — сигнал, а не факт. Почтовые программы часто режут картинки:
+                                                    письмо могли прочитать, а отметки не будет. Переход по ссылке
+                                                    надёжнее — его делает человек.
+                                                </Text>
+                                            </Box>
+                                        )}
+
+                                        {/* Открытие — сигнал, а не факт: почтовые клиенты
+                                            режут картинки, а Apple и Gmail подгружают их сами.
+                                            Об этом сказано прямо, чтобы менеджер не делал
+                                            выводов, которых данные не выдерживают. */}
+                                        <Checkbox
+                                            checked={form.tracking_enabled !== false}
+                                            onCheckedChange={(e) => set('tracking_enabled', !!e.checked)}
+                                        >
+                                            Отслеживать открытия и переходы по ссылкам
+                                        </Checkbox>
 
                                         <HStack justify="space-between" flexWrap="wrap" gap={2}>
                                             <Text fontSize="xs" color="fg.muted">

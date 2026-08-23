@@ -60,6 +60,7 @@ class CrmEmail extends Model implements HasMedia
         'origin_key',
         'origin_data',
         'tags',
+        'tracking_enabled',
         'related_type',
         'related_id',
         'to',
@@ -77,6 +78,7 @@ class CrmEmail extends Model implements HasMedia
             'cc' => 'array',
             'origin_data' => 'array',
             'tags' => 'array',
+            'tracking_enabled' => 'boolean',
             'status' => EmailStatus::class,
             'sent_at' => 'datetime',
         ];

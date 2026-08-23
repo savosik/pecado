@@ -31,15 +31,42 @@ class CrmManagerMail extends Mailable
      */
     public const ID_HEADER = 'X-Crm-Email-Id';
 
-    public function __construct(public CrmEmail $email) {}
+    /**
+     * @param  \App\Models\CrmEmailDelivery|null  $delivery  адресат этого экземпляра;
+     *                                                       по нему подставляется пиксель
+     *                                                       и переписываются ссылки
+     */
+    public function __construct(
+        public CrmEmail $email,
+        public ?\App\Models\CrmEmailDelivery $delivery = null,
+    ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
             subject: $this->email->subject,
             replyTo: $this->email->reply_to === null ? [] : [$this->email->reply_to],
-            cc: $this->email->cc ?? [],
+            // Копия ставится только на первом экземпляре: письмо уходит каждому
+            // адресату отдельно, и без этого условия человек в копии получил бы
+            // столько писем, сколько у письма получателей.
+            cc: $this->includesCarbonCopy() ? ($this->email->cc ?? []) : [],
         );
+    }
+
+    /**
+     * Ставить ли копию на этот экземпляр.
+     */
+    private function includesCarbonCopy(): bool
+    {
+        if ($this->delivery === null) {
+            return true;
+        }
+
+        $first = collect((array) $this->email->to)
+            ->map(fn ($address): string => mb_strtolower(trim((string) $address)))
+            ->first();
+
+        return $first === mb_strtolower(trim($this->delivery->recipient));
     }
 
     public function headers(): Headers
@@ -51,9 +78,21 @@ class CrmManagerMail extends Mailable
 
     public function content(): Content
     {
+        $tracker = app(\App\Services\Crm\Mail\MailTracker::class);
+
+        $body = $this->email->body_html;
+        $pixel = '';
+
+        // Отслеживание выключается и на письме, и на всём контуре: галочка
+        // «не отслеживать» должна работать, чем бы письмо ни было собрано.
+        if ($this->delivery !== null && $this->email->tracking_enabled) {
+            $body = $tracker->decorate($body, $this->delivery);
+            $pixel = $tracker->pixelUrl($this->delivery);
+        }
+
         return new Content(
             view: 'mail.crm.manager-message',
-            with: ['bodyHtml' => $this->email->body_html],
+            with: ['bodyHtml' => $body, 'trackingPixel' => $pixel],
         );
     }
 
