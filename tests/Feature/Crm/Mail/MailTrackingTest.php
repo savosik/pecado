@@ -176,6 +176,21 @@ class MailTrackingTest extends TestCase
     }
 
     #[Test]
+    public function pixel_url_has_no_file_extension(): void
+    {
+        // Разбор с dev: nginx ловит адреса с расширением своим правилом для
+        // статики, и до PHP запрос не доходит — пиксель молча отдавал 404.
+        // Почтовому клиенту важен Content-Type, а не вид ссылки.
+        $this->send(['buh@romashka.ru']);
+        $delivery = CrmEmailDelivery::query()->firstOrFail();
+
+        $url = route('mail.track.open', ['token' => $delivery->track_token]);
+
+        $this->assertStringEndsWith($delivery->track_token, $url);
+        $this->assertStringNotContainsString('.gif', $url);
+    }
+
+    #[Test]
     public function unknown_token_still_returns_a_picture(): void
     {
         // Иначе в письме появится битая картинка, и человек это увидит.

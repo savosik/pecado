@@ -130,8 +130,12 @@ Route::middleware('throttle:30,1')->prefix('api/dadata')->group(function () {
  *
  * Публичные и короткие — их дёргает почтовый клиент получателя. Вне групп
  * с авторизацией сознательно: у адресата письма никакой сессии нет.
+ *
+ * Без расширения `.gif` в адресе, хотя картинка отдаётся именно gif: nginx ловит
+ * такие адреса своим правилом для статики и до PHP запрос не доходит — пиксель
+ * молча отдавал бы 404. Почтовому клиенту важен Content-Type, а не вид ссылки.
  */
-Route::get('/e/o/{token}.gif', [\App\Http\Controllers\MailTrackingController::class, 'open'])
+Route::get('/e/o/{token}', [\App\Http\Controllers\MailTrackingController::class, 'open'])
     ->name('mail.track.open')
     ->where('token', '[A-Za-z0-9]{10,40}');
 
