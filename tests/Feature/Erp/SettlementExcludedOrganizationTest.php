@@ -228,6 +228,64 @@ class SettlementExcludedOrganizationTest extends TestCase
         $this->assertSame($this->organization->id, $row->organization_id);
     }
 
+    /**
+     * v16.7.0 (круг 12): агрегат контрагента приходит вместе с расчётами внутренних
+     * организаций. Строки разреза по ним мы не пишем, а итог писали целиком — и в
+     * сверке всплывал долг перед «Рекламой», которого на витрине нет: у клиента
+     * 2 785,80 ₽ «просрочки» при полностью погашенном графике.
+     */
+    #[Test]
+    public function итог_контрагента_очищается_от_исключённой_организации(): void
+    {
+        app(HandleBalanceUpdated::class)->handle([
+            'event' => 'balance.updated',
+            'message_id' => 'msg-balance-'.uniqid(),
+            'partner_uuid' => self::PARTNER_UUID,
+            'updated_at' => '2026-08-24T10:00:00+03:00',
+            'contractors' => [[
+                'uuid' => self::CONTRACTOR_UUID,
+                'tax_id' => '7710140679',
+                'current_balance' => -12785.80,
+                'overdue_debt' => 7785.80,
+                'organizations' => [
+                    ['uuid' => self::ORGANIZATION_UUID, 'current_balance' => -10000.00, 'overdue_debt' => 5000.00],
+                    ['uuid' => self::EXCLUDED_ORGANIZATION_UUID, 'current_balance' => -2785.80, 'overdue_debt' => 2785.80],
+                ],
+            ]],
+        ]);
+
+        $balance = ContractorBalance::query()->sole();
+
+        $this->assertEqualsWithDelta(-10000.00, (float) $balance->current_balance, 0.01);
+        $this->assertEqualsWithDelta(5000.00, (float) $balance->overdue_debt, 0.01);
+    }
+
+    /**
+     * Без разреза вычитать не из чего: агрегат сохраняется как есть. Соврать
+     * в другую сторону — занизить долг клиента — хуже, чем оставить шум.
+     */
+    #[Test]
+    public function без_разреза_итог_контрагента_сохраняется_целиком(): void
+    {
+        app(HandleBalanceUpdated::class)->handle([
+            'event' => 'balance.updated',
+            'message_id' => 'msg-balance-'.uniqid(),
+            'partner_uuid' => self::PARTNER_UUID,
+            'updated_at' => '2026-08-24T10:00:00+03:00',
+            'contractors' => [[
+                'uuid' => self::CONTRACTOR_UUID,
+                'tax_id' => '7710140679',
+                'current_balance' => -12785.80,
+                'overdue_debt' => 7785.80,
+            ]],
+        ]);
+
+        $balance = ContractorBalance::query()->sole();
+
+        $this->assertEqualsWithDelta(-12785.80, (float) $balance->current_balance, 0.01);
+        $this->assertEqualsWithDelta(7785.80, (float) $balance->overdue_debt, 0.01);
+    }
+
     #[Test]
     public function просрочка_исключённой_организации_не_попадает_в_детализацию(): void
     {

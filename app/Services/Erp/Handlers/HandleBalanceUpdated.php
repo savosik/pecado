@@ -87,11 +87,16 @@ class HandleBalanceUpdated
                     }
                 }
 
+                [$currentBalance, $overdueDebt] = $this->withoutExcludedOrganizations(
+                    $contractorData,
+                    $excludedOrganizationIds,
+                );
+
                 $updateData = [
                     'company_id' => $company?->id,
                     'contractor_uuid' => $contractorUuid,
-                    'current_balance' => $contractorData['current_balance'] ?? 0,
-                    'overdue_debt' => $contractorData['overdue_debt'] ?? 0,
+                    'current_balance' => $currentBalance,
+                    'overdue_debt' => $overdueDebt,
                     'balance_erp_updated_at' => $updatedAt,
                 ];
 
@@ -165,6 +170,61 @@ class HandleBalanceUpdated
                 ]);
             }
         });
+    }
+
+    /**
+     * Итог контрагента без внутренних организаций (круг 12, v16.7.0).
+     *
+     * `current_balance` и `overdue_debt` приходят агрегатом по контрагенту и
+     * включают расчёты с внутренними организациями («Реклама»). Строки разреза
+     * по ним мы не пишем и графики по ним отбрасываем — а агрегат писали целиком,
+     * из-за чего в сверке всплывал долг, которого на витрине нет и быть не должно:
+     * у клиента 2 785,80 ₽ «просрочки» перед «Рекламой» при нулевом графике.
+     *
+     * Вычитаем только по данным разреза: без `organizations[]` вычитать не из чего,
+     * и агрегат остаётся как есть — соврать в другую сторону хуже.
+     *
+     * @param  array<string, mixed>  $contractorData
+     * @param  list<int>  $excludedOrganizationIds
+     * @return array{0: float, 1: float}
+     */
+    private function withoutExcludedOrganizations(array $contractorData, array $excludedOrganizationIds): array
+    {
+        $balance = (float) ($contractorData['current_balance'] ?? 0);
+        $overdue = (float) ($contractorData['overdue_debt'] ?? 0);
+
+        $organizations = $contractorData['organizations'] ?? null;
+
+        if ($excludedOrganizationIds === [] || ! is_array($organizations) || $organizations === []) {
+            return [round($balance, 2), round($overdue, 2)];
+        }
+
+        foreach ($organizations as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $uuid = $row['uuid'] ?? null;
+
+            if (! is_string($uuid) || trim($uuid) === '') {
+                continue;
+            }
+
+            // Заглушку здесь не создаём: незнакомая организация исключённой не бывает,
+            // а плодить карточки ради вычитания нуля незачем.
+            $organizationId = Organization::withTrashed()->where('external_id', trim($uuid))->value('id');
+
+            if ($organizationId === null || ! in_array((int) $organizationId, $excludedOrganizationIds, true)) {
+                continue;
+            }
+
+            $balance -= (float) ($row['current_balance'] ?? 0);
+            $overdue -= (float) ($row['overdue_debt'] ?? 0);
+        }
+
+        // Просрочка отрицательной не бывает: если разрез разошёлся с агрегатом,
+        // ноль честнее минуса.
+        return [round($balance, 2), round(max(0.0, $overdue), 2)];
     }
 
     /**
