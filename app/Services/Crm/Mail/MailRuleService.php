@@ -120,9 +120,10 @@ class MailRuleService
      * менеджеру о том, верно ли набрано условие; конкретные строки — говорят.
      *
      * @param  array<string, mixed>|null  $conditions
+     * @param  list<int>  $clientIds  подписанные партнёры; пустой список — все
      * @return array{total: int, scanned: int, letters: array<int, array<string, mixed>>}
      */
-    public function preview(User $actor, ?array $conditions, int $limit = 10): array
+    public function preview(User $actor, ?array $conditions, int $limit = 10, array $clientIds = []): array
     {
         $window = (int) config('mail_stream.preview_window', 300);
 
@@ -132,7 +133,7 @@ class MailRuleService
             ->limit($window)
             ->get();
 
-        $probe = new CrmMailRule(['conditions' => $conditions]);
+        $probe = (new CrmMailRule(['conditions' => $conditions]))->withSubscribedClientIds($clientIds);
 
         $matched = $letters->filter(fn (CrmEmail $letter): bool => $this->matcher->matches($probe, $letter));
 
@@ -185,7 +186,44 @@ class MailRuleService
             'created_at_label' => $rule->created_at?->format('d.m.Y H:i'),
             'last_matched_at_label' => $rule->last_matched_at?->format('d.m.Y H:i'),
             'author' => $rule->author?->name,
+            'clients' => $this->subscribers($rule),
+            'clients_label' => $this->subscribersLabel($rule),
         ];
+    }
+
+    /**
+     * Подписанные партнёры карточкой: имя нужно, чтобы менеджер узнал их
+     * в списке, не открывая правило.
+     *
+     * @return list<array{id: int, label: string}>
+     */
+    private function subscribers(CrmMailRule $rule): array
+    {
+        if (! $rule->exists) {
+            return [];
+        }
+
+        return $rule->clients
+            ->map(fn (User $client): array => [
+                'id' => (int) $client->getKey(),
+                'label' => (string) $client->display_name,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Короткая строка для списка правил: «Все партнёры» или «Партнёров: 12».
+     */
+    private function subscribersLabel(CrmMailRule $rule): string
+    {
+        $count = count($this->subscribers($rule));
+
+        return match (true) {
+            $count === 0 => 'Все партнёры',
+            $count === 1 => $this->subscribers($rule)[0]['label'],
+            default => 'Партнёров: '.$count,
+        };
     }
 
     /**

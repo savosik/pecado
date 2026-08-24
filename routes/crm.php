@@ -442,6 +442,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
             ->name('emails.suppressions.index');
         Route::post('/emails/rules/preview', [MailRuleController::class, 'preview'])
             ->name('emails.rules.preview');
+        // Подписчики правила: поиск партнёров для адресной части.
+        Route::get('/emails/rules/clients', [MailRuleController::class, 'clientOptions'])
+            ->name('emails.rules.clients');
         Route::get('/emails/{email}', [EmailController::class, 'show'])
             ->name('emails.show')
             ->whereNumber('email');

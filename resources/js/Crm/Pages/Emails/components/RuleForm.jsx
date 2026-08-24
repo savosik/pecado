@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert } from '@/components/ui/alert';
 import { LuPlus, LuX } from 'react-icons/lu';
+import SubscriberPicker from './SubscriberPicker';
 
 const controlStyle = {
     padding: '0.5rem',
@@ -20,6 +21,7 @@ const emptyRule = {
     conditions: [{ field: 'tag', op: 'has_tag', value: '' }],
     recipients: [],
     cc: [],
+    clients: [],
     auto_send: false,
     is_active: true,
     throttle_minutes: null,
@@ -62,6 +64,7 @@ export default function RuleForm({
         axios.post(route('crm.emails.rules.preview'), {
             match: state.match,
             conditions: state.conditions.filter((c) => c.field && c.op),
+            client_ids: (state.clients || []).map((item) => item.id),
         })
             .then((res) => setPreview(res.data))
             .catch(() => setPreview(null));
@@ -69,12 +72,14 @@ export default function RuleForm({
 
     // Превью пересчитывается по мере набора: смысл в том, чтобы менеджер видел
     // результат раньше, чем нажмёт «Сохранить», а не узнавал о промахе потом.
+    // Подписчики входят в пересчёт наравне с условиями: сузив правило до трёх
+    // партнёров, менеджер должен сразу увидеть, что улов стал меньше.
     useEffect(() => {
         clearTimeout(timer.current);
         timer.current = setTimeout(() => loadPreview(form), 400);
 
         return () => clearTimeout(timer.current);
-    }, [form.match, JSON.stringify(form.conditions), loadPreview]);
+    }, [form.match, JSON.stringify(form.conditions), JSON.stringify(form.clients), loadPreview]);
 
     const patch = (changes) => setForm((prev) => ({ ...prev, ...changes }));
 
@@ -126,6 +131,7 @@ export default function RuleForm({
             conditions: form.conditions.filter((c) => c.field && c.op),
             recipients: parseAddresses(recipientsText),
             cc: parseAddresses(ccText),
+            client_ids: (form.clients || []).map((item) => item.id),
             auto_send: form.auto_send,
             is_active: form.is_active,
             throttle_minutes: form.throttle_minutes || null,
@@ -255,6 +261,11 @@ export default function RuleForm({
                         </Text>
                     )}
                 </Box>
+
+                <SubscriberPicker
+                    value={form.clients}
+                    onChange={(clients) => patch({ clients })}
+                />
 
                 <Box>
                     <Text fontSize="sm" fontWeight="600" mb={1}>Отправить на</Text>

@@ -7,6 +7,7 @@ use App\Models\CrmEmail;
 use App\Models\CrmMailRule;
 use App\Models\CrmMailRuleHit;
 use App\Models\User;
+use App\Services\Crm\CrmEntitySearch;
 use App\Services\Crm\Mail\MailFieldCatalog;
 use App\Services\Crm\Mail\MailRuleService;
 use App\Services\Crm\Mail\MailTagBuilder;
@@ -38,7 +39,7 @@ class MailRuleController extends CrmController
             'only_auto' => ['nullable', 'boolean'],
         ]);
 
-        $query = CrmMailRule::query()->with('author:id,name');
+        $query = CrmMailRule::query()->with(['author:id,name', 'clients:id,name,erp_name']);
 
         $this->applyRuleFilters($query, $filters);
 
@@ -101,10 +102,10 @@ class MailRuleController extends CrmController
             $query->where('auto_send', true);
         }
 
-        // Отбор по партнёру — по факту, а не по замыслу: показываем правила,
-        // которые действительно ловили письма этого партнёра. Правило, ещё
-        // ничего не поймавшее, сюда не попадёт, и это честно: про партнёра
-        // оно пока никак себя не проявило.
+        // Отбор по партнёру отвечает сразу на два вопроса: на что партнёр
+        // подписан явно и что про него реально уходило. Одного факта мало —
+        // свежая подписка ещё ничего не поймала; одного замысла мало —
+        // глобальное правило подписки не имеет, а письма шлёт.
         if (filled($filters['client'] ?? null)) {
             $name = $filters['client'];
 
@@ -115,11 +116,13 @@ class MailRuleController extends CrmController
                 ->limit(200)
                 ->pluck('id');
 
-            $query->whereIn('id', CrmMailRuleHit::query()
-                ->select('rule_id')
-                ->whereIn('crm_email_id', CrmEmail::query()
-                    ->select('id')
-                    ->whereIn('client_user_id', $clientIds)));
+            $query->where(fn ($inner) => $inner
+                ->whereHas('clients', fn ($clients) => $clients->whereIn('users.id', $clientIds))
+                ->orWhereIn('id', CrmMailRuleHit::query()
+                    ->select('rule_id')
+                    ->whereIn('crm_email_id', CrmEmail::query()
+                        ->select('id')
+                        ->whereIn('client_user_id', $clientIds))));
         }
     }
 
@@ -149,6 +152,8 @@ class MailRuleController extends CrmController
         $validated = $request->validate([
             'match' => ['nullable', 'string'],
             'conditions' => ['present', 'array', 'max:20'],
+            'client_ids' => ['nullable', 'array', 'max:1000'],
+            'client_ids.*' => ['integer'],
         ]);
 
         $conditions = $this->rules->buildConditions(
@@ -156,7 +161,50 @@ class MailRuleController extends CrmController
             (array) $validated['conditions'],
         );
 
-        return response()->json($this->rules->preview($actor, $conditions));
+        return response()->json($this->rules->preview(
+            $actor,
+            $conditions,
+            10,
+            $this->clientIds($actor, (array) ($validated['client_ids'] ?? [])),
+        ));
+    }
+
+    /**
+     * Партнёры для выбора подписчиков — тот же поиск, что в привязке контактов.
+     */
+    public function clientOptions(Request $request, CrmEntitySearch $search): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        Gate::authorize('viewAny', CrmEmail::class);
+
+        return response()->json([
+            'options' => $search->clients($actor, trim((string) $request->string('search'))),
+        ]);
+    }
+
+    /**
+     * Отсев чужих партнёров.
+     *
+     * Менеджер не должен подписать на правило клиента, которого не видит:
+     * иначе через список подписчиков утекают имена чужих клиентов.
+     *
+     * @param  array<int, mixed>  $ids
+     * @return list<int>
+     */
+    private function clientIds(User $actor, array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return User::query()
+            ->visibleInCrm($actor)
+            ->whereIn('id', $ids)
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
     }
 
     public function store(StoreMailRuleRequest $request): JsonResponse
@@ -167,21 +215,56 @@ class MailRuleController extends CrmController
         $rule->user_id = (int) $actor->getKey();
         $rule->save();
 
+        $this->syncClients($request, $rule, $actor);
+
         // Задним числом ничего не подбираем: правило работает вперёд. Захочет
         // менеджер поднять уже собранные письма — нажмёт «применить к старым»,
         // увидев в превью, что именно ловится.
         return response()->json([
-            'rule' => $this->rules->payload($rule->refresh()),
+            'rule' => $this->rules->payload($this->fresh($rule)),
         ], 201);
     }
 
     public function update(StoreMailRuleRequest $request, CrmMailRule $rule): JsonResponse
     {
+        $actor = $this->crmActor($request);
+
         $rule->fill($this->attributes($request))->save();
 
+        $this->syncClients($request, $rule, $actor);
+
         return response()->json([
-            'rule' => $this->rules->payload($rule->refresh()),
+            'rule' => $this->rules->payload($this->fresh($rule)),
         ]);
+    }
+
+    /**
+     * Пересобрать список подписчиков правила.
+     *
+     * Пустой список — это «все партнёры», а не «никто»: правило без адресной
+     * части остаётся глобальным фильтром, каким было до подписок.
+     */
+    private function syncClients(StoreMailRuleRequest $request, CrmMailRule $rule, User $actor): void
+    {
+        $ids = $this->clientIds($actor, (array) $request->validated('client_ids', []));
+        $current = $rule->clients()->pluck('users.id')->map(fn ($id): int => (int) $id)->all();
+
+        // Не sync(): он переписал бы автора и дату подписки у тех, кто уже
+        // был подписан. Кто и когда подписал партнёра — это история, а не
+        // побочный результат сохранения формы.
+        $rule->clients()->detach(array_diff($current, $ids));
+
+        foreach (array_diff($ids, $current) as $id) {
+            $rule->clients()->attach($id, [
+                'created_by_user_id' => (int) $actor->getKey(),
+                'created_at' => now(),
+            ]);
+        }
+    }
+
+    private function fresh(CrmMailRule $rule): CrmMailRule
+    {
+        return $rule->refresh()->load('clients:id,name,erp_name', 'author:id,name');
     }
 
     public function toggle(Request $request, CrmMailRule $rule): JsonResponse

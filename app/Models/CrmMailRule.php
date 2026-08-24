@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -37,6 +38,13 @@ class CrmMailRule extends Model
 
     /** Получатель «персональный менеджер клиента» — раскрывается по письму. */
     public const RECIPIENT_MANAGER = 'менеджер';
+
+    /**
+     * Подписчики правила, ещё не сохранённого в базу.
+     *
+     * @var list<int>|null
+     */
+    private ?array $transientClientIds = null;
 
     protected $fillable = [
         'name',
@@ -71,6 +79,75 @@ class CrmMailRule extends Model
     public function hits(): HasMany
     {
         return $this->hasMany(CrmMailRuleHit::class, 'rule_id');
+    }
+
+    /**
+     * Партнёры, подписанные на правило. Пустой список означает «все».
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function clients(): BelongsToMany
+    {
+        // Без withTimestamps(): в сводной таблице есть только created_at,
+        // а хелпер требует обе колонки. Дату проставляем при подписке.
+        return $this->belongsToMany(User::class, 'crm_mail_rule_clients', 'rule_id', 'client_user_id')
+            ->withPivot('created_by_user_id', 'created_at');
+    }
+
+    /**
+     * Кого правило подписало — списком идентификаторов.
+     *
+     * @return list<int>
+     */
+    public function subscribedClientIds(): array
+    {
+        if ($this->transientClientIds !== null) {
+            return $this->transientClientIds;
+        }
+
+        if (! $this->exists) {
+            return [];
+        }
+
+        return $this->clients->map(fn (User $client): int => (int) $client->getKey())->values()->all();
+    }
+
+    /**
+     * Подставить список подписчиков непривязанному правилу.
+     *
+     * Нужно превью: там правило существует только в форме, строки в базе
+     * ещё нет, а показать надо ровно то, что поймает сохранённое правило.
+     *
+     * @param  list<int>  $ids
+     */
+    public function withSubscribedClientIds(array $ids): static
+    {
+        $this->transientClientIds = array_values(array_unique(array_map('intval', $ids)));
+
+        return $this;
+    }
+
+    /**
+     * Попадает ли письмо этого партнёра под адресную часть правила.
+     *
+     * Пустой список — все партнёры, включая письма без партнёра вовсе
+     * (внутренние сводки, вопросы с сайта). Как только список заполнен,
+     * правило становится адресным: письмо без партнёра под него не подходит,
+     * потому что «подписаны эти трое» и «подписаны все» — разные намерения.
+     */
+    public function appliesToClient(?int $clientUserId): bool
+    {
+        $subscribed = $this->subscribedClientIds();
+
+        if ($subscribed === []) {
+            return true;
+        }
+
+        if ($clientUserId === null) {
+            return false;
+        }
+
+        return in_array($clientUserId, $subscribed, true);
     }
 
     /**

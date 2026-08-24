@@ -227,6 +227,12 @@ export default function Rules({
 
                                 <Text fontSize="sm" color="fg.muted">{rule.conditions_text}</Text>
                                 <Text fontSize="sm">→ {rule.recipients.join(', ')}</Text>
+                                {rule.clients?.length > 0 && (
+                                    <Text fontSize="xs" color="fg.muted">
+                                        подписаны: {rule.clients.slice(0, 3).map((c) => c.label).join(', ')}
+                                        {rule.clients.length > 3 ? ` и ещё ${rule.clients.length - 3}` : ''}
+                                    </Text>
+                                )}
                                 {rule.cc.length > 0 && (
                                     <Text fontSize="xs" color="fg.muted">копия: {rule.cc.join(', ')}</Text>
                                 )}

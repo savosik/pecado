@@ -320,6 +320,9 @@ class MailRuleEngine
     {
         return CrmMailRule::query()
             ->active()
+            // Подписчики нужны каждому правилу при разборе — без жадной
+            // загрузки это запрос на правило на письмо.
+            ->with('clients:id')
             ->where(function ($query) use ($letter, $force) {
                 $query->where('created_at', '<=', $letter->created_at ?? now());
 

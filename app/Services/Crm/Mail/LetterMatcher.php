@@ -21,6 +21,12 @@ class LetterMatcher
 
     public function matches(CrmMailRule $rule, CrmEmail $letter): bool
     {
+        // Адресная часть проверяется до условий: «подписан ли этот партнёр»
+        // — вопрос дешёвый и отсекающий, а разбор условий по телу письма нет.
+        if (! $rule->appliesToClient($letter->client_user_id === null ? null : (int) $letter->client_user_id)) {
+            return false;
+        }
+
         return $this->evaluator->matches(
             $rule->conditions,
             $this->data($letter),

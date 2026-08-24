@@ -36,6 +36,10 @@ class StoreMailRuleRequest extends FormRequest
             'recipients.*' => ['required', 'string', 'max:255'],
             'cc' => ['nullable', 'array', 'max:30'],
             'cc.*' => ['required', 'string', 'max:255'],
+            // Пустой список — «все партнёры». Тысяча подписчиков в одном
+            // правиле — уже признак, что нужно правило без адресной части.
+            'client_ids' => ['nullable', 'array', 'max:1000'],
+            'client_ids.*' => ['integer'],
             'auto_send' => ['boolean'],
             'is_active' => ['boolean'],
             'throttle_minutes' => ['nullable', 'integer', 'min:1', 'max:20160'],
@@ -56,6 +60,7 @@ class StoreMailRuleRequest extends FormRequest
             'conditions.*.op.in' => 'Неизвестное сравнение.',
             'recipients.required' => 'Укажите хотя бы одного получателя.',
             'recipients.min' => 'Укажите хотя бы одного получателя.',
+            'client_ids.max' => 'Тысяча подписчиков в одном правиле — проще снять отбор и оставить «все партнёры».',
             'throttle_minutes.min' => 'Минимальное ограничение — одна минута.',
             'throttle_minutes.max' => 'Ограничение больше двух недель бессмысленно.',
         ];
