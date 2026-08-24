@@ -97,7 +97,15 @@ class LedgerPaymentForecastService implements PaymentForecast
 
     public function overdueOnly(QueryBuilder $query, ?CarbonImmutable $today = null): QueryBuilder
     {
-        return $query->whereDate('sch.date', '<', ($today ?? CarbonImmutable::today())->toDateString());
+        // График заказа — план платежа, а не долг: долг создаёт отгрузка (круг 12,
+        // v16.7.0). Из плана поступлений заказы не исключаются — только из просрочки.
+        return $query
+            ->whereDate('sch.date', '<', ($today ?? CarbonImmutable::today())->toDateString())
+            // NULL-ветка отдельно: голое `<> 'order'` молча спрятало бы строки
+            // без document_kind.
+            ->where(static function (QueryBuilder $query): void {
+                $query->whereNull('sch.document_kind')->orWhere('sch.document_kind', '<>', 'order');
+            });
     }
 
     public function dueBetween(QueryBuilder $query, string $from, string $to): QueryBuilder
@@ -420,6 +428,10 @@ class LedgerPaymentForecastService implements PaymentForecast
             ->whereNotNull('company_id')
             ->whereDate('date', '<', CarbonImmutable::today()->toDateString())
             ->whereRaw('amount - settled_amount > '.SettlementEntry::EPSILON)
+            // План заказа — не долг, в просрочку не входит (см. overdueOnly).
+            ->where(static function (QueryBuilder $query): void {
+                $query->whereNull('document_kind')->orWhere('document_kind', '<>', 'order');
+            })
             ->groupBy('company_id')
             ->select('company_id')
             ->selectRaw('SUM(amount - settled_amount) as overdue')

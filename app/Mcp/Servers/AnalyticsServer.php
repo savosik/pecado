@@ -133,7 +133,9 @@ class AnalyticsServer extends Server
      WHERE nature = 'plan' AND user_id = ? AND date <= CURDATE()
        AND amount - settled_amount > 0.01;
 
-    -- просрочка: то же самое, но дата строго раньше сегодняшней
+    -- просрочка: то же самое, но дата строго раньше сегодняшней И без планов
+    -- заказов: AND (document_kind IS NULL OR document_kind <> 'order') —
+    -- график заказа это план платежа, долг создаёт отгрузка (v16.7.0)
     -- поток по дням: date > CURDATE() и GROUP BY date
     -- переплата: GREATEST(SUM(amount) WHERE nature = 'fact', 0)
     ```

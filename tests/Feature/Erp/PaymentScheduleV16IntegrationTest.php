@@ -347,4 +347,61 @@ class PaymentScheduleV16IntegrationTest extends TestCase
 
         $this->assertSame(0, SettlementEntry::query()->count());
     }
+
+    /**
+     * v16.7.0 (круг 12): «Первичный документ» — долги переноса остатков.
+     * Ведёт себя как реализация: построчный остаток из 1С, участвует в просрочке.
+     */
+    #[Test]
+    public function график_первичного_документа_принимается_и_участвует_в_просрочке(): void
+    {
+        $this->dispatch($this->scheduleMessage([
+            [
+                'uuid' => 'f4a8c2e7-9d3b-4165-8c7a-1e5f9b3d6208',
+                'due_date' => now()->subDays(30)->toDateString(),
+                'amount' => 50000.00,
+                'settled_amount' => 20000.00,
+            ],
+        ], [
+            'document_uuid' => self::ORDER_UUID,
+            'document_kind' => 'initial',
+            'document_number' => 'ПД-000123',
+        ]));
+
+        $line = SettlementEntry::query()->plans()->sole();
+
+        $this->assertSame('initial', $line->document_kind);
+        $this->assertEqualsWithDelta(30000.0, $line->unsettled_amount, 0.01);
+        $this->assertTrue($line->is_overdue);
+        $this->assertSame('Первичный документ ПД-000123', $line->document_label);
+        $this->assertSame(1, SettlementEntry::query()->overdue()->count());
+    }
+
+    /**
+     * v16.7.0 (круг 12): график заказа — план платежа, а не долг. Регистр по срокам
+     * заказы не ведёт, погашение по ним не публикуется, и просроченный план заказа
+     * висел бы «долгом» навсегда — у клиента с авансом показывалась просрочка 1,14 млн ₽.
+     */
+    #[Test]
+    public function просроченный_план_заказа_не_считается_просрочкой(): void
+    {
+        $this->dispatch($this->scheduleMessage([
+            [
+                'uuid' => 'f4a8c2e7-9d3b-4165-8c7a-1e5f9b3d6208',
+                'due_date' => now()->subDays(7)->toDateString(),
+                'amount' => 151291.00,
+            ],
+        ], [
+            'document_uuid' => self::ORDER_UUID,
+            'document_kind' => 'order',
+        ]));
+
+        $line = SettlementEntry::query()->plans()->sole();
+
+        // Строка живёт как план: остаток есть, но просрочкой не является.
+        $this->assertEqualsWithDelta(151291.0, $line->unsettled_amount, 0.01);
+        $this->assertFalse($line->is_overdue);
+        $this->assertSame(0, SettlementEntry::query()->overdue()->count());
+        $this->assertSame(1, SettlementEntry::query()->outstanding()->count());
+    }
 }

@@ -142,6 +142,7 @@ class SettlementEntry extends Model
         'shipment' => 'Реализация товаров и услуг',
         'service_sale' => 'Реализация услуг и прочих активов',
         'order' => 'Заказ клиента',
+        'initial' => 'Первичный документ',
         'payment' => 'Платёжный документ',
         'goods_return' => 'Возврат товаров от клиента',
         'netting' => 'Взаимозачёт задолженности',
@@ -286,11 +287,22 @@ class SettlementEntry extends Model
     /**
      * Непогашенные плановые строки с прошедшей датой.
      *
+     * График заказа — план платежа, а не долг (долг создаёт отгрузка), поэтому
+     * строки `order` просрочкой не считаются нигде: регистр по срокам заказы
+     * не ведёт, погашение по ним не публикуется, и просроченный план заказа
+     * оставался бы «долгом» навсегда — круг 12, v16.7.0.
+     *
      * @param  Builder<self>  $query
      */
     public function scopeOverdue(Builder $query, ?Carbon $asOf = null): void
     {
-        $query->outstanding()->whereDate('date', '<', ($asOf ?? Carbon::today())->toDateString());
+        $query->outstanding()
+            ->whereDate('date', '<', ($asOf ?? Carbon::today())->toDateString())
+            // Отдельным замыканием и с NULL-веткой: голое `<> 'order'` молча
+            // выкинуло бы строки без document_kind из просрочки.
+            ->where(static function (Builder $query): void {
+                $query->whereNull('document_kind')->orWhere('document_kind', '<>', 'order');
+            });
     }
 
     /**
@@ -342,6 +354,11 @@ class SettlementEntry extends Model
     public function getIsOverdueAttribute(): bool
     {
         if ($this->nature !== self::NATURE_PLAN || $this->unsettled_amount <= self::EPSILON) {
+            return false;
+        }
+
+        // План заказа — не долг, просрочки у него не бывает (см. scopeOverdue).
+        if ($this->document_kind === 'order') {
             return false;
         }
 

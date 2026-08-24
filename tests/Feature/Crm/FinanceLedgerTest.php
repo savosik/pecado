@@ -236,6 +236,68 @@ class FinanceLedgerTest extends TestCase
         $this->assertEqualsWithDelta(50000.0, $buckets['31_60']['amount'], 0.01);
     }
 
+    /**
+     * v16.7.0 (круг 12): график заказа — план платежа, а не долг. Просроченный план
+     * заказа не попадает ни в корзины давности, ни в просрочку балансов, ни в сводку,
+     * но из плана поступлений не исчезает — деньги по нему по-прежнему ожидаются.
+     */
+    #[Test]
+    public function просроченный_план_заказа_не_считается_просрочкой(): void
+    {
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'document_kind' => 'order',
+            'amount' => 151291,
+            'settled_amount' => 0,
+            'date' => CarbonImmutable::today()->subDays(7)->toDateString(),
+        ]);
+
+        $aging = $this->forecast()->aging($this->clients(), $this->filters());
+        $this->assertSame(0.0, $aging['total']);
+        $this->assertSame(0, $aging['count']);
+
+        $summary = $this->forecast()->summary($this->clients(), $this->filters());
+        $this->assertSame(0.0, $summary['overdue_amount']);
+        // План жив: ожидаемые деньги периода строку заказа включают.
+        $this->assertEqualsWithDelta(151291.0, $summary['expected_period'], 0.01);
+
+        $balances = $this->forecast()->balances($this->clients());
+        $this->assertSame([], $balances);
+    }
+
+    /**
+     * v16.7.0 (круг 12): «Первичный документ» переноса остатков — реальная дебиторка,
+     * в просрочке участвует наравне с реализацией.
+     */
+    #[Test]
+    public function просроченная_строка_первичного_документа_считается_просрочкой(): void
+    {
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'document_kind' => 'initial',
+            'document_uuid' => 'aa1c3a52-6f4b-4b1e-9d0a-2c7f5a8b1d99',
+            'amount' => 50000,
+            'settled_amount' => 20000,
+            'date' => CarbonImmutable::today()->subDays(10)->toDateString(),
+        ]);
+
+        $aging = $this->forecast()->aging($this->clients(), $this->filters());
+        $this->assertEqualsWithDelta(30000.0, $aging['total'], 0.01);
+
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -50000,
+            'amount_rub' => -50000,
+            'date' => CarbonImmutable::today()->subDays(60)->toDateString(),
+        ]);
+
+        $balances = $this->forecast()->balances($this->clients());
+        $this->assertEqualsWithDelta(30000.0, $balances[0]['overdue_debt'], 0.01);
+    }
+
     #[Test]
     public function план_по_дням_сводится_в_рубли(): void
     {

@@ -62,7 +62,9 @@ class CabinetSettlementFinance
 
         $due = (float) (clone $plans)->whereDate('date', '<=', $today)
             ->sum(DB::raw('amount - settled_amount'));
-        $overdue = (float) (clone $plans)->whereDate('date', '<', $today)
+        // «К оплате сейчас» заказы включает — это счёт на предоплату; а вот
+        // просрочкой план заказа не бывает: долг создаёт отгрузка (круг 12).
+        $overdue = (float) $this->withoutOrderPlans((clone $plans)->whereDate('date', '<', $today))
             ->sum(DB::raw('amount - settled_amount'));
         $next = (clone $plans)->whereDate('date', '>=', $today)->min('date');
 
@@ -107,7 +109,7 @@ class CabinetSettlementFinance
             ->selectRaw('SUM(COALESCE(amount_rub, amount)) as balance')
             ->get();
 
-        $overdue = $this->outstandingPlans($user)
+        $overdue = $this->withoutOrderPlans($this->outstandingPlans($user))
             ->whereNotNull('organization_id')
             ->whereDate('date', '<', $today)
             ->groupBy('organization_id', 'company_id')
@@ -236,8 +238,9 @@ class CabinetSettlementFinance
             ->get();
 
         // Просрочка не привязана к показываемому месяцу: клиент должен видеть её
-        // всегда, в каком бы месяце календаря ни находился.
-        $overdue = $plans()
+        // всегда, в каком бы месяце календаря ни находился. Планы заказов в блок
+        // просрочки не попадают — они остаются строками своего месяца.
+        $overdue = $this->withoutOrderPlans($plans())
             ->whereDate('date', '<', $today->toDateString())
             ->orderBy('date')
             ->limit(200)
@@ -325,5 +328,23 @@ class CabinetSettlementFinance
     private function outstandingPlans(User $user): \Illuminate\Database\Eloquent\Builder
     {
         return SettlementEntry::query()->outstanding()->where('user_id', $user->id);
+    }
+
+    /**
+     * Без планов заказов — для расчёта просрочки.
+     *
+     * График заказа — план платежа, а не долг: долг создаёт отгрузка (круг 12,
+     * v16.7.0). Регистр по срокам заказы не ведёт, погашение по ним не публикуется,
+     * и просроченный план заказа висел бы «долгом» навсегда. NULL-ветка отдельно:
+     * голое `<> 'order'` молча спрятало бы строки без document_kind.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<SettlementEntry>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<SettlementEntry>
+     */
+    private function withoutOrderPlans(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->where(static function ($inner): void {
+            $inner->whereNull('document_kind')->orWhere('document_kind', '<>', 'order');
+        });
     }
 }

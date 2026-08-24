@@ -174,6 +174,40 @@ class CabinetLedgerFinanceTest extends TestCase
                 ->has('overdueEntries', 1));
     }
 
+    /**
+     * v16.7.0 (круг 12): график заказа — план платежа, а не долг. Просроченный план
+     * заказа не показывается клиенту просрочкой ни на дашборде, ни в календаре —
+     * но из «к оплате сейчас» и строк месяца не исчезает: это счёт на предоплату.
+     */
+    #[Test]
+    public function просроченный_план_заказа_не_показывается_клиенту_просрочкой(): void
+    {
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'amount' => 151291,
+            'settled_amount' => 0,
+            'date' => CarbonImmutable::today()->subDays(7)->toDateString(),
+            'document_kind' => 'order',
+            'document_number' => 'A2УТ-000653',
+        ]);
+
+        $this->actingAs($this->client)
+            ->get('/cabinet/dashboard')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('balance.overdue', 0)
+                ->where('balance.due_now', 151291));
+
+        $this->actingAs($this->client)
+            ->get('/cabinet/payments/calendar')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('summary.overdue_amount', 0)
+                ->where('summary.overdue_count', 0)
+                ->has('overdueEntries', 0));
+    }
+
     #[Test]
     public function акт_сверки_доступен_клиенту(): void
     {
