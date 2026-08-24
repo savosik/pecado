@@ -187,7 +187,6 @@ class MailRuleService
             'last_matched_at_label' => $rule->last_matched_at?->format('d.m.Y H:i'),
             'author' => $rule->author?->name,
             'clients' => $this->subscribers($rule),
-            'clients_label' => $this->subscribersLabel($rule),
         ];
     }
 
@@ -210,20 +209,6 @@ class MailRuleService
             ])
             ->values()
             ->all();
-    }
-
-    /**
-     * Короткая строка для списка правил: «Все партнёры» или «Партнёров: 12».
-     */
-    private function subscribersLabel(CrmMailRule $rule): string
-    {
-        $count = count($this->subscribers($rule));
-
-        return match (true) {
-            $count === 0 => 'Все партнёры',
-            $count === 1 => $this->subscribers($rule)[0]['label'],
-            default => 'Партнёров: '.$count,
-        };
     }
 
     /**

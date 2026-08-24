@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Crm;
 
 use App\Enums\Crm\EmailStatus;
 use App\Models\CrmEmail;
+use App\Services\Crm\Mail\LegacySenders;
 use App\Services\Crm\Mail\MailOccasions;
 use App\Services\Crm\Mail\MailTagBuilder;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ class MailOccasionController extends CrmController
     public function __construct(
         private readonly MailOccasions $occasions,
         private readonly MailTagBuilder $tags,
+        private readonly LegacySenders $legacy,
     ) {}
 
     public function index(Request $request): Response
@@ -47,6 +49,10 @@ class MailOccasionController extends CrmController
                     // что повод разобран правилами полностью.
                     'unmatched' => (int) ($unmatched[$key] ?? 0),
                     'tags' => $this->tags->occasionTags($key),
+                    // Пока по поводу пишет зашитый листенер, подписка на него
+                    // даст клиенту два письма. Автоотправка это остановит,
+                    // но знать, какой флаг гасить, менеджер должен заранее.
+                    'legacy_senders' => $this->legacy->activeFor($key),
                 ];
             })
             ->sortByDesc(fn (array $occasion): int => $occasion['unmatched'])

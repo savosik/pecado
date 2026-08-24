@@ -78,6 +78,21 @@ export default function Occasions({ occasions = [], streamEnabled, days = 30 }) 
                                     Собрано за {days} дней: {occasion.collected}
                                 </Text>
 
+                                {occasion.legacy_senders?.length > 0 && (
+                                    <Alert status="warning" title="Повод пока обслуживает старый механизм">
+                                        <VStack align="stretch" gap={0}>
+                                            {occasion.legacy_senders.map((sender) => (
+                                                <Text key={sender} fontSize="xs">{sender}</Text>
+                                            ))}
+                                            <Text fontSize="xs" mt={1}>
+                                                Подписать партнёров можно уже сейчас, но письма по правилу
+                                                не уйдут, пока флаг включён, — иначе клиент получил бы два
+                                                письма. Сначала выключите флаг, потом ставьте автоотправку.
+                                            </Text>
+                                        </VStack>
+                                    </Alert>
+                                )}
+
                                 {occasion.tags?.length > 0 && (
                                     <Wrap gap={1} mt={1}>
                                         {occasion.tags.map((tag) => (

@@ -23,7 +23,10 @@ use RuntimeException;
  */
 class MailAutoSender
 {
-    public function __construct(private readonly CrmEmailService $emails) {}
+    public function __construct(
+        private readonly CrmEmailService $emails,
+        private readonly LegacySenders $legacy,
+    ) {}
 
     public function attempt(CrmEmail $letter, CrmMailRule $rule): bool
     {
@@ -73,6 +76,15 @@ class MailAutoSender
 
         if ($letter->created_at !== null && $letter->created_at->lt(now()->subMinutes($maxAge))) {
             return 'Письмо старше допустимого возраста автоотправки';
+        }
+
+        // Пока по поводу пишет зашитый листенер, правило молчит. Порядок шагов
+        // при переезде на подписки можно перепутать, а письмо клиенту отозвать
+        // нельзя — поэтому дубль запрещён кодом, а не инструкцией.
+        $legacy = $this->legacy->conflictFor($letter);
+
+        if ($legacy !== null) {
+            return 'По этому поводу пока пишет старый механизм ('.$legacy.') — правило молчит, чтобы не ушло два письма';
         }
 
         $blocked = $this->blockedAddress($letter);
