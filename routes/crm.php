@@ -19,6 +19,7 @@ use App\Http\Controllers\Crm\FinanceController;
 use App\Http\Controllers\Crm\ImpersonationController;
 use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
+use App\Http\Controllers\Crm\MailOccasionController;
 use App\Http\Controllers\Crm\MailRuleController;
 use App\Http\Controllers\Crm\MailSuppressionController;
 use App\Http\Controllers\Crm\OpportunityController;
@@ -442,6 +443,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
             ->name('emails.suppressions.index');
         Route::post('/emails/rules/preview', [MailRuleController::class, 'preview'])
             ->name('emails.rules.preview');
+        // Реестр поводов: на что вообще можно подписать партнёра.
+        Route::get('/emails/occasions', [MailOccasionController::class, 'index'])
+            ->name('emails.occasions.index');
         // Подписчики правила: поиск партнёров для адресной части.
         Route::get('/emails/rules/clients', [MailRuleController::class, 'clientOptions'])
             ->name('emails.rules.clients');

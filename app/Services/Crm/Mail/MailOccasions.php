@@ -41,6 +41,39 @@ class MailOccasions
     }
 
     /**
+     * Все поводы, которые система умеет: ключ, название, домен.
+     *
+     * Реестр нужен экрану «Поводы»: подписать партнёра можно только на то,
+     * что видно, а до этого список событий существовал лишь в конфиге.
+     *
+     * @return list<array{key: string, label: string, subject: string, domain: string}>
+     */
+    public function catalog(): array
+    {
+        $catalog = [];
+
+        foreach (self::all() as $key => $occasion) {
+            $catalog[] = [
+                'key' => (string) $key,
+                'label' => (string) ($occasion['label'] ?? $key),
+                'subject' => (string) ($occasion['subject'] ?? ''),
+                'domain' => $this->domain((string) $key),
+            ];
+        }
+
+        return $catalog;
+    }
+
+    /**
+     * Собирает ли система письма этого домена. Выключенный домен объясняет
+     * пустой счётчик лучше, чем ноль без пояснения.
+     */
+    public function domainEnabled(string $domain): bool
+    {
+        return (bool) config('mail_stream.domains.'.$domain, false);
+    }
+
+    /**
      * @return array<string, array<string, string>>
      */
     private static function all(): array

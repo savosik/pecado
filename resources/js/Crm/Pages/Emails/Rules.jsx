@@ -11,7 +11,7 @@ import { Alert } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import RuleForm from '@/Crm/Pages/Emails/components/RuleForm';
-import { LuBan, LuHistory, LuMail, LuPlus, LuTrash2 } from 'react-icons/lu';
+import { LuBan, LuHistory, LuList, LuMail, LuPlus, LuTrash2 } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 /**
@@ -118,6 +118,9 @@ export default function Rules({
                     <HStack gap={2}>
                         <Link href={route('crm.emails.index')}>
                             <Button size="sm" variant="outline"><LuMail /> К письмам</Button>
+                        </Link>
+                        <Link href={route('crm.emails.occasions.index')}>
+                            <Button size="sm" variant="outline"><LuList /> Поводы</Button>
                         </Link>
                         <Link href={route('crm.emails.suppressions.index')}>
                             <Button size="sm" variant="outline"><LuBan /> Стоп-лист</Button>
