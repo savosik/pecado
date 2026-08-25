@@ -28,16 +28,21 @@ export default function FinanceFilterBar({
     seesAll = false,
     showGranularity = false,
     showOverdueToggle = false,
+    asOfMode = false,
 }) {
     const [dateFrom, setDateFrom] = useState(filters.date_from || '');
     const [dateTo, setDateTo] = useState(filters.date_to || '');
+    const [asOf, setAsOf] = useState(filters.as_of || '');
 
     const current = (extra = {}) => ({
         // Разрез переезжает между отборами и попадает в выгрузку: иначе
         // расфокусированный экран выгружал бы только своих.
         scope: filters.scope === 'department' ? 'department' : undefined,
-        date_from: dateFrom || undefined,
-        date_to: dateTo || undefined,
+        // Баланс — состояние на момент, а не оборот за период: страница отдаёт
+        // одну дату вместо диапазона, и слать «с/по» ей нечего.
+        date_from: asOfMode ? undefined : (dateFrom || undefined),
+        date_to: asOfMode ? undefined : (dateTo || undefined),
+        as_of: asOfMode ? (asOf || undefined) : undefined,
         manager_ids: filters.manager_ids?.length ? filters.manager_ids : undefined,
         organization_ids: filters.organization_ids?.length ? filters.organization_ids : undefined,
         only_overdue: filters.only_overdue ? 1 : undefined,
@@ -53,6 +58,7 @@ export default function FinanceFilterBar({
     const reset = () => {
         setDateFrom('');
         setDateTo('');
+        setAsOf('');
         router.get(route(routeName), { scope: filters.scope }, { preserveState: true, replace: true });
     };
 
@@ -75,29 +81,61 @@ export default function FinanceFilterBar({
     return (
         <Box borderWidth="1px" borderRadius="lg" p={3} bg="bg.subtle" mb={4}>
             <Flex gap={3} wrap="wrap" align="end">
-                <Box>
-                    <Text fontSize="xs" color="fg.muted" mb={1}>Плановая дата с</Text>
-                    <Input
-                        type="date"
-                        size="sm"
-                        value={dateFrom}
-                        onChange={(e) => setDateFrom(e.target.value)}
-                        onBlur={() => apply()}
-                        maxW="160px"
-                    />
-                </Box>
+                {asOfMode ? (
+                    <Box>
+                        <Text fontSize="xs" color="fg.muted" mb={1}>На дату</Text>
+                        <HStack gap={2}>
+                            <Input
+                                type="date"
+                                size="sm"
+                                value={asOf}
+                                onChange={(event) => {
+                                    setAsOf(event.target.value);
+                                    apply({ as_of: event.target.value || undefined });
+                                }}
+                                maxW="160px"
+                            />
+                            {asOf && (
+                                <Button
+                                    size="xs"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setAsOf('');
+                                        apply({ as_of: undefined });
+                                    }}
+                                >
+                                    Сейчас
+                                </Button>
+                            )}
+                        </HStack>
+                    </Box>
+                ) : (
+                    <>
+                        <Box>
+                            <Text fontSize="xs" color="fg.muted" mb={1}>Плановая дата с</Text>
+                            <Input
+                                type="date"
+                                size="sm"
+                                value={dateFrom}
+                                onChange={(e) => setDateFrom(e.target.value)}
+                                onBlur={() => apply()}
+                                maxW="160px"
+                            />
+                        </Box>
 
-                <Box>
-                    <Text fontSize="xs" color="fg.muted" mb={1}>по</Text>
-                    <Input
-                        type="date"
-                        size="sm"
-                        value={dateTo}
-                        onChange={(e) => setDateTo(e.target.value)}
-                        onBlur={() => apply()}
-                        maxW="160px"
-                    />
-                </Box>
+                        <Box>
+                            <Text fontSize="xs" color="fg.muted" mb={1}>по</Text>
+                            <Input
+                                type="date"
+                                size="sm"
+                                value={dateTo}
+                                onChange={(e) => setDateTo(e.target.value)}
+                                onBlur={() => apply()}
+                                maxW="160px"
+                            />
+                        </Box>
+                    </>
+                )}
 
                 <Box pb={1}>
                     <ScopeToggle section="finance" scope={filters.scope} available={seesAll} />

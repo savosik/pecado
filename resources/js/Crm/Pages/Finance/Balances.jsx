@@ -34,6 +34,7 @@ const contractorsLabel = (count) => {
  */
 export default function FinanceBalances({
     balances = [],
+    asOf = null,
     summary = {},
     filters = {},
     managers = [],
@@ -63,7 +64,8 @@ export default function FinanceBalances({
 
             <FinanceFilterBar
                 routeName="crm.finance.balances"
-                filters={filters}
+                filters={{ ...filters, as_of: asOf }}
+                asOfMode
                 managers={managers}
                 organizations={organizations}
                 seesAll={seesAll}
@@ -71,10 +73,15 @@ export default function FinanceBalances({
 
             <Box borderWidth="1px" borderRadius="lg" p={3} mb={4} bg="bg.subtle">
                 <Text fontSize="sm">
-                    Сальдо взаиморасчётов: <b>{formatRub(totals.balance)}</b>.
+                    {asOf
+                        ? <>Сальдо взаиморасчётов на <b>{asOf.split('-').reverse().join('.')}</b>: </>
+                        : <>Сальдо взаиморасчётов: </>}
+                    <b>{formatRub(totals.balance)}</b>.
                     Из них просрочено — <b>{formatRub(totals.overdue)}</b>.
                 </Text>
                 <Text fontSize="xs" color="fg.muted" mt={1}>
+                    {asOf && 'Отчёт ретроспективный: движения после выбранной даты не учитываются, '
+                        + 'просрочка — та, что была на неё. '}
                     Обе цифры — из регистра взаиморасчётов 1С. Сальдо складывается из всех движений,
                     просрочка — из строк графика оплаты, срок которых уже прошёл. Планы платежей
                     по заказам просрочкой не считаются: долг создаёт отгрузка, а не заказ.

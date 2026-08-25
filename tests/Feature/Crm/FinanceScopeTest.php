@@ -308,6 +308,52 @@ class FinanceScopeTest extends TestCase
         $this->assertSame([], $props['overdueRows']);
     }
 
+    /**
+     * Баланс — состояние на момент, а не оборот за период: страница принимает
+     * одну дату и отвечает ретроспективой.
+     */
+    #[Test]
+    public function balances_are_reported_as_of_a_date(): void
+    {
+        [$actor, $card] = $this->makeManagerActor();
+        $client = $this->makeClient($card);
+        $company = Company::factory()->create(['user_id' => $client->id, 'tax_id' => '7701234567']);
+
+        // Отгрузка в июне и оплата в августе: на 31.07 клиент ещё должен.
+        $this->makeFact($client, -1000, ['company_id' => $company->id, 'date' => '2026-06-15']);
+        $this->makeFact($client, 1000, ['company_id' => $company->id, 'date' => '2026-08-10']);
+
+        $now = $this->actingAs($actor)->get('/crm/finance/balances')->viewData('page')['props'];
+        $this->assertEqualsWithDelta(0.0, (float) $now['balances'][0]['current_balance'], 0.01);
+        $this->assertNull($now['asOf']);
+
+        $past = $this->actingAs($actor)
+            ->get('/crm/finance/balances?as_of=2026-07-31')
+            ->viewData('page')['props'];
+
+        $this->assertSame('2026-07-31', $past['asOf']);
+        $this->assertEqualsWithDelta(-1000.0, (float) $past['balances'][0]['current_balance'], 0.01);
+    }
+
+    /**
+     * Дата из будущего гасится: баланс на завтра — это баланс сегодня,
+     * и обещать читателю больше, чем отчёт знает, нельзя.
+     */
+    #[Test]
+    public function future_and_garbage_dates_fall_back_to_now(): void
+    {
+        [$actor, $card] = $this->makeManagerActor();
+        $this->makeFact($this->makeClient($card), -500);
+
+        foreach ([Carbon::today()->addMonth()->toDateString(), 'не-дата'] as $value) {
+            $props = $this->actingAs($actor)
+                ->get('/crm/finance/balances?as_of='.urlencode($value))
+                ->viewData('page')['props'];
+
+            $this->assertNull($props['asOf'], "Дата «{$value}» должна гаситься");
+        }
+    }
+
     #[Test]
     public function overdue_page_ignores_period_filter(): void
     {

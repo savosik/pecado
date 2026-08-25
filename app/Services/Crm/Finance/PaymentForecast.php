@@ -105,7 +105,16 @@ interface PaymentForecast
      * @param  EloquentBuilder<\App\Models\User>  $clients
      * @return list<array<string, mixed>>
      */
-    public function balances(EloquentBuilder $clients): array;
+    /**
+     * Балансы контрагентов на дату: сальдо движений и просрочка.
+     *
+     * `$asOf` = null — состояние «сейчас». С датой отчёт становится
+     * ретроспективным: в сальдо входят движения по эту дату включительно,
+     * в просрочку — непогашенные плановые строки, срок которых на неё уже прошёл.
+     *
+     * @param  EloquentBuilder<\App\Models\User>  $clients
+     */
+    public function balances(EloquentBuilder $clients, ?CarbonImmutable $asOf = null): array;
 
     /**
      * Ключевые показатели пульта.

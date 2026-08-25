@@ -81,8 +81,13 @@ class FinanceController extends CrmController
         $filters = FinanceFilters::fromRequest($request);
         $clients = $this->visibleClients($request, $filters);
 
+        // «На дату», а не период: баланс — состояние, а не оборот. Диапазон здесь
+        // читался бы как «сальдо за июль», чего не бывает: сальдо всегда на момент.
+        $asOf = $this->balancesDate($request);
+
         return Inertia::render('Crm/Pages/Finance/Balances', [
-            'balances' => $this->forecast->balances($clients),
+            'balances' => $this->forecast->balances($clients, $asOf),
+            'asOf' => $asOf?->toDateString(),
             // Сводка нужна ради одной строки сверки в шапке: просрочка по данным 1С
             // против нашего расчёта по графику. Построчно её больше не показываем —
             // это разные разрезы (1С считает по контрагенту, график по документу),
@@ -90,6 +95,28 @@ class FinanceController extends CrmController
             'summary' => $this->forecast->summary($clients, $filters),
             ...$this->sharedOptions($request, $filters),
         ]);
+    }
+
+    /**
+     * Дата отчёта по балансам. Мусор и будущее гасятся в «сейчас»:
+     * баланс на завтра — то же, что баланс сегодня, а показывать его датой
+     * из будущего значит обещать читателю больше, чем отчёт знает.
+     */
+    private function balancesDate(Request $request): ?CarbonImmutable
+    {
+        $value = trim((string) $request->input('as_of'));
+
+        if ($value === '') {
+            return null;
+        }
+
+        try {
+            $date = CarbonImmutable::parse($value)->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $date->isFuture() ? null : $date;
     }
 
     /**

@@ -241,13 +241,16 @@ class LedgerPaymentForecastService implements PaymentForecast
      * @param  EloquentBuilder<\App\Models\User>  $clients
      * @return list<array<string, mixed>>
      */
-    public function balances(EloquentBuilder $clients): array
+    public function balances(EloquentBuilder $clients, ?CarbonImmutable $asOf = null): array
     {
         $facts = DB::table('settlement_entries as e')
             ->join('users as u', 'u.id', '=', 'e.user_id')
             ->leftJoin('personal_managers as pm', 'pm.id', '=', 'u.personal_manager_id')
             ->leftJoin('companies as c', 'c.id', '=', 'e.company_id')
             ->where('e.nature', SettlementEntry::NATURE_FACT)
+            // Ретроспектива: движения после выбранной даты в сальдо не входят.
+            // Дата включительно — «баланс на 31.07» это состояние на конец дня.
+            ->when($asOf !== null, fn ($query) => $query->whereDate('e.date', '<=', $asOf->toDateString()))
             ->whereIn('e.user_id', (clone $clients))
             ->groupBy('e.user_id', 'e.company_id', 'u.name', 'u.erp_name', 'pm.name', 'c.name', 'c.tax_id')
             ->select(['e.user_id', 'e.company_id', 'u.name as client_name', 'u.erp_name as client_erp_name'])
@@ -256,7 +259,7 @@ class LedgerPaymentForecastService implements PaymentForecast
             ->selectRaw('MAX(e.erp_updated_at) as erp_updated_at')
             ->get();
 
-        $overdue = $this->overdueByCompany($clients);
+        $overdue = $this->overdueByCompany($clients, $asOf);
 
         $grouped = [];
 
@@ -420,13 +423,13 @@ class LedgerPaymentForecastService implements PaymentForecast
      * @param  EloquentBuilder<\App\Models\User>  $clients
      * @return array<int, float>
      */
-    private function overdueByCompany(EloquentBuilder $clients): array
+    private function overdueByCompany(EloquentBuilder $clients, ?CarbonImmutable $asOf = null): array
     {
         return DB::table('settlement_entries')
             ->where('nature', SettlementEntry::NATURE_PLAN)
             ->whereIn('user_id', (clone $clients))
             ->whereNotNull('company_id')
-            ->whereDate('date', '<', CarbonImmutable::today()->toDateString())
+            ->whereDate('date', '<', ($asOf ?? CarbonImmutable::today())->toDateString())
             ->whereRaw('amount - settled_amount > '.SettlementEntry::EPSILON)
             // План заказа — не долг, в просрочку не входит (см. overdueOnly).
             ->where(static function (QueryBuilder $query): void {
