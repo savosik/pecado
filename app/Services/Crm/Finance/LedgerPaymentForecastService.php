@@ -432,6 +432,7 @@ class LedgerPaymentForecastService implements PaymentForecast
             ->get();
 
         $overdue = $this->overdueByCell($clients, $asOf, $organizationIds, $overdueFilters);
+        $payments = $this->lastPaymentByCell($clients, $organizationIds);
 
         // Ячейки объединяются, а не джойнятся: просрочка бывает там, где движений
         // в этом разрезе нет вовсе (например, план на одну нашу организацию,
@@ -468,7 +469,7 @@ class LedgerPaymentForecastService implements PaymentForecast
 
         $tree = [];
 
-        foreach ($cells as [
+        foreach ($cells as $cellKey => [
             'cell' => $cell,
             'balance' => $cellBalance,
             'overdue' => $cellOverdue,
@@ -497,6 +498,7 @@ class LedgerPaymentForecastService implements PaymentForecast
                     'overdue_lines' => 0,
                     'overdue_weight' => 0.0,
                     'oldest_due' => null,
+                    'last_payment_date' => null,
                     'erp_updated_at' => null,
                     // Менеджеры узла копятся множеством: у контрагента он один,
                     // у нашей организации их десятки, и подпись имеет смысл
@@ -509,6 +511,17 @@ class LedgerPaymentForecastService implements PaymentForecast
                 $branch[$node['key']]['overdue_debt'] += $cellOverdue;
                 $branch[$node['key']]['overdue_lines'] += $cellLines;
                 $branch[$node['key']]['overdue_weight'] += $cellWeight;
+
+                // По узлу берётся самый свежий платёж его ячеек: «когда здесь
+                // последний раз платили» — вопрос о лучшем, а не о худшем.
+                $lastPayment = $payments[$cellKey]->last_payment_date ?? null;
+
+                if ($lastPayment !== null) {
+                    $branch[$node['key']]['last_payment_date'] = max(
+                        $branch[$node['key']]['last_payment_date'],
+                        $lastPayment,
+                    );
+                }
 
                 if ($cellOldest !== null) {
                     $branch[$node['key']]['oldest_due'] = min(
@@ -605,6 +618,14 @@ class LedgerPaymentForecastService implements PaymentForecast
             // Приоритет узла считается по его сумме и средневзвешенному
             // возрасту — по той же матрице, что и приоритет отдельной строки.
             $row['severity'] = $this->overdueSeverity($row['overdue_debt'], $row['weighted_age']);
+
+            if ($row['last_payment_date'] !== null) {
+                $lastPayment = CarbonImmutable::parse($row['last_payment_date']);
+                $row['days_since_payment'] = (int) $lastPayment->diffInDays(CarbonImmutable::today());
+                $row['last_payment_date'] = $lastPayment->format('d.m.Y');
+            } else {
+                $row['days_since_payment'] = null;
+            }
 
             // Самая давняя просрочка узла: подпись «столько-то дней назад»
             // отвечает на вопрос «насколько всё запущено» без открытия строк.
@@ -777,6 +798,34 @@ class LedgerPaymentForecastService implements PaymentForecast
             ->orderBy('sch.date')
             ->orderByRaw('COALESCE(sch.line_number, 2147483647)')
             ->orderBy('sch.id');
+    }
+
+    /**
+     * Последний платёж по ячейке «партнёр × организация × контрагент».
+     *
+     * Отвечает на вопрос, которого не видно ни в сумме, ни в сроке: клиент
+     * старается платить и просто отстаёт — или замолчал совсем. Долг в 300
+     * тысяч у того, кто платил вчера, и у того, кто молчит полгода, требует
+     * разных разговоров.
+     *
+     * @param  EloquentBuilder<\App\Models\User>  $clients
+     * @return array<string, object>
+     */
+    private function lastPaymentByCell(EloquentBuilder $clients, array $organizationIds = []): array
+    {
+        return DB::table('settlement_entries as f')
+            ->where('f.nature', SettlementEntry::NATURE_FACT)
+            // Только приход денег: отгрузки и корректировки к вопросу «платит
+            // ли клиент» отношения не имеют, а возврат платежа — тем более.
+            ->where('f.type', SettlementEntry::TYPE_PAYMENT_IN)
+            ->whereIn('f.user_id', (clone $clients))
+            ->when($organizationIds !== [], fn ($query) => $query->whereIn('f.organization_id', $organizationIds))
+            ->groupBy('f.user_id', 'f.organization_id', 'f.company_id')
+            ->select(['f.user_id', 'f.organization_id', 'f.company_id'])
+            ->selectRaw('MAX(f.date) as last_payment_date')
+            ->get()
+            ->keyBy(fn (object $row): string => $this->cellKey($row->user_id, $row->organization_id, $row->company_id))
+            ->all();
     }
 
     /**

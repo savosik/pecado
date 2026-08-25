@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Crm;
 use App\Enums\Crm\CrmScope;
 use App\Models\Organization;
 use App\Models\PersonalManager;
+use App\Models\SettlementEntry;
 use App\Models\User;
 use App\Services\Crm\Finance\FinanceFilters;
 use App\Services\Crm\Finance\PaymentForecast;
@@ -94,6 +95,7 @@ class FinanceController extends CrmController
             ->withQueryString();
 
         $rows->through(fn (object $row): array => $this->forecast->row($row, $today));
+        $this->attachLastPayments($rows, $today);
 
         return Inertia::render('Crm/Pages/Finance/Overdue', [
             'rows' => $rows,
@@ -181,6 +183,48 @@ class FinanceController extends CrmController
             'documents' => $documents,
             'clients' => $clients,
         ];
+    }
+
+    /**
+     * Дата последнего платежа партнёра — к строкам текущей страницы.
+     *
+     * Одним запросом по видимым партнёрам, а не подзапросом в основном:
+     * страница показывает полсотни строк, а партнёров за ними десяток, и
+     * тянуть максимум по каждой строке значило бы считать одно и то же.
+     *
+     * @param  LengthAwarePaginator<int, array<string, mixed>>  $rows
+     */
+    private function attachLastPayments(LengthAwarePaginator $rows, CarbonImmutable $today): void
+    {
+        $userIds = array_values(array_unique(array_map(
+            static fn (array $row): int => (int) $row['client']['id'],
+            $rows->items(),
+        )));
+
+        if ($userIds === []) {
+            return;
+        }
+
+        $payments = DB::table('settlement_entries')
+            ->where('nature', SettlementEntry::NATURE_FACT)
+            ->where('type', SettlementEntry::TYPE_PAYMENT_IN)
+            ->whereIn('user_id', $userIds)
+            ->groupBy('user_id')
+            ->selectRaw('user_id, MAX(date) as last_payment_date')
+            ->pluck('last_payment_date', 'user_id');
+
+        $rows->setCollection($rows->getCollection()->map(static function (array $row) use ($payments, $today): array {
+            $date = $payments[$row['client']['id']] ?? null;
+
+            $row['last_payment_date'] = $date !== null
+                ? CarbonImmutable::parse($date)->format('d.m.Y')
+                : null;
+            $row['days_since_payment'] = $date !== null
+                ? (int) CarbonImmutable::parse($date)->diffInDays($today)
+                : null;
+
+            return $row;
+        }));
     }
 
     /** Число просроченных дней строки — выражение под текущий драйвер БД. */

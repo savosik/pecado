@@ -7,6 +7,7 @@ import TaskDialog from '@/Crm/Components/TaskDialog';
 import { usePermission } from '@/shared/Panel/usePermission';
 import { dueHint, formatRub } from './format';
 import OverduePriority from './OverdueWeight';
+import LastPayment from './LastPayment';
 
 /**
  * Таблица строк ожидаемых поступлений — общая для «Плана» и «Просрочки».
@@ -120,6 +121,10 @@ export default function FinanceRowsTable({
             key: 'weight',
             label: 'Приоритет',
             render: (_, row) => <OverduePriority severity={row.severity} age={row.days_overdue} />,
+        }, {
+            key: 'last_payment',
+            label: 'Последний платёж',
+            render: (_, row) => <LastPayment date={row.last_payment_date} days={row.days_since_payment} />,
         }] : []),
         {
             key: 'actions',

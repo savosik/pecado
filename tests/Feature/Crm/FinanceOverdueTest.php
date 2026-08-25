@@ -349,6 +349,62 @@ class FinanceOverdueTest extends TestCase
         $this->assertSame('high', $narrow['severity']['key']);
     }
 
+    /**
+     * Последний платёж отличает того, кто отстаёт, от того, кто замолчал.
+     *
+     * Считаются только приходы: отгрузка или корректировка в регистре — не
+     * признак того, что клиент платит.
+     */
+    #[Test]
+    public function последний_платёж_виден_в_разрезе_и_в_строках(): void
+    {
+        $paying = $this->makeClient();
+        $silent = $this->makeClient();
+
+        $this->overdueLine($paying, 5000, 20);
+        $this->overdueLine($silent, 5000, 20);
+
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_PAYMENT_IN,
+            'user_id' => $paying->id,
+            'amount' => 3000,
+            'amount_rub' => 3000,
+            'currency_code' => 'RUB',
+            'date' => Carbon::today()->subDays(2)->toDateString(),
+        ]);
+
+        // У молчащего движение есть, но это отгрузка — платежом она не считается.
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'user_id' => $silent->id,
+            'amount' => -5000,
+            'amount_rub' => -5000,
+            'currency_code' => 'RUB',
+            'date' => Carbon::today()->subDay()->toDateString(),
+        ]);
+
+        $rows = collect($this->props('?group=partner')['groupRows'])->keyBy('entity_id');
+
+        $this->assertSame(Carbon::today()->subDays(2)->format('d.m.Y'), $rows[$paying->id]['last_payment_date']);
+        $this->assertSame(2, $rows[$paying->id]['days_since_payment']);
+
+        $this->assertNull($rows[$silent->id]['last_payment_date']);
+        $this->assertNull($rows[$silent->id]['days_since_payment']);
+
+        // То же в построчном списке — там дата берётся по партнёру строки.
+        $lines = collect($this->props()['rows']['data']);
+
+        $this->assertSame(
+            2,
+            $lines->first(fn (array $row): bool => $row['client']['id'] === $paying->id)['days_since_payment'],
+        );
+        $this->assertNull(
+            $lines->first(fn (array $row): bool => $row['client']['id'] === $silent->id)['days_since_payment'],
+        );
+    }
+
     /** Сортировка по весу ставит наверх не самое крупное и не самое давнее. */
     #[Test]
     public function сортировка_по_весу_поднимает_дорогое_ожидание(): void

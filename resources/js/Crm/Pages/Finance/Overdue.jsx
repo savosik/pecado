@@ -13,6 +13,7 @@ import FinanceFilterBar from './components/FinanceFilterBar';
 import FinanceRowsTable from './components/FinanceRowsTable';
 import { formatRub } from './components/format';
 import OverduePriority, { WeightHeader } from './components/OverdueWeight';
+import LastPayment from './components/LastPayment';
 
 /** Пороги «мелочи»: копеечные хвосты закрываются взаимозачётом, а не звонком. */
 const AMOUNT_PRESETS = [
@@ -380,6 +381,12 @@ function GroupTree({ rows, total, onDrill, onTask, expanded, onToggle }) {
                             <Table.ColumnHeader width="120px"><WeightHeader /></Table.ColumnHeader>
                             <Table.ColumnHeader textAlign="end">Строк</Table.ColumnHeader>
                             <Table.ColumnHeader>Самая давняя</Table.ColumnHeader>
+                            <Table.ColumnHeader>
+                                <HStack gap={1}>
+                                    <Text fontSize="xs">Последний платёж</Text>
+                                    <MetricHint text="Когда по этой строке разреза последний раз приходили деньги. Долг у того, кто платил вчера, и у того, кто молчит полгода, требует разных разговоров. Учитываются только приходы из регистра 1С; красным — тишина дольше месяца." />
+                                </HStack>
+                            </Table.ColumnHeader>
                             <Table.ColumnHeader />
                         </Table.Row>
                     </Table.Header>
@@ -387,7 +394,7 @@ function GroupTree({ rows, total, onDrill, onTask, expanded, onToggle }) {
                     <Table.Body>
                         {rows.length === 0 && (
                             <Table.Row>
-                                <Table.Cell colSpan={9}>
+                                <Table.Cell colSpan={10}>
                                     <Text py={8} textAlign="center" color="fg.muted">
                                         Просроченных платежей по этому отбору нет
                                     </Text>
@@ -512,6 +519,10 @@ function GroupRows({ row, depth, total, onDrill, onTask, expanded, onToggle }) {
                             </Text>
                         )}
                     </VStack>
+                </Table.Cell>
+
+                <Table.Cell>
+                    <LastPayment date={row.last_payment_date} days={row.days_since_payment} />
                 </Table.Cell>
 
                 <Table.Cell>
