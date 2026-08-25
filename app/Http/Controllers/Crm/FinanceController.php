@@ -7,6 +7,7 @@ use App\Models\Organization;
 use App\Models\PersonalManager;
 use App\Models\SettlementEntry;
 use App\Models\User;
+use App\Services\Crm\Finance\CollectionForecastService;
 use App\Services\Crm\Finance\FinanceFilters;
 use App\Services\Crm\Finance\PaymentForecast;
 use App\Services\Crm\Finance\ReconciliationService;
@@ -63,9 +64,87 @@ class FinanceController extends CrmController
     /**
      * План поступлений — построчно. GET /crm/finance/plan
      */
-    public function plan(Request $request): InertiaResponse
+    public function plan(Request $request, CollectionForecastService $forecast): InertiaResponse
     {
-        return Inertia::render('Crm/Pages/Finance/Plan', $this->tablePayload($request));
+        $filters = FinanceFilters::fromRequest($request);
+        $clients = $this->visibleClients($request, $filters);
+        $today = CarbonImmutable::today();
+        $target = $this->forecastTarget($request, $today);
+
+        // Построчный список — вторичный слой: сперва бюджетный ответ «сколько
+        // денег к дате», и только по явному запросу — из каких строк он сложен.
+        $showLines = $request->input('group') === 'none';
+
+        return Inertia::render('Crm/Pages/Finance/Plan', [
+            'forecast' => $forecast->forecast($clients, $filters, $target, $today),
+            'partners' => $forecast->forecastByPartner($clients, $filters, $target, $today),
+            'showLines' => $showLines,
+            'rows' => $showLines ? $this->planLines($clients, $filters, $today) : null,
+            ...$this->planShared($request, $filters, $target),
+        ]);
+    }
+
+    /**
+     * Дата, на которую верстается бюджет. По умолчанию — конец текущего месяца:
+     * самый частый вопрос финансиста задаётся именно про закрытие месяца.
+     */
+    private function forecastTarget(Request $request, CarbonImmutable $today): CarbonImmutable
+    {
+        $raw = (string) $request->input('target', '');
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw) === 1) {
+            try {
+                $parsed = CarbonImmutable::createFromFormat('Y-m-d', $raw)->startOfDay();
+
+                // Прошедшая дата в прогнозе бессмысленна, а горизонт дальше
+                // года — гадание: в обоих случаях возвращаем к умолчанию.
+                if ($parsed->greaterThanOrEqualTo($today) && $parsed->lessThanOrEqualTo($today->addYear())) {
+                    return $parsed;
+                }
+            } catch (\Throwable) {
+                // Мусор в адресе прогноз не роняет.
+            }
+        }
+
+        return $today->endOfMonth()->startOfDay();
+    }
+
+    /**
+     * Общие пропсы прогноза: отбор плюс выбранная дата и признак списка.
+     *
+     * @return array<string, mixed>
+     */
+    private function planShared(Request $request, FinanceFilters $filters, CarbonImmutable $target): array
+    {
+        $shared = $this->sharedOptions($request, $filters);
+        $shared['filters']['target'] = $target->toDateString();
+        $shared['filters']['group'] = $request->input('group') === 'none' ? 'none' : null;
+
+        return $shared;
+    }
+
+    /**
+     * Построчный список ожидаемых поступлений — от сегодня до выбранной даты.
+     *
+     * @param  Builder<User>  $clients
+     * @return LengthAwarePaginator<int, array<string, mixed>>
+     */
+    private function planLines(Builder $clients, FinanceFilters $filters, CarbonImmutable $today): LengthAwarePaginator
+    {
+        $query = $this->forecast->dueBetween(
+            $this->forecast->plannedQuery($clients, $filters),
+            $filters->dateFrom->toDateString(),
+            $filters->dateTo->toDateString(),
+        );
+
+        /** @var LengthAwarePaginator<int, object> $rows */
+        $rows = $this->forecast->applyDefaultOrder($query)
+            ->paginate(self::PER_PAGE)
+            ->withQueryString();
+
+        $rows->through(fn (object $row): array => $this->forecast->row($row, $today));
+
+        return $rows;
     }
 
     /**
@@ -781,73 +860,6 @@ class FinanceController extends CrmController
             'upcomingRows' => $upcomingRows->map(fn (object $row): array => $this->forecast->row($row, $today))->all(),
             'noScheduleCount' => $filters->includeNoSchedule ? $this->forecast->noScheduleCount($clients, $filters) : 0,
             ...$this->sharedOptions($request, $filters),
-        ];
-    }
-
-    /**
-     * Данные страниц «План поступлений» и «Просрочка».
-     *
-     * Страница просрочки — тот же набор строк с принудительным only_overdue:
-     * два независимых запроса разошлись бы в трактовке «сегодня».
-     *
-     * @return array<string, mixed>
-     */
-    /**
-     * Данные плана поступлений: строки графика в выбранном окне.
-     *
-     * Просрочка сюда больше не ходит — у неё свой набор отборов и разрезов,
-     * и общий метод сводился к «если overdueOnly, то всё иначе».
-     */
-    private function tablePayload(Request $request): array
-    {
-        $filters = FinanceFilters::fromRequest($request);
-        $clients = $this->visibleClients($request, $filters);
-        $today = CarbonImmutable::today();
-
-        $query = $this->forecast->dueBetween(
-            $this->forecast->plannedQuery($clients, $filters),
-            $filters->dateFrom->toDateString(),
-            $filters->dateTo->toDateString(),
-        );
-
-        /** @var LengthAwarePaginator<int, object> $rows */
-        $rows = $this->forecast->applyDefaultOrder($query)
-            ->paginate(self::PER_PAGE)
-            ->withQueryString();
-
-        $rows->through(fn (object $row): array => $this->forecast->row($row, $today));
-
-        return [
-            'rows' => $rows,
-            'summary' => $this->forecast->summary($clients, $filters),
-            'noSchedule' => $filters->includeNoSchedule
-                ? $this->noSchedulePayload($clients, $filters, $today)
-                : null,
-            ...$this->sharedOptions($request, $filters),
-        ];
-    }
-
-    /**
-     * Долг реализаций без графика от 1С — отдельным блоком под таблицей.
-     *
-     * Не подмешиваем его в основной список: у этих строк нет плановой даты, и
-     * в отсортированной по дате таблице они висели бы непонятным хвостом.
-     *
-     * @param  Builder<User>  $clients
-     * @return array{count: int, amount: float, rows: list<array<string, mixed>>}
-     */
-    private function noSchedulePayload(Builder $clients, FinanceFilters $filters, CarbonImmutable $today): array
-    {
-        $rows = $this->forecast->noScheduleQuery($clients, $filters)
-            ->orderByDesc('s.date')
-            ->limit(self::DASHBOARD_ROWS)
-            ->get()
-            ->map(fn (object $row): array => $this->forecast->row($row, $today));
-
-        return [
-            'count' => $this->forecast->noScheduleCount($clients, $filters),
-            'amount' => $this->forecast->noScheduleTotal($clients, $filters),
-            'rows' => $rows->all(),
         ];
     }
 
