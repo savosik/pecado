@@ -12,6 +12,7 @@ use App\Services\Crm\Finance\ReconciliationService;
 use App\Services\SimpleXlsxExporter;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -62,15 +63,130 @@ class FinanceController extends CrmController
      */
     public function plan(Request $request): InertiaResponse
     {
-        return Inertia::render('Crm/Pages/Finance/Plan', $this->tablePayload($request, overdueOnly: false));
+        return Inertia::render('Crm/Pages/Finance/Plan', $this->tablePayload($request));
     }
 
     /**
      * Просрочка — те же строки, но с прошедшей плановой датой. GET /crm/finance/overdue
      */
+    /** Разрезы просрочки: ось → подпись переключателя. */
+    private const OVERDUE_GROUPS = [
+        'partner' => 'По партнёрам',
+        'manager' => 'По менеджерам',
+        'organization' => 'По нашим организациям',
+        'company' => 'По контрагентам',
+    ];
+
     public function overdue(Request $request): InertiaResponse
     {
-        return Inertia::render('Crm/Pages/Finance/Overdue', $this->tablePayload($request, overdueOnly: true));
+        $filters = FinanceFilters::fromRequest($request);
+        $clients = $this->visibleClients($request, $filters);
+        $today = CarbonImmutable::today();
+
+        // Разрез — форма отчёта, отбор — что в него попадает: то же разделение,
+        // что в балансах. Пустое значение показывает построчный список.
+        $group = (string) $request->input('group', '');
+        $group = isset(self::OVERDUE_GROUPS[$group]) ? $group : '';
+
+        $query = $this->forecast->applyOverdueFilters(
+            $this->forecast->overdueOnly($this->forecast->plannedQuery($clients, $filters), $today),
+            $filters,
+            $today,
+        );
+
+        /** @var LengthAwarePaginator<int, object> $rows */
+        $rows = $this->overdueOrder($query, $request)
+            ->paginate(self::PER_PAGE)
+            ->withQueryString();
+
+        $rows->through(fn (object $row): array => $this->forecast->row($row, $today));
+
+        return Inertia::render('Crm/Pages/Finance/Overdue', [
+            'rows' => $rows,
+            // Итог по текущему отбору, а не по всей просрочке: цифра в шапке
+            // обязана совпадать с тем, что видно в таблице под ней.
+            'totals' => $this->overdueTotals($query),
+            'aging' => $this->forecast->aging($clients, $filters),
+            'group' => $group,
+            'groups' => array_map(
+                static fn (string $label, string $key): array => ['value' => $key, 'label' => $label],
+                array_values(self::OVERDUE_GROUPS),
+                array_keys(self::OVERDUE_GROUPS),
+            ),
+            'groupRows' => $group !== '' ? $this->forecast->overdueGroups($clients, $filters, $group) : null,
+            'sort' => $this->overdueSort($request),
+            ...$this->sharedOptions($request, $filters),
+        ]);
+    }
+
+    /**
+     * Итоги по текущему отбору: сумма, строки, документы, партнёры.
+     *
+     * Считаются отдельным агрегатом, а не по странице пагинации: «просрочено
+     * всего» на второй странице не должно меняться.
+     *
+     * @return array<string, float|int>
+     */
+    private function overdueTotals(QueryBuilder $query): array
+    {
+        $rows = (clone $query)->reorder()
+            ->select('sch.currency_code')
+            ->selectRaw('SUM(sch.amount - sch.settled_amount) as unpaid')
+            ->selectRaw('COUNT(*) as lines_count')
+            ->selectRaw('COUNT(DISTINCT sch.document_uuid) as documents_count')
+            ->selectRaw('COUNT(DISTINCT sch.user_id) as clients_count')
+            ->groupBy('sch.currency_code')
+            ->get();
+
+        $amount = 0.0;
+        $lines = 0;
+        $documents = 0;
+        $clients = 0;
+
+        foreach ($rows as $row) {
+            $amount += $this->forecast->toRub((float) $row->unpaid, $row->currency_code);
+            $lines += (int) $row->lines_count;
+            $documents += (int) $row->documents_count;
+            $clients = max($clients, (int) $row->clients_count);
+        }
+
+        return [
+            'amount' => round($amount, 2),
+            'lines' => $lines,
+            'documents' => $documents,
+            'clients' => $clients,
+        ];
+    }
+
+    /**
+     * Сортировка списка: по сроку (самые давние сверху), по сумме или по
+     * партнёру. Ключи те же, что у колонок таблицы.
+     *
+     * @return array{column: string, direction: string}
+     */
+    private function overdueSort(Request $request): array
+    {
+        $column = (string) $request->input('sort', 'due_date');
+        $direction = $request->input('direction') === 'desc' ? 'desc' : 'asc';
+
+        return [
+            'column' => in_array($column, ['due_date', 'unpaid', 'client'], true) ? $column : 'due_date',
+            'direction' => $direction,
+        ];
+    }
+
+    private function overdueOrder(QueryBuilder $query, Request $request): QueryBuilder
+    {
+        ['column' => $column, 'direction' => $direction] = $this->overdueSort($request);
+
+        return match ($column) {
+            // Остаток сортируется в валюте строки: рублёвый эквивалент считается
+            // после выборки, и упорядочить по нему в SQL нечем. Валютных строк
+            // в просрочке единицы, порядок от этого практически не страдает.
+            'unpaid' => $query->reorder()->orderByRaw('sch.amount - sch.settled_amount '.$direction)->orderBy('sch.id'),
+            'client' => $query->reorder()->orderByRaw('COALESCE(NULLIF(u.erp_name, \'\'), u.name) '.$direction)->orderBy('sch.date'),
+            default => $query->reorder()->orderBy('sch.date', $direction)->orderBy('sch.id'),
+        };
     }
 
     /**
@@ -564,23 +680,23 @@ class FinanceController extends CrmController
      *
      * @return array<string, mixed>
      */
-    private function tablePayload(Request $request, bool $overdueOnly): array
+    /**
+     * Данные плана поступлений: строки графика в выбранном окне.
+     *
+     * Просрочка сюда больше не ходит — у неё свой набор отборов и разрезов,
+     * и общий метод сводился к «если overdueOnly, то всё иначе».
+     */
+    private function tablePayload(Request $request): array
     {
         $filters = FinanceFilters::fromRequest($request);
         $clients = $this->visibleClients($request, $filters);
         $today = CarbonImmutable::today();
 
-        $query = $this->forecast->plannedQuery($clients, $filters);
-
-        if ($overdueOnly) {
-            $this->forecast->overdueOnly($query, $today);
-        } else {
-            $this->forecast->dueBetween(
-                $query,
-                $filters->dateFrom->toDateString(),
-                $filters->dateTo->toDateString(),
-            );
-        }
+        $query = $this->forecast->dueBetween(
+            $this->forecast->plannedQuery($clients, $filters),
+            $filters->dateFrom->toDateString(),
+            $filters->dateTo->toDateString(),
+        );
 
         /** @var LengthAwarePaginator<int, object> $rows */
         $rows = $this->forecast->applyDefaultOrder($query)
@@ -592,8 +708,7 @@ class FinanceController extends CrmController
         return [
             'rows' => $rows,
             'summary' => $this->forecast->summary($clients, $filters),
-            'aging' => $overdueOnly ? $this->forecast->aging($clients, $filters) : null,
-            'noSchedule' => $filters->includeNoSchedule && ! $overdueOnly
+            'noSchedule' => $filters->includeNoSchedule
                 ? $this->noSchedulePayload($clients, $filters, $today)
                 : null,
             ...$this->sharedOptions($request, $filters),

@@ -52,6 +52,20 @@ interface PaymentForecast
     public function dueBetween(QueryBuilder $query, string $from, string $to): QueryBuilder;
 
     /**
+     * Отборы, осмысленные только для просрочки: корзина старения и порог суммы.
+     */
+    public function applyOverdueFilters(QueryBuilder $query, FinanceFilters $filters, ?CarbonImmutable $today = null): QueryBuilder;
+
+    /**
+     * Просрочка одной строкой на сущность выбранной оси (партнёр, менеджер,
+     * наша организация, контрагент).
+     *
+     * @param  EloquentBuilder<\App\Models\User>  $clients
+     * @return list<array<string, mixed>>
+     */
+    public function overdueGroups(EloquentBuilder $clients, FinanceFilters $filters, string $axis): array;
+
+    /**
      * Долг документов, по которым плановой даты нет вовсе.
      *
      * @param  EloquentBuilder<\App\Models\User>  $clients
@@ -118,7 +132,7 @@ interface PaymentForecast
      * @param  EloquentBuilder<\App\Models\User>  $clients
      * @param  list<string>  $dimensions
      */
-    public function balances(EloquentBuilder $clients, ?CarbonImmutable $asOf = null, array $dimensions = ['partner', 'company']): array;
+    public function balances(EloquentBuilder $clients, ?CarbonImmutable $asOf = null, array $dimensions = ['partner', 'company'], array $organizationIds = []): array;
 
     /**
      * Ключевые показатели пульта.

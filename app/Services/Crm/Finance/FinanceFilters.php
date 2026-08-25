@@ -28,6 +28,8 @@ class FinanceFilters
      * @param  array<int, int>  $managerIds  разрез по менеджерам (только РОПу)
      * @param  array<int, int>  $clientIds  конкретные партнёры (users.id)
      * @param  array<int, int>  $organizationIds  наши юрлица (shipments.organization_id)
+     * @param  array<int, string>  $overdueBuckets  корзины старения ('1_7', '60_plus', …)
+     * @param  float  $minAmount  порог остатка: копеечные хвосты не работа менеджера
      * @param  bool  $onlyOverdue  только строки с прошедшей плановой датой
      * @param  bool  $includeNoSchedule  включать долг реализаций без графика от 1С
      */
@@ -37,6 +39,8 @@ class FinanceFilters
         public readonly array $managerIds = [],
         public readonly array $clientIds = [],
         public readonly array $organizationIds = [],
+        public readonly array $overdueBuckets = [],
+        public readonly float $minAmount = 0.0,
         public readonly bool $onlyOverdue = false,
         public readonly bool $includeNoSchedule = true,
         public readonly string $granularity = 'week',
@@ -57,6 +61,8 @@ class FinanceFilters
             managerIds: self::sanitizeIds($request->input('manager_ids', [])),
             clientIds: self::sanitizeIds($request->input('client_ids', [])),
             organizationIds: self::sanitizeIds($request->input('organization_ids', [])),
+            overdueBuckets: self::sanitizeBuckets($request->input('overdue_buckets', [])),
+            minAmount: max(0.0, (float) $request->input('min_amount', 0)),
             onlyOverdue: $request->boolean('only_overdue'),
             includeNoSchedule: ! $request->has('include_no_schedule') || $request->boolean('include_no_schedule'),
             granularity: self::sanitizeGranularity($request->input('granularity')),
@@ -75,6 +81,8 @@ class FinanceFilters
             managerIds: $this->managerIds,
             clientIds: $this->clientIds,
             organizationIds: $this->organizationIds,
+            overdueBuckets: $this->overdueBuckets,
+            minAmount: $this->minAmount,
             onlyOverdue: $this->onlyOverdue,
             includeNoSchedule: $this->includeNoSchedule,
             granularity: $this->granularity,
@@ -92,6 +100,8 @@ class FinanceFilters
             'manager_ids' => $this->managerIds,
             'client_ids' => $this->clientIds,
             'organization_ids' => $this->organizationIds,
+            'overdue_buckets' => $this->overdueBuckets,
+            'min_amount' => $this->minAmount ?: null,
             'only_overdue' => $this->onlyOverdue,
             'include_no_schedule' => $this->includeNoSchedule,
             'granularity' => $this->granularity,
@@ -140,6 +150,25 @@ class FinanceFilters
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * Корзины старения: чужие ключи выбрасываются молча — фильтр приходит
+     * кликом по плитке, и падать из-за правки адреса руками отчёту незачем.
+     *
+     * @return array<int, string>
+     */
+    private static function sanitizeBuckets(mixed $value): array
+    {
+        // Константа живёт в трейте FormatsForecastRows и читается через класс,
+        // который его подключает: обращаться к константе трейта напрямую нельзя.
+        $allowed = array_column(LedgerPaymentForecastService::AGING_BUCKETS, 'key');
+        $values = is_array($value) ? $value : [$value];
+
+        return array_values(array_unique(array_filter(
+            array_map(static fn ($item): string => is_scalar($item) ? (string) $item : '', $values),
+            static fn (string $key): bool => in_array($key, $allowed, true),
+        )));
     }
 
     private static function sanitizeGranularity(mixed $value): string

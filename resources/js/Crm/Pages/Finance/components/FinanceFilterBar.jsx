@@ -62,6 +62,10 @@ export default function FinanceFilterBar({
     showGranularity = false,
     showOverdueToggle = false,
     asOfMode = false,
+    hidePeriod = false,
+    extraControls = null,
+    extraChips = [],
+    passthrough = [],
 }) {
     const [dateFrom, setDateFrom] = useState(filters.date_from || '');
     const [dateTo, setDateTo] = useState(filters.date_to || '');
@@ -73,8 +77,8 @@ export default function FinanceFilterBar({
         scope: filters.scope === 'department' ? 'department' : undefined,
         // Баланс — состояние на момент, а не оборот за период: страница отдаёт
         // одну дату вместо диапазона, и слать «с/по» ей нечего.
-        date_from: asOfMode ? undefined : (dateFrom || undefined),
-        date_to: asOfMode ? undefined : (dateTo || undefined),
+        date_from: asOfMode || hidePeriod ? undefined : (dateFrom || undefined),
+        date_to: asOfMode || hidePeriod ? undefined : (dateTo || undefined),
         as_of: asOfMode ? (asOf || undefined) : undefined,
         manager_ids: filters.manager_ids?.length ? filters.manager_ids : undefined,
         organization_ids: filters.organization_ids?.length ? filters.organization_ids : undefined,
@@ -84,6 +88,15 @@ export default function FinanceFilterBar({
         // Разрез отчёта переживает любой отбор: выбор фильтра не должен
         // возвращать таблицу к группировке по умолчанию.
         view: filters.view || undefined,
+        // Отборы, которые панель не рисует сама (корзины старения, порог суммы,
+        // разрез просрочки), но обязана переносить: иначе клик по «Менеджер»
+        // молча сбрасывал бы то, что выбрано выше по странице.
+        ...Object.fromEntries(passthrough.map((key) => [
+            key,
+            Array.isArray(filters[key])
+                ? (filters[key].length ? filters[key] : undefined)
+                : (filters[key] || undefined),
+        ])),
         ...extra,
     });
 
@@ -98,7 +111,7 @@ export default function FinanceFilterBar({
         // Сброс убирает отбор, но не форму отчёта: разрез — не фильтр.
         router.get(
             route(routeName),
-            { scope: filters.scope, view: filters.view || undefined },
+            { scope: filters.scope, view: filters.view || undefined, group: filters.group || undefined },
             { preserveState: true, replace: true },
         );
     };
@@ -147,6 +160,7 @@ export default function FinanceFilterBar({
     const chips = [
         ...chipsFor('manager_ids', managers, 'Менеджер'),
         ...chipsFor('organization_ids', organizations, 'Организация'),
+        ...extraChips,
     ];
 
     if (asOfMode && asOf) {
@@ -158,7 +172,7 @@ export default function FinanceFilterBar({
         });
     }
 
-    if (! asOfMode && (dateFrom || dateTo)) {
+    if (! asOfMode && ! hidePeriod && (dateFrom || dateTo)) {
         chips.push({
             key: 'period',
             label: 'Плановая дата',
@@ -242,8 +256,10 @@ export default function FinanceFilterBar({
                         </Grid>
                     )}
 
+                    {extraControls}
+
                     <Flex gap={4} wrap="wrap" align="center">
-                        {asOfMode ? (
+                        {hidePeriod ? null : asOfMode ? (
                             <HStack gap={2} wrap="wrap" align="center">
                                 <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">Баланс на дату</Text>
 

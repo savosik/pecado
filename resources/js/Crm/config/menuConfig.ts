@@ -131,10 +131,13 @@ export const menuConfig: MenuGroup[] = [
             // Балансы сразу под актом: оба отвечают на вопрос «сколько должен»,
             // только акт разворачивает ответ по движениям, а балансы — по юрлицам.
             { label: "Балансы", icon: LuScale, path: "/crm/finance/balances", permission: "crm-finance.view" },
+            // Просрочка сразу за балансами: баланс отвечает «сколько должен»,
+            // просрочка — «сколько из этого уже пора требовать». Разрывать пару
+            // пультом и планом значило бы уводить от долга к прогнозу и обратно.
+            { label: "Просрочка", icon: LuTriangleAlert, path: "/crm/finance/overdue", permission: "crm-finance.view" },
             { label: "Пульт платежей", icon: LuGauge, path: "/crm/finance", permission: "crm-finance.view" },
             { label: "План поступлений", icon: LuWallet, path: "/crm/finance/plan", permission: "crm-finance.view" },
             { label: "Календарь поступлений", icon: LuCalendarClock, path: "/crm/payments/calendar", permission: "crm-clients.view" },
-            { label: "Просрочка", icon: LuTriangleAlert, path: "/crm/finance/overdue", permission: "crm-finance.view" },
         ],
     },
     {

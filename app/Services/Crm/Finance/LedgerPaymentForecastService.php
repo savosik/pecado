@@ -115,6 +115,223 @@ class LedgerPaymentForecastService implements PaymentForecast
             });
     }
 
+    /**
+     * Отборы, осмысленные только для просрочки: корзина старения и порог суммы.
+     *
+     * Корзины переводятся в диапазон плановых дат, а не в вычисленные дни:
+     * условие по колонке индексируется, а `DATEDIFF(...)` в WHERE — нет.
+     *
+     * Порог сравнивается с остатком в валюте строки, без пересчёта в рубли:
+     * он отсекает копеечные хвосты вроде 0,04 ₽, а такая мелочь остаётся
+     * мелочью в любой валюте. Курс в SQL ради этого тянуть незачем.
+     */
+    public function applyOverdueFilters(
+        QueryBuilder $query,
+        FinanceFilters $filters,
+        ?CarbonImmutable $today = null,
+    ): QueryBuilder {
+        $today = $today ?? CarbonImmutable::today();
+
+        if ($filters->minAmount > 0) {
+            $query->whereRaw('sch.amount - sch.settled_amount >= '.(float) $filters->minAmount);
+        }
+
+        if ($filters->overdueBuckets === []) {
+            return $query;
+        }
+
+        $ranges = array_values(array_filter(array_map(
+            fn (array $bucket): ?array => in_array($bucket['key'], $filters->overdueBuckets, true)
+                ? $this->bucketDateRange($bucket['key'], $today)
+                : null,
+            self::AGING_BUCKETS,
+        )));
+
+        return $query->where(static function (QueryBuilder $outer) use ($ranges): void {
+            foreach ($ranges as [$from, $to]) {
+                $outer->orWhere(static function (QueryBuilder $inner) use ($from, $to): void {
+                    $inner->whereDate('sch.date', '<=', $to);
+
+                    if ($from !== null) {
+                        $inner->whereDate('sch.date', '>=', $from);
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * Границы плановых дат корзины: «1–7 дней просрочки» — это срок между
+     * позавчера-и-глубже и неделей назад включительно.
+     *
+     * @return array{0: ?string, 1: string} нижняя граница (null — без дна) и верхняя
+     */
+    private function bucketDateRange(string $key, CarbonImmutable $today): array
+    {
+        $previous = 0;
+
+        foreach (self::AGING_BUCKETS as $bucket) {
+            if ($bucket['key'] === $key) {
+                return [
+                    $bucket['to'] === null ? null : $today->subDays($bucket['to'])->toDateString(),
+                    $today->subDays(max(1, $previous + 1))->toDateString(),
+                ];
+            }
+
+            $previous = (int) $bucket['to'];
+        }
+
+        return [null, $today->subDay()->toDateString()];
+    }
+
+    /**
+     * Просрочка одной строкой на сущность: разрез отвечает на вопрос «где
+     * копится долг» — у кого из партнёров, у какого менеджера, по какому
+     * нашему юрлицу или контрагенту.
+     *
+     * Считается тем же запросом, что и список строк, поэтому сумма разреза
+     * всегда равна сумме списка: разные цифры на одном экране читались бы
+     * как ошибка расчёта.
+     *
+     * @param  EloquentBuilder<\App\Models\User>  $clients
+     * @return list<array<string, mixed>>
+     */
+    public function overdueGroups(EloquentBuilder $clients, FinanceFilters $filters, string $axis): array
+    {
+        $today = CarbonImmutable::today();
+        $keyExpression = $this->groupKeyExpression($axis);
+
+        $base = fn (): QueryBuilder => $this->applyOverdueFilters(
+            $this->overdueOnly($this->plannedQuery($clients, $filters), $today),
+            $filters,
+            $today,
+        )->reorder();
+
+        $query = $base();
+
+        if ($axis === 'company') {
+            // Джойн только под этот разрез: тащить справочник контрагентов
+            // в каждый запрос плана ради одной оси незачем.
+            $query->leftJoin('companies as cmp', 'cmp.id', '=', 'sch.company_id');
+        }
+
+        $rows = $query
+            // Своя выборка вместо колонок plannedQuery: MySQL с only_full_group_by
+            // отвергает агрегат с чужими колонками, а SQLite молча выполняет —
+            // на тестах такая ошибка не ловится.
+            ->select('sch.currency_code')
+            ->selectRaw($keyExpression.' as group_key')
+            ->selectRaw($this->groupTitleExpression($axis).' as group_title')
+            ->selectRaw('MIN(sch.date) as oldest_due')
+            ->selectRaw('COUNT(*) as lines_count')
+            ->selectRaw('SUM(sch.amount - sch.settled_amount) as unpaid')
+            ->groupByRaw($keyExpression)
+            ->groupByRaw($this->groupTitleExpression($axis))
+            ->groupBy('sch.currency_code')
+            ->get();
+
+        $groups = [];
+
+        foreach ($rows as $row) {
+            $key = (string) ($row->group_key ?? '0');
+
+            $groups[$key] ??= [
+                'key' => $axis.':'.$key,
+                'entity_id' => $row->group_key !== null ? (int) $row->group_key : null,
+                'title' => $row->group_title ?: $this->emptyGroupTitle($axis),
+                'manager_name' => null,
+                'url' => $axis === 'partner' && $row->group_key !== null
+                    ? route('crm.clients.show', (int) $row->group_key)
+                    : null,
+                'unpaid' => 0.0,
+                'lines_count' => 0,
+                'clients_count' => 0,
+                'oldest_due' => null,
+                'days_overdue' => 0,
+            ];
+
+            $groups[$key]['unpaid'] += $this->toRub((float) $row->unpaid, $row->currency_code);
+            $groups[$key]['lines_count'] += (int) $row->lines_count;
+            $groups[$key]['oldest_due'] = min($groups[$key]['oldest_due'] ?? $row->oldest_due, $row->oldest_due);
+        }
+
+        // Партнёры и менеджеры — отдельным запросом по парам «ключ × партнёр».
+        // Считать их в том же агрегате нельзя: COUNT(DISTINCT) внутри разбивки
+        // по валютам сложился бы с задвоением, а имя менеджера у группы, где
+        // их несколько, взялось бы наугад.
+        $pairs = $base()
+            ->select('u.id as user_id')
+            ->selectRaw($keyExpression.' as group_key')
+            ->selectRaw('pm.name as manager_name')
+            ->distinct()
+            ->get();
+
+        $managers = [];
+
+        foreach ($pairs as $pair) {
+            $key = (string) ($pair->group_key ?? '0');
+
+            if (! isset($groups[$key])) {
+                continue;
+            }
+
+            $groups[$key]['clients_count']++;
+
+            if ($pair->manager_name !== null && $pair->manager_name !== '') {
+                $managers[$key][$pair->manager_name] = true;
+            }
+        }
+
+        $groups = array_map(function (array $group) use ($today, $managers, $axis): array {
+            $oldest = CarbonImmutable::parse($group['oldest_due']);
+            $key = (string) ($group['entity_id'] ?? '0');
+
+            $group['unpaid'] = round($group['unpaid'], 2);
+            $group['manager_name'] = $this->managerLabel($managers[$key] ?? [], $axis);
+            $group['days_overdue'] = (int) $oldest->diffInDays($today);
+            $group['oldest_due'] = $oldest->format('d.m.Y');
+
+            return $group;
+        }, array_values($groups));
+
+        // Сверху самый крупный долг: разрез открывают, чтобы понять, с кого начать.
+        usort($groups, static fn (array $a, array $b): int => $b['unpaid'] <=> $a['unpaid']);
+
+        return $groups;
+    }
+
+    /** Ось разреза → колонка группировки. */
+    private function groupKeyExpression(string $axis): string
+    {
+        return match ($axis) {
+            'manager' => 'u.personal_manager_id',
+            'organization' => 'sch.organization_id',
+            'company' => 'sch.company_id',
+            default => 'sch.user_id',
+        };
+    }
+
+    /** Ось разреза → человекочитаемое имя строки. */
+    private function groupTitleExpression(string $axis): string
+    {
+        return match ($axis) {
+            'manager' => 'pm.name',
+            'organization' => 'org.name',
+            'company' => 'cmp.name',
+            default => 'COALESCE(NULLIF(u.erp_name, \'\'), u.name)',
+        };
+    }
+
+    private function emptyGroupTitle(string $axis): string
+    {
+        return match ($axis) {
+            'manager' => 'Без менеджера',
+            'organization' => 'Организация не указана',
+            'company' => 'Контрагент не заведён',
+            default => 'Партнёр не определён',
+        };
+    }
+
     public function dueBetween(QueryBuilder $query, string $from, string $to): QueryBuilder
     {
         // DATE(), а не голая колонка: каст `date` сохраняет значение форматом
@@ -209,7 +426,18 @@ class LedgerPaymentForecastService implements PaymentForecast
     public function aging(EloquentBuilder $clients, FinanceFilters $filters): array
     {
         $today = CarbonImmutable::today();
-        $rows = $this->overdueOnly($this->plannedQuery($clients, $filters), $today)->get();
+
+        // Порог суммы применяется, выбор корзины — нет: иначе остальные плитки
+        // обнулились бы и переключиться на другую корзину стало бы нечем.
+        $rows = $this->applyOverdueFilters(
+            $this->overdueOnly($this->plannedQuery($clients, $filters), $today),
+            new FinanceFilters(
+                dateFrom: $filters->dateFrom,
+                dateTo: $filters->dateTo,
+                minAmount: $filters->minAmount,
+            ),
+            $today,
+        )->get();
 
         $totals = array_fill_keys(array_column(self::AGING_BUCKETS, 'key'), ['amount' => 0.0, 'count' => 0]);
         $total = 0.0;
