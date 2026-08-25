@@ -4,10 +4,8 @@ namespace App\Services\Erp\Handlers;
 
 use App\Models\Company;
 use App\Models\ContractorBalance;
-use App\Models\ContractorBalanceOverdueDetail;
 use App\Models\ContractorOrganizationBalance;
 use App\Models\Organization;
-use App\Models\Shipment;
 use App\Models\User;
 use App\Services\Erp\Support\OrganizationResolver;
 use Illuminate\Support\Facades\DB;
@@ -120,7 +118,7 @@ class HandleBalanceUpdated
 
                 // v15.8.0: разрез по нашим организациям. Пишем до деталей просрочки,
                 // чтобы уметь проставить в них организацию.
-                $organizationsByUuid = $this->syncOrganizationBalances(
+                $this->syncOrganizationBalances(
                     $user,
                     $company,
                     $contractorData,
@@ -128,36 +126,10 @@ class HandleBalanceUpdated
                     $excludedOrganizationIds,
                 );
 
-                // Обновить детализацию просрочки: полностью заменяем
-                $balance->overdueDetails()->delete();
-
-                $overdueDetails = $contractorData['overdue_details'] ?? [];
-
-                // Реализации сайта под UUID-ами просрочки — одним запросом.
-                // Из них берётся и FK, и организация строки (org-04).
-                $shipmentsByUuid = $this->resolveOverdueShipments($overdueDetails);
-
-                foreach ($overdueDetails as $detail) {
-                    if (empty($detail['shipment_uuid'])) {
-                        continue;
-                    }
-                    $shipment = $shipmentsByUuid[$detail['shipment_uuid']] ?? null;
-                    $organizationId = $this->resolveOverdueOrganizationId($detail, $organizationsByUuid, $shipment);
-
-                    // Просрочка внутренней организации («Реклама») — не долг клиента.
-                    if ($organizationId !== null && in_array($organizationId, $excludedOrganizationIds, true)) {
-                        continue;
-                    }
-
-                    ContractorBalanceOverdueDetail::create([
-                        'contractor_balance_id' => $balance->id,
-                        'organization_id' => $organizationId,
-                        'shipment_id' => $shipment?->id,
-                        'shipment_uuid' => $detail['shipment_uuid'],
-                        'amount' => $detail['amount'] ?? 0,
-                        'due_date' => $detail['due_date'],
-                    ]);
-                }
+                // `overdue_details[]`, присланные по инерции, игнорируются:
+                // поле удалено из контракта в v16.0.0, построчная просрочка
+                // выводится из непогашенных плановых строк регистра (fin-11).
+                // Сам баланс остаётся — это контрольная сумма для settlements:verify.
 
                 Log::info('HandleBalanceUpdated: баланс контрагента обновлён', [
                     'partner_uuid' => $user->erp_id,
@@ -165,7 +137,6 @@ class HandleBalanceUpdated
                     'tax_id' => $contractorInn,
                     'current_balance' => $updateData['current_balance'],
                     'overdue_debt' => $updateData['overdue_debt'],
-                    'overdue_count' => count($overdueDetails),
                     'organizations_count' => count($contractorData['organizations'] ?? []),
                 ]);
             }
@@ -381,56 +352,6 @@ class HandleBalanceUpdated
             'organizations_sum' => $organizationsTotal,
             'difference' => round($contractorTotal - $organizationsTotal, 2),
         ]);
-    }
-
-    /**
-     * Реализации сайта под UUID-ами строк просрочки.
-     *
-     * Найдётся не всё: баланс и реализации приезжают разными очередями без
-     * гарантии порядка, поэтому отсутствие реализации — штатная ситуация.
-     * Связь для таких строк доклеит HandleShipmentCreated, когда документ придёт.
-     *
-     * @param  array<int, array<string, mixed>>  $overdueDetails
-     * @return array<string, Shipment>
-     */
-    private function resolveOverdueShipments(array $overdueDetails): array
-    {
-        $uuids = array_values(array_filter(
-            array_map(fn ($detail) => $detail['shipment_uuid'] ?? null, $overdueDetails),
-            fn ($uuid) => is_string($uuid) && $uuid !== '',
-        ));
-
-        if ($uuids === []) {
-            return [];
-        }
-
-        return Shipment::whereIn('uuid', array_unique($uuids))
-            ->get(['id', 'uuid', 'organization_id'])
-            ->keyBy('uuid')
-            ->all();
-    }
-
-    /**
-     * Организация строки просрочки: из payload либо по реализации `shipment_uuid`.
-     *
-     * @param  array<string, mixed>  $detail
-     * @param  array<string, int>  $organizationsByUuid
-     */
-    private function resolveOverdueOrganizationId(array $detail, array $organizationsByUuid, ?Shipment $shipment): ?int
-    {
-        $uuid = $detail['organization_uuid'] ?? null;
-
-        if (is_string($uuid) && isset($organizationsByUuid[$uuid])) {
-            return $organizationsByUuid[$uuid];
-        }
-
-        if (is_string($uuid) && trim($uuid) !== '') {
-            return app(OrganizationResolver::class)->resolveByUuid($uuid)?->id;
-        }
-
-        // Организацию не прислали — выводим по реализации (org-04).
-        // Не нашлась или у неё нет организации — NULL, сумма всё равно учитывается.
-        return $shipment?->organization_id;
     }
 
     /**

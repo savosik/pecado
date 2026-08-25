@@ -92,6 +92,10 @@ class HandlePaymentScheduleUpdated
             }
         });
 
+        // После транзакции: регистр — истина, упавшая проекция уронит job,
+        // и ретрай перезапишет план идемпотентно вместе с проекцией.
+        app(\App\Services\Settlements\SettlementProjector::class)->projectDocument($documentUuid);
+
         Log::info('payment_schedule.updated: график документа применён', [
             'document_uuid' => $documentUuid,
             'document_kind' => $documentKind,

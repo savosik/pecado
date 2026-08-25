@@ -8,7 +8,6 @@ use App\Jobs\SendPreorderToSupplierJob;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\User;
-use App\Services\Erp\Support\LinksPrepaymentToOrder;
 use App\Services\Erp\Support\OrderItemsSynchronizer;
 use App\Services\Erp\Support\OrderStatusMapper;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
@@ -31,7 +30,6 @@ use Illuminate\Support\Facades\Log;
  */
 class HandleOrderCreated
 {
-    use LinksPrepaymentToOrder;
     use ResolvesDocumentOrganization;
 
     public function __construct(
@@ -232,9 +230,8 @@ class HandleOrderCreated
             // Обновляем сумму заказа
             $order->updateQuietly(['total_amount' => $totalAmount]);
 
-            // v15.16.0: предоплата по заказу могла приехать раньше самого заказа —
-            // платежи идут своей очередью. Пересчитываем агрегат от строк расшифровки.
-            $this->refreshOrderPrepayment($order);
+            // Предоплату заказа проецирует регистр: опоздавший заказ доклеивает
+            // и проецирует SettlementLinkObserver при создании (fin-11).
 
             // Если 1С создала/обновила заказ сразу в статусе «Удалён» — soft-delete
             // (status уже выставлен в closed выше). Не диспатчим OrderDeleted,

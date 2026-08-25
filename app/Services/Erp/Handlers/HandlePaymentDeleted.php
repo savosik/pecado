@@ -3,7 +3,6 @@
 namespace App\Services\Erp\Handlers;
 
 use App\Models\Payment;
-use App\Services\Payments\PaymentAllocationService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -33,17 +32,11 @@ class HandlePaymentDeleted
             return;
         }
 
-        // Реализации собираем ДО удаления: после него связь останется, но искать
-        // её будет уже незачем — пересчитывать надо ровно те, что теряют оплату.
-        $affected = $payment->allocations()->whereNotNull('shipment_id')->pluck('shipment_id')->all();
-
         $payment->delete();
 
-        app(PaymentAllocationService::class)->recalculateShipments($affected);
+        // Пересчёт оплат реализаций не нужен: погашения считает регистр,
+        // и отмена проведения приходит своим событием (settlement.reverted).
 
-        Log::info('HandlePaymentDeleted: платёж удалён', [
-            'uuid' => $uuid,
-            'shipments_recalculated' => count($affected),
-        ]);
+        Log::info('HandlePaymentDeleted: платёж удалён', ['uuid' => $uuid]);
     }
 }

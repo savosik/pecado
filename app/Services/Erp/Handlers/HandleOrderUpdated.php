@@ -5,7 +5,6 @@ namespace App\Services\Erp\Handlers;
 use App\Models\Order;
 use App\Services\Erp\ErpHandlerOutcome;
 use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
-use App\Services\Erp\Support\LinksPrepaymentToOrder;
 use App\Services\Erp\Support\OrderItemsSynchronizer;
 use App\Services\Erp\Support\OrderStatusMapper;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
@@ -23,7 +22,6 @@ use Illuminate\Support\Facades\Log;
  */
 class HandleOrderUpdated
 {
-    use LinksPrepaymentToOrder;
     use ResolvesDocumentOrganization;
 
     public function __construct(
@@ -135,10 +133,8 @@ class HandleOrderUpdated
             $this->syncItemsWithHistory($order, $payload['items']);
         }
 
-        // v15.16.0: предоплата по заказу приходит расшифровкой платежа, своей
-        // очередью. Если платёж доехал раньше заказа, агрегат на заказе пуст —
-        // пересчитываем его от строк расшифровки.
-        $this->refreshOrderPrepayment($order);
+        // Предоплату заказа держит регистр (payment_schedule.updated →
+        // SettlementProjector::projectOrder) — пересчёт от расшифровки снят в fin-11.
 
         // Логируем атрибутные изменения (кроме статуса — он идёт в OrderStatusHistory)
         $order->refresh()->load(['company', 'user', 'organization']);

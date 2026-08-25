@@ -285,41 +285,4 @@ class SettlementExcludedOrganizationTest extends TestCase
         $this->assertEqualsWithDelta(-12785.80, (float) $balance->current_balance, 0.01);
         $this->assertEqualsWithDelta(7785.80, (float) $balance->overdue_debt, 0.01);
     }
-
-    #[Test]
-    public function просрочка_исключённой_организации_не_попадает_в_детализацию(): void
-    {
-        app(HandleBalanceUpdated::class)->handle([
-            'event' => 'balance.updated',
-            'message_id' => 'msg-balance-'.uniqid(),
-            'partner_uuid' => self::PARTNER_UUID,
-            'updated_at' => '2026-08-15T10:00:00+03:00',
-            'contractors' => [[
-                'uuid' => self::CONTRACTOR_UUID,
-                'tax_id' => '7710140679',
-                'current_balance' => -15000.50,
-                'overdue_debt' => 5000,
-                'overdue_details' => [
-                    [
-                        'shipment_uuid' => '1b7e4a92-5c3f-4d18-8a6b-9e2c5f7d4031',
-                        'organization_uuid' => self::ORGANIZATION_UUID,
-                        'amount' => 3000,
-                        'due_date' => '2026-08-01',
-                    ],
-                    [
-                        'shipment_uuid' => '2c8f5ba3-6d4e-4e29-9b7c-0f3d6e8e5142',
-                        'organization_uuid' => self::EXCLUDED_ORGANIZATION_UUID,
-                        'amount' => 2000,
-                        'due_date' => '2026-08-01',
-                    ],
-                ],
-            ]],
-        ]);
-
-        $balance = ContractorBalance::query()->sole();
-        $details = $balance->overdueDetails()->get();
-
-        $this->assertCount(1, $details);
-        $this->assertSame($this->organization->id, $details->sole()->organization_id);
-    }
 }

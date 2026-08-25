@@ -4,22 +4,16 @@ namespace App\Services\Erp\Handlers;
 
 use App\Models\Product;
 use App\Models\Shipment;
-use App\Services\Erp\Support\LinksOverdueDetailsToShipment;
-use App\Services\Erp\Support\LinksPaymentAllocationsToShipment;
 use App\Services\Erp\Support\ReadsShipmentInvoice;
 use App\Services\Erp\Support\ResolvesContractorParty;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
-use App\Services\Erp\Support\SyncsShipmentPaymentSchedule;
 use Illuminate\Support\Facades\Log;
 
 class HandleShipmentUpdated
 {
-    use LinksOverdueDetailsToShipment;
-    use LinksPaymentAllocationsToShipment;
     use ReadsShipmentInvoice;
     use ResolvesContractorParty;
     use ResolvesDocumentOrganization;
-    use SyncsShipmentPaymentSchedule;
 
     /**
      * Обработка события shipment.updated из 1С.
@@ -118,16 +112,8 @@ class HandleShipmentUpdated
         // v15.5: пересчёт списания партий некондиции (количество могло измениться).
         app(\App\Services\Defect\DefectShipmentService::class)->reconcileForShipment($shipment);
 
-        // Страховка: строки просрочки, оставшиеся без связи (документ пришёл
-        // до появления FK или баланс обновился между created и updated).
-        $this->linkOverdueDetails($shipment, 'HandleShipmentUpdated');
-
-        // v15.11.0: та же страховка для расшифровки платежей.
-        $this->linkPaymentAllocations($shipment, 'HandleShipmentUpdated');
-
-        // v15.12.0: график оплаты. Именно через updated график доезжает
-        // по документам, проведённым до появления этой версии протокола.
-        $this->syncPaymentSchedule($shipment, $payload, 'HandleShipmentUpdated');
+        // Оплату считает регистр (см. HandleShipmentCreated) — доклейки
+        // расшифровок и графика из payload сняты в fin-11.
 
         Log::info('HandleShipmentUpdated: реализация обновлена', [
             'uuid' => $uuid,

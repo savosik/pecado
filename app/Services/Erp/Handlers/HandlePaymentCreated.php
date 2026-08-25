@@ -6,7 +6,6 @@ use App\Models\Payment;
 use App\Services\Erp\Support\PaymentPayloadMapper;
 use App\Services\Erp\Support\ResolvesContractorParty;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
-use App\Services\Payments\PaymentAllocationService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -62,22 +61,14 @@ class HandlePaymentCreated
             $payment = Payment::create($fields + ['uuid' => $uuid]);
         }
 
-        $service = app(PaymentAllocationService::class);
-
-        // Ключа нет — разнесение не трогаем (правило v15.11.0). Пустой массив
-        // очищает его: это разные операции, различие описано в контракте.
-        if (array_key_exists('allocations', $payload) && is_array($payload['allocations'])) {
-            $service->sync($payment, $payload['allocations']);
-        } else {
-            // Сумма могла измениться без изменения расшифровки — аванс пересчитываем всегда.
-            $service->recalculatePayment($payment);
-        }
+        // `allocations`, присланные по инерции, игнорируются: расшифровка удалена
+        // из контракта в v16.0.0, разнесение снесено в fin-11. Погашения живут
+        // в регистре взаиморасчётов (settlement.posted / payment_schedule.updated).
 
         Log::info('HandlePaymentCreated: платёж создан/обновлён', [
             'uuid' => $uuid,
             'company_id' => $companyId,
             'user_id' => $userId,
-            'allocations' => isset($payload['allocations']) ? count($payload['allocations']) : 'не присланы',
         ]);
     }
 }

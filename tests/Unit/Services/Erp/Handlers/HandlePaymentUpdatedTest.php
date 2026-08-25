@@ -37,63 +37,24 @@ class HandlePaymentUpdatedTest extends TestCase
         ], $overrides);
     }
 
-    private function createPaymentWithAllocation(Shipment $shipment, float $amount = 1200.00): Payment
-    {
-        (new HandlePaymentCreated)->handle($this->payload([
-            'event' => 'payment.created',
-            'allocations' => [['shipment_uuid' => $shipment->uuid, 'amount' => $amount]],
-        ]));
-
-        return Payment::where('uuid', self::PAYMENT_UUID)->firstOrFail();
-    }
-
+    /**
+     * `allocations` игнорируются (v16.0.0/fin-11): обновление платежа
+     * не трогает оплату реализаций — её считает регистр.
+     */
     #[Test]
-    public function it_replaces_allocations_entirely(): void
-    {
-        $first = Shipment::factory()->create(['currency_code' => 'RUB', 'total_amount' => 5000.00]);
-        $second = Shipment::factory()->create(['currency_code' => 'RUB', 'total_amount' => 3000.00]);
-
-        $this->createPaymentWithAllocation($first);
-
-        (new HandlePaymentUpdated)->handle($this->payload([
-            'allocations' => [['shipment_uuid' => $second->uuid, 'amount' => 800.00]],
-        ]));
-
-        $payment = Payment::where('uuid', self::PAYMENT_UUID)->firstOrFail();
-        $this->assertCount(1, $payment->allocations);
-        $this->assertSame($second->uuid, $payment->allocations->first()->shipment_uuid);
-
-        // Снятое разнесение не должно оставить на первой реализации оплату-призрака.
-        $this->assertEquals(0.00, (float) $first->fresh()->paid_amount);
-        $this->assertSame(Shipment::PAYMENT_UNPAID, $first->fresh()->payment_status);
-        $this->assertEquals(800.00, (float) $second->fresh()->paid_amount);
-    }
-
-    #[Test]
-    public function it_keeps_allocations_when_key_is_absent(): void
+    public function it_ignores_legacy_allocations_key(): void
     {
         $shipment = Shipment::factory()->create(['currency_code' => 'RUB', 'total_amount' => 5000.00]);
-        $this->createPaymentWithAllocation($shipment);
 
-        (new HandlePaymentUpdated)->handle($this->payload(['number' => '29УТ-999999']));
+        (new HandlePaymentCreated)->handle($this->payload(['event' => 'payment.created']));
+
+        (new HandlePaymentUpdated)->handle($this->payload([
+            'number' => '29УТ-999999',
+            'allocations' => [['shipment_uuid' => $shipment->uuid, 'amount' => 800.00]],
+        ]));
 
         $payment = Payment::where('uuid', self::PAYMENT_UUID)->firstOrFail();
         $this->assertSame('29УТ-999999', $payment->number);
-        $this->assertCount(1, $payment->allocations, 'Отсутствие ключа allocations не должно очищать разнесение');
-        $this->assertEquals(1200.00, (float) $shipment->fresh()->paid_amount);
-    }
-
-    #[Test]
-    public function it_clears_allocations_on_empty_array(): void
-    {
-        $shipment = Shipment::factory()->create(['currency_code' => 'RUB', 'total_amount' => 5000.00]);
-        $this->createPaymentWithAllocation($shipment);
-
-        (new HandlePaymentUpdated)->handle($this->payload(['allocations' => []]));
-
-        $payment = Payment::where('uuid', self::PAYMENT_UUID)->firstOrFail();
-        $this->assertCount(0, $payment->allocations);
-        $this->assertEquals(2000.00, (float) $payment->unallocated_amount, 'Платёж целиком стал авансом');
         $this->assertEquals(0.00, (float) $shipment->fresh()->paid_amount);
     }
 
@@ -109,18 +70,5 @@ class HandlePaymentUpdatedTest extends TestCase
         ]);
 
         $this->assertSame(ErpHandlerOutcome::STATUS_RECOVERED, app(ErpHandlerOutcome::class)->status());
-    }
-
-    #[Test]
-    public function it_recalculates_advance_when_amount_changes_without_allocations(): void
-    {
-        $shipment = Shipment::factory()->create(['currency_code' => 'RUB', 'total_amount' => 5000.00]);
-        $this->createPaymentWithAllocation($shipment);
-
-        (new HandlePaymentUpdated)->handle($this->payload(['amount' => 5000.00]));
-
-        $payment = Payment::where('uuid', self::PAYMENT_UUID)->firstOrFail();
-        $this->assertEquals(1200.00, (float) $payment->allocated_amount);
-        $this->assertEquals(3800.00, (float) $payment->unallocated_amount);
     }
 }

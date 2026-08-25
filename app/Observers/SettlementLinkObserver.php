@@ -25,6 +25,14 @@ class SettlementLinkObserver
 {
     public function created(Model $document): void
     {
-        app(SettlementProjector::class)->linkToDocument($document);
+        $uuid = $document->getAttribute('uuid');
+
+        if (! is_string($uuid) || $uuid === '') {
+            return;
+        }
+
+        // Полный projectDocument, а не только линковка: опоздавшая реализация
+        // должна сразу получить и колонки оплаты — её график мог приехать раньше.
+        app(SettlementProjector::class)->projectDocument($uuid);
     }
 }

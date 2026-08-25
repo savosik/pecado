@@ -7,7 +7,6 @@ use App\Services\Erp\ErpHandlerOutcome;
 use App\Services\Erp\Support\PaymentPayloadMapper;
 use App\Services\Erp\Support\ResolvesContractorParty;
 use App\Services\Erp\Support\ResolvesDocumentOrganization;
-use App\Services\Payments\PaymentAllocationService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -75,20 +74,9 @@ class HandlePaymentUpdated
             $payment->update($fields);
         }
 
-        $service = app(PaymentAllocationService::class);
+        // `allocations` игнорируются — см. HandlePaymentCreated: разнесение
+        // снесено в fin-11, погашения живут в регистре взаиморасчётов.
 
-        // Ключа нет — разнесение не трогаем; пустой массив очищает его целиком.
-        // Различие зафиксировано в контракте: 1С обязана присылать расшифровку
-        // целиком, а не досылать изменившиеся строки.
-        if (array_key_exists('allocations', $payload) && is_array($payload['allocations'])) {
-            $service->sync($payment, $payload['allocations']);
-        } else {
-            $service->recalculatePayment($payment);
-        }
-
-        Log::info('HandlePaymentUpdated: платёж обновлён', [
-            'uuid' => $uuid,
-            'allocations' => isset($payload['allocations']) ? count($payload['allocations']) : 'не присланы',
-        ]);
+        Log::info('HandlePaymentUpdated: платёж обновлён', ['uuid' => $uuid]);
     }
 }

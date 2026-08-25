@@ -4,7 +4,6 @@ namespace Tests\Unit\Services\Erp\Handlers;
 
 use App\Models\Company;
 use App\Models\ContractorBalance;
-use App\Models\ContractorBalanceOverdueDetail;
 use App\Models\User;
 use App\Services\Erp\Handlers\HandleBalanceUpdated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -72,7 +71,9 @@ class HandleBalanceUpdatedTest extends TestCase
         $this->assertNotNull($balance);
         $this->assertEquals(-125000.00, (float) $balance->current_balance);
         $this->assertEquals(50000.00, (float) $balance->overdue_debt);
-        $this->assertCount(2, $balance->overdueDetails);
+        // `overdue_details` игнорируются (v16.0.0): построчная просрочка
+        // выводится из плановых строк регистра, таблица деталей снесена.
+        $this->assertDatabaseCount('contractor_balance_overdue_details', 0);
     }
 
     #[Test]
@@ -108,48 +109,6 @@ class HandleBalanceUpdatedTest extends TestCase
 
         $this->assertEquals(-20000.00, (float) $balance->current_balance);
         $this->assertEquals(5000.00, (float) $balance->overdue_debt);
-        $this->assertCount(1, $balance->overdueDetails);
-    }
-
-    #[Test]
-    public function it_replaces_overdue_details_on_update(): void
-    {
-        $user = User::factory()->create(['erp_id' => 'partner-003']);
-
-        $balance = ContractorBalance::create([
-            'user_id' => $user->id,
-            'tax_id' => '1111111111',
-            'current_balance' => 0,
-            'overdue_debt' => 0,
-        ]);
-
-        ContractorBalanceOverdueDetail::create([
-            'contractor_balance_id' => $balance->id,
-            'shipment_uuid' => 'old-shipment',
-            'amount' => 1000.00,
-            'due_date' => '2026-01-01',
-        ]);
-
-        $this->handler->handle([
-            'partner_uuid' => 'partner-003',
-            'contractors' => [
-                [
-                    'tax_id' => '1111111111',
-                    'current_balance' => 0,
-                    'overdue_debt' => 2000.00,
-                    'overdue_details' => [
-                        ['shipment_uuid' => 'new-shipment-1', 'amount' => 1200.00, 'due_date' => '2026-04-01'],
-                        ['shipment_uuid' => 'new-shipment-2', 'amount' => 800.00, 'due_date' => '2026-05-01'],
-                    ],
-                ],
-            ],
-            'updated_at' => '2026-02-18T10:00:00',
-        ]);
-
-        $balance->refresh();
-        $details = $balance->overdueDetails()->get();
-        $this->assertCount(2, $details);
-        $this->assertFalse($details->pluck('shipment_uuid')->contains('old-shipment'));
     }
 
     #[Test]
@@ -179,7 +138,6 @@ class HandleBalanceUpdatedTest extends TestCase
         ]);
 
         $this->assertDatabaseCount('contractor_balances', 2);
-        $this->assertDatabaseCount('contractor_balance_overdue_details', 1);
     }
 
     #[Test]

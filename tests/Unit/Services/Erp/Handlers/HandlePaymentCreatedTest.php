@@ -145,8 +145,12 @@ class HandlePaymentCreatedTest extends TestCase
         $this->assertSame(self::CONTRACTOR_UUID, $payment->contractor_uuid);
     }
 
+    /**
+     * `allocations`, присланные по инерции, игнорируются: расшифровка удалена
+     * из контракта в v16.0.0, разнесение снесено в fin-11.
+     */
     #[Test]
-    public function it_syncs_allocations_and_updates_shipment_payment_status(): void
+    public function it_ignores_legacy_allocations_key(): void
     {
         $shipment = Shipment::factory()->create(['currency_code' => 'RUB', 'total_amount' => 5000.00]);
 
@@ -154,62 +158,24 @@ class HandlePaymentCreatedTest extends TestCase
             'amount' => 2000.00,
             'allocations' => [
                 ['shipment_uuid' => $shipment->uuid, 'amount' => 1200.00, 'line_number' => 1],
-                ['shipment_uuid' => 'unknown-shipment-uuid', 'amount' => 500.00, 'line_number' => 2],
             ],
         ]));
 
-        $payment = Payment::where('uuid', self::PAYMENT_UUID)->firstOrFail();
-        $this->assertCount(2, $payment->allocations);
-        $this->assertEquals(1700.00, (float) $payment->allocated_amount);
-        $this->assertEquals(300.00, (float) $payment->unallocated_amount);
-
-        // Строка на неизвестную реализацию сохранена без привязки.
-        $this->assertDatabaseHas('payment_allocations', [
-            'payment_id' => $payment->id,
-            'shipment_uuid' => 'unknown-shipment-uuid',
-            'shipment_id' => null,
-        ]);
-
-        $shipment->refresh();
-        $this->assertEquals(1200.00, (float) $shipment->paid_amount);
-        $this->assertSame(Shipment::PAYMENT_PARTIAL, $shipment->payment_status);
-    }
-
-    #[Test]
-    public function it_skips_allocation_rows_without_shipment_uuid_or_with_foreign_target_type(): void
-    {
-        $shipment = Shipment::factory()->create(['currency_code' => 'RUB', 'total_amount' => 5000.00]);
-
-        (new HandlePaymentCreated)->handle($this->payload([
-            'allocations' => [
-                ['shipment_uuid' => $shipment->uuid, 'amount' => 100.00],
-                ['amount' => 999.00],
-                ['shipment_uuid' => $shipment->uuid, 'amount' => 777.00, 'target_type' => 'order'],
-            ],
-        ]));
-
-        $payment = Payment::where('uuid', self::PAYMENT_UUID)->firstOrFail();
-        $this->assertCount(1, $payment->allocations);
-        $this->assertEquals(100.00, (float) $payment->allocated_amount);
+        $this->assertSame(1, Payment::where('uuid', self::PAYMENT_UUID)->count());
+        // Оплату реализации считает регистр — payload платежа её не трогает.
+        $this->assertEquals(0.0, (float) $shipment->fresh()->paid_amount);
     }
 
     #[Test]
     public function it_is_idempotent_on_repeated_delivery(): void
     {
-        $shipment = Shipment::factory()->create(['currency_code' => 'RUB', 'total_amount' => 5000.00]);
-
-        $payload = $this->payload([
-            'allocations' => [['shipment_uuid' => $shipment->uuid, 'amount' => 1200.00]],
-        ]);
+        $payload = $this->payload(['amount' => 1200.00]);
 
         (new HandlePaymentCreated)->handle($payload);
         (new HandlePaymentCreated)->handle($payload);
 
         $this->assertSame(1, Payment::where('uuid', self::PAYMENT_UUID)->count());
-
-        $payment = Payment::where('uuid', self::PAYMENT_UUID)->firstOrFail();
-        $this->assertCount(1, $payment->allocations, 'Повторная доставка не должна задваивать разнесение');
-        $this->assertEquals(1200.00, (float) $shipment->fresh()->paid_amount);
+        $this->assertEquals(1200.00, (float) Payment::where('uuid', self::PAYMENT_UUID)->firstOrFail()->amount);
     }
 
     #[Test]

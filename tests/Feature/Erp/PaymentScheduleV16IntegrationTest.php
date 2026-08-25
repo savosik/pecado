@@ -5,6 +5,7 @@ namespace Tests\Feature\Erp;
 use App\Models\Company;
 use App\Models\Organization;
 use App\Models\SettlementEntry;
+use App\Models\Shipment;
 use App\Models\User;
 use App\Queue\Jobs\ErpIncomingJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -403,5 +404,69 @@ class PaymentScheduleV16IntegrationTest extends TestCase
         $this->assertFalse($line->is_overdue);
         $this->assertSame(0, SettlementEntry::query()->overdue()->count());
         $this->assertSame(1, SettlementEntry::query()->outstanding()->count());
+    }
+
+    /**
+     * Сквозной путь волны 3: событие графика проецирует колонки оплаты
+     * на реализацию — их читают кабинет, внешний API и карточки панелей.
+     */
+    #[Test]
+    public function событие_графика_проецирует_оплату_на_реализацию(): void
+    {
+        $shipment = Shipment::factory()->create([
+            'uuid' => self::SHIPMENT_UUID,
+            'user_id' => $this->user->id,
+            'total_amount' => 120000,
+            'paid_amount' => 0,
+            'payment_status' => Shipment::PAYMENT_UNPAID,
+        ]);
+
+        $this->dispatch($this->scheduleMessage([
+            [
+                'uuid' => 'f4a8c2e7-9d3b-4165-8c7a-1e5f9b3d6209',
+                'due_date' => '2026-08-14',
+                'amount' => 120000.00,
+                'settled_amount' => 100000.00,
+                'line_number' => 1,
+            ],
+        ]));
+
+        $shipment->refresh();
+
+        $this->assertEqualsWithDelta(100000.0, (float) $shipment->paid_amount, 0.01);
+        $this->assertSame(Shipment::PAYMENT_PARTIAL, $shipment->payment_status);
+        $this->assertSame('2026-08-14', $shipment->payment_due_date?->toDateString());
+    }
+
+    /**
+     * Реализация приехала позже своего графика: SettlementLinkObserver
+     * доклеивает движения и сразу проецирует оплату.
+     */
+    #[Test]
+    public function опоздавшая_реализация_получает_проекцию_при_создании(): void
+    {
+        $this->dispatch($this->scheduleMessage([
+            [
+                'uuid' => 'f4a8c2e7-9d3b-4165-8c7a-1e5f9b3d6210',
+                'due_date' => '2026-08-14',
+                'amount' => 50000.00,
+                'settled_amount' => 50000.00,
+                'line_number' => 1,
+            ],
+        ]));
+
+        // Документа ещё нет — проекции некуда писать, событие не падает.
+        $shipment = Shipment::factory()->create([
+            'uuid' => self::SHIPMENT_UUID,
+            'user_id' => $this->user->id,
+            'total_amount' => 50000,
+            'paid_amount' => 0,
+            'payment_status' => Shipment::PAYMENT_UNPAID,
+        ]);
+
+        $shipment->refresh();
+
+        $this->assertSame(Shipment::PAYMENT_PAID, $shipment->payment_status);
+        $this->assertEqualsWithDelta(50000.0, (float) $shipment->paid_amount, 0.01);
     }
 }

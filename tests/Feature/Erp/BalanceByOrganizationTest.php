@@ -6,7 +6,6 @@ use App\Models\Company;
 use App\Models\ContractorBalance;
 use App\Models\ContractorOrganizationBalance;
 use App\Models\Organization;
-use App\Models\Shipment;
 use App\Models\User;
 use App\Services\Erp\Handlers\HandleBalanceUpdated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -212,80 +211,5 @@ class BalanceByOrganizationTest extends TestCase
             -10000,
             ContractorOrganizationBalance::where('organization_id', $orgA->id)->first()->current_balance,
         );
-    }
-
-    // ──────────────────────────────────────────────
-    // Просрочка
-    // ──────────────────────────────────────────────
-
-    #[Test]
-    public function overdue_detail_takes_organization_from_payload(): void
-    {
-        $orgA = Organization::factory()->create(['external_id' => self::ORG_A]);
-
-        $this->handle([
-            'organizations' => [['uuid' => self::ORG_A, 'current_balance' => -15000.50, 'overdue_debt' => 5000]],
-            'overdue_details' => [[
-                'shipment_uuid' => '550e8400-e29b-41d4-a716-446655440005',
-                'organization_uuid' => self::ORG_A,
-                'amount' => 5000,
-                'due_date' => '2026-07-01',
-            ]],
-        ]);
-
-        $detail = ContractorBalance::first()->overdueDetails()->firstOrFail();
-
-        $this->assertSame($orgA->id, $detail->organization_id);
-    }
-
-    /**
-     * 1С организацию в детали не прислала — выводим по реализации (org-04).
-     */
-    #[Test]
-    public function overdue_detail_falls_back_to_shipment_organization(): void
-    {
-        $orgA = Organization::factory()->create(['external_id' => self::ORG_A]);
-
-        Shipment::create([
-            'uuid' => '550e8400-e29b-41d4-a716-446655440005',
-            'user_id' => $this->user->id,
-            'company_id' => $this->company->id,
-            'organization_id' => $orgA->id,
-            'number' => '29УТ-003413',
-            'date' => '2026-07-01',
-            'status' => 'completed',
-            'currency_code' => 'RUB',
-            'total_amount' => 5000,
-        ]);
-
-        $this->handle([
-            'overdue_details' => [[
-                'shipment_uuid' => '550e8400-e29b-41d4-a716-446655440005',
-                'amount' => 5000,
-                'due_date' => '2026-07-01',
-            ]],
-        ]);
-
-        $this->assertSame($orgA->id, ContractorBalance::first()->overdueDetails()->first()->organization_id);
-    }
-
-    /**
-     * Реализации на сайте нет — организация неизвестна, но сумма учитывается.
-     */
-    #[Test]
-    public function overdue_detail_without_shipment_keeps_amount_with_null_organization(): void
-    {
-        $this->handle([
-            'overdue_details' => [[
-                'shipment_uuid' => 'реализация-которой-нет',
-                'amount' => 5000,
-                'due_date' => '2026-07-01',
-            ]],
-        ]);
-
-        $detail = ContractorBalance::first()->overdueDetails()->firstOrFail();
-
-        $this->assertNull($detail->organization_id);
-        $this->assertEquals(5000, $detail->amount);
     }
 }

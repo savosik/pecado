@@ -1662,7 +1662,6 @@ class ErpIncomingJobTest extends TestCase
 
         $balance = ContractorBalance::where('user_id', $user->id)->first();
         $this->assertEquals('2026-02-16', $balance->balance_erp_updated_at->format('Y-m-d'));
-        $this->assertCount(1, $balance->overdueDetails);
 
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-balance-001',
@@ -3205,7 +3204,8 @@ class ErpIncomingJobTest extends TestCase
             'uuid' => '00000000-0000-4000-b000-0000000000f1',
             'number' => '29УТ-002488',
         ]);
-        $this->assertSame('paid', $shipment->fresh()->payment_status);
+        // `allocations` игнорируются (fin-11): оплату реализаций считает регистр.
+        $this->assertSame('unpaid', $shipment->fresh()->payment_status);
     }
 
     /**
