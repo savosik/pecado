@@ -1,6 +1,6 @@
 import { Fragment, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { Box, Flex, HStack, SimpleGrid, Table, Text, VStack } from '@chakra-ui/react';
+import { Box, Flex, HStack, Table, Text, VStack } from '@chakra-ui/react';
 import { LuChevronDown, LuChevronRight, LuListPlus } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
@@ -11,9 +11,12 @@ import TaskDialog from '@/Crm/Components/TaskDialog';
 import { usePermission } from '@/shared/Panel/usePermission';
 import FinanceFilterBar from './components/FinanceFilterBar';
 import FinanceRowsTable from './components/FinanceRowsTable';
-import { formatRub } from './components/format';
+import { formatCompact, formatRub } from './components/format';
 import OverduePriority, { WeightHeader } from './components/OverdueWeight';
 import LastPayment from './components/LastPayment';
+
+/** Цвета корзин: от жёлтого к тёмно-красному — чем дольше, тем горячее. */
+const BUCKET_COLORS = ['yellow.solid', 'orange.solid', 'orange.600', 'red.solid', 'red.700'];
 
 /** Пороги «мелочи»: копеечные хвосты закрываются взаимозачётом, а не звонком. */
 const AMOUNT_PRESETS = [
@@ -220,42 +223,65 @@ export default function FinanceOverdue({
             </Box>
 
             {aging && (
-                <Box borderWidth="1px" borderRadius="lg" p={4} mb={4}>
-                    <HStack gap={2} mb={3}>
-                        <Text fontWeight="600">По срокам задержки</Text>
-                        <MetricHint text="Корзина считается от плановой даты строки до сегодня. Плитки показывают всю просрочку по текущему отбору партнёров и юрлиц — выбор корзины на них не влияет, иначе переключиться на соседнюю было бы нечем. Клик по плитке фильтрует список; можно выбрать несколько." />
+                <Box borderWidth="1px" borderRadius="lg" px={4} py={3} mb={3}>
+                    <HStack gap={2} mb={2} wrap="wrap">
+                        <Text fontSize="xs" color="fg.muted">Задержка</Text>
+                        <MetricHint text="Корзина считается от плановой даты строки до сегодня. Полоса показывает, как просрочка распределена по срокам: длина сегмента — доля суммы, а не число строк. Клик по корзине фильтрует список, можно выбрать несколько. Сам выбор на полосу не влияет — иначе переключиться на соседнюю корзину было бы нечем." />
+
                         {activeBuckets.length > 0 && (
                             <Button size="xs" variant="ghost" onClick={() => patchQuery({ overdue_buckets: undefined })}>
-                                Показать все
+                                показать все
                             </Button>
                         )}
                     </HStack>
 
-                    <SimpleGrid columns={{ base: 2, md: 5 }} gap={3}>
-                        {aging.buckets.map((bucket) => {
+                    {/* Распределение одной полосой: пять карточек в ряд занимали
+                        треть экрана, а несут ровно то же — доли по срокам. */}
+                    <Flex height="8px" borderRadius="full" overflow="hidden" bg="bg.muted" mb={2}>
+                        {aging.buckets.map((bucket, index) => {
+                            const share = aging.total > 0 ? (bucket.amount / aging.total) * 100 : 0;
+                            const active = activeBuckets.includes(bucket.key);
+
+                            return share > 0 ? (
+                                <Box
+                                    key={bucket.key}
+                                    width={`${share}%`}
+                                    bg={BUCKET_COLORS[index]}
+                                    opacity={activeBuckets.length === 0 || active ? 1 : 0.3}
+                                    title={`${bucket.label}: ${formatRub(bucket.amount)}`}
+                                />
+                            ) : null;
+                        })}
+                    </Flex>
+
+                    <HStack gap={2} wrap="wrap">
+                        {aging.buckets.map((bucket, index) => {
                             const active = activeBuckets.includes(bucket.key);
 
                             return (
-                                <Box
+                                <Button
                                     key={bucket.key}
-                                    as="button"
-                                    type="button"
-                                    textAlign="left"
-                                    borderWidth="1px"
-                                    borderColor={active ? 'pecado.solid' : 'border.muted'}
-                                    bg={active ? 'pecado.subtle' : undefined}
-                                    borderRadius="md"
-                                    p={3}
+                                    size="xs"
+                                    variant={active ? 'solid' : 'outline'}
+                                    colorPalette={active ? 'pecado' : 'gray'}
                                     onClick={() => toggleBucket(bucket.key)}
-                                    _hover={{ borderColor: 'pecado.solid' }}
+                                    opacity={bucket.count === 0 ? 0.5 : 1}
                                 >
-                                    <Text fontSize="xs" color="fg.muted">{bucket.label}</Text>
-                                    <Text fontSize="md" fontWeight="600">{formatRub(bucket.amount)}</Text>
-                                    <Text fontSize="10px" color="fg.muted">{bucket.count} стр.</Text>
-                                </Box>
+                                    <Box
+                                        width="6px"
+                                        height="6px"
+                                        borderRadius="full"
+                                        bg={BUCKET_COLORS[index]}
+                                        mr={1}
+                                    />
+                                    {bucket.label}
+                                    <Text as="span" color="fg.muted" ml={1}>
+                                        {formatCompact(bucket.amount)} · {bucket.count}
+                                    </Text>
+                                </Button>
                             );
                         })}
-                    </SimpleGrid>
+                    </HStack>
                 </Box>
             )}
 
