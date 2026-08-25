@@ -53,11 +53,11 @@ export default function FinanceBalances({
     }), { balance: 0, overdue: 0, contractors: 0 });
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Финансы' }, { label: 'Балансы партнёров' }]}>
-            <Head title="Балансы партнёров — CRM" />
+        <CrmLayout breadcrumbs={[{ label: 'Финансы' }, { label: 'Балансы' }]}>
+            <Head title="Балансы — CRM" />
 
             <PageHeader
-                title="Балансы партнёров"
+                title="Балансы"
                 description="Сальдо взаиморасчётов и просроченная задолженность по данным 1С"
             />
 

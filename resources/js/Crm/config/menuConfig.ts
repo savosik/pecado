@@ -128,11 +128,13 @@ export const menuConfig: MenuGroup[] = [
             // ради денег — что отгружено, что оплачено и что попадёт в сверку.
             { label: "Реализации", icon: LuTruck, path: "/crm/shipments", permission: "crm-clients.view" },
             { label: "Акт сверки", icon: LuFileText, path: "/crm/finance/reconciliation", permission: "crm-finance.view" },
+            // Балансы сразу под актом: оба отвечают на вопрос «сколько должен»,
+            // только акт разворачивает ответ по движениям, а балансы — по юрлицам.
+            { label: "Балансы", icon: LuScale, path: "/crm/finance/balances", permission: "crm-finance.view" },
             { label: "Пульт платежей", icon: LuGauge, path: "/crm/finance", permission: "crm-finance.view" },
             { label: "План поступлений", icon: LuWallet, path: "/crm/finance/plan", permission: "crm-finance.view" },
             { label: "Календарь поступлений", icon: LuCalendarClock, path: "/crm/payments/calendar", permission: "crm-clients.view" },
             { label: "Просрочка", icon: LuTriangleAlert, path: "/crm/finance/overdue", permission: "crm-finance.view" },
-            { label: "Балансы партнёров", icon: LuScale, path: "/crm/finance/balances", permission: "crm-finance.view" },
         ],
     },
     {
