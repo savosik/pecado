@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Models\ContractorBalanceOverdueDetail;
 use App\Models\Currency;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -82,7 +81,7 @@ class ShipmentController extends Controller
                 'currency_code' => $shipment->currency_code,
                 'total_amount' => $shipment->total_amount,
                 'total_converted' => $totalConverted,
-                // Оплата — денормализованные поля, их ведёт PaymentAllocationService.
+                // Оплата — денормализованные поля, их ведёт SettlementProjector.
                 // Считать на лету нельзя: экспорт идёт cursor()-ом, а фильтр —
                 // по колонке. Закрыты флагом: цифры долга не сверены с 1С.
                 ...($financeEnabled ? [
@@ -420,23 +419,7 @@ class ShipmentController extends Controller
 
         $totalConverted = $this->convertAmount((float) $shipment->total_amount, $shipment->currency_code, $currency);
 
-        // Получить деталь просрочки для этой реализации (если есть)
-        $overdueDetail = null;
-        if ($shipment->uuid) {
-            $overdueDetail = ContractorBalanceOverdueDetail::whereHas(
-                'contractorBalance',
-                fn ($q) => $q->where('user_id', $user->id)
-            )->where('shipment_uuid', $shipment->uuid)->first();
-        }
-
         $ordersByUuid = $relatedOrders->keyBy('uuid');
-
-        // Платежи, разнесённые на эту реализацию. Загружаем отдельно, а не
-        // через with() выше: связь нужна только на карточке.
-        $shipment->load([
-            'paymentAllocations.payment:id,number,date,direction,currency_code',
-            // v15.12.0: график оплаты — план рядом с фактом на одной карточке.
-        ]);
 
         return Inertia::render('User/Cabinet/Shipments/Show', [
             'shipment' => [
@@ -463,23 +446,10 @@ class ShipmentController extends Controller
                     'payment_status_label' => $shipment->payment_status_label,
                     'paid_amount' => (float) $shipment->paid_amount,
                     'unpaid_amount' => $shipment->unpaid_amount,
-                    'payments' => $shipment->paymentAllocations
-                        ->filter(fn ($allocation) => $allocation->payment !== null)
-                        ->sortByDesc(fn ($allocation) => $allocation->payment->date)
-                        ->values()
-                        ->map(fn ($allocation) => [
-                            'id' => $allocation->payment->id,
-                            'number' => $allocation->payment->number,
-                            'date' => $allocation->payment->date?->format('d.m.Y'),
-                            'direction' => $allocation->payment->direction,
-                            'direction_label' => $allocation->payment->direction === 'out' ? 'Возврат' : 'Поступление',
-                            'amount' => (float) $allocation->amount,
-                            'amount_converted' => $this->convertAmount(
-                                (float) $allocation->amount,
-                                $allocation->payment->currency_code,
-                                $currency,
-                            ),
-                        ])->all(),
+                    // Список закрывших платежей снят вместе с расшифровкой (fin-11):
+                    // 1С её не присылает, а какой платёж закрыл документ, видно
+                    // в акте сверки.
+                    'payments' => [],
                     'payment_schedule' => \App\Support\Payments\PaymentSchedulePresenter::forShipment(
                         $shipment,
                         fn (float $amount): float => $this->convertAmount($amount, $shipment->currency_code, $currency),
@@ -544,12 +514,9 @@ class ShipmentController extends Controller
                     'erp_updated_at' => ($order->erp_updated_at ?? $order->updated_at)?->format('d.m.Y H:i'),
                 ];
             }),
-            // Просрочка из 1С — тоже под флагом: это про долг клиента.
-            'overdue_detail' => $financeEnabled && $overdueDetail ? [
-                'shipment_uuid' => $overdueDetail->shipment_uuid,
-                'amount' => $overdueDetail->amount,
-                'due_date' => $overdueDetail->due_date?->format('Y-m-d'),
-            ] : null,
+            // Построчная просрочка из balance.updated снята (fin-11): срок
+            // и остаток видны в графике оплаты, он приходит из регистра.
+            'overdue_detail' => null,
         ]);
     }
 

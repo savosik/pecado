@@ -6,9 +6,6 @@ import { Head, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, EntitySelector } from '@/Admin/Components';
 import { toaster } from '@/components/ui/toaster';
-import { LuPlus, LuTrash2 } from 'react-icons/lu';
-
-const emptyDetail = () => ({ shipment_uuid: '', amount: '', due_date: '' });
 
 const ContractorBalancesEdit = ({ balance }) => {
     const { data, setData, put, processing, errors, transform } = useForm({
@@ -20,11 +17,6 @@ const ContractorBalancesEdit = ({ balance }) => {
         balance_erp_updated_at: balance.balance_erp_updated_at
             ? balance.balance_erp_updated_at.substring(0, 16)
             : '',
-        overdue_details: (balance.overdue_details ?? []).map((d) => ({
-            shipment_uuid: d.shipment_uuid ?? '',
-            amount: d.amount ?? '',
-            due_date: d.due_date ?? '',
-        })),
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -44,15 +36,7 @@ const ContractorBalancesEdit = ({ balance }) => {
     };
 
     // Overdue details helpers
-    const addDetail = () => setData('overdue_details', [...data.overdue_details, emptyDetail()]);
 
-    const removeDetail = (idx) =>
-        setData('overdue_details', data.overdue_details.filter((_, i) => i !== idx));
-
-    const updateDetail = (idx, field, value) => {
-        const updated = data.overdue_details.map((d, i) => (i === idx ? { ...d, [field]: value } : d));
-        setData('overdue_details', updated);
-    };
 
     // Отображаемое имя пользователя для EntitySelector
     const userDisplayName = balance.user
@@ -143,101 +127,6 @@ const ContractorBalancesEdit = ({ balance }) => {
                         </Card.Body>
                     </Card.Root>
 
-                    {/* Детализация просрочки по реализациям */}
-                    <Card.Root>
-                        <Card.Header pb={2}>
-                            <HStack justify="space-between">
-                                <Text fontWeight="700" fontSize="md">
-                                    Детализация просрочки по реализациям
-                                </Text>
-                                <Button size="sm" variant="outline" onClick={addDetail} type="button">
-                                    <LuPlus /> Добавить реализацию
-                                </Button>
-                            </HStack>
-                        </Card.Header>
-                        <Card.Body>
-                            {data.overdue_details.length === 0 ? (
-                                <Text color="gray.400" fontSize="sm" py={4} textAlign="center">
-                                    Нет просроченных реализаций. Нажмите «Добавить реализацию», чтобы добавить.
-                                </Text>
-                            ) : (
-                                <Box overflowX="auto">
-                                    <Table.Root size="sm">
-                                        <Table.Header>
-                                            <Table.Row bg="bg.subtle">
-                                                <Table.ColumnHeader>UUID реализации *</Table.ColumnHeader>
-                                                <Table.ColumnHeader>Сумма просрочки (₽) *</Table.ColumnHeader>
-                                                <Table.ColumnHeader>Дата оплаты *</Table.ColumnHeader>
-                                                <Table.ColumnHeader w="40px" />
-                                            </Table.Row>
-                                        </Table.Header>
-                                        <Table.Body>
-                                            {data.overdue_details.map((detail, idx) => (
-                                                <Table.Row key={idx}>
-                                                    <Table.Cell>
-                                                        <Input
-                                                            size="sm"
-                                                            value={detail.shipment_uuid}
-                                                            onChange={(e) => updateDetail(idx, 'shipment_uuid', e.target.value)}
-                                                            placeholder="s1a2b3c4-..."
-                                                            fontFamily="mono"
-                                                        />
-                                                        {errors[`overdue_details.${idx}.shipment_uuid`] && (
-                                                            <Text fontSize="xs" color="red.500" mt={1}>
-                                                                {errors[`overdue_details.${idx}.shipment_uuid`]}
-                                                            </Text>
-                                                        )}
-                                                    </Table.Cell>
-                                                    <Table.Cell>
-                                                        <Input
-                                                            size="sm"
-                                                            type="number"
-                                                            step="0.01"
-                                                            min="0"
-                                                            value={detail.amount}
-                                                            onChange={(e) => updateDetail(idx, 'amount', e.target.value)}
-                                                            placeholder="30000.00"
-                                                            fontFamily="mono"
-                                                        />
-                                                        {errors[`overdue_details.${idx}.amount`] && (
-                                                            <Text fontSize="xs" color="red.500" mt={1}>
-                                                                {errors[`overdue_details.${idx}.amount`]}
-                                                            </Text>
-                                                        )}
-                                                    </Table.Cell>
-                                                    <Table.Cell>
-                                                        <Input
-                                                            size="sm"
-                                                            type="date"
-                                                            value={detail.due_date}
-                                                            onChange={(e) => updateDetail(idx, 'due_date', e.target.value)}
-                                                        />
-                                                        {errors[`overdue_details.${idx}.due_date`] && (
-                                                            <Text fontSize="xs" color="red.500" mt={1}>
-                                                                {errors[`overdue_details.${idx}.due_date`]}
-                                                            </Text>
-                                                        )}
-                                                    </Table.Cell>
-                                                    <Table.Cell>
-                                                        <IconButton
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            colorPalette="red"
-                                                            aria-label="Удалить строку"
-                                                            onClick={() => removeDetail(idx)}
-                                                            type="button"
-                                                        >
-                                                            <LuTrash2 />
-                                                        </IconButton>
-                                                    </Table.Cell>
-                                                </Table.Row>
-                                            ))}
-                                        </Table.Body>
-                                    </Table.Root>
-                                </Box>
-                            )}
-                        </Card.Body>
-                    </Card.Root>
 
                     <FormActions
                         onSaveAndClose={(e) => handleSubmit(e, true)}

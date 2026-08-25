@@ -21,7 +21,6 @@ use Illuminate\Support\Facades\DB;
  *
  *  1. **Регистр** — SUM(settlement_entries.amount) по фактическим движениям.
  *  2. **Мнение 1С** — contractor_organization_balances из balance.updated.
- *  3. **Старая модель** — непогашенный остаток по строкам графика реализаций.
  *
  * Третий источник расходиться обязан: ради этого расхождения эпик и затевался.
  *
@@ -121,8 +120,6 @@ class VerifySettlements extends Command
             // Балансы приходят только в рублях — валюта в ключ подставляется явно.
             ->keyBy(fn ($row) => $this->key($row->company_id, $row->organization_id, 'RUB'));
 
-        $legacy = $this->legacyDebts($clientId);
-
         $names = Company::withoutGlobalScopes()
             ->whereIn('id', array_filter(array_merge(
                 $ledger->pluck('company_id')->all(),
@@ -137,7 +134,6 @@ class VerifySettlements extends Command
 
             $ledgerTotal = (float) ($ledger[$key]->total ?? 0.0);
             $erpTotal = (float) ($balances[$key]->current_balance ?? 0.0);
-            $legacyTotal = (float) ($legacy[$key] ?? 0.0);
 
             // Клиент без движений и с нулевым балансом — не расхождение, а пустая строка.
             if (abs($ledgerTotal) <= self::EPSILON && abs($erpTotal) <= self::EPSILON) {
@@ -159,43 +155,12 @@ class VerifySettlements extends Command
                 'ledger' => round($ledgerTotal, 2),
                 'erp' => round($erpTotal, 2),
                 'delta_erp' => round($ledgerTotal - $erpTotal, 2),
-                'legacy' => round($legacyTotal, 2),
-                'delta_legacy' => round($ledgerTotal + $legacyTotal, 2),
             ];
         }
 
         usort($rows, static fn (array $a, array $b): int => abs($b['delta_erp']) <=> abs($a['delta_erp']));
 
         return $rows;
-    }
-
-    /**
-     * Долг по старой модели: непогашенный остаток строк графика реализаций.
-     *
-     * Именно это число сегодня видят CRM и кабинет, и именно оно расходится
-     * с 1С — сумма неоплаченных документов больше долга в разы, потому что
-     * 1С гасит его ещё авансами по заказам.
-     *
-     * @return array<string, float>
-     */
-    private function legacyDebts(?string $clientId): array
-    {
-        return DB::table('shipment_payment_schedules AS s')
-            ->join('shipments AS d', 'd.id', '=', 's.shipment_id')
-            ->whereNull('d.deleted_at')
-            ->when($clientId, fn ($query) => $query->where('d.user_id', $clientId))
-            ->selectRaw('d.company_id AS company_id, d.organization_id AS organization_id, d.currency_code AS currency_code')
-            // GREATEST — функция MySQL; в SQLite ту же роль играет двухаргументный MAX.
-            ->selectRaw(sprintf(
-                'SUM(%s(s.amount - s.paid_amount - s.prepaid_amount, 0)) AS total',
-                DB::connection()->getDriverName() === 'sqlite' ? 'MAX' : 'GREATEST',
-            ))
-            ->groupBy('d.company_id', 'd.organization_id', 'd.currency_code')
-            ->get()
-            ->mapWithKeys(fn ($row) => [
-                $this->key($row->company_id, $row->organization_id, $row->currency_code ?? 'RUB') => (float) $row->total,
-            ])
-            ->all();
     }
 
     private function key(?int $companyId, ?int $organizationId, ?string $currency): string
@@ -215,7 +180,7 @@ class VerifySettlements extends Command
         }
 
         $this->table(
-            ['Контрагент', 'Орг.', 'Вал.', 'Регистр', '1С', 'Δ с 1С', 'Старая модель', 'Δ со старой'],
+            ['Контрагент', 'Орг.', 'Вал.', 'Регистр', '1С', 'Δ с 1С'],
             array_map(static fn (array $row): array => [
                 mb_strimwidth((string) $row['company'], 0, 34, '…'),
                 $row['organization_id'] ?? '—',
@@ -223,8 +188,6 @@ class VerifySettlements extends Command
                 number_format($row['ledger'], 2, ',', ' '),
                 number_format($row['erp'], 2, ',', ' '),
                 number_format($row['delta_erp'], 2, ',', ' '),
-                number_format($row['legacy'], 2, ',', ' '),
-                number_format($row['delta_legacy'], 2, ',', ' '),
             ], array_slice($rows, 0, 100)),
         );
 
@@ -238,7 +201,7 @@ class VerifySettlements extends Command
      */
     private function renderCsv(array $rows): void
     {
-        $this->line('company_id;company;organization_id;currency;ledger;erp;delta_erp;legacy;delta_legacy');
+        $this->line('company_id;company;organization_id;currency;ledger;erp;delta_erp');
 
         foreach ($rows as $row) {
             $this->line(implode(';', [
@@ -249,8 +212,6 @@ class VerifySettlements extends Command
                 $row['ledger'],
                 $row['erp'],
                 $row['delta_erp'],
-                $row['legacy'],
-                $row['delta_legacy'],
             ]));
         }
     }

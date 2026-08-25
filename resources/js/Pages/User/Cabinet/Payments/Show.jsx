@@ -3,11 +3,6 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { LuArrowLeft, LuReceipt } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 
-const ALLOCATION_COLORS = {
-    allocated: 'green',
-    partial: 'orange',
-    advance: 'blue',
-};
 
 const PAYMENT_STATUS_COLORS = {
     unpaid: 'gray',
@@ -68,16 +63,10 @@ export default function PaymentShow({ payment }) {
                             >
                                 {payment.direction_label}
                             </Badge>
-                            <Badge
-                                colorPalette={ALLOCATION_COLORS[payment.allocation_status] || 'gray'}
-                                variant="subtle" px="3" py="1" borderRadius="full"
-                            >
-                                {payment.allocation_status_label}
-                            </Badge>
                         </HStack>
                     </Flex>
 
-                    <SimpleGrid columns={{ base: 1, md: 3 }} gap="4">
+                    <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
                         <Box>
                             <Text fontSize="xs" color="gray.500">Сумма платежа</Text>
                             <Text fontFamily="mono" fontWeight="700" fontSize="lg">{money(payment.amount)}</Text>
@@ -86,22 +75,6 @@ export default function PaymentShow({ payment }) {
                                     {fmt(payment.amount_converted)} {currencySymbol}
                                 </Text>
                             )}
-                        </Box>
-                        <Box>
-                            <Text fontSize="xs" color="gray.500">Разнесено по отгрузкам</Text>
-                            <Text fontFamily="mono" fontWeight="700" fontSize="lg">{money(payment.allocated_amount)}</Text>
-                        </Box>
-                        <Box>
-                            <Text fontSize="xs" color="gray.500">Нераспределённый остаток (аванс)</Text>
-                            <Text
-                                fontFamily="mono"
-                                fontWeight="700"
-                                fontSize="lg"
-                                color={payment.unallocated_amount > 0 ? 'blue.600' : undefined}
-                                _dark={payment.unallocated_amount > 0 ? { color: 'blue.400' } : undefined}
-                            >
-                                {money(payment.unallocated_amount)}
-                            </Text>
                         </Box>
                     </SimpleGrid>
                 </Card.Body>
@@ -128,93 +101,6 @@ export default function PaymentShow({ payment }) {
                         <Box mt="4">
                             <Text fontSize="xs" color="gray.500" mb="0.5">Назначение платежа</Text>
                             <Text fontSize="sm">{payment.purpose}</Text>
-                        </Box>
-                    )}
-                </Card.Body>
-            </Card.Root>
-
-            <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
-                <Card.Body p={4}>
-                    <Text fontWeight="700" fontSize="md" mb="3">
-                        Расшифровка платежа ({payment.allocations.length})
-                    </Text>
-
-                    {payment.allocations.length === 0 ? (
-                        <Text fontSize="sm" color="gray.500">
-                            Платёж пока не разнесён по документам — вся сумма числится авансом.
-                        </Text>
-                    ) : (
-                        <Box overflowX="auto">
-                            <Table.Root size="sm">
-                                <Table.Header>
-                                    <Table.Row>
-                                        <Table.ColumnHeader>Документ</Table.ColumnHeader>
-                                        <Table.ColumnHeader>Дата</Table.ColumnHeader>
-                                        <Table.ColumnHeader textAlign="end">Сумма документа</Table.ColumnHeader>
-                                        <Table.ColumnHeader textAlign="end">Зачтено</Table.ColumnHeader>
-                                        <Table.ColumnHeader>Статус</Table.ColumnHeader>
-                                    </Table.Row>
-                                </Table.Header>
-                                <Table.Body>
-                                    {payment.allocations.map((allocation) => {
-                                        // v15.16.0: строка расшифровки указывает на реализацию,
-                                        // на заказ (предоплата) либо на прочий документ 1С,
-                                        // которого на сайте нет вовсе
-                                        const doc = allocation.shipment || allocation.order || null;
-                                        const href = allocation.shipment
-                                            ? `/cabinet/shipments/${allocation.shipment.id}`
-                                            : (allocation.order ? `/cabinet/orders/${allocation.order.id}` : null);
-
-                                        return (
-                                            <Table.Row key={allocation.id}>
-                                                <Table.Cell>
-                                                    {href ? (
-                                                        <Link href={href}>
-                                                            <Text fontSize="sm" fontFamily="mono" color="pecado.600" textDecoration="underline">
-                                                                {doc.number}
-                                                            </Text>
-                                                        </Link>
-                                                    ) : (
-                                                        <Text fontSize="sm" color="gray.500">
-                                                            {allocation.document_label}
-                                                        </Text>
-                                                    )}
-                                                    <Text fontSize="xs" color="fg.muted">
-                                                        {allocation.target_type_label}
-                                                    </Text>
-                                                </Table.Cell>
-                                                <Table.Cell>
-                                                    <Text fontSize="sm">
-                                                        {doc?.date
-                                                            ? new Date(doc.date).toLocaleDateString('ru-RU')
-                                                            : '—'}
-                                                    </Text>
-                                                </Table.Cell>
-                                                <Table.Cell textAlign="end" fontFamily="mono">
-                                                    {doc ? fmt(doc.total_amount) : '—'}
-                                                </Table.Cell>
-                                                <Table.Cell textAlign="end" fontFamily="mono" fontWeight="600">
-                                                    {fmt(allocation.amount)}
-                                                </Table.Cell>
-                                                <Table.Cell>
-                                                    {allocation.shipment ? (
-                                                        <Badge
-                                                            colorPalette={PAYMENT_STATUS_COLORS[allocation.shipment.payment_status] || 'gray'}
-                                                            variant="subtle"
-                                                        >
-                                                            {allocation.shipment.payment_status_label}
-                                                        </Badge>
-                                                    ) : allocation.target_type === 'order' ? (
-                                                        <Badge colorPalette="blue" variant="subtle">
-                                                            Предоплата
-                                                        </Badge>
-                                                    ) : '—'}
-                                                </Table.Cell>
-                                            </Table.Row>
-                                        );
-                                    })}
-                                </Table.Body>
-                            </Table.Root>
                         </Box>
                     )}
                 </Card.Body>

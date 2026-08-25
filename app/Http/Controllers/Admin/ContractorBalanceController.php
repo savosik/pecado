@@ -74,10 +74,6 @@ class ContractorBalanceController extends Controller
             'current_balance' => 'required|numeric',
             'overdue_debt' => 'nullable|numeric|min:0',
             'balance_erp_updated_at' => 'nullable|date',
-            'overdue_details' => 'nullable|array',
-            'overdue_details.*.shipment_uuid' => 'required|string|max:255',
-            'overdue_details.*.amount' => 'required|numeric|min:0',
-            'overdue_details.*.due_date' => 'required|date',
         ], [
             'user_id.required' => 'Необходимо выбрать пользователя.',
             'user_id.exists' => 'Пользователь не найден.',
@@ -87,11 +83,6 @@ class ContractorBalanceController extends Controller
             'current_balance.numeric' => 'Баланс должен быть числом.',
             'overdue_debt.numeric' => 'Просроченная задолженность должна быть числом.',
             'overdue_debt.min' => 'Просроченная задолженность не может быть отрицательной.',
-            'overdue_details.*.shipment_uuid.required' => 'UUID реализации обязателен.',
-            'overdue_details.*.amount.required' => 'Сумма просрочки обязательна.',
-            'overdue_details.*.amount.min' => 'Сумма просрочки не может быть отрицательной.',
-            'overdue_details.*.due_date.required' => 'Дата оплаты обязательна.',
-            'overdue_details.*.due_date.date' => 'Неверный формат даты оплаты.',
         ]);
 
         $balance = DB::transaction(function () use ($validated) {
@@ -103,15 +94,6 @@ class ContractorBalanceController extends Controller
                 'overdue_debt' => $validated['overdue_debt'] ?? 0,
                 'balance_erp_updated_at' => $validated['balance_erp_updated_at'] ?? null,
             ]);
-
-            foreach ($validated['overdue_details'] ?? [] as $detail) {
-                $balance->overdueDetails()->create([
-                    'shipment_uuid' => $detail['shipment_uuid'],
-                    'shipment_id' => $this->resolveShipmentId($detail['shipment_uuid']),
-                    'amount' => $detail['amount'],
-                    'due_date' => $detail['due_date'],
-                ]);
-            }
 
             return $balance;
         });
@@ -126,10 +108,6 @@ class ContractorBalanceController extends Controller
         $contractorBalance->load([
             'user',
             'company',
-            'overdueDetails.organization',
-            // Реализация нужна ради номера и даты: без неё в таблице остаётся
-            // голый UUID из 1С. NULL — документ ещё не приехал.
-            'overdueDetails.shipment:id,uuid,erp_number,number,date,total_amount',
         ]);
 
         return Inertia::render('Admin/Pages/ContractorBalances/Show', [
@@ -175,7 +153,7 @@ class ContractorBalanceController extends Controller
 
     public function edit(ContractorBalance $contractorBalance)
     {
-        $contractorBalance->load(['user', 'company', 'overdueDetails']);
+        $contractorBalance->load(['user', 'company']);
 
         return Inertia::render('Admin/Pages/ContractorBalances/Edit', [
             'balance' => $contractorBalance,
@@ -196,10 +174,6 @@ class ContractorBalanceController extends Controller
             'current_balance' => 'required|numeric',
             'overdue_debt' => 'nullable|numeric|min:0',
             'balance_erp_updated_at' => 'nullable|date',
-            'overdue_details' => 'nullable|array',
-            'overdue_details.*.shipment_uuid' => 'required|string|max:255',
-            'overdue_details.*.amount' => 'required|numeric|min:0',
-            'overdue_details.*.due_date' => 'required|date',
         ], [
             'user_id.required' => 'Необходимо выбрать пользователя.',
             'user_id.exists' => 'Пользователь не найден.',
@@ -209,11 +183,6 @@ class ContractorBalanceController extends Controller
             'current_balance.numeric' => 'Баланс должен быть числом.',
             'overdue_debt.numeric' => 'Просроченная задолженность должна быть числом.',
             'overdue_debt.min' => 'Просроченная задолженность не может быть отрицательной.',
-            'overdue_details.*.shipment_uuid.required' => 'UUID реализации обязателен.',
-            'overdue_details.*.amount.required' => 'Сумма просрочки обязательна.',
-            'overdue_details.*.amount.min' => 'Сумма просрочки не может быть отрицательной.',
-            'overdue_details.*.due_date.required' => 'Дата оплаты обязательна.',
-            'overdue_details.*.due_date.date' => 'Неверный формат даты оплаты.',
         ]);
 
         DB::transaction(function () use ($validated, $contractorBalance) {
@@ -225,31 +194,11 @@ class ContractorBalanceController extends Controller
                 'overdue_debt' => $validated['overdue_debt'] ?? 0,
                 'balance_erp_updated_at' => $validated['balance_erp_updated_at'] ?? null,
             ]);
-
-            // Полная замена overdue_details
-            $contractorBalance->overdueDetails()->delete();
-            foreach ($validated['overdue_details'] ?? [] as $detail) {
-                $contractorBalance->overdueDetails()->create([
-                    'shipment_uuid' => $detail['shipment_uuid'],
-                    'shipment_id' => $this->resolveShipmentId($detail['shipment_uuid']),
-                    'amount' => $detail['amount'],
-                    'due_date' => $detail['due_date'],
-                ]);
-            }
         });
 
         return redirect()
             ->route('admin.contractor-balances.show', $contractorBalance)
             ->with('success', 'Баланс контрагента успешно обновлён');
-    }
-
-    /**
-     * Реализация сайта по UUID из формы. NULL — документа ещё нет,
-     * связь доклеится, когда 1С пришлёт реализацию.
-     */
-    private function resolveShipmentId(string $shipmentUuid): ?int
-    {
-        return \App\Models\Shipment::where('uuid', $shipmentUuid)->value('id');
     }
 
     public function destroy(ContractorBalance $contractorBalance)

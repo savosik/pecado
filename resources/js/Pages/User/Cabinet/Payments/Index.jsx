@@ -16,16 +16,11 @@ import SelectedFilters from '@/components/cabinet/SelectedFilters';
 import ExportMenu from '@/components/cabinet/ExportMenu';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 
-const ALLOCATION_COLORS = {
-    allocated: 'green',
-    partial: 'orange',
-    advance: 'blue',
-};
 
 /**
  * Оплаты клиента. Только чтение: платёж заводит 1С.
  */
-export default function PaymentsIndex({ filters, directions = [], allocationStatuses = [], companies = [], exportEnabled = false }) {
+export default function PaymentsIndex({ filters, directions = [], companies = [], exportEnabled = false }) {
     const { payments, currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
 
@@ -36,7 +31,6 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
 
     const [localFilters, setLocalFilters] = useState({
         direction: asArray(filters?.direction),
-        allocation_status: asArray(filters?.allocation_status),
         company_id: filters?.company_id || '',
         date_from: filters?.date_from || '',
         date_to: filters?.date_to || '',
@@ -73,10 +67,6 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
         [directions],
     );
 
-    const allocationCollection = useMemo(
-        () => createListCollection({ items: allocationStatuses.map((a) => ({ label: a.label, value: a.value })) }),
-        [allocationStatuses],
-    );
 
     const companyCollection = useMemo(
         () => createListCollection({
@@ -88,13 +78,12 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
     const filterFields = useMemo(() => [
         { key: 'search', label: 'Поиск', formatter: (v) => `«${v}»` },
         { key: 'direction', label: 'Направление', formatter: (v) => directions.find((d) => d.value === v)?.label || v },
-        { key: 'allocation_status', label: 'Разнесение', formatter: (v) => allocationStatuses.find((a) => a.value === v)?.label || v },
         { key: 'company_id', label: 'Контрагент', formatter: (v) => companies.find((c) => String(c.value) === String(v))?.label || `#${v}` },
         { key: 'date_from', label: 'Дата от' },
         { key: 'date_to', label: 'Дата до' },
         { key: 'amount_from', label: 'Сумма от' },
         { key: 'amount_to', label: 'Сумма до' },
-    ], [directions, allocationStatuses, companies]);
+    ], [directions, companies]);
 
     // search уходит вместе с фильтрами: если нажать «Применить» раньше, чем
     // сработал debounce, набранный текст иначе откатился бы.
@@ -105,7 +94,7 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
 
     const handleResetFilters = () => {
         const reset = {
-            direction: [], allocation_status: [], company_id: '',
+            direction: [], company_id: '',
             date_from: '', date_to: '', amount_from: '', amount_to: '',
         };
         setLocalFilters(reset);
@@ -120,7 +109,7 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
             ? current.filter((item) => String(item) !== String(value))
             : '';
 
-        if (key === 'direction' || key === 'allocation_status') {
+        if (key === 'direction') {
             setLocalFilters({ ...localFilters, [key]: Array.isArray(nextValue) ? nextValue : [] });
         } else if (key === 'search') {
             setSearch('');
@@ -136,7 +125,7 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
     };
 
     const activeFiltersCount = [
-        localFilters.direction, localFilters.allocation_status,
+        localFilters.direction,
     ].reduce((sum, list) => sum + list.length, 0)
         + ['company_id', 'date_from', 'date_to', 'amount_from', 'amount_to'].filter((key) => filters?.[key]).length;
 
@@ -211,26 +200,6 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
                                         </Select.Trigger>
                                         <Select.Content>
                                             {directionCollection.items.map((item) => (
-                                                <Select.Item key={item.value} item={item}>{item.label}</Select.Item>
-                                            ))}
-                                        </Select.Content>
-                                    </Select.Root>
-                                </Field>
-
-                                <Field label="Разнесение" flex="1">
-                                    <Select.Root
-                                        multiple
-                                        collection={allocationCollection}
-                                        value={localFilters.allocation_status}
-                                        onValueChange={(e) => setLocalFilters({ ...localFilters, allocation_status: e.value })}
-                                    >
-                                        <Select.Trigger>
-                                            <Select.ValueText placeholder="Любое">
-                                                {localFilters.allocation_status.length === 0 ? 'Любое' : `Выбрано: ${localFilters.allocation_status.length}`}
-                                            </Select.ValueText>
-                                        </Select.Trigger>
-                                        <Select.Content>
-                                            {allocationCollection.items.map((item) => (
                                                 <Select.Item key={item.value} item={item}>{item.label}</Select.Item>
                                             ))}
                                         </Select.Content>
@@ -340,22 +309,11 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
                                                 >
                                                     {payment.direction_label}
                                                 </Badge>
-                                                <Badge
-                                                    colorPalette={ALLOCATION_COLORS[payment.allocation_status] || 'gray'}
-                                                    variant="subtle" fontSize="xs" borderRadius="full" px="2.5"
-                                                >
-                                                    {payment.allocation_status_label}
-                                                </Badge>
                                             </Flex>
 
                                             <HStack gap="3" fontSize="xs" color="gray.500" flexWrap="wrap" mb="1.5">
                                                 {payment.company_name && <Text fontWeight="500">{payment.company_name}</Text>}
                                                 {payment.bank_number && <Text>по банку: {payment.bank_number}</Text>}
-                                                <Text>
-                                                    {payment.allocations_count === 0
-                                                        ? 'без разнесения'
-                                                        : `отгрузок: ${payment.allocations_count}`}
-                                                </Text>
                                             </HStack>
 
                                             <HStack gap="1" fontSize="xs" color="gray.500" minW="0">
@@ -371,11 +329,6 @@ export default function PaymentsIndex({ filters, directions = [], allocationStat
                                             {payment.currency_code && payment.currency_code !== currency?.code && (
                                                 <Text fontSize="xs" color="gray.400" whiteSpace="nowrap">
                                                     {fmt(payment.amount)} {payment.currency_code}
-                                                </Text>
-                                            )}
-                                            {payment.unallocated_amount > 0 && (
-                                                <Text fontSize="xs" color="blue.500" whiteSpace="nowrap">
-                                                    аванс: {fmt(payment.unallocated_amount)} {payment.currency_code || currencySymbol}
                                                 </Text>
                                             )}
                                         </VStack>

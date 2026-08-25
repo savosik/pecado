@@ -45,7 +45,6 @@ export default function PaymentList({
     filters,
     totals = null,
     directions = [],
-    allocationStatuses = [],
     organizations = [],
     organizationsEnabled = false,
     partners = [],
@@ -79,7 +78,6 @@ export default function PaymentList({
 
     const chips = [
         ...chipsFor('directions', directions, 'Направление', 'value', 'label'),
-        ...chipsFor('allocation_statuses', allocationStatuses, 'Разнесение', 'value', 'label'),
         ...chipsFor('partner_ids', partners, 'Партнёр'),
         ...chipsFor('company_ids', companyOptions, 'Контрагент'),
         ...(seesAll ? chipsFor('manager_ids', managers, 'Менеджер') : []),
@@ -202,25 +200,6 @@ export default function PaymentList({
             ),
         },
         {
-            key: 'unallocated_amount',
-            label: 'Разнесение',
-            sortable: true,
-            render: (_, row) => (
-                <VStack align="start" gap={0}>
-                    <Badge
-                        colorPalette={{ allocated: 'green', partial: 'orange', advance: 'blue' }[row.allocation_status] || 'gray'}
-                        variant="subtle"
-                    >
-                        {row.allocation_status_label}
-                    </Badge>
-                    {row.has_advance && (
-                        <Text fontSize="10px" color="fg.muted">аванс: {row.unallocated_label}</Text>
-                    )}
-                    <Text fontSize="10px" color="fg.muted">реализаций: {row.allocations_count}</Text>
-                </VStack>
-            ),
-        },
-        {
             key: 'actions',
             label: '',
             render: (_, row) => (
@@ -282,17 +261,6 @@ export default function PaymentList({
                             allLabel="Все направления"
                             selectedIds={selected('directions')}
                             onChange={(values) => apply({ directions: values })}
-                            minW="0"
-                        />
-
-                        <MultiSelectFilter
-                            label="Разнесение"
-                            options={allocationStatuses}
-                            idKey="value"
-                            labelKey="label"
-                            allLabel="Любое"
-                            selectedIds={selected('allocation_statuses')}
-                            onChange={(values) => apply({ allocation_statuses: values })}
                             minW="0"
                         />
 

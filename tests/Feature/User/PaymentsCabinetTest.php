@@ -3,7 +3,6 @@
 namespace Tests\Feature\User;
 
 use App\Models\Payment;
-use App\Models\PaymentAllocation;
 use App\Models\SettlementEntry;
 use App\Models\Shipment;
 use App\Models\User;
@@ -43,8 +42,6 @@ class PaymentsCabinetTest extends TestCase
             'number' => '29УТ-002488',
             'amount' => 2325.20,
             'currency_code' => 'RUB',
-            'allocated_amount' => 0,
-            'unallocated_amount' => 2325.20,
         ], $attributes));
     }
 
@@ -99,40 +96,6 @@ class PaymentsCabinetTest extends TestCase
     }
 
     #[Test]
-    public function payment_card_shows_allocations_and_advance(): void
-    {
-        $shipment = Shipment::factory()->create([
-            'user_id' => $this->client->id,
-            'erp_number' => '29УТ-003413',
-            'total_amount' => 5000,
-            'currency_code' => 'RUB',
-            'paid_amount' => 1200,
-            'payment_status' => Shipment::PAYMENT_PARTIAL,
-        ]);
-
-        $payment = $this->paymentFor($this->client, [
-            'amount' => 2000,
-            'allocated_amount' => 1200,
-            'unallocated_amount' => 800,
-        ]);
-
-        PaymentAllocation::factory()->forShipment($shipment)->create([
-            'payment_id' => $payment->id,
-            'amount' => 1200,
-        ]);
-
-        $this->actingAs($this->client)
-            ->get(route('cabinet.payments.show', $payment->id))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('User/Cabinet/Payments/Show')
-                ->where('payment.unallocated_amount', 800)
-                ->has('payment.allocations', 1)
-                ->where('payment.allocations.0.shipment.number', '29УТ-003413')
-                ->where('payment.allocations.0.shipment.payment_status_label', 'Оплачена частично'));
-    }
-
-    #[Test]
     public function shipments_list_shows_payment_status_and_supports_filter(): void
     {
         Shipment::factory()->create([
@@ -168,33 +131,6 @@ class PaymentsCabinetTest extends TestCase
     }
 
     #[Test]
-    public function shipment_card_shows_related_payments(): void
-    {
-        $shipment = Shipment::factory()->create([
-            'user_id' => $this->client->id,
-            'total_amount' => 5000,
-            'currency_code' => 'RUB',
-            'paid_amount' => 1200,
-            'payment_status' => Shipment::PAYMENT_PARTIAL,
-        ]);
-
-        $payment = $this->paymentFor($this->client);
-        PaymentAllocation::factory()->forShipment($shipment)->create([
-            'payment_id' => $payment->id,
-            'amount' => 1200,
-        ]);
-
-        $this->actingAs($this->client)
-            ->get(route('cabinet.shipments.show', $shipment->id))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('shipment.payment_status_label', 'Оплачена частично')
-                ->where('shipment.unpaid_amount', 3800)
-                ->has('shipment.payments', 1)
-                ->where('shipment.payments.0.number', '29УТ-002488'));
-    }
-
-    #[Test]
     public function export_is_gated_by_feature_flag(): void
     {
         $this->paymentFor($this->client);
@@ -215,29 +151,11 @@ class PaymentsCabinetTest extends TestCase
             ->assertStatus(422);
     }
 
-    #[Test]
-    public function search_finds_payment_by_shipment_number(): void
-    {
-        $shipment = Shipment::factory()->create([
-            'user_id' => $this->client->id,
-            'erp_number' => '29УТ-777777',
-        ]);
-
-        $payment = $this->paymentFor($this->client, ['number' => 'НУЖНЫЙ']);
-        PaymentAllocation::factory()->forShipment($shipment)->create(['payment_id' => $payment->id]);
-
-        $this->paymentFor($this->client, ['number' => 'ЛИШНИЙ']);
-
-        $this->actingAs($this->client)
-            ->get(route('cabinet.payments.index', ['search' => '29УТ-777777']))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('payments.data', 1)
-                ->where('payments.data.0.number', 'НУЖНЫЙ'));
-    }
-
     /**
-     * Строка графика по реализации клиента.
+     * Плановая строка регистра по реализации клиента.
+     *
+     * Регистр не делит погашение на «разнесено» и «зачтено авансом»:
+     * 1С отдаёт одну закрытую часть, поэтому оба слагаемых складываются.
      */
     private function scheduleFor(User $user, string $dueDate, float $amount, float $paid = 0.0, float $prepaid = 0.0): SettlementEntry
     {
@@ -247,8 +165,6 @@ class PaymentsCabinetTest extends TestCase
             'currency_code' => 'RUB',
         ]);
 
-        // Регистр не делит погашение на «разнесено» и «зачтено авансом»:
-        // 1С отдаёт одну закрытую часть, поэтому оба слагаемых складываются.
         return SettlementEntry::factory()->create([
             'nature' => SettlementEntry::NATURE_PLAN,
             'type' => SettlementEntry::TYPE_PAYMENT_DUE,
@@ -263,13 +179,6 @@ class PaymentsCabinetTest extends TestCase
         ]);
     }
 
-    /**
-     * Аванс по заказу закрывает строку наравне с прямым разнесением.
-     *
-     * Клиенту без разницы, каким документом 1С зачла деньги, а расчёт без
-     * `prepaid_amount` показывал бы ему просрочку, которой нет: 1С разносит
-     * на заказы почти половину поступлений.
-     */
     #[Test]
     public function order_prepayment_closes_calendar_line(): void
     {

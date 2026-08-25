@@ -5,7 +5,6 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\Currency;
 use App\Models\Payment;
-use App\Models\PaymentAllocation;
 use App\Models\User;
 use App\Services\Crm\Finance\ReconciliationService;
 use App\Services\CurrencyService;
@@ -32,13 +31,7 @@ class PaymentController extends Controller
         Payment::DIRECTION_OUT => 'Возврат',
     ];
 
-    private const ALLOCATION_LABELS = [
-        Payment::ALLOCATION_ALLOCATED => 'Разнесён',
-        Payment::ALLOCATION_PARTIAL => 'Разнесён частично',
-        Payment::ALLOCATION_ADVANCE => 'Аванс',
-    ];
-
-    private const SORTS = ['id', 'date', 'amount', 'unallocated_amount'];
+    private const SORTS = ['id', 'date', 'amount'];
 
     public function __construct(
         protected CurrencyService $currencyService
@@ -63,7 +56,6 @@ class PaymentController extends Controller
                 'search' => $context['search'],
                 'direction' => $context['directions'],
                 'company_id' => $context['company_id'] ? (string) $context['company_id'] : '',
-                'allocation_status' => $context['allocation_statuses'],
                 'date_from' => $context['date_from'],
                 'date_to' => $context['date_to'],
                 'amount_from' => $context['amount_from'],
@@ -73,7 +65,6 @@ class PaymentController extends Controller
                 'per_page' => $context['per_page'],
             ],
             'directions' => $this->options(self::DIRECTION_LABELS),
-            'allocationStatuses' => $this->options(self::ALLOCATION_LABELS),
             'companies' => $user->companies()
                 ->orderBy('name')
                 ->get(['id', 'name'])
@@ -94,9 +85,6 @@ class PaymentController extends Controller
         $payment->load([
             'company',
             'organization:id,name,legal_name,tax_id,is_stub',
-            'allocations.shipment:id,number,erp_number,date,total_amount,paid_amount,payment_status,currency_code',
-            // v15.16.0: расшифровка вмещает и заказы (предоплата), и прочие документы
-            'allocations.order:id,uuid,number,erp_number,total_amount,prepaid_amount,created_at,erp_created_at',
         ]);
 
         $currency = $this->getUserCurrency($request);
@@ -122,40 +110,6 @@ class PaymentController extends Controller
                     'tax_id' => $payment->company->tax_id,
                 ] : null,
                 'seller' => $this->sellerPayload($payment),
-                'allocations' => $payment->allocations
-                    ->sortBy(fn (PaymentAllocation $allocation): int => $allocation->line_number ?? $allocation->id)
-                    ->values()
-                    ->map(fn (PaymentAllocation $allocation): array => [
-                        'id' => $allocation->id,
-                        'amount' => (float) $allocation->amount,
-                        'amount_converted' => $this->convertAmount((float) $allocation->amount, $payment->currency_code, $currency),
-                        // v15.16.0: тип документа расшифровки. `document_label` —
-                        // единственное, что можно показать по строке `other`:
-                        // такие документы сайт не заводит
-                        'target_type' => $allocation->target_type,
-                        'target_type_label' => PaymentAllocation::TARGET_LABELS[$allocation->target_type] ?? 'Документ',
-                        'document_label' => $allocation->documentLabel(),
-                        'shipment' => $allocation->shipment ? [
-                            'id' => $allocation->shipment->id,
-                            'number' => $allocation->shipment->erp_number
-                                ?? $allocation->shipment->number
-                                ?? ('#'.$allocation->shipment->id),
-                            'date' => $allocation->shipment->date?->format('Y-m-d'),
-                            'total_amount' => (float) $allocation->shipment->total_amount,
-                            'paid_amount' => (float) $allocation->shipment->paid_amount,
-                            'payment_status' => $allocation->shipment->payment_status,
-                            'payment_status_label' => $allocation->shipment->payment_status_label,
-                        ] : null,
-                        'order' => $allocation->order ? [
-                            'id' => $allocation->order->id,
-                            'number' => $allocation->order->erp_number
-                                ?? $allocation->order->number
-                                ?? ('#'.$allocation->order->id),
-                            'date' => ($allocation->order->erp_created_at ?? $allocation->order->created_at)?->format('Y-m-d'),
-                            'total_amount' => (float) $allocation->order->total_amount,
-                            'prepaid_amount' => (float) $allocation->order->prepaid_amount,
-                        ] : null,
-                    ])->all(),
             ]),
             'currency_code' => $currency?->code ?? 'RUB',
         ]);
@@ -302,20 +256,13 @@ class PaymentController extends Controller
         $headers = array_merge(
             ['Номер', 'Дата', 'Направление', 'Контрагент'],
             $withSeller ? ['Получатель'] : [],
-            ['Номер по банку', 'Сумма', 'Валюта', 'Сумма в валюте кабинета', 'Разнесено', 'Аванс', 'Реализации'],
+            ['Номер по банку', 'Сумма', 'Валюта', 'Сумма в валюте кабинета'],
         );
 
         // Генератором по cursor(): выгрузка кабинета идёт потоково, держать
         // в памяти все платежи со связями дороже самой генерации файла.
         $rows = (function () use ($query, $currency, $withSeller) {
             foreach ($query->cursor() as $payment) {
-                $shipments = $payment->allocations
-                    ->map(fn (PaymentAllocation $allocation): ?string => $allocation->shipment?->erp_number
-                        ?: $allocation->shipment?->number)
-                    ->filter()
-                    ->unique()
-                    ->implode(', ');
-
                 yield array_merge(
                     [
                         $payment->number,
@@ -329,9 +276,6 @@ class PaymentController extends Controller
                         round((float) $payment->amount, 2),
                         $payment->currency_code ?? 'RUB',
                         round($this->convertAmount((float) $payment->amount, $payment->currency_code, $currency), 2),
-                        round((float) $payment->allocated_amount, 2),
-                        round((float) $payment->unallocated_amount, 2),
-                        $shipments,
                     ],
                 );
             }
@@ -353,18 +297,14 @@ class PaymentController extends Controller
 
         $query = Payment::query()
             ->where('user_id', $user->id)
-            ->with(['company', 'organization', 'allocations.shipment:id,number,erp_number']);
+            ->with(['company', 'organization']);
 
         if ($search !== '') {
             $query->where(function ($inner) use ($search) {
                 $inner->where('number', 'like', "%{$search}%")
                     ->orWhere('bank_number', 'like', "%{$search}%")
                     ->orWhere('uip', 'like', "%{$search}%")
-                    ->orWhere('purpose', 'like', "%{$search}%")
-                    // Номер реализации: клиент чаще помнит накладную, а не платёж.
-                    ->orWhereHas('allocations.shipment', fn ($shipment) => $shipment
-                        ->where('number', 'like', "%{$search}%")
-                        ->orWhere('erp_number', 'like', "%{$search}%"));
+                    ->orWhere('purpose', 'like', "%{$search}%");
             });
         }
 
@@ -376,23 +316,6 @@ class PaymentController extends Controller
         $companyId = $request->integer('company_id') ?: null;
         if ($companyId !== null) {
             $query->where('company_id', $companyId);
-        }
-
-        $allocationStatuses = $this->multi($request, 'allocation_status', array_keys(self::ALLOCATION_LABELS));
-        if ($allocationStatuses !== []) {
-            $query->where(function ($inner) use ($allocationStatuses) {
-                foreach ($allocationStatuses as $status) {
-                    $inner->orWhere(function ($branch) use ($status) {
-                        match ($status) {
-                            Payment::ALLOCATION_ALLOCATED => $branch->where('unallocated_amount', '<=', Payment::EPSILON),
-                            Payment::ALLOCATION_PARTIAL => $branch->where('unallocated_amount', '>', Payment::EPSILON)
-                                ->where('allocated_amount', '>', Payment::EPSILON),
-                            default => $branch->where('allocated_amount', '<=', Payment::EPSILON)
-                                ->where('unallocated_amount', '>', Payment::EPSILON),
-                        };
-                    });
-                }
-            });
         }
 
         if ($dateFrom = $request->input('date_from')) {
@@ -422,7 +345,6 @@ class PaymentController extends Controller
             'search' => $search,
             'directions' => $directions,
             'company_id' => $companyId,
-            'allocation_statuses' => $allocationStatuses,
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
             'amount_from' => $amountFrom,
@@ -469,11 +391,6 @@ class PaymentController extends Controller
             'amount' => (float) $payment->amount,
             'amount_converted' => $this->convertAmount((float) $payment->amount, $payment->currency_code, $currency),
             'currency_code' => $payment->currency_code,
-            'allocated_amount' => (float) $payment->allocated_amount,
-            'unallocated_amount' => (float) $payment->unallocated_amount,
-            'allocation_status' => $payment->allocation_status,
-            'allocation_status_label' => self::ALLOCATION_LABELS[$payment->allocation_status] ?? '',
-            'allocations_count' => $payment->allocations->count(),
             'company_name' => $payment->company?->name,
         ];
     }

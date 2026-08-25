@@ -22,13 +22,7 @@ class PaymentController extends Controller
         Payment::DIRECTION_OUT => 'Возврат клиенту',
     ];
 
-    private const ALLOCATION_LABELS = [
-        Payment::ALLOCATION_ALLOCATED => 'Разнесён',
-        Payment::ALLOCATION_PARTIAL => 'Разнесён частично',
-        Payment::ALLOCATION_ADVANCE => 'Аванс',
-    ];
-
-    private const SORTS = ['id', 'date', 'number', 'amount', 'unallocated_amount', 'created_at'];
+    private const SORTS = ['id', 'date', 'number', 'amount', 'created_at'];
 
     public function index(Request $request)
     {
@@ -37,8 +31,6 @@ class PaymentController extends Controller
         $query = $onlyTrashed
             ? Payment::onlyTrashed()->with(['user', 'company', 'organization'])
             : Payment::query()->with(['user', 'company', 'organization']);
-
-        $query->withCount('allocations');
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -58,18 +50,6 @@ class PaymentController extends Controller
         if ($direction = $request->input('direction')) {
             $query->where('direction', $direction);
         }
-
-        // Состояние разнесения считается по нераспределённому остатку: отдельной
-        // колонки нет, и заводить её ради фильтра значило бы держать в синхроне
-        // ещё одно производное поле.
-        match ($request->input('allocation_status')) {
-            Payment::ALLOCATION_ALLOCATED => $query->where('unallocated_amount', '<=', Payment::EPSILON),
-            Payment::ALLOCATION_PARTIAL => $query->where('unallocated_amount', '>', Payment::EPSILON)
-                ->where('allocated_amount', '>', Payment::EPSILON),
-            Payment::ALLOCATION_ADVANCE => $query->where('allocated_amount', '<=', Payment::EPSILON)
-                ->where('unallocated_amount', '>', Payment::EPSILON),
-            default => null,
-        };
 
         if ($request->filled('user_id')) {
             $query->where('user_id', $request->input('user_id'));
@@ -122,7 +102,7 @@ class PaymentController extends Controller
             'payments' => $payments,
             'filters' => array_merge(
                 $request->only([
-                    'search', 'direction', 'allocation_status', 'user_id', 'organization_id',
+                    'search', 'direction', 'user_id', 'organization_id',
                     'bank_confirmed', 'date_from', 'date_to', 'amount_from', 'amount_to',
                     'currency_code', 'sort_by', 'sort_order', 'per_page',
                 ]),
@@ -130,7 +110,6 @@ class PaymentController extends Controller
             ),
             'trashedCount' => Payment::onlyTrashed()->count(),
             'directions' => $this->options(self::DIRECTION_LABELS),
-            'allocationStatuses' => $this->options(self::ALLOCATION_LABELS),
             'organizations' => \App\Models\Organization::query()->ordered()->get(['id', 'name', 'is_stub']),
             'organizationsEnabled' => config('erp.organizations.enabled'),
         ]);
@@ -138,7 +117,7 @@ class PaymentController extends Controller
 
     public function show(Payment $payment)
     {
-        $payment->load(['user', 'company', 'organization', 'allocations.shipment', 'allocations.order']);
+        $payment->load(['user', 'company', 'organization']);
 
         return Inertia::render('Admin/Pages/Payments/Show', [
             'payment' => array_merge($this->listRow($payment), [
@@ -161,34 +140,6 @@ class PaymentController extends Controller
                 'erp_comment' => $payment->erp_comment,
                 'erp_created_at' => $payment->erp_created_at?->format('d.m.Y H:i'),
                 'erp_updated_at' => $payment->erp_updated_at?->format('d.m.Y H:i'),
-                'allocations' => $payment->allocations
-                    ->sortBy(fn ($allocation) => $allocation->line_number ?? $allocation->id)
-                    ->values()
-                    ->map(fn ($allocation) => [
-                        'id' => $allocation->id,
-                        'line_number' => $allocation->line_number,
-                        'amount' => (float) $allocation->amount,
-                        // v15.16.0: расшифровка вмещает три типа документов —
-                        // реализацию, заказ (предоплата) и прочий документ 1С
-                        'target_type' => $allocation->target_type,
-                        'target_type_label' => \App\Models\PaymentAllocation::TARGET_LABELS[$allocation->target_type] ?? 'Документ',
-                        'document_label' => $allocation->documentLabel(),
-                        'target_uuid' => $allocation->target_uuid,
-                        'target_name' => $allocation->target_name,
-                        'shipment_uuid' => $allocation->shipment_uuid,
-                        'order_uuid' => $allocation->order_uuid,
-                        'order_number' => $allocation->order?->erp_number ?? $allocation->order?->number,
-                        'order_id' => $allocation->order?->id,
-                        'shipment' => $allocation->shipment ? [
-                            'id' => $allocation->shipment->id,
-                            'number' => $allocation->shipment->number ?? $allocation->shipment->erp_number,
-                            'date' => $allocation->shipment->date?->format('d.m.Y'),
-                            'total_amount' => (float) $allocation->shipment->total_amount,
-                            'paid_amount' => (float) $allocation->shipment->paid_amount,
-                            'payment_status' => $allocation->shipment->payment_status,
-                            'payment_status_label' => $allocation->shipment->payment_status_label,
-                        ] : null,
-                    ]),
             ]),
             'organizationsEnabled' => config('erp.organizations.enabled'),
         ]);
@@ -248,11 +199,6 @@ class PaymentController extends Controller
             'bank_confirmed' => (bool) $payment->bank_confirmed,
             'amount' => (float) $payment->amount,
             'currency_code' => $payment->currency_code,
-            'allocated_amount' => (float) $payment->allocated_amount,
-            'unallocated_amount' => (float) $payment->unallocated_amount,
-            'allocation_status' => $payment->allocation_status,
-            'allocation_status_label' => $payment->allocation_status_label,
-            'allocations_count' => $payment->allocations_count ?? $payment->allocations()->count(),
             'created_at' => $payment->created_at->format('d.m.Y H:i'),
             'deleted_at' => $payment->deleted_at?->format('d.m.Y H:i'),
             'user' => $payment->user ? [

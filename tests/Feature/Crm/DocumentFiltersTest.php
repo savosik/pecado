@@ -8,6 +8,7 @@ use App\Models\OrderItem;
 use App\Models\Organization;
 use App\Models\PersonalManager;
 use App\Models\Product;
+use App\Models\SettlementEntry;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
 use App\Models\User;
@@ -146,30 +147,38 @@ class DocumentFiltersTest extends TestCase
     }
 
     /**
-     * «Оплачено / не оплачено» берётся из графика оплаты 1С, а не из
-     * `shipments.paid_amount`: в графике учтён зачёт авансов по заказам,
+     * Плановая строка регистра по реализации: сумма и закрытая 1С часть.
+     */
+    private function planFor(User $client, Shipment $shipment, float $amount, float $settled): SettlementEntry
+    {
+        return SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'user_id' => $client->id,
+            'document_uuid' => $shipment->uuid,
+            'document_kind' => 'shipment',
+            'date' => now()->toDateString(),
+            'amount' => $amount,
+            'settled_amount' => $settled,
+            'currency_code' => 'RUB',
+        ]);
+    }
+
+    /**
+     * «Оплачено / не оплачено» берётся из плановых строк регистра, а не из
+     * `shipments.paid_amount`: в регистре учтён зачёт авансов по заказам,
      * и остаток сходится с долгом учётной системы.
      */
     #[Test]
     public function оплата_реализаций_считается_по_графику_с_зачётом_авансов(): void
     {
-        // Документ на 1000: 400 деньгами, 300 авансом заказа — не хватает 300.
+        // Документ на 1000: закрыто 700 (деньги плюс зачтённый аванс) — не хватает 300.
         $partly = $this->shipmentFor($this->firstClient, ['total_amount' => 1000, 'paid_amount' => 0]);
-        \App\Models\ShipmentPaymentSchedule::factory()->forShipment($partly)->create([
-            'amount' => 1000,
-            'paid_amount' => 400,
-            'prepaid_amount' => 300,
-            'due_date' => now()->toDateString(),
-        ]);
+        $this->planFor($this->firstClient, $partly, 1000, 700);
 
         // Переплаченная строка не должна раздувать «оплачено» выше суммы строки.
         $closed = $this->shipmentFor($this->firstClient, ['total_amount' => 500, 'paid_amount' => 0]);
-        \App\Models\ShipmentPaymentSchedule::factory()->forShipment($closed)->create([
-            'amount' => 500,
-            'paid_amount' => 700,
-            'prepaid_amount' => 0,
-            'due_date' => now()->toDateString(),
-        ]);
+        $this->planFor($this->firstClient, $closed, 500, 700);
 
         // Реализация без графика: её долг в остаток не попадает, о ней сообщают числом.
         $this->shipmentFor($this->firstClient, ['total_amount' => 9000, 'paid_amount' => 0]);

@@ -13,16 +13,11 @@ import { toaster } from '@/components/ui/toaster';
 import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
 
-const ALLOCATION_COLORS = {
-    allocated: 'green',
-    partial: 'orange',
-    advance: 'blue',
-};
 
 const money = (value, currency) =>
     `${parseFloat(value ?? 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${currency ? ` ${currency}` : ''}`;
 
-export default function Index({ payments, filters, directions, allocationStatuses, organizations, organizationsEnabled, trashedCount }) {
+export default function Index({ payments, filters, directions, organizations, organizationsEnabled, trashedCount }) {
     const {
         searchQuery,
         handleSearch,
@@ -64,7 +59,6 @@ export default function Index({ payments, filters, directions, allocationStatuse
 
     const [localFilters, setLocalFilters] = useState({
         direction: filters?.direction ?? '',
-        allocation_status: filters?.allocation_status ?? '',
         organization_id: filters?.organization_id ?? '',
         bank_confirmed: filters?.bank_confirmed ?? '',
         currency_code: filters?.currency_code ?? '',
@@ -83,12 +77,6 @@ export default function Index({ payments, filters, directions, allocationStatuse
         ],
     }), [directions]);
 
-    const allocationCollection = useMemo(() => createListCollection({
-        items: [
-            { label: 'Любое', value: '' },
-            ...(allocationStatuses ?? []).map((option) => ({ label: option.label, value: String(option.value) })),
-        ],
-    }), [allocationStatuses]);
 
     const bankConfirmedCollection = useMemo(() => createListCollection({
         items: [
@@ -126,7 +114,7 @@ export default function Index({ payments, filters, directions, allocationStatuse
 
     const handleResetFilters = () => {
         const reset = {
-            direction: '', allocation_status: '', organization_id: '', bank_confirmed: '',
+            direction: '', organization_id: '', bank_confirmed: '',
             currency_code: '', date_from: '', date_to: '', amount_from: '', amount_to: '',
         };
         setLocalFilters(reset);
@@ -197,24 +185,6 @@ export default function Index({ payments, filters, directions, allocationStatuse
             sortable: true,
             render: (_, row) => (
                 <Box fontFamily="mono" fontWeight="medium">{money(row.amount, row.currency_code)}</Box>
-            ),
-        },
-        {
-            key: 'unallocated_amount',
-            label: 'Разнесение',
-            sortable: true,
-            render: (_, row) => (
-                <Box>
-                    <Badge colorPalette={ALLOCATION_COLORS[row.allocation_status] || 'gray'} variant="subtle">
-                        {row.allocation_status_label}
-                    </Badge>
-                    {row.unallocated_amount > 0 && (
-                        <Text fontSize="xs" color="gray.500" mt={0.5}>
-                            Аванс: {money(row.unallocated_amount, row.currency_code)}
-                        </Text>
-                    )}
-                    <Text fontSize="xs" color="gray.500">Реализаций: {row.allocations_count}</Text>
-                </Box>
             ),
         },
         {
@@ -332,23 +302,6 @@ export default function Index({ payments, filters, directions, allocationStatuse
                                         </Select.Trigger>
                                         <Select.Content>
                                             {directionCollection.items.map((option) => (
-                                                <Select.Item key={option.value} item={option}>{option.label}</Select.Item>
-                                            ))}
-                                        </Select.Content>
-                                    </Select.Root>
-                                </Field>
-
-                                <Field label="Разнесение" flex="1">
-                                    <Select.Root
-                                        collection={allocationCollection}
-                                        value={localFilters.allocation_status ? [localFilters.allocation_status] : []}
-                                        onValueChange={(e) => setLocalFilters({ ...localFilters, allocation_status: e.value[0] || '' })}
-                                    >
-                                        <Select.Trigger>
-                                            <Select.ValueText placeholder="Любое" />
-                                        </Select.Trigger>
-                                        <Select.Content>
-                                            {allocationCollection.items.map((option) => (
                                                 <Select.Item key={option.value} item={option}>{option.label}</Select.Item>
                                             ))}
                                         </Select.Content>

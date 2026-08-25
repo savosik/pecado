@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -19,7 +18,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\Company|null $company
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ContractorBalanceOverdueDetail> $overdueDetails
  * @property-read int|null $overdue_details_count
  * @property-read \App\Models\User $user
  *
@@ -92,13 +90,5 @@ class ContractorBalance extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
-    }
-
-    /**
-     * Детализация просрочки по реализациям.
-     */
-    public function overdueDetails(): HasMany
-    {
-        return $this->hasMany(ContractorBalanceOverdueDetail::class);
     }
 }

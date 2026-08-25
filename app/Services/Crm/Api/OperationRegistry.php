@@ -241,17 +241,16 @@ class OperationRegistry
                 method: 'GET',
                 uri: 'payments',
                 permission: 'crm-clients.view',
-                summary: 'Платежи партнёров: поступления и возвраты с разнесением по отгрузкам',
+                summary: 'Платежи партнёров: поступления и возвраты с банковскими реквизитами',
                 description: 'Состав ограничен скоупом актора. Направление передавайте явно: '
                     .'`in` — поступление от партнёра, `out` — возврат партнёру, и суммировать их '
-                    .'вместе нельзя. `only_unallocated` отбирает висящие авансы — деньги, '
-                    .'которые партнёр заплатил, но которые не привязаны ни к одной отгрузке.',
+                    .'вместе нельзя. Что закрыл платёж — в `settlement.statement`: расшифровку '
+                    .'1С не присылает, и сайт её не хранит.',
                 params: [
                     Param::integer('client_id', 'Партнёр — платежи только по нему', rules: ['min:1']),
                     Param::string('direction', 'Направление платежа', enum: ['in', 'out']),
                     Param::string('date_from', 'Дата платежа с (Y-m-d)', rules: ['date_format:Y-m-d']),
                     Param::string('date_to', 'Дата платежа по (Y-m-d)', rules: ['date_format:Y-m-d']),
-                    Param::boolean('only_unallocated', 'Только платежи с нераспределённым остатком (авансы)'),
                     Param::integer('per_page', 'Платежей на странице (до 100)', rules: ['min:1', 'max:100']),
                     Param::integer('page', 'Номер страницы', rules: ['min:1']),
                 ],

@@ -34,7 +34,6 @@ use Spatie\MediaLibrary\HasMedia;
  * @property-read string $payment_status_label
  * @property-read float $unpaid_amount
  * @property-read bool $is_payment_overdue
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ShipmentPaymentSchedule> $paymentSchedules
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property \Carbon\Carbon|null $erp_created_at
@@ -106,7 +105,7 @@ class Shipment extends Model implements HasMedia
      * Статусы оплаты реализации.
      *
      * Держим константами на модели, чтобы CRM, кабинет и экспорт не разъехались
-     * в написании: это производное поле, его значения задаёт только PaymentAllocationService.
+     * в написании: это производное поле, его пишет только SettlementProjector.
      */
     public const PAYMENT_UNPAID = 'unpaid';
 
@@ -207,42 +206,6 @@ class Shipment extends Model implements HasMedia
         return Order::withoutGlobalScopes()
             ->whereIn('uuid', $orderUuids)
             ->get();
-    }
-
-    /**
-     * Строки расшифровки платежей, разнесённых на эту реализацию.
-     *
-     * @return HasMany<\App\Models\PaymentAllocation, $this>
-     */
-    public function paymentAllocations(): HasMany
-    {
-        return $this->hasMany(PaymentAllocation::class);
-    }
-
-    /**
-     * Платежи, которыми закрывается реализация.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<Payment, $this>
-     */
-    public function payments(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
-    {
-        return $this->belongsToMany(Payment::class, 'payment_allocations')
-            ->withPivot(['amount', 'order_uuid', 'line_number'])
-            ->withTimestamps();
-    }
-
-    /**
-     * График оплаты — плановые даты и суммы из «Правил оплаты» 1С (v15.12.0).
-     *
-     * Отдаётся сразу в порядке погашения: строки читают и календарь, и карточка
-     * документа, и FIFO-раскладка — разъехавшийся порядок означал бы, что клиент
-     * видит одну очерёдность, а закрывается другая.
-     *
-     * @return HasMany<\App\Models\ShipmentPaymentSchedule, $this>
-     */
-    public function paymentSchedules(): HasMany
-    {
-        return $this->hasMany(ShipmentPaymentSchedule::class)->inFifoOrder();
     }
 
     /**

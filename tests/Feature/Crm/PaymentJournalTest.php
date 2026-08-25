@@ -4,10 +4,9 @@ namespace Tests\Feature\Crm;
 
 use App\Models\Company;
 use App\Models\Payment;
-use App\Models\PaymentAllocation;
 use App\Models\PersonalManager;
+use App\Models\SettlementEntry;
 use App\Models\Shipment;
-use App\Models\ShipmentPaymentSchedule;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -60,8 +59,6 @@ class PaymentJournalTest extends TestCase
             'number' => '29УТ-002488',
             'amount' => 2325.20,
             'currency_code' => 'RUB',
-            'allocated_amount' => 0,
-            'unallocated_amount' => 2325.20,
         ], $attributes));
     }
 
@@ -92,84 +89,13 @@ class PaymentJournalTest extends TestCase
     }
 
     #[Test]
-    public function payment_card_shows_details_summary_and_allocations(): void
+    public function direction_filter_narrows_the_journal(): void
     {
-        $shipment = Shipment::factory()->create([
-            'user_id' => $this->client->id,
-            'erp_number' => '29УТ-003413',
-            'total_amount' => 5000,
-            'currency_code' => 'RUB',
-        ]);
-
-        $payment = $this->paymentFor($this->client, [
-            'amount' => 2000,
-            'allocated_amount' => 1200,
-            'unallocated_amount' => 800,
-            'document_type' => 'Платежное поручение',
-            'bank_number' => '9202',
-        ]);
-
-        PaymentAllocation::factory()->forShipment($shipment)->create([
-            'payment_id' => $payment->id,
-            'amount' => 1200,
-        ]);
-
-        $this->actingAs($this->manager)
-            ->get(route('crm.payments.show', $payment->id))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('Crm/Pages/Documents/Show')
-                ->where('document.type', 'payment')
-                ->has('document.items', 1)
-                ->has('document.related', 1)
-                ->has('document.summary', 3)
-                // Реквизиты платёжного поручения — блок, которого нет у заказов.
-                ->where('document.details.0.label', 'Тип документа')
-                ->where('document.details.0.value', 'Платежное поручение'));
-    }
-
-    #[Test]
-    public function shipment_card_shows_payments_and_summary(): void
-    {
-        $shipment = Shipment::factory()->create([
-            'user_id' => $this->client->id,
-            'total_amount' => 5000,
-            'currency_code' => 'RUB',
-            'paid_amount' => 1200,
-            'payment_status' => Shipment::PAYMENT_PARTIAL,
-        ]);
-
-        $payment = $this->paymentFor($this->client);
-        PaymentAllocation::factory()->forShipment($shipment)->create([
-            'payment_id' => $payment->id,
-            'amount' => 1200,
-        ]);
-
-        $this->actingAs($this->manager)
-            ->get(route('crm.shipments.show', $shipment->id))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('document.payment_summary.status', Shipment::PAYMENT_PARTIAL)
-                ->where('document.payment_summary.status_label', 'Оплачена частично')
-                ->has('document.payments', 1)
-                ->where('document.payments.0.number', '29УТ-002488'));
-    }
-
-    #[Test]
-    public function direction_and_allocation_filters_narrow_the_journal(): void
-    {
-        $this->paymentFor($this->client, ['number' => 'ПРИХОД', 'allocated_amount' => 2325.20, 'unallocated_amount' => 0]);
+        $this->paymentFor($this->client, ['number' => 'ПРИХОД']);
         $this->paymentFor($this->client, ['number' => 'ВОЗВРАТ', 'direction' => Payment::DIRECTION_OUT]);
 
         $this->actingAs($this->manager)
             ->get(route('crm.payments.index', ['directions' => ['out']]))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('payments.data', 1)
-                ->where('payments.data.0.number', 'ВОЗВРАТ'));
-
-        $this->actingAs($this->manager)
-            ->get(route('crm.payments.index', ['allocation_statuses' => ['advance']]))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('payments.data', 1)
@@ -303,14 +229,10 @@ class PaymentJournalTest extends TestCase
         $this->paymentFor($this->client, ['number' => 'ВХОД-1', 'direction' => 'in']);
 
         $this->actingAs($this->manager)
-            ->get(route('crm.payments.index', [
-                'directions' => ['in'],
-                'allocation_statuses' => ['advance'],
-            ]))
+            ->get(route('crm.payments.index', ['directions' => ['in']]))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('filters.directions', ['in'])
-                ->where('filters.allocation_statuses', ['advance']));
+                ->where('filters.directions', ['in']));
 
         // Мусор в параметре гасится, а не уезжает обратно на экран.
         $this->actingAs($this->manager)
@@ -404,7 +326,25 @@ class PaymentJournalTest extends TestCase
     /**
      * Строка графика по реализации клиента.
      */
-    private function scheduleFor(User $client, string $dueDate, float $amount, float $paid = 0.0): ShipmentPaymentSchedule
+    /**
+     * Фактическое поступление в регистре: календарь считает факт по движениям,
+     * а не по документам платежей.
+     */
+    private function factFor(User $client, float $amount, string $date, string $type = SettlementEntry::TYPE_PAYMENT_IN): SettlementEntry
+    {
+        return SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => $type,
+            'user_id' => $client->id,
+            'amount' => $type === SettlementEntry::TYPE_PAYMENT_IN ? abs($amount) : -abs($amount),
+            'amount_rub' => $type === SettlementEntry::TYPE_PAYMENT_IN ? abs($amount) : -abs($amount),
+            'currency_code' => 'RUB',
+            'date' => $date,
+            'document_kind' => 'payment',
+        ]);
+    }
+
+    private function scheduleFor(User $client, string $dueDate, float $amount, float $paid = 0.0): SettlementEntry
     {
         $shipment = Shipment::factory()->create([
             'user_id' => $client->id,
@@ -412,10 +352,17 @@ class PaymentJournalTest extends TestCase
             'currency_code' => 'RUB',
         ]);
 
-        return ShipmentPaymentSchedule::factory()->forShipment($shipment)->create([
-            'due_date' => $dueDate,
+        return SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'user_id' => $client->id,
+            'document_uuid' => $shipment->uuid,
+            'document_kind' => 'shipment',
+            'document_number' => $shipment->erp_number,
+            'date' => $dueDate,
             'amount' => $amount,
-            'paid_amount' => $paid,
+            'settled_amount' => $paid,
+            'currency_code' => 'RUB',
         ]);
     }
 
@@ -441,11 +388,7 @@ class PaymentJournalTest extends TestCase
     {
         $day = now()->startOfMonth()->addDays(10);
         $this->scheduleFor($this->client, $day->toDateString(), 3000.00);
-        $this->paymentFor($this->client, [
-            'amount' => 1000.00,
-            'direction' => Payment::DIRECTION_IN,
-            'date' => $day->copy()->setTime(12, 0),
-        ]);
+        $this->factFor($this->client, 1000.00, $day->toDateString());
 
         $this->actingAs($this->manager)
             ->get(route('crm.payments.calendar'))
@@ -463,16 +406,8 @@ class PaymentJournalTest extends TestCase
     {
         $day = now()->startOfMonth()->addDays(10);
 
-        $this->paymentFor($this->client, [
-            'amount' => 1000.00,
-            'direction' => Payment::DIRECTION_IN,
-            'date' => $day->copy()->setTime(10, 0),
-        ]);
-        $this->paymentFor($this->client, [
-            'amount' => 400.00,
-            'direction' => Payment::DIRECTION_OUT,
-            'date' => $day->copy()->setTime(15, 0),
-        ]);
+        $this->factFor($this->client, 1000.00, $day->toDateString());
+        $this->factFor($this->client, 400.00, $day->toDateString(), SettlementEntry::TYPE_PAYMENT_OUT);
 
         $this->actingAs($this->manager)
             ->get(route('crm.payments.calendar'))
@@ -519,10 +454,17 @@ class PaymentJournalTest extends TestCase
             'total_amount' => 10000.00,
         ]);
 
-        ShipmentPaymentSchedule::factory()->forShipment($shipment)->create([
-            'due_date' => now()->addDays(10)->toDateString(),
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'user_id' => $this->client->id,
+            'document_uuid' => $shipment->uuid,
+            'document_kind' => 'shipment',
+            'date' => now()->addDays(10)->toDateString(),
             'amount' => 10000.00,
-            'stage_name' => 'Оплата после отгрузки',
+            'settled_amount' => 0,
+            'currency_code' => 'RUB',
+            'meta' => ['stage_name' => 'Оплата после отгрузки'],
         ]);
 
         $this->actingAs($this->manager)

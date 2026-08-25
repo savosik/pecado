@@ -37,7 +37,7 @@ const PAYMENT_STATUS_COLORS = {
     overpaid: 'purple',
 };
 
-export default function ShipmentShow({ shipment, related_orders, overdue_detail }) {
+export default function ShipmentShow({ shipment, related_orders }) {
     const { currency, config } = usePage().props;
     const documentsEnabled = !!config?.documents_enabled;
     const currencySymbol = currency?.symbol ?? '₽';
@@ -144,38 +144,6 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
             </Card.Root>
 
             {/* Просрочка по этой реализации */}
-            {overdue_detail && (
-                <Card.Root bg="bg" mb={6} borderRadius="xl" border="2px solid" borderColor="red.200" _dark={{ borderColor: 'red.800' }}>
-                    <Card.Body p={4}>
-                        <HStack gap="3" align="start">
-                            <Box color="red.500" flexShrink={0} pt={0.5}>
-                                <LuTriangleAlert size={20} />
-                            </Box>
-                            <Box>
-                                <Text fontWeight="700" color="red.700" _dark={{ color: 'red.300' }} mb={1}>
-                                    Задолженность по этой отгрузке
-                                </Text>
-                                <HStack gap="4">
-                                    <Box>
-                                        <Text fontSize="xs" color="gray.500">Сумма просрочки</Text>
-                                        <Text fontFamily="mono" fontWeight="700" color="red.600" _dark={{ color: 'red.400' }}>
-                                            {fmt(overdue_detail.amount)} ₽
-                                        </Text>
-                                    </Box>
-                                    <Box>
-                                        <Text fontSize="xs" color="gray.500">Дата оплаты</Text>
-                                        <Text fontFamily="mono" fontWeight="700" color="red.600" _dark={{ color: 'red.400' }}>
-                                            {overdue_detail.due_date
-                                                ? new Date(overdue_detail.due_date).toLocaleDateString('ru-RU')
-                                                : '—'}
-                                        </Text>
-                                    </Box>
-                                </HStack>
-                            </Box>
-                        </HStack>
-                    </Card.Body>
-                </Card.Root>
-            )}
 
             {/* Оплата этой отгрузки: чем закрыта и сколько осталось.
                 Суммы приходят из 1С через разнесение платежей. */}

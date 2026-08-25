@@ -86,7 +86,6 @@ class SeedSettlementDemo extends Command
         $this->info('Готово. Дальше:');
         $this->line('  php artisan settlements:stats    — что получилось');
         $this->line('  php artisan settlements:verify   — сверка обязана быть зелёной');
-        $this->line('  SETTLEMENTS_LEDGER_ENABLED=true  — чтобы CRM начала читать регистр');
 
         return self::SUCCESS;
     }

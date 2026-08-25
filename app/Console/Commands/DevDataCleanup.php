@@ -49,7 +49,6 @@ class DevDataCleanup extends Command
         });
 
         $this->step('Компании и балансы', function () {
-            DB::table('contractor_balance_overdue_details')->truncate();
             DB::table('contractor_balances')->truncate();
             DB::table('company_bank_accounts')->truncate();
             DB::table('companies')->truncate();

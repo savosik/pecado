@@ -8,11 +8,6 @@ import { Field } from '@/components/ui/field';
 import { toaster } from '@/components/ui/toaster';
 import EntityCrmPanel from '@/Crm/Components/EntityCrmPanel';
 
-const ALLOCATION_COLORS = {
-    allocated: 'green',
-    partial: 'orange',
-    advance: 'blue',
-};
 
 const PAYMENT_STATUS_COLORS = {
     paid: 'green',
@@ -66,26 +61,6 @@ export default function Show({ payment, organizationsEnabled }) {
                         <Badge colorPalette={payment.direction === 'out' ? 'red' : 'green'} variant="subtle" mt={2}>
                             {payment.direction_label}
                         </Badge>
-                    </Card.Body>
-                </Card.Root>
-                <Card.Root>
-                    <Card.Body>
-                        <Text fontSize="xs" color="gray.500" mb={1}>Разнесено по реализациям</Text>
-                        <Text fontSize="xl" fontWeight="bold" fontFamily="mono">{money(payment.allocated_amount)}</Text>
-                        <Badge colorPalette={ALLOCATION_COLORS[payment.allocation_status] || 'gray'} variant="subtle" mt={2}>
-                            {payment.allocation_status_label}
-                        </Badge>
-                    </Card.Body>
-                </Card.Root>
-                <Card.Root>
-                    <Card.Body>
-                        <Text fontSize="xs" color="gray.500" mb={1}>Нераспределённый остаток (аванс)</Text>
-                        <Text fontSize="xl" fontWeight="bold" fontFamily="mono">{money(payment.unallocated_amount)}</Text>
-                        <Text fontSize="xs" color="gray.500" mt={2}>
-                            {payment.unallocated_amount > 0
-                                ? 'Деньги не привязаны к отгрузкам'
-                                : 'Платёж разнесён полностью'}
-                        </Text>
                     </Card.Body>
                 </Card.Root>
             </SimpleGrid>
@@ -179,82 +154,6 @@ export default function Show({ payment, organizationsEnabled }) {
                             </Box>
                         )}
                     </SimpleGrid>
-                </Card.Body>
-            </Card.Root>
-
-            <Card.Root mb={6}>
-                <Card.Header>
-                    <Text fontWeight="semibold" fontSize="lg">Расшифровка платежа</Text>
-                </Card.Header>
-                <Card.Body>
-                    {payment.allocations?.length ? (
-                        <Box overflowX="auto">
-                            <Table.Root size="sm">
-                                <Table.Header>
-                                    <Table.Row>
-                                        <Table.ColumnHeader>№</Table.ColumnHeader>
-                                        <Table.ColumnHeader>Реализация</Table.ColumnHeader>
-                                        <Table.ColumnHeader>Дата</Table.ColumnHeader>
-                                        <Table.ColumnHeader>Заказ</Table.ColumnHeader>
-                                        <Table.ColumnHeader textAlign="end">Сумма реализации</Table.ColumnHeader>
-                                        <Table.ColumnHeader textAlign="end">Разнесено</Table.ColumnHeader>
-                                        <Table.ColumnHeader>Оплата реализации</Table.ColumnHeader>
-                                    </Table.Row>
-                                </Table.Header>
-                                <Table.Body>
-                                    {payment.allocations.map((allocation) => (
-                                        <Table.Row key={allocation.id}>
-                                            <Table.Cell>{allocation.line_number ?? '—'}</Table.Cell>
-                                            <Table.Cell>
-                                                {allocation.shipment ? (
-                                                    <Link href={route('admin.shipments.show', allocation.shipment.id)}>
-                                                        <Text fontSize="sm" color="blue.600" fontFamily="mono" _hover={{ textDecoration: 'underline' }}>
-                                                            {allocation.shipment.number || `#${allocation.shipment.id}`}
-                                                        </Text>
-                                                    </Link>
-                                                ) : (
-                                                    <Box>
-                                                        <Badge colorPalette="orange" variant="subtle" size="sm">
-                                                            Реализация ещё не пришла из 1С
-                                                        </Badge>
-                                                        <Text fontSize="xs" color="gray.400" fontFamily="mono">
-                                                            {allocation.shipment_uuid}
-                                                        </Text>
-                                                    </Box>
-                                                )}
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                <Text fontSize="sm">{allocation.shipment?.date || '—'}</Text>
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                <Text fontSize="sm" fontFamily="mono">{allocation.order_number || '—'}</Text>
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="end" fontFamily="mono">
-                                                {allocation.shipment ? fmt(allocation.shipment.total_amount) : '—'}
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="end" fontFamily="mono" fontWeight="medium">
-                                                {fmt(allocation.amount)}
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                {allocation.shipment ? (
-                                                    <Badge
-                                                        colorPalette={PAYMENT_STATUS_COLORS[allocation.shipment.payment_status] || 'gray'}
-                                                        variant="subtle"
-                                                    >
-                                                        {allocation.shipment.payment_status_label}
-                                                    </Badge>
-                                                ) : '—'}
-                                            </Table.Cell>
-                                        </Table.Row>
-                                    ))}
-                                </Table.Body>
-                            </Table.Root>
-                        </Box>
-                    ) : (
-                        <Text fontSize="sm" color="gray.500">
-                            Платёж не разнесён по реализациям — вся сумма числится авансом.
-                        </Text>
-                    )}
                 </Card.Body>
             </Card.Root>
 

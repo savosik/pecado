@@ -142,7 +142,7 @@ class Order extends Model implements HasMedia
             'status' => OrderStatus::class,
             'total_amount' => 'decimal:2',
             // v15.16.0: предоплата по заказу из расшифровки платежей 1С.
-            // Вне $fillable намеренно: единственный писатель — PaymentAllocationService
+            // Вне $fillable намеренно: единственный писатель — SettlementProjector
             'prepaid_amount' => 'decimal:2',
             'exchange_rate' => 'decimal:10',
             'rate_coefficient' => 'decimal:4',

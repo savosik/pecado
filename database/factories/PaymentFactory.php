@@ -28,9 +28,6 @@ class PaymentFactory extends Factory
             'bank_confirmed' => true,
             'amount' => $amount,
             'currency_code' => 'RUB',
-            // Разнесение считает PaymentAllocationService; по умолчанию платёж — аванс.
-            'allocated_amount' => 0,
-            'unallocated_amount' => $amount,
         ];
     }
 

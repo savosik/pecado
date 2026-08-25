@@ -3,7 +3,6 @@
 namespace App\Services\Crm\Api\Operations;
 
 use App\Models\Payment;
-use App\Models\PaymentAllocation;
 use App\Models\User;
 use App\Services\Crm\Api\OperationInput;
 use App\Services\Crm\CrmEntityResolver;
@@ -32,7 +31,7 @@ class PaymentOperations
 
         $query = Payment::query()
             ->whereIn('user_id', $clients)
-            ->with(['user:id,name,erp_name', 'company:id,name', 'allocations.shipment:id,number,erp_number']);
+            ->with(['user:id,name,erp_name', 'company:id,name']);
 
         if ($input->int('client_id')) {
             // Партнёра резолвим через скоуп: id вне скоупа не должен просто
@@ -51,12 +50,6 @@ class PaymentOperations
 
         if ($dateTo = $input->string('date_to')) {
             $query->whereDate('date', '<=', $dateTo);
-        }
-
-        // Висящие авансы — частый вопрос менеджера: «за что партнёр заплатил,
-        // но мы ещё не отгрузили».
-        if ($input->bool('only_unallocated')) {
-            $query->where('unallocated_amount', '>', Payment::EPSILON);
         }
 
         $perPage = min(max((int) ($input->int('per_page') ?: 25), 1), 100);
@@ -87,7 +80,6 @@ class PaymentOperations
             'user:id,name,erp_name',
             'company:id,name,tax_id',
             'organization:id,name',
-            'allocations.shipment:id,number,erp_number,date,total_amount,paid_amount,payment_status',
         ]);
 
         return array_merge($this->row($payment), [
@@ -101,15 +93,6 @@ class PaymentOperations
             'organization' => $payment->organization?->name,
             'tax_id' => $payment->tax_id,
             'comment' => $payment->comment,
-            'allocations' => $payment->allocations->map(fn (PaymentAllocation $allocation): array => [
-                'amount' => (float) $allocation->amount,
-                'shipment_uuid' => $allocation->shipment_uuid,
-                'shipment_number' => $allocation->shipment?->erp_number ?: $allocation->shipment?->number,
-                'shipment_id' => $allocation->shipment_id,
-                'shipment_total' => $allocation->shipment ? (float) $allocation->shipment->total_amount : null,
-                'shipment_paid' => $allocation->shipment ? (float) $allocation->shipment->paid_amount : null,
-                'shipment_payment_status' => $allocation->shipment?->payment_status,
-            ])->all(),
         ]);
     }
 
@@ -126,19 +109,9 @@ class PaymentOperations
             'direction_label' => $payment->direction_label,
             'amount' => (float) $payment->amount,
             'currency_code' => $payment->currency_code,
-            'allocated_amount' => (float) $payment->allocated_amount,
-            'unallocated_amount' => (float) $payment->unallocated_amount,
-            'allocation_status' => $payment->allocation_status,
             'client' => $payment->user?->display_name,
             'client_id' => $payment->user_id,
             'company' => $payment->company?->name,
-            'shipments' => $payment->allocations
-                ->map(fn (PaymentAllocation $allocation): ?string => $allocation->shipment?->erp_number
-                    ?: $allocation->shipment?->number)
-                ->filter()
-                ->unique()
-                ->values()
-                ->all(),
         ];
     }
 }

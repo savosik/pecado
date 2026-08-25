@@ -73,7 +73,6 @@ class HandleBalanceUpdatedTest extends TestCase
         $this->assertEquals(50000.00, (float) $balance->overdue_debt);
         // `overdue_details` игнорируются (v16.0.0): построчная просрочка
         // выводится из плановых строк регистра, таблица деталей снесена.
-        $this->assertDatabaseCount('contractor_balance_overdue_details', 0);
     }
 
     #[Test]

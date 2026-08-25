@@ -20,7 +20,7 @@ class CompanyController extends Controller
     public function index()
     {
         $companies = Company::withCount('bankAccounts')
-            ->with(['contractorBalance.overdueDetails'])
+            ->with(['contractorBalance'])
             ->where('user_id', Auth::id())
             ->orderBy('created_at', 'desc')
             ->paginate(15)

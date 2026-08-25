@@ -10,7 +10,6 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Organization;
 use App\Models\Payment;
-use App\Models\PaymentAllocation;
 use App\Models\PersonalManager;
 use App\Models\PrintedDocument;
 use App\Models\Product;
@@ -59,7 +58,7 @@ class DocumentController extends CrmController
      *
      * @var list<string>
      */
-    private const SORTS = ['id', 'number', 'erp_number', 'total_amount', 'created_at', 'erp_created_at', 'date', 'amount', 'unallocated_amount'];
+    private const SORTS = ['id', 'number', 'erp_number', 'total_amount', 'created_at', 'erp_created_at', 'date', 'amount'];
 
     /**
      * Направления платежа для фильтра.
@@ -69,17 +68,6 @@ class DocumentController extends CrmController
     private const PAYMENT_DIRECTIONS = [
         ['value' => 'in', 'label' => 'Поступление', 'color' => 'green'],
         ['value' => 'out', 'label' => 'Возврат партнёру', 'color' => 'red'],
-    ];
-
-    /**
-     * Состояние разнесения платежа — производное от нераспределённого остатка.
-     *
-     * @var list<array{value: string, label: string, color: string}>
-     */
-    private const ALLOCATION_STATUSES = [
-        ['value' => 'allocated', 'label' => 'Разнесён', 'color' => 'green'],
-        ['value' => 'partial', 'label' => 'Разнесён частично', 'color' => 'orange'],
-        ['value' => 'advance', 'label' => 'Аванс', 'color' => 'blue'],
     ];
 
     /**
@@ -270,8 +258,7 @@ class DocumentController extends CrmController
                 'user.personalManager:id,name',
                 'company:id,name',
                 'organization:id,name,is_stub',
-            ])
-            ->withCount('allocations');
+            ]);
 
         [$sortBy, $sortOrder] = $this->sort($request);
         $perPage = min(max((int) $request->input('per_page', 15), 5), 100);
@@ -291,17 +278,12 @@ class DocumentController extends CrmController
             $this->values($request, 'directions', 'direction'),
             array_column(self::PAYMENT_DIRECTIONS, 'value'),
         ));
-        $options['filters']['allocation_statuses'] = array_values(array_intersect(
-            $this->values($request, 'allocation_statuses', 'allocation_status'),
-            array_column(self::ALLOCATION_STATUSES, 'value'),
-        ));
 
         return Inertia::render('Crm/Pages/Finance/Payments', array_merge(
             ['payments' => $payments],
             $options,
             [
                 'directions' => self::PAYMENT_DIRECTIONS,
-                'allocationStatuses' => self::ALLOCATION_STATUSES,
                 'totals' => $this->paymentTotals($request, $clients, $search),
             ],
         ));
@@ -537,63 +519,12 @@ class DocumentController extends CrmController
             'user:id,name,erp_name,email,phone,personal_manager_id',
             'company:id,name,tax_id',
             'organization:id,name,is_stub',
-            'allocations.shipment:id,number,erp_number,date,total_amount,paid_amount,payment_status,currency_code',
-            // v15.16.0: расшифровка вмещает и заказы (предоплата), и прочие документы 1С
-            'allocations.order:id,uuid,number,erp_number,total_amount,currency_code',
         ]);
 
         $currency = $model->currency_code;
 
-        // Строки расшифровки показываем как «позиции» документа: карточка
-        // Show.jsx рисует их той же таблицей, что позиции заказа.
-        $items = $model->allocations
-            ->sortBy(fn (PaymentAllocation $allocation): int => $allocation->line_number ?? $allocation->getKey())
-            ->values()
-            ->map(fn (PaymentAllocation $allocation): array => [
-                'id' => (int) $allocation->getKey(),
-                // documentLabel() сам разбирает три типа: реализация, заказ
-                // (предоплата) и прочий документ, которого на сайте нет вовсе
-                'name' => $allocation->documentLabel(),
-                'sku' => $allocation->shipment_uuid ?: $allocation->order_uuid ?: $allocation->target_uuid,
-                'brand' => PaymentAllocation::TARGET_LABELS[$allocation->target_type] ?? null,
-                'quantity' => 1,
-                'price_label' => match (true) {
-                    $allocation->shipment !== null => $this->money((float) $allocation->shipment->total_amount, $currency),
-                    $allocation->order !== null => $this->money((float) $allocation->order->total_amount, $currency),
-                    default => '—',
-                },
-                'total_label' => $this->money((float) $allocation->amount, $currency),
-            ])->all();
-
-        // Связанные документы — реализации и заказы ссылками: из карточки платежа
-        // менеджер идёт в тот документ, за который заплатили.
-        $relatedShipments = $model->allocations
-            ->filter(fn (PaymentAllocation $allocation): bool => $allocation->shipment !== null)
-            ->unique(fn (PaymentAllocation $allocation) => $allocation->shipment_id)
-            ->values()
-            ->map(fn (PaymentAllocation $allocation): array => [
-                'type' => CrmEntityMap::SHIPMENT,
-                'id' => (int) $allocation->shipment->getKey(),
-                'title' => 'Реализация №'.($allocation->shipment->erp_number ?: $allocation->shipment->number ?: $allocation->shipment->getKey()),
-                'date_label' => $allocation->shipment->date?->format('d.m.Y'),
-                'total_label' => $this->money((float) $allocation->shipment->total_amount, $allocation->shipment->currency_code),
-                'url' => route('crm.shipments.show', $allocation->shipment->getKey()),
-            ])->all();
-
-        $relatedOrders = $model->allocations
-            ->filter(fn (PaymentAllocation $allocation): bool => $allocation->order !== null)
-            ->unique(fn (PaymentAllocation $allocation) => $allocation->order_uuid)
-            ->values()
-            ->map(fn (PaymentAllocation $allocation): array => [
-                'type' => CrmEntityMap::ORDER,
-                'id' => (int) $allocation->order->getKey(),
-                'title' => 'Заказ №'.($allocation->order->erp_number ?: $allocation->order->number ?: $allocation->order->getKey()),
-                'date_label' => null,
-                'total_label' => $this->money((float) $allocation->order->total_amount, $allocation->order->currency_code),
-                'url' => route('crm.orders.show', $allocation->order->getKey()),
-            ])->all();
-
-        $related = array_merge($relatedShipments, $relatedOrders);
+        // Расшифровки в карточке больше нет: 1С не присылает её с v16.0.0,
+        // и «что закрыл платёж» видно в акте сверки и движениях регистра.
 
         return Inertia::render('Crm/Pages/Documents/Show', [
             'document' => [
@@ -614,8 +545,7 @@ class DocumentController extends CrmController
                 'warehouse' => null,
                 'company' => $model->company?->getAttribute('name'),
                 'admin_url' => $actor->hasAdminAccess() ? route('admin.payments.show', $model->getKey()) : null,
-                'items' => $items,
-                'items_title' => 'Расшифровка платежа',
+                'items' => [],
                 // Реквизиты платёжного поручения: у заказа и реализации такого
                 // блока нет, поэтому проп опциональный и карточка его просто
                 // не рисует для других типов.
@@ -634,10 +564,8 @@ class DocumentController extends CrmController
                 ], fn (array $detail): bool => $detail['value'] !== null && $detail['value'] !== '')),
                 'summary' => [
                     ['label' => 'Сумма платежа', 'value' => $this->money((float) $model->amount, $currency), 'tone' => 'neutral'],
-                    ['label' => 'Разнесено', 'value' => $this->money((float) $model->allocated_amount, $currency), 'tone' => 'positive'],
-                    ['label' => 'Аванс', 'value' => $this->money((float) $model->unallocated_amount, $currency), 'tone' => $model->unallocated_amount > 0 ? 'warning' : 'neutral'],
                 ],
-                'related' => $related,
+                'related' => [],
             ],
             'client' => $this->clientPayload($model->user),
         ]);
@@ -664,8 +592,6 @@ class DocumentController extends CrmController
                 'user.personalManager:id,name',
                 'company:id,name,tax_id',
                 'organization:id,name,is_stub',
-                'allocations:id,payment_id,shipment_id,amount',
-                'allocations.shipment:id,number,erp_number',
             ],
         );
 
@@ -685,9 +611,6 @@ class DocumentController extends CrmController
                 'Проведён банком',
                 'Сумма',
                 'Валюта',
-                'Разнесено',
-                'Аванс',
-                'Реализации',
             ])),
             'rows' => $rows,
         ]]);
@@ -1327,30 +1250,6 @@ class DocumentController extends CrmController
             $query->whereIn('direction', $directions);
         }
 
-        // Состояние разнесения считается по остатку: отдельной колонки нет,
-        // и заводить её ради фильтра значило бы держать в синхроне ещё одно
-        // производное поле.
-        $allocationStatuses = array_values(array_intersect(
-            $this->values($request, 'allocation_statuses', 'allocation_status'),
-            array_column(self::ALLOCATION_STATUSES, 'value'),
-        ));
-
-        if ($allocationStatuses !== []) {
-            $query->where(function (Builder $inner) use ($allocationStatuses): void {
-                foreach ($allocationStatuses as $status) {
-                    $inner->orWhere(function (Builder $branch) use ($status): void {
-                        match ($status) {
-                            'allocated' => $branch->where('unallocated_amount', '<=', Payment::EPSILON),
-                            'partial' => $branch->where('unallocated_amount', '>', Payment::EPSILON)
-                                ->where('allocated_amount', '>', Payment::EPSILON),
-                            default => $branch->where('allocated_amount', '<=', Payment::EPSILON)
-                                ->where('unallocated_amount', '>', Payment::EPSILON),
-                        };
-                    });
-                }
-            });
-        }
-
         return $query;
     }
 
@@ -1371,12 +1270,6 @@ class DocumentController extends CrmController
             'bank_number' => $payment->bank_number,
             'bank_confirmed' => (bool) $payment->bank_confirmed,
             'total_label' => $this->money((float) $payment->amount, $payment->currency_code),
-            'allocated_label' => $this->money((float) $payment->allocated_amount, $payment->currency_code),
-            'unallocated_label' => $this->money((float) $payment->unallocated_amount, $payment->currency_code),
-            'has_advance' => (float) $payment->unallocated_amount > Payment::EPSILON,
-            'allocation_status' => $payment->allocation_status,
-            'allocation_status_label' => $payment->allocation_status_label,
-            'allocations_count' => (int) ($payment->allocations_count ?? 0),
             'client' => $payment->user === null ? null : [
                 'id' => (int) $payment->user->getKey(),
                 'name' => $payment->user->display_name,
@@ -1404,13 +1297,6 @@ class DocumentController extends CrmController
     private function paymentExportRow(\Illuminate\Database\Eloquent\Model $payment, bool $organizationsEnabled): array
     {
         /** @var Payment $payment */
-        $shipments = $payment->allocations
-            ->map(fn (PaymentAllocation $allocation): ?string => $allocation->shipment?->erp_number
-                ?: $allocation->shipment?->number)
-            ->filter()
-            ->unique()
-            ->implode(', ');
-
         return [
             $payment->number,
             $payment->date?->format('d.m.Y H:i'),
@@ -1427,9 +1313,6 @@ class DocumentController extends CrmController
             $payment->bank_confirmed ? 'Да' : 'Нет',
             round((float) $payment->amount, 2),
             $payment->currency_code,
-            round((float) $payment->allocated_amount, 2),
-            round((float) $payment->unallocated_amount, 2),
-            $shipments,
         ];
     }
 
@@ -1963,7 +1846,6 @@ class DocumentController extends CrmController
             'organization:id,name,is_stub',
             'warehouse:id,name',
             'items.product:id,name,slug,sku',
-            'paymentAllocations.payment:id,number,date,direction,currency_code',
         ]);
 
         // Заказы, по которым сделана отгрузка: связь идёт через order_uuid
@@ -2019,9 +1901,9 @@ class DocumentController extends CrmController
                     'total_label' => $this->money((float) $item->total, $model->currency_code),
                 ])->all(),
                 'related' => $related,
-                // Оплата реализации: чем закрыта и сколько осталось. Считается
-                // не на лету, а по денормализованным полям — их ведёт
-                // PaymentAllocationService при каждом сообщении из 1С.
+                // Оплата реализации: чем закрыта и сколько осталось. По денормали-
+                // зованным полям — их ведёт проекция плановых строк регистра
+                // (SettlementProjector), а не расчёт сайта.
                 'payment_summary' => [
                     'status' => $model->payment_status,
                     'status_label' => $model->payment_status_label,
@@ -2029,19 +1911,9 @@ class DocumentController extends CrmController
                     'unpaid_label' => $this->money($model->unpaid_amount, $model->currency_code),
                     'total_label' => $this->money((float) $model->total_amount, $model->currency_code),
                 ],
-                'payments' => $model->paymentAllocations
-                    ->filter(fn (PaymentAllocation $allocation): bool => $allocation->payment !== null)
-                    ->sortByDesc(fn (PaymentAllocation $allocation) => $allocation->payment->date)
-                    ->values()
-                    ->map(fn (PaymentAllocation $allocation): array => [
-                        'id' => (int) $allocation->payment->getKey(),
-                        'number' => $allocation->payment->number,
-                        'date_label' => $allocation->payment->date?->format('d.m.Y'),
-                        'direction_label' => $allocation->payment->direction_label,
-                        'direction' => $allocation->payment->direction,
-                        'amount_label' => $this->money((float) $allocation->amount, $allocation->payment->currency_code),
-                        'url' => route('crm.payments.show', $allocation->payment->getKey()),
-                    ])->all(),
+                // Список закрывших платежей снят вместе с расшифровкой: 1С её
+                // не присылает, а угадывать связь по датам и суммам нельзя.
+                'payments' => [],
                 // v15.12.0: план оплаты рядом с фактом. Суммы в валюте документа —
                 // сотрудник сверяет карточку с 1С, а не со своим кабинетом.
                 'payment_schedule' => PaymentSchedulePresenter::forShipment($model),

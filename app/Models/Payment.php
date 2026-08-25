@@ -8,8 +8,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use Spatie\MediaLibrary\HasMedia;
@@ -45,23 +43,16 @@ use Spatie\MediaLibrary\HasMedia;
  * @property string|null $purpose
  * @property numeric $amount
  * @property string|null $currency_code
- * @property numeric $allocated_amount
- * @property numeric $unallocated_amount
  * @property string|null $comment
  * @property \Carbon\Carbon|null $erp_created_at
  * @property \Carbon\Carbon|null $erp_updated_at
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
  * @property \Illuminate\Support\Carbon|null $deleted_at
- * @property int|null $allocations_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\PaymentAllocation> $allocations
  * @property-read \App\Models\User|null $user
  * @property-read \App\Models\Company|null $company
  * @property-read \App\Models\Organization|null $organization
  * @property-read string $direction_label
- * @property-read string $allocation_status
- * @property-read string $allocation_status_label
- * @property-read bool $is_advance
  *
  * @method static \Database\Factories\PaymentFactory factory($count = null, $state = [])
  *
@@ -76,16 +67,6 @@ class Payment extends Model implements HasMedia
 
     /** Возврат оплаты клиенту. */
     public const DIRECTION_OUT = 'out';
-
-    /**
-     * Состояние разнесения платежа. Считается от unallocated_amount, отдельной
-     * колонки нет: производить статус дешевле, чем держать его в синхроне.
-     */
-    public const ALLOCATION_ALLOCATED = 'allocated';
-
-    public const ALLOCATION_PARTIAL = 'partial';
-
-    public const ALLOCATION_ADVANCE = 'advance';
 
     /**
      * Погрешность сравнения денег. Копейка — минимальная значимая единица,
@@ -121,8 +102,6 @@ class Payment extends Model implements HasMedia
         'erp_comment',
         'amount',
         'currency_code',
-        'allocated_amount',
-        'unallocated_amount',
         'comment',
         'erp_created_at',
         'erp_updated_at',
@@ -136,8 +115,6 @@ class Payment extends Model implements HasMedia
             'bank_confirmed' => 'boolean',
             'bank_confirmed_at' => 'datetime',
             'amount' => 'decimal:2',
-            'allocated_amount' => 'decimal:2',
-            'unallocated_amount' => 'decimal:2',
             'erp_created_at' => \App\Casts\ErpDatetime::class,
             'erp_updated_at' => \App\Casts\ErpDatetime::class,
         ];
@@ -171,31 +148,6 @@ class Payment extends Model implements HasMedia
     }
 
     /**
-     * Строки расшифровки платежа.
-     *
-     * @return HasMany<PaymentAllocation, $this>
-     */
-    public function allocations(): HasMany
-    {
-        return $this->hasMany(PaymentAllocation::class);
-    }
-
-    /**
-     * Реализации, на которые разнесён платёж.
-     *
-     * Только те, что уже приехали из 1С: строки с shipment_id = null сюда не попадают,
-     * их видно через allocations().
-     *
-     * @return BelongsToMany<Shipment, $this>
-     */
-    public function shipments(): BelongsToMany
-    {
-        return $this->belongsToMany(Shipment::class, 'payment_allocations')
-            ->withPivot(['amount', 'order_uuid', 'line_number'])
-            ->withTimestamps();
-    }
-
-    /**
      * @param  Builder<static>  $query
      * @return Builder<static>
      */
@@ -219,37 +171,5 @@ class Payment extends Model implements HasMedia
             self::DIRECTION_OUT => 'Возврат клиенту',
             default => 'Поступление',
         };
-    }
-
-    /**
-     * Состояние разнесения: разнесён целиком, частично или целиком аванс.
-     */
-    public function getAllocationStatusAttribute(): string
-    {
-        $allocated = (float) $this->allocated_amount;
-        $unallocated = (float) $this->unallocated_amount;
-
-        if ($unallocated <= self::EPSILON) {
-            return self::ALLOCATION_ALLOCATED;
-        }
-
-        return $allocated > self::EPSILON ? self::ALLOCATION_PARTIAL : self::ALLOCATION_ADVANCE;
-    }
-
-    public function getAllocationStatusLabelAttribute(): string
-    {
-        return match ($this->allocation_status) {
-            self::ALLOCATION_ALLOCATED => 'Разнесён',
-            self::ALLOCATION_PARTIAL => 'Разнесён частично',
-            default => 'Аванс',
-        };
-    }
-
-    /**
-     * Платёж целиком не разнесён — деньги висят авансом.
-     */
-    public function getIsAdvanceAttribute(): bool
-    {
-        return $this->allocation_status === self::ALLOCATION_ADVANCE;
     }
 }
