@@ -39,6 +39,13 @@ use Illuminate\Support\Facades\DB;
  */
 class LedgerPaymentForecastService implements PaymentForecast
 {
+    /**
+     * Оси разреза балансов. Порядок в запросе задаёт вложенность дерева:
+     * ['organization', 'company'] — «наша организация → контрагент»,
+     * ['company'] — плоский список юрлиц.
+     */
+    public const BALANCE_AXES = ['partner', 'organization', 'company'];
+
     use FormatsForecastRows;
 
     /**
@@ -241,78 +248,161 @@ class LedgerPaymentForecastService implements PaymentForecast
      * @param  EloquentBuilder<\App\Models\User>  $clients
      * @return list<array<string, mixed>>
      */
-    public function balances(EloquentBuilder $clients, ?CarbonImmutable $asOf = null): array
+    public function balances(EloquentBuilder $clients, ?CarbonImmutable $asOf = null, array $dimensions = ['partner', 'company']): array
     {
+        $dimensions = array_values(array_filter(
+            $dimensions,
+            static fn (string $axis): bool => in_array($axis, self::BALANCE_AXES, true),
+        ));
+
+        if ($dimensions === []) {
+            $dimensions = ['partner', 'company'];
+        }
+
         $facts = DB::table('settlement_entries as e')
             ->join('users as u', 'u.id', '=', 'e.user_id')
             ->leftJoin('personal_managers as pm', 'pm.id', '=', 'u.personal_manager_id')
             ->leftJoin('companies as c', 'c.id', '=', 'e.company_id')
+            ->leftJoin('organizations as o', 'o.id', '=', 'e.organization_id')
             ->where('e.nature', SettlementEntry::NATURE_FACT)
             // Ретроспектива: движения после выбранной даты в сальдо не входят.
             // Дата включительно — «баланс на 31.07» это состояние на конец дня.
             ->when($asOf !== null, fn ($query) => $query->whereDate('e.date', '<=', $asOf->toDateString()))
             ->whereIn('e.user_id', (clone $clients))
-            ->groupBy('e.user_id', 'e.company_id', 'u.name', 'u.erp_name', 'pm.name', 'c.name', 'c.tax_id')
-            ->select(['e.user_id', 'e.company_id', 'u.name as client_name', 'u.erp_name as client_erp_name'])
-            ->selectRaw('pm.name as manager_name, c.name as company_name, c.tax_id as tax_id')
+            // Группировка всегда по полному ключу «партнёр × организация × контрагент»:
+            // выбранный разрез собирается из этих ячеек в PHP. Считать в БД под каждый
+            // разрез отдельно значило бы четыре почти одинаковых запроса.
+            ->groupBy('e.user_id', 'e.organization_id', 'e.company_id', 'u.name', 'u.erp_name', 'pm.name', 'c.name', 'c.tax_id', 'o.name')
+            ->select(['e.user_id', 'e.organization_id', 'e.company_id', 'u.name as client_name', 'u.erp_name as client_erp_name'])
+            ->selectRaw('pm.name as manager_name, c.name as company_name, c.tax_id as tax_id, o.name as organization_name')
             ->selectRaw('SUM(COALESCE(e.amount_rub, e.amount)) as balance')
             ->selectRaw('MAX(e.erp_updated_at) as erp_updated_at')
             ->get();
 
-        $overdue = $this->overdueByCompany($clients, $asOf);
+        $overdue = $this->overdueByCell($clients, $asOf);
 
-        $grouped = [];
+        // Ячейки объединяются, а не джойнятся: просрочка бывает там, где движений
+        // в этом разрезе нет вовсе (например, план на одну нашу организацию,
+        // а отгрузка проведена на другую). Потерять такую строку — потерять долг.
+        $cells = [];
 
         foreach ($facts as $row) {
-            $userId = (int) $row->user_id;
-            $companyOverdue = round((float) ($overdue[(int) $row->company_id] ?? 0.0), 2);
-
-            $grouped[$userId] ??= [
-                'id' => $userId,
-                'client' => [
-                    'id' => $userId,
-                    'name' => $row->client_erp_name ?: $row->client_name,
-                    'url' => route('crm.clients.show', $userId),
-                ],
-                'manager_name' => $row->manager_name,
-                'current_balance' => 0.0,
-                'overdue_debt' => 0.0,
-                'erp_updated_at' => null,
-                'contractors' => [],
-            ];
-
-            $grouped[$userId]['current_balance'] += (float) $row->balance;
-            $grouped[$userId]['overdue_debt'] += $companyOverdue;
-            $grouped[$userId]['erp_updated_at'] = max(
-                $grouped[$userId]['erp_updated_at'],
-                $row->erp_updated_at,
-            );
-
-            $grouped[$userId]['contractors'][] = [
-                'id' => (int) $row->company_id,
-                'company_name' => $row->company_name,
-                'tax_id' => $row->tax_id,
-                'current_balance' => round((float) $row->balance, 2),
-                'overdue_debt' => $companyOverdue,
-                'erp_updated_at' => $row->erp_updated_at !== null
-                    ? CarbonImmutable::parse($row->erp_updated_at)->format('d.m.Y H:i')
-                    : null,
+            $cells[$this->cellKey($row->user_id, $row->organization_id, $row->company_id)] = [
+                'cell' => $row,
+                'balance' => (float) $row->balance,
+                'overdue' => 0.0,
+                'erp_updated_at' => $row->erp_updated_at,
             ];
         }
 
-        $rows = array_map(static function (array $row): array {
+        foreach ($overdue as $key => $row) {
+            $cells[$key] ??= ['cell' => $row, 'balance' => 0.0, 'overdue' => 0.0, 'erp_updated_at' => null];
+            $cells[$key]['overdue'] = (float) $row->overdue;
+        }
+
+        $tree = [];
+
+        foreach ($cells as ['cell' => $cell, 'balance' => $cellBalance, 'overdue' => $cellOverdue, 'erp_updated_at' => $updatedAt]) {
+            $branch = &$tree;
+            $path = '';
+
+            foreach ($dimensions as $depth => $axis) {
+                $node = $this->balanceNode($axis, $cell);
+                $path .= '|'.$axis.':'.$node['key'];
+
+                $branch[$node['key']] ??= [
+                    'id' => $path,
+                    'axis' => $axis,
+                    'entity_id' => $node['entity_id'],
+                    'title' => $node['title'],
+                    'subtitle' => $node['subtitle'],
+                    'url' => $node['url'],
+                    'current_balance' => 0.0,
+                    'overdue_debt' => 0.0,
+                    'erp_updated_at' => null,
+                    'children' => [],
+                ];
+
+                $branch[$node['key']]['current_balance'] += $cellBalance;
+                $branch[$node['key']]['overdue_debt'] += $cellOverdue;
+                $branch[$node['key']]['erp_updated_at'] = max(
+                    $branch[$node['key']]['erp_updated_at'],
+                    $updatedAt,
+                );
+
+                $branch = &$branch[$node['key']]['children'];
+            }
+
+            unset($branch);
+        }
+
+        return $this->finishBalanceTree($tree);
+    }
+
+    /**
+     * Узел дерева для одной оси разреза.
+     *
+     * @return array{key: string, entity_id: ?int, title: string, subtitle: ?string, url: ?string}
+     */
+    private function balanceNode(string $axis, object $cell): array
+    {
+        return match ($axis) {
+            'partner' => [
+                'key' => 'u'.$cell->user_id,
+                'entity_id' => (int) $cell->user_id,
+                'title' => $cell->client_erp_name ?: $cell->client_name,
+                'subtitle' => $cell->manager_name ?: 'без менеджера',
+                'url' => route('crm.clients.show', (int) $cell->user_id),
+            ],
+            'organization' => [
+                'key' => 'o'.($cell->organization_id ?? 0),
+                'entity_id' => $cell->organization_id === null ? null : (int) $cell->organization_id,
+                'title' => $cell->organization_name ?: 'Организация не указана',
+                'subtitle' => null,
+                'url' => null,
+            ],
+            default => [
+                'key' => 'c'.($cell->company_id ?? 0),
+                'entity_id' => $cell->company_id === null ? null : (int) $cell->company_id,
+                'title' => $cell->company_name ?: 'Контрагент не заведён',
+                'subtitle' => $cell->tax_id ? 'ИНН '.$cell->tax_id : null,
+                'url' => null,
+            ],
+        };
+    }
+
+    /**
+     * Округление, формат даты и сортировка — на всех уровнях дерева.
+     *
+     * Сортировка по просрочке, а не по сальдо: отчёт открывают, чтобы понять,
+     * кому звонить сегодня, и должники обязаны быть сверху на любом уровне.
+     *
+     * @param  array<string, array<string, mixed>>  $branch
+     * @return list<array<string, mixed>>
+     */
+    private function finishBalanceTree(array $branch): array
+    {
+        $rows = array_map(function (array $row): array {
             $row['current_balance'] = round($row['current_balance'], 2);
             $row['overdue_debt'] = round($row['overdue_debt'], 2);
             $row['erp_updated_at'] = $row['erp_updated_at'] !== null
                 ? CarbonImmutable::parse($row['erp_updated_at'])->format('d.m.Y H:i')
                 : null;
+            $row['children'] = $this->finishBalanceTree($row['children']);
 
             return $row;
-        }, array_values($grouped));
+        }, array_values($branch));
 
-        usort($rows, static fn (array $a, array $b): int => $b['overdue_debt'] <=> $a['overdue_debt']);
+        usort($rows, static fn (array $a, array $b): int => [$b['overdue_debt'], $a['current_balance']]
+            <=> [$a['overdue_debt'], $b['current_balance']]);
 
         return $rows;
+    }
+
+    /** Ключ ячейки «партнёр × организация × контрагент». */
+    private function cellKey(mixed $userId, mixed $organizationId, mixed $companyId): string
+    {
+        return (int) $userId.':'.(int) $organizationId.':'.(int) $companyId;
     }
 
     /**
@@ -418,28 +508,36 @@ class LedgerPaymentForecastService implements PaymentForecast
     }
 
     /**
-     * Просрочка по контрагентам — для колонки в балансах.
+     * Просрочка по ячейкам «партнёр × организация × контрагент».
+     *
+     * Ключ полный, а не только контрагент: в разрезе с нашей организацией
+     * долг одного юрлица распадается по нашим организациям, и суммировать
+     * его целиком в каждую ветку значило бы задвоить цифру.
      *
      * @param  EloquentBuilder<\App\Models\User>  $clients
-     * @return array<int, float>
+     * @return array<string, object>
      */
-    private function overdueByCompany(EloquentBuilder $clients, ?CarbonImmutable $asOf = null): array
+    private function overdueByCell(EloquentBuilder $clients, ?CarbonImmutable $asOf = null): array
     {
-        return DB::table('settlement_entries')
-            ->where('nature', SettlementEntry::NATURE_PLAN)
-            ->whereIn('user_id', (clone $clients))
-            ->whereNotNull('company_id')
-            ->whereDate('date', '<', ($asOf ?? CarbonImmutable::today())->toDateString())
-            ->whereRaw('amount - settled_amount > '.SettlementEntry::EPSILON)
+        return DB::table('settlement_entries as p')
+            ->join('users as u', 'u.id', '=', 'p.user_id')
+            ->leftJoin('personal_managers as pm', 'pm.id', '=', 'u.personal_manager_id')
+            ->leftJoin('companies as c', 'c.id', '=', 'p.company_id')
+            ->leftJoin('organizations as o', 'o.id', '=', 'p.organization_id')
+            ->where('p.nature', SettlementEntry::NATURE_PLAN)
+            ->whereIn('p.user_id', (clone $clients))
+            ->whereDate('p.date', '<', ($asOf ?? CarbonImmutable::today())->toDateString())
+            ->whereRaw('p.amount - p.settled_amount > '.SettlementEntry::EPSILON)
             // План заказа — не долг, в просрочку не входит (см. overdueOnly).
             ->where(static function (QueryBuilder $query): void {
-                $query->whereNull('document_kind')->orWhere('document_kind', '<>', 'order');
+                $query->whereNull('p.document_kind')->orWhere('p.document_kind', '<>', 'order');
             })
-            ->groupBy('company_id')
-            ->select('company_id')
-            ->selectRaw('SUM(amount - settled_amount) as overdue')
-            ->pluck('overdue', 'company_id')
-            ->map(static fn ($value): float => (float) $value)
+            ->groupBy('p.user_id', 'p.organization_id', 'p.company_id', 'u.name', 'u.erp_name', 'pm.name', 'c.name', 'c.tax_id', 'o.name')
+            ->select(['p.user_id', 'p.organization_id', 'p.company_id', 'u.name as client_name', 'u.erp_name as client_erp_name'])
+            ->selectRaw('pm.name as manager_name, c.name as company_name, c.tax_id as tax_id, o.name as organization_name')
+            ->selectRaw('SUM(p.amount - p.settled_amount) as overdue')
+            ->get()
+            ->keyBy(fn (object $row): string => $this->cellKey($row->user_id, $row->organization_id, $row->company_id))
             ->all();
     }
 

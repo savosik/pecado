@@ -411,9 +411,72 @@ class FinanceLedgerTest extends TestCase
         $balances = $this->forecast()->balances($this->clients());
 
         $this->assertCount(1, $balances);
+        $this->assertSame('partner', $balances[0]['axis']);
         $this->assertEqualsWithDelta(-120000.0, $balances[0]['current_balance'], 0.01);
         $this->assertEqualsWithDelta(120000.0, $balances[0]['overdue_debt'], 0.01);
-        $this->assertCount(1, $balances[0]['contractors']);
+        $this->assertCount(1, $balances[0]['children']);
+        $this->assertSame('company', $balances[0]['children'][0]['axis']);
+    }
+
+    /**
+     * Разрез меняет вложенность, но не итог: сервер складывает одну и ту же
+     * сетку ячеек «партнёр × организация × контрагент» по выбранным осям.
+     */
+    #[Test]
+    public function разрез_меняет_вложенность_но_не_итог(): void
+    {
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -50000,
+            'amount_rub' => -50000,
+            'date' => CarbonImmutable::today()->subDays(10)->toDateString(),
+        ]);
+        $this->plan(50000, 0, CarbonImmutable::today()->subDays(3)->toDateString());
+
+        foreach ([
+            ['partner', 'company'],
+            ['partner', 'organization', 'company'],
+            ['organization', 'company'],
+            ['company'],
+        ] as $dimensions) {
+            $tree = $this->forecast()->balances($this->clients(), null, $dimensions);
+            $label = implode(' → ', $dimensions);
+
+            $this->assertSame($dimensions[0], $tree[0]['axis'], $label);
+            $this->assertEqualsWithDelta(-50000.0, collect($tree)->sum('current_balance'), 0.01, $label);
+            $this->assertEqualsWithDelta(50000.0, collect($tree)->sum('overdue_debt'), 0.01, $label);
+
+            // Глубина дерева равна числу осей: лишних уровней не появляется.
+            $depth = 1;
+            $node = $tree[0];
+
+            while (($node['children'] ?? []) !== []) {
+                $node = $node['children'][0];
+                $depth++;
+            }
+
+            $this->assertSame(count($dimensions), $depth, $label);
+        }
+    }
+
+    /**
+     * Мусорная ось игнорируется, пустой список падает в разрез по умолчанию:
+     * отчёт открывается всегда, что бы ни оказалось в адресе.
+     */
+    #[Test]
+    public function неизвестные_оси_разреза_гасятся(): void
+    {
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -1000,
+            'amount_rub' => -1000,
+            'date' => CarbonImmutable::today()->toDateString(),
+        ]);
+
+        $this->assertSame('partner', $this->forecast()->balances($this->clients(), null, ['выдумка'])[0]['axis']);
+        $this->assertSame('company', $this->forecast()->balances($this->clients(), null, ['выдумка', 'company'])[0]['axis']);
     }
 
     /**

@@ -1,6 +1,6 @@
 import { Fragment, useState } from 'react';
-import { Head } from '@inertiajs/react';
-import { Badge, Box, Flex, HStack, Table, Text, VStack } from '@chakra-ui/react';
+import { Head, router } from '@inertiajs/react';
+import { Box, Flex, HStack, Table, Text, VStack } from '@chakra-ui/react';
 import { LuChevronDown, LuChevronRight, LuListPlus } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
@@ -10,32 +10,42 @@ import { usePermission } from '@/shared/Panel/usePermission';
 import FinanceFilterBar from './components/FinanceFilterBar';
 import { formatRub } from './components/format';
 
-/** «2 контрагента», но «5 контрагентов» — иначе бейдж читается как опечатка. */
-const contractorsLabel = (count) => {
-    const tail = count % 10;
-    const teen = count % 100 >= 11 && count % 100 <= 14;
-
-    if (!teen && tail >= 2 && tail <= 4) return `${count} контрагента`;
-
-    return `${count} контрагентов`;
+/** Подпись оси в заголовке первой колонки — читатель должен понимать, что за строки видит. */
+const AXIS_TITLES = {
+    partner: 'Партнёр',
+    organization: 'Наша организация',
+    company: 'Контрагент',
 };
+
+/** Сколько узлов в поддереве — для счётчика внизу. */
+const countNodes = (rows, depth = 0) => rows.reduce((acc, row) => {
+    acc[depth] = (acc[depth] ?? 0) + 1;
+
+    return row.children?.length ? countNodes(row.children, depth + 1).reduce(
+        (inner, value, index) => {
+            inner[index] = (inner[index] ?? 0) + value;
+
+            return inner;
+        },
+        acc,
+    ) : acc;
+}, []);
 
 /**
  * Балансы взаиморасчётов — проекция регистра 1С.
  *
- * 1С ведёт расчёты по контрагентам, а у партнёра их бывает несколько. Поэтому
- * верхняя строка — партнёр с итогом, внутри неё раскрываются его контрагенты
- * с ИНН: долг остаётся «по контрагентам», но имя партнёра не повторяется подряд.
- *
- * Сводной сверки в шапке больше нет (v16.3.0). Она сравнивала «просрочку 1С»
- * с «нашим расчётом по графику» и объясняла, почему числа не обязаны совпадать.
- * После перехода на регистр оба берутся из одних и тех же плановых строк ленты,
- * то есть плашка сравнивала число с самим собой.
+ * Разрез выбирается на экране: 1С ведёт расчёты по тройке «партнёр × наша
+ * организация × контрагент», и какая ось верхняя — зависит от вопроса.
+ * Менеджер спрашивает «сколько должен клиент», бухгалтерия — «сколько нам
+ * должны по этому нашему юрлицу», сверка — «покажите все юрлица списком».
+ * Сервер считает одну и ту же сетку ячеек и складывает её в дерево по осям,
+ * поэтому итог во всех разрезах одинаковый — меняется только вложенность.
  */
 export default function FinanceBalances({
     balances = [],
     asOf = null,
-    summary = {},
+    view = 'partner',
+    views = [],
     filters = {},
     managers = [],
     organizations = [],
@@ -45,13 +55,21 @@ export default function FinanceBalances({
     const [taskFor, setTaskFor] = useState(null);
     const [expanded, setExpanded] = useState({});
 
-    const toggle = (id) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+    const toggle = (id) => setExpanded((previous) => ({ ...previous, [id]: ! previous[id] }));
 
     const totals = balances.reduce((acc, row) => ({
         balance: acc.balance + row.current_balance,
         overdue: acc.overdue + row.overdue_debt,
-        contractors: acc.contractors + row.contractors.length,
-    }), { balance: 0, overdue: 0, contractors: 0 });
+    }), { balance: 0, overdue: 0 });
+
+    const levels = countNodes(balances);
+    const axes = (views.find((item) => item.value === view)?.label ?? '').split(' → ');
+
+    const changeView = (value) => router.get(
+        '/crm/finance/balances',
+        { ...(asOf ? { as_of: asOf } : {}), ...(filters.scope === 'department' ? { scope: 'department' } : {}), view: value },
+        { preserveState: true, preserveScroll: true, replace: true },
+    );
 
     return (
         <CrmLayout breadcrumbs={[{ label: 'Финансы' }, { label: 'Балансы' }]}>
@@ -64,12 +82,29 @@ export default function FinanceBalances({
 
             <FinanceFilterBar
                 routeName="crm.finance.balances"
-                filters={{ ...filters, as_of: asOf }}
+                filters={{ ...filters, as_of: asOf, view }}
                 asOfMode
                 managers={managers}
                 organizations={organizations}
                 seesAll={seesAll}
             />
+
+            {/* Разрез отдельной строкой над таблицей, а не среди фильтров: он меняет
+                не состав строк, а форму отчёта — это ближе к выбору представления. */}
+            <HStack gap={2} wrap="wrap" mb={3} px={1}>
+                <Text fontSize="xs" color="fg.muted">Разрез:</Text>
+                {views.map((item) => (
+                    <Button
+                        key={item.value}
+                        size="xs"
+                        variant={view === item.value ? 'solid' : 'outline'}
+                        colorPalette={view === item.value ? 'pecado' : 'gray'}
+                        onClick={() => changeView(item.value)}
+                    >
+                        {item.label}
+                    </Button>
+                ))}
+            </HStack>
 
             <Box borderWidth="1px" borderRadius="lg" p={3} mb={4} bg="bg.subtle">
                 <Text fontSize="sm">
@@ -85,6 +120,7 @@ export default function FinanceBalances({
                     Обе цифры — из регистра взаиморасчётов 1С. Сальдо складывается из всех движений,
                     просрочка — из строк графика оплаты, срок которых уже прошёл. Планы платежей
                     по заказам просрочкой не считаются: долг создаёт отгрузка, а не заказ.
+                    Итог не зависит от разреза: меняется только группировка одних и тех же движений.
                 </Text>
             </Box>
 
@@ -94,7 +130,7 @@ export default function FinanceBalances({
                         <Table.Header>
                             <Table.Row>
                                 <Table.ColumnHeader width="40px" />
-                                <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
+                                <Table.ColumnHeader>{axes[0] || 'Строка'}</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="end">Сальдо</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="end">Просрочено</Table.ColumnHeader>
                                 <Table.ColumnHeader>Данные 1С от</Table.ColumnHeader>
@@ -107,134 +143,31 @@ export default function FinanceBalances({
                                 <Table.Row>
                                     <Table.Cell colSpan={6}>
                                         <Text py={8} textAlign="center" color="fg.muted">
-                                            Балансы по вашим партнёрам ещё не приходили из 1С
+                                            Движений взаиморасчётов по вашим партнёрам ещё не приходило из 1С
                                         </Text>
                                     </Table.Cell>
                                 </Table.Row>
                             )}
 
-                            {balances.map((row) => {
-                                const isOpen = !!expanded[row.id];
-                                const many = row.contractors.length > 1;
-
-                                return (
-                                    // Fragment с ключом, а не <>: строка партнёра и
-                                    // строки его контрагентов — соседи одного уровня.
-                                    <Fragment key={row.id}>
-                                        <Table.Row _hover={{ bg: 'bg.muted' }}>
-                                            <Table.Cell>
-                                                <Button
-                                                    size="xs"
-                                                    variant="ghost"
-                                                    onClick={() => toggle(row.id)}
-                                                    aria-label={isOpen ? 'Свернуть контрагентов' : 'Показать контрагентов'}
-                                                >
-                                                    {isOpen ? <LuChevronDown /> : <LuChevronRight />}
-                                                </Button>
-                                            </Table.Cell>
-
-                                            <Table.Cell>
-                                                <VStack align="start" gap={0}>
-                                                    <Box
-                                                        as="a"
-                                                        href={row.client.url}
-                                                        fontSize="sm"
-                                                        fontWeight="600"
-                                                        _hover={{ color: 'blue.fg', textDecoration: 'underline' }}
-                                                    >
-                                                        {row.client.name}
-                                                    </Box>
-                                                    <HStack gap={2}>
-                                                        <Text fontSize="10px" color="fg.muted">
-                                                            {row.manager_name || 'без менеджера'}
-                                                        </Text>
-                                                        {many && (
-                                                            <Badge size="xs" colorPalette="gray">
-                                                                {contractorsLabel(row.contractors.length)}
-                                                            </Badge>
-                                                        )}
-                                                    </HStack>
-                                                </VStack>
-                                            </Table.Cell>
-
-                                            <Table.Cell textAlign="end">
-                                                <Text
-                                                    fontSize="sm"
-                                                    fontWeight="600"
-                                                    whiteSpace="nowrap"
-                                                    color={row.current_balance < 0 ? 'red.fg' : undefined}
-                                                >
-                                                    {formatRub(row.current_balance)}
-                                                </Text>
-                                            </Table.Cell>
-
-                                            <Table.Cell textAlign="end">
-                                                <Text
-                                                    fontSize="sm"
-                                                    fontWeight="600"
-                                                    whiteSpace="nowrap"
-                                                    color={row.overdue_debt > 0 ? 'red.fg' : 'fg.muted'}
-                                                >
-                                                    {formatRub(row.overdue_debt)}
-                                                </Text>
-                                            </Table.Cell>
-
-                                            <Table.Cell>
-                                                <Text fontSize="xs" color="fg.muted">{row.erp_updated_at || '—'}</Text>
-                                            </Table.Cell>
-
-                                            <Table.Cell>
-                                                {can('crm-tasks.create') && (
-                                                    <Button size="xs" variant="ghost" onClick={() => setTaskFor(row)}>
-                                                        <LuListPlus /> Задача
-                                                    </Button>
-                                                )}
-                                            </Table.Cell>
-                                        </Table.Row>
-
-                                        {isOpen && row.contractors.map((contractor) => (
-                                            <Table.Row key={`${row.id}-${contractor.id}`} bg="bg.subtle">
-                                                <Table.Cell />
-                                                <Table.Cell>
-                                                    <VStack align="start" gap={0} pl={4}>
-                                                        <Text fontSize="sm">
-                                                            {contractor.company_name || 'Контрагент без карточки'}
-                                                        </Text>
-                                                        <Text fontSize="10px" color="fg.muted">
-                                                            {contractor.tax_id ? `ИНН ${contractor.tax_id}` : 'без ИНН'}
-                                                        </Text>
-                                                    </VStack>
-                                                </Table.Cell>
-                                                <Table.Cell textAlign="end">
-                                                    <Text fontSize="sm" whiteSpace="nowrap">
-                                                        {formatRub(contractor.current_balance)}
-                                                    </Text>
-                                                </Table.Cell>
-                                                <Table.Cell textAlign="end">
-                                                    <Text fontSize="sm" whiteSpace="nowrap">
-                                                        {formatRub(contractor.overdue_debt)}
-                                                    </Text>
-                                                </Table.Cell>
-                                                <Table.Cell>
-                                                    <Text fontSize="xs" color="fg.muted">
-                                                        {contractor.erp_updated_at || '—'}
-                                                    </Text>
-                                                </Table.Cell>
-                                                <Table.Cell />
-                                            </Table.Row>
-                                        ))}
-                                    </Fragment>
-                                );
-                            })}
+                            {balances.map((row) => (
+                                <BalanceRows
+                                    key={row.id}
+                                    row={row}
+                                    depth={0}
+                                    expanded={expanded}
+                                    onToggle={toggle}
+                                    onTask={can('crm-tasks.create') ? setTaskFor : null}
+                                />
+                            ))}
                         </Table.Body>
                     </Table.Root>
                 </Box>
             </Box>
 
-            <Flex justify="space-between" mt={3} px={1}>
+            <Flex justify="space-between" mt={3} px={1} gap={4} wrap="wrap">
                 <Text fontSize="xs" color="fg.muted">
-                    Партнёров: {balances.length} · контрагентов: {totals.contractors} ·
-                    суммарное сальдо {formatRub(totals.balance)}. Отрицательное сальдо — долг партнёра.
+                    {axes.map((axis, index) => `${axis.toLowerCase()}: ${levels[index] ?? 0}`).join(' · ')}
+                    {' · '}суммарное сальдо {formatRub(totals.balance)}. Отрицательное сальдо — долг партнёра.
                 </Text>
                 <Text fontSize="xs" color="fg.muted">
                     Суммы приходят из 1С и подписаны как рубли: для мультивалютного
@@ -246,11 +179,114 @@ export default function FinanceBalances({
                 <TaskDialog
                     open
                     onClose={() => setTaskFor(null)}
-                    entity={{ type: 'client', id: taskFor.client.id }}
-                    initialTitle={`Дебиторка: ${taskFor.client.name} — ${formatRub(taskFor.overdue_debt)}`}
+                    entity={{ type: 'client', id: taskFor.clientId }}
+                    initialTitle={`Дебиторка: ${taskFor.title} — ${formatRub(taskFor.overdue_debt)}`}
                     onSaved={() => setTaskFor(null)}
                 />
             )}
         </CrmLayout>
+    );
+}
+
+/**
+ * Узел дерева и его потомки — одной рекурсивной строкой на любом уровне.
+ *
+ * Вложенность рисуется отступом, а не отдельными таблицами: у всех уровней
+ * одни и те же колонки, и разъехавшиеся ширины читались бы как разные отчёты.
+ */
+function BalanceRows({ row, depth, expanded, onToggle, onTask }) {
+    const hasChildren = (row.children?.length ?? 0) > 0;
+    const isOpen = !! expanded[row.id];
+    // Задача ставится на партнёра: у контрагента и нашей организации карточки
+    // клиента нет, и вешать дебиторку не на кого.
+    const clientId = row.axis === 'partner' ? row.entity_id : null;
+
+    return (
+        <Fragment>
+            <Table.Row _hover={{ bg: 'bg.muted' }} bg={depth > 0 ? 'bg.subtle' : undefined}>
+                <Table.Cell>
+                    {hasChildren && (
+                        <Button
+                            size="xs"
+                            variant="ghost"
+                            onClick={() => onToggle(row.id)}
+                            aria-label={isOpen ? 'Свернуть' : 'Развернуть'}
+                        >
+                            {isOpen ? <LuChevronDown /> : <LuChevronRight />}
+                        </Button>
+                    )}
+                </Table.Cell>
+
+                <Table.Cell>
+                    <VStack align="start" gap={0} pl={depth * 4}>
+                        {row.url ? (
+                            <Box
+                                as="a"
+                                href={row.url}
+                                fontSize="sm"
+                                fontWeight={depth === 0 ? '600' : '400'}
+                                _hover={{ color: 'blue.fg', textDecoration: 'underline' }}
+                            >
+                                {row.title}
+                            </Box>
+                        ) : (
+                            <Text fontSize="sm" fontWeight={depth === 0 ? '600' : '400'}>{row.title}</Text>
+                        )}
+                        {row.subtitle && (
+                            <Text fontSize="10px" color="fg.muted">{row.subtitle}</Text>
+                        )}
+                    </VStack>
+                </Table.Cell>
+
+                <Table.Cell textAlign="end">
+                    <Text
+                        fontSize="sm"
+                        fontWeight={depth === 0 ? '600' : '400'}
+                        whiteSpace="nowrap"
+                        color={row.current_balance < 0 ? 'red.fg' : undefined}
+                    >
+                        {formatRub(row.current_balance)}
+                    </Text>
+                </Table.Cell>
+
+                <Table.Cell textAlign="end">
+                    <Text
+                        fontSize="sm"
+                        fontWeight={depth === 0 ? '600' : '400'}
+                        whiteSpace="nowrap"
+                        color={row.overdue_debt > 0 ? 'red.fg' : 'fg.muted'}
+                    >
+                        {formatRub(row.overdue_debt)}
+                    </Text>
+                </Table.Cell>
+
+                <Table.Cell>
+                    <Text fontSize="xs" color="fg.muted">{row.erp_updated_at || '—'}</Text>
+                </Table.Cell>
+
+                <Table.Cell>
+                    {onTask && clientId != null && (
+                        <Button
+                            size="xs"
+                            variant="ghost"
+                            onClick={() => onTask({ ...row, clientId })}
+                        >
+                            <LuListPlus /> Задача
+                        </Button>
+                    )}
+                </Table.Cell>
+            </Table.Row>
+
+            {isOpen && row.children.map((child) => (
+                <BalanceRows
+                    key={child.id}
+                    row={child}
+                    depth={depth + 1}
+                    expanded={expanded}
+                    onToggle={onToggle}
+                    onTask={onTask}
+                />
+            ))}
+        </Fragment>
     );
 }

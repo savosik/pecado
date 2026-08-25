@@ -112,9 +112,13 @@ interface PaymentForecast
      * ретроспективным: в сальдо входят движения по эту дату включительно,
      * в просрочку — непогашенные плановые строки, срок которых на неё уже прошёл.
      *
+     * `$dimensions` задаёт разрез: список осей из `partner`, `organization`,
+     * `company` в порядке вложенности. Ответ — дерево узлов с полем `children`.
+     *
      * @param  EloquentBuilder<\App\Models\User>  $clients
+     * @param  list<string>  $dimensions
      */
-    public function balances(EloquentBuilder $clients, ?CarbonImmutable $asOf = null): array;
+    public function balances(EloquentBuilder $clients, ?CarbonImmutable $asOf = null, array $dimensions = ['partner', 'company']): array;
 
     /**
      * Ключевые показатели пульта.

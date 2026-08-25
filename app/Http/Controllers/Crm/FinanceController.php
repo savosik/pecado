@@ -76,6 +76,20 @@ class FinanceController extends CrmController
     /**
      * Балансы партнёров из 1С. GET /crm/finance/balances
      */
+    /**
+     * Готовые разрезы балансов.
+     *
+     * Свободный выбор осей в интерфейсе не даём: из шести перестановок трёх
+     * измерений осмысленны четыре, а остальные («контрагент → партнёр»)
+     * повторяют друг друга — у контрагента партнёр всегда один.
+     */
+    private const BALANCE_VIEWS = [
+        'partner' => ['label' => 'Партнёр → контрагент', 'dimensions' => ['partner', 'company']],
+        'partner_org' => ['label' => 'Партнёр → организация → контрагент', 'dimensions' => ['partner', 'organization', 'company']],
+        'org' => ['label' => 'Наша организация → контрагент', 'dimensions' => ['organization', 'company']],
+        'company' => ['label' => 'Контрагенты списком', 'dimensions' => ['company']],
+    ];
+
     public function balances(Request $request): InertiaResponse
     {
         $filters = FinanceFilters::fromRequest($request);
@@ -84,10 +98,19 @@ class FinanceController extends CrmController
         // «На дату», а не период: баланс — состояние, а не оборот. Диапазон здесь
         // читался бы как «сальдо за июль», чего не бывает: сальдо всегда на момент.
         $asOf = $this->balancesDate($request);
+        $dimensions = $this->balancesDimensions($request);
 
         return Inertia::render('Crm/Pages/Finance/Balances', [
-            'balances' => $this->forecast->balances($clients, $asOf),
+            'balances' => $this->forecast->balances($clients, $asOf, $dimensions),
             'asOf' => $asOf?->toDateString(),
+            // Ключ разреза отдаём как есть: экран рисует переключатель по нему,
+            // а не по составу осей — иначе подпись пришлось бы собирать на клиенте.
+            'view' => (string) $request->input('view', 'partner'),
+            'views' => array_map(
+                static fn (array $preset, string $key): array => ['value' => $key, 'label' => $preset['label']],
+                array_values(self::BALANCE_VIEWS),
+                array_keys(self::BALANCE_VIEWS),
+            ),
             // Сводка нужна ради одной строки сверки в шапке: просрочка по данным 1С
             // против нашего расчёта по графику. Построчно её больше не показываем —
             // это разные разрезы (1С считает по контрагенту, график по документу),
@@ -95,6 +118,22 @@ class FinanceController extends CrmController
             'summary' => $this->forecast->summary($clients, $filters),
             ...$this->sharedOptions($request, $filters),
         ]);
+    }
+
+    /**
+     * Разрез отчёта: оси в порядке вложенности.
+     *
+     * Приходит строкой вида `organization,company` — так разрез переживает
+     * закладку и «назад», а массив в адресе выглядел бы шумом.
+     *
+     * @return list<string>
+     */
+    private function balancesDimensions(Request $request): array
+    {
+        $raw = (string) $request->input('view', '');
+        $preset = self::BALANCE_VIEWS[$raw] ?? null;
+
+        return $preset['dimensions'] ?? ['partner', 'company'];
     }
 
     /**

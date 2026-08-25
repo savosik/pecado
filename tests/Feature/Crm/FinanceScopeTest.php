@@ -277,10 +277,16 @@ class FinanceScopeTest extends TestCase
 
         $row = $props['balances'][0];
 
-        $this->assertCount(2, $row['contractors']);
+        $this->assertCount(2, $row['children']);
         $this->assertSame(-2000.0, $row['current_balance']);
         $this->assertSame(750.0, $row['overdue_debt']);
-        $this->assertSame(['7701234567', '7739999999'], array_column($row['contractors'], 'tax_id'));
+
+        // Подпись контрагента несёт ИНН: без него две строки одного партнёра
+        // различаются только суммой.
+        $this->assertEqualsCanonicalizing(
+            ['ИНН 7701234567', 'ИНН 7739999999'],
+            array_column($row['children'], 'subtitle'),
+        );
 
         // Сверка живёт в шапке одной строкой, а не в колонке у каждого контрагента.
         $this->assertArrayNotHasKey('overdue_by_schedule', $row);
