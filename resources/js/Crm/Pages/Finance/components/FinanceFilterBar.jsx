@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
-import { Box, Flex, HStack, Input, Text } from '@chakra-ui/react';
-import { LuDownload, LuRotateCcw } from 'react-icons/lu';
+import { Box, Flex, Grid, HStack, Input, Text, VStack } from '@chakra-ui/react';
+import { LuDownload, LuX } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
+import FilterChips from '@/Crm/Components/FilterChips';
+import PeriodFilter from '@/Crm/Components/PeriodFilter';
 
 const GRANULARITIES = [
     { value: 'day', label: 'По дням' },
@@ -13,12 +15,43 @@ const GRANULARITIES = [
     { value: 'month', label: 'По месяцам' },
 ];
 
+/** ISO-дата в человеческий вид для чипа и подписи. */
+const humanDate = (value) => (value ? value.split('-').reverse().join('.') : '');
+
+/** Дата без часового пояса — как её понимает <input type="date">. */
+const iso = (date) => [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+].join('-');
+
+/**
+ * Быстрые точки отсчёта для баланса. «Конец прошлого месяца» — то, что
+ * спрашивают чаще всего: бухгалтерия сверяется по закрытым периодам.
+ */
+const AS_OF_PRESETS = [
+    {
+        key: 'prevMonthEnd',
+        label: 'Конец прошлого месяца',
+        date: () => iso(new Date(new Date().getFullYear(), new Date().getMonth(), 0)),
+    },
+    {
+        key: 'yearStart',
+        label: 'Начало года',
+        date: () => iso(new Date(new Date().getFullYear(), 0, 1)),
+    },
+];
+
 /**
  * Фильтры финансового раздела: период, менеджеры, организации.
  *
  * Один бар на все страницы раздела — набор фильтров у них общий, и разъехавшиеся
  * копии дали бы разные цифры на пульте и в таблице. Что показывать, страница
- * задаёт флагами (`showGranularity`, `showOverdueToggle`).
+ * задаёт флагами (`showGranularity`, `showOverdueToggle`, `asOfMode`).
+ *
+ * Форма панели та же, что у журналов платежей и реализаций: режим и выгрузка
+ * сверху, справочники сеткой, диапазоны снизу, активные фильтры чипами. Раздел
+ * из семи страниц с разной раскладкой фильтров читается как семь разных продуктов.
  */
 export default function FinanceFilterBar({
     routeName,
@@ -62,6 +95,20 @@ export default function FinanceFilterBar({
         router.get(route(routeName), { scope: filters.scope }, { preserveState: true, replace: true });
     };
 
+    const setPeriod = (patch) => {
+        const from = 'date_from' in patch ? (patch.date_from ?? '') : dateFrom;
+        const to = 'date_to' in patch ? (patch.date_to ?? '') : dateTo;
+
+        setDateFrom(from);
+        setDateTo(to);
+        apply({ date_from: from || undefined, date_to: to || undefined });
+    };
+
+    const setAsOfDate = (value) => {
+        setAsOf(value);
+        apply({ as_of: value || undefined });
+    };
+
     /**
      * Выгрузка уходит обычным переходом, а не router.visit: Inertia ждёт JSON,
      * а сервер отдаёт файл. Тот же приём, что в журналах документов.
@@ -78,122 +125,169 @@ export default function FinanceFilterBar({
         window.location.href = `${route('crm.finance.export')}?${query.toString()}`;
     };
 
+    const chipsFor = (key, options, label) => (filters[key] || []).map((value) => ({
+        key: `${key}:${value}`,
+        label,
+        value: options.find((option) => String(option.id) === String(value))?.name ?? String(value),
+        onRemove: () => apply({
+            [key]: (filters[key] || []).filter((item) => String(item) !== String(value)).length
+                ? (filters[key] || []).filter((item) => String(item) !== String(value))
+                : undefined,
+        }),
+    }));
+
+    const chips = [
+        ...chipsFor('manager_ids', managers, 'Менеджер'),
+        ...chipsFor('organization_ids', organizations, 'Организация'),
+    ];
+
+    if (asOfMode && asOf) {
+        chips.push({
+            key: 'as_of',
+            label: 'На дату',
+            value: humanDate(asOf),
+            onRemove: () => setAsOfDate(''),
+        });
+    }
+
+    if (! asOfMode && (dateFrom || dateTo)) {
+        chips.push({
+            key: 'period',
+            label: 'Плановая дата',
+            value: [humanDate(dateFrom) || '…', humanDate(dateTo) || '…'].join(' — '),
+            onRemove: () => setPeriod({ date_from: '', date_to: '' }),
+        });
+    }
+
+    if (filters.only_overdue) {
+        chips.push({
+            key: 'only_overdue',
+            label: 'Отбор',
+            value: 'только просроченные',
+            onRemove: () => apply({ only_overdue: undefined }),
+        });
+    }
+
     return (
-        <Box borderWidth="1px" borderRadius="lg" p={3} bg="bg.subtle" mb={4}>
-            <Flex gap={3} wrap="wrap" align="end">
-                {asOfMode ? (
-                    <Box>
-                        <Text fontSize="xs" color="fg.muted" mb={1}>На дату</Text>
-                        <HStack gap={2}>
-                            <Input
-                                type="date"
-                                size="sm"
-                                value={asOf}
-                                onChange={(event) => {
-                                    setAsOf(event.target.value);
-                                    apply({ as_of: event.target.value || undefined });
-                                }}
-                                maxW="160px"
-                            />
-                            {asOf && (
+        <>
+            <Box borderWidth="1px" borderRadius="lg" p={4} mb={3} bg="bg.panel">
+                <VStack align="stretch" gap={3}>
+                    <HStack gap={3} align="center" wrap="wrap">
+                        <ScopeToggle section="finance" scope={filters.scope} available={seesAll} />
+
+                        {showGranularity && (
+                            <HStack gap={1}>
+                                {GRANULARITIES.map((item) => (
+                                    <Button
+                                        key={item.value}
+                                        size="xs"
+                                        variant={(filters.granularity || 'week') === item.value ? 'solid' : 'outline'}
+                                        colorPalette={(filters.granularity || 'week') === item.value ? 'pecado' : 'gray'}
+                                        onClick={() => apply({ granularity: item.value })}
+                                    >
+                                        {item.label}
+                                    </Button>
+                                ))}
+                            </HStack>
+                        )}
+
+                        {showOverdueToggle && (
+                            <Checkbox
+                                checked={!! filters.only_overdue}
+                                onCheckedChange={(event) => apply({ only_overdue: event.checked ? 1 : undefined })}
+                            >
+                                <Text fontSize="sm">Только просроченные</Text>
+                            </Checkbox>
+                        )}
+
+                        <Button size="sm" variant="outline" onClick={exportXlsx} ml="auto">
+                            <LuDownload /> XLSX
+                        </Button>
+                    </HStack>
+
+                    {(managers.length > 0 || organizations.length > 0) && (
+                        <Grid
+                            gap={3}
+                            templateColumns={{ base: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' }}
+                        >
+                            {seesAll && managers.length > 0 && (
+                                <MultiSelectFilter
+                                    label="Менеджер"
+                                    options={managers}
+                                    allLabel="Все менеджеры"
+                                    selectedIds={filters.manager_ids || []}
+                                    onChange={(ids) => apply({ manager_ids: ids.length ? ids : undefined })}
+                                    minW="0"
+                                />
+                            )}
+
+                            {organizations.length > 0 && (
+                                <MultiSelectFilter
+                                    label="Организация"
+                                    options={organizations}
+                                    allLabel="Все организации"
+                                    selectedIds={filters.organization_ids || []}
+                                    onChange={(ids) => apply({ organization_ids: ids.length ? ids : undefined })}
+                                    minW="0"
+                                />
+                            )}
+                        </Grid>
+                    )}
+
+                    <Flex gap={4} wrap="wrap" align="center">
+                        {asOfMode ? (
+                            <HStack gap={2} wrap="wrap" align="center">
+                                <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">Баланс на дату</Text>
+
                                 <Button
                                     size="xs"
-                                    variant="outline"
-                                    onClick={() => {
-                                        setAsOf('');
-                                        apply({ as_of: undefined });
-                                    }}
+                                    variant={asOf ? 'outline' : 'solid'}
+                                    colorPalette={asOf ? 'gray' : 'pecado'}
+                                    onClick={() => setAsOfDate('')}
                                 >
                                     Сейчас
                                 </Button>
-                            )}
-                        </HStack>
-                    </Box>
-                ) : (
-                    <>
-                        <Box>
-                            <Text fontSize="xs" color="fg.muted" mb={1}>Плановая дата с</Text>
-                            <Input
-                                type="date"
-                                size="sm"
-                                value={dateFrom}
-                                onChange={(e) => setDateFrom(e.target.value)}
-                                onBlur={() => apply()}
-                                maxW="160px"
+
+                                {AS_OF_PRESETS.map((preset) => (
+                                    <Button
+                                        key={preset.key}
+                                        size="xs"
+                                        variant={asOf === preset.date() ? 'solid' : 'outline'}
+                                        colorPalette={asOf === preset.date() ? 'pecado' : 'gray'}
+                                        onClick={() => setAsOfDate(preset.date())}
+                                    >
+                                        {preset.label}
+                                    </Button>
+                                ))}
+
+                                <Input
+                                    type="date"
+                                    size="sm"
+                                    width="160px"
+                                    aria-label="Баланс на дату"
+                                    value={asOf}
+                                    onChange={(event) => setAsOfDate(event.target.value)}
+                                />
+                            </HStack>
+                        ) : (
+                            <PeriodFilter
+                                from={dateFrom}
+                                to={dateTo}
+                                presets={['thisMonth', 'prevMonth', 'year']}
+                                onChange={setPeriod}
                             />
-                        </Box>
+                        )}
 
-                        <Box>
-                            <Text fontSize="xs" color="fg.muted" mb={1}>по</Text>
-                            <Input
-                                type="date"
-                                size="sm"
-                                value={dateTo}
-                                onChange={(e) => setDateTo(e.target.value)}
-                                onBlur={() => apply()}
-                                maxW="160px"
-                            />
-                        </Box>
-                    </>
-                )}
-
-                <Box pb={1}>
-                    <ScopeToggle section="finance" scope={filters.scope} available={seesAll} />
-                </Box>
-
-                {seesAll && managers.length > 0 && (
-                    <MultiSelectFilter
-                        label="Менеджер"
-                        options={managers}
-                        selectedIds={filters.manager_ids || []}
-                        onChange={(ids) => apply({ manager_ids: ids.length ? ids : undefined })}
-                        minW="180px"
-                    />
-                )}
-
-                {organizations.length > 0 && (
-                    <MultiSelectFilter
-                        label="Организация"
-                        options={organizations}
-                        selectedIds={filters.organization_ids || []}
-                        onChange={(ids) => apply({ organization_ids: ids.length ? ids : undefined })}
-                        minW="180px"
-                    />
-                )}
-
-                {showGranularity && (
-                    <HStack gap={1}>
-                        {GRANULARITIES.map((item) => (
-                            <Button
-                                key={item.value}
-                                size="xs"
-                                variant={(filters.granularity || 'week') === item.value ? 'solid' : 'outline'}
-                                onClick={() => apply({ granularity: item.value })}
-                            >
-                                {item.label}
+                        {chips.length > 0 && (
+                            <Button size="xs" variant="outline" colorPalette="red" onClick={reset} ml="auto">
+                                <LuX /> Сбросить всё
                             </Button>
-                        ))}
-                    </HStack>
-                )}
+                        )}
+                    </Flex>
+                </VStack>
+            </Box>
 
-                {showOverdueToggle && (
-                    <Checkbox
-                        checked={!!filters.only_overdue}
-                        onCheckedChange={(e) => apply({ only_overdue: e.checked ? 1 : undefined })}
-                    >
-                        <Text fontSize="sm">Только просроченные</Text>
-                    </Checkbox>
-                )}
-
-                <HStack gap={2} ml="auto">
-                    <Button size="sm" variant="outline" onClick={reset}>
-                        <LuRotateCcw /> Сбросить
-                    </Button>
-                    <Button size="sm" onClick={exportXlsx}>
-                        <LuDownload /> XLSX
-                    </Button>
-                </HStack>
-            </Flex>
-        </Box>
+            <FilterChips items={chips} onReset={reset} />
+        </>
     );
 }
