@@ -602,6 +602,9 @@ class LedgerPaymentForecastService implements PaymentForecast
             $row['weighted_age'] = $row['overdue_debt'] > SettlementEntry::EPSILON
                 ? (int) round($row['overdue_weight'] / $row['overdue_debt'])
                 : 0;
+            // Приоритет узла считается по его сумме и средневзвешенному
+            // возрасту — по той же матрице, что и приоритет отдельной строки.
+            $row['severity'] = $this->overdueSeverity($row['overdue_debt'], $row['weighted_age']);
 
             // Самая давняя просрочка узла: подпись «столько-то дней назад»
             // отвечает на вопрос «насколько всё запущено» без открытия строк.

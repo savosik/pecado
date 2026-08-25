@@ -309,6 +309,46 @@ class FinanceOverdueTest extends TestCase
         $this->assertSame(39, $props['totals']['weighted_age']);
     }
 
+    /**
+     * Приоритет — абсолютная метка, а не место в текущем отборе.
+     *
+     * Относительная шкала ломалась на перекосе: когда на одного партнёра
+     * приходится три четверти веса, все прочие — включая годовой долг —
+     * оказывались «низкими», и метка переставала быть информацией.
+     */
+    #[Test]
+    public function приоритет_считается_по_сумме_и_возрасту_а_не_по_месту_в_списке(): void
+    {
+        $big = $this->makeClient();
+        $stale = $this->makeClient();
+        $pennies = $this->makeClient();
+
+        $this->overdueLine($big, 900000, 60);    // крупный и не первый месяц
+        $this->overdueLine($stale, 50000, 300);  // мелкий, но висит год
+        $this->overdueLine($pennies, 400, 400);  // мелочь: возраст не поднимает
+
+        $rows = collect($this->props('?group=partner')['groupRows'])->keyBy(
+            fn (array $row): string => (string) round($row['overdue_debt']),
+        );
+
+        $this->assertSame('critical', $rows['900000']['severity']['key']);
+        $this->assertSame('high', $rows['50000']['severity']['key']);
+        // Сумма ограничивает уровень сверху: 400 ₽ — задача на взаимозачёт.
+        $this->assertSame('low', $rows['400']['severity']['key']);
+
+        // Тот же уровень и у отдельной строки списка, по тем же порогам.
+        $line = collect($this->props()['rows']['data'])
+            ->first(fn (array $row): bool => abs($row['unpaid_rub'] - 50000) < 0.01);
+        $this->assertSame('high', $line['severity']['key']);
+
+        // Соседство уровень не меняет: в корзине «более 60 дней» крупного нет,
+        // и мелкий стал самым тяжёлым в отборе — но остался «высоким», а не
+        // «критичным». Относительная шкала здесь перекрасила бы его.
+        $narrow = collect($this->props('?overdue_buckets[]=60_plus&group=partner')['groupRows'])
+            ->first(fn (array $row): bool => abs($row['overdue_debt'] - 50000) < 0.01);
+        $this->assertSame('high', $narrow['severity']['key']);
+    }
+
     /** Сортировка по весу ставит наверх не самое крупное и не самое давнее. */
     #[Test]
     public function сортировка_по_весу_поднимает_дорогое_ожидание(): void

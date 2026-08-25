@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import { usePermission } from '@/shared/Panel/usePermission';
 import { dueHint, formatRub } from './format';
-import OverdueWeight from './OverdueWeight';
+import OverduePriority from './OverdueWeight';
 
 /**
  * Таблица строк ожидаемых поступлений — общая для «Плана» и «Просрочки».
@@ -23,7 +23,6 @@ export default function FinanceRowsTable({
     sortDirection,
     emptyMessage,
     showWeight = false,
-    maxWeight = 0,
 }) {
     const { can } = usePermission();
     const [taskFor, setTaskFor] = useState(null);
@@ -119,14 +118,8 @@ export default function FinanceRowsTable({
         // нет, и колонка была бы пустой.
         ...(showWeight ? [{
             key: 'weight',
-            label: 'Вес',
-            render: (_, row) => (
-                <OverdueWeight
-                    weight={(row.unpaid_rub || 0) * (row.days_overdue || 0)}
-                    max={maxWeight}
-                    age={row.days_overdue}
-                />
-            ),
+            label: 'Приоритет',
+            render: (_, row) => <OverduePriority severity={row.severity} age={row.days_overdue} />,
         }] : []),
         {
             key: 'actions',

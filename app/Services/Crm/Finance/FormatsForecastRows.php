@@ -44,6 +44,45 @@ trait FormatsForecastRows
     ];
 
     /**
+     * Приоритет разбора просрочки: матрица «сумма × возраст».
+     *
+     * Абсолютные пороги, а не место в текущем отборе: «высокий» обязан значить
+     * одно и то же в любом разрезе и в любой день, иначе метка перестаёт быть
+     * информацией. Относительная шкала на нашем перекосе (на одного партнёра
+     * приходится три четверти веса) сводила всех остальных в «низкий», включая
+     * долг годовой давности.
+     *
+     * Мелкая сумма ограничивает уровень сверху: 400 ₽, висящие год, — это
+     * задача на взаимозачёт, а не на взыскание.
+     */
+    public const SEVERITY_AMOUNT_STEPS = [1_000, 10_000, 100_000, 500_000];
+
+    /** Возраст долга в днях: до какого дня включительно попадает строка. */
+    public const SEVERITY_AGE_STEPS = [7, 30, 90];
+
+    /**
+     * Матрица «ступень суммы × ступень возраста» → уровень.
+     *
+     * Строки сверху вниз: до 1 тыс, до 10 тыс, до 100 тыс, до 500 тыс, свыше.
+     * Колонки слева направо: до недели, до месяца, до трёх месяцев, дольше.
+     */
+    public const SEVERITY_MATRIX = [
+        ['low', 'low', 'low', 'low'],
+        ['low', 'low', 'medium', 'medium'],
+        ['low', 'medium', 'medium', 'high'],
+        ['medium', 'medium', 'high', 'critical'],
+        ['medium', 'high', 'critical', 'critical'],
+    ];
+
+    /** Уровень → подпись бейджа и палитра Chakra. */
+    public const SEVERITY_LABELS = [
+        'critical' => ['label' => 'критично', 'palette' => 'red'],
+        'high' => ['label' => 'высокий', 'palette' => 'orange'],
+        'medium' => ['label' => 'средний', 'palette' => 'yellow'],
+        'low' => ['label' => 'низкий', 'palette' => 'gray'],
+    ];
+
+    /**
      * Курсы валют к рублю, code => exchange_rate. Читаются один раз на запрос:
      * строк плана тысячи, а справочник валют — единицы.
      *
@@ -99,6 +138,41 @@ trait FormatsForecastRows
      *
      * @return array<string, mixed>
      */
+    /**
+     * Уровень приоритета по сумме в рублях и возрасту долга в днях.
+     *
+     * Возвращает null для непросроченного: у будущего платежа приоритета
+     * взыскания нет, и «низкий» там читался бы как оценка, а не как пустота.
+     *
+     * @return array{key: string, label: string, palette: string}|null
+     */
+    public function overdueSeverity(float $amountRub, int $days): ?array
+    {
+        if ($days <= 0 || $amountRub <= 0) {
+            return null;
+        }
+
+        $amountStep = 0;
+
+        foreach (self::SEVERITY_AMOUNT_STEPS as $index => $step) {
+            if ($amountRub > $step) {
+                $amountStep = $index + 1;
+            }
+        }
+
+        $ageStep = 0;
+
+        foreach (self::SEVERITY_AGE_STEPS as $index => $step) {
+            if ($days > $step) {
+                $ageStep = $index + 1;
+            }
+        }
+
+        $key = self::SEVERITY_MATRIX[$amountStep][$ageStep];
+
+        return ['key' => $key] + self::SEVERITY_LABELS[$key];
+    }
+
     public function row(object $raw, ?CarbonImmutable $today = null): array
     {
         $today ??= CarbonImmutable::today();
@@ -128,6 +202,12 @@ trait FormatsForecastRows
             'is_overdue' => $isOverdue,
             'days_overdue' => $isOverdue ? (int) $dueDate->diffInDays($today) : 0,
             'days_left' => $dueDate !== null && ! $isOverdue ? (int) $today->diffInDays($dueDate) : null,
+            // Приоритет разбора считается на сервере: пороги должны быть одни
+            // и те же в списке строк, в разрезах и в письмах.
+            'severity' => $this->overdueSeverity(
+                round($this->toRub($unpaid, $raw->currency_code), 2),
+                $isOverdue ? (int) $dueDate->diffInDays($today) : 0,
+            ),
             'stage_name' => $raw->stage_name,
             'organization_name' => $raw->organization_name,
             'manager_name' => $raw->manager_name,
