@@ -94,6 +94,35 @@ class FinanceOverdueTest extends TestCase
             ->viewData('page')['props'];
     }
 
+    /**
+     * Раздел открывается разрезом «партнёр → контрагент»: первый вопрос к
+     * просрочке — «кто должен», а не «какие строки».
+     */
+    #[Test]
+    public function по_умолчанию_показан_разрез_по_партнёрам(): void
+    {
+        $client = $this->makeClient();
+        $this->overdueLine($client, 1000, 10);
+
+        $props = $this->props();
+
+        $this->assertSame('partner', $props['group']);
+        $this->assertNotNull($props['groupRows']);
+        $this->assertSame('partner', $props['groupRows'][0]['axis']);
+
+        // Построчный список выбирается явно — иначе «параметр не передали»
+        // было бы не отличить от «показать строки».
+        $lines = $this->props('?group=none');
+        $this->assertSame('', $lines['group']);
+        $this->assertNull($lines['groupRows']);
+        $this->assertCount(1, $lines['rows']['data']);
+
+        // Разрез и сортировка возвращаются в снимке фильтров: панель отборов
+        // переносит их между запросами именно по нему.
+        $this->assertSame('none', $lines['filters']['group']);
+        $this->assertSame('due_date', $lines['filters']['sort']);
+    }
+
     #[Test]
     public function корзина_задержки_отбирает_строки_и_корзины_в_сумме_дают_итог(): void
     {
@@ -103,7 +132,7 @@ class FinanceOverdueTest extends TestCase
         $this->overdueLine($client, 2000, 20);   // 15–30 дней
         $this->overdueLine($client, 4000, 200);  // более 60 дней
 
-        $all = $this->props();
+        $all = $this->props('?group=none');
         $this->assertEqualsWithDelta(7000.0, $all['totals']['amount'], 0.01);
 
         // Сумма корзин равна итогу: границы диапазонов не перекрываются и не оставляют дыр.
@@ -113,7 +142,7 @@ class FinanceOverdueTest extends TestCase
             0.01,
         );
 
-        $narrow = $this->props('?overdue_buckets[]=15_30');
+        $narrow = $this->props('?group=none&overdue_buckets[]=15_30');
         $this->assertEqualsWithDelta(2000.0, $narrow['totals']['amount'], 0.01);
         $this->assertSame(1, $narrow['totals']['lines']);
 
@@ -134,9 +163,9 @@ class FinanceOverdueTest extends TestCase
         $this->overdueLine($client, 5000, 10);
         $this->overdueLine($client, 0.04, 10);
 
-        $this->assertSame(2, $this->props()['totals']['lines']);
+        $this->assertSame(2, $this->props('?group=none')['totals']['lines']);
 
-        $filtered = $this->props('?min_amount=1');
+        $filtered = $this->props('?group=none&min_amount=1');
         $this->assertSame(1, $filtered['totals']['lines']);
         $this->assertEqualsWithDelta(5000.0, $filtered['totals']['amount'], 0.01);
 
@@ -262,12 +291,12 @@ class FinanceOverdueTest extends TestCase
         $this->overdueLine($client, 500, 100);   // давняя, но мелкая
         $this->overdueLine($client, 9000, 2);    // свежая и крупная
 
-        $bySum = $this->props('?sort=unpaid&direction=desc');
+        $bySum = $this->props('?group=none&sort=unpaid&direction=desc');
         $this->assertSame('unpaid', $bySum['sort']['column']);
         $this->assertEqualsWithDelta(9000.0, $bySum['rows']['data'][0]['unpaid_rub'], 0.01);
 
         // По умолчанию — по сроку: сверху самая давняя.
-        $byDate = $this->props();
+        $byDate = $this->props('?group=none');
         $this->assertEqualsWithDelta(500.0, $byDate['rows']['data'][0]['unpaid_rub'], 0.01);
     }
 
@@ -337,7 +366,7 @@ class FinanceOverdueTest extends TestCase
         $this->assertSame('low', $rows['400']['severity']['key']);
 
         // Тот же уровень и у отдельной строки списка, по тем же порогам.
-        $line = collect($this->props()['rows']['data'])
+        $line = collect($this->props('?group=none')['rows']['data'])
             ->first(fn (array $row): bool => abs($row['unpaid_rub'] - 50000) < 0.01);
         $this->assertSame('high', $line['severity']['key']);
 
@@ -394,7 +423,7 @@ class FinanceOverdueTest extends TestCase
         $this->assertNull($rows[$silent->id]['days_since_payment']);
 
         // То же в построчном списке — там дата берётся по партнёру строки.
-        $lines = collect($this->props()['rows']['data']);
+        $lines = collect($this->props('?group=none')['rows']['data']);
 
         $this->assertSame(
             2,
@@ -415,7 +444,7 @@ class FinanceOverdueTest extends TestCase
         $this->overdueLine($client, 50000, 300);   // 15 000 000
         $this->overdueLine($client, 1000, 400);    //    400 000 — самое давнее
 
-        $rows = $this->props('?sort=weight&direction=desc')['rows']['data'];
+        $rows = $this->props('?group=none&sort=weight&direction=desc')['rows']['data'];
 
         $this->assertEqualsWithDelta(50000.0, $rows[0]['unpaid_rub'], 0.01);
         $this->assertEqualsWithDelta(400000.0, $rows[1]['unpaid_rub'], 0.01);
@@ -429,7 +458,7 @@ class FinanceOverdueTest extends TestCase
         $this->overdueLine($client, 1000, 10);
         $this->overdueLine($client, 5000, 10, ['document_kind' => 'order']);
 
-        $props = $this->props();
+        $props = $this->props('?group=none');
 
         $this->assertSame(1, $props['totals']['lines']);
         $this->assertEqualsWithDelta(1000.0, $props['totals']['amount'], 0.01);
@@ -443,7 +472,8 @@ class FinanceOverdueTest extends TestCase
 
         $props = $this->props('?group=выдумка&overdue_buckets[]=вчера&min_amount=-5&sort=xxx');
 
-        $this->assertSame('', $props['group']);
+        // Мусорный разрез падает в разрез по умолчанию, а не в список строк.
+        $this->assertSame('partner', $props['group']);
         $this->assertSame([], $props['filters']['overdue_buckets']);
         $this->assertSame('due_date', $props['sort']['column']);
         $this->assertEqualsWithDelta(1000.0, $props['totals']['amount'], 0.01);

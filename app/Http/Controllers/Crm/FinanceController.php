@@ -78,10 +78,19 @@ class FinanceController extends CrmController
         $today = CarbonImmutable::today();
 
         // Разрез — форма отчёта, отбор — что в него попадает: то же разделение,
-        // что в балансах, и те же самые разрезы. Пустое значение показывает
-        // построчный список документов.
-        $group = (string) $request->input('group', '');
-        $group = isset(self::BALANCE_VIEWS[$group]) ? $group : '';
+        // что в балансах, и те же самые разрезы.
+        //
+        // По умолчанию раздел открывается разрезом «партнёр → контрагент»:
+        // первый вопрос к просрочке — «кто должен», а не «какие строки»;
+        // построчный список нужен уже после того, как виноватый найден.
+        // Он выбирается явным `group=none` — иначе отличить «показать строки»
+        // от «параметр не передали» было бы нечем.
+        $group = (string) $request->input('group', 'partner');
+        $group = match (true) {
+            $group === 'none' => '',
+            isset(self::BALANCE_VIEWS[$group]) => $group,
+            default => 'partner',
+        };
 
         $query = $this->forecast->applyOverdueFilters(
             $this->forecast->overdueOnly($this->forecast->plannedQuery($clients, $filters), $today),
@@ -96,6 +105,15 @@ class FinanceController extends CrmController
 
         $rows->through(fn (object $row): array => $this->forecast->row($row, $today));
         $this->attachLastPayments($rows, $today);
+
+        $shared = $this->sharedOptions($request, $filters);
+
+        // Разрез и сортировка возвращаются в снимке фильтров: панель отборов
+        // переносит их между запросами по этому снимку, и без них клик по
+        // «Менеджеру» сбрасывал бы и разрез, и порядок строк.
+        $shared['filters']['group'] = $group === '' ? 'none' : $group;
+        $shared['filters']['sort'] = $this->overdueSort($request)['column'];
+        $shared['filters']['direction'] = $this->overdueSort($request)['direction'];
 
         return Inertia::render('Crm/Pages/Finance/Overdue', [
             'rows' => $rows,
@@ -117,7 +135,7 @@ class FinanceController extends CrmController
             // значило бы получить два разных числа на одном экране.
             'debtTotal' => $this->overdueDebtTotal($clients, $filters),
             'sort' => $this->overdueSort($request),
-            ...$this->sharedOptions($request, $filters),
+            ...$shared,
         ]);
     }
 

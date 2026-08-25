@@ -41,7 +41,7 @@ export default function FinanceOverdue({
     totals = {},
     debtTotal = 0,
     aging = null,
-    group = '',
+    group = 'partner',
     groups = [],
     groupRows = null,
     sort = { column: 'due_date', direction: 'asc' },
@@ -290,11 +290,14 @@ export default function FinanceOverdue({
             <HStack gap={2} wrap="wrap" mb={3} px={1}>
                 <Text fontSize="xs" color="fg.muted">Показать:</Text>
 
+                {/* Явное `none`, а не пустое значение: раздел открывается
+                    разрезом по партнёрам, и «параметр не передали» здесь
+                    означает как раз его, а не список строк. */}
                 <Button
                     size="xs"
                     variant={group === '' ? 'solid' : 'outline'}
                     colorPalette={group === '' ? 'pecado' : 'gray'}
-                    onClick={() => patchQuery({ group: undefined })}
+                    onClick={() => patchQuery({ group: 'none' })}
                 >
                     Строками
                 </Button>
