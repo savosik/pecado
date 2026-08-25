@@ -385,6 +385,12 @@ class CollectionForecastService
                 'promised' => 0.0,
                 'expected' => 0.0,
                 'overdue' => 0.0,
+                // Разбивка «срок впереди / срок нарушен»: она объясняет,
+                // почему ожидание именно такое, и без неё вероятность
+                // выглядит взятой с потолка.
+                'upcoming_promised' => 0.0,
+                'upcoming_expected' => 0.0,
+                'overdue_expected' => 0.0,
                 'lines_count' => 0,
                 'discipline' => $discipline[$userId] ?? self::DISCIPLINE['silent'] + ['key' => 'silent'],
             ];
@@ -395,13 +401,18 @@ class CollectionForecastService
 
             if ($due->lessThan($today)) {
                 $rows[$userId]['overdue'] += $amount;
+                $rows[$userId]['overdue_expected'] += $amount * $probability;
+            } else {
+                $rows[$userId]['upcoming_promised'] += $amount;
+                $rows[$userId]['upcoming_expected'] += $amount * $probability;
             }
         }
 
         $rows = array_map(static function (array $row): array {
-            $row['promised'] = round($row['promised'], 2);
-            $row['expected'] = round($row['expected'], 2);
-            $row['overdue'] = round($row['overdue'], 2);
+            foreach (['promised', 'expected', 'overdue', 'upcoming_promised', 'upcoming_expected', 'overdue_expected'] as $key) {
+                $row[$key] = round($row[$key], 2);
+            }
+
             $row['probability'] = $row['promised'] > 0 ? round($row['expected'] / $row['promised'], 4) : 0.0;
 
             return $row;

@@ -165,6 +165,43 @@ class FinanceForecastTest extends TestCase
         $this->assertGreaterThan($rows[$silent->id]['expected'] * 5, $rows[$reliable->id]['expected']);
     }
 
+    /**
+     * Разбивка «срок впереди / срок нарушен» объясняет вероятность.
+     *
+     * Без неё число в колонке выглядит взятым с потолка: подсказка строки
+     * собирается именно из этих полей, и они обязаны сходиться с итогом.
+     */
+    #[Test]
+    public function разбивка_ожидания_сходится_с_итогом(): void
+    {
+        $client = $this->client();
+        $this->payment($client, 5000, 2);
+        $this->plan($client, 200000, 5);    // срок впереди
+        $this->plan($client, 100000, -40);  // срок нарушен
+
+        $row = collect($this->service()->forecastByPartner(
+            $this->clients(),
+            $this->filters(),
+            CarbonImmutable::today()->addDays(10),
+        ))->firstWhere('entity_id', $client->id);
+
+        $this->assertEqualsWithDelta(200000.0, $row['upcoming_promised'], 0.01);
+        $this->assertEqualsWithDelta(100000.0, $row['overdue'], 0.01);
+
+        // Части складываются в целое — иначе подсказка противоречила бы колонке.
+        $this->assertEqualsWithDelta(
+            $row['expected'],
+            $row['upcoming_expected'] + $row['overdue_expected'],
+            0.01,
+        );
+
+        // Просроченная часть взвешена строже будущей при равной дисциплине.
+        $this->assertGreaterThan(
+            $row['overdue_expected'] / $row['overdue'],
+            $row['upcoming_expected'] / $row['upcoming_promised'],
+        );
+    }
+
     /** Просроченное обещание дешевеет с возрастом, а не пропадает. */
     #[Test]
     public function просроченная_строка_взвешивается_ниже_свежей(): void

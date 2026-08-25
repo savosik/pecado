@@ -199,10 +199,30 @@ export default function FinancePlan({
                         <Table.Header>
                             <Table.Row>
                                 <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="end">Ожидаем</Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="end">Обещано</Table.ColumnHeader>
-                                <Table.ColumnHeader width="130px">Вероятность</Table.ColumnHeader>
-                                <Table.ColumnHeader>Дисциплина</Table.ColumnHeader>
+                                <Table.ColumnHeader textAlign="end">
+                                    <ColumnLabel
+                                        label="Ожидаем"
+                                        hint="Сколько денег от этого партнёра реально придёт к выбранной дате. Это «обещано», уменьшенное на то, как партнёр платит на самом деле: тот, кто платит вовремя, отдаёт почти всё обещанное, а тот, кто молчит месяцами, — малую часть. Именно эти суммы складываются в прогноз наверху страницы."
+                                    />
+                                </Table.ColumnHeader>
+                                <Table.ColumnHeader textAlign="end">
+                                    <ColumnLabel
+                                        label="Обещано"
+                                        hint="Сколько партнёр должен заплатить к этой дате по графику из 1С — сумма его плановых строк со сроком не позже выбранного дня. Это обязательство на бумаге, а не деньги: в бюджет его переносить нельзя, потому что часть партнёров платит позже срока, а часть не платит вовсе."
+                                    />
+                                </Table.ColumnHeader>
+                                <Table.ColumnHeader width="130px">
+                                    <ColumnLabel
+                                        label="Вероятность"
+                                        hint="Какая доля обещанного дойдёт до счёта: «ожидаем», делённое на «обещано». Складывается из двух вещей — как партнёр платит вообще (колонка «Дисциплина») и не нарушен ли срок уже сейчас: просроченное обещание стоит дешевле нового, и чем дольше оно висит, тем дешевле. Наведите на само число, чтобы увидеть расчёт по этому партнёру."
+                                    />
+                                </Table.ColumnHeader>
+                                <Table.ColumnHeader>
+                                    <ColumnLabel
+                                        label="Дисциплина"
+                                        hint="Как партнёр платит в последнее время — по фактам из 1С, без ручных оценок. «Платит вовремя» — деньги приходили в последний месяц и просрочки нет; «платит с задержкой» — платит, но какие-то сроки уже нарушил; «платежи затухают» — последний платёж был больше месяца назад; «не платит» — тишина дольше трёх месяцев или платежей не было вовсе."
+                                    />
+                                </Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="end">Просрочено</Table.ColumnHeader>
                                 <Table.ColumnHeader>Последний платёж</Table.ColumnHeader>
                             </Table.Row>
@@ -259,9 +279,12 @@ export default function FinancePlan({
                                                     width={`${Math.round(partner.probability * 100)}%`}
                                                 />
                                             </Box>
-                                            <Text fontSize="10px" color="fg.muted">
-                                                {Math.round(partner.probability * 100)}%
-                                            </Text>
+                                            <HStack gap={1}>
+                                                <Text fontSize="10px" color="fg.muted">
+                                                    {Math.round(partner.probability * 100)}%
+                                                </Text>
+                                                <MetricHint text={probabilityBreakdown(partner)} label="Как получилось это число" />
+                                            </HStack>
                                         </HStack>
                                     </Table.Cell>
 
@@ -299,6 +322,43 @@ export default function FinancePlan({
         </CrmLayout>
     );
 }
+
+/** Заголовок колонки с пояснением: без него цифры выглядят взятыми с потолка. */
+const ColumnLabel = ({ label, hint }) => (
+    <HStack gap={1} justify="inherit">
+        <Text fontSize="xs">{label}</Text>
+        <MetricHint text={hint} />
+    </HStack>
+);
+
+/**
+ * Расчёт вероятности для конкретного партнёра — словами и числами.
+ *
+ * Общее объяснение в заголовке колонки отвечает «как считается вообще»,
+ * а этот текст — «почему у него именно столько», и без второго первое
+ * обычно не помогает.
+ */
+const probabilityBreakdown = (partner) => {
+    const parts = [`Партнёр ${partner.discipline?.label ?? 'без истории платежей'}.`];
+
+    if (partner.upcoming_promised > 0) {
+        parts.push(
+            `Со сроком впереди — ${formatCompact(partner.upcoming_promised)}, из них ждём ${formatCompact(partner.upcoming_expected)}.`,
+        );
+    }
+
+    if (partner.overdue > 0) {
+        parts.push(
+            `Уже просрочено ${formatCompact(partner.overdue)} — из просроченного ждём только ${formatCompact(partner.overdue_expected)}: чем дольше висит долг, тем меньше шансов, что его закроют сейчас.`,
+        );
+    }
+
+    parts.push(
+        `Итого ${formatCompact(partner.expected)} из ${formatCompact(partner.promised)} — это ${Math.round(partner.probability * 100)}%.`,
+    );
+
+    return parts.join(' ');
+};
 
 /** Даты, о которых спрашивают чаще всего: закрытие недели, месяца и квартала. */
 const TARGET_PRESETS = [
