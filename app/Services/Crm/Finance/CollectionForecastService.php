@@ -59,7 +59,19 @@ class CollectionForecastService
     ];
 
     /** Опорные горизонты калибровки в днях: между ними интерполируем. */
-    public const HORIZONS = [7, 14, 30, 45, 60, 90];
+    public const HORIZONS = [1, 3, 7, 14, 30, 45, 60, 90];
+
+    /**
+     * Полураспад веса наблюдения: месяц-полтора назад данные значат вдвое
+     * меньше сегодняшних.
+     *
+     * Обучение на всей истории с равными весами давало систематическое
+     * завышение на четверть: весной приходило 12–15 млн в месяц, летом
+     * 9–10, и модель тянула прогноз к прошлому уровню. Полностью обрезать
+     * историю тоже нельзя — на десятке наблюдений коридор становится
+     * бессмысленным.
+     */
+    private const WEIGHT_HALF_LIFE_DAYS = 45;
 
     /**
      * Платёжная дисциплина партнёров: класс, последний платёж, есть ли
@@ -129,11 +141,12 @@ class CollectionForecastService
      * наблюдаемое отношение факт/обещание, а вероятности остались там, где
      * они полезны, — в распределении суммы между партнёрами.
      *
-     * Отношение растёт с горизонтом (за 14 дней 1,08, за 60 — уже 2,06):
-     * график из 1С короткий, и чем дальше дата, тем большую часть прихода
-     * дают документы, которых на момент прогноза ещё не существовало.
+     * Модель на каждый горизонт — линейная: «столько-то придёт независимо от
+     * графика, плюс такая-то доля обещанного». Свободный член растёт с
+     * горизонтом, потому что график из 1С короткий: чем дальше дата, тем
+     * большую часть прихода дают документы, которых ещё не существует.
      *
-     * @return array{ratios: array<int, array{days: int, low: float, mid: float, high: float, samples: int}>, weeks: int}
+     * @return array{models: array<int, array<string, float|int>>, weeks: int}
      */
     public function calibration(?CarbonImmutable $today = null): array
     {
@@ -147,7 +160,7 @@ class CollectionForecastService
     }
 
     /**
-     * @return array{ratios: array<int, array{days: int, low: float, mid: float, high: float, samples: int}>, weeks: int}
+     * @return array{models: array<int, array<string, float|int>>, weeks: int}
      */
     private function buildCalibration(CarbonImmutable $today): array
     {
@@ -175,19 +188,23 @@ class CollectionForecastService
             ->pluck('amount', 'day')
             ->all();
 
-        // Первая неделя, от которой есть смысл считать: история платежей
-        // начинается вместе с переходом на регистр, до неё сравнивать нечего.
         $firstPayment = $payments === [] ? null : min(array_keys($payments));
-        $ratios = [];
-        $weeks = 0;
+        $models = [];
+        $observations = 0;
 
         foreach (self::HORIZONS as $days) {
-            $samples = [];
+            $pairs = [];
             $start = $firstPayment !== null
                 ? CarbonImmutable::parse($firstPayment)->addMonth()->startOfWeek()
                 : $today;
 
-            for ($t = $start; $t->lessThanOrEqualTo($today->subDays($days)); $t = $t->addWeek()) {
+            // Короткие горизонты набирают статистику по дням, длинные — по
+            // неделям: недельный шаг на однодневном окне дал бы три десятка
+            // наблюдений вместо двух сотен, а дневной на 90-дневном — почти
+            // одинаковые перекрывающиеся выборки.
+            $step = $days <= 7 ? 1 : 7;
+
+            for ($t = $start; $t->lessThanOrEqualTo($today->subDays($days)); $t = $t->addDays($step)) {
                 $from = $t->toDateString();
                 $to = $t->addDays($days)->toDateString();
 
@@ -199,10 +216,6 @@ class CollectionForecastService
                     }
                 }
 
-                if ($promised <= 0) {
-                    continue;
-                }
-
                 $fact = 0.0;
 
                 foreach ($payments as $day => $amount) {
@@ -211,67 +224,126 @@ class CollectionForecastService
                     }
                 }
 
-                $samples[] = ['promised' => $promised, 'ratio' => $fact / $promised];
+                $pairs[] = [
+                    'promised' => $promised,
+                    'fact' => $fact,
+                    'weight' => 2 ** (-$t->diffInDays($today) / self::WEIGHT_HALF_LIFE_DAYS),
+                ];
             }
 
-            // Недели, где график почти пуст, выбрасываются: деление живого
-            // факта на копеечное обещание давало отношения вроде 11,5 и
-            // растягивало коридор до бессмыслицы.
-            $median = $this->medianOf(array_column($samples, 'promised'));
-            $samples = array_column(array_filter(
-                $samples,
-                static fn (array $sample): bool => $sample['promised'] >= $median * 0.2,
-            ), 'ratio');
-
-            sort($samples);
-            $count = count($samples);
-            $weeks = max($weeks, $count);
-
-            // Меньше пяти наблюдений — статистики нет; отдаём нейтральное
-            // отношение и честно показываем, на чём оно посчитано.
-            $ratios[$days] = $count < 5
-                ? ['days' => $days, 'low' => 0.8, 'mid' => 1.0, 'high' => 1.3, 'samples' => $count]
-                : [
-                    'days' => $days,
-                    // P05/P95, а не P10/P90: прогон по истории показал, что
-                    // узкий коридор ловил факт лишь в 59% недель — для числа,
-                    // которое несут в бюджет, это негодная надёжность.
-                    'low' => round($samples[(int) floor($count * 0.05)], 3),
-                    'mid' => round($samples[(int) floor($count * 0.5)], 3),
-                    'high' => round($samples[min($count - 1, (int) round($count * 0.95))], 3),
-                    'samples' => $count,
-                ];
+            $models[$days] = $this->fitModel($days, $pairs);
+            $observations = max($observations, count($pairs));
         }
 
-        return ['ratios' => $ratios, 'weeks' => $weeks];
+        return ['models' => $models, 'weeks' => $observations];
     }
 
     /**
-     * Медиана списка — для отбраковки вырожденных наблюдений.
+     * Линейная регрессия «факт ≈ base + slope × обещанное» на исторических окнах.
      *
-     * @param  list<float>  $values
+     * Почему не просто отношение факт/обещание: когда график почти пуст —
+     * а на день-два вперёд он пуст почти всегда, — мультипликативная модель
+     * даёт ноль, хотя деньги идут. Свободный член и есть тот поток, который
+     * от графика не зависит: внеплановые платежи, погашение просрочки и
+     * оплата документов, выставленных уже после прогноза. Прогон по истории:
+     * медианная ошибка на 60 днях 9% против 25% у отношения.
+     *
+     * @param  list<array{promised: float, fact: float, weight: float}>  $pairs
+     * @return array{days: int, base: float, slope: float, low: float, high: float, samples: int}
      */
-    private function medianOf(array $values): float
+    private function fitModel(int $days, array $pairs): array
+    {
+        $count = count($pairs);
+
+        // Статистики нет — верим графику как есть и честно показываем ноль
+        // наблюдений: выдуманный коэффициент хуже отсутствующего.
+        if ($count < 5) {
+            return ['days' => $days, 'base' => 0.0, 'slope' => 1.0, 'low' => 0.8, 'high' => 1.3, 'samples' => $count];
+        }
+
+        $totalWeight = array_sum(array_column($pairs, 'weight'));
+        $meanPromised = array_sum(array_map(static fn (array $p): float => $p['promised'] * $p['weight'], $pairs)) / $totalWeight;
+        $meanFact = array_sum(array_map(static fn (array $p): float => $p['fact'] * $p['weight'], $pairs)) / $totalWeight;
+
+        $covariance = 0.0;
+        $variance = 0.0;
+
+        foreach ($pairs as $pair) {
+            $covariance += $pair['weight'] * ($pair['promised'] - $meanPromised) * ($pair['fact'] - $meanFact);
+            $variance += $pair['weight'] * ($pair['promised'] - $meanPromised) ** 2;
+        }
+
+        // Отрицательный наклон — шум короткого окна: график не может
+        // уменьшать ожидаемый приход.
+        $slope = $variance > 0 ? max(0.0, $covariance / $variance) : 0.0;
+        $base = max(0.0, $meanFact - $slope * $meanPromised);
+
+        // Коридор — из фактических отклонений: во сколько раз приход
+        // отличался от предсказанного. Мультипликативные квантили, а не
+        // абсолютные: они переносятся на другой объём плана.
+        $errors = [];
+
+        foreach ($pairs as $pair) {
+            $predicted = $base + $slope * $pair['promised'];
+
+            if ($predicted > 0) {
+                $errors[] = ['ratio' => $pair['fact'] / $predicted, 'weight' => $pair['weight']];
+            }
+        }
+
+        $low = $this->weightedQuantile($errors, 0.05);
+        $high = $this->weightedQuantile($errors, 0.95);
+
+        // Наблюдения перекрываются (окно шире шага), поэтому разброс по ним
+        // занижен. Коридор не может быть уже разумного минимума — иначе
+        // экран обещал бы точность, которой у восьми месяцев истории нет.
+        return [
+            'days' => $days,
+            'base' => round($base, 2),
+            'slope' => round($slope, 4),
+            'low' => round(min($low, 0.65), 3),
+            'high' => round(max($high, 1.45), 3),
+            'samples' => $count,
+        ];
+    }
+
+    /**
+     * Взвешенный квантиль: свежие наблюдения весят больше старых.
+     *
+     * @param  list<array{ratio: float, weight: float}>  $values
+     */
+    private function weightedQuantile(array $values, float $quantile): float
     {
         if ($values === []) {
-            return 0.0;
+            return $quantile < 0.5 ? 0.8 : 1.3;
         }
 
-        sort($values);
+        usort($values, static fn (array $a, array $b): int => $a['ratio'] <=> $b['ratio']);
 
-        return $values[(int) floor(count($values) / 2)];
+        $target = array_sum(array_column($values, 'weight')) * $quantile;
+        $accumulated = 0.0;
+
+        foreach ($values as $value) {
+            $accumulated += $value['weight'];
+
+            if ($accumulated >= $target) {
+                return $value['ratio'];
+            }
+        }
+
+        return end($values)['ratio'];
     }
 
     /**
-     * Отношение факт/обещание для произвольного горизонта: между опорными
-     * точками — линейная интерполяция, дальше последней — продление роста.
+     * Модель для произвольного горизонта: между опорными точками —
+     * интерполяция, дальше последней — продление базового потока.
      *
-     * @param  array{ratios: array<int, array<string, float|int>>, weeks: int}  $calibration
-     * @return array{low: float, mid: float, high: float, samples: int, extrapolated: bool}
+     * @param  array{models: array<int, array<string, float|int>>, weeks: int}  $calibration
+     * @return array{base: float, slope: float, low: float, high: float, samples: int, extrapolated: bool}
      */
-    public function ratioFor(array $calibration, int $days): array
+    public function modelFor(array $calibration, int $days): array
     {
-        $points = $calibration['ratios'];
+        $points = $calibration['models'];
         $horizons = array_keys($points);
         sort($horizons);
 
@@ -279,22 +351,13 @@ class CollectionForecastService
         $last = $horizons[count($horizons) - 1];
 
         if ($days <= $first) {
-            return $points[$first] + ['extrapolated' => false];
+            return $this->modelPoint($points[$first], $days / max($first, 1), false);
         }
 
         if ($days >= $last) {
-            // За пределами истории отношение продлевается пропорционально
-            // горизонту: дальше 60–90 дней проверять было не на чем, и экран
-            // обязан пометить такой прогноз как экстраполяцию.
-            $scale = $days / $last;
-
-            return [
-                'low' => round($points[$last]['low'] * $scale, 3),
-                'mid' => round($points[$last]['mid'] * $scale, 3),
-                'high' => round($points[$last]['high'] * $scale, 3),
-                'samples' => $points[$last]['samples'],
-                'extrapolated' => $days > $last,
-            ];
+            // За пределами истории растёт только независимый от графика поток:
+            // он пропорционален времени, а чувствительность к графику — нет.
+            return $this->modelPoint($points[$last], $days / $last, $days > $last);
         }
 
         foreach ($horizons as $index => $horizon) {
@@ -304,17 +367,38 @@ class CollectionForecastService
 
             $prev = $horizons[$index - 1];
             $weight = ($days - $prev) / ($horizon - $prev);
+            $mix = static fn (string $key): float => $points[$prev][$key] + ($points[$horizon][$key] - $points[$prev][$key]) * $weight;
 
             return [
-                'low' => round($points[$prev]['low'] + ($points[$horizon]['low'] - $points[$prev]['low']) * $weight, 3),
-                'mid' => round($points[$prev]['mid'] + ($points[$horizon]['mid'] - $points[$prev]['mid']) * $weight, 3),
-                'high' => round($points[$prev]['high'] + ($points[$horizon]['high'] - $points[$prev]['high']) * $weight, 3),
-                'samples' => min($points[$prev]['samples'], $points[$horizon]['samples']),
+                'base' => round($mix('base'), 2),
+                'slope' => round($mix('slope'), 4),
+                'low' => round($mix('low'), 3),
+                'high' => round($mix('high'), 3),
+                'samples' => (int) min($points[$prev]['samples'], $points[$horizon]['samples']),
                 'extrapolated' => false,
             ];
         }
 
-        return $points[$last] + ['extrapolated' => true];
+        return $this->modelPoint($points[$last], 1.0, true);
+    }
+
+    /**
+     * Опорная точка, растянутая по времени: базовый поток масштабируется,
+     * наклон остаётся.
+     *
+     * @param  array<string, float|int>  $point
+     * @return array{base: float, slope: float, low: float, high: float, samples: int, extrapolated: bool}
+     */
+    private function modelPoint(array $point, float $scale, bool $extrapolated): array
+    {
+        return [
+            'base' => round($point['base'] * $scale, 2),
+            'slope' => (float) $point['slope'],
+            'low' => (float) $point['low'],
+            'high' => (float) $point['high'],
+            'samples' => (int) $point['samples'],
+            'extrapolated' => $extrapolated,
+        ];
     }
 
     /**
@@ -336,17 +420,28 @@ class CollectionForecastService
         $horizon = $this->planHorizon($lines);
         $discipline = $this->discipline($clients, $today);
 
-        // Обещанное по дням: просроченное ждём сегодня, иначе кривая
-        // начиналась бы с нуля при живом долге. Рядом — то же, взвешенное на
-        // дисциплину: это ровно сумма таблицы «от кого ждём», и она обязана
-        // сходиться с разложением в шапке.
+        // В прогноз идут только сроки, которые ещё не наступили.
+        //
+        // Просроченное сюда не подмешивается, и это принципиально: раньше оно
+        // сносилось на сегодня, и прогноз «на завтра» показывал 2,6 млн, из
+        // которых 98% — старый долг. Такой день в истории случался один раз
+        // на 196. Возврат просрочки не потерян — он сидит в коэффициенте:
+        // тот считался как «факт периода / обещания с будущим сроком», а факт
+        // включал в себя и погашение старых долгов.
         $byDay = [];
+        $overdue = 0.0;
 
         foreach ($lines as $line) {
             $due = CarbonImmutable::parse($line->due_date);
-            $day = ($due->lessThan($today) ? $today : $due)->toDateString();
             $amount = (float) $line->unpaid;
 
+            if ($due->lessThan($today)) {
+                $overdue += $amount;
+
+                continue;
+            }
+
+            $day = $due->toDateString();
             $byDay[$day] ??= ['promised' => 0.0, 'by_discipline' => 0.0];
             $byDay[$day]['promised'] += $amount;
             $byDay[$day]['by_discipline'] += $amount * $this->lineProbability($line, $discipline, $today);
@@ -366,8 +461,8 @@ class CollectionForecastService
             $byDiscipline += $day['by_discipline'];
 
             $days = max(1, (int) $today->diffInDays($cursor));
-            $ratio = $this->ratioFor($calibration, $days);
-            $total = $promised * $ratio['mid'];
+            $model = $this->modelFor($calibration, $days);
+            $total = $model['base'] + $model['slope'] * $promised;
 
             $curve[] = [
                 'date' => $cursor->toDateString(),
@@ -376,8 +471,8 @@ class CollectionForecastService
                 // Сколько из обещанного ждём по дисциплине партнёров — сумма
                 // построчной таблицы на тот же день.
                 'by_discipline' => round($byDiscipline, 2),
-                'low' => round($promised * $ratio['low'], 2),
-                'high' => round($promised * $ratio['high'], 2),
+                'low' => round($total * $model['low'], 2),
+                'high' => round($total * $model['high'], 2),
                 // Остальное — оплата документов, которых ещё нет, и возврат
                 // тех долгов, которые модель по дисциплине списала.
                 'beyond_plan' => round(max(0.0, $total - $byDiscipline), 2),
@@ -389,7 +484,7 @@ class CollectionForecastService
 
         $atTarget = $this->pointAt($curve, $target);
         $days = max(1, (int) $today->diffInDays($target));
-        $ratio = $this->ratioFor($calibration, $days);
+        $model = $this->modelFor($calibration, $days);
 
         return [
             'target' => $target->toDateString(),
@@ -399,14 +494,17 @@ class CollectionForecastService
             'horizon_label' => $horizon?->format('d.m.Y'),
             'promised' => $atTarget['promised'],
             'by_discipline' => $atTarget['by_discipline'],
+            // Справкой, а не слагаемым: просрочка живёт в разделе «Просрочка»,
+            // а её возврат уже учтён коэффициентом.
+            'overdue' => round($overdue, 2),
             'beyond_plan' => $atTarget['beyond_plan'],
             'total' => $atTarget['total'],
             'low' => $atTarget['low'],
             'high' => $atTarget['high'],
-            'ratio' => $ratio,
+            'model' => $model,
             'calibration' => [
-                'weeks' => $calibration['weeks'],
-                'ratios' => array_values($calibration['ratios']),
+                'observations' => $calibration['weeks'],
+                'models' => array_values($calibration['models']),
             ],
             'curve' => $curve,
         ];
@@ -463,17 +561,20 @@ class CollectionForecastService
                 'discipline' => $discipline[$userId] ?? self::DISCIPLINE['silent'] + ['key' => 'silent'],
             ];
 
+            // Просроченное в ожидание не входит — та же граница, что в шапке,
+            // иначе таблица и прогноз считали бы разное. Но сумму долга по
+            // партнёру показываем: без неё не видно, с кем разговор особый.
+            if ($due->lessThan($today)) {
+                $rows[$userId]['overdue'] += $amount;
+
+                continue;
+            }
+
             $rows[$userId]['promised'] += $amount;
             $rows[$userId]['expected'] += $amount * $probability;
             $rows[$userId]['lines_count']++;
-
-            if ($due->lessThan($today)) {
-                $rows[$userId]['overdue'] += $amount;
-                $rows[$userId]['overdue_expected'] += $amount * $probability;
-            } else {
-                $rows[$userId]['upcoming_promised'] += $amount;
-                $rows[$userId]['upcoming_expected'] += $amount * $probability;
-            }
+            $rows[$userId]['upcoming_promised'] += $amount;
+            $rows[$userId]['upcoming_expected'] += $amount * $probability;
         }
 
         $rows = array_map(static function (array $row): array {

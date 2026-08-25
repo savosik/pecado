@@ -222,32 +222,42 @@ class FinanceForecastTest extends TestCase
         );
     }
 
-    /** Просроченное обещание дешевеет с возрастом, а не пропадает. */
+    /**
+     * Просроченное в ожидание не входит — ни в шапке, ни в строке партнёра.
+     *
+     * Раньше оно сносилось на сегодня и попадало в короткий горизонт целиком:
+     * прогноз «на завтра» показывал 2,6 млн, из которых 98% — старый долг.
+     * Такой день в истории случался один раз на 196. Возврат просрочки не
+     * потерян: он сидит в потоке, не зависящем от графика.
+     */
     #[Test]
-    public function просроченная_строка_взвешивается_ниже_свежей(): void
+    public function просроченное_показывается_справкой_а_не_ожиданием(): void
     {
-        $fresh = $this->client();
-        $this->payment($fresh, 5000, 2);
-        $this->plan($fresh, 100000, 3);
+        $client = $this->client();
+        $this->payment($client, 5000, 2);
+        $this->plan($client, 50000, 3);      // срок впереди
+        $this->plan($client, 900000, -60);   // просрочено два месяца
 
-        $late = $this->client();
-        $this->payment($late, 5000, 2);
-        $this->plan($late, 100000, -20);      // просрочка две недели с лишним
-
-        $ancient = $this->client();
-        $this->payment($ancient, 5000, 2);
-        $this->plan($ancient, 100000, -200);  // висит больше полугода
-
-        $rows = collect($this->service()->forecastByPartner(
+        $forecast = $this->service()->forecast(
             $this->clients(),
             $this->filters(),
             CarbonImmutable::today()->addDays(10),
-        ))->keyBy('entity_id');
+        );
 
-        // Свежая строка — базовая вероятность класса, просроченные — с затуханием.
-        $this->assertGreaterThan($rows[$late->id]['expected'], $rows[$fresh->id]['expected']);
-        $this->assertGreaterThan($rows[$ancient->id]['expected'], $rows[$late->id]['expected']);
-        $this->assertGreaterThan(0.0, $rows[$ancient->id]['expected']);
+        // Обещанным считается только то, чей срок ещё не наступил.
+        $this->assertEqualsWithDelta(50000.0, $forecast['promised'], 0.01);
+        $this->assertEqualsWithDelta(900000.0, $forecast['overdue'], 0.01);
+        $this->assertLessThan(200000.0, $forecast['total'], 'Просрочка не может стать прогнозом на неделю.');
+
+        $row = collect($this->service()->forecastByPartner(
+            $this->clients(),
+            $this->filters(),
+            CarbonImmutable::today()->addDays(10),
+        ))->firstWhere('entity_id', $client->id);
+
+        $this->assertEqualsWithDelta(50000.0, $row['promised'], 0.01);
+        $this->assertEqualsWithDelta(900000.0, $row['overdue'], 0.01);
+        $this->assertLessThan(50000.0, $row['expected']);
     }
 
     /** Строки со сроком позже выбранной даты в ответ на неё не попадают. */
@@ -296,10 +306,9 @@ class FinanceForecastTest extends TestCase
         );
 
         $this->assertEqualsWithDelta(100000.0, $forecast['promised'], 0.01);
-        // Коэффициент около двух — ровно то, что показывала история.
-        $this->assertGreaterThan(1.5, $forecast['ratio']['mid']);
+        // История показывала приход вдвое выше обещанного — прогноз это учёл.
         $this->assertGreaterThan($forecast['promised'] * 1.5, $forecast['total']);
-        $this->assertGreaterThan(5, $forecast['ratio']['samples']);
+        $this->assertGreaterThan(5, $forecast['model']['samples']);
     }
 
     /**
@@ -320,7 +329,7 @@ class FinanceForecastTest extends TestCase
 
         $this->assertEqualsWithDelta(100000.0, $forecast['promised'], 0.01);
         $this->assertEqualsWithDelta(100000.0, $forecast['total'], 0.01);
-        $this->assertSame(0, $forecast['ratio']['samples']);
+        $this->assertSame(0, $forecast['model']['samples']);
     }
 
     /**

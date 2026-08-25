@@ -123,7 +123,7 @@ export default function FinancePlan({
                             <Text fontSize="xs" color="fg.muted">
                                 Ожидаем к {forecast.target_label}
                             </Text>
-                            <MetricHint text="Сумма, которую реально ждём на счетах к этой дате. Считается от обещанного графиком, умноженного на коэффициент, снятый с собственной истории: за такой же срок в прошлом приходило во столько раз больше или меньше, чем обещал график на тот момент. Модель проверена прогоном по неделям — средняя ошибка около 20%, систематического завышения нет." />
+                            <MetricHint text="Сумма, которую реально ждём на счетах к этой дате. Модель снята с собственной истории: приход за период складывается из потока, не зависящего от графика (внеплановые платежи, погашение долгов, оплата будущих отгрузок), и доли того, что график обещает. Просроченные строки в обещанное не входят — их возврат уже сидит в первой части. Проверено прогоном по истории." />
                         </HStack>
                         <Text fontSize="3xl" fontWeight="700" lineHeight="1.1">
                             {formatRub(forecast.total)}
@@ -131,6 +131,14 @@ export default function FinancePlan({
                         <Text fontSize="xs" color="fg.muted">
                             через {forecast.days_ahead} дн. · коридор {formatCompact(forecast.low)} — {formatCompact(forecast.high)}
                         </Text>
+                        {forecast.overdue > 0 && (
+                            <HStack gap={1}>
+                                <Text fontSize="10px" color="fg.muted">
+                                    сверх этого просрочено {formatCompact(forecast.overdue)}
+                                </Text>
+                                <MetricHint text="Просроченные строки в прогноз отдельной суммой не входят: срок по ним уже нарушен, и приписывать их к конкретному дню значило бы обещать деньги, которых может не быть. Их возврат учтён в потоке, не зависящем от графика, — он и посчитан по истории, где такие погашения происходили. Работа с самим долгом — в разделе «Просрочка»." />
+                            </HStack>
+                        )}
                     </VStack>
 
                     <VStack align="start" gap={0}>
@@ -147,23 +155,23 @@ export default function FinancePlan({
                     <VStack align="start" gap={0}>
                         <HStack gap={1}>
                             <Text fontSize="10px" color="fg.muted" textTransform="uppercase">Сверх графика</Text>
-                            <MetricHint text="Оплата документов, которых ещё нет, и возврат тех долгов, которые модель по дисциплине уже списала. График из 1С короткий, и чем дальше дата, тем большую часть прихода даёт эта часть. Величина не выдумана: это наблюдаемое превышение факта над обещанием на таком же сроке в прошлом." />
+                            <MetricHint text="Оплата документов, которых ещё нет, погашение просроченного и внеплановые платежи. График из 1С короткий, и чем дальше дата, тем большую часть прихода даёт эта часть. Величина не выдумана: она снята с истории регрессией «приход за такой же срок ≈ постоянный поток плюс доля обещанного»." />
                         </HStack>
                         <Text fontSize="lg" fontWeight="600">{formatRub(forecast.beyond_plan)}</Text>
                         <Text fontSize="10px" color="fg.muted">
-                            коэффициент ×{(forecast.ratio?.mid ?? 1).toFixed(2)}
-                            {forecast.ratio?.extrapolated ? ' · экстраполяция' : ''}
+                            не зависит от графика {formatCompact(forecast.model?.base)}
+                            {forecast.model?.extrapolated ? ' · экстраполяция' : ''}
                         </Text>
                     </VStack>
 
                     <VStack align="start" gap={0}>
                         <HStack gap={1}>
                             <Text fontSize="10px" color="fg.muted" textTransform="uppercase">Консервативно</Text>
-                            <MetricHint text={`Нижняя граница: так выглядел бы приход, повтори он худшую из наблюдавшихся недель. Границы сняты с собственной истории — модель прогонялась по ${forecast.calibration?.weeks ?? 0} неделям, и коридор построен так, чтобы накрывать факт примерно в девяти случаях из десяти. Именно это число стоит закладывать в бюджет, если кассовый разрыв недопустим.`} />
+                            <MetricHint text={`Нижняя граница: так выглядел бы приход, повтори он худший из наблюдавшихся периодов. Границы сняты с собственной истории — модель проверена на ${forecast.calibration?.observations ?? 0} периодах, и коридор построен так, чтобы накрывать факт примерно в девяти случаях из десяти. Именно это число стоит закладывать в бюджет, если кассовый разрыв недопустим.`} />
                         </HStack>
                         <Text fontSize="lg" fontWeight="600" color="orange.fg">{formatRub(forecast.low)}</Text>
                         <Text fontSize="10px" color="fg.muted">
-                            проверено на {forecast.calibration?.weeks ?? 0} нед. истории
+                            проверено на {forecast.calibration?.observations ?? 0} периодах
                         </Text>
                     </VStack>
                 </Flex>
