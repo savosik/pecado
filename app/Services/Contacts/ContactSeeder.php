@@ -25,6 +25,8 @@ use Illuminate\Support\Collection;
  */
 class ContactSeeder
 {
+    public function __construct(private readonly PersonNameParser $names) {}
+
     /** Ящики, за которыми человека обычно нет. */
     private const IMPERSONAL_PREFIXES = [
         'info', 'office', 'mail', 'sales', 'zakaz', 'order', 'orders', 'shop',
@@ -41,6 +43,7 @@ class ContactSeeder
         $known = $this->knownAddresses();
 
         return collect()
+            ->concat($this->fromPartners($clientId))
             ->concat($this->fromCompanies($clientId))
             ->concat($this->fromSubscriptions($clientId))
             ->concat($this->fromLetters($clientId))
@@ -59,10 +62,20 @@ class ContactSeeder
     {
         $candidates = $this->candidates($clientId, 100000);
 
-        return $candidates
+        $summary = $candidates
             ->groupBy('source_label')
             ->map(fn (Collection $group): int => $group->count())
             ->all();
+
+        // Безымянные показываем отдельной строкой: это не отбракованные,
+        // а те, кого менеджер должен назвать сам.
+        $unnamed = $candidates->filter(fn (array $row): bool => blank($row['full_name']))->count();
+
+        if ($unnamed > 0) {
+            $summary['— из них без имени человека'] = $unnamed;
+        }
+
+        return $summary;
     }
 
     /**
@@ -79,6 +92,14 @@ class ContactSeeder
 
         foreach ($this->candidates(null, 100000) as $candidate) {
             if (! in_array(mb_strtolower((string) $candidate['email']), $wanted, true)) {
+                continue;
+            }
+
+            // «Допустимо Петров И.И. + емейл, недопустимо ООО Ручеек + емейл».
+            // Кандидат, из карточки которого имя человека не вывелось, ждёт,
+            // пока менеджер назовёт его сам, — справочник людей юрлицами
+            // не наполняется.
+            if (blank($candidate['full_name'])) {
                 continue;
             }
 
@@ -129,6 +150,33 @@ class ContactSeeder
     }
 
     /**
+     * Люди из карточек партнёров.
+     *
+     * Самая крупная жила: у индивидуального предпринимателя название карточки
+     * в 1С **и есть** ФИО. На проде такую форму имеют 672 карточки из 839.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function fromPartners(?int $clientId): Collection
+    {
+        return User::query()
+            ->whereNotNull('email')
+            ->where('email', 'like', '%@%')
+            ->when($clientId, fn ($query) => $query->whereKey($clientId))
+            ->get(['id', 'name', 'erp_name', 'email', 'phone'])
+            ->map(fn (User $partner): array => [
+                'email' => mb_strtolower(trim((string) $partner->email)),
+                'phone' => $partner->phone,
+                'full_name' => $this->names->parse((string) ($partner->erp_name ?: $partner->name)),
+                'client_id' => (int) $partner->getKey(),
+                'company_id' => null,
+                'source_label' => 'Карточка партнёра',
+                'impersonal' => $this->looksImpersonal((string) $partner->email),
+                'hint' => (string) ($partner->erp_name ?: $partner->name),
+            ]);
+    }
+
+    /**
      * @return Collection<int, array<string, mixed>>
      */
     private function fromCompanies(?int $clientId): Collection
@@ -143,7 +191,7 @@ class ContactSeeder
             ->map(fn (Company $company): array => [
                 'email' => mb_strtolower(trim((string) $company->email)),
                 'phone' => $company->phone,
-                'full_name' => $this->guessName($company->email, (string) ($company->name ?: $company->legal_name)),
+                'full_name' => $this->names->parse((string) ($company->name ?: $company->legal_name)),
                 'client_id' => (int) $company->user_id,
                 'company_id' => (int) $company->getKey(),
                 'source_label' => 'Почта контрагента',
@@ -165,7 +213,7 @@ class ContactSeeder
             ->map(fn ($subscription): array => [
                 'email' => mb_strtolower(trim((string) $subscription->destination)),
                 'phone' => null,
-                'full_name' => $this->guessName($subscription->destination, ''),
+                'full_name' => null,
                 'client_id' => (int) $subscription->user_id,
                 'company_id' => null,
                 'source_label' => 'Подписка из кабинета',
@@ -190,7 +238,7 @@ class ContactSeeder
             ->map(fn (SentEmail $row): array => [
                 'email' => mb_strtolower(trim((string) $row->recipient)),
                 'phone' => null,
-                'full_name' => $this->guessName($row->recipient, ''),
+                'full_name' => null,
                 'client_id' => (int) $row->client_user_id,
                 'company_id' => null,
                 'source_label' => 'Кому уже писали',
@@ -206,7 +254,7 @@ class ContactSeeder
                 ->map(fn ($email): array => [
                     'email' => mb_strtolower(trim((string) $email)),
                     'phone' => null,
-                    'full_name' => $this->guessName((string) $email, ''),
+                    'full_name' => null,
                     'client_id' => (int) $letter->client_user_id,
                     'company_id' => null,
                     'source_label' => 'Кому уже писали',
@@ -216,23 +264,6 @@ class ContactSeeder
                 ->all());
 
         return $fromJournal->concat($fromDrafts);
-    }
-
-    /**
-     * Имя из адреса — заготовка, которую менеджер поправит. «buh@romashka.ru»
-     * даёт «Buh», и это лучше, чем пустая карточка.
-     */
-    private function guessName(?string $email, string $fallback): string
-    {
-        $local = trim(explode('@', (string) $email)[0]);
-        $local = str_replace(['.', '_', '-'], ' ', $local);
-        $local = trim(preg_replace('/\d+/', '', $local) ?? '');
-
-        if ($local !== '') {
-            return mb_convert_case($local, MB_CASE_TITLE, 'UTF-8');
-        }
-
-        return $fallback !== '' ? $fallback : 'Без имени';
     }
 
     /**
