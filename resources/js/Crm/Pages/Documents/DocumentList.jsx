@@ -1,11 +1,12 @@
 import { Head, router } from '@inertiajs/react';
 import { Badge, Box, Flex, Grid, HStack, Text, VStack } from '@chakra-ui/react';
-import { LuDownload, LuEye, LuX } from 'react-icons/lu';
+import { LuDownload, LuEye, LuInfo, LuX } from 'react-icons/lu';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { SearchInput } from '@/Admin/Components/SearchInput';
 import { ProductSelector } from '@/Admin/Components/ProductSelector';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
 import AmountFilterInput from '@/Crm/Components/AmountFilterInput';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
@@ -395,6 +396,7 @@ export default function DocumentList({
                         <HStack key={bucket.currency} gap={2}>
                             <Text fontSize="xs" color="fg.muted">Сумма:</Text>
                             <Text fontSize="sm" fontWeight="600">{bucket.amount_label}</Text>
+                            <MetricHint text="Сумма документов, попавших в отбор. Оплату не учитывает — это то, на сколько отгружено." />
                         </HStack>
                     ))}
 
@@ -406,21 +408,28 @@ export default function DocumentList({
                             <HStack gap={2}>
                                 <Text fontSize="xs" color="fg.muted">Оплачено:</Text>
                                 <Text fontSize="sm" fontWeight="600" color="green.fg">{bucket.paid_label}</Text>
+                                <MetricHint text="Сколько 1С зачла по этим документам: закрытые части плановых строк взаиморасчётов, включая авансы по заказам. По строке берётся не больше её суммы — переплата одной не гасит долг другой." />
                             </HStack>
                             <HStack gap={2}>
                                 <Text fontSize="xs" color="fg.muted">Не оплачено:</Text>
                                 <Text fontSize="sm" fontWeight="600" color="orange.fg">{bucket.unpaid_label}</Text>
+                                <MetricHint text="Остаток по плановым строкам: сумма минус закрытая часть, ниже нуля не опускается. Это не весь долг партнёра — полный долг в «Балансах партнёров» и акте сверки, там же зачёты и корректировки." />
                             </HStack>
                         </HStack>
                     ))}
 
                     {schedule && (
-                        <Text fontSize="xs" color="fg.muted">
-                            оплата — по данным взаиморасчётов 1С
-                            {schedule.without_plan > 0
-                                ? `; без плана оплаты: ${schedule.without_plan} док.`
-                                : ''}
-                        </Text>
+                        <HStack gap={1.5}>
+                            <Text fontSize="xs" color="fg.muted">
+                                оплата — по данным взаиморасчётов 1С
+                                {schedule.without_plan > 0
+                                    ? `; без плана оплаты: ${schedule.without_plan} док.`
+                                    : ''}
+                            </Text>
+                            <MetricHint text={schedule.without_plan > 0
+                                ? `По ${schedule.without_plan} документам 1С не прислала плановых строк — их суммы не входят ни в «оплачено», ни в «не оплачено». Поэтому эти два числа не складываются в «сумму»: разница и есть такие документы.`
+                                : 'Оплата считается по плановым строкам регистра взаиморасчётов, которые присылает 1С. Сайт ничего не досчитывает сам.'} />
+                        </HStack>
                     )}
                 </HStack>
             )}
@@ -439,5 +448,23 @@ export default function DocumentList({
                     : 'Документы не найдены'}
             />
         </>
+    );
+}
+
+/**
+ * Иконка «i» с пояснением, откуда взялась цифра.
+ *
+ * Итоги журнала складываются не тем очевидным способом, каким кажется:
+ * «оплачено» и «не оплачено» считаются по плановым строкам регистра, а «сумма» —
+ * по самим документам, и документы без плана в первые два числа не попадают.
+ * Без подсказки читатель складывает их, не получает сумму и перестаёт верить всей строке.
+ */
+function MetricHint({ text }) {
+    return (
+        <Tooltip content={text} positioning={{ placement: 'top' }} openDelay={200} contentProps={{ maxW: '340px' }}>
+            <Box as="span" color="fg.subtle" cursor="help" display="inline-flex" aria-label="Как считается">
+                <LuInfo size={13} />
+            </Box>
+        </Tooltip>
     );
 }

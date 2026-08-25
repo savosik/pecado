@@ -1,10 +1,11 @@
 import { Head, router } from '@inertiajs/react';
 import { Badge, Box, Flex, Grid, HStack, Text, VStack } from '@chakra-ui/react';
-import { LuDownload, LuEye, LuX } from 'react-icons/lu';
+import { LuDownload, LuEye, LuInfo, LuX } from 'react-icons/lu';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { SearchInput } from '@/Admin/Components/SearchInput';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
 import AmountFilterInput from '@/Crm/Components/AmountFilterInput';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
@@ -355,6 +356,17 @@ export default function PaymentList({
                             <Text fontSize="10px" color="fg.muted">({bucket.count})</Text>
                         </HStack>
                     ))}
+
+                    <Tooltip
+                        content="Суммы платежей отбора, раздельно по направлению и валюте: поступления и возвраты не складываются, курс на дату платежа сайту неизвестен. Это движение денег, а не долг — долг в «Балансах партнёров» и акте сверки."
+                        positioning={{ placement: 'top' }}
+                        openDelay={200}
+                        contentProps={{ maxW: '340px' }}
+                    >
+                        <Box as="span" color="fg.subtle" cursor="help" display="inline-flex" aria-label="Как считается">
+                            <LuInfo size={13} />
+                        </Box>
+                    </Tooltip>
                 </HStack>
             )}
 
