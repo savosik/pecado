@@ -1,10 +1,14 @@
+import { Fragment, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { Box, Flex, Grid, HStack, SimpleGrid, Table, Text, VStack } from '@chakra-ui/react';
+import { Box, Flex, HStack, SimpleGrid, Table, Text, VStack } from '@chakra-ui/react';
+import { LuChevronDown, LuChevronRight, LuListPlus } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
 import AmountFilterInput from '@/Crm/Components/AmountFilterInput';
 import MetricHint from '@/Crm/Components/MetricHint';
+import TaskDialog from '@/Crm/Components/TaskDialog';
+import { usePermission } from '@/shared/Panel/usePermission';
 import FinanceFilterBar from './components/FinanceFilterBar';
 import FinanceRowsTable from './components/FinanceRowsTable';
 import { formatRub } from './components/format';
@@ -30,6 +34,7 @@ const AMOUNT_PRESETS = [
 export default function FinanceOverdue({
     rows,
     totals = {},
+    debtTotal = 0,
     aging = null,
     group = '',
     groups = [],
@@ -40,6 +45,12 @@ export default function FinanceOverdue({
     organizations = [],
     seesAll = false,
 }) {
+    const { can } = usePermission();
+    const [taskFor, setTaskFor] = useState(null);
+    const [expanded, setExpanded] = useState({});
+
+    const toggle = (id) => setExpanded((previous) => ({ ...previous, [id]: ! previous[id] }));
+
     /** Отбор меняется поверх текущего адреса: разрез и прочие фильтры остаются. */
     const patchQuery = (patch) => {
         const query = new URLSearchParams(window.location.search);
@@ -65,6 +76,11 @@ export default function FinanceOverdue({
     };
 
     const activeBuckets = filters.overdue_buckets || [];
+
+    // Доля просрочки в общем долге: главный индикатор раздела. Долг приходит
+    // отрицательным сальдо, поэтому сравниваем модули.
+    const debt = Math.abs(debtTotal || 0);
+    const debtShare = debt > 0 ? Math.round(((totals.amount || 0) / debt) * 100) : 0;
 
     const toggleBucket = (key) => patchQuery({
         overdue_buckets: activeBuckets.includes(key)
@@ -150,29 +166,50 @@ export default function FinanceOverdue({
                 )}
             />
 
-            <SimpleGrid columns={{ base: 1, md: 4 }} gap={3} mb={4}>
-                <Tile
-                    label="Просрочено"
-                    value={formatRub(totals.amount)}
-                    tone="red"
-                    hint="Сумма непогашенных остатков по строкам графика, срок которых прошёл. Учитывает все фильтры сверху, включая корзину задержки и порог остатка. Планы по заказам сюда не входят: долг создаёт отгрузка, а не заказ."
-                />
-                <Tile
-                    label="Строк графика"
-                    value={String(totals.lines || 0)}
-                    hint="Сколько строк графика просрочено. У одной реализации строк бывает несколько — по этапам оплаты, поэтому строк всегда не меньше, чем документов."
-                />
-                <Tile
-                    label="Документов"
-                    value={String(totals.documents || 0)}
-                    hint="Сколько разных реализаций стоит за этими строками."
-                />
-                <Tile
-                    label="Партнёров"
-                    value={String(totals.clients || 0)}
-                    hint="Сколько партнёров имеют хотя бы одну просроченную строку. Это те, кому предстоит звонить."
-                />
-            </SimpleGrid>
+            {/* Итоги одной строкой: четыре карточки в полэкрана отодвигали
+                таблицу за сгиб, а читаются эти числа мельком. */}
+            <Box borderWidth="1px" borderRadius="lg" px={4} py={3} mb={3} bg="bg.panel">
+                <Flex gap={{ base: 3, md: 6 }} wrap="wrap" align="center">
+                    <Metric
+                        label="Просрочено"
+                        value={formatRub(totals.amount)}
+                        tone="red"
+                        hint="Сумма непогашенных остатков по строкам графика, срок которых прошёл. Учитывает все фильтры сверху, включая корзину задержки и порог остатка. Планы по заказам сюда не входят: долг создаёт отгрузка, а не заказ."
+                    />
+
+                    <Metric
+                        label="Общий долг"
+                        value={formatRub(Math.abs(debtTotal))}
+                        hint="Сальдо взаиморасчётов по тем же партнёрам — весь долг, а не только просроченная его часть. Считается по регистру 1С, как в разделе «Балансы»."
+                    />
+
+                    <Metric
+                        label="Доля просрочки"
+                        value={`${debtShare}%`}
+                        tone={debtShare >= 50 ? 'red' : undefined}
+                        hint="Какая часть общего долга уже просрочена. Растущая доля означает, что деньги не приходят в срок, даже если сам долг не меняется. Числитель — просрочка по текущему отбору, знаменатель — весь долг тех же партнёров: при выбранной корзине задержки доля показывает вклад именно этой корзины."
+                        after={<ShareBar value={debtShare} tone={debtShare >= 50 ? 'red' : 'orange'} width="120px" />}
+                    />
+
+                    <Metric
+                        label="Строк графика"
+                        value={String(totals.lines || 0)}
+                        hint="Сколько строк графика просрочено. У одной реализации строк бывает несколько — по этапам оплаты, поэтому строк всегда не меньше, чем документов."
+                    />
+
+                    <Metric
+                        label="Документов"
+                        value={String(totals.documents || 0)}
+                        hint="Сколько разных реализаций стоит за этими строками."
+                    />
+
+                    <Metric
+                        label="Партнёров"
+                        value={String(totals.clients || 0)}
+                        hint="Сколько партнёров имеют хотя бы одну просроченную строку. Это те, кому предстоит звонить."
+                    />
+                </Flex>
+            </Box>
 
             {aging && (
                 <Box borderWidth="1px" borderRadius="lg" p={4} mb={4}>
@@ -271,40 +308,64 @@ export default function FinanceOverdue({
                     <FinanceRowsTable rows={rows} emptyMessage="Просроченных платежей по этому отбору нет" />
                 </>
             ) : (
-                <GroupTable
+                <GroupTree
                     rows={groupRows ?? []}
-                    axis={group}
                     total={totals.amount || 0}
                     onDrill={(row) => {
-                        if (group === 'manager') patchQuery({ manager_ids: [row.entity_id], group: undefined });
-                        if (group === 'organization') patchQuery({ organization_ids: [row.entity_id], group: undefined });
+                        if (row.axis === 'manager') patchQuery({ manager_ids: [row.entity_id], group: undefined });
+                        if (row.axis === 'organization') patchQuery({ organization_ids: [row.entity_id], group: undefined });
                     }}
+                    onTask={can('crm-tasks.create') ? setTaskFor : null}
+                    expanded={expanded}
+                    onToggle={toggle}
                 />
             )}
+
+            {taskFor && (
+                <TaskDialog
+                    open
+                    onClose={() => setTaskFor(null)}
+                    entity={{ type: 'client', id: taskFor.entity_id }}
+                    initialTitle={`Просрочка: ${taskFor.title} — ${formatRub(taskFor.overdue_debt)}`}
+                    onSaved={() => setTaskFor(null)}
+                />
+            )}
+
         </CrmLayout>
     );
 }
 
 /**
- * Сводка по выбранной оси: одна строка на сущность.
+ * Разрез просрочки: то же дерево, что в балансах, но о долге, который уже пора
+ * требовать.
  *
- * Доля рисуется полосой, а не процентом: раздел открывают, чтобы понять,
- * с кого начинать, и на глаз длина полосы отвечает на это быстрее числа.
+ * Рядом с просроченной суммой всегда стоит общий долг узла и доля просрочки
+ * в нём: сто тысяч просрочки при долге в сто двадцать тысяч и при долге в пять
+ * миллионов — разные новости, и одна лишь абсолютная сумма их не различает.
  */
-function GroupTable({ rows, axis, total, onDrill }) {
-    const drillable = axis === 'manager' || axis === 'organization';
-
+function GroupTree({ rows, total, onDrill, onTask, expanded, onToggle }) {
     return (
         <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" overflow="hidden">
             <Box overflowX="auto">
                 <Table.Root size="sm" variant="line">
                     <Table.Header>
                         <Table.Row>
-                            <Table.ColumnHeader>{AXIS_LABELS[axis]}</Table.ColumnHeader>
+                            <Table.ColumnHeader width="40px" />
+                            <Table.ColumnHeader>Строка разреза</Table.ColumnHeader>
                             <Table.ColumnHeader textAlign="end">Просрочено</Table.ColumnHeader>
-                            <Table.ColumnHeader width="140px">Доля</Table.ColumnHeader>
+                            <Table.ColumnHeader width="150px">
+                                <HStack gap={1}>
+                                    <Text fontSize="xs">Доля в просрочке</Text>
+                                    <MetricHint text="Какую часть всей просроченной суммы даёт эта строка." />
+                                </HStack>
+                            </Table.ColumnHeader>
+                            <Table.ColumnHeader width="170px">
+                                <HStack gap={1}>
+                                    <Text fontSize="xs">Просрочено от долга</Text>
+                                    <MetricHint text="Доля просрочки в общем долге этой строки: сальдо взаиморасчётов берётся по тем же движениям, что в разделе «Балансы». Долг без просрочки в разрез не попадает вовсе." />
+                                </HStack>
+                            </Table.ColumnHeader>
                             <Table.ColumnHeader textAlign="end">Строк</Table.ColumnHeader>
-                            <Table.ColumnHeader textAlign="end">Партнёров</Table.ColumnHeader>
                             <Table.ColumnHeader>Самая давняя</Table.ColumnHeader>
                             <Table.ColumnHeader />
                         </Table.Row>
@@ -313,7 +374,7 @@ function GroupTable({ rows, axis, total, onDrill }) {
                     <Table.Body>
                         {rows.length === 0 && (
                             <Table.Row>
-                                <Table.Cell colSpan={7}>
+                                <Table.Cell colSpan={8}>
                                     <Text py={8} textAlign="center" color="fg.muted">
                                         Просроченных платежей по этому отбору нет
                                     </Text>
@@ -322,72 +383,16 @@ function GroupTable({ rows, axis, total, onDrill }) {
                         )}
 
                         {rows.map((row) => (
-                            <Table.Row key={row.key} _hover={{ bg: 'bg.muted' }}>
-                                <Table.Cell>
-                                    <VStack align="start" gap={0}>
-                                        {row.url ? (
-                                            <Box
-                                                as="a"
-                                                href={row.url}
-                                                fontSize="sm"
-                                                fontWeight="600"
-                                                _hover={{ color: 'blue.fg', textDecoration: 'underline' }}
-                                            >
-                                                {row.title}
-                                            </Box>
-                                        ) : (
-                                            <Text fontSize="sm" fontWeight="600">{row.title}</Text>
-                                        )}
-                                        {row.manager_name && (
-                                            <Text fontSize="10px" color="fg.muted">{row.manager_name}</Text>
-                                        )}
-                                    </VStack>
-                                </Table.Cell>
-
-                                <Table.Cell textAlign="end">
-                                    <Text fontSize="sm" fontWeight="600" color="red.fg" whiteSpace="nowrap">
-                                        {formatRub(row.unpaid)}
-                                    </Text>
-                                </Table.Cell>
-
-                                <Table.Cell>
-                                    <Grid templateColumns="1fr auto" gap={2} alignItems="center">
-                                        <Box bg="bg.muted" borderRadius="full" height="6px" overflow="hidden">
-                                            <Box
-                                                bg="red.solid"
-                                                height="6px"
-                                                width={`${total > 0 ? Math.max(2, Math.round((row.unpaid / total) * 100)) : 0}%`}
-                                            />
-                                        </Box>
-                                        <Text fontSize="10px" color="fg.muted">
-                                            {total > 0 ? Math.round((row.unpaid / total) * 100) : 0}%
-                                        </Text>
-                                    </Grid>
-                                </Table.Cell>
-
-                                <Table.Cell textAlign="end">
-                                    <Text fontSize="sm">{row.lines_count}</Text>
-                                </Table.Cell>
-
-                                <Table.Cell textAlign="end">
-                                    <Text fontSize="sm">{axis === 'partner' ? '—' : row.clients_count}</Text>
-                                </Table.Cell>
-
-                                <Table.Cell>
-                                    <VStack align="start" gap={0}>
-                                        <Text fontSize="sm">{row.oldest_due}</Text>
-                                        <Text fontSize="10px" color="red.fg">{row.days_overdue} дн. назад</Text>
-                                    </VStack>
-                                </Table.Cell>
-
-                                <Table.Cell>
-                                    {drillable && row.entity_id != null && (
-                                        <Button size="xs" variant="ghost" onClick={() => onDrill(row)}>
-                                            Строки
-                                        </Button>
-                                    )}
-                                </Table.Cell>
-                            </Table.Row>
+                            <GroupRows
+                                key={row.id}
+                                row={row}
+                                depth={0}
+                                total={total}
+                                onDrill={onDrill}
+                                onTask={onTask}
+                                expanded={expanded}
+                                onToggle={onToggle}
+                            />
                         ))}
                     </Table.Body>
                 </Table.Root>
@@ -396,19 +401,175 @@ function GroupTable({ rows, axis, total, onDrill }) {
     );
 }
 
-const AXIS_LABELS = {
-    partner: 'Партнёр',
-    manager: 'Менеджер',
-    organization: 'Наша организация',
-    company: 'Контрагент',
-};
+/** Узел дерева и его потомки — одной рекурсивной строкой на любом уровне. */
+function GroupRows({ row, depth, total, onDrill, onTask, expanded, onToggle }) {
+    const hasChildren = (row.children?.length ?? 0) > 0;
+    const isOpen = !! expanded[row.id];
 
-const Tile = ({ label, value, tone, hint }) => (
-    <Box borderWidth="1px" borderRadius="lg" p={4} bg={tone === 'red' ? 'red.subtle' : undefined}>
-        <HStack gap={1}>
-            <Text fontSize="xs" color="fg.muted">{label}</Text>
-            {hint && <MetricHint text={hint} />}
+    const debt = Math.abs(row.current_balance || 0);
+    // Долга может не быть вовсе: просрочка живёт на одной нашей организации,
+    // а движения проведены на другой. Считать долю от нуля нечестно — прочерк.
+    const debtShare = debt > 0 ? Math.round((row.overdue_debt / debt) * 100) : null;
+    const share = total > 0 ? Math.round((row.overdue_debt / total) * 100) : 0;
+
+    // Задача ставится на партнёра: у контрагента и нашей организации карточки
+    // клиента нет, и вешать дебиторку не на кого.
+    const taskable = row.axis === 'partner' && row.entity_id != null;
+    const drillable = (row.axis === 'manager' || row.axis === 'organization') && row.entity_id != null;
+
+    return (
+        <Fragment>
+            <Table.Row _hover={{ bg: 'bg.muted' }} bg={depth > 0 ? 'bg.subtle' : undefined}>
+                <Table.Cell>
+                    {hasChildren && (
+                        <Button
+                            size="xs"
+                            variant="ghost"
+                            onClick={() => onToggle(row.id)}
+                            aria-label={isOpen ? 'Свернуть' : 'Развернуть'}
+                        >
+                            {isOpen ? <LuChevronDown /> : <LuChevronRight />}
+                        </Button>
+                    )}
+                </Table.Cell>
+
+                <Table.Cell>
+                    <VStack align="start" gap={0} pl={depth * 4}>
+                        {row.url ? (
+                            <Box
+                                as="a"
+                                href={row.url}
+                                fontSize="sm"
+                                fontWeight={depth === 0 ? '600' : '400'}
+                                _hover={{ color: 'blue.fg', textDecoration: 'underline' }}
+                            >
+                                {row.title}
+                            </Box>
+                        ) : (
+                            <Text fontSize="sm" fontWeight={depth === 0 ? '600' : '400'}>{row.title}</Text>
+                        )}
+
+                        {(row.subtitle || row.manager_name) && (
+                            <HStack gap={1} color="fg.muted" fontSize="10px">
+                                {row.subtitle && <Text>{row.subtitle}</Text>}
+                                {row.subtitle && row.manager_name && <Text>·</Text>}
+                                {row.manager_name && <Text>{row.manager_name}</Text>}
+                            </HStack>
+                        )}
+                    </VStack>
+                </Table.Cell>
+
+                <Table.Cell textAlign="end">
+                    <Text fontSize="sm" fontWeight="600" color="red.fg" whiteSpace="nowrap">
+                        {formatRub(row.overdue_debt)}
+                    </Text>
+                </Table.Cell>
+
+                <Table.Cell>
+                    <ShareBar value={share} tone="red" caption={`${share}%`} />
+                </Table.Cell>
+
+                <Table.Cell>
+                    <VStack align="stretch" gap={0}>
+                        <ShareBar
+                            value={debtShare ?? 0}
+                            tone={debtShare !== null && debtShare >= 50 ? 'red' : 'orange'}
+                            caption={debtShare === null ? '—' : `${debtShare}%`}
+                        />
+                        <Text fontSize="10px" color="fg.muted" whiteSpace="nowrap">
+                            общий долг {debt > 0 ? formatRub(debt) : '—'}
+                        </Text>
+                    </VStack>
+                </Table.Cell>
+
+                <Table.Cell textAlign="end">
+                    <Text fontSize="sm">{row.overdue_lines}</Text>
+                </Table.Cell>
+
+                <Table.Cell>
+                    <VStack align="start" gap={0}>
+                        <Text fontSize="sm" whiteSpace="nowrap">{row.oldest_due ?? '—'}</Text>
+                        {row.days_overdue > 0 && (
+                            <Text fontSize="10px" color="red.fg" whiteSpace="nowrap">
+                                {row.days_overdue} дн. назад
+                            </Text>
+                        )}
+                    </VStack>
+                </Table.Cell>
+
+                <Table.Cell>
+                    <HStack gap={1}>
+                        {drillable && (
+                            <Button size="xs" variant="ghost" onClick={() => onDrill(row)}>
+                                Строки
+                            </Button>
+                        )}
+
+                        {taskable && onTask && (
+                            <Button
+                                size="xs"
+                                variant="ghost"
+                                onClick={() => onTask(row)}
+                                title="Поставить задачу по дебиторке"
+                            >
+                                <LuListPlus /> Задача
+                            </Button>
+                        )}
+                    </HStack>
+                </Table.Cell>
+            </Table.Row>
+
+            {isOpen && row.children.map((child) => (
+                <GroupRows
+                    key={child.id}
+                    row={child}
+                    depth={depth + 1}
+                    total={total}
+                    onDrill={onDrill}
+                    onTask={onTask}
+                    expanded={expanded}
+                    onToggle={onToggle}
+                />
+            ))}
+        </Fragment>
+    );
+}
+
+/**
+ * Доля полосой: длина читается быстрее числа, а число нужно для точности —
+ * поэтому рядом и то и другое.
+ */
+function ShareBar({ value, tone = 'red', caption, width }) {
+    return (
+        <HStack gap={2} width={width}>
+            <Box bg="bg.muted" borderRadius="full" height="6px" flex="1" minW="40px" overflow="hidden">
+                <Box
+                    bg={tone === 'red' ? 'red.solid' : 'orange.solid'}
+                    height="6px"
+                    width={`${Math.min(100, Math.max(value > 0 ? 2 : 0, value))}%`}
+                />
+            </Box>
+            {caption !== undefined && (
+                <Text fontSize="10px" color="fg.muted" whiteSpace="nowrap">{caption}</Text>
+            )}
         </HStack>
-        <Text fontSize="xl" fontWeight="700" mt={1} color={tone === 'red' ? 'red.fg' : undefined}>{value}</Text>
-    </Box>
+    );
+}
+
+/** Одно число в компактной ленте итогов. */
+const Metric = ({ label, value, tone, hint, after }) => (
+    <HStack gap={2} align="baseline">
+        <VStack align="start" gap={0}>
+            <HStack gap={1}>
+                <Text fontSize="10px" color="fg.muted" textTransform="uppercase" letterSpacing="0.03em">{label}</Text>
+                {hint && <MetricHint text={hint} />}
+            </HStack>
+            <HStack gap={2} align="center">
+                <Text fontSize="md" fontWeight="700" color={tone === 'red' ? 'red.fg' : undefined} whiteSpace="nowrap">
+                    {value}
+                </Text>
+                {after}
+            </HStack>
+        </VStack>
+    </HStack>
 );

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Crm;
 
+use App\Models\Company;
 use App\Models\Currency;
 use App\Models\Organization;
 use App\Models\PersonalManager;
@@ -160,45 +161,98 @@ class FinanceOverdueTest extends TestCase
         $this->overdueLine($mine, 3000, 10, ['organization_id' => $organization->id]);
         $this->overdueLine($theirs, 1000, 40, ['organization_id' => $organization->id]);
 
-        foreach (['partner', 'manager', 'organization', 'company'] as $axis) {
-            $props = $this->props('?group='.$axis);
+        // Разрезы те же, что в балансах: одна сетка ячеек, разная вложенность.
+        foreach (['partner', 'manager', 'org', 'company', 'org_partner', 'company_org_manager'] as $view) {
+            $props = $this->props('?group='.$view);
 
-            $this->assertSame($axis, $props['group'], $axis);
+            $this->assertSame($view, $props['group'], $view);
             $this->assertEqualsWithDelta(
                 4000.0,
-                array_sum(array_column($props['groupRows'], 'unpaid')),
+                array_sum(array_column($props['groupRows'], 'overdue_debt')),
                 0.01,
-                $axis,
+                $view,
             );
         }
 
         // У партнёра менеджер один — он и подписан.
-        $byPartner = collect($this->props('?group=partner')['groupRows'])->firstWhere('unpaid', 3000.0);
+        $byPartner = collect($this->props('?group=partner')['groupRows'])->firstWhere('overdue_debt', 3000.0);
         $this->assertSame('Сухов', $byPartner['manager_name']);
-        $this->assertSame(1, $byPartner['clients_count']);
+        $this->assertSame(1, $byPartner['overdue_lines']);
 
         // За нашей организацией стоят двое: имя одного из них было бы враньём.
-        $byOrganization = $this->props('?group=organization')['groupRows'][0];
+        $byOrganization = $this->props('?group=org_partner')['groupRows'][0];
+        $this->assertSame('ООО Пекадо', $byOrganization['title']);
         $this->assertSame('2 менеджера', $byOrganization['manager_name']);
-        $this->assertSame(2, $byOrganization['clients_count']);
-        $this->assertSame(2, $byOrganization['lines_count']);
+        $this->assertSame(2, $byOrganization['overdue_lines']);
         // Самая давняя строка — 40 дней назад, а не средняя по группе.
         $this->assertSame(40, $byOrganization['days_overdue']);
+
+        // Под нашей организацией — оба партнёра, каждый со своей просрочкой.
+        $this->assertCount(2, $byOrganization['children']);
+        $this->assertEqualsWithDelta(
+            4000.0,
+            array_sum(array_column($byOrganization['children'], 'overdue_debt')),
+            0.01,
+        );
     }
 
+    /**
+     * Рядом с просрочкой стоит общий долг: сто тысяч просрочки при долге в сто
+     * двадцать тысяч и при долге в пять миллионов — разные новости.
+     */
     #[Test]
-    public function отбор_и_разрез_живут_независимо(): void
+    public function разрез_показывает_общий_долг_рядом_с_просрочкой(): void
     {
         $client = $this->makeClient();
-        $this->overdueLine($client, 1000, 3);
-        $this->overdueLine($client, 9000, 100);
+        $company = Company::factory()->create(['user_id' => $client->id, 'name' => 'ООО Ромашка']);
 
-        $props = $this->props('?group=partner&overdue_buckets[]=60_plus');
+        $this->overdueLine($client, 2000, 10, ['company_id' => $company->id]);
 
-        $this->assertSame('partner', $props['group']);
-        $this->assertSame(['60_plus'], $props['filters']['overdue_buckets']);
-        $this->assertEqualsWithDelta(9000.0, $props['groupRows'][0]['unpaid'], 0.01);
-        $this->assertEqualsWithDelta(9000.0, $props['totals']['amount'], 0.01);
+        // Долг партнёра шире просрочки: отгружено на 5 000, просрочено 2 000.
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'user_id' => $client->id,
+            'company_id' => $company->id,
+            'amount' => -5000,
+            'amount_rub' => -5000,
+            'currency_code' => 'RUB',
+            'date' => Carbon::today()->subDays(20)->toDateString(),
+        ]);
+
+        $props = $this->props('?group=partner');
+        $row = $props['groupRows'][0];
+
+        $this->assertEqualsWithDelta(2000.0, $row['overdue_debt'], 0.01);
+        $this->assertEqualsWithDelta(-5000.0, $row['current_balance'], 0.01);
+        $this->assertEqualsWithDelta(-5000.0, $props['debtTotal'], 0.01);
+    }
+
+    /**
+     * Ветка без просрочки в разрез не попадает: раздел о долге, который уже
+     * пора требовать, и партнёр с нулевой просрочкой в нём только шум.
+     */
+    #[Test]
+    public function партнёр_без_просрочки_в_разрез_не_попадает(): void
+    {
+        $withOverdue = $this->makeClient();
+        $this->overdueLine($withOverdue, 1000, 10);
+
+        $clean = $this->makeClient();
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'user_id' => $clean->id,
+            'amount' => -7000,
+            'amount_rub' => -7000,
+            'currency_code' => 'RUB',
+            'date' => Carbon::today()->subDays(3)->toDateString(),
+        ]);
+
+        $rows = $this->props('?group=partner')['groupRows'];
+
+        $this->assertCount(1, $rows);
+        $this->assertEqualsWithDelta(1000.0, $rows[0]['overdue_debt'], 0.01);
     }
 
     #[Test]

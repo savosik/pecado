@@ -129,11 +129,12 @@ class LedgerPaymentForecastService implements PaymentForecast
         QueryBuilder $query,
         FinanceFilters $filters,
         ?CarbonImmutable $today = null,
+        string $alias = 'sch',
     ): QueryBuilder {
         $today = $today ?? CarbonImmutable::today();
 
         if ($filters->minAmount > 0) {
-            $query->whereRaw('sch.amount - sch.settled_amount >= '.(float) $filters->minAmount);
+            $query->whereRaw($alias.'.amount - '.$alias.'.settled_amount >= '.(float) $filters->minAmount);
         }
 
         if ($filters->overdueBuckets === []) {
@@ -147,13 +148,13 @@ class LedgerPaymentForecastService implements PaymentForecast
             self::AGING_BUCKETS,
         )));
 
-        return $query->where(static function (QueryBuilder $outer) use ($ranges): void {
+        return $query->where(static function (QueryBuilder $outer) use ($ranges, $alias): void {
             foreach ($ranges as [$from, $to]) {
-                $outer->orWhere(static function (QueryBuilder $inner) use ($from, $to): void {
-                    $inner->whereDate('sch.date', '<=', $to);
+                $outer->orWhere(static function (QueryBuilder $inner) use ($from, $to, $alias): void {
+                    $inner->whereDate($alias.'.date', '<=', $to);
 
                     if ($from !== null) {
-                        $inner->whereDate('sch.date', '>=', $from);
+                        $inner->whereDate($alias.'.date', '>=', $from);
                     }
                 });
             }
@@ -196,140 +197,52 @@ class LedgerPaymentForecastService implements PaymentForecast
      * @param  EloquentBuilder<\App\Models\User>  $clients
      * @return list<array<string, mixed>>
      */
-    public function overdueGroups(EloquentBuilder $clients, FinanceFilters $filters, string $axis): array
+    /**
+     * Разрез просрочки: то же дерево ячеек, что и в балансах, но оставлены
+     * только ветки с просроченным долгом.
+     *
+     * Механика общая с балансами намеренно: у обоих разделов одна сетка
+     * «партнёр × наша организация × контрагент», и вопрос «перед каким нашим
+     * юрлицом висит долг» должен отвечаться одинаково в обоих. Рядом с
+     * просрочкой показывается общий долг узла — просроченные 100 тысяч при
+     * долге в 120 и при долге в 5 миллионов означают разное.
+     *
+     * @param  EloquentBuilder<\App\Models\User>  $clients
+     * @param  list<string>  $dimensions
+     * @return list<array<string, mixed>>
+     */
+    public function overdueTree(EloquentBuilder $clients, FinanceFilters $filters, array $dimensions): array
     {
-        $today = CarbonImmutable::today();
-        $keyExpression = $this->groupKeyExpression($axis);
+        $tree = $this->balances($clients, null, $dimensions, $filters->organizationIds, $filters);
 
-        $base = fn (): QueryBuilder => $this->applyOverdueFilters(
-            $this->overdueOnly($this->plannedQuery($clients, $filters), $today),
-            $filters,
-            $today,
-        )->reorder();
+        return $this->keepOverdueBranches($tree);
+    }
 
-        $query = $base();
-
-        if ($axis === 'company') {
-            // Джойн только под этот разрез: тащить справочник контрагентов
-            // в каждый запрос плана ради одной оси незачем.
-            $query->leftJoin('companies as cmp', 'cmp.id', '=', 'sch.company_id');
-        }
-
-        $rows = $query
-            // Своя выборка вместо колонок plannedQuery: MySQL с only_full_group_by
-            // отвергает агрегат с чужими колонками, а SQLite молча выполняет —
-            // на тестах такая ошибка не ловится.
-            ->select('sch.currency_code')
-            ->selectRaw($keyExpression.' as group_key')
-            ->selectRaw($this->groupTitleExpression($axis).' as group_title')
-            ->selectRaw('MIN(sch.date) as oldest_due')
-            ->selectRaw('COUNT(*) as lines_count')
-            ->selectRaw('SUM(sch.amount - sch.settled_amount) as unpaid')
-            ->groupByRaw($keyExpression)
-            ->groupByRaw($this->groupTitleExpression($axis))
-            ->groupBy('sch.currency_code')
-            ->get();
-
-        $groups = [];
+    /**
+     * Ветки без просрочки убираются целиком: раздел о долге, который уже пора
+     * требовать, и партнёр с нулевой просрочкой в нём только шум.
+     *
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<array<string, mixed>>
+     */
+    private function keepOverdueBranches(array $rows): array
+    {
+        $kept = [];
 
         foreach ($rows as $row) {
-            $key = (string) ($row->group_key ?? '0');
-
-            $groups[$key] ??= [
-                'key' => $axis.':'.$key,
-                'entity_id' => $row->group_key !== null ? (int) $row->group_key : null,
-                'title' => $row->group_title ?: $this->emptyGroupTitle($axis),
-                'manager_name' => null,
-                'url' => $axis === 'partner' && $row->group_key !== null
-                    ? route('crm.clients.show', (int) $row->group_key)
-                    : null,
-                'unpaid' => 0.0,
-                'lines_count' => 0,
-                'clients_count' => 0,
-                'oldest_due' => null,
-                'days_overdue' => 0,
-            ];
-
-            $groups[$key]['unpaid'] += $this->toRub((float) $row->unpaid, $row->currency_code);
-            $groups[$key]['lines_count'] += (int) $row->lines_count;
-            $groups[$key]['oldest_due'] = min($groups[$key]['oldest_due'] ?? $row->oldest_due, $row->oldest_due);
-        }
-
-        // Партнёры и менеджеры — отдельным запросом по парам «ключ × партнёр».
-        // Считать их в том же агрегате нельзя: COUNT(DISTINCT) внутри разбивки
-        // по валютам сложился бы с задвоением, а имя менеджера у группы, где
-        // их несколько, взялось бы наугад.
-        $pairs = $base()
-            ->select('u.id as user_id')
-            ->selectRaw($keyExpression.' as group_key')
-            ->selectRaw('pm.name as manager_name')
-            ->distinct()
-            ->get();
-
-        $managers = [];
-
-        foreach ($pairs as $pair) {
-            $key = (string) ($pair->group_key ?? '0');
-
-            if (! isset($groups[$key])) {
+            if ($row['overdue_debt'] <= SettlementEntry::EPSILON) {
                 continue;
             }
 
-            $groups[$key]['clients_count']++;
-
-            if ($pair->manager_name !== null && $pair->manager_name !== '') {
-                $managers[$key][$pair->manager_name] = true;
-            }
+            $row['children'] = $this->keepOverdueBranches($row['children']);
+            $kept[] = $row;
         }
 
-        $groups = array_map(function (array $group) use ($today, $managers, $axis): array {
-            $oldest = CarbonImmutable::parse($group['oldest_due']);
-            $key = (string) ($group['entity_id'] ?? '0');
+        // Сверху самая крупная просрочка: разрез открывают, чтобы понять,
+        // с кого начать. В балансах порядок тот же, но там он задаётся общий.
+        usort($kept, static fn (array $a, array $b): int => $b['overdue_debt'] <=> $a['overdue_debt']);
 
-            $group['unpaid'] = round($group['unpaid'], 2);
-            $group['manager_name'] = $this->managerLabel($managers[$key] ?? [], $axis);
-            $group['days_overdue'] = (int) $oldest->diffInDays($today);
-            $group['oldest_due'] = $oldest->format('d.m.Y');
-
-            return $group;
-        }, array_values($groups));
-
-        // Сверху самый крупный долг: разрез открывают, чтобы понять, с кого начать.
-        usort($groups, static fn (array $a, array $b): int => $b['unpaid'] <=> $a['unpaid']);
-
-        return $groups;
-    }
-
-    /** Ось разреза → колонка группировки. */
-    private function groupKeyExpression(string $axis): string
-    {
-        return match ($axis) {
-            'manager' => 'u.personal_manager_id',
-            'organization' => 'sch.organization_id',
-            'company' => 'sch.company_id',
-            default => 'sch.user_id',
-        };
-    }
-
-    /** Ось разреза → человекочитаемое имя строки. */
-    private function groupTitleExpression(string $axis): string
-    {
-        return match ($axis) {
-            'manager' => 'pm.name',
-            'organization' => 'org.name',
-            'company' => 'cmp.name',
-            default => 'COALESCE(NULLIF(u.erp_name, \'\'), u.name)',
-        };
-    }
-
-    private function emptyGroupTitle(string $axis): string
-    {
-        return match ($axis) {
-            'manager' => 'Без менеджера',
-            'organization' => 'Организация не указана',
-            'company' => 'Контрагент не заведён',
-            default => 'Партнёр не определён',
-        };
+        return $kept;
     }
 
     public function dueBetween(QueryBuilder $query, string $from, string $to): QueryBuilder
@@ -486,6 +399,7 @@ class LedgerPaymentForecastService implements PaymentForecast
         ?CarbonImmutable $asOf = null,
         array $dimensions = ['partner', 'company'],
         array $organizationIds = [],
+        ?FinanceFilters $overdueFilters = null,
     ): array {
         $dimensions = array_values(array_filter(
             $dimensions,
@@ -517,7 +431,7 @@ class LedgerPaymentForecastService implements PaymentForecast
             ->selectRaw('MAX(e.erp_updated_at) as erp_updated_at')
             ->get();
 
-        $overdue = $this->overdueByCell($clients, $asOf, $organizationIds);
+        $overdue = $this->overdueByCell($clients, $asOf, $organizationIds, $overdueFilters);
 
         // Ячейки объединяются, а не джойнятся: просрочка бывает там, где движений
         // в этом разрезе нет вовсе (например, план на одну нашу организацию,
@@ -529,18 +443,36 @@ class LedgerPaymentForecastService implements PaymentForecast
                 'cell' => $row,
                 'balance' => (float) $row->balance,
                 'overdue' => 0.0,
+                'overdue_lines' => 0,
+                'oldest_due' => null,
                 'erp_updated_at' => $row->erp_updated_at,
             ];
         }
 
         foreach ($overdue as $key => $row) {
-            $cells[$key] ??= ['cell' => $row, 'balance' => 0.0, 'overdue' => 0.0, 'erp_updated_at' => null];
+            $cells[$key] ??= [
+                'cell' => $row,
+                'balance' => 0.0,
+                'overdue' => 0.0,
+                'overdue_lines' => 0,
+                'oldest_due' => null,
+                'erp_updated_at' => null,
+            ];
             $cells[$key]['overdue'] = (float) $row->overdue;
+            $cells[$key]['overdue_lines'] = (int) $row->overdue_lines;
+            $cells[$key]['oldest_due'] = $row->oldest_due;
         }
 
         $tree = [];
 
-        foreach ($cells as ['cell' => $cell, 'balance' => $cellBalance, 'overdue' => $cellOverdue, 'erp_updated_at' => $updatedAt]) {
+        foreach ($cells as [
+            'cell' => $cell,
+            'balance' => $cellBalance,
+            'overdue' => $cellOverdue,
+            'overdue_lines' => $cellLines,
+            'oldest_due' => $cellOldest,
+            'erp_updated_at' => $updatedAt,
+        ]) {
             $branch = &$tree;
             $path = '';
 
@@ -558,6 +490,8 @@ class LedgerPaymentForecastService implements PaymentForecast
                     'url' => $node['url'],
                     'current_balance' => 0.0,
                     'overdue_debt' => 0.0,
+                    'overdue_lines' => 0,
+                    'oldest_due' => null,
                     'erp_updated_at' => null,
                     // Менеджеры узла копятся множеством: у контрагента он один,
                     // у нашей организации их десятки, и подпись имеет смысл
@@ -568,6 +502,14 @@ class LedgerPaymentForecastService implements PaymentForecast
 
                 $branch[$node['key']]['current_balance'] += $cellBalance;
                 $branch[$node['key']]['overdue_debt'] += $cellOverdue;
+                $branch[$node['key']]['overdue_lines'] += $cellLines;
+
+                if ($cellOldest !== null) {
+                    $branch[$node['key']]['oldest_due'] = min(
+                        $branch[$node['key']]['oldest_due'] ?? $cellOldest,
+                        $cellOldest,
+                    );
+                }
                 $branch[$node['key']]['erp_updated_at'] = max(
                     $branch[$node['key']]['erp_updated_at'],
                     $updatedAt,
@@ -647,6 +589,16 @@ class LedgerPaymentForecastService implements PaymentForecast
             $row['overdue_debt'] = round($row['overdue_debt'], 2);
             $row['manager_name'] = $this->managerLabel($row['managers'], $row['axis']);
             unset($row['managers']);
+
+            // Самая давняя просрочка узла: подпись «столько-то дней назад»
+            // отвечает на вопрос «насколько всё запущено» без открытия строк.
+            if ($row['oldest_due'] !== null) {
+                $oldest = CarbonImmutable::parse($row['oldest_due']);
+                $row['days_overdue'] = (int) $oldest->diffInDays(CarbonImmutable::today());
+                $row['oldest_due'] = $oldest->format('d.m.Y');
+            } else {
+                $row['days_overdue'] = 0;
+            }
             $row['erp_updated_at'] = $row['erp_updated_at'] !== null
                 ? CarbonImmutable::parse($row['erp_updated_at'])->format('d.m.Y H:i')
                 : null;
@@ -821,9 +773,13 @@ class LedgerPaymentForecastService implements PaymentForecast
      * @param  EloquentBuilder<\App\Models\User>  $clients
      * @return array<string, object>
      */
-    private function overdueByCell(EloquentBuilder $clients, ?CarbonImmutable $asOf = null, array $organizationIds = []): array
-    {
-        return DB::table('settlement_entries as p')
+    private function overdueByCell(
+        EloquentBuilder $clients,
+        ?CarbonImmutable $asOf = null,
+        array $organizationIds = [],
+        ?FinanceFilters $overdueFilters = null,
+    ): array {
+        $query = DB::table('settlement_entries as p')
             ->join('users as u', 'u.id', '=', 'p.user_id')
             ->leftJoin('personal_managers as pm', 'pm.id', '=', 'u.personal_manager_id')
             ->leftJoin('companies as c', 'c.id', '=', 'p.company_id')
@@ -841,7 +797,17 @@ class LedgerPaymentForecastService implements PaymentForecast
             ->select(['p.user_id', 'p.organization_id', 'p.company_id', 'u.name as client_name', 'u.erp_name as client_erp_name', 'u.personal_manager_id'])
             ->selectRaw('pm.name as manager_name, c.name as company_name, c.tax_id as tax_id, o.name as organization_name')
             ->selectRaw('SUM(p.amount - p.settled_amount) as overdue')
-            ->get()
+            // Число просроченных строк и самая давняя дата: разрез просрочки
+            // показывает их рядом с суммой, а второй проход по тем же строкам
+            // ради двух чисел был бы лишним запросом.
+            ->selectRaw('COUNT(*) as overdue_lines')
+            ->selectRaw('MIN(p.date) as oldest_due');
+
+        if ($overdueFilters !== null) {
+            $this->applyOverdueFilters($query, $overdueFilters, $asOf, 'p');
+        }
+
+        return $query->get()
             ->keyBy(fn (object $row): string => $this->cellKey($row->user_id, $row->organization_id, $row->company_id))
             ->all();
     }

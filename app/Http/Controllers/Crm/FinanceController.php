@@ -69,14 +69,6 @@ class FinanceController extends CrmController
     /**
      * Просрочка — те же строки, но с прошедшей плановой датой. GET /crm/finance/overdue
      */
-    /** Разрезы просрочки: ось → подпись переключателя. */
-    private const OVERDUE_GROUPS = [
-        'partner' => 'По партнёрам',
-        'manager' => 'По менеджерам',
-        'organization' => 'По нашим организациям',
-        'company' => 'По контрагентам',
-    ];
-
     public function overdue(Request $request): InertiaResponse
     {
         $filters = FinanceFilters::fromRequest($request);
@@ -84,9 +76,10 @@ class FinanceController extends CrmController
         $today = CarbonImmutable::today();
 
         // Разрез — форма отчёта, отбор — что в него попадает: то же разделение,
-        // что в балансах. Пустое значение показывает построчный список.
+        // что в балансах, и те же самые разрезы. Пустое значение показывает
+        // построчный список документов.
         $group = (string) $request->input('group', '');
-        $group = isset(self::OVERDUE_GROUPS[$group]) ? $group : '';
+        $group = isset(self::BALANCE_VIEWS[$group]) ? $group : '';
 
         $query = $this->forecast->applyOverdueFilters(
             $this->forecast->overdueOnly($this->forecast->plannedQuery($clients, $filters), $today),
@@ -109,14 +102,38 @@ class FinanceController extends CrmController
             'aging' => $this->forecast->aging($clients, $filters),
             'group' => $group,
             'groups' => array_map(
-                static fn (string $label, string $key): array => ['value' => $key, 'label' => $label],
-                array_values(self::OVERDUE_GROUPS),
-                array_keys(self::OVERDUE_GROUPS),
+                static fn (array $preset, string $key): array => ['value' => $key, 'label' => $preset['label']],
+                array_values(self::BALANCE_VIEWS),
+                array_keys(self::BALANCE_VIEWS),
             ),
-            'groupRows' => $group !== '' ? $this->forecast->overdueGroups($clients, $filters, $group) : null,
+            'groupRows' => $group !== ''
+                ? $this->forecast->overdueTree($clients, $filters, self::BALANCE_VIEWS[$group]['dimensions'])
+                : null,
+            // Общий долг по тому же отбору: доля просрочки в нём — главный
+            // индикатор раздела, и считать её на клиенте из разных источников
+            // значило бы получить два разных числа на одном экране.
+            'debtTotal' => $this->overdueDebtTotal($clients, $filters),
             'sort' => $this->overdueSort($request),
             ...$this->sharedOptions($request, $filters),
         ]);
+    }
+
+    /**
+     * Общий долг партнёров, попавших в отбор: сумма отрицательных сальдо.
+     *
+     * Просрочка сравнивается именно с ним, а не с оборотом: «просрочено 100
+     * тысяч» при долге 120 тысяч и при долге 5 миллионов — разные новости.
+     *
+     * @param  Builder<User>  $clients
+     */
+    private function overdueDebtTotal(Builder $clients, FinanceFilters $filters): float
+    {
+        $balances = $this->forecast->balances($clients, null, ['partner'], $filters->organizationIds);
+
+        return round(array_sum(array_map(
+            static fn (array $row): float => min(0.0, (float) $row['current_balance']),
+            $balances,
+        )), 2);
     }
 
     /**
@@ -208,6 +225,13 @@ class FinanceController extends CrmController
         // из группировки по организации сверху не читается.
         'company_org' => ['label' => 'Контрагент → наша организация', 'dimensions' => ['company', 'organization']],
         'company' => ['label' => 'Контрагенты списком', 'dimensions' => ['company']],
+        // Наша организация сверху, партнёры под ней: «перед каким нашим юрлицом
+        // висит долг и чей он» — вопрос бухгалтерии, а не менеджера.
+        'org_partner' => ['label' => 'Наша организация → партнёр', 'dimensions' => ['organization', 'partner']],
+        'company_org_manager' => [
+            'label' => 'Контрагент → организация → менеджер',
+            'dimensions' => ['company', 'organization', 'manager'],
+        ],
         // Разрезы отдела: РОП смотрит на долг не по клиентам, а по людям —
         // сколько ведёт каждый менеджер и с какими нашими юрлицами это идёт.
         'manager' => ['label' => 'Менеджер → партнёр → контрагент', 'dimensions' => ['manager', 'partner', 'company']],

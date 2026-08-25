@@ -54,16 +54,16 @@ interface PaymentForecast
     /**
      * Отборы, осмысленные только для просрочки: корзина старения и порог суммы.
      */
-    public function applyOverdueFilters(QueryBuilder $query, FinanceFilters $filters, ?CarbonImmutable $today = null): QueryBuilder;
+    public function applyOverdueFilters(QueryBuilder $query, FinanceFilters $filters, ?CarbonImmutable $today = null, string $alias = 'sch'): QueryBuilder;
 
     /**
-     * Просрочка одной строкой на сущность выбранной оси (партнёр, менеджер,
-     * наша организация, контрагент).
+     * Разрез просрочки: дерево ячеек по выбранным осям, только ветки с долгом.
      *
      * @param  EloquentBuilder<\App\Models\User>  $clients
+     * @param  list<string>  $dimensions
      * @return list<array<string, mixed>>
      */
-    public function overdueGroups(EloquentBuilder $clients, FinanceFilters $filters, string $axis): array;
+    public function overdueTree(EloquentBuilder $clients, FinanceFilters $filters, array $dimensions): array;
 
     /**
      * Долг документов, по которым плановой даты нет вовсе.
@@ -132,7 +132,7 @@ interface PaymentForecast
      * @param  EloquentBuilder<\App\Models\User>  $clients
      * @param  list<string>  $dimensions
      */
-    public function balances(EloquentBuilder $clients, ?CarbonImmutable $asOf = null, array $dimensions = ['partner', 'company'], array $organizationIds = []): array;
+    public function balances(EloquentBuilder $clients, ?CarbonImmutable $asOf = null, array $dimensions = ['partner', 'company'], array $organizationIds = [], ?FinanceFilters $overdueFilters = null): array;
 
     /**
      * Ключевые показатели пульта.
