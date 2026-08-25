@@ -2,14 +2,15 @@
 
 namespace App\Services\Crm\Mail\Sources;
 
-use App\Models\ContractorBalance;
 use App\Models\CrmEmail;
 use App\Models\PrintedDocument;
-use App\Models\ShipmentPaymentSchedule;
+use App\Models\SettlementEntry;
+use App\Models\Shipment;
 use App\Services\Crm\Mail\MailStream;
 use App\Support\Notifications\Occasion;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Плановый обход финансового состояния.
@@ -58,22 +59,34 @@ class FinanceScanner
      */
     private function scanDueSoon(CarbonImmutable $today, int $horizonDays, bool $dryRun): int
     {
-        $rows = ShipmentPaymentSchedule::query()
-            ->with(['shipment.user', 'shipment.company'])
-            ->whereBetween('due_date', [$today->toDateString(), $today->addDays($horizonDays)->toDateString()])
+        // Планы заказов исключены: предоплата — не обязательство с сроком,
+        // и напоминать по ней «срок оплаты подходит» нечего (та же граница,
+        // что у просрочки в счётном ядре).
+        $lines = SettlementEntry::query()
+            ->outstanding()
+            ->where('document_kind', '!=', 'order')
+            ->whereBetween(DB::raw('DATE(date)'), [
+                $today->toDateString(),
+                $today->addDays($horizonDays)->toDateString(),
+            ])
+            ->get();
+
+        $shipments = Shipment::query()
+            ->whereIn('uuid', $lines->pluck('document_uuid')->filter()->unique())
             ->get()
-            ->filter(fn (ShipmentPaymentSchedule $row) => $this->unpaid($row) > 0.009);
+            ->keyBy('uuid');
 
         $count = 0;
 
-        foreach ($rows as $row) {
-            $shipment = $row->shipment;
+        foreach ($lines as $line) {
+            $shipment = $shipments->get($line->document_uuid);
 
             if ($shipment === null || $shipment->user_id === null) {
                 continue;
             }
 
-            $dueDate = Carbon::parse($row->due_date);
+            $dueDate = Carbon::parse($line->date);
+            $unpaid = $line->unsettled_amount;
 
             $this->publish($dryRun, new Occasion(
                 key: 'finance.payment_due_soon',
@@ -82,7 +95,7 @@ class FinanceScanner
                 subject: $shipment,
                 data: [
                     'days_left' => $today->diffInDays($dueDate, false),
-                    'amount' => round($this->unpaid($row), 2),
+                    'amount' => round($unpaid, 2),
                     'due_date' => $dueDate->toDateString(),
                     'shipment_id' => $shipment->id,
                     'shipment_number' => $shipment->erp_number ?? $shipment->number ?? null,
@@ -95,7 +108,7 @@ class FinanceScanner
                         'По реализации %s срок оплаты — %s. К оплате: %s ₽.',
                         $shipment->erp_number ?? $shipment->number ?? '—',
                         $dueDate->format('d.m.Y'),
-                        number_format($this->unpaid($row), 2, ',', ' '),
+                        number_format($unpaid, 2, ',', ' '),
                     ),
                 ],
             ));
@@ -115,21 +128,18 @@ class FinanceScanner
     {
         $result = ['started' => 0, 'grew' => 0, 'cleared' => 0];
 
-        $balances = ContractorBalance::query()
-            ->with('overdueDetails')
-            ->where(function ($q) {
-                $q->where('overdue_debt', '>', 0)
-                    ->orWhereIn('user_id', $this->clientsWithPreviousOverdue());
-            })
-            ->get();
+        // Состояние собирается из регистра: `overdue_details` от 1С удалены
+        // из контракта в v16.0.0, а канал балансов сама 1С признала недостоверным.
+        $states = $this->overdueStates($today);
 
-        foreach ($balances as $balance) {
-            if ($balance->user_id === null) {
-                continue;
-            }
+        // Клиенты, которым в прошлый раз писали: без них не заметить погашение —
+        // в регистре у них теперь пусто, и переход «cleared» некому породить.
+        foreach ($this->clientsWithPreviousOverdue() as $clientId) {
+            $states[$clientId] ??= $this->emptyState();
+        }
 
-            $current = $this->currentState($balance, $today);
-            $previous = $this->previousState($balance->user_id);
+        foreach ($states as $clientUserId => $current) {
+            $previous = $this->previousState($clientUserId);
 
             $transition = $this->detectTransition($current, $previous);
 
@@ -141,8 +151,8 @@ class FinanceScanner
 
             $this->publish($dryRun, new Occasion(
                 key: $eventKey,
-                clientUserId: $balance->user_id,
-                companyId: $balance->company_id,
+                clientUserId: $clientUserId,
+                companyId: $current['company_id'],
                 data: $data,
                 view: $view,
             ));
@@ -154,21 +164,97 @@ class FinanceScanner
     }
 
     /**
+     * Просрочка клиентов по регистру: сумма, возраст и контрагент-виновник.
+     *
+     * Ключ — id партнёра: письма адресуются ему, а не контрагенту. Юрлицо
+     * подставляется то, у которого просрочка больше, — письмо уходит с ним
+     * в реквизитах, и брать первое попавшееся было бы враньём.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function overdueStates(CarbonImmutable $today): array
+    {
+        $lines = SettlementEntry::query()
+            ->overdue(Carbon::parse($today->toDateString()))
+            // nature и document_kind обязательны в выборке: без них аксессоры
+            // `unsettled_amount` и `is_overdue` считают строку не плановой
+            // и молча возвращают ноль.
+            ->get([
+                'user_id', 'company_id', 'nature', 'document_kind',
+                'amount', 'settled_amount', 'amount_rub', 'currency_code', 'date',
+            ]);
+
+        $byClient = [];
+
+        foreach ($lines as $line) {
+            $clientId = (int) $line->user_id;
+
+            if ($clientId === 0) {
+                continue;
+            }
+
+            $unpaid = $line->unsettled_amount;
+            $date = $line->date?->toDateString();
+
+            $state = $byClient[$clientId] ??= $this->emptyState() + ['by_company' => []];
+
+            $state['overdue_amount'] += $unpaid;
+            $state['positions_count']++;
+
+            if ($date !== null && ($state['oldest_due_date'] === null || $date < $state['oldest_due_date'])) {
+                $state['oldest_due_date'] = $date;
+            }
+
+            $companyId = $line->company_id === null ? 0 : (int) $line->company_id;
+            $state['by_company'][$companyId] = ($state['by_company'][$companyId] ?? 0.0) + $unpaid;
+
+            $byClient[$clientId] = $state;
+        }
+
+        // Сальдо клиента — сумма его фактических движений: то же число, что
+        // в балансах CRM и кабинете.
+        $debts = SettlementEntry::query()
+            ->facts()
+            ->whereIn('user_id', array_keys($byClient))
+            ->selectRaw('user_id, SUM(COALESCE(amount_rub, amount)) as total')
+            ->groupBy('user_id')
+            ->pluck('total', 'user_id');
+
+        foreach ($byClient as $clientId => $state) {
+            arsort($state['by_company']);
+            $topCompany = (int) array_key_first($state['by_company']);
+
+            $byClient[$clientId] = [
+                'overdue_amount' => round($state['overdue_amount'], 2),
+                'total_debt' => round((float) ($debts[$clientId] ?? 0), 2),
+                // Порядок аргументов значим: diffInDays возвращает знаковую
+                // разницу, и today->diff(прошлое) дал бы отрицательные дни.
+                'days_overdue' => $state['oldest_due_date']
+                    ? (int) Carbon::parse($state['oldest_due_date'])->diffInDays($today)
+                    : 0,
+                'oldest_due_date' => $state['oldest_due_date'],
+                'positions_count' => $state['positions_count'],
+                'company_id' => $topCompany > 0 ? $topCompany : null,
+            ];
+        }
+
+        return $byClient;
+    }
+
+    /**
+     * Состояние «просрочки нет» — для клиентов, которым писали в прошлый раз.
+     *
      * @return array<string, mixed>
      */
-    private function currentState(ContractorBalance $balance, CarbonImmutable $today): array
+    private function emptyState(): array
     {
-        $details = $balance->overdueDetails;
-        $oldest = $details->min('due_date');
-
         return [
-            'overdue_amount' => round((float) $balance->overdue_debt, 2),
-            'total_debt' => round((float) $balance->current_balance, 2),
-            // Порядок аргументов значим: diffInDays возвращает знаковую разницу,
-            // и today->diff(прошлое) дал бы отрицательные дни просрочки.
-            'days_overdue' => $oldest ? (int) Carbon::parse($oldest)->diffInDays($today) : 0,
-            'oldest_due_date' => $oldest ? Carbon::parse($oldest)->toDateString() : null,
-            'positions_count' => $details->count(),
+            'overdue_amount' => 0.0,
+            'total_debt' => 0.0,
+            'days_overdue' => 0,
+            'oldest_due_date' => null,
+            'positions_count' => 0,
+            'company_id' => null,
         ];
     }
 
@@ -299,13 +385,6 @@ class FinanceScanner
             (int) $state['positions_count'],
             $state['oldest_due_date'] ? Carbon::parse($state['oldest_due_date'])->format('d.m.Y') : '—',
         );
-    }
-
-    private function unpaid(ShipmentPaymentSchedule $row): float
-    {
-        // 1С гасит долг ещё и авансами по заказам, поэтому остаток графика —
-        // это сумма за вычетом оплаченного И предоплаченного.
-        return (float) $row->amount - (float) $row->paid_amount - (float) $row->prepaid_amount;
     }
 
     private function hasInvoice(int $shipmentId): bool

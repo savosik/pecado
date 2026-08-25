@@ -3,11 +3,10 @@
 namespace Tests\Feature\Crm\Mail;
 
 use App\Models\Company;
-use App\Models\ContractorBalance;
-use App\Models\ContractorBalanceOverdueDetail;
 use App\Models\CrmEmail;
 use App\Models\CrmMailRule;
 use App\Models\PersonalManager;
+use App\Models\SettlementEntry;
 use App\Models\User;
 use App\Services\Crm\Mail\Sources\FinanceScanner;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -59,28 +58,43 @@ class MailFinanceTest extends TestCase
         ]);
     }
 
+    /**
+     * Просрочка задаётся движениями регистра: письма считают её оттуда же,
+     * откуда CRM и кабинет, — канал `balance.updated` 1С признала недостоверным.
+     */
     private function setOverdue(float $amount, int $daysOverdue): void
     {
-        $balance = ContractorBalance::updateOrCreate(
-            ['company_id' => $this->company->id],
-            [
-                'user_id' => $this->partner->id,
-                'tax_id' => $this->company->tax_id,
-                'current_balance' => $amount,
-                'overdue_debt' => $amount,
-            ],
-        );
+        SettlementEntry::query()->where('user_id', $this->partner->id)->delete();
 
-        $balance->overdueDetails()->delete();
-
-        if ($amount > 0) {
-            ContractorBalanceOverdueDetail::create([
-                'contractor_balance_id' => $balance->id,
-                'shipment_uuid' => (string) Str::uuid(),
-                'amount' => $amount,
-                'due_date' => now()->subDays($daysOverdue)->toDateString(),
-            ]);
+        if ($amount <= 0) {
+            return;
         }
+
+        // Просроченная плановая строка — сама просрочка.
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'user_id' => $this->partner->id,
+            'company_id' => $this->company->id,
+            'document_uuid' => (string) Str::uuid(),
+            'document_kind' => 'shipment',
+            'date' => now()->subDays($daysOverdue)->toDateString(),
+            'amount' => $amount,
+            'settled_amount' => 0,
+            'currency_code' => 'RUB',
+        ]);
+
+        // Фактическое движение — общий долг клиента в шапке письма.
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'user_id' => $this->partner->id,
+            'company_id' => $this->company->id,
+            'amount' => -$amount,
+            'amount_rub' => -$amount,
+            'currency_code' => 'RUB',
+            'date' => now()->subDays($daysOverdue)->toDateString(),
+        ]);
     }
 
     private function scan(): void
