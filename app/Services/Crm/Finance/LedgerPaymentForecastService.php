@@ -44,7 +44,7 @@ class LedgerPaymentForecastService implements PaymentForecast
      * ['organization', 'company'] — «наша организация → контрагент»,
      * ['company'] — плоский список юрлиц.
      */
-    public const BALANCE_AXES = ['partner', 'organization', 'company'];
+    public const BALANCE_AXES = ['manager', 'partner', 'organization', 'company'];
 
     use FormatsForecastRows;
 
@@ -272,8 +272,8 @@ class LedgerPaymentForecastService implements PaymentForecast
             // Группировка всегда по полному ключу «партнёр × организация × контрагент»:
             // выбранный разрез собирается из этих ячеек в PHP. Считать в БД под каждый
             // разрез отдельно значило бы четыре почти одинаковых запроса.
-            ->groupBy('e.user_id', 'e.organization_id', 'e.company_id', 'u.name', 'u.erp_name', 'pm.name', 'c.name', 'c.tax_id', 'o.name')
-            ->select(['e.user_id', 'e.organization_id', 'e.company_id', 'u.name as client_name', 'u.erp_name as client_erp_name'])
+            ->groupBy('e.user_id', 'e.organization_id', 'e.company_id', 'u.name', 'u.erp_name', 'u.personal_manager_id', 'pm.name', 'c.name', 'c.tax_id', 'o.name')
+            ->select(['e.user_id', 'e.organization_id', 'e.company_id', 'u.name as client_name', 'u.erp_name as client_erp_name', 'u.personal_manager_id'])
             ->selectRaw('pm.name as manager_name, c.name as company_name, c.tax_id as tax_id, o.name as organization_name')
             ->selectRaw('SUM(COALESCE(e.amount_rub, e.amount)) as balance')
             ->selectRaw('MAX(e.erp_updated_at) as erp_updated_at')
@@ -316,10 +316,15 @@ class LedgerPaymentForecastService implements PaymentForecast
                     'entity_id' => $node['entity_id'],
                     'title' => $node['title'],
                     'subtitle' => $node['subtitle'],
+                    'tax_id' => $node['tax_id'],
                     'url' => $node['url'],
                     'current_balance' => 0.0,
                     'overdue_debt' => 0.0,
                     'erp_updated_at' => null,
+                    // Менеджеры узла копятся множеством: у контрагента он один,
+                    // у нашей организации их десятки, и подпись имеет смысл
+                    // только в первом случае.
+                    'managers' => [],
                     'children' => [],
                 ];
 
@@ -329,6 +334,10 @@ class LedgerPaymentForecastService implements PaymentForecast
                     $branch[$node['key']]['erp_updated_at'],
                     $updatedAt,
                 );
+
+                if ($cell->manager_name !== null && $cell->manager_name !== '') {
+                    $branch[$node['key']]['managers'][$cell->manager_name] = true;
+                }
 
                 $branch = &$branch[$node['key']]['children'];
             }
@@ -342,7 +351,7 @@ class LedgerPaymentForecastService implements PaymentForecast
     /**
      * Узел дерева для одной оси разреза.
      *
-     * @return array{key: string, entity_id: ?int, title: string, subtitle: ?string, url: ?string}
+     * @return array{key: string, entity_id: ?int, title: string, subtitle: ?string, tax_id: ?string, url: ?string}
      */
     private function balanceNode(string $axis, object $cell): array
     {
@@ -351,14 +360,26 @@ class LedgerPaymentForecastService implements PaymentForecast
                 'key' => 'u'.$cell->user_id,
                 'entity_id' => (int) $cell->user_id,
                 'title' => $cell->client_erp_name ?: $cell->client_name,
-                'subtitle' => $cell->manager_name ?: 'без менеджера',
+                'subtitle' => null,
+                'tax_id' => null,
                 'url' => route('crm.clients.show', (int) $cell->user_id),
+            ],
+            // Менеджер как ось: разрез отдела — «сколько долга ведёт каждый»,
+            // без него РОП складывает партнёров по фамилиям руками.
+            'manager' => [
+                'key' => 'm'.($cell->personal_manager_id ?? 0),
+                'entity_id' => $cell->personal_manager_id === null ? null : (int) $cell->personal_manager_id,
+                'title' => $cell->manager_name ?: 'Без менеджера',
+                'subtitle' => null,
+                'tax_id' => null,
+                'url' => null,
             ],
             'organization' => [
                 'key' => 'o'.($cell->organization_id ?? 0),
                 'entity_id' => $cell->organization_id === null ? null : (int) $cell->organization_id,
                 'title' => $cell->organization_name ?: 'Организация не указана',
                 'subtitle' => null,
+                'tax_id' => null,
                 'url' => null,
             ],
             default => [
@@ -366,6 +387,7 @@ class LedgerPaymentForecastService implements PaymentForecast
                 'entity_id' => $cell->company_id === null ? null : (int) $cell->company_id,
                 'title' => $cell->company_name ?: 'Контрагент не заведён',
                 'subtitle' => $cell->tax_id ? 'ИНН '.$cell->tax_id : null,
+                'tax_id' => $cell->tax_id !== null ? (string) $cell->tax_id : null,
                 'url' => null,
             ],
         };
@@ -385,6 +407,8 @@ class LedgerPaymentForecastService implements PaymentForecast
         $rows = array_map(function (array $row): array {
             $row['current_balance'] = round($row['current_balance'], 2);
             $row['overdue_debt'] = round($row['overdue_debt'], 2);
+            $row['manager_name'] = $this->managerLabel($row['managers'], $row['axis']);
+            unset($row['managers']);
             $row['erp_updated_at'] = $row['erp_updated_at'] !== null
                 ? CarbonImmutable::parse($row['erp_updated_at'])->format('d.m.Y H:i')
                 : null;
@@ -397,6 +421,48 @@ class LedgerPaymentForecastService implements PaymentForecast
             <=> [$a['overdue_debt'], $b['current_balance']]);
 
         return $rows;
+    }
+
+    /**
+     * Подпись менеджера для узла.
+     *
+     * Один менеджер — имя; несколько — их число (так у нашей организации видно,
+     * что за ней стоит весь отдел, а не конкретный человек). Партнёр без
+     * менеджера подписывается явно: пустая строка читалась бы как «не загрузилось».
+     *
+     * @param  array<string, bool>  $managers
+     */
+    private function managerLabel(array $managers, string $axis): ?string
+    {
+        // На самой оси менеджера подпись не нужна: она повторила бы заголовок строки.
+        if ($axis === 'manager') {
+            return null;
+        }
+
+        $names = array_keys($managers);
+
+        if (count($names) === 1) {
+            return $names[0];
+        }
+
+        if ($names === []) {
+            return $axis === 'organization' ? null : 'без менеджера';
+        }
+
+        return count($names).' '.$this->managersPlural(count($names));
+    }
+
+    /** «2 менеджера», но «5 менеджеров». */
+    private function managersPlural(int $count): string
+    {
+        $tail = $count % 10;
+        $teen = $count % 100 >= 11 && $count % 100 <= 14;
+
+        if (! $teen && $tail >= 2 && $tail <= 4) {
+            return 'менеджера';
+        }
+
+        return 'менеджеров';
     }
 
     /** Ключ ячейки «партнёр × организация × контрагент». */
@@ -532,8 +598,8 @@ class LedgerPaymentForecastService implements PaymentForecast
             ->where(static function (QueryBuilder $query): void {
                 $query->whereNull('p.document_kind')->orWhere('p.document_kind', '<>', 'order');
             })
-            ->groupBy('p.user_id', 'p.organization_id', 'p.company_id', 'u.name', 'u.erp_name', 'pm.name', 'c.name', 'c.tax_id', 'o.name')
-            ->select(['p.user_id', 'p.organization_id', 'p.company_id', 'u.name as client_name', 'u.erp_name as client_erp_name'])
+            ->groupBy('p.user_id', 'p.organization_id', 'p.company_id', 'u.name', 'u.erp_name', 'u.personal_manager_id', 'pm.name', 'c.name', 'c.tax_id', 'o.name')
+            ->select(['p.user_id', 'p.organization_id', 'p.company_id', 'u.name as client_name', 'u.erp_name as client_erp_name', 'u.personal_manager_id'])
             ->selectRaw('pm.name as manager_name, c.name as company_name, c.tax_id as tax_id, o.name as organization_name')
             ->selectRaw('SUM(p.amount - p.settled_amount) as overdue')
             ->get()

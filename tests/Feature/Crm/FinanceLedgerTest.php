@@ -4,6 +4,7 @@ namespace Tests\Feature\Crm;
 
 use App\Models\Company;
 use App\Models\Organization;
+use App\Models\PersonalManager;
 use App\Models\SettlementEntry;
 use App\Models\Shipment;
 use App\Models\User;
@@ -439,6 +440,8 @@ class FinanceLedgerTest extends TestCase
             ['partner', 'organization', 'company'],
             ['organization', 'company'],
             ['company'],
+            ['manager', 'partner', 'company'],
+            ['manager', 'organization', 'partner'],
         ] as $dimensions) {
             $tree = $this->forecast()->balances($this->clients(), null, $dimensions);
             $label = implode(' → ', $dimensions);
@@ -458,6 +461,79 @@ class FinanceLedgerTest extends TestCase
 
             $this->assertSame(count($dimensions), $depth, $label);
         }
+    }
+
+    /**
+     * Менеджер подписан на каждом уровне любого разреза: первый вопрос к строке
+     * долга — «кому звонить», и ответ не должен зависеть от группировки.
+     *
+     * У нашей организации менеджер один назвать нельзя — за ней стоит весь
+     * отдел, поэтому там подпись считает людей, а не выдумывает ответственного.
+     */
+    #[Test]
+    public function менеджер_подписан_в_любом_разрезе(): void
+    {
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -10000,
+            'amount_rub' => -10000,
+            'date' => CarbonImmutable::today()->subDays(4)->toDateString(),
+        ]);
+
+        $this->client->update([
+            'personal_manager_id' => PersonalManager::create(['name' => 'Сухов'])->id,
+        ]);
+
+        // Второй партнёр другого менеджера, но расчёты с той же нашей организацией.
+        $other = User::factory()->create([
+            'personal_manager_id' => PersonalManager::create(['name' => 'Курочкина'])->id,
+        ]);
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'user_id' => $other->id,
+            'company_id' => Company::factory()->create(['user_id' => $other->id])->id,
+            'organization_id' => $this->organization->id,
+            'currency_code' => 'RUB',
+            'document_uuid' => (string) Str::uuid(),
+            'document_kind' => 'shipment',
+            'amount' => -5000,
+            'amount_rub' => -5000,
+            'date' => CarbonImmutable::today()->subDays(4)->toDateString(),
+        ]);
+
+        $clients = User::query()->whereIn('users.id', [$this->client->id, $other->id])->select('users.id');
+
+        $byPartner = $this->forecast()->balances($clients, null, ['partner', 'company']);
+        $this->assertEqualsCanonicalizing(
+            ['Сухов', 'Курочкина'],
+            array_column($byPartner, 'manager_name'),
+        );
+        foreach ($byPartner as $partner) {
+            $this->assertSame($partner['manager_name'], $partner['children'][0]['manager_name']);
+        }
+
+        // Плоский список контрагентов — менеджер остаётся у каждой строки.
+        $flat = $this->forecast()->balances($clients, null, ['company']);
+        $this->assertEqualsCanonicalizing(
+            ['Сухов', 'Курочкина'],
+            array_column($flat, 'manager_name'),
+        );
+
+        // На оси менеджера подпись пуста: она повторила бы заголовок строки.
+        $byManager = $this->forecast()->balances($clients, null, ['manager', 'partner', 'company']);
+        $this->assertEqualsCanonicalizing(['Сухов', 'Курочкина'], array_column($byManager, 'title'));
+        $this->assertSame([null, null], array_column($byManager, 'manager_name'));
+
+        // Наша организация: людей двое, имени нет — вместо него счёт.
+        $byOrg = $this->forecast()->balances($clients, null, ['organization', 'company']);
+        $this->assertCount(1, $byOrg);
+        $this->assertSame('2 менеджера', $byOrg[0]['manager_name']);
+        $this->assertEqualsCanonicalizing(
+            ['Сухов', 'Курочкина'],
+            array_column($byOrg[0]['children'], 'manager_name'),
+        );
     }
 
     /**

@@ -92,6 +92,10 @@ class FinanceController extends CrmController
         // из группировки по организации сверху не читается.
         'company_org' => ['label' => 'Контрагент → наша организация', 'dimensions' => ['company', 'organization']],
         'company' => ['label' => 'Контрагенты списком', 'dimensions' => ['company']],
+        // Разрезы отдела: РОП смотрит на долг не по клиентам, а по людям —
+        // сколько ведёт каждый менеджер и с какими нашими юрлицами это идёт.
+        'manager' => ['label' => 'Менеджер → партнёр → контрагент', 'dimensions' => ['manager', 'partner', 'company']],
+        'manager_org' => ['label' => 'Менеджер → организация → партнёр', 'dimensions' => ['manager', 'organization', 'partner']],
     ];
 
     public function balances(Request $request): InertiaResponse
@@ -480,6 +484,10 @@ class FinanceController extends CrmController
      * Лист «Балансы»: строка на контрагента, имя партнёра дублируется в каждой —
      * так лист фильтруется и сводится в самом Excel.
      *
+     * Выгрузка всегда идёт в разрезе «партнёр → контрагент» независимо от того,
+     * какой разрез выбран на экране: лист сверяют с 1С, а она ведёт расчёты
+     * именно по контрагентам, и переменная форма листа ломала бы сводные.
+     *
      * @param  Builder<User>  $clients
      * @return list<array<int, scalar|null>>
      */
@@ -487,12 +495,16 @@ class FinanceController extends CrmController
     {
         $rows = [];
 
-        foreach ($this->forecast->balances($clients) as $client) {
-            foreach ($client['contractors'] as $contractor) {
+        foreach ($this->forecast->balances($clients) as $partner) {
+            // Партнёр без контрагентов в дереве листьев не имеет — его строку
+            // всё равно выводим, иначе сальдо листа не сойдётся с экраном.
+            $contractors = $partner['children'] ?: [$partner];
+
+            foreach ($contractors as $contractor) {
                 $rows[] = [
-                    $client['client']['name'],
-                    $client['manager_name'],
-                    $contractor['company_name'],
+                    $partner['title'],
+                    $partner['manager_name'],
+                    $contractor['title'],
                     $contractor['tax_id'],
                     $contractor['current_balance'],
                     $contractor['overdue_debt'],

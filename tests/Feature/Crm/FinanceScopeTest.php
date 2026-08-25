@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Reader\Xlsx as XlsxReader;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
@@ -437,5 +438,62 @@ class FinanceScopeTest extends TestCase
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         );
         $this->assertNotEmpty($response->streamedContent());
+    }
+
+    /**
+     * Лист «Балансы» строится из того же дерева, что и экран, но всегда в
+     * разрезе «партнёр → контрагент»: лист сверяют с 1С, а она ведёт расчёты
+     * по контрагентам.
+     */
+    #[Test]
+    public function balances_sheet_carries_partner_manager_and_tax_id(): void
+    {
+        [$actor, $card] = $this->makeManagerActor();
+        $client = $this->makeClient($card);
+        $company = Company::factory()->create([
+            'user_id' => $client->id,
+            'name' => 'ООО Ромашка',
+            'tax_id' => '7701234567',
+        ]);
+
+        $this->makeFact($client, -4000, [
+            'company_id' => $company->id,
+            'date' => Carbon::today()->subDays(3)->toDateString(),
+        ]);
+
+        $response = $this->actingAs($actor)->get('/crm/finance/export');
+        $response->assertOk();
+
+        $sheets = $this->readXlsx($response->streamedContent());
+        $this->assertArrayHasKey('Балансы', $sheets);
+
+        [$headers, $row] = $sheets['Балансы'];
+
+        $this->assertSame(['Партнёр', 'Менеджер', 'Контрагент', 'ИНН'], array_slice($headers, 0, 4));
+        $this->assertSame('Менеджер', $row[1]);
+        $this->assertSame('ООО Ромашка', $row[2]);
+        $this->assertSame('7701234567', (string) $row[3]);
+        $this->assertEqualsWithDelta(-4000.0, (float) $row[4], 0.01);
+    }
+
+    /**
+     * @return array<string, array<int, array<int, mixed>>> лист => строки
+     */
+    private function readXlsx(string $binary): array
+    {
+        $path = tempnam(sys_get_temp_dir(), 'xlsx').'.xlsx';
+        file_put_contents($path, $binary);
+
+        $spreadsheet = (new XlsxReader)->load($path);
+        $sheets = [];
+
+        foreach ($spreadsheet->getAllSheets() as $sheet) {
+            $sheets[$sheet->getTitle()] = $sheet->toArray(null, true, false);
+        }
+
+        $spreadsheet->disconnectWorksheets();
+        @unlink($path);
+
+        return $sheets;
     }
 }

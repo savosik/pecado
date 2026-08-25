@@ -11,12 +11,6 @@ import FinanceFilterBar from './components/FinanceFilterBar';
 import { formatRub } from './components/format';
 
 /** Подпись оси в заголовке первой колонки — читатель должен понимать, что за строки видит. */
-const AXIS_TITLES = {
-    partner: 'Партнёр',
-    organization: 'Наша организация',
-    company: 'Контрагент',
-};
-
 /** Сколько узлов в поддереве — для счётчика внизу. */
 const countNodes = (rows, depth = 0) => rows.reduce((acc, row) => {
     acc[depth] = (acc[depth] ?? 0) + 1;
@@ -232,8 +226,15 @@ function BalanceRows({ row, depth, expanded, onToggle, onTask }) {
                         ) : (
                             <Text fontSize="sm" fontWeight={depth === 0 ? '600' : '400'}>{row.title}</Text>
                         )}
-                        {row.subtitle && (
-                            <Text fontSize="10px" color="fg.muted">{row.subtitle}</Text>
+                        {(row.subtitle || row.manager_name) && (
+                            <HStack gap={1} color="fg.muted" fontSize="10px">
+                                {row.subtitle && <Text>{row.subtitle}</Text>}
+                                {row.subtitle && row.manager_name && <Text>·</Text>}
+                                {/* Менеджер мелким шрифтом виден в любом разрезе:
+                                    «кому звонить по этому долгу» — первый вопрос
+                                    к любой строке, на каком бы уровне она ни была. */}
+                                {row.manager_name && <Text>{row.manager_name}</Text>}
+                            </HStack>
                         )}
                     </VStack>
                 </Table.Cell>
