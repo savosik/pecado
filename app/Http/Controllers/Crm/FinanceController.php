@@ -87,6 +87,10 @@ class FinanceController extends CrmController
         'partner' => ['label' => 'Партнёр → контрагент', 'dimensions' => ['partner', 'company']],
         'partner_org' => ['label' => 'Партнёр → организация → контрагент', 'dimensions' => ['partner', 'organization', 'company']],
         'org' => ['label' => 'Наша организация → контрагент', 'dimensions' => ['organization', 'company']],
+        // Обратный разрез: у контрагента расчёты могут идти сразу с несколькими
+        // нашими юрлицами, и вопрос «с кем именно из наших он не рассчитался»
+        // из группировки по организации сверху не читается.
+        'company_org' => ['label' => 'Контрагент → наша организация', 'dimensions' => ['company', 'organization']],
         'company' => ['label' => 'Контрагенты списком', 'dimensions' => ['company']],
     ];
 
