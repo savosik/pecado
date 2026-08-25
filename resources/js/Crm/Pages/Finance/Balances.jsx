@@ -59,11 +59,22 @@ export default function FinanceBalances({
     const levels = countNodes(balances);
     const axes = (views.find((item) => item.value === view)?.label ?? '').split(' → ');
 
-    const changeView = (value) => router.get(
-        '/crm/finance/balances',
-        { ...(asOf ? { as_of: asOf } : {}), ...(filters.scope === 'department' ? { scope: 'department' } : {}), view: value },
-        { preserveState: true, preserveScroll: true, replace: true },
-    );
+    /**
+     * Разрез меняется поверх текущего адреса, а не вместо него: отбор и форма
+     * отчёта независимы — фильтр сужает движения, разрез только раскладывает
+     * оставшееся. Перечислять фильтры руками здесь нельзя: каждый новый пришлось
+     * бы дописывать сюда, и забытый молча слетал бы при смене разреза.
+     */
+    const changeView = (value) => {
+        const query = new URLSearchParams(window.location.search);
+        query.set('view', value);
+
+        router.get(
+            `/crm/finance/balances?${query.toString()}`,
+            {},
+            { preserveState: true, preserveScroll: true, replace: true },
+        );
+    };
 
     return (
         <CrmLayout breadcrumbs={[{ label: 'Финансы' }, { label: 'Балансы' }]}>

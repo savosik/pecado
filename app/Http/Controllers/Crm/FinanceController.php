@@ -109,7 +109,9 @@ class FinanceController extends CrmController
         $dimensions = $this->balancesDimensions($request);
 
         return Inertia::render('Crm/Pages/Finance/Balances', [
-            'balances' => $this->forecast->balances($clients, $asOf, $dimensions),
+            // Отбор применяется до разреза: фильтры сужают ленту движений,
+            // разрез только раскладывает то, что осталось.
+            'balances' => $this->forecast->balances($clients, $asOf, $dimensions, $filters->organizationIds),
             'asOf' => $asOf?->toDateString(),
             // Ключ разреза отдаём как есть: экран рисует переключатель по нему,
             // а не по составу осей — иначе подпись пришлось бы собирать на клиенте.
@@ -475,7 +477,7 @@ class FinanceController extends CrmController
                 ],
                 // Построчно по контрагентам: 1С ведёт расчёты именно по ним, и
                 // свёрнутый до партнёра лист нельзя было бы сверить с учётной системой.
-                'rows' => $this->balancesSheet($clients),
+                'rows' => $this->balancesSheet($clients, $filters),
             ],
         ]);
     }
@@ -491,11 +493,11 @@ class FinanceController extends CrmController
      * @param  Builder<User>  $clients
      * @return list<array<int, scalar|null>>
      */
-    private function balancesSheet(Builder $clients): array
+    private function balancesSheet(Builder $clients, FinanceFilters $filters): array
     {
         $rows = [];
 
-        foreach ($this->forecast->balances($clients) as $partner) {
+        foreach ($this->forecast->balances($clients, null, ['partner', 'company'], $filters->organizationIds) as $partner) {
             // Партнёр без контрагентов в дереве листьев не имеет — его строку
             // всё равно выводим, иначе сальдо листа не сойдётся с экраном.
             $contractors = $partner['children'] ?: [$partner];

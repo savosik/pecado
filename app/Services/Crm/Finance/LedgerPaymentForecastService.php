@@ -245,11 +245,20 @@ class LedgerPaymentForecastService implements PaymentForecast
      * у партнёра их бывает несколько. Просрочка теперь выводится из непогашенных
      * плановых строк, а не приходит отдельным полем.
      *
+     * Отбор (партнёры, наши юрлица) сужает ленту движений **до** сборки дерева:
+     * разрез — это форма отчёта, а не способ отбора, и переключение осей
+     * не должно ни возвращать отфильтрованное, ни терять выбранное.
+     *
      * @param  EloquentBuilder<\App\Models\User>  $clients
+     * @param  array<int, int>  $organizationIds  отбор по нашим юрлицам
      * @return list<array<string, mixed>>
      */
-    public function balances(EloquentBuilder $clients, ?CarbonImmutable $asOf = null, array $dimensions = ['partner', 'company']): array
-    {
+    public function balances(
+        EloquentBuilder $clients,
+        ?CarbonImmutable $asOf = null,
+        array $dimensions = ['partner', 'company'],
+        array $organizationIds = [],
+    ): array {
         $dimensions = array_values(array_filter(
             $dimensions,
             static fn (string $axis): bool => in_array($axis, self::BALANCE_AXES, true),
@@ -265,6 +274,7 @@ class LedgerPaymentForecastService implements PaymentForecast
             ->leftJoin('companies as c', 'c.id', '=', 'e.company_id')
             ->leftJoin('organizations as o', 'o.id', '=', 'e.organization_id')
             ->where('e.nature', SettlementEntry::NATURE_FACT)
+            ->when($organizationIds !== [], fn ($query) => $query->whereIn('e.organization_id', $organizationIds))
             // Ретроспектива: движения после выбранной даты в сальдо не входят.
             // Дата включительно — «баланс на 31.07» это состояние на конец дня.
             ->when($asOf !== null, fn ($query) => $query->whereDate('e.date', '<=', $asOf->toDateString()))
@@ -279,7 +289,7 @@ class LedgerPaymentForecastService implements PaymentForecast
             ->selectRaw('MAX(e.erp_updated_at) as erp_updated_at')
             ->get();
 
-        $overdue = $this->overdueByCell($clients, $asOf);
+        $overdue = $this->overdueByCell($clients, $asOf, $organizationIds);
 
         // Ячейки объединяются, а не джойнятся: просрочка бывает там, где движений
         // в этом разрезе нет вовсе (например, план на одну нашу организацию,
@@ -583,7 +593,7 @@ class LedgerPaymentForecastService implements PaymentForecast
      * @param  EloquentBuilder<\App\Models\User>  $clients
      * @return array<string, object>
      */
-    private function overdueByCell(EloquentBuilder $clients, ?CarbonImmutable $asOf = null): array
+    private function overdueByCell(EloquentBuilder $clients, ?CarbonImmutable $asOf = null, array $organizationIds = []): array
     {
         return DB::table('settlement_entries as p')
             ->join('users as u', 'u.id', '=', 'p.user_id')
@@ -591,6 +601,7 @@ class LedgerPaymentForecastService implements PaymentForecast
             ->leftJoin('companies as c', 'c.id', '=', 'p.company_id')
             ->leftJoin('organizations as o', 'o.id', '=', 'p.organization_id')
             ->where('p.nature', SettlementEntry::NATURE_PLAN)
+            ->when($organizationIds !== [], fn ($query) => $query->whereIn('p.organization_id', $organizationIds))
             ->whereIn('p.user_id', (clone $clients))
             ->whereDate('p.date', '<', ($asOf ?? CarbonImmutable::today())->toDateString())
             ->whereRaw('p.amount - p.settled_amount > '.SettlementEntry::EPSILON)

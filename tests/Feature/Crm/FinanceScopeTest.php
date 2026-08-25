@@ -4,6 +4,7 @@ namespace Tests\Feature\Crm;
 
 use App\Models\Company;
 use App\Models\Currency;
+use App\Models\Organization;
 use App\Models\PersonalManager;
 use App\Models\SettlementEntry;
 use App\Models\Shipment;
@@ -438,6 +439,37 @@ class FinanceScopeTest extends TestCase
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         );
         $this->assertNotEmpty($response->streamedContent());
+    }
+
+    /**
+     * Отбор и разрез независимы: фильтр сужает движения, разрез раскладывает
+     * то, что осталось. Раньше фильтр по нашему юрлицу до балансов вообще
+     * не доходил — панель показывала отбор, а таблица его игнорировала.
+     */
+    #[Test]
+    public function balances_filter_narrows_data_before_the_view_is_applied(): void
+    {
+        [$actor, $card] = $this->makeManagerActor(head: true);
+        $client = $this->makeClient($card);
+
+        $ours = Organization::factory()->create(['name' => 'ООО Пекадо']);
+        $theirs = Organization::factory()->create(['name' => 'ИП Елисеев']);
+
+        $this->makeFact($client, -3000, ['organization_id' => $ours->id]);
+        $this->makeFact($client, -7000, ['organization_id' => $theirs->id]);
+
+        $props = $this->actingAs($actor)
+            ->get('/crm/finance/balances?view=org&organization_ids[]='.$ours->id)
+            ->viewData('page')['props'];
+
+        // Разрез не сбросился отбором…
+        $this->assertSame('org', $props['view']);
+        $this->assertSame('organization', $props['balances'][0]['axis']);
+
+        // …а отбор — разрезом: второе юрлицо в дерево не попало.
+        $this->assertCount(1, $props['balances']);
+        $this->assertSame('ООО Пекадо', $props['balances'][0]['title']);
+        $this->assertEqualsWithDelta(-3000.0, $props['balances'][0]['current_balance'], 0.01);
     }
 
     /**

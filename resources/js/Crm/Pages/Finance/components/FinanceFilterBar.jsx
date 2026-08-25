@@ -81,6 +81,9 @@ export default function FinanceFilterBar({
         only_overdue: filters.only_overdue ? 1 : undefined,
         include_no_schedule: filters.include_no_schedule === false ? 0 : undefined,
         granularity: filters.granularity && filters.granularity !== 'week' ? filters.granularity : undefined,
+        // Разрез отчёта переживает любой отбор: выбор фильтра не должен
+        // возвращать таблицу к группировке по умолчанию.
+        view: filters.view || undefined,
         ...extra,
     });
 
@@ -92,7 +95,12 @@ export default function FinanceFilterBar({
         setDateFrom('');
         setDateTo('');
         setAsOf('');
-        router.get(route(routeName), { scope: filters.scope }, { preserveState: true, replace: true });
+        // Сброс убирает отбор, но не форму отчёта: разрез — не фильтр.
+        router.get(
+            route(routeName),
+            { scope: filters.scope, view: filters.view || undefined },
+            { preserveState: true, replace: true },
+        );
     };
 
     const setPeriod = (patch) => {
