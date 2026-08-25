@@ -148,27 +148,43 @@ class CollectionForecastService
      *
      * @return array{models: array<int, array<string, float|int>>, weeks: int}
      */
-    public function calibration(?CarbonImmutable $today = null): array
-    {
+    public function calibration(
+        EloquentBuilder $clients,
+        FinanceFilters $filters,
+        ?CarbonImmutable $today = null,
+    ): array {
         $today ??= CarbonImmutable::today();
 
+        // Ключ учитывает отбор: у одной нашей организации свой поток платежей,
+        // и калибровка по всей компании приписывала бы ей чужие деньги.
+        $scope = md5(
+            (clone $clients)->toSql()
+            .json_encode((clone $clients)->getBindings())
+            .json_encode($filters->organizationIds)
+        );
+
         return Cache::remember(
-            'finance:collection-calibration:'.$today->toDateString(),
+            'finance:collection-calibration:'.$today->toDateString().':'.$scope,
             now()->addHours(6),
-            fn (): array => $this->buildCalibration($today),
+            fn (): array => $this->buildCalibration($clients, $filters, $today),
         );
     }
 
     /**
      * @return array{models: array<int, array<string, float|int>>, weeks: int}
      */
-    private function buildCalibration(CarbonImmutable $today): array
+    private function buildCalibration(EloquentBuilder $clients, FinanceFilters $filters, CarbonImmutable $today): array
     {
         $plans = DB::table('settlement_entries')
             ->where('nature', SettlementEntry::NATURE_PLAN)
             ->where(function ($query): void {
                 $query->whereNull('document_kind')->orWhere('document_kind', '<>', 'order');
             })
+            ->whereIn('user_id', (clone $clients))
+            ->when(
+                $filters->organizationIds !== [],
+                fn ($query) => $query->whereIn('organization_id', $filters->organizationIds),
+            )
             ->whereNotNull('document_date')
             ->selectRaw('DATE(date) as due, DATE(document_date) as doc, SUM(amount) as amount')
             ->groupByRaw('DATE(date), DATE(document_date)')
@@ -183,6 +199,11 @@ class CollectionForecastService
         $payments = DB::table('settlement_entries')
             ->where('nature', SettlementEntry::NATURE_FACT)
             ->where('type', SettlementEntry::TYPE_PAYMENT_IN)
+            ->whereIn('user_id', (clone $clients))
+            ->when(
+                $filters->organizationIds !== [],
+                fn ($query) => $query->whereIn('organization_id', $filters->organizationIds),
+            )
             ->selectRaw('DATE(date) as day, SUM(COALESCE(amount_rub, amount)) as amount')
             ->groupByRaw('DATE(date)')
             ->pluck('amount', 'day')
@@ -414,7 +435,7 @@ class CollectionForecastService
         ?CarbonImmutable $today = null,
     ): array {
         $today ??= CarbonImmutable::today();
-        $calibration = $this->calibration($today);
+        $calibration = $this->calibration($clients, $filters, $today);
 
         $lines = $this->openPlanLines($clients, $filters);
         $horizon = $this->planHorizon($lines);

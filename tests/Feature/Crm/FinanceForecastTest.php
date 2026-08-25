@@ -3,6 +3,7 @@
 namespace Tests\Feature\Crm;
 
 use App\Models\Currency;
+use App\Models\Organization;
 use App\Models\PersonalManager;
 use App\Models\SettlementEntry;
 use App\Models\Shipment;
@@ -61,9 +62,12 @@ class FinanceForecastTest extends TestCase
         return User::query()->whereNotNull('users.personal_manager_id')->select('users.id');
     }
 
-    private function filters(): FinanceFilters
+    /**
+     * @param  array<string, mixed>  $query
+     */
+    private function filters(array $query = []): FinanceFilters
     {
-        return FinanceFilters::fromRequest(Request::create('/', 'GET'));
+        return FinanceFilters::fromRequest(Request::create('/', 'GET', $query));
     }
 
     private function client(): User
@@ -72,7 +76,7 @@ class FinanceForecastTest extends TestCase
     }
 
     /** Плановая строка: обещание заплатить сумму к дате. */
-    private function plan(User $client, float $amount, int $daysFromToday): SettlementEntry
+    private function plan(User $client, float $amount, int $daysFromToday, ?int $organizationId = null): SettlementEntry
     {
         $shipment = Shipment::create([
             'uuid' => (string) Str::uuid(),
@@ -91,6 +95,7 @@ class FinanceForecastTest extends TestCase
             'user_id' => $client->id,
             'document_uuid' => $shipment->uuid,
             'document_kind' => 'shipment',
+            'organization_id' => $organizationId,
             'document_date' => Carbon::today()->subDays(5),
             'date' => Carbon::today()->addDays($daysFromToday)->toDateString(),
             'amount' => $amount,
@@ -100,7 +105,7 @@ class FinanceForecastTest extends TestCase
     }
 
     /** Плановая строка в прошлом — уже закрытая: нужна для калибровки по истории. */
-    private function closedPlan(User $client, float $amount, int $daysAgo): SettlementEntry
+    private function closedPlan(User $client, float $amount, int $daysAgo, ?int $organizationId = null): SettlementEntry
     {
         $date = Carbon::today()->subDays($daysAgo);
 
@@ -110,6 +115,7 @@ class FinanceForecastTest extends TestCase
             'user_id' => $client->id,
             'document_uuid' => (string) Str::uuid(),
             'document_kind' => 'shipment',
+            'organization_id' => $organizationId,
             'document_date' => $date->copy()->subDays(10),
             'date' => $date->toDateString(),
             'amount' => $amount,
@@ -118,12 +124,13 @@ class FinanceForecastTest extends TestCase
         ]);
     }
 
-    private function payment(User $client, float $amount, int $daysAgo): SettlementEntry
+    private function payment(User $client, float $amount, int $daysAgo, ?int $organizationId = null): SettlementEntry
     {
         return SettlementEntry::factory()->create([
             'nature' => SettlementEntry::NATURE_FACT,
             'type' => SettlementEntry::TYPE_PAYMENT_IN,
             'user_id' => $client->id,
+            'organization_id' => $organizationId,
             'amount' => $amount,
             'amount_rub' => $amount,
             'currency_code' => 'RUB',
@@ -364,6 +371,57 @@ class FinanceForecastTest extends TestCase
             1.0,
             'Прогноз раскладывается без остатка.',
         );
+    }
+
+    /**
+     * Отбор действует и на калибровку, а не только на график.
+     *
+     * Поток, не зависящий от графика, у каждой нашей организации свой.
+     * Пока он считался по всей компании, фильтр по одному юрлицу оставлял
+     * ему чужие деньги: «из графика ждём» падало вместе с отбором, а «сверх
+     * графика» — нет, и итог не сходился ни с чем.
+     */
+    #[Test]
+    public function отбор_по_организации_сужает_и_калибровку(): void
+    {
+        $ours = Organization::factory()->create(['name' => 'ООО Пекадо']);
+        $theirs = Organization::factory()->create(['name' => 'ИП Елисеев']);
+
+        $client = $this->client();
+
+        // История: обе организации получают деньги, но «наша» — вдесятеро
+        // больше, причём часть приходит вовсе без графика: именно она и
+        // образует поток, не зависящий от плана.
+        for ($week = 26; $week >= 1; $week--) {
+            // Обещания скачут, внеплановый приход постоянен: только так
+            // регрессия отделит поток, не зависящий от графика, от доли плана.
+            $promised = $week % 2 === 0 ? 100000 : 20000;
+
+            $this->closedPlan($client, $promised, $week * 7, $ours->id);
+            $this->payment($client, $promised, $week * 7 - 3, $ours->id);
+            $this->payment($client, 300000, $week * 7 - 5, $ours->id);
+
+            $this->closedPlan($client, $promised / 10, $week * 7, $theirs->id);
+            $this->payment($client, $promised / 10, $week * 7 - 3, $theirs->id);
+            $this->payment($client, 30000, $week * 7 - 5, $theirs->id);
+        }
+
+        $this->plan($client, 50000, 5, $ours->id);
+        $this->plan($client, 50000, 5, $theirs->id);
+
+        $target = CarbonImmutable::today()->addDays(14);
+
+        $all = $this->service()->forecast($this->clients(), $this->filters(), $target);
+        $narrow = $this->service()->forecast(
+            $this->clients(),
+            $this->filters(['organization_ids' => [$theirs->id]]),
+            $target,
+        );
+
+        // Отбор сузил и обещанное, и поток, не зависящий от графика.
+        $this->assertLessThan($all['promised'], $narrow['promised']);
+        $this->assertLessThan($all['model']['base'], $narrow['model']['base']);
+        $this->assertLessThan($all['total'] / 2, $narrow['total']);
     }
 
     #[Test]
