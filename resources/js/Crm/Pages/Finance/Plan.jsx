@@ -10,6 +10,7 @@ import FinanceRowsTable from './components/FinanceRowsTable';
 import ForecastChart from './components/ForecastChart';
 import LastPayment from './components/LastPayment';
 import { formatCompact, formatRub } from './components/format';
+import { localDate } from '@/shared/localDate';
 
 /**
  * План поступлений — ответ на вопрос финансового директора: «я верстаю
@@ -91,15 +92,21 @@ export default function FinancePlan({
                 <HStack gap={2} wrap="wrap" mb={3}>
                     <Text fontSize="xs" color="fg.muted">Деньги к дате</Text>
 
+                    {/* Активен только первый совпавший пресет: в последнюю
+                        неделю месяца «конец недели» и «конец месяца» могут
+                        указывать на один день, и подсвечивать оба — значит
+                        показывать выбор, которого пользователь не делал. */}
                     {TARGET_PRESETS.map((preset) => {
                         const date = preset.date();
+                        const active = forecast.target === date
+                            && TARGET_PRESETS.find((item) => item.date() === forecast.target)?.key === preset.key;
 
                         return (
                             <Button
                                 key={preset.key}
                                 size="xs"
-                                variant={forecast.target === date ? 'solid' : 'outline'}
-                                colorPalette={forecast.target === date ? 'pecado' : 'gray'}
+                                variant={active ? 'solid' : 'outline'}
+                                colorPalette={active ? 'pecado' : 'gray'}
                                 onClick={() => setTarget(date)}
                             >
                                 {preset.label}
@@ -380,7 +387,7 @@ const TARGET_PRESETS = [
             const date = new Date();
             date.setDate(date.getDate() + ((7 - date.getDay()) % 7));
 
-            return date.toISOString().slice(0, 10);
+            return localDate(date);
         },
     },
     {
@@ -389,7 +396,7 @@ const TARGET_PRESETS = [
         date: () => {
             const date = new Date();
 
-            return new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().slice(0, 10);
+            return localDate(new Date(date.getFullYear(), date.getMonth() + 1, 0));
         },
     },
     {
@@ -398,7 +405,7 @@ const TARGET_PRESETS = [
         date: () => {
             const date = new Date();
 
-            return new Date(date.getFullYear(), date.getMonth() + 2, 0).toISOString().slice(0, 10);
+            return localDate(new Date(date.getFullYear(), date.getMonth() + 2, 0));
         },
     },
     {
@@ -408,7 +415,7 @@ const TARGET_PRESETS = [
             const date = new Date();
             const quarterEnd = (Math.floor(date.getMonth() / 3) + 1) * 3;
 
-            return new Date(date.getFullYear(), quarterEnd, 0).toISOString().slice(0, 10);
+            return localDate(new Date(date.getFullYear(), quarterEnd, 0));
         },
     },
 ];

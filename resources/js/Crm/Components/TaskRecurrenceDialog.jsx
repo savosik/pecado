@@ -6,6 +6,7 @@ import { Field } from '@/components/ui/field';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useTaskOptions } from '@/Crm/Components/useTaskOptions';
 import { toastError, toastSuccess } from '@/utils/toast';
+import { localDate } from '@/shared/localDate';
 
 const WEEKDAYS = [
     { value: 1, label: 'Пн' },
@@ -19,7 +20,9 @@ const WEEKDAYS = [
 
 const WORKDAYS = [1, 2, 3, 4, 5];
 
-const today = () => new Date().toISOString().slice(0, 10);
+// Местная дата: toISOString() восточнее Гринвича отдаёт вчерашний день
+// начиная с вечера, и повтор задачи стартовал задним числом.
+const today = () => localDate();
 
 const EMPTY = {
     title: '',

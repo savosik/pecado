@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import { LuInfo } from 'react-icons/lu';
+import { localDate } from '@/shared/localDate';
 
 /**
  * Журнал недоборов: что, у кого и на какую сумму отменилось.
@@ -42,7 +43,7 @@ const PERIODS = [
 const money = (value) =>
     new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(value || 0);
 
-const isoDate = (date) => date.toISOString().slice(0, 10);
+const isoDate = (date) => localDate(date);
 
 const shiftDays = (days) => {
     const date = new Date();
