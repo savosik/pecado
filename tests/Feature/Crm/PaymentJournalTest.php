@@ -378,9 +378,8 @@ class PaymentJournalTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Crm/Pages/Finance/PaymentCalendar')
-                ->has('entries', 1)
-                ->where('entries.0.unpaid_amount', 3000)
-                ->where('summary.plan_month', 3000));
+                ->where('summary.plan', 3000)
+                ->where('days.'.$inMonth.'.plan', 3000));
     }
 
     #[Test]
@@ -396,9 +395,9 @@ class PaymentJournalTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 // План идёт по графику, факт — по проведённым платежам:
                 // одно не подменяет другое даже в один и тот же день.
-                ->where('summary.plan_month', 3000)
-                ->where('summary.fact_month', 1000)
-                ->where('facts.'.$day->toDateString().'.amount', 1000));
+                ->where('summary.plan', 3000)
+                ->where('summary.fact', 1000)
+                ->where('days.'.$day->toDateString().'.fact', 1000));
     }
 
     #[Test]
@@ -413,9 +412,16 @@ class PaymentJournalTest extends TestCase
             ->get(route('crm.payments.calendar'))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('summary.fact_month', 600));
+                ->where('summary.fact', 600));
     }
 
+    /**
+     * Закрытая строка остаётся в графике месяца, но деньгами её больше не ждут.
+     *
+     * Календарь показывает документ: если строку оплатили, месяц не должен
+     * выглядеть пустым — иначе исполненный график читался бы как отсутствие
+     * обязательств.
+     */
     #[Test]
     public function closed_schedule_lines_are_not_expected_money_v15_12(): void
     {
@@ -426,8 +432,10 @@ class PaymentJournalTest extends TestCase
             ->get(route('crm.payments.calendar'))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('entries', 0)
-                ->where('summary.plan_month', 0));
+                ->where('summary.plan', 3000)
+                ->where('summary.settled', 3000)
+                // Просрочки нет: строка закрыта, требовать нечего.
+                ->where('overdueThread.total', 0));
     }
 
     #[Test]
@@ -439,10 +447,11 @@ class PaymentJournalTest extends TestCase
             ->get(route('crm.payments.calendar'))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('entries', 0)
-                ->has('overdueEntries', 1)
-                ->where('overdueEntries.0.is_overdue', true)
-                ->where('summary.overdue_amount', 1500));
+                // В месяце обязательств нет — срок был в прошлом…
+                ->where('summary.plan', 0)
+                // …но долг виден навесом, в каком бы месяце ни находился менеджер.
+                ->where('overdueThread.total', 1500)
+                ->where('overdueThread.lines', 1));
     }
 
     #[Test]

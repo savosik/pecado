@@ -289,7 +289,7 @@ class PaymentCalendarService
     }
 
     /**
-     * Фактические платежи.
+     * Фактические платежи: приходы за вычетом возвратов.
      *
      * @param  EloquentBuilder<\App\Models\User>  $clients
      */
@@ -299,7 +299,10 @@ class PaymentCalendarService
             ->join('users as u', 'u.id', '=', 'f.user_id')
             ->leftJoin('personal_managers as pm', 'pm.id', '=', 'u.personal_manager_id')
             ->where('f.nature', SettlementEntry::NATURE_FACT)
-            ->where('f.type', SettlementEntry::TYPE_PAYMENT_IN)
+            // Возвраты входят со своим знаком: деньги, которые вернули
+            // партнёру, в этот день не пришли, и день, где возврат больше
+            // прихода, обязан показывать минус, а не приход.
+            ->whereIn('f.type', [SettlementEntry::TYPE_PAYMENT_IN, SettlementEntry::TYPE_PAYMENT_OUT])
             ->whereIn('f.user_id', (clone $clients))
             ->when(
                 $filters->organizationIds !== [],
