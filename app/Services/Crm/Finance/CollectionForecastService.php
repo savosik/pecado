@@ -5,6 +5,7 @@ namespace App\Services\Crm\Finance;
 use App\Models\SettlementEntry;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -57,8 +58,8 @@ class CollectionForecastService
         ['days' => PHP_INT_MAX, 'factor' => 0.25],
     ];
 
-    /** Сколько последних полных месяцев берём для калибровки границ. */
-    private const CALIBRATION_MONTHS = 6;
+    /** Опорные горизонты калибровки в днях: между ними интерполируем. */
+    public const HORIZONS = [7, 14, 30, 45, 60, 90];
 
     /**
      * Платёжная дисциплина партнёров: класс, последний платёж, есть ли
@@ -118,113 +119,202 @@ class CollectionForecastService
     }
 
     /**
-     * Калибровка границ по истории: во сколько раз факт месяца отличался
-     * от плана месяца.
+     * Калибровка по собственной истории: во сколько раз фактический приход
+     * за N дней отличался от того, что обещал график на начало этих N дней.
      *
-     * Считается на агрегате, а не по строкам: даты фактического погашения
-     * плановой строки регистр не отдаёт, а помесячное сопоставление
-     * «сколько собирались получить / сколько получили» ей и не требует.
+     * Это и есть модель. Раньше здесь были две эвристики — вероятности по
+     * классам и «ритм отгрузок», — и прогон по историческим неделям показал,
+     * что вместе они завышают прогноз вдвое (средняя ошибка 98%), тогда как
+     * голая сумма графика ошибалась на 15%. Поэтому уровень прогноза задаёт
+     * наблюдаемое отношение факт/обещание, а вероятности остались там, где
+     * они полезны, — в распределении суммы между партнёрами.
      *
-     * @return array{low: float, mid: float, high: float, months: int, samples: list<array{month: string, plan: float, fact: float, rate: float}>}
+     * Отношение растёт с горизонтом (за 14 дней 1,08, за 60 — уже 2,06):
+     * график из 1С короткий, и чем дальше дата, тем большую часть прихода
+     * дают документы, которых на момент прогноза ещё не существовало.
+     *
+     * @return array{ratios: array<int, array{days: int, low: float, mid: float, high: float, samples: int}>, weeks: int}
      */
-    public function collectionStats(?CarbonImmutable $today = null): array
+    public function calibration(?CarbonImmutable $today = null): array
     {
         $today ??= CarbonImmutable::today();
-        // Текущий месяц не берём: он не закончился, и его собираемость всегда
-        // выглядит провальной.
-        $from = $today->startOfMonth()->subMonths(self::CALIBRATION_MONTHS);
-        $to = $today->startOfMonth()->subDay();
 
-        $plan = $this->monthlySums(
-            DB::table('settlement_entries')
-                ->where('nature', SettlementEntry::NATURE_PLAN)
-                ->where(function ($query): void {
-                    $query->whereNull('document_kind')->orWhere('document_kind', '<>', 'order');
-                }),
-            'amount',
-            $from,
-            $to,
+        return Cache::remember(
+            'finance:collection-calibration:'.$today->toDateString(),
+            now()->addHours(6),
+            fn (): array => $this->buildCalibration($today),
         );
-
-        $fact = $this->monthlySums(
-            DB::table('settlement_entries')
-                ->where('nature', SettlementEntry::NATURE_FACT)
-                ->where('type', SettlementEntry::TYPE_PAYMENT_IN),
-            'COALESCE(amount_rub, amount)',
-            $from,
-            $to,
-        );
-
-        $samples = [];
-
-        foreach ($plan as $month => $planned) {
-            // Месяцы без плана пропускаем: делить на ноль нечем, а сам факт
-            // прихода без плана уже учтён в ритме.
-            if ($planned <= 0) {
-                continue;
-            }
-
-            $samples[] = [
-                'month' => $month,
-                'plan' => round($planned, 2),
-                'fact' => round($fact[$month] ?? 0, 2),
-                'rate' => round(($fact[$month] ?? 0) / $planned, 4),
-            ];
-        }
-
-        $rates = array_column($samples, 'rate');
-        sort($rates);
-
-        // Истории мало — границы берём консервативные по умолчанию, но
-        // помечаем, на скольких месяцах они посчитаны: экран обязан показать,
-        // что уверенность в цифре тоже оценка.
-        if (count($rates) < 3) {
-            return ['low' => 0.80, 'mid' => 0.95, 'high' => 1.10, 'months' => count($rates), 'samples' => $samples];
-        }
-
-        return [
-            'low' => round($rates[0], 4),
-            'mid' => round($rates[(int) floor(count($rates) / 2)], 4),
-            'high' => round($rates[count($rates) - 1], 4),
-            'months' => count($rates),
-            'samples' => $samples,
-        ];
     }
 
     /**
-     * Скорость поступлений: сколько в среднем приходит в день.
-     *
-     * Медиана по последним полным месяцам, а не среднее: один крупный расчёт
-     * иначе задирает прогноз на весь квартал вперёд.
-     *
-     * @param  EloquentBuilder<\App\Models\User>  $clients
+     * @return array{ratios: array<int, array{days: int, low: float, mid: float, high: float, samples: int}>, weeks: int}
      */
-    public function dailyRhythm(EloquentBuilder $clients, ?CarbonImmutable $today = null): float
+    private function buildCalibration(CarbonImmutable $today): array
     {
-        $today ??= CarbonImmutable::today();
-        $from = $today->startOfMonth()->subMonths(3);
-        $to = $today->startOfMonth()->subDay();
+        $plans = DB::table('settlement_entries')
+            ->where('nature', SettlementEntry::NATURE_PLAN)
+            ->where(function ($query): void {
+                $query->whereNull('document_kind')->orWhere('document_kind', '<>', 'order');
+            })
+            ->whereNotNull('document_date')
+            ->selectRaw('DATE(date) as due, DATE(document_date) as doc, SUM(amount) as amount')
+            ->groupByRaw('DATE(date), DATE(document_date)')
+            ->get()
+            ->map(static fn (object $row): array => [
+                'due' => (string) $row->due,
+                'doc' => (string) $row->doc,
+                'amount' => (float) $row->amount,
+            ])
+            ->all();
 
-        $months = $this->monthlySums(
-            DB::table('settlement_entries')
-                ->where('nature', SettlementEntry::NATURE_FACT)
-                ->where('type', SettlementEntry::TYPE_PAYMENT_IN)
-                ->whereIn('user_id', (clone $clients)),
-            'COALESCE(amount_rub, amount)',
-            $from,
-            $to,
-        );
+        $payments = DB::table('settlement_entries')
+            ->where('nature', SettlementEntry::NATURE_FACT)
+            ->where('type', SettlementEntry::TYPE_PAYMENT_IN)
+            ->selectRaw('DATE(date) as day, SUM(COALESCE(amount_rub, amount)) as amount')
+            ->groupByRaw('DATE(date)')
+            ->pluck('amount', 'day')
+            ->all();
 
-        $values = array_values(array_filter($months, static fn (float $value): bool => $value > 0));
+        // Первая неделя, от которой есть смысл считать: история платежей
+        // начинается вместе с переходом на регистр, до неё сравнивать нечего.
+        $firstPayment = $payments === [] ? null : min(array_keys($payments));
+        $ratios = [];
+        $weeks = 0;
 
+        foreach (self::HORIZONS as $days) {
+            $samples = [];
+            $start = $firstPayment !== null
+                ? CarbonImmutable::parse($firstPayment)->addMonth()->startOfWeek()
+                : $today;
+
+            for ($t = $start; $t->lessThanOrEqualTo($today->subDays($days)); $t = $t->addWeek()) {
+                $from = $t->toDateString();
+                $to = $t->addDays($days)->toDateString();
+
+                $promised = 0.0;
+
+                foreach ($plans as $plan) {
+                    if ($plan['doc'] <= $from && $plan['due'] > $from && $plan['due'] <= $to) {
+                        $promised += $plan['amount'];
+                    }
+                }
+
+                if ($promised <= 0) {
+                    continue;
+                }
+
+                $fact = 0.0;
+
+                foreach ($payments as $day => $amount) {
+                    if ($day > $from && $day <= $to) {
+                        $fact += $amount;
+                    }
+                }
+
+                $samples[] = ['promised' => $promised, 'ratio' => $fact / $promised];
+            }
+
+            // Недели, где график почти пуст, выбрасываются: деление живого
+            // факта на копеечное обещание давало отношения вроде 11,5 и
+            // растягивало коридор до бессмыслицы.
+            $median = $this->medianOf(array_column($samples, 'promised'));
+            $samples = array_column(array_filter(
+                $samples,
+                static fn (array $sample): bool => $sample['promised'] >= $median * 0.2,
+            ), 'ratio');
+
+            sort($samples);
+            $count = count($samples);
+            $weeks = max($weeks, $count);
+
+            // Меньше пяти наблюдений — статистики нет; отдаём нейтральное
+            // отношение и честно показываем, на чём оно посчитано.
+            $ratios[$days] = $count < 5
+                ? ['days' => $days, 'low' => 0.8, 'mid' => 1.0, 'high' => 1.3, 'samples' => $count]
+                : [
+                    'days' => $days,
+                    // P05/P95, а не P10/P90: прогон по истории показал, что
+                    // узкий коридор ловил факт лишь в 59% недель — для числа,
+                    // которое несут в бюджет, это негодная надёжность.
+                    'low' => round($samples[(int) floor($count * 0.05)], 3),
+                    'mid' => round($samples[(int) floor($count * 0.5)], 3),
+                    'high' => round($samples[min($count - 1, (int) round($count * 0.95))], 3),
+                    'samples' => $count,
+                ];
+        }
+
+        return ['ratios' => $ratios, 'weeks' => $weeks];
+    }
+
+    /**
+     * Медиана списка — для отбраковки вырожденных наблюдений.
+     *
+     * @param  list<float>  $values
+     */
+    private function medianOf(array $values): float
+    {
         if ($values === []) {
             return 0.0;
         }
 
         sort($values);
-        $median = $values[(int) floor(count($values) / 2)];
 
-        return round($median / 30, 2);
+        return $values[(int) floor(count($values) / 2)];
+    }
+
+    /**
+     * Отношение факт/обещание для произвольного горизонта: между опорными
+     * точками — линейная интерполяция, дальше последней — продление роста.
+     *
+     * @param  array{ratios: array<int, array<string, float|int>>, weeks: int}  $calibration
+     * @return array{low: float, mid: float, high: float, samples: int, extrapolated: bool}
+     */
+    public function ratioFor(array $calibration, int $days): array
+    {
+        $points = $calibration['ratios'];
+        $horizons = array_keys($points);
+        sort($horizons);
+
+        $first = $horizons[0];
+        $last = $horizons[count($horizons) - 1];
+
+        if ($days <= $first) {
+            return $points[$first] + ['extrapolated' => false];
+        }
+
+        if ($days >= $last) {
+            // За пределами истории отношение продлевается пропорционально
+            // горизонту: дальше 60–90 дней проверять было не на чем, и экран
+            // обязан пометить такой прогноз как экстраполяцию.
+            $scale = $days / $last;
+
+            return [
+                'low' => round($points[$last]['low'] * $scale, 3),
+                'mid' => round($points[$last]['mid'] * $scale, 3),
+                'high' => round($points[$last]['high'] * $scale, 3),
+                'samples' => $points[$last]['samples'],
+                'extrapolated' => $days > $last,
+            ];
+        }
+
+        foreach ($horizons as $index => $horizon) {
+            if ($days > $horizon) {
+                continue;
+            }
+
+            $prev = $horizons[$index - 1];
+            $weight = ($days - $prev) / ($horizon - $prev);
+
+            return [
+                'low' => round($points[$prev]['low'] + ($points[$horizon]['low'] - $points[$prev]['low']) * $weight, 3),
+                'mid' => round($points[$prev]['mid'] + ($points[$horizon]['mid'] - $points[$prev]['mid']) * $weight, 3),
+                'high' => round($points[$prev]['high'] + ($points[$horizon]['high'] - $points[$prev]['high']) * $weight, 3),
+                'samples' => min($points[$prev]['samples'], $points[$horizon]['samples']),
+                'extrapolated' => false,
+            ];
+        }
+
+        return $points[$last] + ['extrapolated' => true];
     }
 
     /**
@@ -240,90 +330,66 @@ class CollectionForecastService
         ?CarbonImmutable $today = null,
     ): array {
         $today ??= CarbonImmutable::today();
-        $discipline = $this->discipline($clients, $today);
-        $stats = $this->collectionStats($today);
-        $rhythm = $this->dailyRhythm($clients, $today);
+        $calibration = $this->calibration($today);
 
         $lines = $this->openPlanLines($clients, $filters);
         $horizon = $this->planHorizon($lines);
+        $discipline = $this->discipline($clients, $today);
 
-        // Накопление по дням: к каждой дате — сколько по графику обещано и
-        // сколько из этого реально ожидаем.
+        // Обещанное по дням: просроченное ждём сегодня, иначе кривая
+        // начиналась бы с нуля при живом долге. Рядом — то же, взвешенное на
+        // дисциплину: это ровно сумма таблицы «от кого ждём», и она обязана
+        // сходиться с разложением в шапке.
         $byDay = [];
 
         foreach ($lines as $line) {
             $due = CarbonImmutable::parse($line->due_date);
-            // Просроченное не остаётся в своём прошлом: деньги ждут сегодня,
-            // и в кривую оно входит первым днём, иначе график начинался бы
-            // с нуля при живом долге.
-            $day = $due->lessThan($today) ? $today : $due;
-            $probability = $this->lineProbability($line, $discipline, $today);
+            $day = ($due->lessThan($today) ? $today : $due)->toDateString();
             $amount = (float) $line->unpaid;
 
-            $key = $day->toDateString();
-            $byDay[$key] ??= ['promised' => 0.0, 'expected' => 0.0, 'overdue' => 0.0];
-            $byDay[$key]['promised'] += $amount;
-            $byDay[$key]['expected'] += $amount * $probability;
-
-            if ($due->lessThan($today)) {
-                $byDay[$key]['overdue'] += $amount;
-            }
+            $byDay[$day] ??= ['promised' => 0.0, 'by_discipline' => 0.0];
+            $byDay[$day]['promised'] += $amount;
+            $byDay[$day]['by_discipline'] += $amount * $this->lineProbability($line, $discipline, $today);
         }
 
         ksort($byDay);
 
-        // Ритм будущих отгрузок: исторически в месяц приходит больше, чем
-        // обещает текущий график, — разница и есть оплата документов, которых
-        // ещё нет. Считаем её как остаток месячного прихода сверх того, что
-        // даёт открытый план за те же 30 дней: так оценка самокалибруется и
-        // не задваивает уже обещанное.
-        $expectedInMonth = 0.0;
-        $monthEnd = $today->addDays(30);
-
-        foreach ($byDay as $date => $sums) {
-            if ($date <= $monthEnd->toDateString()) {
-                $expectedInMonth += $sums['expected'];
-            }
-        }
-
-        $newSalesDaily = max(0.0, ($rhythm * 30 - $expectedInMonth) / 30);
-
         $curve = [];
         $promised = 0.0;
-        $expected = 0.0;
+        $byDiscipline = 0.0;
         $cursor = $today;
         $end = $target->greaterThan($horizon ?? $target) ? $target : ($horizon ?? $target);
 
         while ($cursor->lessThanOrEqualTo($end)) {
-            $key = $cursor->toDateString();
-            $promised += $byDay[$key]['promised'] ?? 0.0;
-            $expected += $byDay[$key]['expected'] ?? 0.0;
+            $day = $byDay[$cursor->toDateString()] ?? ['promised' => 0.0, 'by_discipline' => 0.0];
+            $promised += $day['promised'];
+            $byDiscipline += $day['by_discipline'];
 
-            // До конца графика ритм добавляет только то, чего в плане нет
-            // (будущие отгрузки). За горизонтом графика плана нет вовсе —
-            // там прогноз держится на полной исторической скорости, иначе
-            // квартал оказался бы занижен вдвое.
-            $daysAhead = (int) $today->diffInDays($cursor);
-            $daysWithinPlan = $horizon !== null ? min($daysAhead, (int) $today->diffInDays($horizon)) : $daysAhead;
-            $daysBeyondPlan = max(0, $daysAhead - $daysWithinPlan);
-
-            $fromNewSales = $newSalesDaily * $daysWithinPlan + $rhythm * $daysBeyondPlan;
+            $days = max(1, (int) $today->diffInDays($cursor));
+            $ratio = $this->ratioFor($calibration, $days);
+            $total = $promised * $ratio['mid'];
 
             $curve[] = [
-                'date' => $key,
+                'date' => $cursor->toDateString(),
                 'label' => $cursor->format('d.m'),
                 'promised' => round($promised, 2),
-                'expected' => round($expected, 2),
-                'rhythm' => round($fromNewSales, 2),
-                'low' => round($expected * $this->ratio($stats, 'low') + $fromNewSales * 0.6, 2),
-                'high' => round($expected * $this->ratio($stats, 'high') + $fromNewSales * 1.3, 2),
-                'total' => round($expected + $fromNewSales, 2),
+                // Сколько из обещанного ждём по дисциплине партнёров — сумма
+                // построчной таблицы на тот же день.
+                'by_discipline' => round($byDiscipline, 2),
+                'low' => round($promised * $ratio['low'], 2),
+                'high' => round($promised * $ratio['high'], 2),
+                // Остальное — оплата документов, которых ещё нет, и возврат
+                // тех долгов, которые модель по дисциплине списала.
+                'beyond_plan' => round(max(0.0, $total - $byDiscipline), 2),
+                'total' => round($total, 2),
             ];
 
             $cursor = $cursor->addDay();
         }
 
         $atTarget = $this->pointAt($curve, $target);
+        $days = max(1, (int) $today->diffInDays($target));
+        $ratio = $this->ratioFor($calibration, $days);
 
         return [
             'target' => $target->toDateString(),
@@ -332,14 +398,16 @@ class CollectionForecastService
             'horizon' => $horizon?->toDateString(),
             'horizon_label' => $horizon?->format('d.m.Y'),
             'promised' => $atTarget['promised'],
-            'expected' => $atTarget['expected'],
-            'rhythm_part' => $atTarget['rhythm'],
+            'by_discipline' => $atTarget['by_discipline'],
+            'beyond_plan' => $atTarget['beyond_plan'],
             'total' => $atTarget['total'],
             'low' => $atTarget['low'],
             'high' => $atTarget['high'],
-            'daily_rhythm' => $rhythm,
-            'new_sales_daily' => round($newSalesDaily, 2),
-            'calibration' => $stats,
+            'ratio' => $ratio,
+            'calibration' => [
+                'weeks' => $calibration['weeks'],
+                'ratios' => array_values($calibration['ratios']),
+            ],
             'curve' => $curve,
         ];
     }
@@ -502,7 +570,8 @@ class CollectionForecastService
      */
     private function pointAt(array $curve, CarbonImmutable $target): array
     {
-        $point = ['promised' => 0.0, 'expected' => 0.0, 'rhythm' => 0.0, 'low' => 0.0, 'high' => 0.0, 'total' => 0.0];
+        $keys = ['promised', 'by_discipline', 'beyond_plan', 'low', 'high', 'total'];
+        $point = array_fill_keys($keys, 0.0);
         $date = $target->toDateString();
 
         foreach ($curve as $row) {
@@ -510,14 +579,9 @@ class CollectionForecastService
                 break;
             }
 
-            $point = [
-                'promised' => $row['promised'],
-                'expected' => $row['expected'],
-                'rhythm' => $row['rhythm'],
-                'low' => $row['low'],
-                'high' => $row['high'],
-                'total' => $row['total'],
-            ];
+            foreach ($keys as $key) {
+                $point[$key] = (float) $row[$key];
+            }
         }
 
         return $point;

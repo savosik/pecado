@@ -91,9 +91,29 @@ class FinanceForecastTest extends TestCase
             'user_id' => $client->id,
             'document_uuid' => $shipment->uuid,
             'document_kind' => 'shipment',
+            'document_date' => Carbon::today()->subDays(5),
             'date' => Carbon::today()->addDays($daysFromToday)->toDateString(),
             'amount' => $amount,
             'settled_amount' => 0,
+            'currency_code' => 'RUB',
+        ]);
+    }
+
+    /** Плановая строка в прошлом — уже закрытая: нужна для калибровки по истории. */
+    private function closedPlan(User $client, float $amount, int $daysAgo): SettlementEntry
+    {
+        $date = Carbon::today()->subDays($daysAgo);
+
+        return SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'user_id' => $client->id,
+            'document_uuid' => (string) Str::uuid(),
+            'document_kind' => 'shipment',
+            'document_date' => $date->copy()->subDays(10),
+            'date' => $date->toDateString(),
+            'amount' => $amount,
+            'settled_amount' => $amount,
             'currency_code' => 'RUB',
         ]);
     }
@@ -247,47 +267,94 @@ class FinanceForecastTest extends TestCase
     }
 
     /**
-     * За концом графика прогноз держится на ритме: 1С не присылает плановых
-     * строк дальше месяца, и без этой части квартал был бы занижен.
+     * Уровень прогноза задаёт история, а не эвристика.
+     *
+     * Первая версия модели умножала график на «вероятности дисциплины» и
+     * добавляла ритм отгрузок — прогон по историческим неделям показал
+     * завышение вдвое. Теперь коэффициент снимается с собственных данных:
+     * если за такой же срок в прошлом приходило вдвое больше обещанного,
+     * прогноз это учитывает.
      */
     #[Test]
-    public function за_горизонтом_графика_прогноз_опирается_на_ритм(): void
+    public function коэффициент_снимается_с_истории_а_не_назначается(): void
+    {
+        $client = $this->client();
+
+        // Полгода истории: каждую неделю обещание на 100 тыс и приход вдвое
+        // больше — половина денег приходит за документы вне графика.
+        for ($week = 26; $week >= 1; $week--) {
+            $this->closedPlan($client, 100000, $week * 7);
+            $this->payment($client, 200000, $week * 7 - 3);
+        }
+
+        $this->plan($client, 100000, 10);
+
+        $forecast = $this->service()->forecast(
+            $this->clients(),
+            $this->filters(),
+            CarbonImmutable::today()->addDays(14),
+        );
+
+        $this->assertEqualsWithDelta(100000.0, $forecast['promised'], 0.01);
+        // Коэффициент около двух — ровно то, что показывала история.
+        $this->assertGreaterThan(1.5, $forecast['ratio']['mid']);
+        $this->assertGreaterThan($forecast['promised'] * 1.5, $forecast['total']);
+        $this->assertGreaterThan(5, $forecast['ratio']['samples']);
+    }
+
+    /**
+     * Без истории модель не фантазирует: коэффициент нейтральный, прогноз
+     * равен обещанному, и экран показывает, что наблюдений не было.
+     */
+    #[Test]
+    public function без_истории_прогноз_равен_обещанному(): void
     {
         $client = $this->client();
         $this->plan($client, 100000, 10);
 
-        // История платежей: три полных месяца примерно по 300 тысяч.
-        foreach ([40, 70, 100] as $daysAgo) {
-            $this->payment($client, 300000, $daysAgo);
-        }
+        $forecast = $this->service()->forecast(
+            $this->clients(),
+            $this->filters(),
+            CarbonImmutable::today()->addDays(14),
+        );
 
-        $atHorizon = $this->service()->forecast($this->clients(), $this->filters(), CarbonImmutable::today()->addDays(10));
-        $farAhead = $this->service()->forecast($this->clients(), $this->filters(), CarbonImmutable::today()->addDays(120));
-
-        // Обещанное графиком за горизонтом не растёт — новых строк нет…
-        $this->assertEqualsWithDelta($atHorizon['promised'], $farAhead['promised'], 0.01);
-        // …а прогноз растёт, потому что отгрузки не прекращаются.
-        $this->assertGreaterThan($atHorizon['total'] * 2, $farAhead['total']);
-        $this->assertGreaterThan(0.0, $farAhead['rhythm_part']);
+        $this->assertEqualsWithDelta(100000.0, $forecast['promised'], 0.01);
+        $this->assertEqualsWithDelta(100000.0, $forecast['total'], 0.01);
+        $this->assertSame(0, $forecast['ratio']['samples']);
     }
 
-    /** Коридор сценариев обнимает ожидание, а не заменяет его. */
+    /**
+     * Числа на экране обязаны сходиться: «из графика ждём» в шапке — это
+     * ровно итог таблицы «от кого ждём», а прогноз раскладывается на него
+     * и часть сверх графика без остатка.
+     */
     #[Test]
-    public function коридор_сценариев_шире_ожидания_с_обеих_сторон(): void
+    public function разложение_прогноза_сходится_с_таблицей_партнёров(): void
     {
-        $client = $this->client();
-        $this->payment($client, 200000, 5);
-        $this->plan($client, 400000, 7);
+        $first = $this->client();
+        $this->payment($first, 5000, 2);
+        $this->plan($first, 300000, 5);
 
-        $forecast = $this->service()->forecast($this->clients(), $this->filters(), CarbonImmutable::today()->addDays(14));
+        $second = $this->client();
+        $this->plan($second, 200000, 8);
 
-        $this->assertLessThanOrEqual($forecast['total'], $forecast['low']);
-        $this->assertGreaterThanOrEqual($forecast['total'], $forecast['high']);
+        $target = CarbonImmutable::today()->addDays(14);
+        $forecast = $this->service()->forecast($this->clients(), $this->filters(), $target);
+        $partners = $this->service()->forecastByPartner($this->clients(), $this->filters(), $target);
 
-        // Экран обязан показать, на скольких месяцах посчитаны границы:
-        // «коридор» без числа месяцев читался бы как точность, которой нет.
-        $this->assertArrayHasKey('months', $forecast['calibration']);
-        $this->assertIsInt($forecast['calibration']['months']);
+        $this->assertEqualsWithDelta(
+            array_sum(array_column($partners, 'expected')),
+            $forecast['by_discipline'],
+            1.0,
+            'Шапка и таблица считают одно и то же разными путями — они обязаны сойтись.',
+        );
+
+        $this->assertEqualsWithDelta(
+            $forecast['total'],
+            $forecast['by_discipline'] + $forecast['beyond_plan'],
+            1.0,
+            'Прогноз раскладывается без остатка.',
+        );
     }
 
     #[Test]

@@ -80,7 +80,7 @@ export default function ForecastChart({ curve, target, horizon }) {
 
             <HStack gap={4} rowGap={1} justify="center" mt={2} fontSize="10px" color="fg.muted" wrap="wrap">
                 <Legend color="var(--chakra-colors-blue-solid)" text="прогноз" />
-                <Legend color="var(--chakra-colors-green-solid)" text="подтверждено графиком 1С" />
+                <Legend color="var(--chakra-colors-green-solid)" text="из графика 1С" />
                 <Legend color="var(--chakra-colors-blue-muted)" text="коридор сценариев" />
             </HStack>
         </Box>
@@ -106,7 +106,7 @@ function ForecastTooltip({ active, payload, label }) {
             <Text fontSize="xs" color="fg.muted" mb={1}>к {label}</Text>
             <Text fontSize="sm" fontWeight="600">{formatRub(point.total)}</Text>
             <Text fontSize="10px" color="fg.muted">
-                по графику {formatCompact(point.expected)} · от отгрузок {formatCompact(point.rhythm)}
+                из графика {formatCompact(point.by_discipline)} · сверх него {formatCompact(point.beyond_plan)}
             </Text>
             <Text fontSize="10px" color="fg.muted">
                 коридор {formatCompact(point.low)} — {formatCompact(point.high)}

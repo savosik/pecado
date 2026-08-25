@@ -66,7 +66,7 @@ export default function FinancePlan({
     }));
 
     const targetPoint = curve.find((point) => point.date === forecast.target);
-    const confirmedShare = forecast.total > 0 ? Math.round((forecast.expected / forecast.total) * 100) : 0;
+    const confirmedShare = forecast.total > 0 ? Math.round((forecast.by_discipline / forecast.total) * 100) : 0;
 
     return (
         <CrmLayout breadcrumbs={[{ label: 'Финансы' }, { label: 'План поступлений' }]}>
@@ -123,7 +123,7 @@ export default function FinancePlan({
                             <Text fontSize="xs" color="fg.muted">
                                 Ожидаем к {forecast.target_label}
                             </Text>
-                            <MetricHint text="Сумма, которую реально ждём на счетах к этой дате. Считается из двух частей: плановые строки графика 1С, взвешенные на платёжную дисциплину каждого партнёра, плюс оплата будущих отгрузок по историческому ритму. Обещанная графиком сумма всегда больше — часть партнёров платит позже срока, а часть не платит вовсе." />
+                            <MetricHint text="Сумма, которую реально ждём на счетах к этой дате. Считается от обещанного графиком, умноженного на коэффициент, снятый с собственной истории: за такой же срок в прошлом приходило во столько раз больше или меньше, чем обещал график на тот момент. Модель проверена прогоном по неделям — средняя ошибка около 20%, систематического завышения нет." />
                         </HStack>
                         <Text fontSize="3xl" fontWeight="700" lineHeight="1.1">
                             {formatRub(forecast.total)}
@@ -135,33 +135,36 @@ export default function FinancePlan({
 
                     <VStack align="start" gap={0}>
                         <HStack gap={1}>
-                            <Text fontSize="10px" color="fg.muted" textTransform="uppercase">Подтверждено графиком</Text>
-                            <MetricHint text="Часть прогноза, стоящая на плановых строках из 1С: документы уже отгружены, срок оплаты назначен. Это самая надёжная часть ответа — остальное держится на том, что отгрузки продолжатся." />
+                            <Text fontSize="10px" color="fg.muted" textTransform="uppercase">Из графика ждём</Text>
+                            <MetricHint text="Сколько из обещанного графиком реально ждём: сумма плановых строк, взвешенная на платёжную дисциплину каждого партнёра. Это ровно итог таблицы «от кого ждём» ниже — числа на экране обязаны сходиться." />
                         </HStack>
-                        <Text fontSize="lg" fontWeight="600" color="green.fg">{formatRub(forecast.expected)}</Text>
+                        <Text fontSize="lg" fontWeight="600" color="green.fg">{formatRub(forecast.by_discipline)}</Text>
                         <Text fontSize="10px" color="fg.muted">
-                            {confirmedShare}% прогноза · обещано {formatCompact(forecast.promised)}
+                            из {formatCompact(forecast.promised)} обещанных · график до {forecast.horizon_label ?? '—'}
                         </Text>
                     </VStack>
 
                     <VStack align="start" gap={0}>
                         <HStack gap={1}>
-                            <Text fontSize="10px" color="fg.muted" textTransform="uppercase">От будущих отгрузок</Text>
-                            <MetricHint text="Оценка по ритму: исторически в месяц приходит больше, чем обещает текущий график, — разница и есть оплата документов, которые ещё не выставлены. За концом графика (он редко длиннее месяца) это единственный источник прогноза, поэтому чем дальше дата, тем больше эта доля и шире коридор." />
+                            <Text fontSize="10px" color="fg.muted" textTransform="uppercase">Сверх графика</Text>
+                            <MetricHint text="Оплата документов, которых ещё нет, и возврат тех долгов, которые модель по дисциплине уже списала. График из 1С короткий, и чем дальше дата, тем большую часть прихода даёт эта часть. Величина не выдумана: это наблюдаемое превышение факта над обещанием на таком же сроке в прошлом." />
                         </HStack>
-                        <Text fontSize="lg" fontWeight="600">{formatRub(forecast.rhythm_part)}</Text>
+                        <Text fontSize="lg" fontWeight="600">{formatRub(forecast.beyond_plan)}</Text>
                         <Text fontSize="10px" color="fg.muted">
-                            ритм {formatCompact((forecast.daily_rhythm ?? 0) * 30)} в месяц
+                            коэффициент ×{(forecast.ratio?.mid ?? 1).toFixed(2)}
+                            {forecast.ratio?.extrapolated ? ' · экстраполяция' : ''}
                         </Text>
                     </VStack>
 
                     <VStack align="start" gap={0}>
                         <HStack gap={1}>
                             <Text fontSize="10px" color="fg.muted" textTransform="uppercase">Консервативно</Text>
-                            <MetricHint text={`Нижняя граница: так выглядел бы прогноз, если собираемость окажется худшей из наблюдавшихся. Границы взяты из истории — за ${forecast.calibration?.months ?? 0} мес. факт составлял от ${Math.round((forecast.calibration?.low ?? 0) * 100)}% до ${Math.round((forecast.calibration?.high ?? 0) * 100)}% плана месяца. Именно это число стоит закладывать в бюджет, если кассовый разрыв недопустим.`} />
+                            <MetricHint text={`Нижняя граница: так выглядел бы приход, повтори он худшую из наблюдавшихся недель. Границы сняты с собственной истории — модель прогонялась по ${forecast.calibration?.weeks ?? 0} неделям, и коридор построен так, чтобы накрывать факт примерно в девяти случаях из десяти. Именно это число стоит закладывать в бюджет, если кассовый разрыв недопустим.`} />
                         </HStack>
                         <Text fontSize="lg" fontWeight="600" color="orange.fg">{formatRub(forecast.low)}</Text>
-                        <Text fontSize="10px" color="fg.muted">худший из {forecast.calibration?.months ?? 0} мес.</Text>
+                        <Text fontSize="10px" color="fg.muted">
+                            проверено на {forecast.calibration?.weeks ?? 0} нед. истории
+                        </Text>
                     </VStack>
                 </Flex>
             </Box>
