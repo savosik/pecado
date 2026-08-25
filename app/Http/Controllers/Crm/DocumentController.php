@@ -19,6 +19,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Crm\CrmEntityResolver;
 use App\Services\Crm\Finance\FinanceFilters;
+use App\Services\Crm\Finance\PaymentCalendarService;
 use App\Services\Crm\Finance\PaymentForecast;
 use App\Services\SimpleXlsxExporter;
 use App\Support\Crm\CrmEntityMap;
@@ -50,6 +51,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class DocumentController extends CrmController
 {
+    use Concerns\ListsOrganizations;
+
     /**
      * Поля, по которым разрешена сортировка списков.
      *
@@ -416,62 +419,95 @@ class DocumentController extends CrmController
      * независимых запроса неизбежно разъедутся. Оттуда же приходит сведение
      * валют в рубли — без него месяц с валютным документом складывал бы Br с ₽.
      */
-    public function paymentsCalendar(Request $request, PaymentForecast $forecast): Response
-    {
+    public function paymentsCalendar(
+        Request $request,
+        PaymentForecast $forecast,
+        PaymentCalendarService $calendar,
+    ): Response {
         $actor = $this->crmActor($request);
         $clients = $this->visibleClients($request, $actor);
 
         $month = $this->resolveMonth($request->input('month'));
-        $monthStart = $month->toDateString();
-        $monthEnd = $month->copy()->endOfMonth()->toDateString();
-        $today = Carbon::today();
+        $monthStart = CarbonImmutable::parse($month->toDateString());
+        $monthEnd = $monthStart->endOfMonth()->startOfDay();
         $todayImmutable = CarbonImmutable::today();
 
-        // Календарю нужен только период: отбор по менеджерам уже сведён в скоуп партнёров.
-        $filters = new FinanceFilters(
-            dateFrom: CarbonImmutable::parse($monthStart),
-            dateTo: CarbonImmutable::parse($monthEnd),
-        );
+        // Отбор общий с остальными финансовыми разделами: тот же снимок
+        // фильтров, те же справочники, тот же скоуп.
+        $filters = FinanceFilters::fromRequest($request)->withRange($monthStart, $monthEnd);
 
-        $planned = $forecast->applyDefaultOrder(
-            $forecast->dueBetween($forecast->plannedQuery($clients, $filters), $monthStart, $monthEnd)
-        )->get();
+        $axis = (string) $request->input('axis', 'partner');
+        $axis = isset(PaymentCalendarService::AXES[$axis]) ? $axis : 'partner';
 
-        // Просрочка не привязана к показываемому месяцу: менеджеру она нужна
-        // всегда, в каком бы месяце он ни находился.
-        $overdue = $forecast->applyDefaultOrder(
-            $forecast->overdueOnly($forecast->plannedQuery($clients, $filters), $todayImmutable)
-        )->limit(self::CALENDAR_OVERDUE_LIMIT)->get();
+        $days = $calendar->days($clients, $filters, $monthStart, $monthEnd);
 
-        $facts = $forecast->factsByDay($clients, $monthStart, $monthEnd);
-        $entries = $planned->map(fn (object $row): array => $forecast->row($row, $todayImmutable));
-        $overdueEntries = $overdue->map(fn (object $row): array => $forecast->row($row, $todayImmutable));
+        // Навес считается на начало месяца: листая назад, менеджер должен
+        // видеть картину того времени, а не сегодняшнюю.
+        $threadDate = $monthStart->greaterThan($todayImmutable) ? $todayImmutable : $monthStart;
+
+        $plan = array_sum(array_column($days, 'plan'));
+        $settled = array_sum(array_column($days, 'settled'));
+        $fact = array_sum(array_column($days, 'fact'));
 
         return Inertia::render('Crm/Pages/Finance/PaymentCalendar', [
             'month' => $month->format('Y-m'),
             'monthLabel' => $this->monthLabel($month),
             'prevMonth' => $month->copy()->subMonth()->format('Y-m'),
             'nextMonth' => $month->copy()->addMonth()->format('Y-m'),
-            'today' => $today->toDateString(),
-            'entries' => $entries->all(),
-            'overdueEntries' => $overdueEntries->all(),
-            'facts' => $facts,
+            'today' => $todayImmutable->toDateString(),
+            'days' => $days,
+            'overdueThread' => $calendar->overdueThread($clients, $filters, $threadDate),
+            'axis' => $axis,
+            'axes' => array_map(
+                static fn (string $label, string $key): array => ['value' => $key, 'label' => $label],
+                array_values(PaymentCalendarService::AXES),
+                array_keys(PaymentCalendarService::AXES),
+            ),
+            'breakdown' => $calendar->breakdown($clients, $filters, $monthStart, $monthEnd, $axis),
             'summary' => [
-                'plan_month' => round($entries->sum(fn (array $entry): float => $entry['unpaid_rub']), 2),
-                'fact_month' => round($facts->sum(fn (array $day): float => $day['amount']), 2),
-                'overdue_amount' => round($overdueEntries->sum(fn (array $entry): float => $entry['unpaid_rub']), 2),
-                'overdue_count' => $overdueEntries->count(),
+                'plan' => round($plan, 2),
+                // Сколько из графика месяца 1С уже закрыла. Отдельно от факта
+                // платежей: платежом может гаситься долг прошлых месяцев, а
+                // строка этого месяца — закрываться зачётом аванса.
+                'settled' => round($settled, 2),
+                'fact' => round($fact, 2),
+                // Исполнение считается только для прошедших дней месяца:
+                // в середине месяца сравнивать факт с планом всего месяца
+                // значило бы каждый раз показывать провал.
+                'plan_to_date' => round($this->planToDate($days, $todayImmutable), 2),
+                'days_passed' => $monthStart->greaterThan($todayImmutable)
+                    ? 0
+                    : min((int) $monthStart->diffInDays($todayImmutable) + 1, $monthEnd->day),
+            ],
+            'filters' => [
+                ...$filters->toArray(),
+                'scope' => CrmScope::fromRequest($request, $actor)->value,
+                'month' => $month->format('Y-m'),
+                'axis' => $axis,
+                'manager_ids' => $this->seesDepartment($request) ? $filters->managerIds : [],
             ],
             'managers' => $this->seesDepartment($request) ? $this->managerOptions() : [],
+            'organizations' => $this->organizationOptions(),
             'seesAll' => $this->seesDepartment($request),
-            'filters' => [
-                // Разрез отдаётся экрану, хотя фильтрует уже `visibleClients`:
-                // без него календарь показывал сумму по своим партнёрам и никак
-                // об этом не сообщал — расфокус нечем было ни увидеть, ни снять.
-                'scope' => CrmScope::fromRequest($request, $this->crmActor($request))->value,
-                'manager_ids' => $this->seesDepartment($request) ? $this->ids($request, 'manager_ids') : [],
-            ],
         ]);
+    }
+
+    /**
+     * Сколько по графику должно было прийти к сегодняшнему дню.
+     *
+     * @param  array<string, array{plan: float, fact: float}>  $days
+     */
+    private function planToDate(array $days, CarbonImmutable $today): float
+    {
+        $sum = 0.0;
+
+        foreach ($days as $date => $day) {
+            if ($date <= $today->toDateString()) {
+                $sum += $day['plan'];
+            }
+        }
+
+        return $sum;
     }
 
     /**

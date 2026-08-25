@@ -35,6 +35,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class FinanceController extends CrmController
 {
+    use Concerns\ListsOrganizations;
+
     /** Потолок строк на страницу таблиц раздела. */
     private const PER_PAGE = 50;
 
@@ -1052,26 +1054,6 @@ class FinanceController extends CrmController
             ->map(fn (PersonalManager $manager): array => [
                 'id' => (int) $manager->getKey(),
                 'name' => (string) $manager->name,
-            ])
-            ->all();
-    }
-
-    /**
-     * @return list<array{id: int, name: string}>
-     */
-    private function organizationOptions(): array
-    {
-        if (! config('erp.organizations.enabled')) {
-            return [];
-        }
-
-        return Organization::query()
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(fn (Organization $organization): array => [
-                'id' => (int) $organization->getKey(),
-                'name' => (string) $organization->name,
             ])
             ->all();
     }

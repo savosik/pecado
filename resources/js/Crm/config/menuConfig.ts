@@ -139,8 +139,12 @@ export const menuConfig: MenuGroup[] = [
             // должны были заплатить и что заплатят дальше. Пульт со сводкой
             // уходит ниже: к нему обращаются реже, чем к обоим спискам.
             { label: "План поступлений", icon: LuWallet, path: "/crm/finance/plan", permission: "crm-finance.view" },
-            { label: "Пульт платежей", icon: LuGauge, path: "/crm/finance", permission: "crm-finance.view" },
+            // Календарь сразу за планом: прогноз отвечает «сколько будет»,
+            // календарь — «какого числа обещано и когда пришло». Один смотрит
+            // вперёд с поправкой на дисциплину, второй показывает документ
+            // как есть, и читают их подряд.
             { label: "Календарь поступлений", icon: LuCalendarClock, path: "/crm/payments/calendar", permission: "crm-clients.view" },
+            { label: "Пульт платежей", icon: LuGauge, path: "/crm/finance", permission: "crm-finance.view" },
         ],
     },
     {
