@@ -444,6 +444,7 @@ class LedgerPaymentForecastService implements PaymentForecast
                 'balance' => (float) $row->balance,
                 'overdue' => 0.0,
                 'overdue_lines' => 0,
+                'overdue_weight' => 0.0,
                 'oldest_due' => null,
                 'erp_updated_at' => $row->erp_updated_at,
             ];
@@ -455,11 +456,13 @@ class LedgerPaymentForecastService implements PaymentForecast
                 'balance' => 0.0,
                 'overdue' => 0.0,
                 'overdue_lines' => 0,
+                'overdue_weight' => 0.0,
                 'oldest_due' => null,
                 'erp_updated_at' => null,
             ];
             $cells[$key]['overdue'] = (float) $row->overdue;
             $cells[$key]['overdue_lines'] = (int) $row->overdue_lines;
+            $cells[$key]['overdue_weight'] = (float) $row->overdue_weight;
             $cells[$key]['oldest_due'] = $row->oldest_due;
         }
 
@@ -470,6 +473,7 @@ class LedgerPaymentForecastService implements PaymentForecast
             'balance' => $cellBalance,
             'overdue' => $cellOverdue,
             'overdue_lines' => $cellLines,
+            'overdue_weight' => $cellWeight,
             'oldest_due' => $cellOldest,
             'erp_updated_at' => $updatedAt,
         ]) {
@@ -491,6 +495,7 @@ class LedgerPaymentForecastService implements PaymentForecast
                     'current_balance' => 0.0,
                     'overdue_debt' => 0.0,
                     'overdue_lines' => 0,
+                    'overdue_weight' => 0.0,
                     'oldest_due' => null,
                     'erp_updated_at' => null,
                     // Менеджеры узла копятся множеством: у контрагента он один,
@@ -503,6 +508,7 @@ class LedgerPaymentForecastService implements PaymentForecast
                 $branch[$node['key']]['current_balance'] += $cellBalance;
                 $branch[$node['key']]['overdue_debt'] += $cellOverdue;
                 $branch[$node['key']]['overdue_lines'] += $cellLines;
+                $branch[$node['key']]['overdue_weight'] += $cellWeight;
 
                 if ($cellOldest !== null) {
                     $branch[$node['key']]['oldest_due'] = min(
@@ -589,6 +595,13 @@ class LedgerPaymentForecastService implements PaymentForecast
             $row['overdue_debt'] = round($row['overdue_debt'], 2);
             $row['manager_name'] = $this->managerLabel($row['managers'], $row['axis']);
             unset($row['managers']);
+
+            $row['overdue_weight'] = round($row['overdue_weight'], 2);
+            // Средневзвешенный возраст долга: рублёдни, поделённые на сумму.
+            // Одна давняя копейка так не перевешивает свежий миллион.
+            $row['weighted_age'] = $row['overdue_debt'] > SettlementEntry::EPSILON
+                ? (int) round($row['overdue_weight'] / $row['overdue_debt'])
+                : 0;
 
             // Самая давняя просрочка узла: подпись «столько-то дней назад»
             // отвечает на вопрос «насколько всё запущено» без открытия строк.
@@ -801,7 +814,8 @@ class LedgerPaymentForecastService implements PaymentForecast
             // показывает их рядом с суммой, а второй проход по тем же строкам
             // ради двух чисел был бы лишним запросом.
             ->selectRaw('COUNT(*) as overdue_lines')
-            ->selectRaw('MIN(p.date) as oldest_due');
+            ->selectRaw('MIN(p.date) as oldest_due')
+            ->selectRaw($this->overdueWeightExpression($asOf ?? CarbonImmutable::today()).' as overdue_weight');
 
         if ($overdueFilters !== null) {
             $this->applyOverdueFilters($query, $overdueFilters, $asOf, 'p');
@@ -838,6 +852,26 @@ class LedgerPaymentForecastService implements PaymentForecast
      * не окупались. `json_extract` есть в обоих движках, но MySQL возвращает
      * значение в кавычках, и снимать их нужно только там.
      */
+    /**
+     * «Рублёдни» просрочки: остаток строки, умноженный на число просроченных
+     * дней. Мера «сколько денег и как долго не у нас» — в отличие от суммы,
+     * она различает 50 тысяч, висящие год, и 400 тысяч недельной задержки.
+     *
+     * Складывается по строкам и по узлам разреза, поэтому считается прямо
+     * в агрегате, а не после выборки.
+     */
+    private function overdueWeightExpression(CarbonImmutable $today, string $alias = 'p'): string
+    {
+        $unpaid = '('.$alias.'.amount - '.$alias.'.settled_amount)';
+        $date = $today->toDateString();
+
+        $days = DB::connection()->getDriverName() === 'sqlite'
+            ? "(julianday('".$date."') - julianday(".$alias.'.date))'
+            : "DATEDIFF('".$date."', ".$alias.'.date)';
+
+        return 'SUM('.$unpaid.' * '.$days.')';
+    }
+
     private function stageNameExpression(): string
     {
         $extract = "json_extract(sch.meta, '$.stage_name')";

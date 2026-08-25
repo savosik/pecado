@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import { usePermission } from '@/shared/Panel/usePermission';
 import { dueHint, formatRub } from './format';
+import OverdueWeight from './OverdueWeight';
 
 /**
  * Таблица строк ожидаемых поступлений — общая для «Плана» и «Просрочки».
@@ -15,7 +16,15 @@ import { dueHint, formatRub } from './format';
  * Привязка идёт к реализации (CrmEntityMap разрешает `shipment`), поэтому задача
  * попадёт и в ленту партнёра: client_user_id проставляет сама модель CrmTask.
  */
-export default function FinanceRowsTable({ rows, onSort, sortColumn, sortDirection, emptyMessage }) {
+export default function FinanceRowsTable({
+    rows,
+    onSort,
+    sortColumn,
+    sortDirection,
+    emptyMessage,
+    showWeight = false,
+    maxWeight = 0,
+}) {
     const { can } = usePermission();
     const [taskFor, setTaskFor] = useState(null);
 
@@ -106,6 +115,19 @@ export default function FinanceRowsTable({ rows, onSort, sortColumn, sortDirecti
                 </VStack>
             ),
         },
+        // Вес показывается только в просрочке: у будущего платежа дней задержки
+        // нет, и колонка была бы пустой.
+        ...(showWeight ? [{
+            key: 'weight',
+            label: 'Вес',
+            render: (_, row) => (
+                <OverdueWeight
+                    weight={(row.unpaid_rub || 0) * (row.days_overdue || 0)}
+                    max={maxWeight}
+                    age={row.days_overdue}
+                />
+            ),
+        }] : []),
         {
             key: 'actions',
             label: '',

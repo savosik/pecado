@@ -16,6 +16,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -152,16 +153,19 @@ class FinanceController extends CrmController
             ->selectRaw('COUNT(*) as lines_count')
             ->selectRaw('COUNT(DISTINCT sch.document_uuid) as documents_count')
             ->selectRaw('COUNT(DISTINCT sch.user_id) as clients_count')
+            ->selectRaw('SUM((sch.amount - sch.settled_amount) * '.$this->overdueDaysExpression().') as weight')
             ->groupBy('sch.currency_code')
             ->get();
 
         $amount = 0.0;
+        $weight = 0.0;
         $lines = 0;
         $documents = 0;
         $clients = 0;
 
         foreach ($rows as $row) {
             $amount += $this->forecast->toRub((float) $row->unpaid, $row->currency_code);
+            $weight += $this->forecast->toRub((float) $row->weight, $row->currency_code);
             $lines += (int) $row->lines_count;
             $documents += (int) $row->documents_count;
             $clients = max($clients, (int) $row->clients_count);
@@ -169,10 +173,24 @@ class FinanceController extends CrmController
 
         return [
             'amount' => round($amount, 2),
+            'weight' => round($weight, 2),
+            // Средневзвешенный возраст просрочки: рублёдни на рубль долга.
+            // Отвечает на «сколько в среднем ждём эти деньги» одним числом.
+            'weighted_age' => $amount > 0.01 ? (int) round($weight / $amount) : 0,
             'lines' => $lines,
             'documents' => $documents,
             'clients' => $clients,
         ];
+    }
+
+    /** Число просроченных дней строки — выражение под текущий драйвер БД. */
+    private function overdueDaysExpression(): string
+    {
+        $today = CarbonImmutable::today()->toDateString();
+
+        return DB::connection()->getDriverName() === 'sqlite'
+            ? "(julianday('".$today."') - julianday(sch.date))"
+            : "DATEDIFF('".$today."', sch.date)";
     }
 
     /**
@@ -187,7 +205,7 @@ class FinanceController extends CrmController
         $direction = $request->input('direction') === 'desc' ? 'desc' : 'asc';
 
         return [
-            'column' => in_array($column, ['due_date', 'unpaid', 'client'], true) ? $column : 'due_date',
+            'column' => in_array($column, ['due_date', 'unpaid', 'client', 'weight'], true) ? $column : 'due_date',
             'direction' => $direction,
         ];
     }
@@ -196,7 +214,15 @@ class FinanceController extends CrmController
     {
         ['column' => $column, 'direction' => $direction] = $this->overdueSort($request);
 
+        $days = $this->overdueDaysExpression();
+
         return match ($column) {
+            // Вес — «рублёдни»: остаток, умноженный на дни просрочки. Сверху
+            // оказывается не самое крупное и не самое давнее, а то, где
+            // сумма и время вместе дают наибольшую цену ожидания.
+            'weight' => $query->reorder()
+                ->orderByRaw('(sch.amount - sch.settled_amount) * '.$days.' '.$direction)
+                ->orderBy('sch.id'),
             // Остаток сортируется в валюте строки: рублёвый эквивалент считается
             // после выборки, и упорядочить по нему в SQL нечем. Валютных строк
             // в просрочке единицы, порядок от этого практически не страдает.

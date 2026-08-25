@@ -271,6 +271,61 @@ class FinanceOverdueTest extends TestCase
         $this->assertEqualsWithDelta(500.0, $byDate['rows']['data'][0]['unpaid_rub'], 0.01);
     }
 
+    /**
+     * Вес («рублёдни») различает то, чего не различают сумма и срок порознь:
+     * мелкий долг, висящий год, разбирают раньше крупного недельного.
+     */
+    #[Test]
+    public function вес_просрочки_считается_суммой_на_дни(): void
+    {
+        $client = $this->makeClient();
+
+        $old = $this->makeClient();      // 50 000 ₽ × 300 дней = 15 000 000
+        $fresh = $this->makeClient();    // 400 000 ₽ × 7 дней  =  2 800 000
+
+        $this->overdueLine($old, 50000, 300);
+        $this->overdueLine($fresh, 400000, 7);
+        $this->overdueLine($client, 1000, 10);
+
+        $props = $this->props('?group=partner');
+        $rows = collect($props['groupRows'])->keyBy('title');
+
+        $oldRow = $rows->first(fn (array $row): bool => abs($row['overdue_debt'] - 50000) < 0.01);
+        $freshRow = $rows->first(fn (array $row): bool => abs($row['overdue_debt'] - 400000) < 0.01);
+
+        $this->assertEqualsWithDelta(15_000_000.0, $oldRow['overdue_weight'], 1.0);
+        $this->assertEqualsWithDelta(2_800_000.0, $freshRow['overdue_weight'], 1.0);
+
+        // Средневзвешенный возраст — рублёдни на рубль долга.
+        $this->assertSame(300, $oldRow['weighted_age']);
+        $this->assertSame(7, $freshRow['weighted_age']);
+
+        // Мелкий, но давний долг тяжелее крупного свежего — ради этого метрика
+        // и вводилась.
+        $this->assertGreaterThan($freshRow['overdue_weight'], $oldRow['overdue_weight']);
+
+        // Итог по отбору: сумма весов строк и средний возраст по всей просрочке.
+        $this->assertEqualsWithDelta(17_810_000.0, $props['totals']['weight'], 10.0);
+        $this->assertSame(39, $props['totals']['weighted_age']);
+    }
+
+    /** Сортировка по весу ставит наверх не самое крупное и не самое давнее. */
+    #[Test]
+    public function сортировка_по_весу_поднимает_дорогое_ожидание(): void
+    {
+        $client = $this->makeClient();
+
+        $this->overdueLine($client, 400000, 7);    //  2 800 000
+        $this->overdueLine($client, 50000, 300);   // 15 000 000
+        $this->overdueLine($client, 1000, 400);    //    400 000 — самое давнее
+
+        $rows = $this->props('?sort=weight&direction=desc')['rows']['data'];
+
+        $this->assertEqualsWithDelta(50000.0, $rows[0]['unpaid_rub'], 0.01);
+        $this->assertEqualsWithDelta(400000.0, $rows[1]['unpaid_rub'], 0.01);
+        $this->assertEqualsWithDelta(1000.0, $rows[2]['unpaid_rub'], 0.01);
+    }
+
     #[Test]
     public function план_по_заказу_в_просрочку_не_попадает(): void
     {

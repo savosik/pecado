@@ -12,6 +12,7 @@ import { usePermission } from '@/shared/Panel/usePermission';
 import FinanceFilterBar from './components/FinanceFilterBar';
 import FinanceRowsTable from './components/FinanceRowsTable';
 import { formatRub } from './components/format';
+import OverdueWeight, { WeightHeader } from './components/OverdueWeight';
 
 /** Пороги «мелочи»: копеечные хвосты закрываются взаимозачётом, а не звонком. */
 const AMOUNT_PRESETS = [
@@ -92,6 +93,14 @@ export default function FinanceOverdue({
         sort: column,
         direction: sort.column === column && sort.direction === 'asc' ? 'desc' : 'asc',
     });
+
+    // Шкала балла для списка строк — по самой тяжёлой строке страницы: это
+    // относительный приоритет разбора, и «самая тяжёлая из видимых» честнее
+    // абсолютного порога, который пришлось бы держать в рублёднях.
+    const maxRowWeight = (rows?.data ?? []).reduce(
+        (max, row) => Math.max(max, (row.unpaid_rub || 0) * (row.days_overdue || 0)),
+        0,
+    );
 
     const bucketLabel = (key) => aging?.buckets.find((bucket) => bucket.key === key)?.label ?? key;
 
@@ -192,6 +201,12 @@ export default function FinanceOverdue({
                     />
 
                     <Metric
+                        label="Средний возраст"
+                        value={`${totals.weighted_age || 0} дн.`}
+                        hint="Средневзвешенный возраст просроченных денег: рублёдни, поделённые на сумму. Одна давняя копейка так не перевешивает свежий миллион — число показывает, сколько в среднем ждут именно эти деньги."
+                    />
+
+                    <Metric
                         label="Строк графика"
                         value={String(totals.lines || 0)}
                         hint="Сколько строк графика просрочено. У одной реализации строк бывает несколько — по этапам оплаты, поэтому строк всегда не меньше, чем документов."
@@ -287,6 +302,7 @@ export default function FinanceOverdue({
                             <Text fontSize="xs" color="fg.muted">Сортировка:</Text>
 
                             {[
+                                { key: 'weight', label: 'по весу' },
                                 { key: 'due_date', label: 'по сроку' },
                                 { key: 'unpaid', label: 'по сумме' },
                                 { key: 'client', label: 'по партнёру' },
@@ -305,7 +321,12 @@ export default function FinanceOverdue({
                         </HStack>
                     </Flex>
 
-                    <FinanceRowsTable rows={rows} emptyMessage="Просроченных платежей по этому отбору нет" />
+                    <FinanceRowsTable
+                        rows={rows}
+                        showWeight
+                        maxWeight={maxRowWeight}
+                        emptyMessage="Просроченных платежей по этому отбору нет"
+                    />
                 </>
             ) : (
                 <GroupTree
@@ -344,6 +365,11 @@ export default function FinanceOverdue({
  * миллионов — разные новости, и одна лишь абсолютная сумма их не различает.
  */
 function GroupTree({ rows, total, onDrill, onTask, expanded, onToggle }) {
+    // Максимум берётся по верхнему уровню: балл отвечает на «кто тяжелее в
+    // этом разрезе», и пересчитывать шкалу на каждом уровне значило бы делать
+    // всех детей одинаково красными.
+    const maxWeight = rows.reduce((max, row) => Math.max(max, row.overdue_weight || 0), 0);
+
     return (
         <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" overflow="hidden">
             <Box overflowX="auto">
@@ -365,6 +391,7 @@ function GroupTree({ rows, total, onDrill, onTask, expanded, onToggle }) {
                                     <MetricHint text="Доля просрочки в общем долге этой строки: сальдо взаиморасчётов берётся по тем же движениям, что в разделе «Балансы». Долг без просрочки в разрез не попадает вовсе." />
                                 </HStack>
                             </Table.ColumnHeader>
+                            <Table.ColumnHeader width="120px"><WeightHeader /></Table.ColumnHeader>
                             <Table.ColumnHeader textAlign="end">Строк</Table.ColumnHeader>
                             <Table.ColumnHeader>Самая давняя</Table.ColumnHeader>
                             <Table.ColumnHeader />
@@ -374,7 +401,7 @@ function GroupTree({ rows, total, onDrill, onTask, expanded, onToggle }) {
                     <Table.Body>
                         {rows.length === 0 && (
                             <Table.Row>
-                                <Table.Cell colSpan={8}>
+                                <Table.Cell colSpan={9}>
                                     <Text py={8} textAlign="center" color="fg.muted">
                                         Просроченных платежей по этому отбору нет
                                     </Text>
@@ -388,6 +415,7 @@ function GroupTree({ rows, total, onDrill, onTask, expanded, onToggle }) {
                                 row={row}
                                 depth={0}
                                 total={total}
+                                maxWeight={maxWeight}
                                 onDrill={onDrill}
                                 onTask={onTask}
                                 expanded={expanded}
@@ -402,7 +430,7 @@ function GroupTree({ rows, total, onDrill, onTask, expanded, onToggle }) {
 }
 
 /** Узел дерева и его потомки — одной рекурсивной строкой на любом уровне. */
-function GroupRows({ row, depth, total, onDrill, onTask, expanded, onToggle }) {
+function GroupRows({ row, depth, total, maxWeight, onDrill, onTask, expanded, onToggle }) {
     const hasChildren = (row.children?.length ?? 0) > 0;
     const isOpen = !! expanded[row.id];
 
@@ -482,6 +510,10 @@ function GroupRows({ row, depth, total, onDrill, onTask, expanded, onToggle }) {
                     </VStack>
                 </Table.Cell>
 
+                <Table.Cell>
+                    <OverdueWeight weight={row.overdue_weight} max={maxWeight} age={row.weighted_age} />
+                </Table.Cell>
+
                 <Table.Cell textAlign="end">
                     <Text fontSize="sm">{row.overdue_lines}</Text>
                 </Table.Cell>
@@ -525,6 +557,7 @@ function GroupRows({ row, depth, total, onDrill, onTask, expanded, onToggle }) {
                     row={child}
                     depth={depth + 1}
                     total={total}
+                    maxWeight={maxWeight}
                     onDrill={onDrill}
                     onTask={onTask}
                     expanded={expanded}
