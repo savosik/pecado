@@ -10,7 +10,6 @@ use App\Models\SettlementEntry;
 use App\Models\User;
 use App\Services\Crm\Api\OperationInput;
 use App\Services\Crm\Api\OperationRegistry;
-use App\Services\Crm\Api\Operations\PaymentOperations;
 use App\Services\Crm\Api\Operations\SettlementOperations;
 use Carbon\CarbonImmutable;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -80,31 +79,27 @@ class SettlementOperationsTest extends TestCase
         return app(SettlementOperations::class);
     }
 
-    /**
-     * @param  array<string, mixed>  $params
-     */
     private function input(array $params = []): OperationInput
     {
         return new OperationInput($params);
     }
 
     /**
-     * Пока регистр пуст, операции отвечали бы «никто ничего не должен», и агент
-     * сообщил бы это менеджеру с полной уверенностью. Поэтому они появляются
-     * только вместе с переключением чтения.
+     * Операции регистра — единственный ответ агента про деньги (fin-11):
+     * прежние `payment.balances`, `payment.unpaid-shipments` и `payment.schedule`
+     * сняты, чтобы агент не выбирал между двумя источниками долга.
      */
     #[Test]
-    public function операции_регистра_появляются_только_с_флагом(): void
+    public function операции_регистра_зарегистрированы_а_старые_сняты(): void
     {
-        config(['settlements.ledger_enabled' => false]);
-        $ids = collect((new OperationRegistry)->all())->pluck('id');
-        $this->assertFalse($ids->contains('settlement.balance'));
-
-        config(['settlements.ledger_enabled' => true]);
         $ids = collect((new OperationRegistry)->all())->pluck('id');
 
         foreach (['settlement.balance', 'settlement.schedule', 'settlement.reconciliation', 'settlement.debtors'] as $id) {
             $this->assertTrue($ids->contains($id), $id.' не зарегистрирована');
+        }
+
+        foreach (['payment.balances', 'payment.unpaid-shipments', 'payment.schedule'] as $id) {
+            $this->assertFalse($ids->contains($id), $id.' должна быть снята');
         }
     }
 
@@ -257,50 +252,21 @@ class SettlementOperationsTest extends TestCase
     }
 
     /**
-     * Совсем удалить операцию нельзя: у существующих агентов вызов зашит
-     * в промптах, и молчаливое исчезновение они истолкуют как «долгов нет».
+     * Инструкция аналитического агента — только про регистр: вторая версия
+     * с предупреждениями «это не долг» снята вместе со старым ядром.
      */
     #[Test]
-    public function снятая_операция_объясняет_чем_её_заменить(): void
-    {
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessageMatches('/settlement\.balance/');
-
-        app(PaymentOperations::class)->unpaidShipments($this->manager, $this->input());
-    }
-
-    #[Test]
-    public function при_выключенном_флаге_старая_операция_работает(): void
-    {
-        config(['settlements.ledger_enabled' => false]);
-
-        $result = app(PaymentOperations::class)->unpaidShipments($this->manager, $this->input());
-
-        $this->assertArrayHasKey('data', $result);
-    }
-
-    /**
-     * Инструкции аналитического агента переключаются тем же флагом: снять
-     * предупреждения «это не долг» раньше данных значило бы дать агенту
-     * уверенно врать.
-     */
-    #[Test]
-    public function инструкции_mcp_переключаются_флагом(): void
+    public function инструкции_mcp_описывают_только_регистр(): void
     {
         $transport = \Mockery::mock(\Laravel\Mcp\Server\Contracts\Transport::class);
 
-        config(['settlements.ledger_enabled' => false]);
-        $legacy = (new AnalyticsServer($transport))->createContext()->instructions;
+        $instructions = (new AnalyticsServer($transport))->createContext()->instructions;
 
-        config(['settlements.ledger_enabled' => true]);
-        $ledger = (new AnalyticsServer($transport))->createContext()->instructions;
-
-        $this->assertStringContainsString('Не считайте долг суммой', $legacy);
-        $this->assertStringNotContainsString('Не считайте долг суммой', $ledger);
-
-        $this->assertStringContainsString('settlement_entries', $ledger);
+        $this->assertStringContainsString('settlement_entries', $instructions);
+        $this->assertStringNotContainsString('Не считайте долг суммой', $instructions);
+        $this->assertStringNotContainsString('shipment_payment_schedules', $instructions);
         // Предупреждение про знак остаётся навсегда: перепутав его, агент выдаст
         // долг наизнанку — арифметика сойдётся, а смысл перевернётся.
-        $this->assertStringContainsString('Знак содержательный', $ledger);
+        $this->assertStringContainsString('Знак содержательный', $instructions);
     }
 }

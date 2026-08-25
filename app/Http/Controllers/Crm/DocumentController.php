@@ -1964,7 +1964,6 @@ class DocumentController extends CrmController
             'warehouse:id,name',
             'items.product:id,name,slug,sku',
             'paymentAllocations.payment:id,number,date,direction,currency_code',
-            'paymentSchedules',
         ]);
 
         // Заказы, по которым сделана отгрузка: связь идёт через order_uuid

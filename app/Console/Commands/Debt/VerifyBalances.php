@@ -141,9 +141,11 @@ class VerifyBalances extends Command
         return $forecast->overdueOnly($query, $today)
             ->get()
             ->groupBy('user_id')
+            // unpaidOf, а не арифметика по колонкам: остаток строки знает само
+            // счётное ядро, и у строк регистра колонок paid/prepaid нет вовсе.
             ->map(fn (Collection $lines): float => round($lines->sum(
                 fn (object $line): float => $forecast->toRub(
-                    (float) $line->amount - (float) $line->paid_amount - (float) $line->prepaid_amount,
+                    $forecast->unpaidOf($line),
                     $line->currency_code,
                 ),
             ), 2))

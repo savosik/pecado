@@ -2,16 +2,22 @@
 
 namespace App\Support\Payments;
 
+use App\Models\SettlementEntry;
 use App\Models\Shipment;
-use App\Models\ShipmentPaymentSchedule;
 
 /**
  * Блок «График оплаты» в карточке реализации.
  *
- * Один презентер на три интерфейса (кабинет, CRM, админка): график везде показывается
- * одинаково — он read-only и мастером является 1С. Расходится только валюта: кабинет
- * пересчитывает суммы в валюту клиента, сотрудники видят их как в документе,
- * поэтому пересчёт передаётся колбэком, а не зашит внутрь.
+ * Один презентер на четыре интерфейса (кабинет, CRM, админка, клиентское API):
+ * график везде показывается одинаково — он read-only и мастером является 1С.
+ * Расходится только валюта: кабинет пересчитывает суммы в валюту клиента,
+ * сотрудники видят их как в документе, поэтому пересчёт передаётся колбэком.
+ *
+ * Источник — плановые строки регистра взаиморасчётов (fin-11). Прежняя таблица
+ * `shipment_payment_schedules` не наполняется с 12.08.2026: 1С присылает график
+ * событием `payment_schedule.updated`, и карточки реализаций, отгруженных после
+ * этой даты, показывали пустой блок. Форма ответа сохранена в точности —
+ * общий фронт-компонент PaymentScheduleBlock и внешний API её знают.
  */
 class PaymentSchedulePresenter
 {
@@ -21,9 +27,13 @@ class PaymentSchedulePresenter
      */
     public static function forShipment(Shipment $shipment, ?callable $convert = null): ?array
     {
-        $lines = $shipment->relationLoaded('paymentSchedules')
-            ? $shipment->paymentSchedules
-            : $shipment->paymentSchedules()->get();
+        $lines = SettlementEntry::query()
+            ->plans()
+            ->where('document_uuid', $shipment->uuid)
+            ->orderByRaw('COALESCE(line_number, 2147483647)')
+            ->orderBy('date')
+            ->orderBy('id')
+            ->get();
 
         if ($lines->isEmpty()) {
             return null;
@@ -32,28 +42,41 @@ class PaymentSchedulePresenter
         $convert ??= static fn (float $amount): float => $amount;
 
         $total = round((float) $lines->sum('amount'), 2);
-        // Аванс по заказу закрывает строку наравне с прямым разнесением — ровно так
-        // считает ShipmentPaymentSchedule::unpaid_amount. Забыв про prepaid_amount
-        // здесь, шапка показывала бы долг больше, чем даёт сумма строк под ней.
-        $paid = round((float) $lines->sum('paid_amount') + (float) $lines->sum('prepaid_amount'), 2);
-        // Итог собирается из строк, а не из разницы сумм: остаток строки клампится
-        // в ноль, и переплата по одной строке не должна гасить долг по другой.
-        $unpaid = round((float) $lines->sum(static fn (ShipmentPaymentSchedule $line): float => $line->unpaid_amount), 2);
+        // Построчный кламп: закрытая часть строки не может превысить её сумму,
+        // иначе переплата по одной гасила бы долг по другой.
+        $paid = round((float) $lines->sum(
+            static fn (SettlementEntry $line): float => min((float) $line->amount, (float) $line->settled_amount),
+        ), 2);
+        $unpaid = round((float) $lines->sum(
+            static fn (SettlementEntry $line): float => $line->unsettled_amount,
+        ), 2);
         $documentTotal = round((float) $shipment->total_amount, 2);
 
+        // Ближайший срок берётся из самих строк, а не из денормализованной
+        // shipments.payment_due_date: карточка не должна зависеть от того,
+        // успела ли отработать проекция.
+        $nextDue = $lines
+            ->filter(static fn (SettlementEntry $line): bool => $line->unsettled_amount > SettlementEntry::EPSILON)
+            ->pluck('date')
+            ->filter()
+            ->sort()
+            ->first();
+
         return [
-            'lines' => $lines->map(fn (ShipmentPaymentSchedule $line): array => [
+            'lines' => $lines->map(fn (SettlementEntry $line): array => [
                 'id' => $line->id,
                 'line_number' => $line->line_number,
-                'due_date' => $line->due_date?->toDateString(),
-                'due_date_label' => $line->due_date?->format('d.m.Y'),
+                'due_date' => $line->date?->toDateString(),
+                'due_date_label' => $line->date?->format('d.m.Y'),
                 'amount' => $convert((float) $line->amount),
-                'paid_amount' => $convert((float) $line->paid_amount),
-                'unpaid_amount' => $convert($line->unpaid_amount),
-                'percent' => $line->percent !== null ? (float) $line->percent : null,
-                'term_days' => $line->term_days,
-                'basis_name' => $line->basis_name,
-                'stage_name' => $line->stage_name,
+                'paid_amount' => $convert(min((float) $line->amount, (float) $line->settled_amount)),
+                'unpaid_amount' => $convert($line->unsettled_amount),
+                // Реквизиты этапа 1С отдаёт «только для показа» — они лежат
+                // в meta и в расчётах не участвуют.
+                'percent' => isset($line->meta['percent']) ? (float) $line->meta['percent'] : null,
+                'term_days' => $line->meta['term_days'] ?? null,
+                'basis_name' => $line->meta['basis_name'] ?? null,
+                'stage_name' => $line->meta['stage_name'] ?? null,
                 'status' => $line->status,
                 'status_label' => $line->status_label,
                 'is_overdue' => $line->is_overdue,
@@ -61,10 +84,10 @@ class PaymentSchedulePresenter
             'total_amount' => $convert($total),
             'paid_amount' => $convert($paid),
             'unpaid_amount' => $convert($unpaid),
-            'next_due_date_label' => $shipment->payment_due_date?->format('d.m.Y'),
-            'is_overdue' => $shipment->is_payment_overdue,
+            'next_due_date_label' => $nextDue?->format('d.m.Y'),
+            'is_overdue' => $lines->contains(static fn (SettlementEntry $line): bool => $line->is_overdue),
             // Арифметику документа ведёт 1С: расхождение показываем, но не «чиним».
-            'mismatches_document' => abs($total - $documentTotal) > ShipmentPaymentSchedule::EPSILON,
+            'mismatches_document' => abs($total - $documentTotal) > SettlementEntry::EPSILON,
             'document_total' => $convert($documentTotal),
         ];
     }

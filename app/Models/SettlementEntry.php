@@ -125,6 +125,13 @@ class SettlementEntry extends Model
      */
     public const EPSILON = 0.01;
 
+    /** Состояния плановой строки — те же три, что показывала карточка графика. */
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_PARTIAL = 'partial';
+
+    public const STATUS_PAID = 'paid';
+
     /** @var array<string, string> */
     public const TYPE_LABELS = [
         self::TYPE_OPENING_BALANCE => 'Начальное сальдо',
@@ -343,6 +350,32 @@ class SettlementEntry extends Model
         }
 
         return max(0.0, round((float) $this->amount - (float) $this->settled_amount, 2));
+    }
+
+    /**
+     * Состояние плановой строки: ожидается, частично закрыта, закрыта.
+     *
+     * Просрочка сюда не входит — это отдельный признак: просроченной бывает
+     * и неоплаченная строка, и частично закрытая.
+     */
+    public function getStatusAttribute(): string
+    {
+        $settled = (float) $this->settled_amount;
+
+        if ($settled >= (float) $this->amount - self::EPSILON) {
+            return self::STATUS_PAID;
+        }
+
+        return $settled > self::EPSILON ? self::STATUS_PARTIAL : self::STATUS_PENDING;
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return match ($this->status) {
+            self::STATUS_PAID => 'Оплачено',
+            self::STATUS_PARTIAL => 'Оплачено частично',
+            default => $this->is_overdue ? 'Просрочено' : 'Ожидается',
+        };
     }
 
     /**

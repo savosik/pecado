@@ -39,7 +39,7 @@ class CabinetLedgerFinanceTest extends TestCase
         $this->organization = Organization::factory()->create(['is_stub' => false]);
         Company::factory()->create(['user_id' => $this->client->id]);
 
-        config(['cabinet.finance_enabled' => true, 'settlements.ledger_enabled' => true]);
+        config(['cabinet.finance_enabled' => true]);
     }
 
     /**
@@ -130,31 +130,6 @@ class CabinetLedgerFinanceTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('balance.next_due_date', $due->format('d.m.Y')));
-    }
-
-    /**
-     * Два флага, а не один: деньги кабинета и источник расчёта включаются
-     * независимо. Регистр может быть включён для CRM, пока кабинет ещё закрыт.
-     */
-    #[Test]
-    public function при_выключенном_флаге_регистра_дашборд_читает_старую_модель(): void
-    {
-        config(['settlements.ledger_enabled' => false]);
-
-        $this->entry([
-            'nature' => SettlementEntry::NATURE_FACT,
-            'type' => SettlementEntry::TYPE_SHIPMENT,
-            'amount' => -100000,
-            'amount_rub' => -100000,
-            'date' => CarbonImmutable::today()->toDateString(),
-        ]);
-
-        // Балансов старой модели нет, значит блок не показывается вовсе —
-        // и уж точно не берётся из регистра.
-        $this->actingAs($this->client)
-            ->get('/cabinet/dashboard')
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('balance', null));
     }
 
     #[Test]

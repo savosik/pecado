@@ -628,10 +628,14 @@ class FinanceController extends CrmController
         $planned = $this->forecast->plannedQuery($clients, $filters);
 
         if (! $filters->onlyOverdue) {
-            $planned->whereBetween('sch.due_date', [
+            // Через dueBetween, а не whereBetween по колонке: имя плановой даты —
+            // деталь ядра (`due_date` у графика, `date` у регистра), и выгрузка
+            // падала на проде 500-й, пока тесты шли на старом ядре.
+            $planned = $this->forecast->dueBetween(
+                $planned,
                 $filters->dateFrom->toDateString(),
                 $filters->dateTo->toDateString(),
-            ]);
+            );
         }
 
         $this->forecast->applyDefaultOrder($planned)->chunk(500, function ($chunk) use ($collect): void {

@@ -436,7 +436,6 @@ class ShipmentController extends Controller
         $shipment->load([
             'paymentAllocations.payment:id,number,date,direction,currency_code',
             // v15.12.0: график оплаты — план рядом с фактом на одной карточке.
-            'paymentSchedules',
         ]);
 
         return Inertia::render('User/Cabinet/Shipments/Show', [

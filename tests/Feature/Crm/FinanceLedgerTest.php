@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Services\Crm\Finance\FinanceFilters;
 use App\Services\Crm\Finance\LedgerPaymentForecastService;
 use App\Services\Crm\Finance\PaymentForecast;
-use App\Services\Crm\Finance\PaymentForecastService;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -45,8 +44,6 @@ class FinanceLedgerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        config(['settlements.ledger_enabled' => true]);
 
         $this->client = User::factory()->create();
         $this->company = Company::factory()->create(['user_id' => $this->client->id]);
@@ -110,16 +107,11 @@ class FinanceLedgerTest extends TestCase
      * Флаг по умолчанию выключен: включение регистра — осознанное решение после
      * зелёной сверки, а не побочный эффект деплоя.
      */
+    /**
+     * Счётное ядро одно: выбирать больше не из чего (fin-11).
+     */
     #[Test]
-    public function по_умолчанию_используется_старое_ядро(): void
-    {
-        config(['settlements.ledger_enabled' => false]);
-
-        $this->assertInstanceOf(PaymentForecastService::class, app(PaymentForecast::class));
-    }
-
-    #[Test]
-    public function флаг_переключает_реализацию(): void
+    public function счётное_ядро_всегда_регистр(): void
     {
         $this->assertInstanceOf(LedgerPaymentForecastService::class, app(PaymentForecast::class));
     }

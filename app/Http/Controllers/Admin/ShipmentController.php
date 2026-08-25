@@ -152,7 +152,7 @@ class ShipmentController extends Controller
 
     public function show(Shipment $shipment)
     {
-        $shipment->load(['user', 'company', 'organization', 'warehouse', 'items.product', 'items.order', 'paymentSchedules']);
+        $shipment->load(['user', 'company', 'organization', 'warehouse', 'items.product', 'items.order']);
 
         // Получить связанные заказы с расширенными данными для карточного отображения
         $orderUuids = $shipment->items()

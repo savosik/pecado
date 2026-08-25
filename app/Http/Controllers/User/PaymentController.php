@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Currency;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
-use App\Models\ShipmentPaymentSchedule;
 use App\Models\User;
 use App\Services\Crm\Finance\ReconciliationService;
 use App\Services\CurrencyService;
@@ -15,7 +14,6 @@ use App\Services\SimpleCsvExporter;
 use App\Services\SimpleXlsxExporter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -177,53 +175,9 @@ class PaymentController extends Controller
         $month = $this->resolveMonth($request->input('month'));
         $today = Carbon::today();
 
-        // v16.0.0: на регистре план приходит из ленты, и раскладывать платежи
-        // самим больше не нужно. Ветвление здесь одно на весь календарь —
-        // ниже начинается старый расчёт, который снимается в fin-11.
-        if (config('settlements.ledger_enabled')) {
-            return $this->ledgerCalendar($user, $month, $today, $currency, $request->integer('company_id') ?: null);
-        }
-
-        $monthly = $this->scheduleQuery($user)
-            ->whereBetween('sch.due_date', [$month->toDateString(), $month->copy()->endOfMonth()->toDateString()])
-            ->get();
-
-        // Просрочка не привязана к показываемому месяцу: клиент должен видеть её
-        // всегда, в каком бы месяце календаря ни находился.
-        $overdue = $this->scheduleQuery($user)
-            ->whereDate('sch.due_date', '<', $today->toDateString())
-            // Закрытые строки в просрочку не идут. Без этого условия клиент видел
-            // бы «Просрочено: 5 документов» на нулевую сумму — счётчик считал все
-            // прошедшие строки, включая оплаченные. Константа подставляется в SQL,
-            // а не биндится: у выражения нет аффинности типа, и SQLite сравнил бы
-            // число с привязанной строкой.
-            ->whereRaw('sch.amount - sch.paid_amount - sch.prepaid_amount > '.ShipmentPaymentSchedule::EPSILON)
-            ->orderBy('sch.due_date')
-            ->limit(200)
-            ->get();
-
-        $weekAhead = $this->scheduleQuery($user)
-            ->whereBetween('sch.due_date', [$today->toDateString(), $today->copy()->addDays(7)->toDateString()])
-            ->get();
-
-        $entries = $monthly->map(fn (object $row): array => $this->scheduleEntry($row, $currency, $today))->all();
-
-        return Inertia::render('User/Cabinet/Payments/Calendar', [
-            'month' => $month->format('Y-m'),
-            'monthLabel' => $this->monthLabel($month),
-            'prevMonth' => $month->copy()->subMonth()->format('Y-m'),
-            'nextMonth' => $month->copy()->addMonth()->format('Y-m'),
-            'today' => $today->toDateString(),
-            'entries' => $entries,
-            'overdueEntries' => $overdue->map(fn (object $row): array => $this->scheduleEntry($row, $currency, $today))->all(),
-            'summary' => [
-                'overdue_amount' => $this->sumUnpaid($overdue, $currency),
-                'overdue_count' => $overdue->count(),
-                'week_amount' => $this->sumUnpaid($weekAhead, $currency),
-                'month_amount' => $this->sumUnpaid($monthly, $currency),
-            ],
-            'currencyCode' => $currency?->code ?? 'RUB',
-        ]);
+        // План приходит из ленты регистра: раскладывать платежи самим сайт
+        // перестал в v16.0.0, старый расчёт снят в fin-11.
+        return $this->ledgerCalendar($user, $month, $today, $currency, $request->integer('company_id') ?: null);
     }
 
     /**
@@ -232,6 +186,38 @@ class PaymentController extends Controller
      * Джойном, а не через связь: календарю нужны только плоские поля, а грузить
      * реализации со связями ради номера документа — лишние запросы на каждый месяц.
      */
+    /**
+     * Календарь на регистре взаиморасчётов.
+     *
+     * Форма ответа та же, что у старого расчёта: экран один, и переключение
+     * источника не должно менять его разметку — иначе при включении флага
+     * поедут не только цифры, но и вёрстка, и отличить одно от другого станет нельзя.
+     */
+    private function ledgerCalendar(User $user, Carbon $month, Carbon $today, ?Currency $currency, ?int $companyId = null): InertiaResponse
+    {
+        $finance = app(CabinetSettlementFinance::class);
+        $data = $finance->calendar(
+            $user,
+            \Carbon\CarbonImmutable::parse($month->toDateString()),
+            $companyId,
+        );
+
+        return Inertia::render('User/Cabinet/Payments/Calendar', [
+            'month' => $month->format('Y-m'),
+            'monthLabel' => $this->monthLabel($month),
+            'prevMonth' => $month->copy()->subMonth()->format('Y-m'),
+            'nextMonth' => $month->copy()->addMonth()->format('Y-m'),
+            'today' => $today->toDateString(),
+            'entries' => $data['entries'],
+            'overdueEntries' => $data['overdue'],
+            'summary' => $data['summary'],
+            // Пустой список прячет селектор контрагента на фронте.
+            'companies' => $finance->companiesOf($user),
+            'companyId' => $companyId,
+            'currencyCode' => $currency?->code ?? 'RUB',
+        ]);
+    }
+
     /**
      * Акт сверки для клиента. GET /cabinet/payments/reconciliation
      *
@@ -264,126 +250,6 @@ class PaymentController extends Controller
                 'date_to' => (string) $request->string('date_to', $period['to']),
             ],
         ]);
-    }
-
-    /**
-     * Календарь на регистре взаиморасчётов.
-     *
-     * Форма ответа та же, что у старого расчёта: экран один, и переключение
-     * источника не должно менять его разметку — иначе при включении флага
-     * поедут не только цифры, но и вёрстка, и отличить одно от другого станет нельзя.
-     */
-    private function ledgerCalendar(User $user, Carbon $month, Carbon $today, ?Currency $currency, ?int $companyId = null): InertiaResponse
-    {
-        $finance = app(CabinetSettlementFinance::class);
-        $data = $finance->calendar(
-            $user,
-            \Carbon\CarbonImmutable::parse($month->toDateString()),
-            $companyId,
-        );
-
-        return Inertia::render('User/Cabinet/Payments/Calendar', [
-            'month' => $month->format('Y-m'),
-            'monthLabel' => $this->monthLabel($month),
-            'prevMonth' => $month->copy()->subMonth()->format('Y-m'),
-            'nextMonth' => $month->copy()->addMonth()->format('Y-m'),
-            'today' => $today->toDateString(),
-            'entries' => $data['entries'],
-            'overdueEntries' => $data['overdue'],
-            'summary' => $data['summary'],
-            // Старый расчёт по графикам разреза по контрагентам не имеет,
-            // поэтому справочник отдаёт только ветка регистра: пустой список
-            // прячет селектор на фронте.
-            'companies' => $finance->companiesOf($user),
-            'companyId' => $companyId,
-            'currencyCode' => $currency?->code ?? 'RUB',
-        ]);
-    }
-
-    private function scheduleQuery(User $user): \Illuminate\Database\Query\Builder
-    {
-        return DB::table('shipment_payment_schedules as sch')
-            ->join('shipments as s', 's.id', '=', 'sch.shipment_id')
-            ->whereNull('s.deleted_at')
-            ->where('s.user_id', $user->id)
-            ->orderBy('sch.due_date')
-            ->orderByRaw('COALESCE(sch.line_number, 2147483647)')
-            ->select([
-                'sch.id',
-                'sch.shipment_id',
-                'sch.due_date',
-                'sch.amount',
-                'sch.paid_amount',
-                // Аванс по заказу закрывает строку наравне с прямым разнесением —
-                // так считает ShipmentPaymentSchedule::unpaid_amount и весь остальной
-                // расчёт денег. Без этой колонки кабинет показывал бы клиенту
-                // просрочку, которой у него нет: 1С разносит на заказы почти
-                // половину денег.
-                'sch.prepaid_amount',
-                'sch.stage_name',
-                'sch.line_number',
-                's.number as shipment_number',
-                's.erp_number as shipment_erp_number',
-                's.date as shipment_date',
-                's.currency_code',
-            ]);
-    }
-
-    /**
-     * Строка календаря в том виде, в каком её рисует фронт.
-     *
-     * @return array<string, mixed>
-     */
-    private function scheduleEntry(object $row, ?Currency $currency, Carbon $today): array
-    {
-        $unpaid = $this->unpaidOf($row);
-        $dueDate = Carbon::parse($row->due_date);
-        $isPaid = $unpaid <= ShipmentPaymentSchedule::EPSILON;
-
-        return [
-            'id' => $row->id,
-            'due_date' => $dueDate->toDateString(),
-            'due_date_label' => $dueDate->format('d.m.Y'),
-            'amount' => $this->convertAmount((float) $row->amount, $row->currency_code, $currency),
-            'unpaid_amount' => $this->convertAmount($unpaid, $row->currency_code, $currency),
-            'is_paid' => $isPaid,
-            'is_overdue' => ! $isPaid && $dueDate->isBefore($today),
-            'stage_name' => $row->stage_name,
-            'shipment' => [
-                'id' => $row->shipment_id,
-                'number' => $row->shipment_erp_number ?? $row->shipment_number ?? ('#'.$row->shipment_id),
-                'date_label' => $row->shipment_date ? Carbon::parse($row->shipment_date)->format('d.m.Y') : null,
-                'url' => '/cabinet/shipments/'.$row->shipment_id,
-            ],
-        ];
-    }
-
-    /**
-     * Сумма остатков к оплате в валюте кабинета.
-     *
-     * @param  \Illuminate\Support\Collection<int, \stdClass>  $rows
-     */
-    private function sumUnpaid(\Illuminate\Support\Collection $rows, ?Currency $currency): float
-    {
-        return round($rows->sum(function (object $row) use ($currency): float {
-            return $this->convertAmount($this->unpaidOf($row), $row->currency_code, $currency);
-        }), 2);
-    }
-
-    /**
-     * Остаток по строке графика.
-     *
-     * Обе колонки погашения вычитаются обязательно: `paid_amount` — закрытое
-     * разнесением платежа на накладную, `prepaid_amount` — закрытое авансом
-     * по заказу. Клиенту без разницы, каким документом 1С зачла деньги,
-     * а формула без второй колонки завышает его долг в разы.
-     */
-    private function unpaidOf(object $row): float
-    {
-        return max(0.0, round(
-            (float) $row->amount - (float) $row->paid_amount - (float) ($row->prepaid_amount ?? 0),
-            2,
-        ));
     }
 
     /**

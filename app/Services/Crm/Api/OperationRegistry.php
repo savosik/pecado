@@ -130,23 +130,13 @@ class OperationRegistry
     }
 
     /**
-     * @return list<Operation>
-     */
-    /**
-     * Взаиморасчёты из регистра 1С (v16.0.0).
-     *
-     * Появляются только при включённом `settlements.ledger_enabled`. Пока флаг
-     * выключен, регистр пуст, и операции отвечали бы «никто ничего не должен» —
-     * агент принял бы это за факт и сообщил менеджеру с полной уверенностью.
+     * Взаиморасчёты из регистра 1С — единственный источник ответа про деньги
+     * (v16.0.0, fin-11). Прежние операции по разнесению и графику сняты.
      *
      * @return list<Operation>
      */
     private function settlements(): array
     {
-        if (! config('settlements.ledger_enabled')) {
-            return [];
-        }
-
         return [
             new Operation(
                 id: 'settlement.balance',
@@ -231,44 +221,10 @@ class OperationRegistry
      */
     private function payments(): array
     {
-        return [
-            // `payment.balances` читает `contractor_balances` — канал `balance.updated`,
-            // который сторона 1С признала недостоверным (14.08.2026). При включённом
-            // регистре операция скрывается: иначе агент видит две почти одинаковые
-            // по описанию операции про долг и может ответить по сломанному источнику.
-            // Симметрично тому, как `settlements()` скрыт при выключенном регистре.
-            ...(config('settlements.ledger_enabled') ? [] : [$this->legacyBalancesOperation()]),
-            ...$this->paymentDocuments(),
-        ];
-    }
-
-    /**
-     * Балансы по данным `balance.updated`. Замещены `settlement.balance`.
-     */
-    private function legacyBalancesOperation(): Operation
-    {
-        return new Operation(
-            id: 'payment.balances',
-            section: 'payments',
-            method: 'GET',
-            uri: 'payments/balances',
-            permission: 'crm-clients.view',
-            summary: 'Сальдо и просроченная задолженность партнёров по данным 1С',
-            description: 'МАСТЕР-ДАННЫЕ по долгам: так их видит учётная система. '
-                .'Именно отсюда отвечайте на «сколько партнёр должен» и «какая у него просрочка». '
-                .'Не считайте долг суммированием остатков по документам (`payment.unpaid-shipments`): '
-                .'1С закрывает долг не только платежами по накладным — есть авансы по заказам, '
-                .'зачёты и корректировки, — и сумма по документам систематически больше реального долга. '
-                .'Отрицательное сальдо — долг партнёра, положительное — переплата. '
-                .'Строка — контрагент (юрлицо), у партнёра их может быть несколько.',
-            params: [
-                Param::integer('client_id', 'Партнёр — балансы только по нему', rules: ['min:1']),
-                Param::boolean('only_overdue', 'Только контрагенты с просроченной задолженностью'),
-                Param::integer('per_page', 'Строк на странице (до 100)', rules: ['min:1', 'max:100']),
-                Param::integer('page', 'Номер страницы', rules: ['min:1']),
-            ],
-            handler: [PaymentOperations::class, 'balances'],
-        );
+        // `payment.balances` (канал `balance.updated`, признан 1С недостоверным),
+        // `payment.unpaid-shipments` и `payment.schedule` сняты в fin-11:
+        // на их вопросы отвечают `settlement.balance` и `settlement.schedule`.
+        return $this->paymentDocuments();
     }
 
     /**
@@ -300,53 +256,6 @@ class OperationRegistry
                     Param::integer('page', 'Номер страницы', rules: ['min:1']),
                 ],
                 handler: [PaymentOperations::class, 'list'],
-            ),
-            new Operation(
-                id: 'payment.unpaid-shipments',
-                section: 'payments',
-                method: 'GET',
-                uri: 'payments/unpaid-shipments',
-                permission: 'crm-clients.view',
-                summary: 'Неоплаченные и частично оплаченные отгрузки (остаток по документам)',
-                description: 'Отвечает на «какие документы не закрыты», а НЕ на «сколько партнёр должен». '
-                    .'Разница существенная: `paid_amount` растёт только от разнесения платежа на саму '
-                    .'накладную, а 1С закрывает долг и авансами по заказам, и зачётами, и корректировками. '
-                    .'Поэтому сумма остатков здесь бывает в разы больше реальной задолженности — '
-                    .'для долга берите `payment.balances`. '
-                    .'Суммы взяты из посчитанных полей, а не собраны запросом по разнесению, '
-                    .'поэтому возвраты не попадают в приход.',
-                params: [
-                    Param::integer('client_id', 'Партнёр — отгрузки только по нему', rules: ['min:1']),
-                    Param::string('date_from', 'Дата отгрузки с (Y-m-d)', rules: ['date_format:Y-m-d']),
-                    Param::integer('per_page', 'Отгрузок на странице (до 100)', rules: ['min:1', 'max:100']),
-                    Param::integer('page', 'Номер страницы', rules: ['min:1']),
-                ],
-                handler: [PaymentOperations::class, 'unpaidShipments'],
-            ),
-            new Operation(
-                id: 'payment.schedule',
-                section: 'payments',
-                method: 'GET',
-                uri: 'payments/schedule',
-                permission: 'crm-clients.view',
-                summary: 'Ожидаемые поступления по графику оплаты («Правила оплаты» 1С)',
-                description: 'Готовый ответ на «сколько денег ждём за период». Отдаёт строки '
-                    .'графика, по которым остались деньги, — по одной на плановую дату. '
-                    .'Не путайте с `payment.unpaid-shipments`: там остаток по документу целиком, '
-                    .'здесь — по конкретной дате, и отгрузка с рассрочкой попадает сюда '
-                    .'несколькими строками в разные месяцы. График приходит не по всем '
-                    .'отгрузкам: пустой ответ означает «1С его не присылала», а не «долгов нет». '
-                    .'Строка считается закрытой, если её покрыли деньгами по накладной ИЛИ авансом '
-                    .'по заказу — оба варианта означают, что деньги получены.',
-                params: [
-                    Param::integer('client_id', 'Партнёр — график только по нему', rules: ['min:1']),
-                    Param::string('date_from', 'Плановая дата платежа с (Y-m-d)', rules: ['date_format:Y-m-d']),
-                    Param::string('date_to', 'Плановая дата платежа по (Y-m-d)', rules: ['date_format:Y-m-d']),
-                    Param::boolean('only_overdue', 'Только строки с прошедшей плановой датой'),
-                    Param::integer('per_page', 'Строк на странице (до 100)', rules: ['min:1', 'max:100']),
-                    Param::integer('page', 'Номер страницы', rules: ['min:1']),
-                ],
-                handler: [PaymentOperations::class, 'schedule'],
             ),
             new Operation(
                 id: 'payment.show',

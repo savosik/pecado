@@ -3,8 +3,8 @@
 namespace Tests\Feature\Debt;
 
 use App\Models\ContractorBalance;
+use App\Models\SettlementEntry;
 use App\Models\Shipment;
-use App\Models\ShipmentPaymentSchedule;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -32,11 +32,18 @@ class VerifyBalancesCommandTest extends TestCase
                 'currency_code' => 'RUB',
             ]);
 
-            ShipmentPaymentSchedule::factory()->forShipment($shipment)->create([
-                'due_date' => now()->subDays(10)->toDateString(),
+            // Просроченная плановая строка регистра — то, с чем команда
+            // сравнивает просрочку 1С после перехода на единственное ядро.
+            SettlementEntry::factory()->create([
+                'nature' => SettlementEntry::NATURE_PLAN,
+                'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+                'user_id' => $user->id,
+                'document_uuid' => $shipment->uuid,
+                'document_kind' => 'shipment',
+                'date' => now()->subDays(10)->toDateString(),
                 'amount' => $scheduleOutstanding,
-                'paid_amount' => 0,
-                'prepaid_amount' => 0,
+                'settled_amount' => 0,
+                'currency_code' => 'RUB',
             ]);
         }
 
@@ -102,11 +109,16 @@ class VerifyBalancesCommandTest extends TestCase
 
         // Просроченная, но полностью закрытая авансом строка — сайт долга не видит,
         // 1С тоже: клиент сходится и попадает в кандидаты пилота.
-        ShipmentPaymentSchedule::factory()->forShipment($shipment)->create([
-            'due_date' => now()->subDays(5)->toDateString(),
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'user_id' => $user->id,
+            'document_uuid' => $shipment->uuid,
+            'document_kind' => 'shipment',
+            'date' => now()->subDays(5)->toDateString(),
             'amount' => 3000,
-            'paid_amount' => 0,
-            'prepaid_amount' => 3000,
+            'settled_amount' => 3000,
+            'currency_code' => 'RUB',
         ]);
 
         $this->artisan('debt:verify-balances')

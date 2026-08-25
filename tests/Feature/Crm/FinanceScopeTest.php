@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\Crm;
 
-use App\Models\ContractorBalance;
+use App\Models\Company;
 use App\Models\Currency;
 use App\Models\PersonalManager;
+use App\Models\SettlementEntry;
 use App\Models\Shipment;
-use App\Models\ShipmentPaymentSchedule;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -19,6 +19,9 @@ use Tests\TestCase;
 
 /**
  * Финансовый раздел CRM: изоляция скоупа, сведение валют, бакеты просрочки.
+ *
+ * Все деньги считаются регистром взаиморасчётов (fin-11): фикстуры — плановые
+ * строки `settlement_entries`, привязанные к реализации по `document_uuid`.
  */
 class FinanceScopeTest extends TestCase
 {
@@ -72,6 +75,41 @@ class FinanceScopeTest extends TestCase
         ], $attrs));
     }
 
+    /**
+     * Плановая строка регистра по реализации — то, чем 1С описывает ожидаемый
+     * платёж: сумма, срок и уже закрытая часть.
+     */
+    private function makePlan(User $client, Shipment $shipment, float $amount, string $dueDate, float $settled = 0.0): SettlementEntry
+    {
+        return SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'user_id' => $client->id,
+            'document_uuid' => $shipment->uuid,
+            'document_kind' => 'shipment',
+            'document_number' => $shipment->number,
+            'date' => $dueDate,
+            'amount' => $amount,
+            'settled_amount' => $settled,
+            'currency_code' => $shipment->currency_code,
+        ]);
+    }
+
+    /**
+     * Фактическое движение — то, из чего складывается сальдо контрагента.
+     */
+    private function makeFact(User $client, float $amount, array $attrs = []): SettlementEntry
+    {
+        return SettlementEntry::factory()->create($attrs + [
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'user_id' => $client->id,
+            'amount' => $amount,
+            'amount_rub' => $amount,
+            'currency_code' => 'RUB',
+        ]);
+    }
+
     #[Test]
     public function it_denies_access_without_permission(): void
     {
@@ -90,17 +128,9 @@ class FinanceScopeTest extends TestCase
         $otherCard = PersonalManager::create(['name' => 'Чужой']);
         $foreign = $this->makeClient($otherCard);
 
-        ShipmentPaymentSchedule::factory()->create([
-            'shipment_id' => $this->makeShipment($mine)->id,
-            'due_date' => Carbon::today()->addDays(5)->toDateString(),
-            'amount' => 1000,
-        ]);
+        $this->makePlan($mine, $this->makeShipment($mine), 1000, Carbon::today()->addDays(5)->toDateString());
 
-        ShipmentPaymentSchedule::factory()->create([
-            'shipment_id' => $this->makeShipment($foreign)->id,
-            'due_date' => Carbon::today()->addDays(5)->toDateString(),
-            'amount' => 7777,
-        ]);
+        $this->makePlan($foreign, $this->makeShipment($foreign), 7777, Carbon::today()->addDays(5)->toDateString());
 
         $response = $this->actingAs($actor)->get('/crm/finance');
 
@@ -124,11 +154,7 @@ class FinanceScopeTest extends TestCase
         $otherClient = $this->makeClient($otherCard);
 
         foreach ([[$ownClient, 500], [$otherClient, 300]] as [$client, $amount]) {
-            ShipmentPaymentSchedule::factory()->create([
-                'shipment_id' => $this->makeShipment($client)->id,
-                'due_date' => Carbon::today()->addDays(3)->toDateString(),
-                'amount' => $amount,
-            ]);
+            $this->makePlan($client, $this->makeShipment($client), $amount, Carbon::today()->addDays(3)->toDateString());
         }
 
         // По умолчанию — только свои, хотя права на отдел есть.
@@ -146,11 +172,7 @@ class FinanceScopeTest extends TestCase
         [$manager, $managerCard] = $this->makeManagerActor();
         $managerClient = $this->makeClient($managerCard);
 
-        ShipmentPaymentSchedule::factory()->create([
-            'shipment_id' => $this->makeShipment($managerClient)->id,
-            'due_date' => Carbon::today()->addDays(3)->toDateString(),
-            'amount' => 100,
-        ]);
+        $this->makePlan($managerClient, $this->makeShipment($managerClient), 100, Carbon::today()->addDays(3)->toDateString());
 
         $attempt = $this->actingAs($manager)->get('/crm/finance?manager_ids[]='.$otherCard->id);
 
@@ -166,11 +188,7 @@ class FinanceScopeTest extends TestCase
         [$actor, $card] = $this->makeManagerActor();
         $client = $this->makeClient($card);
 
-        ShipmentPaymentSchedule::factory()->create([
-            'shipment_id' => $this->makeShipment($client, ['currency_code' => 'BYN', 'total_amount' => 100])->id,
-            'due_date' => Carbon::today()->addDays(2)->toDateString(),
-            'amount' => 100,
-        ]);
+        $this->makePlan($client, $this->makeShipment($client, ['currency_code' => 'BYN', 'total_amount' => 100]), 100, Carbon::today()->addDays(2)->toDateString());
 
         $props = $this->actingAs($actor)->get('/crm/finance')->viewData('page')['props'];
 
@@ -179,8 +197,13 @@ class FinanceScopeTest extends TestCase
         $this->assertSame(100.0, $props['upcomingRows'][0]['unpaid_amount']);
     }
 
+    /**
+     * Категории «долг без графика» у регистра нет: 1С присылает плановые строки
+     * по каждому документу, а реализация без них — не долг без срока, а документ,
+     * о котором учётная система молчит. Блок остаётся пустым, а не выдумывает сумму.
+     */
     #[Test]
-    public function shipments_without_schedule_are_reported_separately(): void
+    public function shipments_without_plan_do_not_invent_debt(): void
     {
         [$actor, $card] = $this->makeManagerActor();
         $client = $this->makeClient($card);
@@ -189,10 +212,9 @@ class FinanceScopeTest extends TestCase
 
         $props = $this->actingAs($actor)->get('/crm/finance')->viewData('page')['props'];
 
-        // Долг без плановой даты не попадает в план по датам, но и не теряется.
         $this->assertSame(0.0, $props['summary']['expected_period']);
-        $this->assertSame(2000.0, $props['summary']['no_schedule_amount']);
-        $this->assertSame(1, $props['noScheduleCount']);
+        $this->assertSame(0.0, $props['summary']['no_schedule_amount']);
+        $this->assertSame(0, $props['noScheduleCount']);
     }
 
     #[Test]
@@ -201,11 +223,7 @@ class FinanceScopeTest extends TestCase
         [$actor, $card] = $this->makeManagerActor();
         $client = $this->makeClient($card);
 
-        ShipmentPaymentSchedule::factory()->create([
-            'shipment_id' => $this->makeShipment($client)->id,
-            'due_date' => Carbon::today()->subDays(45)->toDateString(),
-            'amount' => 900,
-        ]);
+        $this->makePlan($client, $this->makeShipment($client), 900, Carbon::today()->subDays(45)->toDateString());
 
         $props = $this->actingAs($actor)->get('/crm/finance')->viewData('page')['props'];
         $buckets = collect($props['aging']['buckets'])->keyBy('key');
@@ -222,12 +240,7 @@ class FinanceScopeTest extends TestCase
         [$actor, $card] = $this->makeManagerActor();
         $client = $this->makeClient($card);
 
-        ShipmentPaymentSchedule::factory()->create([
-            'shipment_id' => $this->makeShipment($client, ['paid_amount' => 1000])->id,
-            'due_date' => Carbon::today()->addDays(4)->toDateString(),
-            'amount' => 1000,
-            'paid_amount' => 1000,
-        ]);
+        $this->makePlan($client, $this->makeShipment($client, ['paid_amount' => 1000]), 1000, Carbon::today()->addDays(4)->toDateString(), 1000.0);
 
         $props = $this->actingAs($actor)->get('/crm/finance')->viewData('page')['props'];
 
@@ -248,13 +261,14 @@ class FinanceScopeTest extends TestCase
         $client = $this->makeClient($card);
 
         foreach ([['7701234567', -1500, 600], ['7739999999', -500, 150]] as [$taxId, $balance, $overdue]) {
-            ContractorBalance::create([
-                'user_id' => $client->id,
-                'tax_id' => $taxId,
-                'current_balance' => $balance,
-                'overdue_debt' => $overdue,
-                'balance_erp_updated_at' => Carbon::now(),
-            ]);
+            $company = Company::factory()->create(['user_id' => $client->id, 'tax_id' => $taxId]);
+
+            // Сальдо — сумма фактических движений контрагента.
+            $this->makeFact($client, $balance, ['company_id' => $company->id]);
+
+            // Просрочка — непогашенная плановая строка с прошедшим сроком.
+            $this->makePlan($client, $this->makeShipment($client), $overdue, Carbon::today()->subDays(10)->toDateString());
+            SettlementEntry::query()->latest('id')->first()->update(['company_id' => $company->id]);
         }
 
         $props = $this->actingAs($actor)->get('/crm/finance/balances')->viewData('page')['props'];
@@ -285,13 +299,7 @@ class FinanceScopeTest extends TestCase
         [$actor, $card] = $this->makeManagerActor();
         $client = $this->makeClient($card);
 
-        ShipmentPaymentSchedule::factory()->create([
-            'shipment_id' => $this->makeShipment($client)->id,
-            'due_date' => Carbon::today()->subDays(30)->toDateString(),
-            'amount' => 1000,
-            'paid_amount' => 0,
-            'prepaid_amount' => 1000,
-        ]);
+        $this->makePlan($client, $this->makeShipment($client), 1000, Carbon::today()->subDays(30)->toDateString(), 1000.0);
 
         $props = $this->actingAs($actor)->get('/crm/finance')->viewData('page')['props'];
 
@@ -306,11 +314,7 @@ class FinanceScopeTest extends TestCase
         [$actor, $card] = $this->makeManagerActor();
         $client = $this->makeClient($card);
 
-        ShipmentPaymentSchedule::factory()->create([
-            'shipment_id' => $this->makeShipment($client)->id,
-            'due_date' => Carbon::today()->subDays(120)->toDateString(),
-            'amount' => 750,
-        ]);
+        $this->makePlan($client, $this->makeShipment($client), 750, Carbon::today()->subDays(120)->toDateString());
 
         // Период фильтров смотрит вперёд, а просрочка всё равно должна быть видна.
         $props = $this->actingAs($actor)
@@ -336,11 +340,7 @@ class FinanceScopeTest extends TestCase
         [$actor, $card] = $this->makeManagerActor();
         $client = $this->makeClient($card);
 
-        ShipmentPaymentSchedule::factory()->create([
-            'shipment_id' => $this->makeShipment($client)->id,
-            'due_date' => Carbon::today()->addDays(3)->toDateString(),
-            'amount' => 500,
-        ]);
+        $this->makePlan($client, $this->makeShipment($client), 500, Carbon::today()->addDays(3)->toDateString());
 
         $queries = [];
         DB::listen(function ($query) use (&$queries): void {
@@ -375,11 +375,7 @@ class FinanceScopeTest extends TestCase
         [$actor, $card] = $this->makeManagerActor();
         $client = $this->makeClient($card);
 
-        ShipmentPaymentSchedule::factory()->create([
-            'shipment_id' => $this->makeShipment($client)->id,
-            'due_date' => Carbon::today()->addDays(6)->toDateString(),
-            'amount' => 1200,
-        ]);
+        $this->makePlan($client, $this->makeShipment($client), 1200, Carbon::today()->addDays(6)->toDateString());
 
         $response = $this->actingAs($actor)->get('/crm/finance/export');
 

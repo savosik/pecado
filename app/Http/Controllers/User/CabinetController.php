@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Models\ContractorBalance;
 use App\Models\Order;
 use App\Services\Settlements\CabinetSettlementFinance;
 use Illuminate\Http\Request;
@@ -32,19 +31,9 @@ class CabinetController extends Controller
         // но в него входят обязательства, срок которых ещё не наступил, и клиент
         // читал их как «должен прямо сейчас». Теперь наверху — «к оплате сейчас»,
         // а сальдо остаётся справочным.
-        $ledger = $financeEnabled && config('settlements.ledger_enabled')
+        $ledger = $financeEnabled
             ? app(CabinetSettlementFinance::class)->summary($user)
             : null;
-
-        // Агрегируем баланс по всем контрагентам пользователя
-        $balances = $financeEnabled && $ledger === null
-            ? ContractorBalance::where('user_id', $user->id)->get()
-            : collect();
-        $totalBalance = $balances->sum('current_balance');
-        $totalOverdue = $balances->sum('overdue_debt');
-        $hasBalance = $balances->count() > 0;
-
-        $balanceByOrganization = $financeEnabled && $ledger === null ? $this->balanceByOrganization($user) : [];
 
         $recentOrders = Order::where('user_id', $user->id)
             ->withCount('items')
@@ -65,14 +54,7 @@ class CabinetController extends Controller
             'ordersCount' => $ordersCount,
             'favoritesCount' => $favoritesCount,
             'cartsCount' => $cartsCount,
-            'balance' => $ledger ?? ($hasBalance ? [
-                'current_balance' => $totalBalance,
-                'overdue_debt' => $totalOverdue,
-                'contractors_count' => $balances->count(),
-                // v15.8.0: разрез по нашим юрлицам. Пустой массив — блок не показываем
-                // вовсе: «одна организация: не указана» выглядит как поломка.
-                'organizations' => $balanceByOrganization,
-            ] : null),
+            'balance' => $ledger,
             'recentOrders' => $recentOrders,
             'questionnaireCompleted' => $questionnaire && $questionnaire->isCompleted(),
             'clientStatus' => $user->clientStatus ? [
@@ -112,59 +94,6 @@ class CabinetController extends Controller
                 'until' => $resolution->until->format('d.m.Y'),
             ] : null,
         ];
-    }
-
-    /**
-     * Задолженность клиента в разрезе наших организаций (v15.8.0, org-06).
-     *
-     * Главная польза для клиента — не сама цифра, а реквизиты: он платит разным
-     * юрлицам на разные счета, и должен видеть, куда именно.
-     *
-     * Возвращает пустой массив, когда флаг выключен, разрез ни разу не приходил
-     * или все строки обнулены (долг погашен). Плюсы и минусы разных организаций
-     * НЕ схлопываются в одно число: взаимозачёт между нашими юрлицами — компетенция
-     * 1С, и «ноль» на экране убедил бы клиента, что платить нечего.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    private function balanceByOrganization(\App\Models\User $user): array
-    {
-        if (! config('erp.organizations.enabled')) {
-            return [];
-        }
-
-        $rows = \App\Models\ContractorOrganizationBalance::query()
-            ->where('user_id', $user->id)
-            ->where(fn ($q) => $q->where('current_balance', '!=', 0)->orWhere('overdue_debt', '!=', 0))
-            ->with(['organization', 'company:id,name'])
-            ->get()
-            ->filter(fn ($row) => $row->organization && ! $row->organization->is_stub);
-
-        // Разрез по юрлицам клиента показываем, только когда их несколько:
-        // единственный контрагент в карточке — шум.
-        $splitByCompany = $rows->pluck('company_id')->filter()->unique()->count() > 1;
-
-        return $rows
-            ->groupBy('organization_id')
-            ->map(function ($group) use ($splitByCompany) {
-                $contractors = $group
-                    ->map(fn ($row) => [
-                        'name' => $row->company?->name ?? 'Контрагент не указан',
-                        'current_balance' => round((float) $row->current_balance, 2),
-                        'overdue_debt' => round((float) $row->overdue_debt, 2),
-                    ])
-                    ->sortBy('name')
-                    ->values();
-
-                return \App\Services\Settlements\CabinetSettlementFinance::organizationCard(
-                    $group->first()->organization,
-                    $contractors,
-                    $splitByCompany,
-                );
-            })
-            ->sortBy('organization_name')
-            ->values()
-            ->all();
     }
 
     public function profile()

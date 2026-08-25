@@ -4,8 +4,8 @@ namespace Tests\Feature\User;
 
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
+use App\Models\SettlementEntry;
 use App\Models\Shipment;
-use App\Models\ShipmentPaymentSchedule;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
@@ -239,7 +239,7 @@ class PaymentsCabinetTest extends TestCase
     /**
      * Строка графика по реализации клиента.
      */
-    private function scheduleFor(User $user, string $dueDate, float $amount, float $paid = 0.0, float $prepaid = 0.0): ShipmentPaymentSchedule
+    private function scheduleFor(User $user, string $dueDate, float $amount, float $paid = 0.0, float $prepaid = 0.0): SettlementEntry
     {
         $shipment = Shipment::factory()->create([
             'user_id' => $user->id,
@@ -247,11 +247,19 @@ class PaymentsCabinetTest extends TestCase
             'currency_code' => 'RUB',
         ]);
 
-        return ShipmentPaymentSchedule::factory()->forShipment($shipment)->create([
-            'due_date' => $dueDate,
+        // Регистр не делит погашение на «разнесено» и «зачтено авансом»:
+        // 1С отдаёт одну закрытую часть, поэтому оба слагаемых складываются.
+        return SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'user_id' => $user->id,
+            'document_uuid' => $shipment->uuid,
+            'document_kind' => 'shipment',
+            'document_number' => $shipment->erp_number,
+            'date' => $dueDate,
             'amount' => $amount,
-            'paid_amount' => $paid,
-            'prepaid_amount' => $prepaid,
+            'settled_amount' => $paid + $prepaid,
+            'currency_code' => 'RUB',
         ]);
     }
 
@@ -267,13 +275,14 @@ class PaymentsCabinetTest extends TestCase
     {
         $this->scheduleFor($this->client, now()->addDays(3)->toDateString(), 2000.00, prepaid: 2000.00);
 
+        // Закрытая строка исчезает из календаря целиком: регистр отдаёт только
+        // непогашенное, и «оплачено 0 ₽» в клиентском календаре — лишний шум.
         $this->actingAs($this->client)
             ->get(route('cabinet.payments.calendar'))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('summary.week_amount', 0)
-                ->where('entries.0.is_paid', true)
-                ->where('entries.0.unpaid_amount', 0));
+                ->where('entries', []));
     }
 
     /**
@@ -343,8 +352,7 @@ class PaymentsCabinetTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('summary.week_amount', 0)
-                ->where('entries.0.is_paid', true)
-                ->where('entries.0.unpaid_amount', 0));
+                ->where('entries', []));
     }
 
     #[Test]
@@ -368,10 +376,17 @@ class PaymentsCabinetTest extends TestCase
             'payment_due_date' => now()->addDays(10)->toDateString(),
         ]);
 
-        ShipmentPaymentSchedule::factory()->forShipment($shipment)->create([
-            'due_date' => now()->addDays(10)->toDateString(),
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'user_id' => $this->client->id,
+            'document_uuid' => $shipment->uuid,
+            'document_kind' => 'shipment',
+            'date' => now()->addDays(10)->toDateString(),
             'amount' => 10000.00,
-            'stage_name' => 'Оплата после отгрузки',
+            'settled_amount' => 0,
+            'currency_code' => 'RUB',
+            'meta' => ['stage_name' => 'Оплата после отгрузки'],
         ]);
 
         $this->actingAs($this->client)
@@ -428,9 +443,16 @@ class PaymentsCabinetTest extends TestCase
             'payment_status' => Shipment::PAYMENT_PARTIAL,
         ]);
 
-        ShipmentPaymentSchedule::factory()->forShipment($shipment)->create([
-            'due_date' => now()->subDays(5)->toDateString(),
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'user_id' => $this->client->id,
+            'document_uuid' => $shipment->uuid,
+            'document_kind' => 'shipment',
+            'date' => now()->subDays(5)->toDateString(),
             'amount' => 5000,
+            'settled_amount' => 0,
+            'currency_code' => 'RUB',
         ]);
 
         $this->actingAs($this->client)

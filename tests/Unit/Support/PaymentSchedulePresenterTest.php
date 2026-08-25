@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\Support;
 
+use App\Models\SettlementEntry;
 use App\Models\Shipment;
-use App\Models\ShipmentPaymentSchedule;
 use App\Models\User;
 use App\Support\Payments\PaymentSchedulePresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -11,10 +11,11 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * Блок «График оплаты» — один презентер на кабинет, CRM и админку.
+ * Блок «График оплаты» — один презентер на кабинет, CRM, админку и внешний API.
  *
- * Главное требование: **шапка обязана сходиться со строками под ней**. Разошедшиеся
- * числа в одном блоке подрывают доверие ко всему разделу сильнее, чем отсутствие блока.
+ * Источник — плановые строки регистра (fin-11). Главное требование прежнее:
+ * **шапка обязана сходиться со строками под ней**. Разошедшиеся числа в одном
+ * блоке подрывают доверие ко всему разделу сильнее, чем отсутствие блока.
  */
 class PaymentSchedulePresenterTest extends TestCase
 {
@@ -32,13 +33,22 @@ class PaymentSchedulePresenterTest extends TestCase
         ]);
     }
 
+    /**
+     * Регистр не делит закрытую часть на «разнесено» и «зачтено авансом»:
+     * 1С отдаёт одно число, поэтому оба слагаемых складываются.
+     */
     private function line(float $amount, float $paid = 0, float $prepaid = 0): void
     {
-        ShipmentPaymentSchedule::factory()->create([
-            'shipment_id' => $this->shipment->id,
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'user_id' => $this->shipment->user_id,
+            'document_uuid' => $this->shipment->uuid,
+            'document_kind' => 'shipment',
+            'date' => now()->addDays(10)->toDateString(),
             'amount' => $amount,
-            'paid_amount' => $paid,
-            'prepaid_amount' => $prepaid,
+            'settled_amount' => $paid + $prepaid,
+            'currency_code' => 'RUB',
         ]);
     }
 

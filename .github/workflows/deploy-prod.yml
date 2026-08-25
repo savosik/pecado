@@ -500,18 +500,14 @@ jobs:
             echo "SUPPLIER_PREORDER_ENABLED=false" >> /srv/pecado/.env
           fi
 
-          echo "==> [0.35/9] Регистр взаиморасчётов: чтение из ленты 1С..."
-          # config/settlements.php → settlements.ledger_enabled (CRM, MCP, отчёты)
-          # config/cabinet.php     → cabinet.finance_enabled  (деньги в кабинете клиента)
+          echo "==> [0.35/9] Деньги в кабинете клиента..."
+          # config/cabinet.php → cabinet.finance_enabled (видимость денег клиенту).
           #
-          # Включено 14.08.2026 после полной досылки регистра из 1С. Сверка с
-          # контрольной точкой 01.08.2026 (эталон 1С, 150 пар): сходятся 149,
-          # расходится одна — Кириллов Н. Д. ИП на 22 267,25 ₽, разбирается отдельно.
-          #
-          # Сайт больше НЕ считает деньги сам: долг, просрочка и акт сверки —
-          # проекция регистра 1С. Обратно выключается сменой true на false здесь,
-          # а не на сервере: деплой перезапишет.
-          for pair in "SETTLEMENTS_LEDGER_ENABLED=true" "CABINET_FINANCE_ENABLED=true"; do
+          # SETTLEMENTS_LEDGER_ENABLED отсюда снят вместе со старым счётным ядром
+          # (fin-11): выбирать больше не из чего — долг, просрочка и акт сверки
+          # считаются регистром 1С всегда. Рубильник кабинета остаётся: им гасят
+          # раздел, если данные из 1С окажутся недостоверными.
+          for pair in "CABINET_FINANCE_ENABLED=true"; do
             key="${pair%%=*}"
             if grep -q "^${key}=" /srv/pecado/.env; then
               sed -i "s|^${key}=.*|${pair}|" /srv/pecado/.env

@@ -385,7 +385,7 @@ class ClientApiController extends Controller
         $found->load(array_merge(
             ['company:id,name,legal_name,tax_id'],
             $this->shipmentItemsEagerLoad(),
-            $financeEnabled ? ['paymentSchedules'] : [],
+            [],
         ));
 
         $payload = $this->shipmentPayload($found, $financeEnabled, withItems: true);
