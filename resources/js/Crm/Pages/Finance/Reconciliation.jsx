@@ -1,13 +1,11 @@
-import { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import { Badge, Box, HStack, Input, Table, Text, VStack } from '@chakra-ui/react';
-import { LuDownload, LuTriangleAlert } from 'react-icons/lu';
+import { Badge, Box, Grid, HStack, Table, Text, VStack } from '@chakra-ui/react';
+import { LuDownload, LuTriangleAlert, LuX } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
-import FinanceTabs from './components/FinanceTabs';
+import PeriodFilter from '@/Crm/Components/PeriodFilter';
 import { formatRub } from './components/format';
 
 /**
@@ -18,50 +16,58 @@ import { formatRub } from './components/format';
  * на конец. Формула расшифрована словами внизу страницы — менеджеру приходится
  * объяснять её клиенту, а не только читать самому.
  *
- * Клиент выбирается явно: акт — документ по одному контрагенту, «акт по всем
- * клиентам менеджера» не имеет смысла. Пока клиент не выбран, показывается
- * только форма.
+ * Отбор применяется сразу, без кнопки «Сформировать»: она требовала лишнего
+ * действия и, хуже того, до неё справочник контрагентов оставался пустым —
+ * выбрать юрлицо можно было только со второго захода.
+ *
+ * Партнёра можно не выбирать вовсе: достаточно контрагента, партнёр выводится
+ * из его движений на сервере. Сверку чаще начинают именно с юрлица — оно
+ * фигурирует в переписке, а под каким партнёром оно заведено, менеджер
+ * в этот момент не знает.
  */
-export default function FinanceReconciliation({ client = null, act = null, options = {}, form = {} }) {
-    const [state, setState] = useState({
-        client_id: form.client_id ?? null,
-        company_id: form.company_id ?? null,
-        organization_id: form.organization_id ?? null,
-        agreement_id: form.agreement_id ?? null,
-        without_agreement: form.without_agreement ?? false,
-        currency: form.currency ?? 'RUB',
-        date_from: form.date_from ?? '',
-        date_to: form.date_to ?? '',
-    });
+export default function FinanceReconciliation({ client = null, act = null, options = {}, form = {}, notice = null }) {
+    const apply = (patch) => {
+        const next = { ...form, ...patch };
 
-    const set = (patch) => setState((prev) => ({ ...prev, ...patch }));
+        const query = Object.entries(next).reduce((acc, [key, value]) => {
+            if (value !== null && value !== undefined && value !== '') acc[key] = value;
 
-    const query = () => Object.fromEntries(
-        Object.entries(state).filter(([, value]) => value !== null && value !== '' && value !== false),
-    );
+            return acc;
+        }, {});
 
-    const apply = () => router.get('/crm/finance/reconciliation', query(), { preserveState: false });
+        router.get('/crm/finance/reconciliation', query, { preserveState: true, replace: true });
+    };
 
     // Ссылкой, а не router.get: это файл, и Inertia на него не рассчитан.
-    const exportUrl = `/crm/finance/reconciliation/export?${new URLSearchParams(query())}`;
+    const exportUrl = `/crm/finance/reconciliation/export?${new URLSearchParams(
+        Object.entries(form).filter(([, value]) => value !== null && value !== undefined && value !== ''),
+    )}`;
 
     // Выбор из длинного справочника — тем же контролом, что и остальные фильтры
     // раздела. Значение одно, поэтому из набора берётся последнее добавленное:
     // так повторный клик по строке меняет выбор, а не копит его.
-    const pickOne = (key) => (ids) => set({ [key]: ids.length ? ids[ids.length - 1] : null });
+    const pickOne = (key) => (ids) => apply({ [key]: ids.length ? ids[ids.length - 1] : undefined });
 
-    // Смена клиента сбрасывает зависящие от него фильтры: контрагент, организация
-    // и соглашение прежнего клиента для нового бессмысленны, а молча оставить их
-    // в запросе значит получить пустой акт без видимой причины.
-    const pickClient = (ids) => set({
-        client_id: ids.length ? ids[ids.length - 1] : null,
-        company_id: null,
-        organization_id: null,
-        agreement_id: null,
+    // Смена партнёра сбрасывает зависящие от него фильтры: контрагент и наша
+    // организация прежнего партнёра для нового бессмысленны, а молча оставить
+    // их в запросе значит получить пустой акт без видимой причины.
+    const pickClient = (ids) => apply({
+        client_id: ids.length ? ids[ids.length - 1] : undefined,
+        company_id: undefined,
+        organization_id: undefined,
     });
 
+    const reset = () => router.get('/crm/finance/reconciliation', {}, { preserveState: false, replace: true });
+
+    const hasSelection = Boolean(form.client_id || form.company_id || form.organization_id);
+
+    // Колонка стороны нужна ровно до тех пор, пока сторона не задана фильтром:
+    // в акте по одному юрлицу это столбец с одним и тем же именем в каждой строке.
+    const showCompany = !form.company_id;
+    const showOrganization = !form.organization_id;
+
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Финансы', href: '/crm/finance' }, { label: 'Акт сверки' }]}>
+        <CrmLayout breadcrumbs={[{ label: 'Финансы' }, { label: 'Акт сверки' }]}>
             <Head title="Акт сверки — CRM" />
 
             <PageHeader
@@ -69,114 +75,119 @@ export default function FinanceReconciliation({ client = null, act = null, optio
                 description="Движения взаиморасчётов за период: сальдо на начало, обороты, сальдо на конец"
             />
 
-            <FinanceTabs active="reconciliation" />
-
-            <Box borderWidth="1px" borderRadius="lg" p={4} mb={4}>
-                <HStack gap={3} wrap="wrap" align="flex-end">
-                    <MultiSelectFilter
-                        label="Клиент"
-                        options={options.clients ?? []}
-                        selectedIds={state.client_id ? [state.client_id] : []}
-                        onChange={pickClient}
-                        allLabel="Не выбран"
-                        minW="260px"
-                    />
-
-                    <MultiSelectFilter
-                        label="Контрагент"
-                        options={options.companies ?? []}
-                        selectedIds={state.company_id ? [state.company_id] : []}
-                        onChange={pickOne('company_id')}
-                        allLabel="Все"
-                        disabled={!client}
-                    />
-
-                    <MultiSelectFilter
-                        label="Наша организация"
-                        options={options.organizations ?? []}
-                        selectedIds={state.organization_id ? [state.organization_id] : []}
-                        onChange={pickOne('organization_id')}
-                        allLabel="Все"
-                        disabled={!client}
-                    />
-
-                    <MultiSelectFilter
-                        label="Соглашение"
-                        options={options.agreements ?? []}
-                        selectedIds={state.agreement_id ? [state.agreement_id] : []}
-                        onChange={pickOne('agreement_id')}
-                        allLabel="Все"
-                        disabled={!client || state.without_agreement}
-                    />
-
-                    <VStack align="stretch" gap={1}>
-                        <Text fontSize="xs" color="fg.muted" fontWeight="500">С даты</Text>
-                        <Input
-                            type="date"
-                            size="sm"
-                            value={state.date_from}
-                            onChange={(e) => set({ date_from: e.target.value })}
-                        />
-                    </VStack>
-
-                    <VStack align="stretch" gap={1}>
-                        <Text fontSize="xs" color="fg.muted" fontWeight="500">По дату</Text>
-                        <Input
-                            type="date"
-                            size="sm"
-                            value={state.date_to}
-                            onChange={(e) => set({ date_to: e.target.value })}
-                        />
-                    </VStack>
-
-                    <Button size="sm" onClick={apply} disabled={!state.client_id}>
-                        Сформировать
-                    </Button>
-
-                    <Button size="sm" variant="outline" asChild disabled={!client}>
-                        <a href={exportUrl}><LuDownload /> Выгрузить в XLSX</a>
-                    </Button>
-                </HStack>
-
-                <HStack gap={4} mt={3} wrap="wrap">
-                    <Checkbox
-                        checked={state.without_agreement}
-                        onCheckedChange={(e) => set({ without_agreement: !!e.checked, agreement_id: null })}
-                        disabled={!client}
+            <Box borderWidth="1px" borderRadius="lg" p={4} mb={4} bg="bg.panel">
+                <VStack align="stretch" gap={3}>
+                    <Grid
+                        gap={3}
+                        templateColumns={{ base: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' }}
                     >
-                        <Text fontSize="sm">Только без соглашения</Text>
-                    </Checkbox>
+                        <MultiSelectFilter
+                            label="Партнёр"
+                            options={options.clients ?? []}
+                            selectedIds={form.client_id ? [form.client_id] : []}
+                            onChange={pickClient}
+                            allLabel="Не выбран"
+                            minW="0"
+                        />
 
-                    {(options.currencies ?? ['RUB']).length > 1 && (
-                        <HStack gap={2}>
-                            <Text fontSize="sm" color="fg.muted">Валюта:</Text>
-                            {(options.currencies ?? []).map((code) => (
-                                <Button
-                                    key={code}
-                                    size="xs"
-                                    variant={state.currency === code ? 'solid' : 'outline'}
-                                    onClick={() => set({ currency: code })}
-                                >
-                                    {code}
+                        {/* Контрагент доступен без партнёра: выберут юрлицо —
+                            партнёр подставится сам. */}
+                        <MultiSelectFilter
+                            label={form.client_id ? 'Контрагент' : 'Контрагент (можно без партнёра)'}
+                            options={options.companies ?? []}
+                            selectedIds={form.company_id ? [form.company_id] : []}
+                            onChange={pickOne('company_id')}
+                            allLabel="Все контрагенты"
+                            minW="0"
+                        />
+
+                        <MultiSelectFilter
+                            label="Наша организация"
+                            options={options.organizations ?? []}
+                            selectedIds={form.organization_id ? [form.organization_id] : []}
+                            onChange={pickOne('organization_id')}
+                            allLabel="Все организации"
+                            minW="0"
+                        />
+                    </Grid>
+
+                    <HStack gap={4} wrap="wrap" align="center">
+                        {/* Периода «сегодня» у акта не бывает, и пустым он тоже
+                            не бывает: сальдо считается на границы окна. */}
+                        <PeriodFilter
+                            from={form.date_from}
+                            to={form.date_to}
+                            presets={['thisMonth', 'prevMonth', 'year']}
+                            clearable={false}
+                            onChange={(patch) => apply(patch)}
+                        />
+
+                        {(options.currencies ?? ['RUB']).length > 1 && (
+                            <HStack gap={2}>
+                                <Text fontSize="xs" color="fg.muted">Валюта</Text>
+                                {(options.currencies ?? []).map((code) => (
+                                    <Button
+                                        key={code}
+                                        size="xs"
+                                        variant={form.currency === code ? 'solid' : 'outline'}
+                                        colorPalette={form.currency === code ? 'pecado' : 'gray'}
+                                        onClick={() => apply({ currency: code })}
+                                    >
+                                        {code}
+                                    </Button>
+                                ))}
+                            </HStack>
+                        )}
+
+                        <HStack gap={2} ml="auto">
+                            {hasSelection && (
+                                <Button size="sm" variant="outline" colorPalette="red" onClick={reset}>
+                                    <LuX /> Сбросить
                                 </Button>
-                            ))}
+                            )}
+
+                            {client && act && (
+                                <Button size="sm" variant="outline" asChild>
+                                    <a href={exportUrl}><LuDownload /> Выгрузить в XLSX</a>
+                                </Button>
+                            )}
                         </HStack>
-                    )}
-                </HStack>
+                    </HStack>
+                </VStack>
             </Box>
 
-            {!client && (
-                <Box borderWidth="1px" borderRadius="lg" p={6} textAlign="center">
-                    <Text color="fg.muted">Выберите клиента и период, чтобы сформировать акт сверки.</Text>
+            {/* Снятый или не сработавший фильтр объясняется словами: иначе
+                выбор, который ничего не изменил, читается как поломка. */}
+            {notice && (
+                <Box borderWidth="1px" borderColor="orange.muted" bg="orange.subtle" borderRadius="lg" p={3} mb={4}>
+                    <HStack gap={2} align="flex-start">
+                        <Box color="orange.fg" mt="2px"><LuTriangleAlert /></Box>
+                        <Text fontSize="sm">{notice}</Text>
+                    </HStack>
                 </Box>
             )}
 
-            {client && act && <Act client={client} act={act} />}
+            {!client && (
+                <Box borderWidth="1px" borderRadius="lg" p={6} textAlign="center">
+                    <Text color="fg.muted">
+                        Выберите партнёра или сразу контрагента — акт соберётся сам.
+                    </Text>
+                </Box>
+            )}
+
+            {client && act && (
+                <Act
+                    client={client}
+                    act={act}
+                    showCompany={showCompany}
+                    showOrganization={showOrganization}
+                />
+            )}
         </CrmLayout>
     );
 }
 
-function Act({ client, act }) {
+function Act({ client, act, showCompany = true, showOrganization = true }) {
     const isRub = act.currency === 'RUB';
     const money = (value) => (isRub ? formatRub(value) : `${Number(value || 0).toLocaleString('ru-RU', {
         minimumFractionDigits: 2,
@@ -220,7 +231,7 @@ function Act({ client, act }) {
             <Box borderWidth="1px" borderRadius="lg" p={4}>
                 <HStack justify="space-between" wrap="wrap" gap={3}>
                     <Box>
-                        <Text fontSize="sm" color="fg.muted">Клиент</Text>
+                        <Text fontSize="sm" color="fg.muted">Партнёр</Text>
                         <Link href={client.url}>
                             <Text fontWeight="600" textDecoration="underline">{client.name}</Text>
                         </Link>
@@ -258,6 +269,8 @@ function Act({ client, act }) {
                                 <Table.ColumnHeader>Дата</Table.ColumnHeader>
                                 <Table.ColumnHeader>Документ</Table.ColumnHeader>
                                 <Table.ColumnHeader>Операция</Table.ColumnHeader>
+                                {showCompany && <Table.ColumnHeader>Контрагент</Table.ColumnHeader>}
+                                {showOrganization && <Table.ColumnHeader>Наша организация</Table.ColumnHeader>}
                                 <Table.ColumnHeader textAlign="end">Дебет</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="end">Кредит</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="end">Сальдо</Table.ColumnHeader>
@@ -282,6 +295,20 @@ function Act({ client, act }) {
                                     <Table.Cell>
                                         <Badge size="sm" variant="subtle">{row.type_label}</Badge>
                                     </Table.Cell>
+                                    {showCompany && (
+                                        <Table.Cell>
+                                            <Text fontSize="sm" color={row.company_name ? undefined : 'fg.muted'}>
+                                                {row.company_name || 'не указан'}
+                                            </Text>
+                                        </Table.Cell>
+                                    )}
+                                    {showOrganization && (
+                                        <Table.Cell>
+                                            <Text fontSize="sm" color={row.organization_name ? undefined : 'fg.muted'}>
+                                                {row.organization_name || 'не указана'}
+                                            </Text>
+                                        </Table.Cell>
+                                    )}
                                     <Table.Cell textAlign="end">{row.debit ? money(row.debit) : '—'}</Table.Cell>
                                     <Table.Cell textAlign="end">{row.credit ? money(row.credit) : '—'}</Table.Cell>
                                     <Table.Cell textAlign="end" fontWeight="600">{money(row.balance)}</Table.Cell>
@@ -290,7 +317,12 @@ function Act({ client, act }) {
                         </Table.Body>
                         <Table.Footer>
                             <Table.Row>
-                                <Table.Cell colSpan={3} fontWeight="600">Обороты за период</Table.Cell>
+                                <Table.Cell
+                                    colSpan={3 + (showCompany ? 1 : 0) + (showOrganization ? 1 : 0)}
+                                    fontWeight="600"
+                                >
+                                    Обороты за период
+                                </Table.Cell>
                                 <Table.Cell textAlign="end" fontWeight="600">{money(act.turnover_debit)}</Table.Cell>
                                 <Table.Cell textAlign="end" fontWeight="600">{money(act.turnover_credit)}</Table.Cell>
                                 <Table.Cell textAlign="end" fontWeight="700">{money(act.closing_balance)}</Table.Cell>

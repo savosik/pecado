@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import { Badge, Box, Flex, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
 import {
     Bar,
@@ -13,8 +13,6 @@ import {
 import { LuTriangleAlert } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
-import { Button } from '@/components/ui/button';
-import FinanceTabs from './components/FinanceTabs';
 import FinanceFilterBar from './components/FinanceFilterBar';
 import FinanceRowsTable from './components/FinanceRowsTable';
 import { formatCompact, formatRub } from './components/format';
@@ -45,15 +43,13 @@ export default function FinanceDashboard({
     const hasFactBalance = summary.balance_fact !== null && summary.balance_fact !== undefined;
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Финансы' }]}>
-            <Head title="Платежи — CRM" />
+        <CrmLayout breadcrumbs={[{ label: 'Финансы' }, { label: 'Пульт платежей' }]}>
+            <Head title="Пульт платежей — CRM" />
 
             <PageHeader
                 title="Пульт платежей"
                 description="План поступлений, просрочка и балансы партнёров по данным 1С"
             />
-
-            <FinanceTabs active="index" />
 
             <FinanceFilterBar
                 routeName="crm.finance.index"
@@ -108,8 +104,7 @@ export default function FinanceDashboard({
                         <Text fontSize="sm">
                             <b>{formatRub(summary.no_schedule_amount)}</b> долга — по {noScheduleCount} реализациям,
                             для которых 1С не прислала график оплаты. В плане по датам эти деньги не учтены:
-                            срок платежа неизвестен. Полный список — на странице{' '}
-                            <Box as={Link} href="/crm/finance/plan" textDecoration="underline">План поступлений</Box>.
+                            срок платежа неизвестен. Полный список — в разделе «План поступлений».
                         </Text>
                     </HStack>
                 </Box>
@@ -193,23 +188,22 @@ export default function FinanceDashboard({
                 </Box>
             </SimpleGrid>
 
+            {/* Обе таблицы — короткая выжимка «на посмотреть», а не журнал:
+                полные списки живут своими пунктами меню, и кнопок-переходов
+                отсюда нет намеренно — раздел не отправляет в соседний. */}
             <Box borderWidth="1px" borderRadius="lg" p={4} mb={4}>
-                <Flex justify="space-between" align="center" mb={3}>
+                <Flex justify="space-between" align="baseline" mb={3}>
                     <Text fontWeight="600">Просроченные платежи</Text>
-                    <Button asChild size="xs" variant="outline">
-                        <Link href="/crm/finance/overdue">Все просроченные</Link>
-                    </Button>
+                    <Text fontSize="xs" color="fg.muted">самые давние сверху</Text>
                 </Flex>
 
                 <FinanceRowsTable rows={overdueRows} emptyMessage="Просроченных платежей нет" />
             </Box>
 
             <Box borderWidth="1px" borderRadius="lg" p={4}>
-                <Flex justify="space-between" align="center" mb={3}>
+                <Flex justify="space-between" align="baseline" mb={3}>
                     <Text fontWeight="600">Ближайшие поступления</Text>
-                    <Button asChild size="xs" variant="outline">
-                        <Link href="/crm/finance/plan">Весь план</Link>
-                    </Button>
+                    <Text fontSize="xs" color="fg.muted">по плановой дате</Text>
                 </Flex>
 
                 <FinanceRowsTable rows={upcomingRows} emptyMessage="В выбранном периоде поступлений не ожидается" />

@@ -125,7 +125,13 @@ class DocumentController extends CrmController
         $search = $this->search($request);
 
         $query = $this->ordersQuery($request, $clients, $search)
-            ->with(['user:id,name,erp_name,email', 'company:id,name', 'organization:id,name,is_stub', 'warehouse:id,name'])
+            ->with([
+                'user:id,name,erp_name,email,personal_manager_id',
+                'user.personalManager:id,name',
+                'company:id,name',
+                'organization:id,name,is_stub',
+                'warehouse:id,name',
+            ])
             ->withCount('items');
 
         [$sortBy, $sortOrder] = $this->sort($request);
@@ -145,6 +151,9 @@ class DocumentController extends CrmController
             'client' => $order->user === null ? null : [
                 'id' => (int) $order->user->getKey(),
                 'name' => $order->user->display_name,
+                // Менеджер подписью под именем — тот же приём, что в журнале
+                // платежей: РОП читает журнал отдела построчно.
+                'manager_name' => $order->user->personalManager?->getAttribute('name'),
                 'url' => route('crm.clients.show', $order->user->getKey()),
             ],
             'organization' => $order->organization === null ? null : [
@@ -156,7 +165,13 @@ class DocumentController extends CrmController
         ]);
 
         return Inertia::render('Crm/Pages/Documents/Orders', array_merge(
-            ['orders' => $orders],
+            [
+                'orders' => $orders,
+                'totals' => $this->documentTotals(
+                    $this->ordersQuery($request, $clients, $search),
+                    'total_amount',
+                ),
+            ],
             $this->listOptions($request, 'orders', $clients, $sortBy, $sortOrder, $perPage, $search),
             [
                 'statuses' => array_map(
@@ -174,14 +189,20 @@ class DocumentController extends CrmController
     /**
      * Список реализаций партнёров актора.
      */
-    public function shipments(Request $request): Response
+    public function shipments(Request $request, PaymentForecast $forecast): Response
     {
         $actor = $this->crmActor($request);
         $clients = $this->visibleClients($request, $actor);
         $search = $this->search($request);
 
         $query = $this->shipmentsQuery($request, $clients, $search)
-            ->with(['user:id,name,erp_name,email', 'company:id,name', 'organization:id,name,is_stub', 'warehouse:id,name'])
+            ->with([
+                'user:id,name,erp_name,email,personal_manager_id',
+                'user.personalManager:id,name',
+                'company:id,name',
+                'organization:id,name,is_stub',
+                'warehouse:id,name',
+            ])
             ->withCount('items');
 
         [$sortBy, $sortOrder] = $this->sort($request);
@@ -201,6 +222,7 @@ class DocumentController extends CrmController
             'client' => $shipment->user === null ? null : [
                 'id' => (int) $shipment->user->getKey(),
                 'name' => $shipment->user->display_name,
+                'manager_name' => $shipment->user->personalManager?->getAttribute('name'),
                 'url' => route('crm.clients.show', $shipment->user->getKey()),
             ],
             'organization' => $shipment->organization === null ? null : [
@@ -212,7 +234,17 @@ class DocumentController extends CrmController
         ]);
 
         return Inertia::render('Crm/Pages/Documents/Shipments', array_merge(
-            ['shipments' => $shipments],
+            [
+                'shipments' => $shipments,
+                'totals' => $this->documentTotals(
+                    $this->shipmentsQuery($request, $clients, $search),
+                    'total_amount',
+                ),
+                'schedule' => $this->shipmentScheduleTotals(
+                    $this->shipmentsQuery($request, $clients, $search),
+                    $forecast,
+                ),
+            ],
             $this->listOptions($request, 'shipments', $clients, $sortBy, $sortOrder, $perPage, $search),
             ['statuses' => self::SHIPMENT_STATUSES],
         ));
@@ -233,7 +265,12 @@ class DocumentController extends CrmController
         $search = $this->search($request);
 
         $query = $this->paymentsQuery($request, $clients, $search)
-            ->with(['user:id,name,erp_name,email', 'company:id,name', 'organization:id,name,is_stub'])
+            ->with([
+                'user:id,name,erp_name,email,personal_manager_id',
+                'user.personalManager:id,name',
+                'company:id,name',
+                'organization:id,name,is_stub',
+            ])
             ->withCount('allocations');
 
         [$sortBy, $sortOrder] = $this->sort($request);
@@ -244,14 +281,144 @@ class DocumentController extends CrmController
 
         $payments->getCollection()->transform(fn (Payment $payment): array => $this->paymentRow($payment));
 
-        return Inertia::render('Crm/Pages/Documents/Payments', array_merge(
+        $options = $this->listOptions($request, 'payments', $clients, $sortBy, $sortOrder, $perPage, $search);
+
+        // Свои фильтры платежей возвращаются экрану наравне с общими: без них
+        // галочки в «Направлении» и «Разнесении» не отрисовывались, а любое
+        // следующее применение фильтра теряло их — снимок отбора собирается
+        // на клиенте именно из этого массива.
+        $options['filters']['directions'] = array_values(array_intersect(
+            $this->values($request, 'directions', 'direction'),
+            array_column(self::PAYMENT_DIRECTIONS, 'value'),
+        ));
+        $options['filters']['allocation_statuses'] = array_values(array_intersect(
+            $this->values($request, 'allocation_statuses', 'allocation_status'),
+            array_column(self::ALLOCATION_STATUSES, 'value'),
+        ));
+
+        return Inertia::render('Crm/Pages/Finance/Payments', array_merge(
             ['payments' => $payments],
-            $this->listOptions($request, 'payments', $clients, $sortBy, $sortOrder, $perPage, $search),
+            $options,
             [
                 'directions' => self::PAYMENT_DIRECTIONS,
                 'allocationStatuses' => self::ALLOCATION_STATUSES,
+                'totals' => $this->paymentTotals($request, $clients, $search),
             ],
         ));
+    }
+
+    /**
+     * Оплата реализаций отбора — числами счётного ядра раздела «Финансы».
+     *
+     * ## Почему не своим запросом
+     *
+     * Первый заход считал по `shipments.paid_amount` — проекции расшифровки
+     * платежей, которой 1С больше не присылает: «не оплачено» вышло 44,4 млн ₽
+     * при 11,5 млн ₽ реального долга. Второй — по `shipment_payment_schedules`,
+     * и это тоже мимо: с v16.0.0 график приезжает событием `payment_schedule.updated`
+     * в плановые движения регистра, а старая таблица не пополняется с 12.08.2026.
+     *
+     * Правильный ответ у того же ядра, на котором стоят пульт и просрочка
+     * (`PaymentForecast`): какое из двух включено, решает флаг `settlements.ledger_enabled`,
+     * и журнал знать об этом не должен — иначе он покажет одно число, а пульт другое.
+     *
+     * @param  Builder<Shipment>  $shipments  отбор журнала без пагинации
+     * @return array{buckets: list<array<string, mixed>>, without_plan: int}
+     */
+    private function shipmentScheduleTotals(Builder $shipments, PaymentForecast $forecast): array
+    {
+        $totals = $forecast->shipmentPaymentTotals($shipments);
+
+        return [
+            'buckets' => array_map(fn (array $bucket): array => [
+                'currency' => $bucket['currency'],
+                'docs' => $bucket['docs'],
+                'paid_label' => $this->money($bucket['paid'], $bucket['currency']),
+                'unpaid_label' => $this->money($bucket['unpaid'], $bucket['currency']),
+            ], $totals['buckets']),
+            'without_plan' => $totals['without_plan'],
+        ];
+    }
+
+    /**
+     * Итоги журнала документов по текущему отбору.
+     *
+     * Считается по тому же запросу, что и список, но без пагинации: «на сколько
+     * отгрузили за август» — вопрос, ради которого фильтр и открывают, а сумма
+     * показанной страницы на него не отвечает.
+     *
+     * Разрез по валюте, а не сведение в рубли: курса на дату документа сайт
+     * не знает, а складывать рубли с тенге в итоге, который читают как деньги,
+     * нельзя.
+     *
+     * ## Почему здесь нет «оплачено» и «остатка»
+     *
+     * Соблазн вычесть `paid_amount` из суммы велик, а результат — ложь: колонка
+     * заполнялась расшифровкой платежей, которой 1С больше не присылает
+     * (`allocations[]` удалены в v16.0.0 и вмещали меньше трети денег), и долг
+     * 1С гасит ещё авансами по заказам, взаимозачётами и корректировками.
+     * Замер боевой базы 25.08.2026: такой «остаток» дал 44,4 млн ₽ против
+     * 11,5 млн ₽ реального долга по `contractor_balances`. Деньги живут
+     * в регистре взаиморасчётов — в «Балансах партнёров» и акте сверки.
+     *
+     * @param  Builder<\Illuminate\Database\Eloquent\Model>  $query
+     * @return array{count: int, buckets: list<array{currency: string, count: int, amount_label: string}>}
+     */
+    private function documentTotals(Builder $query, string $amountColumn): array
+    {
+        $rows = $query->toBase()
+            ->select([
+                'currency_code',
+                DB::raw('COUNT(*) as cnt'),
+                DB::raw('SUM('.$amountColumn.') as total'),
+            ])
+            ->groupBy('currency_code')
+            ->orderBy('currency_code')
+            ->get();
+
+        return [
+            'count' => (int) $rows->sum('cnt'),
+            'buckets' => $rows->map(fn (object $row): array => [
+                'currency' => (string) ($row->currency_code ?: 'RUB'),
+                'count' => (int) $row->cnt,
+                'amount_label' => $this->money((float) $row->total, $row->currency_code),
+            ])->all(),
+        ];
+    }
+
+    /**
+     * Итоги по текущему отбору: сколько платежей и на какую сумму.
+     *
+     * Считается по тому же запросу, что и список, но без пагинации: менеджеру
+     * нужна сумма всего отбора, а не показанной страницы. Разрез по направлению
+     * обязателен — складывать поступления с возвратами бессмысленно, а разрез
+     * по валюте честнее конвертации: курс на дату платежа сайту неизвестен.
+     *
+     * @param  Builder<User>  $clients
+     * @return array{count: int, buckets: list<array{currency: string, direction: string, direction_label: string, count: int, amount_label: string}>}
+     */
+    private function paymentTotals(Request $request, Builder $clients, ?string $search): array
+    {
+        $rows = $this->paymentsQuery($request, $clients, $search)
+            ->toBase()
+            ->selectRaw('currency_code, direction, COUNT(*) as cnt, SUM(amount) as total')
+            ->groupBy('currency_code', 'direction')
+            ->orderBy('currency_code')
+            ->orderBy('direction')
+            ->get();
+
+        $labels = array_column(self::PAYMENT_DIRECTIONS, 'label', 'value');
+
+        return [
+            'count' => (int) $rows->sum('cnt'),
+            'buckets' => $rows->map(fn (object $row): array => [
+                'currency' => (string) ($row->currency_code ?: 'RUB'),
+                'direction' => (string) $row->direction,
+                'direction_label' => $labels[$row->direction] ?? (string) $row->direction,
+                'count' => (int) $row->cnt,
+                'amount_label' => $this->money((float) $row->total, $row->currency_code),
+            ])->all(),
+        ];
     }
 
     /**
@@ -298,7 +465,7 @@ class DocumentController extends CrmController
         $entries = $planned->map(fn (object $row): array => $forecast->row($row, $todayImmutable));
         $overdueEntries = $overdue->map(fn (object $row): array => $forecast->row($row, $todayImmutable));
 
-        return Inertia::render('Crm/Pages/Documents/PaymentCalendar', [
+        return Inertia::render('Crm/Pages/Finance/PaymentCalendar', [
             'month' => $month->format('Y-m'),
             'monthLabel' => $this->monthLabel($month),
             'prevMonth' => $month->copy()->subMonth()->format('Y-m'),
@@ -316,6 +483,10 @@ class DocumentController extends CrmController
             'managers' => $this->seesDepartment($request) ? $this->managerOptions() : [],
             'seesAll' => $this->seesDepartment($request),
             'filters' => [
+                // Разрез отдаётся экрану, хотя фильтрует уже `visibleClients`:
+                // без него календарь показывал сумму по своим партнёрам и никак
+                // об этом не сообщал — расфокус нечем было ни увидеть, ни снять.
+                'scope' => CrmScope::fromRequest($request, $this->crmActor($request))->value,
                 'manager_ids' => $this->seesDepartment($request) ? $this->ids($request, 'manager_ids') : [],
             ],
         ]);
@@ -1209,6 +1380,10 @@ class DocumentController extends CrmController
             'client' => $payment->user === null ? null : [
                 'id' => (int) $payment->user->getKey(),
                 'name' => $payment->user->display_name,
+                // Персональный менеджер партнёра — подписью под именем. РОП
+                // читает журнал отдела построчно, и без этого приходилось
+                // открывать карточку, чтобы понять, чей это клиент.
+                'manager_name' => $payment->user->personalManager?->getAttribute('name'),
                 'url' => route('crm.clients.show', $payment->user->getKey()),
             ],
             'company' => $payment->company?->getAttribute('name'),
@@ -1402,7 +1577,14 @@ class DocumentController extends CrmController
             'organizationsEnabled' => $organizationsEnabled,
             'warehouses' => Warehouse::query()->orderBy('name')->get(['id', 'name']),
             'partners' => $this->partnerOptions($table, $clients),
-            'companies' => $this->companyOptions($table, $clients),
+            // Справочник контрагентов зависит от выбранных партнёров: у партнёра
+            // юрлиц один-два, а в общем списке их сотни.
+            'companies' => $this->companyOptions(
+                $table,
+                $clients,
+                $this->ids($request, 'partner_ids'),
+                $this->ids($request, 'company_ids'),
+            ),
             // Менеджер — только РОПу: у рядового менеджера в скоупе и так
             // только свои партнёры, фильтр был бы кнопкой без эффекта.
             'managers' => $seesAll ? $this->managerOptions() : [],
@@ -1575,17 +1757,33 @@ class DocumentController extends CrmController
      *
      * @param  'orders'|'shipments'|'payments'|'printed_documents'  $table
      * @param  Builder<User>  $clients
+     * @param  list<int>  $partnerIds  выбранные партнёры — сужают справочник
+     * @param  list<int>  $keepIds  уже выбранные контрагенты — не выпадают из списка
      * @return list<array{id: int, name: string}>
      */
-    private function companyOptions(string $table, Builder $clients): array
+    private function companyOptions(string $table, Builder $clients, array $partnerIds = [], array $keepIds = []): array
     {
-        $ids = DB::table($table)
+        $query = DB::table($table)
             ->whereNull($table.'.deleted_at')
             ->whereIn($table.'.user_id', (clone $clients))
-            ->whereNotNull($table.'.company_id')
-            ->distinct()
-            ->pluck($table.'.company_id')
-            ->all();
+            ->whereNotNull($table.'.company_id');
+
+        // Обратной зависимости (контрагент сужает партнёров) нет намеренно:
+        // выбрав одного контрагента, второго партнёра было бы уже не добавить —
+        // справочник схлопнулся бы до выбранного. Та же причина, по которой
+        // фильтр по партнёру не входит в visibleClients.
+        if ($partnerIds !== []) {
+            $query->whereIn($table.'.user_id', $partnerIds);
+        }
+
+        $ids = $query->distinct()->pluck($table.'.company_id')->all();
+
+        // Уже выбранные контрагенты остаются в списке, даже если выпали из
+        // сужения: иначе снять фильтр, который сам себя спрятал, было бы нечем.
+        $ids = array_values(array_unique(array_merge(
+            array_map('intval', $ids),
+            array_map('intval', $keepIds),
+        )));
 
         if ($ids === []) {
             return [];

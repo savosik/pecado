@@ -74,6 +74,18 @@ class ReconciliationService
         $opening = (float) $scope()->whereDate('date', '<', $from)->sum('amount');
 
         $entries = $scope()
+            // Контрагент и наша организация показываются построчно, пока их не
+            // задали фильтром: без них акт «по всем юрлицам» — столбик сумм,
+            // о котором нельзя сказать, между кем и кем эти расчёты.
+            //
+            // withoutGlobalScopes у контрагента: CompanyScope прячет чужие юрлица
+            // от пользователя без ролей, и сотрудник, которому права выданы
+            // напрямую, видел бы акт с пустой колонкой. Доступ здесь уже решён
+            // выше — движения отобраны по партнёру из скоупа актора.
+            ->with([
+                'company' => fn ($query) => $query->withoutGlobalScopes()->select('id', 'name'),
+                'organization:id,name',
+            ])
             ->whereBetween(DB::raw('DATE(date)'), [$from, $to])
             ->orderBy('date')
             ->orderBy('id')
@@ -106,6 +118,8 @@ class ReconciliationService
                 'credit' => round((float) $entry->credit, 2),
                 'balance' => round($balance, 2),
                 'agreement_name' => $entry->agreement_name,
+                'company_name' => $entry->company?->getAttribute('name'),
+                'organization_name' => $entry->organization?->getAttribute('name'),
                 'settlement_object_name' => $entry->settlement_object_name,
                 'comment' => $entry->comment,
             ];
@@ -257,6 +271,80 @@ class ReconciliationService
             ->map(static fn (string $name, int $id): array => ['id' => $id, 'name' => $name])
             ->values()
             ->all();
+    }
+
+    /**
+     * Контрагенты всего доступного менеджеру круга — для выбора без клиента.
+     *
+     * Контрагента выбирают первым не реже, чем клиента: в переписке о сверке
+     * фигурирует юрлицо («пришлите акт по ООО „Ромашка“»), а под каким партнёром
+     * оно заведено на сайте — знание, которого у менеджера в этот момент нет.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<User>  $clients
+     * @return list<array{id: int, name: string}>
+     */
+    public function companiesInScope(\Illuminate\Database\Eloquent\Builder $clients): array
+    {
+        return SettlementEntry::query()
+            ->facts()
+            ->whereIn('settlement_entries.user_id', (clone $clients))
+            ->whereNotNull('settlement_entries.company_id')
+            ->join('companies as c', 'c.id', '=', 'settlement_entries.company_id')
+            ->whereNull('c.deleted_at')
+            ->distinct()
+            ->orderBy('c.name')
+            ->pluck('c.name', 'c.id')
+            ->map(static fn (string $name, int $id): array => ['id' => $id, 'name' => $name])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Наши организации всего доступного круга — для выбора без клиента.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<User>  $clients
+     * @return list<array{id: int, name: string}>
+     */
+    public function organizationsInScope(\Illuminate\Database\Eloquent\Builder $clients): array
+    {
+        return SettlementEntry::query()
+            ->facts()
+            ->whereIn('settlement_entries.user_id', (clone $clients))
+            ->whereNotNull('settlement_entries.organization_id')
+            ->join('organizations as o', 'o.id', '=', 'settlement_entries.organization_id')
+            ->distinct()
+            ->orderBy('o.name')
+            ->pluck('o.name', 'o.id')
+            ->map(static fn (string $name, int $id): array => ['id' => $id, 'name' => $name])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Партнёр, которому принадлежит контрагент, — по его же движениям.
+     *
+     * Акт строится по партнёру: расчёты ведутся с юрлицом, но карточка, скоуп
+     * и права живут на партнёре. Поэтому выбор одного контрагента доводится
+     * до партнёра здесь, а не требует второго выбора от менеджера.
+     *
+     * Если одно юрлицо встречается у нескольких партнёров (в 1С так бывает
+     * после переноса карточек), возвращается null: угадывать, чей это акт,
+     * нельзя — менеджер уточнит партнёра сам.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<User>  $clients
+     */
+    public function clientOfCompany(\Illuminate\Database\Eloquent\Builder $clients, int $companyId): ?User
+    {
+        $ids = SettlementEntry::query()
+            ->facts()
+            ->whereIn('user_id', (clone $clients))
+            ->where('company_id', $companyId)
+            ->distinct()
+            ->limit(2)
+            ->pluck('user_id')
+            ->all();
+
+        return count($ids) === 1 ? User::query()->find($ids[0]) : null;
     }
 
     /**

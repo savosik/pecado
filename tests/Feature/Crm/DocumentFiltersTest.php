@@ -103,6 +103,110 @@ class DocumentFiltersTest extends TestCase
     // Партнёр, контрагент, склад, организация
     // ──────────────────────────────────────────────
 
+    /**
+     * Итог журнала считается по всему отбору, а не по показанной странице,
+     * и раздельно по валютам: курса на дату документа сайт не знает.
+     *
+     * Оплаты в итоге нет намеренно: `paid_amount` живёт с расшифровки платежей,
+     * которую 1С больше не присылает, и «остаток» по нему втрое расходится
+     * с реальным долгом. Деньги — в балансах и акте сверки.
+     */
+    #[Test]
+    public function итог_реализаций_покрывает_весь_отбор(): void
+    {
+        $this->shipmentFor($this->firstClient, ['total_amount' => 1000, 'paid_amount' => 400]);
+        $this->shipmentFor($this->firstClient, ['total_amount' => 2000, 'paid_amount' => 2000]);
+        $this->shipmentFor($this->secondClient, ['total_amount' => 500, 'paid_amount' => 0]);
+
+        $this->actingAs($this->head)
+            ->get(route('crm.shipments.index', ['scope' => 'department', 'per_page' => 5]))
+            ->assertOk()
+            ->assertInertia(function (AssertableInertia $page) {
+                $totals = $page->toArray()['props']['totals'];
+
+                $this->assertSame(3, $totals['count']);
+                $this->assertCount(1, $totals['buckets']);
+
+                $bucket = $totals['buckets'][0];
+
+                $this->assertStringContainsString('3 500,00', $bucket['amount_label']);
+                // Оплата в этот блок не входит: она считается по графику 1С
+                // и приезжает отдельным пропсом.
+                $this->assertArrayNotHasKey('paid_label', $bucket);
+            });
+
+        // Фильтр сужает и итог.
+        $this->actingAs($this->head)
+            ->get(route('crm.shipments.index', [
+                'scope' => 'department',
+                'manager_ids' => [$this->secondCard->id],
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('totals.count', 1));
+    }
+
+    /**
+     * «Оплачено / не оплачено» берётся из графика оплаты 1С, а не из
+     * `shipments.paid_amount`: в графике учтён зачёт авансов по заказам,
+     * и остаток сходится с долгом учётной системы.
+     */
+    #[Test]
+    public function оплата_реализаций_считается_по_графику_с_зачётом_авансов(): void
+    {
+        // Документ на 1000: 400 деньгами, 300 авансом заказа — не хватает 300.
+        $partly = $this->shipmentFor($this->firstClient, ['total_amount' => 1000, 'paid_amount' => 0]);
+        \App\Models\ShipmentPaymentSchedule::factory()->forShipment($partly)->create([
+            'amount' => 1000,
+            'paid_amount' => 400,
+            'prepaid_amount' => 300,
+            'due_date' => now()->toDateString(),
+        ]);
+
+        // Переплаченная строка не должна раздувать «оплачено» выше суммы строки.
+        $closed = $this->shipmentFor($this->firstClient, ['total_amount' => 500, 'paid_amount' => 0]);
+        \App\Models\ShipmentPaymentSchedule::factory()->forShipment($closed)->create([
+            'amount' => 500,
+            'paid_amount' => 700,
+            'prepaid_amount' => 0,
+            'due_date' => now()->toDateString(),
+        ]);
+
+        // Реализация без графика: её долг в остаток не попадает, о ней сообщают числом.
+        $this->shipmentFor($this->firstClient, ['total_amount' => 9000, 'paid_amount' => 0]);
+
+        $this->actingAs($this->head)
+            ->get(route('crm.shipments.index', ['scope' => 'department']))
+            ->assertOk()
+            ->assertInertia(function (AssertableInertia $page) {
+                $schedule = $page->toArray()['props']['schedule'];
+
+                $this->assertSame(1, $schedule['without_plan']);
+                $this->assertCount(1, $schedule['buckets']);
+
+                $bucket = $schedule['buckets'][0];
+
+                // 400 + 300 по первой, 500 (а не 700) по второй.
+                $this->assertStringContainsString('1 200,00', $bucket['paid_label']);
+                $this->assertStringContainsString('300,00', $bucket['unpaid_label']);
+                $this->assertSame(2, $bucket['docs']);
+            });
+    }
+
+    /**
+     * Менеджер партнёра приезжает в строку журнала — подписью под именем.
+     */
+    #[Test]
+    public function строка_журнала_несёт_менеджера_партнёра(): void
+    {
+        $this->shipmentFor($this->firstClient);
+
+        $this->actingAs($this->head)
+            ->get(route('crm.shipments.index', ['scope' => 'department']))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('shipments.data.0.client.manager_name', $this->firstCard->name));
+    }
+
     #[Test]
     public function orders_are_filtered_by_several_partners(): void
     {

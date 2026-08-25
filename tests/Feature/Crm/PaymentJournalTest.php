@@ -75,7 +75,7 @@ class PaymentJournalTest extends TestCase
             ->get(route('crm.payments.index'))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('Crm/Pages/Documents/Payments')
+                ->component('Crm/Pages/Finance/Payments')
                 ->has('payments.data', 1)
                 ->where('payments.data.0.number', 'СВОЙ-1'));
     }
@@ -225,6 +225,183 @@ class PaymentJournalTest extends TestCase
     }
 
     /**
+     * Журнал и календарь отдают текущий разрез экрану.
+     *
+     * Без этого пропса переключатель «Только мои» нечем нарисовать, и журнал
+     * молча показывает часть платежей: сервер по умолчанию отдаёт своих
+     * партнёров, а экран об этом не сообщает.
+     */
+    #[Test]
+    public function payment_screens_expose_current_scope_and_department_widens_it(): void
+    {
+        $head = User::factory()->create();
+        $head->assignRole('sales-head');
+        $headCard = PersonalManager::factory()->create(['user_id' => $head->id]);
+        $ownClient = User::factory()->create(['personal_manager_id' => $headCard->id]);
+
+        $this->paymentFor($ownClient, ['number' => 'СВОЙ-1']);
+        $this->paymentFor($this->client, ['number' => 'ЧУЖОЙ-1']);
+
+        // По умолчанию — только свои, хотя право на отдел есть.
+        $this->actingAs($head)
+            ->get(route('crm.payments.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('filters.scope', 'mine')
+                ->where('seesAll', true)
+                ->has('payments.data', 1)
+                ->where('payments.data.0.number', 'СВОЙ-1'));
+
+        $this->actingAs($head)
+            ->get(route('crm.payments.index', ['scope' => 'department']))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('filters.scope', 'department')
+                ->has('payments.data', 2));
+
+        $this->actingAs($head)
+            ->get(route('crm.payments.calendar'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('filters.scope', 'mine'));
+
+        // Рядовому менеджеру расфокус недоступен: параметр гасится молча,
+        // и экран показывает тот разрез, который сервер действительно применил.
+        $this->actingAs($this->manager)
+            ->get(route('crm.payments.index', ['scope' => 'department']))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('filters.scope', 'mine')
+                ->has('payments.data', 1)
+                ->where('payments.data.0.number', 'ЧУЖОЙ-1'));
+    }
+
+    /**
+     * Менеджер партнёра приезжает в строку журнала — подписью под именем.
+     */
+    #[Test]
+    public function payment_row_carries_partner_manager_name(): void
+    {
+        $this->paymentFor($this->client);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.payments.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('payments.data.0.client.manager_name', $this->card->name));
+    }
+
+    /**
+     * Свои фильтры платежей возвращаются в снимке отбора.
+     *
+     * Без этого галочки в «Направлении» и «Разнесении» не рисовались, а любое
+     * следующее применение фильтра теряло их: клиент собирает адрес из filters,
+     * и чего там нет — того после следующего клика нет и в запросе.
+     */
+    #[Test]
+    public function payment_filters_round_trip_through_the_snapshot(): void
+    {
+        $this->paymentFor($this->client, ['number' => 'ВХОД-1', 'direction' => 'in']);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.payments.index', [
+                'directions' => ['in'],
+                'allocation_statuses' => ['advance'],
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('filters.directions', ['in'])
+                ->where('filters.allocation_statuses', ['advance']));
+
+        // Мусор в параметре гасится, а не уезжает обратно на экран.
+        $this->actingAs($this->manager)
+            ->get(route('crm.payments.index', ['directions' => ['сомнительно']]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('filters.directions', []));
+    }
+
+    /**
+     * Итог считается по всему отбору, а не по показанной странице.
+     */
+    #[Test]
+    public function totals_cover_the_whole_selection_and_split_by_direction(): void
+    {
+        foreach ([1000, 2000, 3000] as $amount) {
+            $this->paymentFor($this->client, ['amount' => $amount, 'direction' => 'in']);
+        }
+
+        $this->paymentFor($this->client, ['amount' => 500, 'direction' => 'out']);
+        $this->paymentFor($this->foreignClient(), ['amount' => 9999, 'direction' => 'in']);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.payments.index', ['per_page' => 5]))
+            ->assertOk()
+            ->assertInertia(function (AssertableInertia $page) {
+                $totals = $page->toArray()['props']['totals'];
+
+                // Четыре платежа своих клиентов; чужой в итог не попал.
+                $this->assertSame(4, $totals['count']);
+
+                $byDirection = collect($totals['buckets'])->keyBy('direction');
+
+                $this->assertSame(3, $byDirection['in']['count']);
+                $this->assertStringContainsString('6 000,00', $byDirection['in']['amount_label']);
+                $this->assertSame(1, $byDirection['out']['count']);
+                $this->assertStringContainsString('500,00', $byDirection['out']['amount_label']);
+            });
+
+        // Отбор сужает и итог: страница показывает то же число, что и сумма.
+        $this->actingAs($this->manager)
+            ->get(route('crm.payments.index', ['directions' => ['out']]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('totals.count', 1));
+    }
+
+    /**
+     * Выбранный партнёр сужает справочник контрагентов.
+     */
+    #[Test]
+    public function partner_filter_narrows_the_company_options(): void
+    {
+        $second = User::factory()->create(['personal_manager_id' => $this->card->id]);
+
+        $mine = Company::factory()->create(['name' => 'ЮРЛИЦО ПЕРВОГО']);
+        $other = Company::factory()->create(['name' => 'ЮРЛИЦО ВТОРОГО']);
+
+        $this->paymentFor($this->client, ['company_id' => $mine->id]);
+        $this->paymentFor($second, ['company_id' => $other->id]);
+
+        // Без фильтра по партнёру видно оба юрлица.
+        $this->actingAs($this->manager)
+            ->get(route('crm.payments.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('companies', 2));
+
+        // С выбранным партнёром — только его.
+        $this->actingAs($this->manager)
+            ->get(route('crm.payments.index', ['partner_ids' => [$this->client->id]]))
+            ->assertOk()
+            ->assertInertia(function (AssertableInertia $page) use ($mine) {
+                $names = array_column($page->toArray()['props']['companies'], 'name');
+
+                $this->assertSame([$mine->name], $names);
+            });
+
+        // Уже выбранный контрагент остаётся в списке, даже если выпал из сужения:
+        // иначе снять фильтр, который сам себя спрятал, было бы нечем.
+        $this->actingAs($this->manager)
+            ->get(route('crm.payments.index', [
+                'partner_ids' => [$this->client->id],
+                'company_ids' => [$other->id],
+            ]))
+            ->assertOk()
+            ->assertInertia(function (AssertableInertia $page) use ($other) {
+                $ids = array_column($page->toArray()['props']['companies'], 'id');
+
+                $this->assertContains($other->id, $ids);
+            });
+    }
+
+    /**
      * Строка графика по реализации клиента.
      */
     private function scheduleFor(User $client, string $dueDate, float $amount, float $paid = 0.0): ShipmentPaymentSchedule
@@ -253,7 +430,7 @@ class PaymentJournalTest extends TestCase
             ->get(route('crm.payments.calendar'))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('Crm/Pages/Documents/PaymentCalendar')
+                ->component('Crm/Pages/Finance/PaymentCalendar')
                 ->has('entries', 1)
                 ->where('entries.0.unpaid_amount', 3000)
                 ->where('summary.plan_month', 3000));

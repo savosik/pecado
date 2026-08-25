@@ -523,6 +523,55 @@ class LedgerPaymentForecastService implements PaymentForecast
     }
 
     /**
+     * Оплата набора реализаций по плановым движениям регистра.
+     *
+     * Связь по `document_uuid`, а не по `document_id`: в плановых строках
+     * регистра ссылка на документ сайта не заполняется — 1С знает только свой
+     * UUID, и он же лежит у реализации.
+     *
+     * CASE WHEN вместо LEAST/GREATEST: последних нет в SQLite, на котором тесты.
+     *
+     * @param  EloquentBuilder<\App\Models\Shipment>  $shipments
+     * @return array{buckets: list<array{currency: string, docs: int, paid: float, unpaid: float}>, without_plan: int}
+     */
+    public function shipmentPaymentTotals(EloquentBuilder $shipments): array
+    {
+        $paid = 'CASE WHEN e.settled_amount > e.amount THEN e.amount ELSE e.settled_amount END';
+        $unpaid = 'CASE WHEN e.amount - e.settled_amount > 0 THEN e.amount - e.settled_amount ELSE 0 END';
+
+        $rows = DB::table('shipments as sh')
+            ->join('settlement_entries as e', function ($join): void {
+                $join->on('e.document_uuid', '=', 'sh.uuid')
+                    ->where('e.nature', '=', SettlementEntry::NATURE_PLAN);
+            })
+            ->whereIn('sh.id', (clone $shipments)->toBase()->reorder()->select('shipments.id'))
+            ->groupBy('sh.currency_code')
+            ->orderBy('sh.currency_code')
+            ->selectRaw('sh.currency_code, COUNT(DISTINCT sh.id) as docs, SUM('.$paid.') as paid, SUM('.$unpaid.') as unpaid')
+            ->get();
+
+        // Реализации без плановых строк: их долг в остаток не попал, и промолчать
+        // об этом значит выдать неполную сумму за полную.
+        $withoutPlan = DB::table('shipments as sh')
+            ->whereIn('sh.id', (clone $shipments)->toBase()->reorder()->select('shipments.id'))
+            ->whereNotExists(fn ($sub) => $sub->select(DB::raw(1))
+                ->from('settlement_entries as e')
+                ->where('e.nature', SettlementEntry::NATURE_PLAN)
+                ->whereColumn('e.document_uuid', 'sh.uuid'))
+            ->count();
+
+        return [
+            'buckets' => $rows->map(static fn (object $row): array => [
+                'currency' => (string) ($row->currency_code ?: 'RUB'),
+                'docs' => (int) $row->docs,
+                'paid' => round((float) $row->paid, 2),
+                'unpaid' => round((float) $row->unpaid, 2),
+            ])->all(),
+            'without_plan' => $withoutPlan,
+        ];
+    }
+
+    /**
      * Сумма непогашенного плана по запросу, сведённая в рубли.
      */
     private function sumRub(QueryBuilder $query): float

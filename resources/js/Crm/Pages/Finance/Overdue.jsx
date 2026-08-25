@@ -2,7 +2,6 @@ import { Head } from '@inertiajs/react';
 import { Box, Flex, HStack, SimpleGrid, Text } from '@chakra-ui/react';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
-import FinanceTabs from './components/FinanceTabs';
 import FinanceFilterBar from './components/FinanceFilterBar';
 import FinanceRowsTable from './components/FinanceRowsTable';
 import { formatRub } from './components/format';
@@ -23,15 +22,13 @@ export default function FinanceOverdue({
     seesAll = false,
 }) {
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Финансы', href: '/crm/finance' }, { label: 'Просрочка' }]}>
+        <CrmLayout breadcrumbs={[{ label: 'Финансы' }, { label: 'Просрочка' }]}>
             <Head title="Просроченные платежи — CRM" />
 
             <PageHeader
                 title="Просроченные платежи"
                 description="Деньги, которые должны были прийти, но не пришли"
             />
-
-            <FinanceTabs active="overdue" />
 
             <FinanceFilterBar
                 routeName="crm.finance.overdue"

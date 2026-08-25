@@ -4,7 +4,6 @@ import { LuDownload, LuEye, LuX } from 'react-icons/lu';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { SearchInput } from '@/Admin/Components/SearchInput';
-import { ProductSelector } from '@/Admin/Components/ProductSelector';
 import { Button } from '@/components/ui/button';
 import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
 import AmountFilterInput from '@/Crm/Components/AmountFilterInput';
@@ -14,70 +13,58 @@ import PeriodFilter from '@/Crm/Components/PeriodFilter';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { useDocumentFilters } from '@/Crm/hooks/useDocumentFilters';
 
-/** «1 документ», «2 документа», «5 документов» — иначе итог читается как опечатка. */
-const documentsLabel = (count) => {
+/** «1 платёж», «2 платежа», «5 платежей» — иначе итог читается как опечатка. */
+const paymentsLabel = (count) => {
     const tail = count % 10;
     const teen = count % 100 >= 11 && count % 100 <= 14;
 
-    if (!teen && tail === 1) return `${count} документ`;
-    if (!teen && tail >= 2 && tail <= 4) return `${count} документа`;
+    if (!teen && tail === 1) return `${count} платёж`;
+    if (!teen && tail >= 2 && tail <= 4) return `${count} платежа`;
 
-    return `${count} документов`;
+    return `${count} платежей`;
 };
 
 /** ISO-дата из поля <input type="date"> — в человеческий вид для чипа. */
 const humanDate = (value) => (value ? value.split('-').reverse().join('.') : '');
 
 /**
- * Список документов 1С внутри CRM — заказы или реализации.
+ * Журнал платежей — раздел «Финансы».
  *
- * Один компонент на оба списка: колонки и фильтры у них совпадают, различаются
- * заголовок, набор статусов и маршрут. Две копии разошлись бы на первой же
- * правке фильтров.
+ * Отдельный компонент, а не параметризованный DocumentList: у платежа нет ни
+ * позиций, ни статусов 1С, а фильтр по товару бессмыслен — зато есть направление
+ * денег и состояние разнесения, которых нет у документов.
  *
- * Видимость обеспечивает сервер (скоуп партнёров актора), фронт ничего не прячет:
- * фильтрация на партнёре означала бы, что чужой документ приезжает в браузер
- * и просто не рисуется.
+ * Здесь только факт — проведённые платежи. План по дням живёт своим пунктом
+ * меню («Календарь поступлений»), и переключателя между ними на странице нет:
+ * навигация по разделу — одно меню слева.
  *
- * Панель отбора устроена так же, как в журнале платежей: поиск и режим сверху,
- * справочники ровной сеткой, диапазоны снизу, активные фильтры чипами. Три
- * журнала одного раздела, отличающиеся раскладкой фильтров, читаются как три
- * разных продукта.
- *
- * @param {string} routeName — 'crm.orders' | 'crm.shipments'
- * @param {object} pagination — Laravel-пагинатор с трансформированными строками
+ * Читаем только: реквизиты и расшифровку ведёт 1С.
  */
-export default function DocumentList({
-    routeName,
-    title,
-    description,
-    pagination,
+export default function PaymentList({
+    payments,
     filters,
     totals = null,
-    schedule = null,
-    statuses = [],
+    directions = [],
+    allocationStatuses = [],
     organizations = [],
     organizationsEnabled = false,
-    warehouses = [],
     partners = [],
     companies = [],
     managers = [],
     seesAll = false,
-    selectedProducts = [],
 }) {
-    const { searchQuery, handleSearch, handleSort } = useResourceIndex(routeName, filters, {
-        entityLabel: 'Документ',
+    const { searchQuery, handleSearch, handleSort } = useResourceIndex('crm.payments', filters, {
+        entityLabel: 'Платёж',
     });
 
-    const { apply, exportXlsx, reset, selected } = useDocumentFilters(routeName, filters);
+    const { apply, exportXlsx, reset, selected } = useDocumentFilters('crm.payments', filters);
 
-    // 'none' — псевдо-значение «поле пустое»: документов без организации,
-    // склада или контрагента в базе хватает, и отобрать их бывает нужно.
+    // 'none' — псевдо-значение «поле пустое»: платежи без контрагента приезжают
+    // из 1С раньше самого контрагента, и отобрать их бывает нужно.
     const withNone = (options, label) => [{ id: 'none', name: label }, ...options];
 
     const companyOptions = withNone(companies, 'Без контрагента');
     const organizationOptions = withNone(organizations, 'Без организации');
-    const warehouseOptions = withNone(warehouses, 'Без склада');
 
     /**
      * Чипы одного мультивыбора: подпись значения ищется в его же справочнике,
@@ -91,24 +78,16 @@ export default function DocumentList({
     }));
 
     const chips = [
-        ...chipsFor('statuses', statuses, 'Статус', 'value', 'label'),
+        ...chipsFor('directions', directions, 'Направление', 'value', 'label'),
+        ...chipsFor('allocation_statuses', allocationStatuses, 'Разнесение', 'value', 'label'),
         ...chipsFor('partner_ids', partners, 'Партнёр'),
         ...chipsFor('company_ids', companyOptions, 'Контрагент'),
         ...(seesAll ? chipsFor('manager_ids', managers, 'Менеджер') : []),
         ...(organizationsEnabled ? chipsFor('organization_ids', organizationOptions, 'Организация') : []),
-        ...chipsFor('warehouse_ids', warehouseOptions, 'Склад'),
-        // Товары приезжают отдельным пропсом с названиями: в отборе только id.
-        ...selectedProducts.map((product) => ({
-            key: `product:${product.id}`,
-            label: 'Товар',
-            value: product.name,
-            onRemove: () => apply({
-                product_ids: selectedProducts.filter((item) => item.id !== product.id).map((item) => item.id),
-            }),
-        })),
     ];
 
-    // Период и сумма — диапазоны, поэтому одним чипом на пару полей.
+    // Период и сумма — диапазоны, поэтому одним чипом на пару полей: два чипа
+    // «от» и «до» пришлось бы читать вместе, а снимать по отдельности.
     if (filters.date_from || filters.date_to) {
         chips.push({
             key: 'period',
@@ -132,8 +111,8 @@ export default function DocumentList({
             key: 'search',
             label: 'Поиск',
             value: filters.search,
-            // Через handleSearch, а не apply: строку хранит локальное состояние
-            // поля, и без него текст остался бы в инпуте после снятия чипа.
+            // Через handleSearch, а не apply: строку поиска хранит локальное
+            // состояние поля, и без него текст остался бы в инпуте после снятия чипа.
             onRemove: () => handleSearch(''),
         });
     }
@@ -142,16 +121,14 @@ export default function DocumentList({
 
     const columns = [
         {
-            key: 'erp_number',
-            label: 'Документ',
+            key: 'number',
+            label: 'Платёж',
             sortable: true,
             render: (_, row) => (
                 <VStack align="start" gap={0}>
-                    <Text fontSize="sm" fontWeight="600">
-                        {row.erp_number || row.number || `#${row.id}`}
-                    </Text>
-                    {row.erp_number && row.number && (
-                        <Text fontSize="10px" color="fg.muted">сайт: {row.number}</Text>
+                    <Text fontSize="sm" fontWeight="600">{row.number || `#${row.id}`}</Text>
+                    {row.bank_number && (
+                        <Text fontSize="10px" color="fg.muted">по банку: {row.bank_number}</Text>
                     )}
                 </VStack>
             ),
@@ -170,8 +147,9 @@ export default function DocumentList({
                         >
                             {row.client.name}
                         </Box>
-                        {/* Менеджер подписью, а не колонкой: вопрос «чей это
-                            клиент» возникает в момент чтения имени партнёра. */}
+                        {/* Менеджер подписью, а не колонкой: своя колонка на восемь
+                            существующих не влезает, а вопрос «чей это клиент»
+                            возникает ровно в момент чтения имени партнёра. */}
                         <Text fontSize="10px" color="fg.muted">
                             {row.client.manager_name || 'без менеджера'}
                         </Text>
@@ -180,17 +158,26 @@ export default function DocumentList({
                 : <Text fontSize="sm" color="fg.muted">—</Text>),
         },
         {
-            key: 'erp_created_at',
+            key: 'company',
+            label: 'Контрагент',
+            render: (_, row) => (
+                <Text fontSize="sm" color={row.company ? undefined : 'fg.muted'}>
+                    {row.company || 'не заведён'}
+                </Text>
+            ),
+        },
+        {
+            key: 'date',
             label: 'Дата',
             sortable: true,
             render: (_, row) => <Text fontSize="sm" whiteSpace="nowrap">{row.date_label || '—'}</Text>,
         },
         {
-            key: 'status',
-            label: 'Статус',
+            key: 'direction',
+            label: 'Направление',
             render: (_, row) => (
-                <Badge colorPalette={row.status_color || 'gray'} variant="subtle">
-                    {row.status_label}
+                <Badge colorPalette={row.direction_color} variant="subtle">
+                    {row.direction_label}
                 </Badge>
             ),
         },
@@ -207,21 +194,30 @@ export default function DocumentList({
                 : <Text fontSize="sm" color="fg.muted">—</Text>),
         }] : []),
         {
-            key: 'warehouse',
-            label: 'Склад',
-            render: (_, row) => <Text fontSize="sm">{row.warehouse || '—'}</Text>,
-        },
-        {
-            key: 'items_count',
-            label: 'Позиций',
-            render: (_, row) => <Text fontSize="sm" color="fg.muted">{row.items_count || '—'}</Text>,
-        },
-        {
-            key: 'total_amount',
+            key: 'amount',
             label: 'Сумма',
             sortable: true,
             render: (_, row) => (
                 <Text fontSize="sm" fontWeight="600" whiteSpace="nowrap">{row.total_label}</Text>
+            ),
+        },
+        {
+            key: 'unallocated_amount',
+            label: 'Разнесение',
+            sortable: true,
+            render: (_, row) => (
+                <VStack align="start" gap={0}>
+                    <Badge
+                        colorPalette={{ allocated: 'green', partial: 'orange', advance: 'blue' }[row.allocation_status] || 'gray'}
+                        variant="subtle"
+                    >
+                        {row.allocation_status_label}
+                    </Badge>
+                    {row.has_advance && (
+                        <Text fontSize="10px" color="fg.muted">аванс: {row.unallocated_label}</Text>
+                    )}
+                    <Text fontSize="10px" color="fg.muted">реализаций: {row.allocations_count}</Text>
+                </VStack>
             ),
         },
         {
@@ -232,7 +228,7 @@ export default function DocumentList({
                     size="xs"
                     variant="ghost"
                     onClick={() => router.visit(row.url)}
-                    aria-label="Открыть документ"
+                    aria-label="Открыть платёж"
                 >
                     <LuEye />
                 </Button>
@@ -242,11 +238,16 @@ export default function DocumentList({
 
     return (
         <>
-            <Head title={`CRM — ${title}`} />
-            <PageHeader title={title} description={description} />
+            <Head title="CRM — Платежи" />
+            <PageHeader
+                title="Платежи"
+                description="Поступления и возвраты из 1С с расшифровкой по реализациям"
+            />
 
-            {/* Панель отбора той же формы, что в журнале платежей: поиск,
-                режим и выгрузка сверху; справочники сеткой; диапазоны снизу. */}
+            {/* Панель отбора одним блоком: поиск и режим сверху, справочники
+                сеткой, диапазоны снизу. Раньше всё шло в три ряда вперемешку,
+                и галочка «Только мои» оказывалась зажата между выпадающими
+                списками — без подписи, но на их высоте. */}
             <Box borderWidth="1px" borderRadius="lg" p={4} mb={3} bg="bg.panel">
                 <VStack align="stretch" gap={3}>
                     <HStack gap={3} align="center" wrap="wrap">
@@ -254,11 +255,11 @@ export default function DocumentList({
                             <SearchInput
                                 value={searchQuery}
                                 onChange={handleSearch}
-                                placeholder="Номер, партнёр или товар…"
+                                placeholder="Номер, номер по банку, УИП или партнёр…"
                             />
                         </Box>
 
-                        <ScopeToggle section="documents" scope={filters.scope} available={seesAll} />
+                        <ScopeToggle section="finance" scope={filters.scope} available={seesAll} />
 
                         <Button size="sm" variant="outline" onClick={exportXlsx}>
                             <LuDownload /> XLSX
@@ -274,13 +275,24 @@ export default function DocumentList({
                         }}
                     >
                         <MultiSelectFilter
-                            label="Статус"
-                            options={statuses}
+                            label="Направление"
+                            options={directions}
                             idKey="value"
                             labelKey="label"
-                            allLabel="Все статусы"
-                            selectedIds={selected('statuses')}
-                            onChange={(values) => apply({ statuses: values })}
+                            allLabel="Все направления"
+                            selectedIds={selected('directions')}
+                            onChange={(values) => apply({ directions: values })}
+                            minW="0"
+                        />
+
+                        <MultiSelectFilter
+                            label="Разнесение"
+                            options={allocationStatuses}
+                            idKey="value"
+                            labelKey="label"
+                            allLabel="Любое"
+                            selectedIds={selected('allocation_statuses')}
+                            onChange={(values) => apply({ allocation_statuses: values })}
                             minW="0"
                         />
 
@@ -294,7 +306,8 @@ export default function DocumentList({
                         />
 
                         {/* Справочник контрагентов сервер сужает до юрлиц выбранных
-                            партнёров — подпись объясняет, почему список короче. */}
+                            партнёров — подпись объясняет, почему список короче,
+                            чем был минуту назад. */}
                         <MultiSelectFilter
                             label={selected('partner_ids').length > 0 ? 'Контрагент (выбранных партнёров)' : 'Контрагент'}
                             options={companyOptions}
@@ -325,32 +338,7 @@ export default function DocumentList({
                                 minW="0"
                             />
                         )}
-
-                        <MultiSelectFilter
-                            label="Склад"
-                            options={warehouseOptions}
-                            allLabel="Все склады"
-                            selectedIds={selected('warehouse_ids')}
-                            onChange={(values) => apply({ warehouse_ids: values })}
-                            minW="0"
-                        />
                     </Grid>
-
-                    {/* Товар — отдельной строкой: подсказки грузятся с сервера,
-                        и контролу нужна вся ширина, а не треть сетки. */}
-                    <VStack align="stretch" gap={1}>
-                        <Text fontSize="xs" color="fg.muted" fontWeight="500">
-                            Товар в документе
-                            {selectedProducts.length > 0 ? ` — выбрано ${selectedProducts.length}` : ''}
-                        </Text>
-                        <ProductSelector
-                            mode="multi"
-                            value={selectedProducts}
-                            onChange={(items) => apply({ product_ids: items.map((item) => item.id) })}
-                            searchRoute="crm.documents.products.search"
-                            compactSelected
-                        />
-                    </VStack>
 
                     <Flex gap={4} wrap="wrap" align="center">
                         <PeriodFilter
@@ -385,58 +373,35 @@ export default function DocumentList({
 
             <FilterChips items={chips} onReset={reset} />
 
-            {/* Итог по всему отбору, а не по странице: «на сколько отгрузили
-                за август» — вопрос, ради которого фильтр и открывают. */}
+            {/* Итог по всему отбору, а не по странице: «сколько пришло за август»
+                — вопрос, ради которого фильтр и открывают. Поступления и возвраты
+                раздельно, валюты не складываются: курса на дату платежа сайт не знает. */}
             {totals && totals.count > 0 && (
                 <HStack gap={4} wrap="wrap" mb={3} px={1}>
-                    <Text fontSize="sm" color="fg.muted">Найдено: {documentsLabel(totals.count)}</Text>
+                    <Text fontSize="sm" color="fg.muted">Найдено: {paymentsLabel(totals.count)}</Text>
 
                     {totals.buckets.map((bucket) => (
-                        <HStack key={bucket.currency} gap={2}>
-                            <Text fontSize="xs" color="fg.muted">Сумма:</Text>
+                        <HStack key={`${bucket.currency}:${bucket.direction}`} gap={2}>
+                            <Text fontSize="xs" color="fg.muted">{bucket.direction_label}:</Text>
                             <Text fontSize="sm" fontWeight="600">{bucket.amount_label}</Text>
+                            <Text fontSize="10px" color="fg.muted">({bucket.count})</Text>
                         </HStack>
                     ))}
-
-                    {/* Оплата приходит из счётного ядра раздела «Финансы» — того же,
-                        на котором стоят пульт и просрочка. Свой расчёт по документам
-                        давал 44 млн «долга» против 11,5 млн реальных. */}
-                    {(schedule?.buckets ?? []).map((bucket) => (
-                        <HStack key={`schedule:${bucket.currency}`} gap={3}>
-                            <HStack gap={2}>
-                                <Text fontSize="xs" color="fg.muted">Оплачено:</Text>
-                                <Text fontSize="sm" fontWeight="600" color="green.fg">{bucket.paid_label}</Text>
-                            </HStack>
-                            <HStack gap={2}>
-                                <Text fontSize="xs" color="fg.muted">Не оплачено:</Text>
-                                <Text fontSize="sm" fontWeight="600" color="orange.fg">{bucket.unpaid_label}</Text>
-                            </HStack>
-                        </HStack>
-                    ))}
-
-                    {schedule && (
-                        <Text fontSize="xs" color="fg.muted">
-                            оплата — по данным взаиморасчётов 1С
-                            {schedule.without_plan > 0
-                                ? `; без плана оплаты: ${schedule.without_plan} док.`
-                                : ''}
-                        </Text>
-                    )}
                 </HStack>
             )}
 
             <DataTable
-                data={pagination.data}
+                data={payments.data}
                 columns={columns}
-                pagination={pagination}
+                pagination={payments}
                 sortColumn={filters.sort_by}
                 sortDirection={filters.sort_order}
                 onSort={handleSort}
                 perPage={filters.per_page}
                 onPerPageChange={(perPage) => apply({ per_page: perPage })}
                 emptyMessage={hasFilters
-                    ? 'Под текущий отбор документов нет — снимите часть фильтров выше'
-                    : 'Документы не найдены'}
+                    ? 'Под текущий отбор платежей нет — снимите часть фильтров выше'
+                    : 'Платежи не найдены'}
             />
         </>
     );

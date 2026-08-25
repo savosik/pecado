@@ -101,20 +101,14 @@ class FinanceController extends CrmController
      */
     public function reconciliation(Request $request, ReconciliationService $service): InertiaResponse
     {
-        $clientId = $request->integer('client_id') ?: null;
         $period = $service->defaultPeriod();
         $from = (string) $request->string('date_from', $period['from']);
         $to = (string) $request->string('date_to', $period['to']);
+        $companyId = $request->integer('company_id') ?: null;
+        $organizationId = $request->integer('organization_id') ?: null;
 
-        $client = $clientId !== null
-            // visibleInCrm, а не findOrFail: чужой клиент обязан давать 404,
-            // а не показывать акт по деньгам другого менеджера.
-            ? User::query()->visibleInCrm($this->crmActor($request))->find($clientId)
-            : null;
-
-        if ($clientId !== null && $client === null) {
-            abort(404);
-        }
+        [$client, $companyId, $notice] = $this->resolveReconciliationParties($request, $service, $companyId);
+        $clients = $this->visibleClientsForReconciliation($request);
 
         return Inertia::render('Crm/Pages/Finance/Reconciliation', [
             'client' => $client !== null ? [
@@ -124,34 +118,99 @@ class FinanceController extends CrmController
             ] : null,
             'act' => $client !== null ? $service->act(
                 client: $client,
-                organizationId: $request->integer('organization_id') ?: null,
+                organizationId: $organizationId,
                 from: $from,
                 to: $to,
-                agreementId: $request->integer('agreement_id') ?: null,
-                withoutAgreement: $request->boolean('without_agreement'),
                 currency: (string) $request->string('currency', 'RUB'),
-                companyId: $request->integer('company_id') ?: null,
+                companyId: $companyId,
             ) : null,
             'options' => [
                 // Список партнёров нужен всегда: без него не с чего начать.
                 // Уже ограничен скоупом менеджера, поэтому чужих в нём нет.
                 'clients' => $this->clientOptions($request),
-                'companies' => $client !== null ? $service->companiesOf($client) : [],
-                'organizations' => $client !== null ? $service->organizationsOf($client) : [],
-                'agreements' => $client !== null ? $service->agreementsOf($client) : [],
+                // Контрагенты и организации доступны до выбора партнёра: акт
+                // часто начинают с юрлица («пришлите сверку по ООО „Ромашка“»).
+                // Выбранный партнёр сужает оба справочника до своих.
+                'companies' => $client !== null
+                    ? $service->companiesOf($client)
+                    : $service->companiesInScope($clients),
+                'organizations' => $client !== null
+                    ? $service->organizationsOf($client)
+                    : $service->organizationsInScope($clients),
                 'currencies' => $client !== null ? $service->currenciesOf($client) : ['RUB'],
             ],
+            // Снятый фильтр объясняется словами: молча проигнорированный выбор
+            // выглядит как поломка экрана.
+            'notice' => $notice,
             'form' => [
-                'client_id' => $clientId,
-                'company_id' => $request->integer('company_id') ?: null,
-                'organization_id' => $request->integer('organization_id') ?: null,
-                'agreement_id' => $request->integer('agreement_id') ?: null,
-                'without_agreement' => $request->boolean('without_agreement'),
+                // client_id возвращается уже разрешённым: выбрали контрагента —
+                // партнёр подставился сам, и экран показывает его выбранным.
+                'client_id' => $client?->getKey(),
+                'company_id' => $companyId,
+                'organization_id' => $organizationId,
                 'currency' => (string) $request->string('currency', 'RUB'),
                 'date_from' => $from,
                 'date_to' => $to,
             ],
         ]);
+    }
+
+    /**
+     * Партнёр и контрагент акта: что выбрал менеджер и что из этого следует.
+     *
+     * Выбор контрагента доводится до партнёра, потому что акт строится по нему.
+     * Если контрагент не принадлежит выбранному партнёру, побеждает партнёр,
+     * а контрагент гасится: показать акт «партнёр А, юрлицо партнёра Б» нельзя,
+     * а падать 404 на несочетаемый отбор — значит наказывать за любопытство.
+     *
+     * @return array{0: ?User, 1: ?int, 2: ?string}
+     */
+    private function resolveReconciliationParties(
+        Request $request,
+        ReconciliationService $service,
+        ?int $companyId,
+    ): array {
+        $clientId = $request->integer('client_id') ?: null;
+        $clients = $this->visibleClientsForReconciliation($request);
+
+        // visibleInCrm, а не findOrFail: чужой клиент обязан давать 404,
+        // а не показывать акт по деньгам другого менеджера.
+        $client = $clientId !== null
+            ? User::query()->visibleInCrm($this->crmActor($request))->find($clientId)
+            : null;
+
+        if ($clientId !== null && $client === null) {
+            abort(404);
+        }
+
+        if ($companyId === null) {
+            return [$client, null, null];
+        }
+
+        $ownerOfCompany = $service->clientOfCompany($clients, $companyId);
+
+        if ($client === null) {
+            // Контрагент без партнёра: партнёр выводится из движений юрлица.
+            // Не вывелся (юрлицо у нескольких партнёров или чужое) — контрагент
+            // гасится, и экран остаётся формой, а не отдаёт чужие деньги.
+            return $ownerOfCompany !== null
+                ? [$ownerOfCompany, $companyId, null]
+                : [null, null, 'Этот контрагент встречается у нескольких партнёров или недоступен вам — выберите партнёра.'];
+        }
+
+        return $ownerOfCompany !== null && $ownerOfCompany->getKey() === $client->getKey()
+            ? [$client, $companyId, null]
+            : [$client, null, 'Выбранный контрагент относится к другому партнёру — фильтр по нему снят.'];
+    }
+
+    /**
+     * Партнёры, доступные актору, — набором для справочников акта.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<User>
+     */
+    private function visibleClientsForReconciliation(Request $request): \Illuminate\Database\Eloquent\Builder
+    {
+        return User::query()->visibleInCrm($this->crmActor($request))->select('users.id');
     }
 
     /**
@@ -168,28 +227,54 @@ class FinanceController extends CrmController
         ReconciliationService $service,
         SimpleXlsxExporter $exporter,
     ): StreamedResponse {
-        $client = User::query()
-            ->visibleInCrm($this->crmActor($request))
-            ->findOrFail($request->integer('client_id'));
+        $organizationId = $request->integer('organization_id') ?: null;
+
+        // Тот же разбор сторон, что и на экране: выгрузка обязана повторять
+        // видимое, включая партнёра, выведенного из выбранного контрагента.
+        [$client, $companyId] = $this->resolveReconciliationParties(
+            $request,
+            $service,
+            $request->integer('company_id') ?: null,
+        );
+
+        abort_if($client === null, 404);
 
         $period = $service->defaultPeriod();
         $act = $service->act(
             client: $client,
-            organizationId: $request->integer('organization_id') ?: null,
+            organizationId: $organizationId,
             from: (string) $request->string('date_from', $period['from']),
             to: (string) $request->string('date_to', $period['to']),
-            agreementId: $request->integer('agreement_id') ?: null,
-            withoutAgreement: $request->boolean('without_agreement'),
             currency: (string) $request->string('currency', 'RUB'),
-            companyId: $request->integer('company_id') ?: null,
+            companyId: $companyId,
         );
+
+        // Колонки сторон — только когда сторона не задана фильтром: в акте
+        // по одному юрлицу колонка с его повторяющимся именем лишь занимает
+        // ширину, а в акте по всем — единственный способ понять, чьи это строки.
+        $withCompany = $companyId === null;
+        $withOrganization = $organizationId === null;
+
+        $headers = array_values(array_filter([
+            'Дата',
+            'Документ',
+            'Операция',
+            $withCompany ? 'Контрагент' : null,
+            // В файле, который уходит клиенту, «наша организация» звучит с чужой
+            // стороны стола: для получателя мы — поставщик. На экране заголовок
+            // остаётся прежним, там читатель свой.
+            $withOrganization ? 'Поставщик' : null,
+            'Дебет',
+            'Кредит',
+            'Сальдо',
+        ]));
 
         return $exporter->streamSheets(
             'akt-sverki-'.$client->getKey().'-'.$act['period']['from'].'-'.$act['period']['to'],
             [[
                 'title' => 'Акт сверки',
-                'headers' => ['Дата', 'Документ', 'Операция', 'Дебет', 'Кредит', 'Сальдо'],
-                'rows' => $this->reconciliationSheet($client, $act),
+                'headers' => $headers,
+                'rows' => $this->reconciliationSheet($client, $act, $withCompany, $withOrganization),
             ]],
         );
     }
@@ -204,49 +289,74 @@ class FinanceController extends CrmController
      * @param  array<string, mixed>  $act
      * @return list<array<int, scalar|null>>
      */
-    private function reconciliationSheet(User $client, array $act): array
-    {
+    private function reconciliationSheet(
+        User $client,
+        array $act,
+        bool $withCompany = true,
+        bool $withOrganization = true,
+    ): array {
+        // Ширина листа плавает вместе с набором колонок сторон, поэтому строки
+        // шапки и итогов собираются добивкой до неё, а не руками по месту.
+        $width = 6 + (int) $withCompany + (int) $withOrganization;
+        $line = static fn (array $cells): array => array_pad($cells, $width, null);
+        $last = static function (array $head, mixed $tail) use ($width): array {
+            $row = array_pad($head, $width - 1, null);
+            $row[] = $tail;
+
+            return $row;
+        };
+
         $rows = [
-            ['Клиент', $client->erp_name ?: $client->name, null, null, null, null],
-            ['Период', $act['period']['from'].' — '.$act['period']['to'], null, null, null, null],
-            ['Валюта', $act['currency'], null, null, null, null],
-            ['Сальдо на начало', null, null, null, null, $act['opening_balance']],
-            [null, null, null, null, null, null],
+            $line(['Клиент', $client->erp_name ?: $client->name]),
+            $line(['Период', $act['period']['from'].' — '.$act['period']['to']]),
+            $line(['Валюта', $act['currency']]),
+            $last(['Сальдо на начало'], $act['opening_balance']),
+            $line([]),
         ];
 
         if ($act['discrepancy'] !== null) {
             // Предупреждение в самом файле, а не только на экране: выгрузку
             // отправляют клиенту, и расхождение обязано ехать вместе с ней.
-            $rows[] = [
+            $rows[] = $line([
                 'ВНИМАНИЕ',
                 'Сумма движений не сходится с балансом 1С на '.$act['discrepancy']['delta']
                     .' — акт неполный, отправлять клиенту нельзя',
-                null, null, null, null,
-            ];
-            $rows[] = [null, null, null, null, null, null];
+            ]);
+            $rows[] = $line([]);
         }
 
         foreach ($act['rows'] as $row) {
-            $rows[] = [
-                $row['date_label'],
-                $row['document'],
-                $row['type_label'],
-                $row['debit'] ?: null,
-                $row['credit'] ?: null,
-                $row['balance'],
-            ];
+            $cells = [$row['date_label'], $row['document'], $row['type_label']];
+
+            if ($withCompany) {
+                $cells[] = $row['company_name'] ?? '—';
+            }
+
+            if ($withOrganization) {
+                $cells[] = $row['organization_name'] ?? '—';
+            }
+
+            $cells[] = $row['debit'] ?: null;
+            $cells[] = $row['credit'] ?: null;
+            $cells[] = $row['balance'];
+
+            $rows[] = $cells;
         }
 
-        $rows[] = [null, null, null, null, null, null];
-        $rows[] = ['Обороты за период', null, null, $act['turnover_debit'], $act['turnover_credit'], null];
-        $rows[] = ['Сальдо на конец', null, null, null, null, $act['closing_balance']];
+        $turnover = array_pad(['Обороты за период'], $width - 3, null);
+        $turnover[] = $act['turnover_debit'];
+        $turnover[] = $act['turnover_credit'];
+        $turnover[] = null;
+
+        $rows[] = $line([]);
+        $rows[] = $turnover;
+        $rows[] = $last(['Сальдо на конец'], $act['closing_balance']);
 
         if ($act['truncated']) {
-            $rows[] = [
+            $rows[] = $line([
                 'ВНИМАНИЕ',
                 'Показаны первые '.$act['rows_count'].' движений — сальдо на конец неполное. Сузьте период',
-                null, null, null, null,
-            ];
+            ]);
         }
 
         return $rows;

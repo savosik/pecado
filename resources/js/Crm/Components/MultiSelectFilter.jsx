@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Box, HStack, Input, Popover, Portal, Text, VStack } from '@chakra-ui/react';
-import { LuChevronDown, LuSearch } from 'react-icons/lu';
+import { LuChevronDown, LuSearch, LuX } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
  * @param {Array} options — справочник [{ id, name }]
  * @param {Array} selectedIds — выбранные значения (числа или строки)
  * @param {Function} onChange — новый массив значений
+ * @param {boolean|'auto'} searchable — строка поиска; 'auto' скрывает её на коротких списках
  */
 export default function MultiSelectFilter({
     label,
@@ -28,9 +29,14 @@ export default function MultiSelectFilter({
     allLabel = 'Все',
     minW = '200px',
     disabled = false,
+    searchable = 'auto',
 }) {
     const [query, setQuery] = useState('');
     const selectedSet = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
+
+    // Поиск по списку из двух строк («Поступление» / «Возврат») — лишний
+    // элемент управления и лишний повод промахнуться мимо нужной строки.
+    const withSearch = searchable === 'auto' ? options.length > 8 : Boolean(searchable);
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -77,19 +83,30 @@ export default function MultiSelectFilter({
                                     <Text fontSize="sm" color="fg.muted" p={2}>Нет вариантов</Text>
                                 ) : (
                                     <VStack align="stretch" gap={2}>
-                                        <HStack gap={2} px={1}>
-                                            <LuSearch size={14} />
-                                            <Input
-                                                size="xs"
-                                                variant="flushed"
-                                                placeholder="Поиск…"
-                                                value={query}
-                                                onChange={(e) => setQuery(e.target.value)}
-                                            />
-                                        </HStack>
+                                        {withSearch && (
+                                            <HStack gap={2} px={1}>
+                                                <LuSearch size={14} />
+                                                <Input
+                                                    size="xs"
+                                                    variant="flushed"
+                                                    placeholder="Поиск…"
+                                                    value={query}
+                                                    onChange={(e) => setQuery(e.target.value)}
+                                                />
+                                            </HStack>
+                                        )}
+                                        {/* Outline, а не ghost: призрачная кнопка на белом
+                                            фоне поповера читается как обычная строка списка,
+                                            и её просто не находят взглядом. */}
                                         {selectedIds.length > 0 && (
-                                            <Button size="xs" variant="ghost" onClick={() => onChange([])} justifyContent="flex-start">
-                                                Сбросить выбор
+                                            <Button
+                                                size="xs"
+                                                variant="outline"
+                                                colorPalette="red"
+                                                onClick={() => onChange([])}
+                                                justifyContent="center"
+                                            >
+                                                <LuX /> Сбросить выбор ({selectedIds.length})
                                             </Button>
                                         )}
                                         <Box maxH="300px" overflowY="auto">

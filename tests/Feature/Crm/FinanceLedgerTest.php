@@ -13,6 +13,7 @@ use App\Services\Crm\Finance\PaymentForecast;
 use App\Services\Crm\Finance\PaymentForecastService;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -476,5 +477,47 @@ class FinanceLedgerTest extends TestCase
                 );
             }
         }
+    }
+
+    /**
+     * Итог журнала «Реализации» считается тем же ядром, что пульт и просрочка.
+     *
+     * Иначе журнал показывал бы своё число: свой расчёт по документам уже дважды
+     * дал ложь — сначала по `shipments.paid_amount` (44,4 млн «долга» против
+     * 11,5 млн реальных), потом по `shipment_payment_schedules`, которая
+     * с v16.0.0 не пополняется вовсе.
+     */
+    #[Test]
+    public function итог_оплаты_реализаций_берётся_из_регистра(): void
+    {
+        // Документ на 120 000: плановые строки на 100 000, закрыто 70 000.
+        $this->plan(60000, 60000, CarbonImmutable::today()->subDays(5)->toDateString());
+        $this->plan(40000, 10000, CarbonImmutable::today()->addDays(5)->toDateString());
+
+        // Переплаченная строка не должна раздувать «оплачено» выше своей суммы.
+        $this->plan(1000, 4000, CarbonImmutable::today()->toDateString());
+
+        // Реализация без плановых строк: в остаток не попадает, о ней сообщают числом.
+        Shipment::factory()->create([
+            'user_id' => $this->client->id,
+            'uuid' => (string) Str::uuid(),
+            'total_amount' => 9000,
+            'currency_code' => 'RUB',
+        ]);
+
+        $totals = $this->forecast()->shipmentPaymentTotals(
+            Shipment::query()->where('user_id', $this->client->id),
+        );
+
+        $this->assertSame(1, $totals['without_plan']);
+        $this->assertCount(1, $totals['buckets']);
+
+        $bucket = $totals['buckets'][0];
+
+        // 60 000 + 10 000 + 1 000 (а не 4 000).
+        $this->assertEqualsWithDelta(71000.0, $bucket['paid'], 0.01);
+        // Не закрыто только по второй строке: 40 000 − 10 000.
+        $this->assertEqualsWithDelta(30000.0, $bucket['unpaid'], 0.01);
+        $this->assertSame(1, $bucket['docs']);
     }
 }

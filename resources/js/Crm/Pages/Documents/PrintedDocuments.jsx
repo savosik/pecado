@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { Badge, Box, Flex, HStack, Input, Text, VStack } from '@chakra-ui/react';
-import { LuDownload, LuFileDown } from 'react-icons/lu';
+import { LuDownload, LuFileDown, LuX } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
@@ -288,8 +288,12 @@ export default function PrintedDocuments({
                         />
                     </HStack>
 
+                    {/* Outline с крестиком: ghost-кнопка сброса рядом с полями
+                        ввода выглядит подписью и её не замечают. */}
                     {hasFilters && (
-                        <Button size="xs" variant="ghost" onClick={reset}>Сбросить</Button>
+                        <Button size="xs" variant="outline" colorPalette="red" onClick={reset}>
+                            <LuX /> Сбросить
+                        </Button>
                     )}
 
                     <Button size="xs" variant="outline" onClick={exportXlsx} ml="auto">

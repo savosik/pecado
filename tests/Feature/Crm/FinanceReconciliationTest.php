@@ -369,6 +369,149 @@ class FinanceReconciliationTest extends TestCase
     }
 
     /**
+     * Контрагента выбирают без партнёра: партнёр выводится из его движений.
+     */
+    #[Test]
+    public function контрагент_выбирается_без_партнёра(): void
+    {
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -10000, 'date' => '2026-02-10']);
+
+        $props = $this->open([
+            'company_id' => $this->company->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ]);
+
+        $this->assertSame($this->client->id, $props['client']['id']);
+        $this->assertSame($this->client->id, $props['form']['client_id']);
+        $this->assertCount(1, $props['act']['rows']);
+    }
+
+    /**
+     * Справочники доступны до выбора партнёра — иначе контрагента не выбрать
+     * первым: раньше список был пуст, пока не сформируешь акт.
+     */
+    #[Test]
+    public function справочники_наполнены_без_выбранного_партнёра(): void
+    {
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -10000, 'date' => '2026-02-10']);
+
+        $props = $this->open();
+
+        $this->assertNull($props['client']);
+        $this->assertCount(1, $props['options']['companies']);
+        $this->assertCount(1, $props['options']['organizations']);
+    }
+
+    /**
+     * Чужой контрагент не доводит до чужого акта: партнёр не выводится,
+     * и экран остаётся формой.
+     */
+    #[Test]
+    public function контрагент_вне_скоупа_акта_не_даёт(): void
+    {
+        $foreign = User::factory()->create([
+            'personal_manager_id' => PersonalManager::create(['name' => 'Чужой'])->id,
+        ]);
+        $foreignCompany = Company::factory()->create(['user_id' => $foreign->id]);
+
+        SettlementEntry::factory()->create([
+            'user_id' => $foreign->id,
+            'company_id' => $foreignCompany->id,
+            'organization_id' => $this->organization->id,
+            'currency_code' => 'RUB',
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -50000,
+            'date' => '2026-02-10',
+        ]);
+
+        $props = $this->open(['company_id' => $foreignCompany->id]);
+
+        $this->assertNull($props['client']);
+        $this->assertNull($props['act']);
+        $this->assertNull($props['form']['company_id']);
+    }
+
+    /**
+     * Контрагент чужого партнёра при явно выбранном своём гасится, а не смешивается.
+     */
+    #[Test]
+    public function несочетаемый_контрагент_гасится_а_партнёр_остаётся(): void
+    {
+        $second = User::factory()->create([
+            'personal_manager_id' => $this->client->personal_manager_id,
+        ]);
+        $secondCompany = Company::factory()->create(['user_id' => $second->id]);
+
+        SettlementEntry::factory()->create([
+            'user_id' => $second->id,
+            'company_id' => $secondCompany->id,
+            'organization_id' => $this->organization->id,
+            'currency_code' => 'RUB',
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -30000,
+            'date' => '2026-02-10',
+        ]);
+
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -10000, 'date' => '2026-02-10']);
+
+        $props = $this->open([
+            'client_id' => $this->client->id,
+            'company_id' => $secondCompany->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ]);
+
+        $this->assertSame($this->client->id, $props['client']['id']);
+        $this->assertNull($props['form']['company_id']);
+        $this->assertCount(1, $props['act']['rows']);
+        $this->assertEqualsWithDelta(-10000.0, $props['act']['closing_balance'], 0.01);
+    }
+
+    /**
+     * Стороны расчётов видны построчно, пока не заданы фильтром.
+     */
+    #[Test]
+    public function строка_акта_несёт_контрагента_и_нашу_организацию(): void
+    {
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -10000, 'date' => '2026-02-10']);
+
+        $row = $this->open([
+            'client_id' => $this->client->id,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ])['act']['rows'][0];
+
+        $this->assertSame($this->company->name, $row['company_name']);
+        $this->assertSame($this->organization->name, $row['organization_name']);
+    }
+
+    /**
+     * Соглашения из отбора убраны: акт строится по всем соглашениям сразу,
+     * и параметр из адреса на состав движений больше не влияет.
+     */
+    #[Test]
+    public function соглашения_в_отборе_не_участвуют(): void
+    {
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -10000, 'date' => '2026-02-10']);
+
+        $props = $this->open([
+            'client_id' => $this->client->id,
+            'without_agreement' => 1,
+            'agreement_id' => 999,
+            'date_from' => '2026-02-01',
+            'date_to' => '2026-02-28',
+        ]);
+
+        $this->assertCount(1, $props['act']['rows']);
+        $this->assertArrayNotHasKey('agreements', $props['options']);
+        $this->assertArrayNotHasKey('agreement_id', $props['form']);
+        $this->assertArrayNotHasKey('without_agreement', $props['form']);
+    }
+
+    /**
      * Сверка с 1С обязана идти в том же разрезе, что и акт: баланс другого
      * контрагента — не расхождение.
      */

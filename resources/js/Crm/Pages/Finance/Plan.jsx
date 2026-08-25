@@ -2,7 +2,6 @@ import { Head } from '@inertiajs/react';
 import { Box, Flex, SimpleGrid, Text } from '@chakra-ui/react';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
-import FinanceTabs from './components/FinanceTabs';
 import FinanceFilterBar from './components/FinanceFilterBar';
 import FinanceRowsTable from './components/FinanceRowsTable';
 import { formatRub } from './components/format';
@@ -23,15 +22,13 @@ export default function FinancePlan({
     seesAll = false,
 }) {
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Финансы', href: '/crm/finance' }, { label: 'План поступлений' }]}>
+        <CrmLayout breadcrumbs={[{ label: 'Финансы' }, { label: 'План поступлений' }]}>
             <Head title="План поступлений — CRM" />
 
             <PageHeader
                 title="План поступлений"
                 description="Ожидаемые платежи по графику оплаты реализаций из 1С"
             />
-
-            <FinanceTabs active="plan" />
 
             <FinanceFilterBar
                 routeName="crm.finance.plan"

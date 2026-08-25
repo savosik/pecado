@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { Badge, Box, Flex, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
-import { LuList, LuCalendarClock, LuTriangleAlert } from 'react-icons/lu';
+import { LuTriangleAlert } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
 import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
+import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import PaymentCalendarGrid, { formatMoney } from '@/components/payments/PaymentCalendarGrid';
 
 /**
@@ -67,27 +68,23 @@ export default function PaymentCalendar({
                 description="План по графику оплаты из 1С и фактические поступления по дням"
             />
 
-            <VStack align="stretch" gap={3} mb={4}>
-                <HStack gap={2} wrap="wrap">
-                    <Button size="sm" variant="outline" onClick={() => router.get('/crm/payments')}>
-                        <LuList size={16} /> Журнал
-                    </Button>
-                    <Button size="sm" variant="solid" colorPalette="pecado">
-                        <LuCalendarClock size={16} /> Календарь поступлений
-                    </Button>
-                </HStack>
+            {seesAll && (
+                <Flex gap={3} wrap="wrap" align="center" mb={4}>
+                    {/* Тот же разрез и та же секция памяти, что у остальных
+                        финансов: календарь по умолчанию показывает своих
+                        партнёров, и это должно быть видно на экране. */}
+                    <ScopeToggle section="finance" scope={filters.scope} available={seesAll} />
 
-                {seesAll && managers.length > 0 && (
-                    <Flex gap={3} wrap="wrap">
+                    {managers.length > 0 && (
                         <MultiSelectFilter
                             label="Менеджер"
                             options={managers}
                             selectedIds={filters.manager_ids || []}
                             onChange={(value) => navigate({ manager_ids: value })}
                         />
-                    </Flex>
-                )}
-            </VStack>
+                    )}
+                </Flex>
+            )}
 
             <SimpleGrid columns={{ base: 1, md: 3 }} gap={3} mb={4}>
                 <Tile label={`План: ${monthLabel.toLowerCase()}`} value={formatMoney(summary.plan_month)} hint="Остаток к поступлению по графику" />
@@ -235,4 +232,6 @@ function EntryRow({ entry, showDate = false }) {
     );
 }
 
-PaymentCalendar.layout = (page) => <CrmLayout>{page}</CrmLayout>;
+PaymentCalendar.layout = (page) => (
+    <CrmLayout breadcrumbs={[{ label: 'Финансы' }, { label: 'Календарь поступлений' }]}>{page}</CrmLayout>
+);

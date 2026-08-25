@@ -111,29 +111,41 @@ export const menuConfig: MenuGroup[] = [
     {
         // Финансы: деньги, которые уже пришли или должны прийти. Отдельно от
         // «Документов», потому что это не журнал первички, а работа с долгом:
-        // план поступлений, просрочка и балансы партнёров.
+        // план поступлений, просрочка, факт платежей и балансы партнёров.
+        //
+        // Первыми — то, к чему обращаются ежедневно: журнал платежей («деньги
+        // пришли?») и акт сверки («сколько клиент оплатил и когда»). Дальше
+        // сводка → что ждём (списком и по дням) → что просрочено → сколько
+        // должны в итоге. Внутри страниц переключателей между пунктами нет:
+        // единственная навигация по разделу — это меню слева.
         title: "Финансы",
         icon: LuWallet,
         items: [
+            // Журнал и календарь платежей живут под правом документов: они появились
+            // раньше раздела и остаются доступны тем, у кого есть журналы, но нет финансов.
+            { label: "Платежи", icon: LuReceipt, path: "/crm/payments", permission: "crm-clients.view" },
+            // Реализации живут здесь, а не в «Документах»: менеджер открывает их
+            // ради денег — что отгружено, что оплачено и что попадёт в сверку.
+            { label: "Реализации", icon: LuTruck, path: "/crm/shipments", permission: "crm-clients.view" },
+            { label: "Акт сверки", icon: LuFileText, path: "/crm/finance/reconciliation", permission: "crm-finance.view" },
             { label: "Пульт платежей", icon: LuGauge, path: "/crm/finance", permission: "crm-finance.view" },
             { label: "План поступлений", icon: LuWallet, path: "/crm/finance/plan", permission: "crm-finance.view" },
+            { label: "Календарь поступлений", icon: LuCalendarClock, path: "/crm/payments/calendar", permission: "crm-clients.view" },
             { label: "Просрочка", icon: LuTriangleAlert, path: "/crm/finance/overdue", permission: "crm-finance.view" },
             { label: "Балансы партнёров", icon: LuScale, path: "/crm/finance/balances", permission: "crm-finance.view" },
-            { label: "Акт сверки", icon: LuFileText, path: "/crm/finance/reconciliation", permission: "crm-finance.view" },
-            // Календарь живёт под правом документов: он появился раньше раздела
-            // и остаётся доступен тем, у кого есть журналы, но нет финансов.
-            { label: "Календарь платежей", icon: LuCalendarClock, path: "/crm/payments/calendar", permission: "crm-clients.view" },
         ],
     },
     {
         // Документы 1С: читаются, но не редактируются. Живут отдельной группой,
         // потому что это не работа с партнёром, а её результат.
+        //
+        // Платежи и реализации отсюда переехали в «Финансы»: и то и другое
+        // менеджер ищет рядом с планом, просрочкой и сверкой, а не в общей
+        // куче первички. Здесь остаётся то, что деньгами ещё не стало.
         title: "Документы",
         icon: LuFileText,
         items: [
             { label: "Заказы", icon: LuFileText, path: "/crm/orders", permission: "crm-clients.view" },
-            { label: "Реализации", icon: LuTruck, path: "/crm/shipments", permission: "crm-clients.view" },
-            { label: "Платежи", icon: LuReceipt, path: "/crm/payments", permission: "crm-clients.view" },
             // Печатные формы из 1С (v16.1.0). Своего права нет — то же решение,
             // что и у журналов выше: «вижу партнёра, но не вижу его документы»
             // это состояние, которого быть не должно.

@@ -144,4 +144,17 @@ interface PaymentForecast
      * Сумма в рублях.
      */
     public function toRub(float $amount, ?string $currencyCode): float;
+
+    /**
+     * Оплата набора реализаций — для итога журнала «Реализации».
+     *
+     * Живёт здесь, а не в контроллере журнала, по той же причине, что и всё
+     * остальное в этом интерфейсе: «сколько закрыто по отгруженному» считается
+     * по-разному у двух ядер, и журнал не должен знать, какое из них включено.
+     * Иначе он показывал бы одно число, а пульт и просрочка — другое.
+     *
+     * @param  EloquentBuilder<\App\Models\Shipment>  $shipments  отбор журнала без пагинации
+     * @return array{buckets: list<array{currency: string, docs: int, paid: float, unpaid: float}>, without_plan: int}
+     */
+    public function shipmentPaymentTotals(EloquentBuilder $shipments): array;
 }

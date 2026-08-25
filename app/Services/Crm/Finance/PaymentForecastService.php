@@ -532,4 +532,48 @@ class PaymentForecastService implements PaymentForecast
             's.total_amount - s.paid_amount',
         ), 2);
     }
+
+    /**
+     * Оплата набора реализаций по графику оплаты (историческое ядро).
+     *
+     * Оплаченным считается и зачёт аванса заказа (`prepaid_amount`): 1С гасит
+     * им реализацию, и без него остаток завышался бы на всю предоплату.
+     *
+     * CASE WHEN вместо LEAST/GREATEST: последних нет в SQLite, на котором тесты.
+     *
+     * @param  EloquentBuilder<\App\Models\Shipment>  $shipments
+     * @return array{buckets: list<array{currency: string, docs: int, paid: float, unpaid: float}>, without_plan: int}
+     */
+    public function shipmentPaymentTotals(EloquentBuilder $shipments): array
+    {
+        $paid = 'CASE WHEN s.paid_amount + s.prepaid_amount > s.amount'
+            .' THEN s.amount ELSE s.paid_amount + s.prepaid_amount END';
+        $unpaid = 'CASE WHEN s.amount - s.paid_amount - s.prepaid_amount > 0'
+            .' THEN s.amount - s.paid_amount - s.prepaid_amount ELSE 0 END';
+
+        $rows = DB::table('shipments as sh')
+            ->join('shipment_payment_schedules as s', 's.shipment_id', '=', 'sh.id')
+            ->whereIn('sh.id', (clone $shipments)->toBase()->reorder()->select('shipments.id'))
+            ->groupBy('sh.currency_code')
+            ->orderBy('sh.currency_code')
+            ->selectRaw('sh.currency_code, COUNT(DISTINCT sh.id) as docs, SUM('.$paid.') as paid, SUM('.$unpaid.') as unpaid')
+            ->get();
+
+        $withoutPlan = DB::table('shipments as sh')
+            ->whereIn('sh.id', (clone $shipments)->toBase()->reorder()->select('shipments.id'))
+            ->whereNotExists(fn ($sub) => $sub->select(DB::raw(1))
+                ->from('shipment_payment_schedules as s')
+                ->whereColumn('s.shipment_id', 'sh.id'))
+            ->count();
+
+        return [
+            'buckets' => $rows->map(static fn (object $row): array => [
+                'currency' => (string) ($row->currency_code ?: 'RUB'),
+                'docs' => (int) $row->docs,
+                'paid' => round((float) $row->paid, 2),
+                'unpaid' => round((float) $row->unpaid, 2),
+            ])->all(),
+            'without_plan' => $withoutPlan,
+        ];
+    }
 }

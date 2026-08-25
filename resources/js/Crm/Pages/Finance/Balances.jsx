@@ -7,7 +7,6 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import { usePermission } from '@/shared/Panel/usePermission';
-import FinanceTabs from './components/FinanceTabs';
 import FinanceFilterBar from './components/FinanceFilterBar';
 import { formatRub } from './components/format';
 
@@ -54,15 +53,13 @@ export default function FinanceBalances({
     }), { balance: 0, overdue: 0, contractors: 0 });
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Финансы', href: '/crm/finance' }, { label: 'Балансы партнёров' }]}>
+        <CrmLayout breadcrumbs={[{ label: 'Финансы' }, { label: 'Балансы партнёров' }]}>
             <Head title="Балансы партнёров — CRM" />
 
             <PageHeader
                 title="Балансы партнёров"
                 description="Сальдо взаиморасчётов и просроченная задолженность по данным 1С"
             />
-
-            <FinanceTabs active="balances" />
 
             <FinanceFilterBar
                 routeName="crm.finance.balances"
