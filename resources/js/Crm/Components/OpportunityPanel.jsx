@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { LuDownload, LuListChecks, LuMail, LuPhone } from 'react-icons/lu';
 import { usePermission } from '@/shared/Panel/usePermission';
+import RowActions from '@/shared/Panel/RowActions';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import CallDialog from '@/Crm/Components/CallDialog';
@@ -225,7 +226,7 @@ export default function OpportunityPanel({ month, canSeeAll = false }) {
                                 <Table.ColumnHeader>Последняя отгрузка</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="center">Класс</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="right">Оценка</Table.ColumnHeader>
-                                <Table.ColumnHeader />
+                                <Table.ColumnHeader textAlign="right">Действия</Table.ColumnHeader>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
@@ -233,11 +234,7 @@ export default function OpportunityPanel({ month, canSeeAll = false }) {
                                 <Table.Row key={row.id}>
                                     <Table.Cell>
                                         <VStack align="start" gap={0}>
-                                            <a href={route('crm.clients.show', row.id)}>
-                                                <Text fontSize="sm" fontWeight="500" textDecoration="underline" textDecorationStyle="dotted">
-                                                    {row.name}
-                                                </Text>
-                                            </a>
+                                            <Text fontSize="sm" fontWeight="500">{row.name}</Text>
                                             {canSeeAll && row.manager && (
                                                 <Text fontSize="xs" color="fg.muted">{row.manager}</Text>
                                             )}
@@ -273,41 +270,15 @@ export default function OpportunityPanel({ month, canSeeAll = false }) {
                                         <Text fontSize="sm" fontWeight="600">{row.score}</Text>
                                     </Table.Cell>
                                     <Table.Cell>
-                                        <HStack gap={1} justify="end">
-                                            {can('crm-tasks.create') && (
-                                                <Button
-                                                    size="xs"
-                                                    variant="ghost"
-                                                    onClick={() => setTaskFor(row)}
-                                                    aria-label="Поставить задачу"
-                                                    title="Поставить задачу"
-                                                >
-                                                    <LuListChecks />
-                                                </Button>
-                                            )}
-                                            {can('crm-calls.create') && (
-                                                <Button
-                                                    size="xs"
-                                                    variant="ghost"
-                                                    onClick={() => setCallFor(row)}
-                                                    aria-label="Записать звонок"
-                                                    title="Записать звонок"
-                                                >
-                                                    <LuPhone />
-                                                </Button>
-                                            )}
-                                            {can('crm-emails.create') && (
-                                                <Button
-                                                    size="xs"
-                                                    variant="ghost"
-                                                    onClick={() => setEmailFor(row)}
-                                                    aria-label="Написать письмо"
-                                                    title="Написать письмо"
-                                                >
-                                                    <LuMail />
-                                                </Button>
-                                            )}
-                                        </HStack>
+                                        <RowActions
+                                            size="xs"
+                                            view={{ label: 'Открыть партнёра', href: route('crm.clients.show', row.id) }}
+                                            extra={[
+                                                { key: 'task', icon: LuListChecks, label: 'Поставить задачу', permission: 'crm-tasks.create', onClick: () => setTaskFor(row) },
+                                                { key: 'call', icon: LuPhone, label: 'Записать звонок', permission: 'crm-calls.create', onClick: () => setCallFor(row) },
+                                                { key: 'email', icon: LuMail, label: 'Написать письмо', permission: 'crm-emails.create', onClick: () => setEmailFor(row) },
+                                            ]}
+                                        />
                                     </Table.Cell>
                                 </Table.Row>
                             ))}

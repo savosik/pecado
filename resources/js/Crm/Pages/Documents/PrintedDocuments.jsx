@@ -10,6 +10,7 @@ import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { useDocumentFilters } from '@/Crm/hooks/useDocumentFilters';
+import RowActions from '@/shared/Panel/RowActions';
 
 const ROUTE_NAME = 'crm.printed-documents';
 
@@ -159,22 +160,22 @@ export default function PrintedDocuments({
         },
         {
             key: 'actions',
-            label: '',
-            render: (_, row) => (row.download_url
-                ? (
-                    // Обычная ссылка, а не router.visit: сервер отдаёт файл,
-                    // а Inertia ждёт JSON и такой ответ не поймёт.
-                    <Button
-                        size="xs"
-                        variant="ghost"
-                        as="a"
-                        href={row.download_url}
-                        aria-label="Скачать документ"
-                    >
-                        <LuFileDown />
-                    </Button>
-                )
-                : null),
+            label: 'Действия',
+            // Обычный переход, а не Inertia-ссылка (`href` в RowActions): сервер
+            // отдаёт файл, а Inertia ждёт JSON и такой ответ не поймёт.
+            render: (_, row) => (
+                <RowActions
+                    size="xs"
+                    extra={[
+                        row.download_url && {
+                            key: 'download',
+                            icon: LuFileDown,
+                            label: 'Скачать документ',
+                            onClick: () => window.location.assign(row.download_url),
+                        },
+                    ].filter(Boolean)}
+                />
+            ),
         },
     ];
 

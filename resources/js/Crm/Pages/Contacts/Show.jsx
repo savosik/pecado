@@ -12,7 +12,9 @@ import CommentThread from '@/Crm/Components/CommentThread';
 import TaskPanel from '@/Crm/Components/TaskPanel';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
 import { usePermission } from '@/shared/Panel/usePermission';
-import { LuArrowLeft, LuCake, LuDownload, LuPencil, LuTrash2, LuUpload } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
+import { LuArrowLeft, LuCake, LuDownload, LuPencil, LuTrash2, LuUnlink, LuUpload } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 function InfoRow({ label, value }) {
@@ -33,7 +35,14 @@ function InfoRow({ label, value }) {
  */
 export default function Show({ contact, letters = [], calls = [], roles = [], channels = [], linkableTypes = [], can = {} }) {
     const { can: hasPermission } = usePermission();
-    const [editing, setEditing] = useState(false);
+    // Со списка карандаш ведёт сюда с ?edit=1 — форма открывается сразу.
+    const [editing, setEditing] = useState(() => {
+        if (typeof window === 'undefined' || !can.edit) {
+            return false;
+        }
+
+        return new URLSearchParams(window.location.search).get('edit') === '1';
+    });
     const [pendingDelete, setPendingDelete] = useState(false);
     const [busy, setBusy] = useState(false);
     const fileInput = useRef(null);
@@ -85,6 +94,13 @@ export default function Show({ contact, letters = [], calls = [], roles = [], ch
             setBusy(false);
         }
     };
+
+    const unlinkConfirm = useConfirmDelete({
+        title: 'Отвязать контакт?',
+        description: (link) => `Связь «${link?.subject?.title ?? ''}» будет снята. Сам контакт останется.`,
+        confirmLabel: 'Отвязать',
+        onConfirm: (link) => unlink(link.id),
+    });
 
     const remove = async () => {
         setBusy(true);
@@ -233,11 +249,17 @@ export default function Show({ contact, letters = [], calls = [], roles = [], ch
                                                 : <Text fontSize="sm">{link.subject?.title || '—'}</Text>}
                                             {link.is_primary && <Badge size="sm" colorPalette="blue">основной</Badge>}
                                         </HStack>
-                                        {can.edit && (
-                                            <Button size="xs" variant="ghost" colorPalette="red" disabled={busy} onClick={() => unlink(link.id)}>
-                                                <LuTrash2 />
-                                            </Button>
-                                        )}
+                                        <RowActions
+                                            size="xs"
+                                            view={{ href: link.subject?.url }}
+                                            extra={[{
+                                                icon: LuUnlink,
+                                                label: 'Отвязать',
+                                                allowed: !!can.edit,
+                                                disabled: busy,
+                                                onClick: () => unlinkConfirm.request(link),
+                                            }]}
+                                        />
                                     </HStack>
                                 ))}
                             </VStack>
@@ -347,6 +369,7 @@ export default function Show({ contact, letters = [], calls = [], roles = [], ch
                 cancelLabel="Отмена"
                 isLoading={busy}
             />
+            <ConfirmDialog {...unlinkConfirm.dialogProps} />
         </>
     );
 }

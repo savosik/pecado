@@ -1,19 +1,11 @@
-import { useRef } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Badge, Box, HStack, IconButton, Text, VStack } from '@chakra-ui/react';
-import { LuPencil, LuPhone, LuUser } from 'react-icons/lu';
+import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
+import { LuPhone, LuUser } from 'react-icons/lu';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tooltip } from '@/components/ui/tooltip';
+import RowActions from '@/shared/Panel/RowActions';
 
 const RUB = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
-
-/**
- * Насколько палец может уехать, чтобы жест всё ещё считался кликом.
- * Совпадает с порогом активации сенсора на доске — иначе появилась бы щель,
- * в которой жест уже не драг, но ещё и не клик.
- */
-const CLICK_SLOP = 6;
 
 /**
  * Внешний вид карточки без поведения перетаскивания.
@@ -37,8 +29,8 @@ export function LeadCardView({ lead, dragging = false, selected = false, ...rest
             {...rest}
         >
             <VStack align="stretch" gap={1}>
-                {/* Место под кнопку в углу — иначе длинное имя уезжает под неё. */}
-                <Text fontSize="sm" fontWeight="600" lineClamp={1} pr={5}>{lead.name}</Text>
+                {/* Место под кнопки в углу — иначе длинное имя уезжает под них. */}
+                <Text fontSize="sm" fontWeight="600" lineClamp={1} pr={12}>{lead.name}</Text>
 
                 {lead.company_name && (
                     <Text fontSize="11px" color="fg.muted" lineClamp={1}>{lead.company_name}</Text>
@@ -81,11 +73,12 @@ export function LeadCardView({ lead, dragging = false, selected = false, ...rest
  *
  * Компактная намеренно: колонок в воронке много, доска прокручивается
  * горизонтально, и каждая лишняя строка в карточке — это минус одна видимая
- * колонка. Всё остальное живёт в карточке лида, которая открывается по клику.
+ * колонка. Всё остальное живёт в карточке лида, которая открывается «глазом».
  */
 export default function LeadCard({
     lead,
     onOpen,
+    onDelete,
     draggable = true,
     selectable = false,
     selected = false,
@@ -96,32 +89,11 @@ export default function LeadCard({
         disabled: ! draggable,
     });
 
-    // Клик и драг живут на одном элементе, поэтому «клик» распознаём сами:
-    // после перетаскивания браузер всё равно присылает click, и без этой
-    // проверки каждый перенос заканчивался бы открытием карточки.
-    const origin = useRef(null);
-
-    const onPointerDown = (event) => {
-        origin.current = { x: event.clientX, y: event.clientY };
-    };
-
-    const onClick = (event) => {
-        const start = origin.current;
-        origin.current = null;
-
-        if (! start) return;
-
-        const moved = Math.abs(event.clientX - start.x) + Math.abs(event.clientY - start.y);
-
-        if (moved <= CLICK_SLOP) onOpen?.(lead);
-    };
-
     return (
         <Box
             position="relative"
             ref={setNodeRef}
             style={{ transform: CSS.Translate.toString(transform), transition }}
-            css={{ '&:hover .lead-card-edit': { opacity: 1 } }}
         >
             {selectable && (
                 // Поверх карточки, а не внутри неё: чекбокс не должен начинать
@@ -136,32 +108,16 @@ export default function LeadCard({
                 </Box>
             )}
 
-            {/* Карандаш вне области с listeners — иначе нажатие на него начинало бы
-                перетаскивание. Виден всегда, а не только по наведению: открытие
-                карточки кликом ниоткуда не следует, и его попросту не находят. */}
+            {/* Действия вне области с listeners — иначе нажатие на них начинало бы
+                перетаскивание. Клика по всей карточке нет: он ниоткуда не следует,
+                и его попросту не находят. */}
             {! selectable && (
-                <Box
-                    position="absolute"
-                    top="4px"
-                    right="4px"
-                    zIndex={1}
-                    className="lead-card-edit"
-                    opacity={0.45}
-                    transition="opacity 120ms"
-                >
-                    <Tooltip content="Открыть карточку лида" openDelay={400}>
-                        <IconButton
-                            size="2xs"
-                            variant="ghost"
-                            aria-label={`Открыть лида ${lead.name}`}
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                onOpen?.(lead);
-                            }}
-                        >
-                            <LuPencil />
-                        </IconButton>
-                    </Tooltip>
+                <Box position="absolute" top="2px" right="2px" zIndex={1}>
+                    <RowActions
+                        size="xs"
+                        view={onOpen ? { label: 'Открыть карточку лида', onClick: () => onOpen(lead) } : null}
+                        delete={onDelete ? { permission: 'crm-leads.delete', onClick: () => onDelete(lead) } : null}
+                    />
                 </Box>
             )}
 
@@ -169,9 +125,7 @@ export default function LeadCard({
                 lead={lead}
                 selected={selected}
                 opacity={isDragging ? 0.4 : 1}
-                cursor={draggable ? 'grab' : 'pointer'}
-                onPointerDown={onPointerDown}
-                onClick={onClick}
+                cursor={draggable ? 'grab' : undefined}
                 {...attributes}
                 {...listeners}
             />

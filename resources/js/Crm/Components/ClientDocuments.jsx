@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Badge, Box, HStack, Spinner, Table, Text, VStack, createListCollection } from '@chakra-ui/react';
-import { LuExternalLink } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
+import RowActions from '@/shared/Panel/RowActions';
 import { Select } from '@/components/ui/select';
 import { useCommentFeed } from '@/Crm/Components/useCommentFeed';
 
@@ -165,11 +165,10 @@ export default function ClientDocuments({ clientId, type, organizations = [], or
                                     </Text>
                                 </Table.Cell>
                                 <Table.Cell>
-                                    {entry.entity?.url && (
-                                        <Button size="xs" variant="ghost" asChild title="Открыть документ">
-                                            <a href={entry.entity.url}><LuExternalLink /></a>
-                                        </Button>
-                                    )}
+                                    <RowActions
+                                        size="xs"
+                                        view={entry.entity?.url ? { label: 'Открыть документ', href: entry.entity.url } : null}
+                                    />
                                 </Table.Cell>
                             </Table.Row>
                         ))}

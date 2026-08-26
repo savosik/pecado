@@ -6,11 +6,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { ProgressBar, ProgressRoot } from '@/components/ui/progress';
-import { LuDownload, LuX } from 'react-icons/lu';
+import { LuChartLine, LuDownload, LuMessageSquarePlus, LuX } from 'react-icons/lu';
 import LastOrderCell from '@/Crm/Components/LastOrderCell';
 import LastVisitHint from '@/Crm/Components/LastVisitHint';
 import TasksCell from '@/Crm/Pages/Clients/components/TasksCell';
-import RowActions from '@/Crm/Components/RowActions';
+import RowActions from '@/shared/Panel/RowActions';
 import BurndownChart from './BurndownChart';
 
 const money = (value) => (value === null || value === undefined
@@ -372,15 +372,14 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                                     <Table.ColumnHeader minW="180px">Факт / план</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Прогноз при текущем темпе</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Активных партнёров</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
                                 {managers.map((row) => (
                                     <Table.Row
                                         key={row.manager_id}
-                                        cursor="pointer"
                                         bg={String(scope) === String(row.manager_id) ? 'bg.subtle' : undefined}
-                                        onClick={() => selectScope(String(row.manager_id))}
                                     >
                                         <Table.Cell>
                                             <Text fontSize="sm" fontWeight="500">{row.name}</Text>
@@ -390,6 +389,16 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">{money(row.forecast)}</Table.Cell>
                                         <Table.Cell textAlign="right">{row.clients_count}</Table.Cell>
+                                        <Table.Cell>
+                                            <RowActions
+                                                size="xs"
+                                                extra={[{
+                                                    icon: LuChartLine,
+                                                    label: 'Показать на графике',
+                                                    onClick: () => selectScope(String(row.manager_id)),
+                                                }]}
+                                            />
+                                        </Table.Cell>
                                     </Table.Row>
                                 ))}
                             </Table.Body>
@@ -401,8 +410,8 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
             <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4}>
                 <Text fontWeight="600" mb={1}>По партнёрам</Text>
                 <Text fontSize="xs" color="fg.muted" mb={3}>
-                    Сверху — кто сильнее отстаёт от своего плана. Клик по строке строит график
-                    по этому партнёру; партнёры без плана идут в конце списка.
+                    Сверху — кто сильнее отстаёт от своего плана. Кнопка «Показать на графике»
+                    строит график по этому партнёру; партнёры без плана идут в конце списка.
                 </Text>
 
                 {clients.length === 0 ? (
@@ -421,36 +430,23 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                                     <Table.ColumnHeader textAlign="right">Отставание</Table.ColumnHeader>
                                     {showFinance && <Table.ColumnHeader textAlign="right">Долг</Table.ColumnHeader>}
                                     {showFinance && <Table.ColumnHeader textAlign="right">Последний платёж</Table.ColumnHeader>}
-                                    <Table.ColumnHeader />
+                                    <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
                                 {clients.map((row) => (
                                     <Table.Row
                                         key={row.id}
-                                        cursor="pointer"
                                         bg={clientId === row.id ? 'bg.subtle' : undefined}
-                                        onClick={() => selectClient(clientId === row.id ? null : row.id)}
                                     >
                                         <Table.Cell>
-                                            {/* Ссылка на карточку не должна проваливать в график —
-                                                клик по строке и клик по имени решают разные задачи. */}
-                                            <a
-                                                href={route('crm.clients.show', row.id)}
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                <Text fontSize="sm" fontWeight="500" textDecoration="underline" textDecorationStyle="dotted">
-                                                    {row.name}
-                                                </Text>
-                                            </a>
+                                            <Text fontSize="sm" fontWeight="500">{row.name}</Text>
                                             <LastVisitHint visit={row.last_visit} />
                                         </Table.Cell>
-                                        {/* Клик по ячейке с действиями не должен строить график:
-                                            это две разные задачи на одной строке. */}
-                                        <Table.Cell onClick={(e) => e.stopPropagation()}>
+                                        <Table.Cell>
                                             <LastOrderCell value={row.last_order} />
                                         </Table.Cell>
-                                        <Table.Cell onClick={(e) => e.stopPropagation()}>
+                                        <Table.Cell>
                                             <TasksCell
                                                 tasks={row.tasks}
                                                 onCreate={onTask ? () => onTask(row) : undefined}
@@ -475,9 +471,23 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                                                 <LastPaymentCell finance={row.finance} />
                                             </Table.Cell>
                                         )}
-                                        <Table.Cell onClick={(e) => e.stopPropagation()}>
+                                        <Table.Cell>
                                             <RowActions
-                                                onComment={onComment ? () => onComment(row) : undefined}
+                                                size="xs"
+                                                view={{ href: route('crm.clients.show', row.id), label: 'Карточка партнёра' }}
+                                                extra={[
+                                                    {
+                                                        icon: LuChartLine,
+                                                        label: clientId === row.id ? 'Убрать с графика' : 'Показать на графике',
+                                                        onClick: () => selectClient(clientId === row.id ? null : row.id),
+                                                    },
+                                                    {
+                                                        icon: LuMessageSquarePlus,
+                                                        label: 'Оставить комментарий',
+                                                        allowed: Boolean(onComment),
+                                                        onClick: () => onComment?.(row),
+                                                    },
+                                                ]}
                                             />
                                         </Table.Cell>
                                     </Table.Row>

@@ -4,6 +4,7 @@ import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
+import RowActions from '@/shared/Panel/RowActions';
 import { LuArrowLeft, LuCake } from 'react-icons/lu';
 
 /**
@@ -45,7 +46,7 @@ export default function Birthdays({ birthdays = [] }) {
                             )}
 
                         <VStack align="start" gap={0} flex="1" minW="200px">
-                            <Link href={item.url}><Text fontSize="sm" fontWeight="600">{item.full_name}</Text></Link>
+                            <Text fontSize="sm" fontWeight="600">{item.full_name}</Text>
                             <Text fontSize="xs" color="fg.muted">
                                 {[item.position, item.client?.name].filter(Boolean).join(' · ')}
                             </Text>
@@ -57,6 +58,8 @@ export default function Birthdays({ birthdays = [] }) {
                                 ? <Badge colorPalette="pink">сегодня</Badge>
                                 : <Badge variant="subtle">через {item.days_left} дн.</Badge>}
                         </HStack>
+
+                        <RowActions size="xs" view={{ href: item.url }} />
                     </HStack>
                 ))}
             </VStack>

@@ -5,7 +5,10 @@ import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
 import { Button } from '@/components/ui/button';
 import ContactForm from '@/Crm/Components/ContactForm';
 import { toastError, toastSuccess } from '@/utils/toast';
-import { LuDownload, LuExternalLink, LuUserPlus, LuX } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
+import { LuDownload, LuExternalLink, LuUnlink, LuUserPlus } from 'react-icons/lu';
 
 const controlStyle = {
     padding: '0.35rem',
@@ -18,9 +21,7 @@ function ContactRow({ item, onOpenLink, actions }) {
         <HStack borderWidth="1px" borderRadius="md" p={2} justifyContent="space-between" gap={3} flexWrap="wrap">
             <VStack align="start" gap={0} flex="1" minW="200px">
                 <HStack gap={2} flexWrap="wrap">
-                    <Link href={route('crm.contacts.show', item.id)}>
-                        <Text fontSize="sm" fontWeight="600">{item.full_name}</Text>
-                    </Link>
+                    <Text fontSize="sm" fontWeight="600">{item.full_name}</Text>
                     {onOpenLink}
                 </HStack>
                 {item.position && <Text fontSize="xs" color="fg.muted">{item.position}</Text>}
@@ -89,6 +90,13 @@ export default function ContactsPanel({ entityType, entityId, canEdit = false, c
         }
     };
 
+    const detachConfirm = useConfirmDelete({
+        title: 'Отвязать контакт?',
+        description: (link) => `«${link?.contact?.full_name ?? ''}» перестанет числиться в этой карточке. Сам контакт останется в справочнике.`,
+        confirmLabel: 'Отвязать',
+        onConfirm: (link) => detach(link.contact.id, link.link_id),
+    });
+
     return (
         <VStack align="stretch" gap={3}>
             <HStack justifyContent="space-between" flexWrap="wrap" gap={2}>
@@ -133,23 +141,25 @@ export default function ContactsPanel({ entityType, entityId, canEdit = false, c
                         </>
                     )}
                     actions={(
-                        <>
-                            <a href={route('crm.contacts.vcard', link.contact.id)}>
-                                <Button size="xs" variant="ghost" title="Скачать в телефон"><LuDownload /></Button>
-                            </a>
-                            {canEdit && (
-                                <Button
-                                    size="xs"
-                                    variant="ghost"
-                                    colorPalette="red"
-                                    disabled={busy}
-                                    title="Отвязать"
-                                    onClick={() => detach(link.contact.id, link.link_id)}
-                                >
-                                    <LuX />
-                                </Button>
-                            )}
-                        </>
+                        <RowActions
+                            size="xs"
+                            view={{ href: route('crm.contacts.show', link.contact.id) }}
+                            extra={[
+                                {
+                                    icon: LuDownload,
+                                    label: 'Скачать в телефон',
+                                    // Файл, а не страница: Inertia-ссылка сюда не годится.
+                                    onClick: () => window.location.assign(route('crm.contacts.vcard', link.contact.id)),
+                                },
+                                {
+                                    icon: LuUnlink,
+                                    label: 'Отвязать',
+                                    allowed: canEdit,
+                                    disabled: busy,
+                                    onClick: () => detachConfirm.request(link),
+                                },
+                            ]}
+                        />
                     )}
                 />
             ))}
@@ -164,24 +174,31 @@ export default function ContactsPanel({ entityType, entityId, canEdit = false, c
                             <ContactRow
                                 key={contact.id}
                                 item={contact}
-                                actions={canEdit ? (
-                                    <select
-                                        defaultValue=""
-                                        style={controlStyle}
-                                        disabled={busy}
-                                        onChange={(e) => e.target.value && attach(contact.id, e.target.value)}
-                                    >
-                                        <option value="">Привязать как…</option>
-                                        {roles.map((role) => (
-                                            <option key={role.value} value={role.value}>{role.label}</option>
-                                        ))}
-                                    </select>
-                                ) : null}
+                                actions={(
+                                    <>
+                                        <RowActions size="xs" view={{ href: route('crm.contacts.show', contact.id) }} />
+                                        {canEdit ? (
+                                            <select
+                                                defaultValue=""
+                                                style={controlStyle}
+                                                disabled={busy}
+                                                onChange={(e) => e.target.value && attach(contact.id, e.target.value)}
+                                            >
+                                                <option value="">Привязать как…</option>
+                                                {roles.map((role) => (
+                                                    <option key={role.value} value={role.value}>{role.label}</option>
+                                                ))}
+                                            </select>
+                                        ) : null}
+                                    </>
+                                )}
                             />
                         ))}
                     </VStack>
                 </Box>
             )}
+
+            <ConfirmDialog {...detachConfirm.dialogProps} />
         </VStack>
     );
 }

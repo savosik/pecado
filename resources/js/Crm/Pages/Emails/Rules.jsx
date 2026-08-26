@@ -11,7 +11,8 @@ import { Alert } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import RuleForm from '@/Crm/Pages/Emails/components/RuleForm';
-import { LuBan, LuHistory, LuList, LuMail, LuPlus, LuTrash2 } from 'react-icons/lu';
+import { LuBan, LuList, LuMail, LuPlay, LuPlus } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 /**
@@ -254,33 +255,22 @@ export default function Rules({
                                         onCheckedChange={() => toggle(rule)}
                                     />
                                 )}
-                                {canManage && rule.is_active && (
-                                    <Button
-                                        size="xs"
-                                        variant="outline"
-                                        disabled={busy}
-                                        onClick={() => applyToOld(rule)}
-                                        title={`Разобрать письма, собранные за последние ${applyToOldDays} дн. до создания правила`}
-                                    >
-                                        <LuHistory /> Применить к старым
-                                    </Button>
-                                )}
-                                {canManage && (
-                                    <Button size="xs" variant="outline" onClick={() => setEditing(rule)}>
-                                        Изменить
-                                    </Button>
-                                )}
-                                {canManage && (
-                                    <Button
-                                        size="xs"
-                                        variant="ghost"
-                                        colorPalette="red"
-                                        onClick={() => setPendingDelete(rule.id)}
-                                        title="Удалить правило"
-                                    >
-                                        <LuTrash2 />
-                                    </Button>
-                                )}
+                                <RowActions
+                                    size="xs"
+                                    edit={{ allowed: Boolean(canManage), onClick: () => setEditing(rule) }}
+                                    extra={[{
+                                        icon: LuPlay,
+                                        label: `Применить к старым: разобрать письма за последние ${applyToOldDays} дн. до создания правила`,
+                                        allowed: Boolean(canManage && rule.is_active),
+                                        disabled: busy,
+                                        onClick: () => applyToOld(rule),
+                                    }]}
+                                    delete={{
+                                        allowed: Boolean(canManage),
+                                        label: 'Удалить правило',
+                                        onClick: () => setPendingDelete(rule.id),
+                                    }}
+                                />
                             </HStack>
                         </HStack>
                     </Box>

@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
 import { Alert } from '@/components/ui/alert';
-import { LuCalendarPlus, LuCheck, LuTrash2 } from 'react-icons/lu';
+import { LuCalendarPlus, LuCheck } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 
 /**
  * Отсутствия и замещения менеджеров (abs-02).
@@ -120,31 +121,21 @@ export default function Index() {
         },
         ...(canEdit ? [{
             key: 'actions',
-            label: '',
+            label: 'Действия',
             render: (_, row) => (
-                <HStack gap={1} justify="flex-end">
-                    {row.is_active && (
-                        <Button
-                            size="xs"
-                            variant="ghost"
-                            disabled={busy}
-                            onClick={() => setFinishFor(row)}
-                            title="Завершить досрочно"
-                        >
-                            <LuCheck /> Завершить
-                        </Button>
-                    )}
-                    <Button
-                        size="xs"
-                        variant="ghost"
-                        colorPalette="red"
-                        disabled={busy}
-                        onClick={() => setDeleteFor(row)}
-                        title="Удалить запись"
-                    >
-                        <LuTrash2 />
-                    </Button>
-                </HStack>
+                <RowActions
+                    size="xs"
+                    extra={[
+                        row.is_active && {
+                            key: 'finish',
+                            icon: LuCheck,
+                            label: 'Завершить досрочно',
+                            disabled: busy,
+                            onClick: () => setFinishFor(row),
+                        },
+                    ].filter(Boolean)}
+                    delete={{ label: 'Удалить запись', disabled: busy, onClick: () => setDeleteFor(row) }}
+                />
             ),
         }] : []),
     ];

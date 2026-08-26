@@ -11,6 +11,9 @@ import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import ContactForm from '@/Crm/Components/ContactForm';
 import SeedWizard from '@/Crm/Pages/Contacts/components/SeedWizard';
 import DuplicatesPanel from '@/Crm/Pages/Contacts/components/DuplicatesPanel';
+import RowActions from '@/shared/Panel/RowActions';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
 import { LuCake, LuCopy, LuDownload, LuMail, LuPhone, LuSparkles, LuUserPlus } from 'react-icons/lu';
 
 const selectStyle = {
@@ -40,6 +43,12 @@ export default function Index({
     const [creating, setCreating] = useState(false);
     const [panel, setPanel] = useState(null);
 
+    const del = useConfirmDelete({
+        title: 'Удалить контакт?',
+        description: (row) => `Контакт «${row?.full_name ?? ''}» будет удалён.`,
+        onConfirm: (row) => router.delete(route('crm.contacts.destroy', row.id), { preserveScroll: true }),
+    });
+
     const apply = (patch) => {
         router.get(route('crm.contacts.index'), { ...filters, ...patch, page: undefined }, {
             preserveState: true,
@@ -61,9 +70,7 @@ export default function Index({
                             </Box>
                         )}
                     <VStack align="start" gap={0}>
-                        <Link href={route('crm.contacts.show', row.id)}>
-                            <Text fontSize="sm" fontWeight="600">{row.full_name}</Text>
-                        </Link>
+                        <Text fontSize="sm" fontWeight="600">{row.full_name}</Text>
                         {row.position && <Text fontSize="xs" color="fg.muted">{row.position}</Text>}
                         <HStack gap={1} mt={1}>
                             <Badge size="sm" variant="subtle" colorPalette={row.source_color}>{row.source_badge}</Badge>
@@ -128,6 +135,18 @@ export default function Index({
             render: (_, row) => (row.birthday_label
                 ? <HStack gap={1}><LuCake size={12} /><Text fontSize="xs">{row.birthday_label}</Text></HStack>
                 : <Text fontSize="xs" color="fg.muted">—</Text>),
+        },
+        {
+            key: 'actions',
+            label: 'Действия',
+            render: (_, row) => (
+                <RowActions
+                    size="xs"
+                    view={{ href: route('crm.contacts.show', row.id) }}
+                    edit={{ href: route('crm.contacts.show', { contact: row.id, edit: 1 }), allowed: !!can.edit }}
+                    delete={{ onClick: () => del.request(row), allowed: !!can.delete }}
+                />
+            ),
         },
     ];
 
@@ -256,6 +275,8 @@ export default function Index({
                     emptyMessage="Пока никого нет — заведите первый контакт"
                 />
             </VStack>
+
+            <ConfirmDialog {...del.dialogProps} />
         </>
     );
 }

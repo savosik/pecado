@@ -13,6 +13,7 @@ import { LuArrowLeft, LuExternalLink, LuFileText, LuReceipt, LuTruck } from 'rea
 import { Button } from '@/components/ui/button';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
+import RowActions from '@/shared/Panel/RowActions';
 import EntityCrmPanel from '@/Crm/Components/EntityCrmPanel';
 import PaymentScheduleBlock from '@/components/payments/PaymentScheduleBlock';
 
@@ -244,9 +245,7 @@ export default function Show() {
                                                 </Badge>
                                                 <Text fontSize="sm">{payment.amount_label}</Text>
                                             </HStack>
-                                            <Button size="xs" variant="ghost" onClick={() => router.visit(payment.url)}>
-                                                Открыть
-                                            </Button>
+                                            <RowActions size="xs" view={{ label: 'Открыть платёж', href: payment.url }} />
                                         </HStack>
                                     ))}
                                 </VStack>
@@ -372,9 +371,7 @@ export default function Show() {
                                             <Text fontSize="xs" color="fg.muted">{related.date_label}</Text>
                                             <Text fontSize="sm">{related.total_label}</Text>
                                         </HStack>
-                                        <Button size="xs" variant="ghost" onClick={() => router.visit(related.url)}>
-                                            Открыть
-                                        </Button>
+                                        <RowActions size="xs" view={{ label: 'Открыть документ', href: related.url }} />
                                     </HStack>
                                 ))}
                             </VStack>

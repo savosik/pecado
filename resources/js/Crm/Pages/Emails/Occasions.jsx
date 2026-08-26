@@ -5,6 +5,7 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { LuFilter, LuMail, LuPlus } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 
 /**
  * Реестр поводов: что система вообще умеет присылать.
@@ -102,15 +103,15 @@ export default function Occasions({ occasions = [], streamEnabled, days = 30 }) 
                                 )}
                             </VStack>
 
-                            <Link
-                                href={route('crm.emails.rules.index', {
-                                    tag: occasion.tags?.[0] || `повод:${occasion.key}`,
-                                })}
-                            >
-                                <Button size="sm" variant="outline">
-                                    <LuPlus /> Подписать
-                                </Button>
-                            </Link>
+                            <RowActions
+                                extra={[{
+                                    icon: LuPlus,
+                                    label: 'Подписать',
+                                    href: route('crm.emails.rules.index', {
+                                        tag: occasion.tags?.[0] || `повод:${occasion.key}`,
+                                    }),
+                                }]}
+                            />
                         </HStack>
                     </Box>
                 ))}

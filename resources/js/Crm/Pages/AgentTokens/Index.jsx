@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
 import { Alert } from '@/components/ui/alert';
-import { LuCheck, LuCopy, LuKeyRound, LuTrash2 } from 'react-icons/lu';
+import { LuCheck, LuCopy, LuKeyRound } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 
 /**
  * Токены ИИ-агентов: выдача и отзыв руководителем отдела.
@@ -111,19 +112,13 @@ export default function Index() {
         },
         ...(canRevoke ? [{
             key: 'actions',
-            label: '',
-            render: (_, row) => (row.is_active ? (
-                <Button
+            label: 'Действия',
+            render: (_, row) => (
+                <RowActions
                     size="xs"
-                    variant="ghost"
-                    colorPalette="red"
-                    disabled={busy}
-                    onClick={() => setRevokeFor(row)}
-                    title="Отозвать токен"
-                >
-                    <LuTrash2 /> Отозвать
-                </Button>
-            ) : null),
+                    delete={row.is_active ? { label: 'Отозвать токен', disabled: busy, onClick: () => setRevokeFor(row) } : null}
+                />
+            ),
         }] : []),
     ];
 

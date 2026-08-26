@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Box, Dialog, HStack, IconButton, Input, Portal, Text, VStack } from '@chakra-ui/react';
-import { LuArrowDown, LuArrowUp, LuPlus, LuTrash2 } from 'react-icons/lu';
+import { LuArrowDown, LuArrowUp, LuPlus } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
 import { Tooltip } from '@/components/ui/tooltip';
+import RowActions from '@/shared/Panel/RowActions';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 const COLORS = [
@@ -133,6 +136,12 @@ export default function StagesDialog({ open, stages = [], onClose, onSaved }) {
         }
     };
 
+    const confirmRemove = useConfirmDelete({
+        title: 'Удалить стадию?',
+        description: (row) => `Стадия «${row?.name ?? ''}» исчезнет из воронки. Стадию с лидами удалить нельзя.`,
+        onConfirm: remove,
+    });
+
     return (
         <Dialog.Root
             open={open}
@@ -237,15 +246,10 @@ export default function StagesDialog({ open, stages = [], onClose, onSaved }) {
                                             </Checkbox>
                                         </Tooltip>
 
-                                        <IconButton
+                                        <RowActions
                                             size="xs"
-                                            variant="ghost"
-                                            colorPalette="red"
-                                            aria-label="Удалить стадию"
-                                            onClick={() => remove(row)}
-                                        >
-                                            <LuTrash2 />
-                                        </IconButton>
+                                            delete={{ label: 'Удалить стадию', onClick: () => confirmRemove.request(row) }}
+                                        />
                                     </HStack>
                                 ))}
 
@@ -263,6 +267,8 @@ export default function StagesDialog({ open, stages = [], onClose, onSaved }) {
                     </Dialog.Content>
                 </Dialog.Positioner>
             </Portal>
+
+            <ConfirmDialog {...confirmRemove.dialogProps} />
         </Dialog.Root>
     );
 }

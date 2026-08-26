@@ -1,7 +1,6 @@
-import { Badge, HStack, IconButton, Text, VStack } from '@chakra-ui/react';
-import { LuPencil } from 'react-icons/lu';
+import { Badge, HStack, Text, VStack } from '@chakra-ui/react';
 import { DataTable } from '@/Admin/Components/DataTable';
-import { Tooltip } from '@/components/ui/tooltip';
+import RowActions from '@/shared/Panel/RowActions';
 import TasksCell from '@/Crm/Pages/Clients/components/TasksCell';
 
 const RUB = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
@@ -25,6 +24,7 @@ export default function LeadsTable({
     bulkActions = [],
     onSort,
     onOpen,
+    onDelete,
     onCreateTask,
     onOpenTask,
 }) {
@@ -35,17 +35,7 @@ export default function LeadsTable({
             sortable: true,
             render: (_value, row) => (
                 <VStack align="start" gap={0}>
-                    <Text
-                        as="button"
-                        type="button"
-                        fontWeight="600"
-                        fontSize="sm"
-                        textAlign="left"
-                        _hover={{ textDecoration: 'underline' }}
-                        onClick={() => onOpen?.(row)}
-                    >
-                        {row.name}
-                    </Text>
+                    <Text fontWeight="600" fontSize="sm">{row.name}</Text>
                     {row.company_name && (
                         <Text fontSize="xs" color="fg.muted">{row.company_name}</Text>
                     )}
@@ -123,23 +113,14 @@ export default function LeadsTable({
                 : <Text fontSize="sm" color="fg.muted">—</Text>),
         },
         {
-            // Явная кнопка, хотя имя в первой колонке тоже открывает карточку:
-            // кликабельность имени ничем не обозначена, и её не находят.
             key: 'actions',
-            label: '',
+            label: 'Действия',
             render: (_value, row) => (
-                <HStack gap={1} justify="end">
-                    <Tooltip content="Открыть карточку лида" openDelay={400}>
-                        <IconButton
-                            size="xs"
-                            variant="ghost"
-                            aria-label={`Открыть лида ${row.name}`}
-                            onClick={() => onOpen?.(row)}
-                        >
-                            <LuPencil />
-                        </IconButton>
-                    </Tooltip>
-                </HStack>
+                <RowActions
+                    size="xs"
+                    view={onOpen ? { label: 'Открыть карточку лида', onClick: () => onOpen(row) } : null}
+                    delete={onDelete ? { permission: 'crm-leads.delete', onClick: () => onDelete(row) } : null}
+                />
             ),
         },
     ];

@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { Box, Flex, HStack, Table, Text, VStack } from '@chakra-ui/react';
-import { LuChevronDown, LuChevronRight, LuListPlus } from 'react-icons/lu';
+import { LuChevronDown, LuChevronRight, LuList, LuListPlus } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import AmountFilterInput from '@/Crm/Components/AmountFilterInput';
 import MetricHint from '@/Crm/Components/MetricHint';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import { usePermission } from '@/shared/Panel/usePermission';
+import RowActions from '@/shared/Panel/RowActions';
 import FinanceFilterBar from './components/FinanceFilterBar';
 import FinanceRowsTable from './components/FinanceRowsTable';
 import { formatCompact, formatRub } from './components/format';
@@ -416,7 +417,7 @@ function GroupTree({ rows, total, onDrill, onTask, expanded, onToggle }) {
                                     <MetricHint text="Когда по этой строке разреза последний раз приходили деньги. Долг у того, кто платил вчера, и у того, кто молчит полгода, требует разных разговоров. Учитываются только приходы из регистра 1С; красным — тишина дольше месяца." />
                                 </HStack>
                             </Table.ColumnHeader>
-                            <Table.ColumnHeader />
+                            <Table.ColumnHeader textAlign="right">Действия</Table.ColumnHeader>
                         </Table.Row>
                     </Table.Header>
 
@@ -484,19 +485,7 @@ function GroupRows({ row, depth, total, onDrill, onTask, expanded, onToggle }) {
 
                 <Table.Cell>
                     <VStack align="start" gap={0} pl={depth * 4}>
-                        {row.url ? (
-                            <Box
-                                as="a"
-                                href={row.url}
-                                fontSize="sm"
-                                fontWeight={depth === 0 ? '600' : '400'}
-                                _hover={{ color: 'blue.fg', textDecoration: 'underline' }}
-                            >
-                                {row.title}
-                            </Box>
-                        ) : (
-                            <Text fontSize="sm" fontWeight={depth === 0 ? '600' : '400'}>{row.title}</Text>
-                        )}
+                        <Text fontSize="sm" fontWeight={depth === 0 ? '600' : '400'}>{row.title}</Text>
 
                         {(row.subtitle || row.manager_name) && (
                             <HStack gap={1} color="fg.muted" fontSize="10px">
@@ -555,24 +544,19 @@ function GroupRows({ row, depth, total, onDrill, onTask, expanded, onToggle }) {
                 </Table.Cell>
 
                 <Table.Cell>
-                    <HStack gap={1}>
-                        {drillable && (
-                            <Button size="xs" variant="ghost" onClick={() => onDrill(row)}>
-                                Строки
-                            </Button>
-                        )}
-
-                        {taskable && onTask && (
-                            <Button
-                                size="xs"
-                                variant="ghost"
-                                onClick={() => onTask(row)}
-                                title="Поставить задачу по дебиторке"
-                            >
-                                <LuListPlus /> Задача
-                            </Button>
-                        )}
-                    </HStack>
+                    <RowActions
+                        size="xs"
+                        view={row.url ? { label: 'Открыть карточку', href: row.url } : null}
+                        extra={[
+                            drillable && { key: 'drill', icon: LuList, label: 'Показать строки', onClick: () => onDrill(row) },
+                            taskable && onTask && {
+                                key: 'task',
+                                icon: LuListPlus,
+                                label: 'Поставить задачу по дебиторке',
+                                onClick: () => onTask(row),
+                            },
+                        ].filter(Boolean)}
+                    />
                 </Table.Cell>
             </Table.Row>
 

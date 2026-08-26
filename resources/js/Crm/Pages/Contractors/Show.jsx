@@ -14,6 +14,7 @@ import CommentThread from '@/Crm/Components/CommentThread';
 import TaskPanel from '@/Crm/Components/TaskPanel';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
 import { formatPrice } from '@/utils/formatPrice';
+import RowActions from '@/shared/Panel/RowActions';
 
 function InfoRow({ label, value }) {
     return (
@@ -42,17 +43,14 @@ function DocumentsTable({ rows, emptyMessage }) {
                         <Table.ColumnHeader>Дата</Table.ColumnHeader>
                         <Table.ColumnHeader>Статус</Table.ColumnHeader>
                         <Table.ColumnHeader textAlign="end">Сумма</Table.ColumnHeader>
+                        <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
                     </Table.Row>
                 </Table.Header>
                 <Table.Body>
                     {rows.map((row) => (
                         <Table.Row key={row.id}>
                             <Table.Cell>
-                                <Link href={row.url}>
-                                    <Text fontSize="sm" color="blue.500" _hover={{ textDecoration: 'underline' }}>
-                                        № {row.number}
-                                    </Text>
-                                </Link>
+                                <Text fontSize="sm">№ {row.number}</Text>
                                 {row.erp_number && (
                                     <Text fontSize="xs" color="fg.muted">1С: {row.erp_number}</Text>
                                 )}
@@ -60,6 +58,9 @@ function DocumentsTable({ rows, emptyMessage }) {
                             <Table.Cell>{row.date || '—'}</Table.Cell>
                             <Table.Cell>{row.status_label || '—'}</Table.Cell>
                             <Table.Cell textAlign="end">{formatPrice(row.total)}</Table.Cell>
+                            <Table.Cell textAlign="end">
+                                <RowActions size="xs" view={{ href: row.url }} />
+                            </Table.Cell>
                         </Table.Row>
                     ))}
                 </Table.Body>

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { useColorMode } from '@/components/ui/color-mode';
 import { LuExternalLink } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 
 const money = (value) => `${Number(value ?? 0).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽`;
 
@@ -217,11 +218,10 @@ export default function BedDrawer({ tile, month, scope, scopeId, onClose }) {
                                                 <HStack gap={3}>
                                                     <Text fontSize="xs" color="fg.muted">{doc.happened_at_label}</Text>
                                                     <Text fontSize="sm" color="fg.muted">{doc.amount_label}</Text>
-                                                    {doc.entity?.url && (
-                                                        <Button size="xs" variant="ghost" asChild aria-label="Открыть документ">
-                                                            <a href={doc.entity.url}><LuExternalLink /></a>
-                                                        </Button>
-                                                    )}
+                                                    <RowActions
+                                                        size="xs"
+                                                        view={doc.entity?.url ? { href: doc.entity.url, label: 'Открыть документ' } : null}
+                                                    />
                                                 </HStack>
                                             </HStack>
                                         ))}

@@ -8,8 +8,11 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
-import { LuFilter, LuMail, LuTrash2 } from 'react-icons/lu';
+import { LuFilter, LuMail } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
+import RowActions from '@/shared/Panel/RowActions';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
 
 /**
  * Стоп-лист адресов.
@@ -52,6 +55,13 @@ export default function Suppressions({ suppressions, canManage }) {
         }
     };
 
+    const del = useConfirmDelete({
+        title: 'Убрать адрес из стоп-листа?',
+        description: (row) => `На «${row?.email ?? ''}» снова начнут уходить письма.`,
+        confirmLabel: 'Убрать',
+        onConfirm: (row) => remove(row.id),
+    });
+
     const columns = [
         {
             key: 'email',
@@ -87,19 +97,18 @@ export default function Suppressions({ suppressions, canManage }) {
         },
         {
             key: 'actions',
-            label: '',
-            render: (_, row) => (canManage ? (
-                <Button
+            label: 'Действия',
+            render: (_, row) => (
+                <RowActions
                     size="xs"
-                    variant="ghost"
-                    colorPalette="red"
-                    disabled={busy}
-                    onClick={() => remove(row.id)}
-                    title="Убрать из стоп-листа"
-                >
-                    <LuTrash2 />
-                </Button>
-            ) : null),
+                    delete={{
+                        allowed: Boolean(canManage),
+                        disabled: busy,
+                        label: 'Убрать из стоп-листа',
+                        onClick: () => del.request(row),
+                    }}
+                />
+            ),
         },
     ];
 
@@ -154,6 +163,8 @@ export default function Suppressions({ suppressions, canManage }) {
                     emptyMessage="Стоп-лист пуст — письма уходят на все адреса"
                 />
             </VStack>
+
+            <ConfirmDialog {...del.dialogProps} />
         </>
     );
 }

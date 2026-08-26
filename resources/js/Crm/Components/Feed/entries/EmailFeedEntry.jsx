@@ -1,7 +1,5 @@
-import { router } from '@inertiajs/react';
 import { Badge, HStack, Text } from '@chakra-ui/react';
-import { LuExternalLink } from 'react-icons/lu';
-import { Button } from '@/components/ui/button';
+import RowActions from '@/shared/Panel/RowActions';
 import FeedEntryShell from '../FeedEntryShell';
 
 /**
@@ -30,14 +28,10 @@ export default function EmailFeedEntry({ entry }) {
             badges={badges}
             accent={email.status === 'failed' ? 'red' : null}
             actions={(
-                <Button
+                <RowActions
                     size="xs"
-                    variant="ghost"
-                    onClick={() => router.visit(route('crm.emails.index', { email: email.id }))}
-                    title="Открыть письмо"
-                >
-                    <LuExternalLink />
-                </Button>
+                    view={{ href: route('crm.emails.index', { email: email.id }), label: 'Открыть письмо' }}
+                />
             )}
         >
             <HStack gap={3} flexWrap="wrap">

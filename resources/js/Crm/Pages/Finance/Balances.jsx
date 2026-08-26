@@ -7,6 +7,7 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import { usePermission } from '@/shared/Panel/usePermission';
+import RowActions from '@/shared/Panel/RowActions';
 import FinanceFilterBar from './components/FinanceFilterBar';
 import { formatRub } from './components/format';
 
@@ -139,7 +140,7 @@ export default function FinanceBalances({
                                 <Table.ColumnHeader textAlign="end">Сальдо</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="end">Просрочено</Table.ColumnHeader>
                                 <Table.ColumnHeader>Данные 1С от</Table.ColumnHeader>
-                                <Table.ColumnHeader />
+                                <Table.ColumnHeader textAlign="right">Действия</Table.ColumnHeader>
                             </Table.Row>
                         </Table.Header>
 
@@ -224,19 +225,7 @@ function BalanceRows({ row, depth, expanded, onToggle, onTask }) {
 
                 <Table.Cell>
                     <VStack align="start" gap={0} pl={depth * 4}>
-                        {row.url ? (
-                            <Box
-                                as="a"
-                                href={row.url}
-                                fontSize="sm"
-                                fontWeight={depth === 0 ? '600' : '400'}
-                                _hover={{ color: 'blue.fg', textDecoration: 'underline' }}
-                            >
-                                {row.title}
-                            </Box>
-                        ) : (
-                            <Text fontSize="sm" fontWeight={depth === 0 ? '600' : '400'}>{row.title}</Text>
-                        )}
+                        <Text fontSize="sm" fontWeight={depth === 0 ? '600' : '400'}>{row.title}</Text>
                         {(row.subtitle || row.manager_name) && (
                             <HStack gap={1} color="fg.muted" fontSize="10px">
                                 {row.subtitle && <Text>{row.subtitle}</Text>}
@@ -277,15 +266,18 @@ function BalanceRows({ row, depth, expanded, onToggle, onTask }) {
                 </Table.Cell>
 
                 <Table.Cell>
-                    {onTask && clientId != null && (
-                        <Button
-                            size="xs"
-                            variant="ghost"
-                            onClick={() => onTask({ ...row, clientId })}
-                        >
-                            <LuListPlus /> Задача
-                        </Button>
-                    )}
+                    <RowActions
+                        size="xs"
+                        view={row.url ? { label: 'Открыть карточку', href: row.url } : null}
+                        extra={[
+                            onTask && clientId != null && {
+                                key: 'task',
+                                icon: LuListPlus,
+                                label: 'Поставить задачу',
+                                onClick: () => onTask({ ...row, clientId }),
+                            },
+                        ].filter(Boolean)}
+                    />
                 </Table.Cell>
             </Table.Row>
 

@@ -1,6 +1,6 @@
 import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
-import { Button } from '@/components/ui/button';
-import { LuCheck, LuPencil, LuPaperclip, LuTrash2, LuUndo2 } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
+import { LuCheck, LuPaperclip, LuUndo2 } from 'react-icons/lu';
 
 /**
  * Одна задача в списке.
@@ -67,41 +67,21 @@ export default function TaskListItem({ task, showEntity = false, onEdit, onToggl
                         </HStack>
                     </VStack>
 
-                    <HStack gap={1}>
-                        {task.can?.update && (
-                            <Button
-                                size="xs"
-                                variant="ghost"
-                                colorPalette={done ? undefined : 'green'}
-                                disabled={busy}
-                                onClick={() => onToggleDone?.(task)}
-                                title={done ? 'Вернуть в работу' : 'Отметить выполненной'}
-                            >
-                                {done ? <LuUndo2 /> : <LuCheck />}
-                            </Button>
-                        )}
-                        <Button
-                            size="xs"
-                            variant="ghost"
-                            disabled={busy}
-                            onClick={() => onEdit?.(task)}
-                            title="Открыть задачу"
-                        >
-                            <LuPencil />
-                        </Button>
-                        {task.can?.delete && (
-                            <Button
-                                size="xs"
-                                variant="ghost"
-                                colorPalette="red"
-                                disabled={busy}
-                                onClick={() => onDelete?.(task)}
-                                title="Удалить"
-                            >
-                                <LuTrash2 />
-                            </Button>
-                        )}
-                    </HStack>
+                    <RowActions
+                        size="xs"
+                        view={onEdit ? { label: 'Открыть задачу', disabled: busy, onClick: () => onEdit(task) } : null}
+                        extra={[
+                            task.can?.update && onToggleDone && {
+                                key: 'toggle',
+                                icon: done ? LuUndo2 : LuCheck,
+                                label: done ? 'Вернуть в работу' : 'Отметить выполненной',
+                                colorPalette: done ? undefined : 'green',
+                                disabled: busy,
+                                onClick: () => onToggleDone(task),
+                            },
+                        ].filter(Boolean)}
+                        delete={onDelete ? { allowed: !!task.can?.delete, disabled: busy, onClick: () => onDelete(task) } : null}
+                    />
                 </HStack>
 
                 {task.description && (

@@ -17,6 +17,8 @@ import { SearchInput } from '@/Admin/Components/SearchInput';
 import { Button } from '@/components/ui/button';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import TaskDialog from '@/Crm/Components/TaskDialog';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
 import { toastError, toastSuccess } from '@/utils/toast';
 import LeadCard, { LeadCardView } from './components/LeadCard';
 import StageColumn from './components/StageColumn';
@@ -133,6 +135,21 @@ export default function Index({
 
     // Закрытие снимает и ?lead= из адреса: иначе следующая же перезагрузка
     // списка снова открыла бы ту же карточку.
+    // Удаление из строки таблицы и с карточки — тот же запрос, что в LeadDialog,
+    // но с общим окном подтверждения на всю страницу.
+    const leadDelete = useConfirmDelete({
+        title: 'Удалить лида?',
+        description: (lead) => `Лид «${lead?.name ?? ''}» и его переписка исчезнут с доски. Вернуть его сможет только администратор базы.`,
+        onConfirm: (lead) => new Promise((resolve) => {
+            router.delete(route('crm.leads.destroy', lead.id), {
+                preserveScroll: true,
+                onSuccess: () => toastSuccess('Лид удалён.'),
+                onError: () => toastError('Не удалось удалить лида.'),
+                onFinish: resolve,
+            });
+        }),
+    });
+
     const closeDialog = () => {
         setDialogOpen(false);
 
@@ -299,6 +316,7 @@ export default function Index({
                         bulkActions={canEdit ? bulkActions : []}
                         onSort={(column, dir) => go({ sort: column, direction: dir })}
                         onOpen={(lead) => { setDialogLead(lead); setDialogOpen(true); }}
+                        onDelete={canDelete ? (lead) => leadDelete.request(lead) : undefined}
                         onCreateTask={(lead) => setTaskFor(lead)}
                         onOpenTask={(taskId) => setOpenTaskId(taskId)}
                     />
@@ -338,6 +356,7 @@ export default function Index({
                                             lead={lead}
                                             draggable={canEdit}
                                             onOpen={(item) => { setDialogLead(item); setDialogOpen(true); }}
+                                            onDelete={canDelete ? (item) => leadDelete.request(item) : undefined}
                                         />
                                     ))}
                                 </StageColumn>
@@ -353,6 +372,8 @@ export default function Index({
                     </DndContext>
                 )}
             </VStack>
+
+            <ConfirmDialog {...leadDelete.dialogProps} />
 
             <StagesDialog
                 open={stagesOpen}

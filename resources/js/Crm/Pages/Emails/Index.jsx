@@ -13,7 +13,8 @@ import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import MailNav from '@/Crm/Pages/Emails/components/MailNav';
 import { usePermission } from '@/shared/Panel/usePermission';
-import { LuBot, LuEye, LuFilter, LuMail, LuPaperclip, LuPencil, LuSend, LuTrash2, LuUser } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
+import { LuBot, LuEye, LuFilter, LuMail, LuPaperclip, LuSend, LuUser } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 
 const selectStyle = {
@@ -246,37 +247,26 @@ export default function Index({
         },
         {
             key: 'actions',
-            label: '',
+            label: 'Действия',
             render: (_, row) => (
-                <HStack gap={1}>
-                    <Button size="xs" variant="ghost" onClick={() => openDialog(row)} title="Открыть письмо">
-                        <LuPencil />
-                    </Button>
-                    {row.can?.send && outboundEnabled && (
-                        <Button
-                            size="xs"
-                            variant="ghost"
-                            colorPalette="blue"
-                            disabled={busy}
-                            onClick={() => send(row)}
-                            title="Отправить"
-                        >
-                            <LuSend />
-                        </Button>
-                    )}
-                    {row.can?.delete && (
-                        <Button
-                            size="xs"
-                            variant="ghost"
-                            colorPalette="red"
-                            disabled={busy}
-                            onClick={() => setPendingDelete(row.id)}
-                            title="Удалить письмо"
-                        >
-                            <LuTrash2 />
-                        </Button>
-                    )}
-                </HStack>
+                <RowActions
+                    size="xs"
+                    view={{ onClick: () => openDialog(row), label: 'Открыть письмо' }}
+                    extra={[{
+                        icon: LuSend,
+                        label: 'Отправить',
+                        colorPalette: 'blue',
+                        allowed: Boolean(row.can?.send && outboundEnabled),
+                        disabled: busy,
+                        onClick: () => send(row),
+                    }]}
+                    delete={{
+                        allowed: row.can?.delete,
+                        disabled: busy,
+                        label: 'Удалить письмо',
+                        onClick: () => setPendingDelete(row.id),
+                    }}
+                />
             ),
         },
     ];

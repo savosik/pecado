@@ -380,6 +380,8 @@ class SalesPlanService
             'id' => $id,
             'name' => $client->display_name,
             'manager' => $client->personalManager?->name,
+            // Корзине в сетке нужен id самого плана: удаляется запись, а не партнёр.
+            'plan_id' => isset($plans[$id]) ? $plans[$id]->getKey() : null,
             'amount' => isset($plans[$id]) ? $plans[$id]->amountValue() : null,
             'previous_amount' => isset($previous[$id]) ? $previous[$id]->amountValue() : null,
             'comment' => $plans[$id]->comment ?? null,

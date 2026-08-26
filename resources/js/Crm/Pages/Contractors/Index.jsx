@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
-import { LuEye } from 'react-icons/lu';
+import { LuTarget } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
@@ -108,16 +109,9 @@ export default function Index({ contractors, filters, managers = [], canSeeAll =
             label: 'Задачи',
             sortable: true,
             render: (_, row) => (
-                <HStack gap={2}>
-                    {row.open_tasks_count > 0
-                        ? <Badge colorPalette="purple" variant="subtle">{row.open_tasks_count}</Badge>
-                        : <Text fontSize="sm" color="fg.muted">—</Text>}
-                    {canCreateTask && (
-                        <Button size="xs" variant="ghost" onClick={() => setTaskFor(row)}>
-                            + задача
-                        </Button>
-                    )}
-                </HStack>
+                row.open_tasks_count > 0
+                    ? <Badge colorPalette="purple" variant="subtle">{row.open_tasks_count}</Badge>
+                    : <Text fontSize="sm" color="fg.muted">—</Text>
             ),
         },
         {
@@ -129,16 +123,18 @@ export default function Index({ contractors, filters, managers = [], canSeeAll =
         },
         {
             key: 'actions',
-            label: '',
+            label: 'Действия',
             render: (_, row) => (
-                <Button
+                <RowActions
                     size="xs"
-                    variant="ghost"
-                    onClick={() => router.visit(route('crm.contractors.show', row.id))}
-                    aria-label="Открыть карточку контрагента"
-                >
-                    <LuEye />
-                </Button>
+                    view={{ href: route('crm.contractors.show', row.id), label: 'Открыть карточку контрагента' }}
+                    extra={[{
+                        icon: LuTarget,
+                        label: 'Поставить задачу',
+                        allowed: canCreateTask,
+                        onClick: () => setTaskFor(row),
+                    }]}
+                />
             ),
         },
     ];

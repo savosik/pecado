@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
-import { LuCopy, LuSave } from 'react-icons/lu';
+import { LuCopy, LuMessageSquarePlus, LuSave } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
 import { usePermission } from '@/shared/Panel/usePermission';
 import OpportunityPanel from '@/Crm/Components/OpportunityPanel';
@@ -18,7 +18,8 @@ import CommentThread from '@/Crm/Components/CommentThread';
 import LastVisitHint from '@/Crm/Components/LastVisitHint';
 import LastOrderCell from '@/Crm/Components/LastOrderCell';
 import TasksCell from '@/Crm/Pages/Clients/components/TasksCell';
-import RowActions from '@/Crm/Components/RowActions';
+import RowActions from '@/shared/Panel/RowActions';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import ProgressPanel from './components/ProgressPanel';
 
@@ -95,6 +96,20 @@ export default function Index({
     const [tab, setTab] = useState('progress');
 
     const dirtyCount = Object.keys(drafts).length;
+
+    const planDelete = useConfirmDelete({
+        title: 'Удалить план партнёра?',
+        description: (row) => `План «${row?.name ?? ''}» на ${monthLabel} будет снят. Факт отгрузок не затрагивается.`,
+        onConfirm: async (row) => {
+            try {
+                await axios.delete(route('crm.plans.destroy', row.plan_id));
+                toastSuccess('План удалён');
+                router.reload({ only: ['clients', 'managers', 'managersSum'] });
+            } catch (e) {
+                toastError('Не удалось удалить план', e?.response?.data?.message || 'Попробуйте ещё раз.');
+            }
+        },
+    });
 
     const setDraft = (key, value) => setDrafts((prev) => ({ ...prev, [key]: value }));
 
@@ -381,16 +396,14 @@ export default function Index({
                                                         <Table.ColumnHeader>Ближайшая задача</Table.ColumnHeader>
                                                         <Table.ColumnHeader>{previousMonthLabel}</Table.ColumnHeader>
                                                         <Table.ColumnHeader>План на {monthLabel}</Table.ColumnHeader>
-                                                        <Table.ColumnHeader />
+                                                        <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
                                                     </Table.Row>
                                                 </Table.Header>
                                                 <Table.Body>
                                                     {clients.data.map((row) => (
                                                         <Table.Row key={row.id}>
                                                             <Table.Cell>
-                                                                <a href={route('crm.clients.show', row.id)}>
-                                                                    <Text fontSize="sm" fontWeight="500">{row.name}</Text>
-                                                                </a>
+                                                                <Text fontSize="sm" fontWeight="500">{row.name}</Text>
                                                                 <LastVisitHint visit={row.last_visit} />
                                                             </Table.Cell>
                                                             {canSeeAll && (
@@ -420,7 +433,19 @@ export default function Index({
                                                             </Table.Cell>
                                                             <Table.Cell>
                                                                 <RowActions
-                                                                    onComment={canComment ? () => setCommentFor(row) : undefined}
+                                                                    size="xs"
+                                                                    view={{ href: route('crm.clients.show', row.id), label: 'Карточка партнёра' }}
+                                                                    extra={[{
+                                                                        icon: LuMessageSquarePlus,
+                                                                        label: 'Оставить комментарий',
+                                                                        allowed: canComment,
+                                                                        onClick: () => setCommentFor(row),
+                                                                    }]}
+                                                                    delete={{
+                                                                        permission: 'crm-plans.delete',
+                                                                        allowed: Boolean(row.can_edit && row.plan_id),
+                                                                        onClick: () => planDelete.request(row),
+                                                                    }}
                                                                 />
                                                             </Table.Cell>
                                                         </Table.Row>
@@ -500,6 +525,7 @@ export default function Index({
                 cancelLabel="Отмена"
                 isLoading={busy}
             />
+            <ConfirmDialog {...planDelete.dialogProps} />
         </>
     );
 }

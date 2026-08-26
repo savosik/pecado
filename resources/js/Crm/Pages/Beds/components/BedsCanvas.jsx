@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { Box, HStack, Progress, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, HStack, Progress, Table, Text, VStack } from '@chakra-ui/react';
 import { ResponsiveContainer, Tooltip, Treemap } from 'recharts';
 import { useColorMode } from '@/components/ui/color-mode';
+import RowActions from '@/shared/Panel/RowActions';
 import { bedFill, bedInk, bedLegend } from './bedScale';
 
 const money = (value) => `${Number(value ?? 0).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽`;
@@ -130,6 +131,24 @@ function BedTooltip({ active, payload, mode }) {
     );
 }
 
+/** Состояние грядки словами — то же, что заливка плитки говорит цветом. */
+function BedStatus({ tile }) {
+    if (tile.plan === null || tile.plan === undefined) {
+        return <Badge colorPalette="gray" variant="subtle">без плана</Badge>;
+    }
+
+    return (
+        <HStack gap={1}>
+            <Badge colorPalette={Number(tile.percent ?? 0) >= 100 ? 'green' : 'blue'} variant="subtle">
+                {tile.percent ?? 0}%
+            </Badge>
+            {tile.sleeping && (
+                <Badge colorPalette="orange" variant="subtle">заросло {tile.overdue_days} дн.</Badge>
+            )}
+        </HStack>
+    );
+}
+
 /**
  * Полотно грядок: план периода прямоугольником, внутри плитки.
  *
@@ -170,6 +189,8 @@ export default function BedsCanvas({ canvas, onSelect }) {
     }
 
     const legend = bedLegend(dark);
+    const beds = data.filter((t) => t.kind !== 'unallocated');
+    const openLabel = canvas.mode === 'managers' ? 'Открыть грядки менеджера' : 'Открыть аналитику партнёра';
 
     return (
         <VStack align="stretch" gap={3}>
@@ -186,9 +207,46 @@ export default function BedsCanvas({ canvas, onSelect }) {
                 </ResponsiveContainer>
             </Box>
 
+            {/* Явный «глаз» под полотном: клик по плитке ниоткуда не следует,
+                а таблица к тому же даёт те же цифры без наведения. */}
+            <Box display={{ base: 'none', md: 'block' }} borderWidth="1px" borderRadius="lg" overflowX="auto">
+                <Table.Root size="sm">
+                    <Table.Header>
+                        <Table.Row>
+                            <Table.ColumnHeader>{canvas.mode === 'managers' ? 'Менеджер' : 'Партнёр'}</Table.ColumnHeader>
+                            <Table.ColumnHeader>Состояние</Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="end">План / факт</Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
+                        </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
+                        {beds.map((tile) => (
+                            <Table.Row key={tile.id}>
+                                <Table.Cell>
+                                    <Text fontSize="sm" fontWeight="600">{tile.name}</Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                    <BedStatus tile={tile} />
+                                </Table.Cell>
+                                <Table.Cell textAlign="end">
+                                    <Text fontSize="sm" whiteSpace="nowrap">
+                                        {tile.plan === null
+                                            ? `оборот ${money(tile.area)}/мес`
+                                            : `${money(tile.fact)} из ${money(tile.plan)}`}
+                                    </Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                    <RowActions size="xs" view={{ label: openLabel, onClick: () => onSelect?.(tile) }} />
+                                </Table.Cell>
+                            </Table.Row>
+                        ))}
+                    </Table.Body>
+                </Table.Root>
+            </Box>
+
             {/* Мобильный вариант: тот же порядок, те же цифры, но списком. */}
             <VStack align="stretch" gap={2} display={{ base: 'flex', md: 'none' }}>
-                {data.filter((t) => t.kind !== 'unallocated').map((tile) => (
+                {beds.map((tile) => (
                     <Box
                         key={tile.id}
                         bg="bg.panel"
@@ -197,13 +255,15 @@ export default function BedsCanvas({ canvas, onSelect }) {
                         borderStyle={tile.sleeping ? 'dashed' : 'solid'}
                         borderRadius="lg"
                         p={3}
-                        onClick={() => onSelect?.(tile)}
                     >
                         <HStack justify="space-between" mb={1}>
                             <Text fontSize="sm" fontWeight="600">{tile.name}</Text>
-                            <Text fontSize="sm" color="fg.muted">
-                                {tile.percent === null ? 'плана нет' : `${tile.percent}%`}
-                            </Text>
+                            <HStack gap={2}>
+                                <Text fontSize="sm" color="fg.muted">
+                                    {tile.percent === null ? 'плана нет' : `${tile.percent}%`}
+                                </Text>
+                                <RowActions size="xs" view={{ label: openLabel, onClick: () => onSelect?.(tile) }} />
+                            </HStack>
                         </HStack>
                         <Progress.Root value={Math.min(100, Number(tile.percent ?? 0))} size="sm" mb={1}>
                             <Progress.Track><Progress.Range /></Progress.Track>

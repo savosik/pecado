@@ -1,6 +1,5 @@
 import { Badge, HStack, Text } from '@chakra-ui/react';
-import { LuExternalLink } from 'react-icons/lu';
-import { Button } from '@/components/ui/button';
+import RowActions from '@/shared/Panel/RowActions';
 import FeedEntryShell from '../FeedEntryShell';
 
 /**
@@ -30,9 +29,7 @@ export default function DocumentFeedEntry({ entry }) {
             title={entry.title}
             badges={badges}
             actions={entry.entity?.url ? (
-                <Button size="xs" variant="ghost" asChild title="Открыть документ">
-                    <a href={entry.entity.url}><LuExternalLink /></a>
-                </Button>
+                <RowActions size="xs" view={{ href: entry.entity.url, label: 'Открыть документ' }} />
             ) : null}
         >
             <HStack gap={3} flexWrap="wrap">

@@ -1,6 +1,6 @@
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import { Badge, Box, Flex, Grid, HStack, Text, VStack } from '@chakra-ui/react';
-import { LuDownload, LuEye, LuX } from 'react-icons/lu';
+import { LuDownload, LuX } from 'react-icons/lu';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { SearchInput } from '@/Admin/Components/SearchInput';
@@ -13,6 +13,7 @@ import FilterChips from '@/Crm/Components/FilterChips';
 import MetricHint from '@/Crm/Components/MetricHint';
 import PeriodFilter from '@/Crm/Components/PeriodFilter';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import RowActions from '@/shared/Panel/RowActions';
 import { useDocumentFilters } from '@/Crm/hooks/useDocumentFilters';
 
 /** «1 документ», «2 документа», «5 документов» — иначе итог читается как опечатка. */
@@ -227,17 +228,8 @@ export default function DocumentList({
         },
         {
             key: 'actions',
-            label: '',
-            render: (_, row) => (
-                <Button
-                    size="xs"
-                    variant="ghost"
-                    onClick={() => router.visit(row.url)}
-                    aria-label="Открыть документ"
-                >
-                    <LuEye />
-                </Button>
-            ),
+            label: 'Действия',
+            render: (_, row) => <RowActions size="xs" view={{ label: 'Открыть документ', href: row.url }} />,
         },
     ];
 

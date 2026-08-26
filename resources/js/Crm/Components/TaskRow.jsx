@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Badge, Box, HStack, IconButton, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
 import TaskChecklist from '@/Crm/Components/TaskChecklist';
+import RowActions from '@/shared/Panel/RowActions';
 import {
     LuCheck,
     LuChevronDown,
@@ -8,10 +9,8 @@ import {
     LuClock,
     LuEye,
     LuListChecks,
-    LuPencil,
     LuPin,
     LuPinOff,
-    LuTrash2,
     LuUndo2,
     LuUsers,
 } from 'react-icons/lu';
@@ -58,24 +57,7 @@ export default function TaskRow({
             align="center"
             _hover={{ bg: 'bg.muted' }}
         >
-            {onToggleDone && task.can?.update && (
-                // Нейтральная «пустая» кнопка: зелёной она становится только под
-                // курсором — иначе список открытых задач выглядит уже выполненным.
-                <IconButton
-                    size="xs"
-                    variant={closed ? 'ghost' : 'outline'}
-                    color={closed ? undefined : 'transparent'}
-                    _hover={closed ? undefined : { color: 'green.fg', borderColor: 'green.fg', bg: 'green.subtle' }}
-                    aria-label={closed ? 'Вернуть в работу' : 'Завершить'}
-                    title={closed ? 'Вернуть в работу' : 'Завершить'}
-                    disabled={busy}
-                    onClick={() => onToggleDone(task)}
-                >
-                    {closed ? <LuUndo2 /> : <LuCheck />}
-                </IconButton>
-            )}
-
-            <Box flex="1" minW={0} cursor="pointer" onClick={() => onOpen?.(task)}>
+            <Box flex="1" minW={0}>
                 <HStack gap={2} flexWrap="wrap">
                     <Text
                         fontSize="sm"
@@ -182,41 +164,30 @@ export default function TaskRow({
                 </HStack>
             </Box>
 
-            <HStack gap={1} flexShrink={0}>
-                {onPin && !closed && (
-                    <IconButton
-                        size="xs"
-                        variant="ghost"
-                        colorPalette={task.is_pinned ? 'blue' : undefined}
-                        aria-label={task.is_pinned ? 'Открепить' : 'Закрепить сверху'}
-                        title={task.is_pinned ? 'Открепить' : 'Закрепить сверху'}
-                        disabled={busy}
-                        onClick={() => onPin(task)}
-                    >
-                        {task.is_pinned ? <LuPinOff /> : <LuPin />}
-                    </IconButton>
-                )}
-
-                {onOpen && (
-                    <IconButton size="xs" variant="ghost" aria-label="Открыть задачу" title="Открыть задачу" onClick={() => onOpen(task)}>
-                        <LuPencil />
-                    </IconButton>
-                )}
-
-                {onDelete && task.can?.delete && (
-                    <IconButton
-                        size="xs"
-                        variant="ghost"
-                        colorPalette="red"
-                        aria-label="Удалить"
-                        title="Удалить"
-                        disabled={busy}
-                        onClick={() => onDelete(task)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                )}
-            </HStack>
+            <Box flexShrink={0}>
+                <RowActions
+                    size="xs"
+                    view={onOpen ? { label: 'Открыть задачу', onClick: () => onOpen(task) } : null}
+                    extra={[
+                        onToggleDone && task.can?.update && {
+                            key: 'toggle',
+                            icon: closed ? LuUndo2 : LuCheck,
+                            label: closed ? 'Вернуть в работу' : 'Завершить',
+                            disabled: busy,
+                            onClick: () => onToggleDone(task),
+                        },
+                        onPin && !closed && {
+                            key: 'pin',
+                            icon: task.is_pinned ? LuPinOff : LuPin,
+                            label: task.is_pinned ? 'Открепить' : 'Закрепить сверху',
+                            colorPalette: task.is_pinned ? 'blue' : undefined,
+                            disabled: busy,
+                            onClick: () => onPin(task),
+                        },
+                    ].filter(Boolean)}
+                    delete={onDelete ? { allowed: !!task.can?.delete, disabled: busy, onClick: () => onDelete(task) } : null}
+                />
+            </Box>
         </HStack>
 
         {checklistOpen && (

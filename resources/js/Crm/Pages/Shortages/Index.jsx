@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Badge, Box, Flex, HStack, Input, Text, VStack } from '@chakra-ui/react';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
@@ -9,7 +9,8 @@ import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-sele
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
-import { LuInfo } from 'react-icons/lu';
+import { LuInfo, LuPackage, LuUser } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 import { localDate } from '@/shared/localDate';
 
 /**
@@ -198,24 +199,14 @@ export default function Index({
         {
             key: 'order_number',
             label: 'Заказ',
-            render: (value, row) => (
-                <Link href={`/crm/orders/${row.order_id}`}>
-                    <Text fontWeight="medium" _hover={{ textDecoration: 'underline' }}>{value || '—'}</Text>
-                </Link>
-            ),
+            render: (value) => <Text fontWeight="medium">{value || '—'}</Text>,
         },
         {
             key: 'client',
             label: 'Партнёр',
             render: (value, row) => (
                 <VStack align="start" gap={0}>
-                    {row.client_id ? (
-                        <Link href={`/crm/partners/${row.client_id}`}>
-                            <Text fontSize="sm" _hover={{ textDecoration: 'underline' }}>{value}</Text>
-                        </Link>
-                    ) : (
-                        <Text fontSize="sm">{value}</Text>
-                    )}
+                    <Text fontSize="sm">{value}</Text>
                     {row.company && <Text fontSize="xs" color="fg.muted">{row.company}</Text>}
                 </VStack>
             ),
@@ -226,13 +217,7 @@ export default function Index({
             label: 'Товар',
             render: (value, row) => (
                 <VStack align="start" gap={0}>
-                    {row.slug ? (
-                        <Link href={`/products/${row.slug}`}>
-                            <Text fontSize="sm" _hover={{ textDecoration: 'underline' }}>{value}</Text>
-                        </Link>
-                    ) : (
-                        <Text fontSize="sm">{value}</Text>
-                    )}
+                    <Text fontSize="sm">{value}</Text>
                     {row.sku && <Text fontSize="xs" color="fg.muted">арт. {row.sku}</Text>}
                 </VStack>
             ),
@@ -264,17 +249,34 @@ export default function Index({
             label: 'Комментарий',
             render: (_value, row) => <NoteCell row={row} canEdit={canEdit} onSave={setNote} />,
         },
+        {
+            key: 'actions',
+            label: 'Действия',
+            render: (_value, row) => (
+                <RowActions
+                    size="xs"
+                    view={{ href: row.order_id ? `/crm/orders/${row.order_id}` : null, label: 'Открыть заказ' }}
+                    extra={[
+                        {
+                            icon: LuUser,
+                            label: 'Карточка партнёра',
+                            href: row.client_id ? `/crm/partners/${row.client_id}` : null,
+                        },
+                        {
+                            icon: LuPackage,
+                            label: 'Карточка товара',
+                            href: row.slug ? `/products/${row.slug}` : null,
+                        },
+                    ]}
+                />
+            ),
+        },
     ];
 
     const partnerColumns = [
         {
             key: 'name',
             label: 'Партнёр',
-            render: (value, row) => (row.user_id ? (
-                <Link href={`/crm/partners/${row.user_id}`}>
-                    <Text _hover={{ textDecoration: 'underline' }}>{value}</Text>
-                </Link>
-            ) : value),
         },
         { key: 'manager', label: 'Менеджер' },
         { key: 'lines_count', label: 'Отмен' },
@@ -289,6 +291,16 @@ export default function Index({
             ),
         },
         { key: 'last_cancelled_at', label: 'Последняя' },
+        {
+            key: 'actions',
+            label: 'Действия',
+            render: (_value, row) => (
+                <RowActions
+                    size="xs"
+                    view={{ href: row.user_id ? `/crm/partners/${row.user_id}` : null, label: 'Карточка партнёра' }}
+                />
+            ),
+        },
     ];
 
     const productColumns = [
@@ -297,13 +309,7 @@ export default function Index({
             label: 'Товар',
             render: (value, row) => (
                 <VStack align="start" gap={0}>
-                    {row.slug ? (
-                        <Link href={`/products/${row.slug}`}>
-                            <Text fontSize="sm" _hover={{ textDecoration: 'underline' }}>{value}</Text>
-                        </Link>
-                    ) : (
-                        <Text fontSize="sm">{value}</Text>
-                    )}
+                    <Text fontSize="sm">{value}</Text>
                     {row.sku && <Text fontSize="xs" color="fg.muted">арт. {row.sku}</Text>}
                 </VStack>
             ),
@@ -320,6 +326,16 @@ export default function Index({
             ),
         },
         { key: 'last_cancelled_at', label: 'Последняя' },
+        {
+            key: 'actions',
+            label: 'Действия',
+            render: (_value, row) => (
+                <RowActions
+                    size="xs"
+                    view={{ href: row.slug ? `/products/${row.slug}` : null, label: 'Карточка товара' }}
+                />
+            ),
+        },
     ];
 
     const hasFilters = Boolean(

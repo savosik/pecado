@@ -1,6 +1,6 @@
-import { Link } from '@inertiajs/react';
 import { Badge, Box, Card, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
 import { formatPrice } from '@/utils/formatPrice';
+import RowActions from '@/shared/Panel/RowActions';
 
 /**
  * Юрлица партнёра во вкладке его карточки.
@@ -28,11 +28,9 @@ export default function PartnerContractors({ contractors = [] }) {
                         <SimpleGrid columns={{ base: 1, md: 4 }} gap={3} alignItems="center">
                             <Box>
                                 <HStack gap={2}>
-                                    <Link href={route('crm.contractors.show', contractor.id)}>
-                                        <Text fontSize="sm" fontWeight="600" color="blue.500">
-                                            {contractor.name}
-                                        </Text>
-                                    </Link>
+                                    <Text fontSize="sm" fontWeight="600">
+                                        {contractor.name}
+                                    </Text>
                                     {contractor.is_default && (
                                         <Badge colorPalette="blue" variant="subtle" size="sm">основной</Badge>
                                     )}
@@ -82,6 +80,7 @@ export default function PartnerContractors({ contractors = [] }) {
                                         комментариев: {contractor.comments_count}
                                     </Text>
                                 )}
+                                <RowActions size="xs" view={{ href: route('crm.contractors.show', contractor.id) }} />
                             </HStack>
                         </SimpleGrid>
                     </Card.Body>

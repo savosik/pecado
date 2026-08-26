@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, Text, VStack } from '@chakra-ui/react';
 import { LuListPlus } from 'react-icons/lu';
 import { DataTable } from '@/Admin/Components/DataTable';
-import { Button } from '@/components/ui/button';
+import RowActions from '@/shared/Panel/RowActions';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import { usePermission } from '@/shared/Panel/usePermission';
 import { dueHint, formatRub } from './format';
@@ -67,19 +67,9 @@ export default function FinanceRowsTable({
             label: 'Документ',
             render: (_, row) => (
                 <VStack align="start" gap={0}>
-                    {/*
-                        Ссылки может не быть: предоплата по заказу приходит из регистра,
-                        и карточки реализации у неё нет. Мёртвый <a> без href выглядел бы
-                        кликабельным и никуда не вёл.
-                    */}
-                    <Box
-                        as={row.shipment.url ? 'a' : 'span'}
-                        href={row.shipment.url ?? undefined}
-                        fontSize="sm"
-                        _hover={row.shipment.url ? { color: 'blue.fg', textDecoration: 'underline' } : undefined}
-                    >
+                    <Text fontSize="sm">
                         {row.shipment.kind_label ?? 'Реализация'} {row.shipment.number}
-                    </Box>
+                    </Text>
                     <Text fontSize="10px" color="fg.muted">
                         {row.shipment.date || '—'}
                         {row.shipment.invoice_number ? ` · с-ф ${row.shipment.invoice_number}` : ''}
@@ -128,17 +118,23 @@ export default function FinanceRowsTable({
         }] : []),
         {
             key: 'actions',
-            label: '',
-            render: (_, row) => (canCreateTask ? (
-                <Button
+            label: 'Действия',
+            // Карточки реализации может не быть: предоплата по заказу приходит
+            // из регистра — тогда «глаз» не рисуется.
+            render: (_, row) => (
+                <RowActions
                     size="xs"
-                    variant="ghost"
-                    onClick={() => setTaskFor(row)}
-                    title="Поставить задачу по оплате"
-                >
-                    <LuListPlus /> Задача
-                </Button>
-            ) : null),
+                    view={row.shipment.url ? { label: 'Открыть документ', href: row.shipment.url } : null}
+                    extra={[
+                        canCreateTask && {
+                            key: 'task',
+                            icon: LuListPlus,
+                            label: 'Поставить задачу по оплате',
+                            onClick: () => setTaskFor(row),
+                        },
+                    ].filter(Boolean)}
+                />
+            ),
         },
     ];
 

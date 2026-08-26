@@ -6,9 +6,12 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { Alert } from '@/components/ui/alert';
 import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
-import { LuEye, LuUserX } from 'react-icons/lu';
+import { LuUserX } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { usePermission } from '@/shared/Panel/usePermission';
+import RowActions from '@/shared/Panel/RowActions';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import PresetsBar from '@/Crm/Components/PresetsBar';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
@@ -99,6 +102,12 @@ export default function Index({
             toastError('Не удалось удалить отбор');
         }
     };
+
+    const presetDelete = useConfirmDelete({
+        title: 'Удалить сохранённый отбор?',
+        description: (preset) => `Отбор «${preset?.name ?? ''}» исчезнет из панели. Сами партнёры не затрагиваются.`,
+        onConfirm: (preset) => deletePreset(preset.id),
+    });
 
     const applyPreset = (preset) => {
         router.get(route('crm.clients.index'), preset.payload || {}, {
@@ -212,30 +221,19 @@ export default function Index({
         }] : []),
         {
             key: 'actions',
-            label: '',
+            label: 'Действия',
             render: (_, row) => (
-                <HStack gap={1}>
-                    <Button
-                        size="xs"
-                        variant="ghost"
-                        onClick={() => router.visit(route('crm.clients.show', row.id))}
-                        aria-label="Открыть карточку партнёра"
-                    >
-                        <LuEye />
-                    </Button>
-                    {canManageKind && (
-                        <Button
-                            size="xs"
-                            variant="ghost"
-                            colorPalette="red"
-                            onClick={() => setKindFor(row)}
-                            aria-label="Это не партнёр — убрать из базы отдела"
-                            title="Это не партнёр"
-                        >
-                            <LuUserX />
-                        </Button>
-                    )}
-                </HStack>
+                <RowActions
+                    size="xs"
+                    view={{ href: route('crm.clients.show', row.id), label: 'Открыть карточку партнёра' }}
+                    extra={[{
+                        icon: LuUserX,
+                        label: 'Это не партнёр — убрать из базы отдела',
+                        colorPalette: 'red',
+                        allowed: canManageKind,
+                        onClick: () => setKindFor(row),
+                    }]}
+                />
             ),
         },
     ];
@@ -262,7 +260,7 @@ export default function Index({
             <PresetsBar
                 presets={savedPresets}
                 onApply={applyPreset}
-                onDelete={deletePreset}
+                onDelete={(id) => presetDelete.request(savedPresets.find((preset) => preset.id === id) ?? { id })}
                 onSave={savePreset}
             />
 
@@ -342,6 +340,8 @@ export default function Index({
                 client={kindFor}
                 onClose={() => setKindFor(null)}
             />
+
+            <ConfirmDialog {...presetDelete.dialogProps} />
         </>
     );
 }

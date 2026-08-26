@@ -12,7 +12,7 @@ import { Tooltip } from '@/components/ui/tooltip';
  * Кнопка без обработчика не рисуется вовсе, а не показывается неактивной:
  * серая кнопка занимает место и обещает то, чего не будет.
  */
-export default function RowActions({ onTask, onComment }) {
+export default function RowDomainActions({ onTask, onComment }) {
     if (! onTask && ! onComment) {
         return null;
     }

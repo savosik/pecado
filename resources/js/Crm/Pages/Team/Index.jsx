@@ -4,9 +4,9 @@ import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { Badge, Box, HStack, Image, Text } from '@chakra-ui/react';
-import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
-import { LuEyeOff, LuUndo2 } from 'react-icons/lu';
+import { LuArchive, LuUndo2 } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 
 /**
  * Команда: карточки персональных менеджеров.
@@ -78,31 +78,29 @@ export default function Index() {
         },
         ...(canEdit ? [{
             key: 'actions',
-            label: '',
-            render: (_, row) => (row.is_active
-                ? (
-                    <Button
-                        size="xs"
-                        variant="ghost"
-                        colorPalette="red"
-                        disabled={busy}
-                        onClick={() => setHideFor(row)}
-                        title="Скрыть карточку из списков CRM"
-                    >
-                        <LuEyeOff /> Скрыть
-                    </Button>
-                )
-                : (
-                    <Button
-                        size="xs"
-                        variant="ghost"
-                        disabled={busy}
-                        onClick={() => setActive(row, true)}
-                        title="Вернуть карточку в работу"
-                    >
-                        <LuUndo2 /> Вернуть
-                    </Button>
-                )),
+            label: 'Действия',
+            render: (_, row) => (
+                <RowActions
+                    size="xs"
+                    extra={[
+                        row.is_active
+                            ? {
+                                key: 'hide',
+                                icon: LuArchive,
+                                label: 'Скрыть карточку из списков CRM',
+                                disabled: busy,
+                                onClick: () => setHideFor(row),
+                            }
+                            : {
+                                key: 'restore',
+                                icon: LuUndo2,
+                                label: 'Вернуть карточку в работу',
+                                disabled: busy,
+                                onClick: () => setActive(row, true),
+                            },
+                    ]}
+                />
+            ),
         }] : []),
     ];
 

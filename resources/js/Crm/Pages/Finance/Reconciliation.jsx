@@ -6,6 +6,7 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
 import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
 import PeriodFilter from '@/Crm/Components/PeriodFilter';
+import RowActions from '@/shared/Panel/RowActions';
 import { formatRub } from './components/format';
 
 /**
@@ -274,6 +275,7 @@ function Act({ client, act, showCompany = true, showOrganization = true }) {
                                 <Table.ColumnHeader textAlign="end">Дебет</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="end">Кредит</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="end">Сальдо</Table.ColumnHeader>
+                                <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
@@ -281,13 +283,7 @@ function Act({ client, act, showCompany = true, showOrganization = true }) {
                                 <Table.Row key={row.id}>
                                     <Table.Cell whiteSpace="nowrap">{row.date_label}</Table.Cell>
                                     <Table.Cell>
-                                        {row.document_url ? (
-                                            <Link href={row.document_url}>
-                                                <Text textDecoration="underline">{row.document}</Text>
-                                            </Link>
-                                        ) : (
-                                            <Text>{row.document}</Text>
-                                        )}
+                                        <Text>{row.document}</Text>
                                         {row.settlement_object_name && (
                                             <Text fontSize="xs" color="fg.muted">{row.settlement_object_name}</Text>
                                         )}
@@ -312,6 +308,12 @@ function Act({ client, act, showCompany = true, showOrganization = true }) {
                                     <Table.Cell textAlign="end">{row.debit ? money(row.debit) : '—'}</Table.Cell>
                                     <Table.Cell textAlign="end">{row.credit ? money(row.credit) : '—'}</Table.Cell>
                                     <Table.Cell textAlign="end" fontWeight="600">{money(row.balance)}</Table.Cell>
+                                    <Table.Cell>
+                                        <RowActions
+                                            size="xs"
+                                            view={row.document_url ? { label: 'Открыть документ', href: row.document_url } : null}
+                                        />
+                                    </Table.Cell>
                                 </Table.Row>
                             ))}
                         </Table.Body>

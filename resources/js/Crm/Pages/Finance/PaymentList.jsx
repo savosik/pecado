@@ -1,6 +1,6 @@
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import { Badge, Box, Flex, Grid, HStack, Text, VStack } from '@chakra-ui/react';
-import { LuDownload, LuEye, LuInfo, LuX } from 'react-icons/lu';
+import { LuDownload, LuInfo, LuX } from 'react-icons/lu';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { SearchInput } from '@/Admin/Components/SearchInput';
@@ -12,6 +12,7 @@ import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import FilterChips from '@/Crm/Components/FilterChips';
 import PeriodFilter from '@/Crm/Components/PeriodFilter';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import RowActions from '@/shared/Panel/RowActions';
 import { useDocumentFilters } from '@/Crm/hooks/useDocumentFilters';
 
 /** «1 платёж», «2 платежа», «5 платежей» — иначе итог читается как опечатка. */
@@ -202,17 +203,8 @@ export default function PaymentList({
         },
         {
             key: 'actions',
-            label: '',
-            render: (_, row) => (
-                <Button
-                    size="xs"
-                    variant="ghost"
-                    onClick={() => router.visit(row.url)}
-                    aria-label="Открыть платёж"
-                >
-                    <LuEye />
-                </Button>
-            ),
+            label: 'Действия',
+            render: (_, row) => <RowActions size="xs" view={{ label: 'Открыть платёж', href: row.url }} />,
         },
     ];
 
