@@ -77,6 +77,25 @@ class SubscriptionRegistry
      * @param  array<int, string>|null  $selected
      * @return array<int, string>|null
      */
+    /**
+     * Типы уведомлений, которые относятся к разделу кабинета.
+     *
+     * Нужны отписке: она обязана погасить ровно то, из письма чего пришли,
+     * а не всю почту клиенту. Клиент, отказавшийся от статусов заказов,
+     * не отказывается от актов сверки.
+     *
+     * @return list<string>
+     */
+    public function occasionKeys(string $section): array
+    {
+        $prefix = $section.'.';
+
+        return array_values(array_filter(
+            array_keys((array) config('mail_occasions', [])),
+            fn (string $key): bool => str_starts_with($key, $prefix),
+        ));
+    }
+
     public function normalizeEvents(string $section, ?array $selected): ?array
     {
         $known = $this->eventKeys($section);

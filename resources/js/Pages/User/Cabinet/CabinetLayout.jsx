@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+    LuBell,
     Box, Flex, VStack, Text, HStack, Heading,
     Button, Drawer, Portal, CloseButton,
 } from '@chakra-ui/react';
@@ -68,6 +69,7 @@ const menuGroups = [
         title: 'Настройки',
         items: [
             { href: '/cabinet/profile', label: 'Мои данные', icon: LuUser },
+            { href: '/cabinet/notifications', label: 'Уведомления', icon: LuBell },
             { href: '/cabinet/change-password', label: 'Смена пароля', icon: LuLock },
         ],
     },

@@ -201,17 +201,23 @@ class SubscriptionController extends Controller
             $subscription->update(['is_active' => false]);
         }
 
+        // Раньше здесь стоял SCOPE_ALL — отписка от одного раздела глушила
+        // клиенту всю почту разом. Клиент, попросивший перестать присылать
+        // статусы заказов, не отказывается от актов сверки, и решать это
+        // за него нельзя. Гасим ровно то, из письма чего пришли.
         if ($subscription && filled($subscription->destination)) {
-            NotificationSuppression::updateOrCreate(
-                [
-                    'email' => mb_strtolower(trim($subscription->destination)),
-                    'scope' => NotificationSuppression::SCOPE_ALL,
-                ],
-                [
-                    'reason' => NotificationSuppression::REASON_UNSUBSCRIBED,
-                    'note' => 'Отписка по ссылке из письма',
-                ],
-            );
+            foreach ($this->registry->occasionKeys($subscription->section) as $occasionKey) {
+                NotificationSuppression::updateOrCreate(
+                    [
+                        'email' => mb_strtolower(trim($subscription->destination)),
+                        'scope' => $occasionKey,
+                    ],
+                    [
+                        'reason' => NotificationSuppression::REASON_UNSUBSCRIBED,
+                        'note' => 'Отписка по ссылке из письма: '.$this->registry->label($subscription->section),
+                    ],
+                );
+            }
         }
 
         $sectionLabel = $subscription

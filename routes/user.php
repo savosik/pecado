@@ -17,6 +17,7 @@ use App\Http\Controllers\User\FavoriteController;
 use App\Http\Controllers\User\HomeController;
 use App\Http\Controllers\User\MediaController;
 use App\Http\Controllers\User\NewsController;
+use App\Http\Controllers\User\NotificationPreferenceController;
 use App\Http\Controllers\User\OrderChangeController;
 use App\Http\Controllers\User\OrderController;
 use App\Http\Controllers\User\PageController;
@@ -288,6 +289,15 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/media/api', [MediaController::class, 'api'])->name('media.api');
     Route::get('/media/{media}/download', [MediaController::class, 'download'])->name('media.download');
     Route::post('/media/download-batch', [MediaController::class, 'downloadBatch'])->name('media.download-batch');
+
+    // Уведомления: клиент настраивает себе почту сам. Главный критерий эпика
+    // note-00 — что для этого не нужно ничего объяснять.
+    Route::get('/notifications', [NotificationPreferenceController::class, 'index'])
+        ->name('notifications.index');
+    Route::get('/notifications/data', [NotificationPreferenceController::class, 'data'])
+        ->name('notifications.data');
+    Route::patch('/notifications', [NotificationPreferenceController::class, 'update'])
+        ->name('notifications.update');
 
     // Подписки на изменения сущностей раздела (email; универсальный CRUD).
     Route::get('/subscriptions/{section}', [SubscriptionController::class, 'index'])->name('subscriptions.index');
