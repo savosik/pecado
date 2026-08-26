@@ -1,88 +1,82 @@
-import { HStack, IconButton } from '@chakra-ui/react';
-import { router } from '@inertiajs/react';
-import { LuEye, LuPencil, LuTrash2 } from 'react-icons/lu';
-import { usePermission } from '@/Admin/hooks/usePermission';
+import RowActions from '@/shared/Panel/RowActions';
 
-const ActionsCell = ({ row, routeName, onDelete, showView, showEdit, showDelete, extraActions, permissionPrefix }) => {
-    const { can } = usePermission();
-
-    const canView = !permissionPrefix || can(`${permissionPrefix}.view`);
-    const canEdit = !permissionPrefix || can(`${permissionPrefix}.edit`);
-    const canDelete = !permissionPrefix || can(`${permissionPrefix}.delete`);
-
-    return (
-        <HStack gap={1}>
-            {showView && canView && (
-                <IconButton
-                    size="sm"
-                    variant="ghost"
-                    aria-label="Просмотреть"
-                    onClick={() => router.visit(route(`${routeName}.show`, row.id))}
-                >
-                    <LuEye />
-                </IconButton>
-            )}
-            {extraActions && extraActions(row)}
-            {showEdit && canEdit && (
-                <IconButton
-                    size="sm"
-                    variant="ghost"
-                    aria-label="Редактировать"
-                    onClick={() => router.visit(route(`${routeName}.edit`, row.id))}
-                >
-                    <LuPencil />
-                </IconButton>
-            )}
-            {showDelete && canDelete && (
-                <IconButton
-                    size="sm"
-                    variant="ghost"
-                    colorPalette="red"
-                    aria-label="Удалить"
-                    onClick={() => onDelete(row)}
-                >
-                    <LuTrash2 />
-                </IconButton>
-            )}
-        </HStack>
-    );
+const routeExists = (name) => {
+    try {
+        return route().has(name);
+    } catch {
+        return false;
+    }
 };
 
 /**
- * createActionsColumn — генерирует колонку «Действия» для DataTable
+ * createActionsColumn — колонка «Действия» для DataTable поверх общего RowActions.
+ *
+ * Глаз, карандаш и корзина — единый стандарт всех панелей, поэтому просмотр
+ * включён по умолчанию; выключать его нужно явно и только там, где нет
+ * show-маршрута (иначе Ziggy упадёт на рендере всей страницы — на это
+ * стоит страховка routeExists).
  *
  * @param {string} routeName - Базовый маршрут (напр. 'admin.brands')
- * @param {Function} onDelete - Обработчик удаления (получает row)
+ * @param {Function} onDelete - Обработчик удаления (получает row); корзина не рисуется без него
  * @param {Object} options
- * @param {boolean} options.showView - Показать кнопку просмотра (по умолчанию false)
- * @param {boolean} options.showEdit - Показать кнопку редактирования (по умолчанию true)
- * @param {boolean} options.showDelete - Показать кнопку удаления (по умолчанию true)
- * @param {string} options.permissionPrefix - Префикс ресурса для проверки прав (напр. 'products').
- *                                            Если не указан — кнопки показываются без проверки.
- * @param {Function} options.extraActions - Дополнительные действия (получает row, возвращает JSX)
+ * @param {boolean} options.showView - Кнопка просмотра (по умолчанию true, если есть маршрут .show)
+ * @param {boolean} options.showEdit - Кнопка редактирования (по умолчанию true)
+ * @param {boolean} options.showDelete - Кнопка удаления (по умолчанию true)
+ * @param {string} options.permissionPrefix - Префикс ресурса для проверки прав (напр. 'products')
+ * @param {Function} options.viewHref - (row) => url — нестандартный адрес просмотра
+ * @param {Function} options.editHref - (row) => url — нестандартный адрес редактирования
+ * @param {Function} options.canDelete - (row) => true | false | 'причина' — блокировка корзины по данным строки
+ * @param {string} options.deleteLabel - Подпись корзины (напр. «Удалить навсегда»)
+ * @param {Function} options.extraActions - (row) => массив действий RowActions либо JSX
  */
 export const createActionsColumn = (routeName, onDelete, options = {}) => {
     const {
-        showView = false,
+        showView = true,
         showEdit = true,
         showDelete = true,
         extraActions,
         permissionPrefix,
+        viewHref,
+        editHref,
+        canDelete,
+        deleteLabel,
     } = options;
+
+    const showRoute = `${routeName}.show`;
+    const editRoute = `${routeName}.edit`;
+    const perm = (action) => (permissionPrefix ? `${permissionPrefix}.${action}` : undefined);
+
+    const hasView = showView && (viewHref || routeExists(showRoute));
+    const hasEdit = showEdit && (editHref || routeExists(editRoute));
+
+    const disabledFor = (row) => {
+        if (!canDelete) return false;
+        const verdict = canDelete(row);
+        if (verdict === false) return true;
+        if (typeof verdict === 'string') return verdict;
+        return false;
+    };
 
     return {
         key: 'actions',
         label: 'Действия',
         render: (_, row) => (
-            <ActionsCell
-                row={row}
-                routeName={routeName}
-                onDelete={onDelete}
-                showView={showView}
-                showEdit={showEdit}
-                showDelete={showDelete}
-                extraActions={extraActions}
-                permissionPrefix={permissionPrefix}
+            <RowActions
+                view={hasView ? {
+                    href: viewHref ? viewHref(row) : route(showRoute, row.id),
+                    permission: perm('view'),
+                } : null}
+                edit={hasEdit ? {
+                    href: editHref ? editHref(row) : route(editRoute, row.id),
+                    permission: perm('edit'),
+                } : null}
+                delete={showDelete && onDelete ? {
+                    onClick: () => onDelete(row),
+                    permission: perm('delete'),
+                    disabled: disabledFor(row),
+                    label: deleteLabel,
+                } : null}
+                extra={extraActions ? extraActions(row) : null}
             />
         ),
     };
