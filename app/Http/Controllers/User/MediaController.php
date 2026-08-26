@@ -25,12 +25,43 @@ use ZipArchive;
 class MediaController extends Controller
 {
     /**
+     * Белый список владельцев медиа, доступных партнёру.
+     *
+     * Только публичный контент витрины. Всё остальное (голосовые заметки о
+     * клиентах на User, фото уценки ProductDefect, вложения контактов и
+     * вопросов, фото менеджеров) — служебные данные, в кабинет не попадают.
+     * Любой новый тип добавляется сюда осознанно, по умолчанию — закрыт.
+     */
+    public const PUBLIC_MODEL_TYPES = [
+        Product::class,
+        Brand::class,
+        Article::class,
+        News::class,
+        BrandStory::class,
+        Story::class,
+        StorySlide::class,
+        Promotion::class,
+        \App\Models\Banner::class,
+        \App\Models\Category::class,
+        \App\Models\ProductSelection::class,
+        \App\Models\Certificate::class,
+    ];
+
+    /**
+     * Базовый запрос медиатеки кабинета — всегда сужен до публичных владельцев.
+     */
+    private function publicMedia(): \Illuminate\Database\Eloquent\Builder
+    {
+        return Media::query()->whereIn('model_type', self::PUBLIC_MODEL_TYPES);
+    }
+
+    /**
      * Страница медиатеки (Inertia).
      */
     public function index(): Response
     {
         // Уникальные коллекции для фильтра
-        $collections = Media::query()
+        $collections = $this->publicMedia()
             ->select('collection_name')
             ->distinct()
             ->pluck('collection_name')
@@ -38,7 +69,7 @@ class MediaController extends Controller
             ->values();
 
         // Уникальные типы моделей для фильтра
-        $modelTypes = Media::query()
+        $modelTypes = $this->publicMedia()
             ->select('model_type')
             ->distinct()
             ->pluck('model_type')
@@ -63,7 +94,7 @@ class MediaController extends Controller
         $sort = $request->input('sort', 'newest');
         $perPage = $request->integer('per_page', 24);
 
-        $query = Media::query()->with('model');
+        $query = $this->publicMedia()->with('model');
 
         if ($type) {
             match ($type) {
@@ -125,6 +156,10 @@ class MediaController extends Controller
      */
     public function download(Media $media)
     {
+        if (! in_array($media->model_type, self::PUBLIC_MODEL_TYPES, true)) {
+            abort(404, 'Файл не найден');
+        }
+
         $disk = $media->disk;
         $path = $media->getPath();
 
@@ -146,7 +181,7 @@ class MediaController extends Controller
             return response()->json(['message' => 'Не указаны файлы для скачивания'], 422);
         }
 
-        $mediaItems = Media::whereIn('id', $ids)->get();
+        $mediaItems = $this->publicMedia()->whereIn('id', $ids)->get();
 
         if ($mediaItems->isEmpty()) {
             return response()->json(['message' => 'Файлы не найдены'], 404);
