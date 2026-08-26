@@ -455,6 +455,14 @@ class MailStream
             $data['company_tax_id'] = $company->tax_id;
         }
 
+        // Отдельно запоминаем контрагента, **названного самим поводом**.
+        // Выше в `company_id` может лечь юрлицо партнёра по умолчанию — оно
+        // годится для подписи в письме, но не для адресации: сузив по нему
+        // роль, мы отрезали бы бухгалтеров остальных юрлиц без причины.
+        if ($occasion->companyId !== null) {
+            $data['occasion_company_id'] = $occasion->companyId;
+        }
+
         return array_filter($data, fn ($value): bool => $value !== null);
     }
 

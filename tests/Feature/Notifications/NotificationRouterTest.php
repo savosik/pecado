@@ -139,6 +139,36 @@ class NotificationRouterTest extends TestCase
     }
 
     #[Test]
+    public function без_названного_контрагента_роль_не_сужается(): void
+    {
+        // Повод может не относиться ни к какому юрлицу. Тогда письмо идёт всем
+        // людям партнёра с этой ролью — сужать не по чему, и подставлять
+        // «юрлицо по умолчанию» нельзя: это отрезало бы людей без причины.
+        $companies = [];
+
+        foreach (['first@example.com', 'second@example.com'] as $email) {
+            $company = Company::factory()->create(['user_id' => $this->client->id]);
+            $companies[] = $company;
+            $contact = Contact::factory()->create(['client_user_id' => $this->client->id, 'email' => $email]);
+            ContactLink::query()->create([
+                'contact_id' => $contact->id,
+                'subject_type' => Company::class,
+                'subject_id' => $company->id,
+                'role' => ContactRole::ACCOUNTANT->value,
+                'client_user_id' => $this->client->id,
+            ]);
+        }
+
+        $this->prefer('documents.published', [
+            'destinations' => [['type' => 'contact_role', 'role' => 'accountant']],
+        ]);
+
+        $addresses = $this->router->addressesFor($this->occasion('documents.published'));
+
+        $this->assertCount(2, $addresses);
+    }
+
+    #[Test]
     public function конкретный_человек_адресуется_по_идентификатору(): void
     {
         $contact = Contact::factory()->create([

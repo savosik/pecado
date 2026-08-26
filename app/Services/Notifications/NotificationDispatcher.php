@@ -90,7 +90,9 @@ class NotificationDispatcher
         return new Occasion(
             key: (string) $letter->origin_event,
             clientUserId: $letter->client_user_id === null ? null : (int) $letter->client_user_id,
-            companyId: isset($data['company_id']) ? (int) $data['company_id'] : null,
+            // Только контрагент, названный поводом: `company_id` может быть
+            // юрлицом партнёра по умолчанию, и сужать по нему адресацию нельзя.
+            companyId: isset($data['occasion_company_id']) ? (int) $data['occasion_company_id'] : null,
             data: $data,
         );
     }
