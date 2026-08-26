@@ -5,12 +5,10 @@ namespace Tests\Feature\Crm\Mail;
 use App\Enums\Crm\EmailStatus;
 use App\Models\CrmEmail;
 use App\Models\CrmMailRule;
-use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Crm\Mail\MailRuleEngine;
 use App\Services\Crm\Mail\MailStream;
 use App\Support\Notifications\Occasion;
-use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
@@ -33,28 +31,19 @@ class MailRuleSubscribersTest extends TestCase
 
     private User $other;
 
+    /**
+     * Движок правил больше не маршрутизирует уведомления: этим занимается
+     * настройка партнёра (эпик note-00). Тесты описывают механизм, который
+     * ничего не решает, и уходят вместе с ним в note-08.
+     *
+     * Пропуск, а не удаление: снос движка — большая необратимая правка,
+     * и делать её без присмотра неправильно.
+     */
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(RolesAndPermissionsSeeder::class);
-        $this->restrictManagersToOwnClients();
 
-        $this->manager = User::factory()->create(['email' => 'manager@pecado.ru']);
-        $this->manager->assignRole('sales-manager');
-        $profile = PersonalManager::factory()->create(['user_id' => $this->manager->id]);
-
-        $this->subscribed = User::factory()->create([
-            'personal_manager_id' => $profile->id,
-            'email' => 'subscribed@example.com',
-            'erp_name' => 'Подписанный партнёр',
-        ]);
-        $this->other = User::factory()->create([
-            'personal_manager_id' => $profile->id,
-            'email' => 'other@example.com',
-            'erp_name' => 'Неподписанный партнёр',
-        ]);
-
-        config(['mail_stream.enabled' => true, 'mail_stream.autosend' => false]);
+        $this->markTestSkipped('Движок правил отключён от маршрутизации — сносится в note-08.');
     }
 
     private function rule(array $clientIds = []): CrmMailRule

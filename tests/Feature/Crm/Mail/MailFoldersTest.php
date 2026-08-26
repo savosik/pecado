@@ -55,6 +55,21 @@ class MailFoldersTest extends TestCase
             ->viewData('page')['props'];
     }
 
+    /**
+     * Уведомление, которому некуда уйти: адресат настроен ролью, а людей
+     * с такой ролью у партнёра нет. Теперь «мимо фильтров» означает именно
+     * это, а не «правило не завели».
+     */
+    private function unroutableLetter(string $number = '1023'): CrmEmail
+    {
+        \App\Models\NotificationPreference::query()->updateOrCreate(
+            ['user_id' => $this->client->id, 'occasion_key' => 'documents.published'],
+            ['is_enabled' => true, 'destinations' => [['type' => 'contact_role', 'role' => 'accountant']]],
+        );
+
+        return $this->systemLetter($number);
+    }
+
     private function systemLetter(string $number = '1023'): CrmEmail
     {
         return app(MailStream::class)->capture(new Occasion(
@@ -78,7 +93,7 @@ class MailFoldersTest extends TestCase
     {
         CrmEmail::factory()->by($this->manager)->on($this->client)->create();
         CrmEmail::factory()->by($this->manager)->on($this->client)->sent()->create();
-        $this->systemLetter();
+        $this->unroutableLetter();
 
         $counts = collect($this->props()['folders'])->pluck('count', 'value')->all();
 
@@ -91,7 +106,7 @@ class MailFoldersTest extends TestCase
     #[Test]
     public function letter_shows_who_composed_it(): void
     {
-        $this->systemLetter();
+        $this->unroutableLetter();
 
         $letter = $this->props(['folder' => 'unmatched'])['emails']['data'][0];
 
@@ -147,12 +162,15 @@ class MailFoldersTest extends TestCase
     #[Test]
     public function unmatched_folder_explains_what_is_not_configured(): void
     {
-        $this->systemLetter('1023');
-        $this->systemLetter('1024');
+        $this->unroutableLetter('1023');
+        $this->unroutableLetter('1024');
 
         $summary = $this->props(['folder' => 'unmatched'])['unmatchedSummary'];
 
-        $this->assertSame(2, $summary['rows'][0]['total']);
+        // Два документа в одном окне — одно письмо: суточный конвейер актов
+        // выкладывает их пачками, и письмо на каждый акт было бы тем же
+        // потоком, из-за которого пожаловался клиент.
+        $this->assertSame(1, $summary['rows'][0]['total']);
         $this->assertSame('documents.published', $summary['rows'][0]['event']);
         $this->assertSame(14, $summary['retention_days']);
         // Кнопка «настроить» ведёт в форму с уже набранным условием: иначе
@@ -175,9 +193,9 @@ class MailFoldersTest extends TestCase
     {
         // Данные не копятся: иначе повторилась бы история, когда журналы
         // мониторинга съели почти всю боевую базу.
-        $old = $this->systemLetter('1023');
+        $old = $this->unroutableLetter('1023');
         $old->forceFill(['created_at' => now()->subDays(20)])->save();
-        $fresh = $this->systemLetter('1024');
+        $fresh = $this->unroutableLetter('1024');
 
         $this->artisan('mail:prune-unmatched')->assertSuccessful();
 

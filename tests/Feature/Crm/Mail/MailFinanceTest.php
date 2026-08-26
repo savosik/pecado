@@ -4,7 +4,6 @@ namespace Tests\Feature\Crm\Mail;
 
 use App\Models\Company;
 use App\Models\CrmEmail;
-use App\Models\CrmMailRule;
 use App\Models\PersonalManager;
 use App\Models\SettlementEntry;
 use App\Models\User;
@@ -147,30 +146,23 @@ class MailFinanceTest extends TestCase
     }
 
     #[Test]
-    public function threshold_lives_in_the_rule_not_in_the_code(): void
+    public function кому_писать_о_просрочке_решает_настройка_партнёра(): void
     {
-        // У одного клиента отсрочка привычна, у другого пять дней уже сигнал.
-        // Поэтому письмо создаётся при любой просрочке, а кому писать —
-        // решает фильтр.
-        CrmMailRule::factory()->create([
-            'name' => 'Просрочка от 60 дней — директору',
-            'conditions' => ['all' => [
-                ['field' => 'tag', 'op' => 'has_tag', 'value' => 'просрочка'],
-                ['field' => 'days_overdue', 'op' => '>=', 'value' => 60],
-            ]],
-            'recipients' => ['dir@romashka.ru'],
+        // Раньше порог жил в условии правила. Теперь порогов нет вовсе:
+        // о просрочке узнаёт менеджер (умолчание), а если у конкретного
+        // партнёра письмо должно уходить директору — это его настройка.
+        \App\Models\NotificationPreference::query()->create([
+            'user_id' => $this->partner->id,
+            'occasion_key' => 'finance.overdue_started',
+            'is_enabled' => true,
+            'destinations' => [['type' => 'email', 'email' => 'dir@romashka.ru']],
         ]);
-
-        $this->setOverdue(10000, 40);
-        $this->scan();
-
-        $letter = CrmEmail::query()->where('origin_event', 'like', 'finance.%')->firstOrFail();
-        $this->assertSame([], $letter->to);
 
         $this->setOverdue(10000, 70);
         $this->scan();
 
-        $caught = CrmEmail::query()->where('origin_event', 'like', 'finance.%')->latest('id')->firstOrFail();
-        $this->assertSame(['dir@romashka.ru'], $caught->to);
+        $letter = CrmEmail::query()->where('origin_event', 'like', 'finance.%')->latest('id')->firstOrFail();
+
+        $this->assertSame(['dir@romashka.ru'], (array) $letter->to);
     }
 }

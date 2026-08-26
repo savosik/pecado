@@ -93,12 +93,13 @@ class MailStreamTest extends TestCase
     }
 
     #[Test]
-    public function without_rules_letter_waits_outside_the_working_folder(): void
+    public function уведомление_адресуется_по_умолчанию_типа(): void
     {
-        // Иначе рабочая папка менеджера забилась бы поводами,
-        // которые никого не интересуют.
-        $this->assertSame(EmailStatus::UNMATCHED, $this->capture()->status);
-        $this->assertSame([], $this->capture()->to);
+        // Раньше письмо ждало правила и лежало «мимо фильтров». Теперь адресата
+        // даёт настройка партнёра, а при её отсутствии — умолчание типа.
+        $letter = $this->capture();
+
+        $this->assertContains($this->client->email, (array) $letter->to);
     }
 
     #[Test]
@@ -124,12 +125,16 @@ class MailStreamTest extends TestCase
     }
 
     #[Test]
-    public function different_orders_do_not_merge(): void
+    public function партия_заказов_склеивается_в_одно_письмо(): void
     {
+        // Поведение изменено осознанно (note-05): 1С правит заказы построчно,
+        // и восемь смен статуса за две минуты — одно событие глазами клиента.
+        // Раньше каждый заказ давал своё письмо, и активный клиент получал
+        // по два десятка писем в день.
         $this->capture();
         $this->capture(['data' => ['order_number' => 'П-200']]);
 
-        $this->assertSame(2, CrmEmail::query()->count());
+        $this->assertSame(1, CrmEmail::query()->count());
     }
 
     #[Test]

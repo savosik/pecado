@@ -66,6 +66,13 @@ class MailNavigationTest extends TestCase
 
     private function financeLetter(): CrmEmail
     {
+        // По умолчанию о просрочке узнаёт менеджер; здесь проверяются топики,
+        // поэтому адресуем письмо партнёру, чтобы оба легли в одну папку.
+        \App\Models\NotificationPreference::query()->updateOrCreate(
+            ['user_id' => $this->client->id, 'occasion_key' => 'finance.overdue_started'],
+            ['is_enabled' => true, 'destinations' => [['type' => 'login']]],
+        );
+
         return app(MailStream::class)->capture(new Occasion(
             key: 'finance.overdue_started',
             clientUserId: $this->client->id,
@@ -77,7 +84,9 @@ class MailNavigationTest extends TestCase
     private function props(array $query = []): array
     {
         return $this->actingAs($this->manager)
-            ->get(route('crm.emails.index', $query + ['folder' => 'unmatched']))
+            // Уведомления теперь адресованы по настройке партнёра и ждут
+            // отправки в черновиках, а не лежат «мимо фильтров».
+            ->get(route('crm.emails.index', $query + ['folder' => 'drafts']))
             ->viewData('page')['props'];
     }
 
@@ -119,7 +128,7 @@ class MailNavigationTest extends TestCase
 
         $counts = collect($this->props(['topic' => 'documents'])['folders'])->pluck('count', 'value')->all();
 
-        $this->assertSame(1, $counts['unmatched']);
+        $this->assertSame(1, $counts['drafts']);
     }
 
     #[Test]

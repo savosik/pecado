@@ -110,9 +110,12 @@ class MailLegacyConflictTest extends TestCase
         Mail::fake();
         config(['notifications.mail.features.order_status_changes' => true]);
 
-        // Старый листенер пишет клиенту. Правило, целящееся в менеджера,
+        // Старый листенер пишет клиенту. Уведомление, адресованное менеджеру,
         // дубля не создаёт — и молчать не должно.
-        CrmMailRule::query()->update(['recipients' => [CrmMailRule::RECIPIENT_MANAGER]]);
+        \App\Models\NotificationPreference::query()->updateOrCreate(
+            ['user_id' => $this->client->id, 'occasion_key' => 'orders.status_changed'],
+            ['is_enabled' => true, 'destinations' => [['type' => 'manager']]],
+        );
 
         $letter = $this->statusLetter()->refresh();
 

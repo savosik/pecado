@@ -10,7 +10,6 @@ use App\Models\CrmEmailDelivery;
 use App\Models\CrmMailRule;
 use App\Models\PersonalManager;
 use App\Models\User;
-use App\Services\Crm\Mail\MailRuleEngine;
 use App\Services\Crm\Mail\MailStream;
 use App\Support\Notifications\Occasion;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -67,13 +66,22 @@ class MailDeliveryLedgerTest extends TestCase
     }
 
     #[Test]
-    public function two_independent_rules_naming_one_address_give_one_letter(): void
+    public function два_одинаковых_адресата_дают_одно_письмо(): void
     {
-        // Первое правило без автоотправки, второе с ней: правила независимы,
-        // и достаточно одного, разрешившего отправку, — но письмо уходит одно
-        // и на каждый адрес по разу.
-        CrmMailRule::factory()->byTag('документы')->to(['buh@romashka.ru'])->create();
-        CrmMailRule::factory()->byTag('акт-сверки')->to(['buh@romashka.ru', 'dir@romashka.ru'])->auto()->create();
+        // Один и тот же адрес назван дважды — прямо и через роль контакта.
+        // Письмо обязано уйти на него ровно один раз.
+        config(['mail_stream.autosend' => true]);
+
+        \App\Models\NotificationPreference::query()->create([
+            'user_id' => $this->client->id,
+            'occasion_key' => 'documents.published',
+            'is_enabled' => true,
+            'destinations' => [
+                ['type' => 'email', 'email' => 'buh@romashka.ru'],
+                ['type' => 'email', 'email' => 'BUH@romashka.ru'],
+                ['type' => 'email', 'email' => 'dir@romashka.ru'],
+            ],
+        ]);
 
         $letter = $this->letter();
 
@@ -119,26 +127,27 @@ class MailDeliveryLedgerTest extends TestCase
     }
 
     #[Test]
-    public function address_added_later_receives_the_letter_and_the_old_one_does_not(): void
+    public function адрес_добавленный_позже_получает_письмо_а_прежний_нет(): void
     {
-        // Второе правило добавило адрес, пока письмо ещё не ушло. Уходит одно
-        // письмо на оба адреса, а не два — но если бы первое уже ушло, повтора
-        // на прежний адрес всё равно не случилось бы.
+        // Настройку поменяли, пока письмо ещё не ушло. Прежний адрес повтора
+        // не получает, новый — получает.
+        config(['mail_stream.autosend' => false]);
+
+        \App\Models\NotificationPreference::query()->create([
+            'user_id' => $this->client->id,
+            'occasion_key' => 'documents.published',
+            'is_enabled' => true,
+            'destinations' => [['type' => 'email', 'email' => 'dir@romashka.ru']],
+        ]);
+
         $letter = $this->letter();
-        $this->assertSame(EmailStatus::UNMATCHED, $letter->status);
-
-        $first = CrmMailRule::factory()->byTag('документы')->to(['dir@romashka.ru'])->create();
-        app(MailRuleEngine::class)->applyToOld($first);
-
         $ledger = app(\App\Services\Crm\Mail\MailDeliveryLedger::class);
-        $letter->refresh();
 
         $this->assertSame(['dir@romashka.ru'], $ledger->claim($letter, $letter->to));
         // Повторный заход по тому же адресу не даёт ничего — он уже занят.
         $this->assertSame([], $ledger->claim($letter, $letter->to));
 
-        $second = CrmMailRule::factory()->byTag('акт-сверки')->to(['buh@romashka.ru'])->create();
-        app(MailRuleEngine::class)->applyToOld($second);
+        $letter->forceFill(['to' => ['dir@romashka.ru', 'buh@romashka.ru']])->save();
 
         $this->assertSame(['buh@romashka.ru'], $ledger->claim($letter->refresh(), $letter->to));
     }
