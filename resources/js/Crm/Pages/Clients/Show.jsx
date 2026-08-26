@@ -17,6 +17,7 @@ import ClientFeed from '@/Crm/Components/Feed/ClientFeed';
 import ClientDocuments from '@/Crm/Components/ClientDocuments';
 import CommentThread from '@/Crm/Components/CommentThread';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
+import NotificationMatrix from '@/Crm/Components/NotificationMatrix';
 import ContactsPanel from '@/Crm/Components/ContactsPanel';
 import VoiceNotes from '@/Crm/Components/VoiceNotes';
 import ClientProfileForm from '@/Crm/Components/ClientProfileForm';
@@ -250,6 +251,7 @@ export default function Show() {
                                     {canViewComments && <Tabs.Trigger value="shipments">Реализации</Tabs.Trigger>}
                                     {canViewFiles && <Tabs.Trigger value="files">Файлы</Tabs.Trigger>}
                                     {canViewContacts && <Tabs.Trigger value="contacts">Контакты</Tabs.Trigger>}
+                                    <Tabs.Trigger value="notifications">Уведомления</Tabs.Trigger>
                                 </Tabs.List>
 
                                 {canViewComments && (
@@ -339,6 +341,18 @@ export default function Show() {
                                         />
                                     </Tabs.Content>
                                 )}
+
+                                <Tabs.Content value="notifications">
+                                    <NotificationMatrix
+                                        canEdit={can('crm-clients.edit')}
+                                        intro="Что система присылает этому партнёру и на какие адреса. Клиент видит те же настройки у себя в кабинете и может их менять — тогда строка помечается «правил клиент»."
+                                        endpoints={{
+                                            index: route('crm.clients.notifications.index', client.id),
+                                            update: route('crm.clients.notifications.update', client.id),
+                                            contacts: route('crm.clients.notifications.contacts', client.id),
+                                        }}
+                                    />
+                                </Tabs.Content>
 
                             </Tabs.Root>
                         </Card.Body>

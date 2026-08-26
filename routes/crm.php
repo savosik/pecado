@@ -22,6 +22,7 @@ use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\MailOccasionController;
 use App\Http\Controllers\Crm\MailRuleController;
 use App\Http\Controllers\Crm\MailSuppressionController;
+use App\Http\Controllers\Crm\NotificationPreferenceController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
@@ -87,6 +88,18 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // вернул бы 403 вместо 404 и подтвердил факт существования.
         Route::get('/partners/{client}', [ClientController::class, 'show'])
             ->name('clients.show')
+            ->whereNumber('client');
+
+        // Уведомления партнёра: что ему присылать и куда. Отдельного права нет —
+        // это часть карточки партнёра, а не самостоятельный раздел.
+        Route::get('/partners/{client}/notifications', [NotificationPreferenceController::class, 'index'])
+            ->name('clients.notifications.index')
+            ->whereNumber('client');
+        Route::patch('/partners/{client}/notifications', [NotificationPreferenceController::class, 'update'])
+            ->name('clients.notifications.update')
+            ->whereNumber('client');
+        Route::get('/partners/{client}/notifications/contacts', [NotificationPreferenceController::class, 'contacts'])
+            ->name('clients.notifications.contacts')
             ->whereNumber('client');
 
         // Закупки партнёра для карточки — отдельным запросом, а не в пропсах

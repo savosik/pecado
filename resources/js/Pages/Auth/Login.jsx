@@ -1,4 +1,4 @@
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
 import { Box, Input, Button, Text, Stack } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -7,6 +7,7 @@ import AuthLayout from './AuthLayout';
 // import SocialAuthButtons from './SocialAuthButtons';
 
 export default function Login({ errors }) {
+    const flashError = usePage().props.flash?.error;
     const { data, setData, post, processing } = useForm({
         email: '',
         password: '',
@@ -40,6 +41,11 @@ export default function Login({ errors }) {
             <AuthLayout title="Вход в аккаунт" subtitle="Добро пожаловать в Pecado" image="/images/auth-login.png">
                 <form onSubmit={handleSubmit}>
                     <Stack gap={5}>
+                        {flashError && (
+                            <Box bg="red.50" borderWidth="1px" borderColor="red.200" borderRadius="lg" px={4} py={3}>
+                                <Text color="red.700" fontSize="sm">{flashError}</Text>
+                            </Box>
+                        )}
                         <Field
                             label={<Text color="fg" fontSize="sm" fontWeight="medium">Email</Text>}
                             invalid={!!errors.email}
