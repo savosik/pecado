@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-    LuBell,
     Box, Flex, VStack, Text, HStack, Heading,
     Button, Drawer, Portal, CloseButton,
 } from '@chakra-ui/react';
@@ -11,7 +10,7 @@ import {
     LuLayoutDashboard, LuShoppingBag, LuShoppingCart,
     LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin, LuContact,
     LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuReceipt, LuLayoutGrid, LuWrench, LuCode,
-    LuChartPie, LuMessageSquare, LuArrowRightLeft, LuFileText,
+    LuChartPie, LuMessageSquare, LuArrowRightLeft, LuFileText, LuBell,
 } from 'react-icons/lu';
 
 const menuGroups = [
