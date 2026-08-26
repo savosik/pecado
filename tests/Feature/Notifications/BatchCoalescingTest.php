@@ -142,6 +142,29 @@ class BatchCoalescingTest extends TestCase
     }
 
     #[Test]
+    public function выключенный_рубильник_адресует_но_не_отправляет(): void
+    {
+        // Механизм приезжает на прод раньше, чем кто-то посмотрел на умолчания
+        // глазами. Пока рубильник выключен, видно, кому что ушло бы,
+        // и не уходит ничего.
+        config([
+            'mail_stream.autosend' => true,
+            'mail_stream.notifications_live' => false,
+            'notifications.mail.features.crm_outbound' => true,
+        ]);
+
+        // Очередь в этом классе подменена, поэтому зовём отправку напрямую —
+        // проверяем именно её отказ, а не постановку задачи.
+        $letter = $this->statusLetter('1001');
+        app(\App\Services\Notifications\NotificationDispatcher::class)->send($letter);
+        $letter->refresh();
+
+        $this->assertContains($this->client->email, (array) $letter->to);
+        $this->assertNotSame(\App\Enums\Crm\EmailStatus::SENT, $letter->status);
+        $this->assertStringContainsString('MAIL_NOTIFICATIONS_LIVE', (string) $letter->skip_reason);
+    }
+
+    #[Test]
     public function внутренний_статус_письма_не_создаёт(): void
     {
         $this->statusLetter('1001', 'ready_for_closure');

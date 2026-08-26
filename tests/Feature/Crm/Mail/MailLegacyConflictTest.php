@@ -52,6 +52,7 @@ class MailLegacyConflictTest extends TestCase
         config([
             'mail_stream.enabled' => true,
             'mail_stream.autosend' => true,
+            'mail_stream.notifications_live' => true,
             'notifications.mail.features.crm_outbound' => true,
         ]);
 

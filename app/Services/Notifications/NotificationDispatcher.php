@@ -102,6 +102,13 @@ class NotificationDispatcher
      */
     private function refusal(CrmEmail $letter): ?string
     {
+        // Новая маршрутизация приезжает на прод раньше, чем кто-то посмотрел
+        // на умолчания глазами. Пока рубильник выключен, уведомление
+        // адресуется, но не уходит: видно, кому что ушло бы, и ничего не ушло.
+        if (! config('mail_stream.notifications_live')) {
+            return 'Уведомления по настройкам партнёра ещё не включены (MAIL_NOTIFICATIONS_LIVE)';
+        }
+
         if (! config('mail_stream.autosend')) {
             return 'Автоотправка выключена администратором';
         }

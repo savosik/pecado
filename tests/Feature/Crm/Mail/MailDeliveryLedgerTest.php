@@ -51,6 +51,7 @@ class MailDeliveryLedgerTest extends TestCase
         config([
             'mail_stream.enabled' => true,
             'mail_stream.autosend' => true,
+            'mail_stream.notifications_live' => true,
             'notifications.mail.features.crm_outbound' => true,
         ]);
     }
@@ -70,7 +71,7 @@ class MailDeliveryLedgerTest extends TestCase
     {
         // Один и тот же адрес назван дважды — прямо и через роль контакта.
         // Письмо обязано уйти на него ровно один раз.
-        config(['mail_stream.autosend' => true]);
+        config(['mail_stream.autosend' => true, 'mail_stream.notifications_live' => true]);
 
         \App\Models\NotificationPreference::query()->create([
             'user_id' => $this->client->id,
