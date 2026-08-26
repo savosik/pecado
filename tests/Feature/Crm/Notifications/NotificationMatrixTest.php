@@ -161,6 +161,36 @@ class NotificationMatrixTest extends TestCase
     }
 
     #[Test]
+    public function удалённого_менеджера_можно_вернуть(): void
+    {
+        // Умолчание финансовых уведомлений — персональный менеджер. Если его
+        // убрать, вернуть должно быть чем: в выборе адресата такой пункт есть.
+        $this->actingAs($this->manager)
+            ->patchJson(route('crm.clients.notifications.update', $this->client), [
+                'occasion_key' => 'finance.payment_due_soon',
+                'is_enabled' => true,
+                'destinations' => [],
+            ])
+            ->assertOk();
+
+        $response = $this->actingAs($this->manager)
+            ->patchJson(route('crm.clients.notifications.update', $this->client), [
+                'occasion_key' => 'finance.payment_due_soon',
+                'is_enabled' => true,
+                'destinations' => [['type' => 'manager']],
+            ])
+            ->assertOk();
+
+        $row = collect($response->json('rows'))->firstWhere('key', 'finance.payment_due_soon');
+
+        $this->assertSame('manager', $row['destinations'][0]['type']);
+        $this->assertSame('Персональному менеджеру', $row['destinations'][0]['label']);
+
+        // Вернулись к умолчанию — строка отклонения исчезла.
+        $this->assertSame(0, NotificationPreference::query()->count());
+    }
+
+    #[Test]
     public function набор_статусов_сохраняется(): void
     {
         $this->actingAs($this->manager)

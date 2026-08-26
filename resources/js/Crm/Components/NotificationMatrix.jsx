@@ -13,7 +13,15 @@ import { toastError, toastSuccess } from '@/utils/toast';
  * интерфейс и отправку, а это тот самый класс ошибок, из-за которого подсистему
  * переделывают третий раз. Отличается только `endpoints` и `readOnlyKeys`.
  */
-export default function NotificationMatrix({ endpoints, canEdit = true, intro = null }) {
+export default function NotificationMatrix({
+    endpoints,
+    canEdit = true,
+    intro = null,
+    // Какие адресаты вообще можно выбрать. В кабинете сервер принимает от
+    // клиента только почту аккаунта и свой адрес — предлагать ему остальное
+    // значит показывать кнопки, отвечающие ошибкой.
+    allowedTypes = ['login', 'manager', 'contact_role', 'contact', 'email'],
+}) {
     const [data, setData] = useState(null);
     const [busy, setBusy] = useState(false);
     const [adding, setAdding] = useState(null);
@@ -165,6 +173,7 @@ export default function NotificationMatrix({ endpoints, canEdit = true, intro = 
                                         roles={data.roles}
                                         contactsEndpoint={endpoints.contacts}
                                         allowContacts={data.has_contacts}
+                                        allowedTypes={allowedTypes}
                                         onPick={(destination) => save(row, {
                                             destinations: [...row.destinations, destination],
                                         })}
@@ -213,10 +222,19 @@ function StatusPicker({ row, statuses, canEdit, onChange }) {
     );
 }
 
-function DestinationPicker({ roles, contactsEndpoint, allowContacts, onPick, onCancel }) {
+/**
+ * Выбор адресата.
+ *
+ * `allowedTypes` не декоративный: в кабинете сервер принимает от клиента только
+ * почту аккаунта и свой адрес. Показать там «контактам с ролью» значило бы
+ * предложить кнопку, которая отвечает ошибкой.
+ */
+function DestinationPicker({ roles, contactsEndpoint, allowContacts, allowedTypes, onPick, onCancel }) {
     const [mode, setMode] = useState(null);
     const [email, setEmail] = useState('');
     const [contacts, setContacts] = useState([]);
+
+    const allows = (type) => allowedTypes.includes(type);
 
     useEffect(() => {
         if (mode !== 'contact' || !contactsEndpoint) return;
@@ -228,20 +246,31 @@ function DestinationPicker({ roles, contactsEndpoint, allowContacts, onPick, onC
     return (
         <Box mt={3} p={3} borderWidth="1px" borderRadius="md" bg="bg.subtle">
             <HStack gap={2} flexWrap="wrap" mb={mode ? 3 : 0}>
-                <Button size="xs" variant="outline" onClick={() => onPick({ type: 'login' })}>
-                    На почту партнёра
-                </Button>
-                <Button size="xs" variant="outline" onClick={() => setMode('role')}>
-                    Контактам с ролью
-                </Button>
-                {allowContacts && (
+                {allows('login') && (
+                    <Button size="xs" variant="outline" onClick={() => onPick({ type: 'login' })}>
+                        На почту партнёра
+                    </Button>
+                )}
+                {allows('manager') && (
+                    <Button size="xs" variant="outline" onClick={() => onPick({ type: 'manager' })}>
+                        Персональному менеджеру
+                    </Button>
+                )}
+                {allows('contact_role') && (
+                    <Button size="xs" variant="outline" onClick={() => setMode('role')}>
+                        Контактам с ролью
+                    </Button>
+                )}
+                {allows('contact') && allowContacts && (
                     <Button size="xs" variant="outline" onClick={() => setMode('contact')}>
                         Конкретному человеку
                     </Button>
                 )}
-                <Button size="xs" variant="outline" onClick={() => setMode('email')}>
-                    На другой адрес
-                </Button>
+                {allows('email') && (
+                    <Button size="xs" variant="outline" onClick={() => setMode('email')}>
+                        На другой адрес
+                    </Button>
+                )}
                 <Button size="xs" variant="ghost" onClick={onCancel}>Отмена</Button>
             </HStack>
 

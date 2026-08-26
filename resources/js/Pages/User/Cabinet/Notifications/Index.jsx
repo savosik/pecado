@@ -25,6 +25,9 @@ export default function Index() {
 
                 <NotificationMatrix
                     canEdit
+                    // Роли и конкретные люди — инструмент менеджера: через них
+                    // клиент нащупал бы, кто ещё заведён в справочнике.
+                    allowedTypes={['login', 'email']}
                     endpoints={{
                         index: route('cabinet.notifications.data'),
                         update: route('cabinet.notifications.update'),
