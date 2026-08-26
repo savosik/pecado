@@ -50,7 +50,7 @@ class EmailController extends CrmController
 
         $query = $this->emails->visibleTo($actor, $scope)
             ->inFolder($folder)
-            ->with(['author:id,name', 'related', 'autoSentRule:id,name', 'deliveries'])
+            ->with(['author:id,name', 'related', 'deliveries'])
             ->withCount(['media as attachments_count' => fn ($media) => $media->where(
                 'collection_name',
                 CrmAttachments::COLLECTION,
@@ -180,7 +180,7 @@ class EmailController extends CrmController
     }
 
     /**
-     * Что прошло мимо фильтров за время хранения — с разбивкой по поводам.
+     * Что осталось без получателя за время хранения — с разбивкой по поводам.
      *
      * @return array<string, mixed>
      */

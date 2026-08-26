@@ -7,7 +7,7 @@ use App\Models\CrmEmail;
 use Illuminate\Console\Command;
 
 /**
- * Уборка папки «Мимо фильтров».
+ * Уборка папки «Без получателя».
  *
  * Система собирает письма по всем поводам, а правила ловят не всё. Без уборки
  * непойманное копилось бы вечно — ровно та история, из-за которой боевая база
@@ -17,7 +17,7 @@ class PruneUnmatchedMail extends Command
 {
     protected $signature = 'mail:prune-unmatched {--days= : Сколько дней хранить} {--dry-run : Только показать, сколько удалилось бы}';
 
-    protected $description = 'Удалить письма, прошедшие мимо фильтров и не пригодившиеся';
+    protected $description = 'Удалить письма, оставшиеся без получателя и не пригодившиеся';
 
     public function handle(): int
     {
@@ -38,7 +38,7 @@ class PruneUnmatchedMail extends Command
 
         $query->delete();
 
-        $this->info("Удалено писем мимо фильтров: {$count} (старше {$days} дн.)");
+        $this->info("Удалено писем без получателя: {$count} (старше {$days} дн.)");
 
         return self::SUCCESS;
     }

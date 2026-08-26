@@ -235,9 +235,6 @@ export default function Index({
                 <VStack align="start" gap={1}>
                     <Badge colorPalette={row.status_color} variant="subtle">{row.status_label}</Badge>
                     {row.sent_at_label && <Text fontSize="xs" color="fg.muted">{row.sent_at_label}</Text>}
-                    {row.auto_sent_rule && (
-                        <Text fontSize="xs" color="purple.500">Правило «{row.auto_sent_rule}»</Text>
-                    )}
                     {row.skip_reason && (
                         <Text fontSize="xs" color="orange.600" maxW="220px">{row.skip_reason}</Text>
                     )}

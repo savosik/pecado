@@ -179,16 +179,6 @@ class MailFoldersTest extends TestCase
     }
 
     #[Test]
-    public function rule_form_opens_with_the_condition_from_the_summary(): void
-    {
-        $props = $this->actingAs($this->manager)
-            ->get(route('crm.emails.rules.index', ['tag' => 'документы']))
-            ->viewData('page')['props'];
-
-        $this->assertSame('документы', $props['prefillTag']);
-    }
-
-    #[Test]
     public function unmatched_letters_are_pruned_after_retention(): void
     {
         // Данные не копятся: иначе повторилась бы история, когда журналы

@@ -7,7 +7,6 @@ use App\Jobs\SendCrmEmailJob;
 use App\Mail\CrmManagerMail;
 use App\Models\CrmEmail;
 use App\Models\CrmEmailDelivery;
-use App\Models\CrmMailRule;
 use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Crm\Mail\MailStream;
@@ -113,7 +112,12 @@ class MailDeliveryLedgerTest extends TestCase
     {
         // Задание очереди повторяется при сбое сети: если письмо успело уйти,
         // а результат записаться не успел, клиент не должен получить его дважды.
-        CrmMailRule::factory()->byTag('акт-сверки')->to(['buh@romashka.ru'])->auto()->create();
+        \App\Models\NotificationPreference::query()->create([
+            'user_id' => $this->client->id,
+            'occasion_key' => 'documents.published',
+            'is_enabled' => true,
+            'destinations' => [['type' => 'email', 'email' => 'buh@romashka.ru']],
+        ]);
 
         $letter = $this->letter();
         $this->assertSame(EmailStatus::SENT, $letter->status);

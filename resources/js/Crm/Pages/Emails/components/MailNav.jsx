@@ -15,7 +15,7 @@ export default function MailNav({ description = null }) {
 
     const items = [
         { href: route('crm.emails.index'), label: 'Поток', match: '/crm/emails' },
-        { href: route('crm.emails.suppressions.index'), label: 'Стоп-лист', match: '/crm/emails/suppressions' },
+        { href: route('crm.emails.suppressions.index'), label: 'Заблокированные', match: '/crm/emails/suppressions' },
     ];
 
     const active = (item) => {

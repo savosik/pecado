@@ -45,6 +45,11 @@ export default defineConfig({
                 '**/node_modules/**',
                 '**/.git/**',
                 '**/public/build/**',
+                // .claude/worktrees/* — полные копии проекта от параллельных
+                // сессий агента. Vite их сторожил и на каждое чужое изменение
+                // делал full page reload (в логах — пачки «page reload
+                // .claude/worktrees/…/seo/texts/*.html»), сбивая HMR.
+                '**/.claude/**',
             ],
         },
     },

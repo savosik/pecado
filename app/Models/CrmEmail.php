@@ -36,7 +36,6 @@ use Spatie\MediaLibrary\HasMedia;
  * @property string|null $origin_key
  * @property array<string, mixed>|null $origin_data
  * @property array<int, string>|null $tags
- * @property int|null $auto_sent_rule_id
  * @property string|null $skip_reason
  * @property string|null $error
  * @property \Illuminate\Support\Carbon|null $created_at
@@ -128,15 +127,6 @@ class CrmEmail extends Model implements HasMedia
     }
 
     /**
-     * Правило, отправившее письмо само. Нужно в списке «Отправленных»:
-     * менеджер должен видеть, что ушло без него и по какому фильтру.
-     */
-    public function autoSentRule(): BelongsTo
-    {
-        return $this->belongsTo(CrmMailRule::class, 'auto_sent_rule_id');
-    }
-
-    /**
      * Кому это письмо уже уходило. Слой, гарантирующий, что один адрес
      * не получит одно письмо дважды, сколько бы правил его ни поймало.
      */
@@ -152,11 +142,6 @@ class CrmEmail extends Model implements HasMedia
     public function contact(): BelongsTo
     {
         return $this->belongsTo(Contact::class);
-    }
-
-    public function hits(): HasMany
-    {
-        return $this->hasMany(CrmMailRuleHit::class, 'crm_email_id');
     }
 
     public function isSystem(): bool

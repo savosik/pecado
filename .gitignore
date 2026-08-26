@@ -76,3 +76,4 @@ docker/supervisor/conf.d.local/
 
 # Runtime-темп медиабиблиотеки (spatie) — не версионируем
 /storage/media-library/
+.env.bak-*

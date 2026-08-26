@@ -4,12 +4,10 @@ namespace Tests\Feature\Crm\Mail;
 
 use App\Models\Company;
 use App\Models\CrmEmail;
-use App\Models\CrmMailRule;
 use App\Models\Order;
 use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Crm\CrmEmailService;
-use App\Services\Crm\Mail\MailRuleEngine;
 use App\Services\Crm\Mail\MailStream;
 use App\Services\Crm\Mail\PartnerAddressBook;
 use App\Support\Notifications\Occasion;
@@ -129,46 +127,6 @@ class MailNavigationTest extends TestCase
         $counts = collect($this->props(['topic' => 'documents'])['folders'])->pluck('count', 'value')->all();
 
         $this->assertSame(1, $counts['drafts']);
-    }
-
-    #[Test]
-    public function rules_are_filtered_by_author_and_partner(): void
-    {
-        $colleague = User::factory()->create(['name' => 'Курочкина']);
-        $colleague->assignRole('sales-head');
-
-        $mine = CrmMailRule::factory()->byTag('акт-сверки')->create([
-            'name' => 'Акты Афониной',
-            'user_id' => $this->manager->id,
-        ]);
-        CrmMailRule::factory()->byTag('просрочка')->create([
-            'name' => 'Просрочка директору',
-            'user_id' => $colleague->id,
-        ]);
-
-        $letter = $this->documentLetter();
-        app(MailRuleEngine::class)->applyToOld($mine);
-        $this->assertNotNull($letter->refresh()->client_user_id);
-
-        $byAuthor = $this->rulesProps(['author_id' => $this->manager->id])['rules'];
-        $this->assertCount(1, $byAuthor);
-        $this->assertSame('Акты Афониной', $byAuthor[0]['name']);
-
-        // По партнёру — по факту: правило, ничего не поймавшее, не покажется.
-        $byClient = $this->rulesProps(['client' => $this->client->name])['rules'];
-        $this->assertCount(1, $byClient);
-        $this->assertSame('Акты Афониной', $byClient[0]['name']);
-
-        $bySearch = $this->rulesProps(['search' => 'Просрочка'])['rules'];
-        $this->assertCount(1, $bySearch);
-        $this->assertSame('Просрочка директору', $bySearch[0]['name']);
-    }
-
-    private function rulesProps(array $query = []): array
-    {
-        return $this->actingAs($this->manager)
-            ->get(route('crm.emails.rules.index', $query))
-            ->viewData('page')['props'];
     }
 
     #[Test]

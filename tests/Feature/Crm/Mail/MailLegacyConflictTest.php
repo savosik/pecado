@@ -4,7 +4,6 @@ namespace Tests\Feature\Crm\Mail;
 
 use App\Enums\Crm\EmailStatus;
 use App\Models\CrmEmail;
-use App\Models\CrmMailRule;
 use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Crm\Mail\MailStream;
@@ -56,13 +55,6 @@ class MailLegacyConflictTest extends TestCase
             'notifications.mail.features.crm_outbound' => true,
         ]);
 
-        CrmMailRule::query()->create([
-            'name' => 'Смена статуса — клиенту',
-            'conditions' => ['all' => [['field' => 'tag', 'op' => 'has_tag', 'value' => 'заказ']]],
-            'recipients' => [CrmMailRule::RECIPIENT_CLIENT],
-            'auto_send' => true,
-            'is_active' => true,
-        ]);
     }
 
     private function statusLetter(): CrmEmail

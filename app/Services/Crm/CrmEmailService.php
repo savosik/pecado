@@ -306,7 +306,6 @@ class CrmEmailService
                 : [],
             'tracking_enabled' => (bool) $email->tracking_enabled,
             'reads' => $this->reads($email),
-            'auto_sent_rule' => $email->autoSentRule?->name,
             'author' => [
                 'id' => (int) $email->user_id,
                 'name' => $email->isSystem() ? 'Система' : ($email->author?->name ?? '—'),

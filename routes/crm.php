@@ -19,8 +19,6 @@ use App\Http\Controllers\Crm\FinanceController;
 use App\Http\Controllers\Crm\ImpersonationController;
 use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
-use App\Http\Controllers\Crm\MailOccasionController;
-use App\Http\Controllers\Crm\MailRuleController;
 use App\Http\Controllers\Crm\MailSuppressionController;
 use App\Http\Controllers\Crm\NotificationPreferenceController;
 use App\Http\Controllers\Crm\OpportunityController;
@@ -449,19 +447,10 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/emails/options', [EmailController::class, 'options'])->name('emails.options');
         // Правила — вкладка внутри «Писем», а не отдельный раздел меню:
         // именно дробление на разделы сделало прошлый подход непонятным.
-        Route::get('/emails/rules', [MailRuleController::class, 'index'])->name('emails.rules.index');
         // Стоп-лист — не раздел, а настройка внутри «Писем»: отвечает
         // на единственный вопрос «почему на этот адрес не уходят письма».
         Route::get('/emails/suppressions', [MailSuppressionController::class, 'index'])
             ->name('emails.suppressions.index');
-        Route::post('/emails/rules/preview', [MailRuleController::class, 'preview'])
-            ->name('emails.rules.preview');
-        // Реестр поводов: на что вообще можно подписать партнёра.
-        Route::get('/emails/occasions', [MailOccasionController::class, 'index'])
-            ->name('emails.occasions.index');
-        // Подписчики правила: поиск партнёров для адресной части.
-        Route::get('/emails/rules/clients', [MailRuleController::class, 'clientOptions'])
-            ->name('emails.rules.clients');
         Route::get('/emails/{email}', [EmailController::class, 'show'])
             ->name('emails.show')
             ->whereNumber('email');
@@ -484,21 +473,6 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::delete('/emails/suppressions/{suppression}', [MailSuppressionController::class, 'destroy'])
             ->name('emails.suppressions.destroy')
             ->whereNumber('suppression');
-        Route::post('/emails/rules', [MailRuleController::class, 'store'])->name('emails.rules.store');
-        Route::patch('/emails/rules/{rule}', [MailRuleController::class, 'update'])
-            ->name('emails.rules.update')
-            ->whereNumber('rule');
-        Route::post('/emails/rules/{rule}/toggle', [MailRuleController::class, 'toggle'])
-            ->name('emails.rules.toggle')
-            ->whereNumber('rule');
-        // Разовое действие: правило работает вперёд, а к уже собранным письмам
-        // применяется только по прямой команде.
-        Route::post('/emails/rules/{rule}/apply-to-old', [MailRuleController::class, 'applyToOld'])
-            ->name('emails.rules.apply-to-old')
-            ->whereNumber('rule');
-        Route::delete('/emails/rules/{rule}', [MailRuleController::class, 'destroy'])
-            ->name('emails.rules.destroy')
-            ->whereNumber('rule');
         Route::patch('/emails/{email}', [EmailController::class, 'update'])
             ->name('emails.update')
             ->whereNumber('email');

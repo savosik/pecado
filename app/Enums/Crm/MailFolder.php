@@ -22,7 +22,7 @@ enum MailFolder: string
             self::DRAFTS => 'Черновики',
             self::SENT => 'Отправленные',
             self::FAILED => 'Не ушли',
-            self::UNMATCHED => 'Мимо фильтров',
+            self::UNMATCHED => 'Без получателя',
         };
     }
 
