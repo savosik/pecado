@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     Badge,
     Box,
@@ -16,7 +16,7 @@ import { SearchInput } from '@/Admin/Components/SearchInput';
 import { Pagination } from '@/Admin/Components/Pagination';
 import { Button } from '@/components/ui/button';
 import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
-import { usePermission } from '@/Admin/hooks/usePermission';
+import RowActions from '@/shared/Panel/RowActions';
 
 const FILTERS = [
     { value: 'uncovered', label: 'Не покрыто' },
@@ -71,22 +71,11 @@ function UncoveredValue({ value }) {
     );
 }
 
-/** Ссылка на форму с уже подставленным товаром и складом. */
-function CreateBatchButton({ row, size = 'xs', width }) {
-    return (
-        <Button asChild size={size} variant="outline" w={width}>
-            <Link href={`/wms/defects/create?product_id=${row.product_id}&warehouse_id=${row.warehouse_id}`}>
-                <LuPackagePlus /> Завести партию
-            </Link>
-        </Button>
-    );
-}
-
 /**
  * Строка отчёта карточкой — мобильный вариант: таблица из шести колонок
  * в 360px не помещается, а горизонтальный скролл на складе одной рукой не листают.
  */
-function CoverageMobileCard({ row, canCreate }) {
+function CoverageMobileCard({ row, actions }) {
     return (
         <Box borderWidth="1px" borderColor="border" borderRadius="md" p={3}>
             <VStack align="stretch" gap={3}>
@@ -118,9 +107,7 @@ function CoverageMobileCard({ row, canCreate }) {
                     </Text>
                 )}
 
-                {canCreate && row.uncovered_quantity > 0 && (
-                    <CreateBatchButton row={row} size="sm" width="100%" />
-                )}
+                <RowActions {...actions} size="md" />
             </VStack>
         </Box>
     );
@@ -128,8 +115,21 @@ function CoverageMobileCard({ row, canCreate }) {
 
 export default function DefectsUncovered() {
     const { rows, filters, stats, warehouses } = usePage().props;
-    const { can } = usePermission();
-    const canCreate = can('wms-defects.create');
+    /**
+     * Строка — это товар на складе, а не партия, поэтому карандаша нет:
+     * править нечего, пока партия не заведена. Форма открывается с уже
+     * подставленными товаром и складом.
+     */
+    const actionsFor = (row) => ({
+        extra: row.uncovered_quantity > 0
+            ? [{
+                icon: LuPackagePlus,
+                label: 'Завести партию',
+                href: `/wms/defects/create?product_id=${row.product_id}&warehouse_id=${row.warehouse_id}`,
+                permission: 'wms-defects.create',
+            }]
+            : [],
+    });
 
     const applyFilters = (next) => {
         router.get('/wms/defects/uncovered', { ...filters, ...next }, {
@@ -232,7 +232,7 @@ export default function DefectsUncovered() {
                                             <CoverageMobileCard
                                                 key={`${row.product_id}-${row.warehouse_id}`}
                                                 row={row}
-                                                canCreate={canCreate}
+                                                actions={actionsFor(row)}
                                             />
                                         ))}
                                     </VStack>
@@ -246,7 +246,7 @@ export default function DefectsUncovered() {
                                                     <Table.ColumnHeader textAlign="end">Остаток 1С</Table.ColumnHeader>
                                                     <Table.ColumnHeader textAlign="end">В партиях</Table.ColumnHeader>
                                                     <Table.ColumnHeader textAlign="end">Не покрыто</Table.ColumnHeader>
-                                                    <Table.ColumnHeader />
+                                                    <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
                                                 </Table.Row>
                                             </Table.Header>
                                             <Table.Body>
@@ -282,11 +282,7 @@ export default function DefectsUncovered() {
                                                             <UncoveredValue value={row.uncovered_quantity} />
                                                         </Table.Cell>
                                                         <Table.Cell>
-                                                            <HStack justify="end">
-                                                                {canCreate && row.uncovered_quantity > 0 && (
-                                                                    <CreateBatchButton row={row} />
-                                                                )}
-                                                            </HStack>
+                                                            <RowActions {...actionsFor(row)} size="sm" />
                                                         </Table.Cell>
                                                     </Table.Row>
                                                 ))}

@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
-import { usePermission } from '@/Admin/hooks/usePermission';
+import { usePermission } from '@/shared/Panel/usePermission';
 import { useFlashToast } from '@/hooks/useFlashToast';
 
 /**

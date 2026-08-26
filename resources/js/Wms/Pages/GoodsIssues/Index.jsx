@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     Badge,
     Box,
@@ -20,7 +20,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
 import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
-import { usePermission } from '@/Admin/hooks/usePermission';
+import RowActions from '@/shared/Panel/RowActions';
+import { usePermission } from '@/shared/Panel/usePermission';
 
 const SORT_OPTIONS = [
     { value: 'date', label: 'По дате документа' },
@@ -68,14 +69,12 @@ function StatusBadge({ order }) {
  * Строка журнала карточкой — мобильный вариант: таблица из десяти колонок
  * на складском телефоне не читается, а горизонтальный скролл одной рукой не листают.
  */
-function OrderMobileCard({ order }) {
+function OrderMobileCard({ order, actions }) {
     return (
         <Box borderWidth="1px" borderColor="border" borderRadius="md" p={3}>
             <VStack align="stretch" gap={2}>
                 <HStack justify="space-between" align="start">
-                    <Link href={order.url}>
-                        <Text fontSize="sm" fontWeight="bold">{order.number}</Text>
-                    </Link>
+                    <Text fontSize="sm" fontWeight="bold">{order.number}</Text>
                     <StatusBadge order={order} />
                 </HStack>
 
@@ -99,6 +98,8 @@ function OrderMobileCard({ order }) {
                         <Text>{order.unresolved_items_count} позиций нет в каталоге сайта</Text>
                     </HStack>
                 )}
+
+                <RowActions {...actions} size="md" />
             </VStack>
         </Box>
     );
@@ -108,6 +109,11 @@ export default function GoodsIssuesIndex() {
     const { orders, filters, stats, options, sort, perPage, staleHours } = usePage().props;
     const { can } = usePermission();
     const canExport = can('wms-goods-issues.export');
+
+    /** Ордер приходит из 1С и на сайте не правится — единственное действие «открыть». */
+    const actionsFor = (order) => ({
+        view: { href: order.url },
+    });
 
     const [search, setSearch] = useState(filters.search || '');
 
@@ -357,7 +363,7 @@ export default function GoodsIssuesIndex() {
                                 <Box display={{ base: 'block', lg: 'none' }}>
                                     <VStack align="stretch" gap={2}>
                                         {orders.data.map((order) => (
-                                            <OrderMobileCard key={order.id} order={order} />
+                                            <OrderMobileCard key={order.id} order={order} actions={actionsFor(order)} />
                                         ))}
                                     </VStack>
                                 </Box>
@@ -376,17 +382,16 @@ export default function GoodsIssuesIndex() {
                                                 <Table.ColumnHeader textAlign="end">Позиций</Table.ColumnHeader>
                                                 <Table.ColumnHeader textAlign="end">Кол-во</Table.ColumnHeader>
                                                 <Table.ColumnHeader textAlign="end">Мест</Table.ColumnHeader>
+                                                <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
                                             </Table.Row>
                                         </Table.Header>
                                         <Table.Body>
                                             {orders.data.map((order) => (
                                                 <Table.Row key={order.id}>
                                                     <Table.Cell>
-                                                        <Link href={order.url}>
-                                                            <Text fontSize="sm" fontWeight="medium" color="colorPalette.fg">
-                                                                {order.number}
-                                                            </Text>
-                                                        </Link>
+                                                        <Text fontSize="sm" fontWeight="medium">
+                                                            {order.number}
+                                                        </Text>
                                                         {order.unresolved_items_count > 0 && (
                                                             <HStack gap={1} color="orange.500">
                                                                 <LuTriangleAlert size={11} />
@@ -415,6 +420,9 @@ export default function GoodsIssuesIndex() {
                                                     </Table.Cell>
                                                     <Table.Cell textAlign="end" fontSize="sm" fontVariantNumeric="tabular-nums">
                                                         {order.packages_count}
+                                                    </Table.Cell>
+                                                    <Table.Cell>
+                                                        <RowActions {...actionsFor(order)} size="sm" />
                                                     </Table.Cell>
                                                 </Table.Row>
                                             ))}

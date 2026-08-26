@@ -14,6 +14,7 @@ import { LuImageOff, LuTruck } from 'react-icons/lu';
 import WmsLayout from '@/Wms/Layouts/WmsLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Pagination } from '@/Admin/Components/Pagination';
+import RowActions from '@/shared/Panel/RowActions';
 import { useFlashToast } from '@/hooks/useFlashToast';
 
 const formatDate = (iso) => (iso ? new Date(iso).toLocaleDateString('ru-RU') : '—');
@@ -79,6 +80,16 @@ function ItemPhotos({ photos, alt }) {
     );
 }
 
+/**
+ * Действия по позиции заказа: единственная страница партии — её форма правки.
+ * Удалённой партии править нечего — кнопка не рисуется.
+ */
+const actionsFor = (item) => ({
+    edit: item.product_defect_id && !item.defect_deleted
+        ? { href: `/wms/defects/${item.product_defect_id}/edit`, permission: 'wms-defects.edit', label: 'Открыть партию' }
+        : null,
+});
+
 function OrderCard({ order }) {
     return (
         <Card.Root>
@@ -133,6 +144,7 @@ function OrderCard({ order }) {
                                 )}
                                 <Text fontSize="sm">{item.defect_description || '—'}</Text>
                                 <ItemPhotos photos={item.photos} alt={item.defect_description} />
+                                <RowActions {...actionsFor(item)} size="md" />
                             </VStack>
                         </Box>
                     ))}
@@ -146,6 +158,7 @@ function OrderCard({ order }) {
                                 <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                 <Table.ColumnHeader>Дефект</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="end">Кол-во</Table.ColumnHeader>
+                                <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
                             </Table.Row>
                         </Table.Header>
                         <Table.Body>
@@ -178,6 +191,9 @@ function OrderCard({ order }) {
                                     </Table.Cell>
                                     <Table.Cell textAlign="end" fontWeight="semibold">
                                         {item.quantity}
+                                    </Table.Cell>
+                                    <Table.Cell>
+                                        <RowActions {...actionsFor(item)} size="sm" />
                                     </Table.Cell>
                                 </Table.Row>
                             ))}

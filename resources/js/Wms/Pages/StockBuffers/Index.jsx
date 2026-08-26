@@ -12,12 +12,13 @@ import {
     Text,
     VStack,
 } from '@chakra-ui/react';
-import { LuImageOff, LuShieldCheck, LuX } from 'react-icons/lu';
+import { LuBookmarkX, LuImageOff, LuShieldCheck } from 'react-icons/lu';
 import WmsLayout from '@/Wms/Layouts/WmsLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
-import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
+import RowActions from '@/shared/Panel/RowActions';
 import { Button } from '@/components/ui/button';
-import { usePermission } from '@/Admin/hooks/usePermission';
+import { usePermission } from '@/shared/Panel/usePermission';
 import { useFlashToast } from '@/hooks/useFlashToast';
 import axios from 'axios';
 
@@ -191,6 +192,19 @@ export default function Index() {
     const canEdit = can('wms-stock-buffers.edit');
     const [clearFor, setClearFor] = useState(null);
 
+    /** Снятие пометки — не удаление товара из списка, поэтому не корзина, а своё действие. */
+    const actionsFor = (row) => ({
+        extra: row.manual_qty !== null
+            ? [{
+                icon: LuBookmarkX,
+                label: 'Снять пометку',
+                onClick: () => setClearFor(row),
+                permission: 'wms-stock-buffers.edit',
+                colorPalette: 'red',
+            }]
+            : [],
+    });
+
     return (
         <>
             <Head title="Страховой запас — Склад" />
@@ -240,7 +254,7 @@ export default function Index() {
                                             <Table.ColumnHeader textAlign="right">Скрыто от сегмента</Table.ColumnHeader>
                                             <Table.ColumnHeader>Почему в списке</Table.ColumnHeader>
                                             <Table.ColumnHeader>Пометка склада</Table.ColumnHeader>
-                                            {canEdit && <Table.ColumnHeader />}
+                                            {canEdit && <Table.ColumnHeader textAlign="right">Действия</Table.ColumnHeader>}
                                         </Table.Row>
                                     </Table.Header>
                                     <Table.Body>
@@ -277,17 +291,8 @@ export default function Index() {
                                                     )}
                                                 </Table.Cell>
                                                 {canEdit && (
-                                                    <Table.Cell textAlign="right">
-                                                        {row.manual_qty !== null && (
-                                                            <Button
-                                                                size="xs"
-                                                                variant="ghost"
-                                                                colorPalette="red"
-                                                                onClick={() => setClearFor(row)}
-                                                            >
-                                                                <LuX /> Снять пометку
-                                                            </Button>
-                                                        )}
+                                                    <Table.Cell>
+                                                        <RowActions {...actionsFor(row)} size="sm" />
                                                     </Table.Cell>
                                                 )}
                                             </Table.Row>

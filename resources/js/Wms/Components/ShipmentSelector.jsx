@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { Badge, Box, HStack, Input, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, HStack, IconButton, Input, Text, VStack } from '@chakra-ui/react';
 import { LuSearch, LuX } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import { formatMoney, formatWeight } from './deliveryFormat';
@@ -109,14 +109,17 @@ export function ShipmentSelector({ selected, onChange, exceptDeliveryId }) {
                                     {shipment.date_label} · {formatWeight(shipment.weight)} · {formatMoney(shipment.amount)}
                                 </Text>
                             </VStack>
-                            <Box
-                                cursor="pointer"
+                            <IconButton
+                                size="xs"
+                                variant="ghost"
                                 color="fg.muted"
                                 _hover={{ color: 'red.500' }}
+                                aria-label="Убрать из выборки"
+                                title="Убрать из выборки"
                                 onClick={() => remove(shipment.id)}
                             >
-                                <LuX size={14} />
-                            </Box>
+                                <LuX />
+                            </IconButton>
                         </HStack>
                     ))}
                 </HStack>

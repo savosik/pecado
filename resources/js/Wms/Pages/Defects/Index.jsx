@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     Box,
     Card,
@@ -10,14 +10,16 @@ import {
     Text,
     VStack,
 } from '@chakra-ui/react';
-import { LuImageOff, LuPackageX, LuPencil, LuTrash2 } from 'react-icons/lu';
+import { LuImageOff, LuPackageX } from 'react-icons/lu';
 import WmsLayout from '@/Wms/Layouts/WmsLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { SearchInput } from '@/Admin/Components/SearchInput';
 import { Pagination } from '@/Admin/Components/Pagination';
-import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
+import RowActions from '@/shared/Panel/RowActions';
 import { Button } from '@/components/ui/button';
-import { usePermission } from '@/Admin/hooks/usePermission';
+import { usePermission } from '@/shared/Panel/usePermission';
 import { useFlashToast } from '@/hooks/useFlashToast';
 import { DefectStatusBadge } from '@/Wms/Components/DefectStatusBadge';
 import ImageLightbox from '@/components/common/ImageLightbox';
@@ -110,12 +112,10 @@ function DefectPhoto({ defect, onOpen }) {
 /**
  * Партия одной карточкой — мобильный вариант строки таблицы.
  *
- * Действия крупные (44px): попадать пальцем в иконку размера xs на складе
+ * Действия крупные (size="md"): попадать пальцем в иконку размера xs на складе
  * невозможно.
  */
-function DefectMobileCard({ defect, can, onDelete, onOpenGallery }) {
-    const reserved = defect.reserved_quantity > 0;
-
+function DefectMobileCard({ defect, actions, onOpenGallery }) {
     return (
         <Box borderWidth="1px" borderColor="border" borderRadius="md" p={3}>
             <VStack align="stretch" gap={3}>
@@ -151,31 +151,7 @@ function DefectMobileCard({ defect, can, onDelete, onOpenGallery }) {
                     </Text>
                 </HStack>
 
-                {(can('wms-defects.edit') || can('wms-defects.delete')) && (
-                    <HStack gap={2}>
-                        {can('wms-defects.edit') && (
-                            <Button asChild size="sm" variant="outline" flex="1" h="44px">
-                                <Link href={`/wms/defects/${defect.id}/edit`}>
-                                    <LuPencil /> Изменить
-                                </Link>
-                            </Button>
-                        )}
-                        {can('wms-defects.delete') && (
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                colorPalette="red"
-                                h="44px"
-                                minW="44px"
-                                disabled={reserved}
-                                title={reserved ? 'По партии есть заказы — удалить нельзя' : 'Удалить партию'}
-                                onClick={onDelete}
-                            >
-                                <LuTrash2 />
-                            </Button>
-                        )}
-                    </HStack>
-                )}
+                <RowActions {...actions} size="md" />
             </VStack>
         </Box>
     );
@@ -184,25 +160,33 @@ function DefectMobileCard({ defect, can, onDelete, onOpenGallery }) {
 export default function DefectsIndex() {
     const { defects, filters, stats } = usePage().props;
     const { can } = usePermission();
-    const [confirmTarget, setConfirmTarget] = useState(null);
     // Партия, чьи фотографии открыты в полноэкранной галерее.
     const [galleryDefect, setGalleryDefect] = useState(null);
 
     useFlashToast();
 
+    const defectDelete = useConfirmDelete({
+        onConfirm: (defect) => router.delete(`/wms/defects/${defect.id}`, { preserveScroll: true }),
+        title: 'Удалить партию?',
+        description: (defect) => (defect
+            ? `Партия «${defect.defect_description}» будет удалена вместе с фотографиями. Действие необратимо.`
+            : ''),
+    });
+
+    /** Один набор действий для строки таблицы и мобильной карточки. */
+    const actionsFor = (defect) => ({
+        edit: { href: `/wms/defects/${defect.id}/edit`, permission: 'wms-defects.edit' },
+        delete: {
+            onClick: () => defectDelete.request(defect),
+            permission: 'wms-defects.delete',
+            disabled: defect.reserved_quantity > 0 ? 'По партии есть заказы — удалить нельзя' : false,
+        },
+    });
+
     const applyFilters = (next) => {
         router.get('/wms/defects', { ...filters, ...next }, {
             preserveState: true,
             replace: true,
-        });
-    };
-
-    const handleDelete = () => {
-        if (!confirmTarget) return;
-
-        router.delete(`/wms/defects/${confirmTarget.id}`, {
-            preserveScroll: true,
-            onFinish: () => setConfirmTarget(null),
         });
     };
 
@@ -267,8 +251,7 @@ export default function DefectsIndex() {
                                         <DefectMobileCard
                                             key={defect.id}
                                             defect={defect}
-                                            can={can}
-                                            onDelete={() => setConfirmTarget(defect)}
+                                            actions={actionsFor(defect)}
                                             onOpenGallery={() => setGalleryDefect(defect)}
                                         />
                                     ))}
@@ -285,7 +268,7 @@ export default function DefectsIndex() {
                                                 <Table.ColumnHeader textAlign="end">Свободно</Table.ColumnHeader>
                                                 <Table.ColumnHeader textAlign="end">Цена</Table.ColumnHeader>
                                                 <Table.ColumnHeader>Состояние</Table.ColumnHeader>
-                                                <Table.ColumnHeader />
+                                                <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
                                             </Table.Row>
                                         </Table.Header>
                                         <Table.Body>
@@ -331,31 +314,7 @@ export default function DefectsIndex() {
                                                         <DefectStatusBadge defect={defect} />
                                                     </Table.Cell>
                                                     <Table.Cell>
-                                                        <HStack gap={1} justify="end">
-                                                            {can('wms-defects.edit') && (
-                                                                <Button asChild size="xs" variant="ghost">
-                                                                    <Link href={`/wms/defects/${defect.id}/edit`}>
-                                                                        <LuPencil />
-                                                                    </Link>
-                                                                </Button>
-                                                            )}
-                                                            {can('wms-defects.delete') && (
-                                                                <Button
-                                                                    size="xs"
-                                                                    variant="ghost"
-                                                                    colorPalette="red"
-                                                                    disabled={defect.reserved_quantity > 0}
-                                                                    title={
-                                                                        defect.reserved_quantity > 0
-                                                                            ? 'По партии есть заказы — удалить нельзя'
-                                                                            : 'Удалить партию'
-                                                                    }
-                                                                    onClick={() => setConfirmTarget(defect)}
-                                                                >
-                                                                    <LuTrash2 />
-                                                                </Button>
-                                                            )}
-                                                        </HStack>
+                                                        <RowActions {...actionsFor(defect)} size="sm" />
                                                     </Table.Cell>
                                                 </Table.Row>
                                             ))}
@@ -374,18 +333,7 @@ export default function DefectsIndex() {
                 </Card.Root>
             </VStack>
 
-            <ConfirmDialog
-                open={confirmTarget !== null}
-                onClose={() => setConfirmTarget(null)}
-                onConfirm={handleDelete}
-                title="Удалить партию?"
-                description={
-                    confirmTarget
-                        ? `Партия «${confirmTarget.defect_description}» будет удалена вместе с фотографиями. Действие необратимо.`
-                        : ''
-                }
-                confirmLabel="Удалить"
-            />
+            <ConfirmDialog {...defectDelete.dialogProps} />
 
             <ImageLightbox
                 images={(galleryDefect?.photos ?? []).map((photo) => ({

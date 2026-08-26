@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, HStack, IconButton, Text, VStack } from '@chakra-ui/react';
 import {
+    LuArchive,
+    LuArchiveRestore,
     LuChevronDown,
     LuChevronRight,
     LuCircleAlert,
-    LuEye,
-    LuEyeOff,
     LuMapPin,
     LuPackage,
     LuRotateCcw,
@@ -184,7 +184,7 @@ function ShipmentRow({ shipment, checked, blocked, onToggle, onToggleHidden }) {
                     {shipment.hidden && (
                         <Tooltip content={`Скрыл ${shipment.hidden.by || 'сотрудник'}${shipment.hidden.reason ? `: ${shipment.hidden.reason}` : ''}`}>
                             <Badge size="sm" colorPalette="gray" variant="outline">
-                                <LuEyeOff size={11} /> скрыта
+                                <LuArchive size={11} /> скрыта
                             </Badge>
                         </Tooltip>
                     )}
@@ -227,18 +227,20 @@ function ShipmentRow({ shipment, checked, blocked, onToggle, onToggleHidden }) {
                 <Text fontSize="xs" color="fg.muted">{shipment.items_count} поз.</Text>
             </VStack>
 
+            {/* Скрытие — это «убрать в архив», а не просмотр: глаз здесь запутывал бы. */}
             <Tooltip content={shipment.hidden ? 'Вернуть в список' : 'Убрать из списка'}>
-                <Box
-                    pt={1}
+                <IconButton
+                    size="xs"
+                    variant="ghost"
                     color="fg.muted"
-                    _hover={{ color: 'colorPalette.fg' }}
+                    aria-label={shipment.hidden ? 'Вернуть в список' : 'Убрать из списка'}
                     onClick={(event) => {
                         event.stopPropagation();
                         onToggleHidden(shipment);
                     }}
                 >
-                    {shipment.hidden ? <LuEye size={15} /> : <LuEyeOff size={15} />}
-                </Box>
+                    {shipment.hidden ? <LuArchiveRestore /> : <LuArchive />}
+                </IconButton>
             </Tooltip>
         </HStack>
     );

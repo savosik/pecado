@@ -725,6 +725,7 @@ class DeliveryController extends WmsController
             'is_manual' => $delivery->is_manual,
             'tariff_name' => $delivery->tariff_name,
             'provider_number' => $delivery->provider_number,
+            'apiship_order_id' => $delivery->apiship_order_id,
             'tracking_url' => $delivery->tracking_url,
             'apiship_status_label' => $delivery->provider_status_label,
             'client' => $delivery->user?->erp_name ?: $delivery->user?->name ?: $delivery->company?->name,

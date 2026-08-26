@@ -7,7 +7,7 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { toaster } from '@/components/ui/toaster';
-import { usePermission } from '@/Admin/hooks/usePermission';
+import { usePermission } from '@/shared/Panel/usePermission';
 import { useFlashToast } from '@/hooks/useFlashToast';
 import { ShipmentFilters } from '@/Wms/Components/ShipmentFilters';
 import { ShipmentPicker } from '@/Wms/Components/ShipmentPicker';

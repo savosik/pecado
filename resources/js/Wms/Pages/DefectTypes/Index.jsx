@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import { Card, HStack, Input, Table, Text, VStack } from '@chakra-ui/react';
-import { LuPlus, LuTrash2 } from 'react-icons/lu';
+import { LuPlus } from 'react-icons/lu';
 import WmsLayout from '@/Wms/Layouts/WmsLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
-import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
+import RowActions from '@/shared/Panel/RowActions';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useFlashToast } from '@/hooks/useFlashToast';
@@ -19,13 +21,29 @@ export default function WmsDefectTypesIndex() {
     const { can } = usePermission();
     const [newName, setNewName] = useState('');
     const [adding, setAdding] = useState(false);
-    const [deleteTarget, setDeleteTarget] = useState(null);
+    // Строка, чьё название сейчас правится по месту. Режим включает карандаш.
+    const [editingId, setEditingId] = useState(null);
 
     useFlashToast();
 
     const canCreate = can('wms-defect-types.create');
     const canEdit = can('wms-defect-types.edit');
-    const canDelete = can('wms-defect-types.delete');
+
+    const typeDelete = useConfirmDelete({
+        onConfirm: (type) => router.delete(`/wms/defect-types/${type.id}`, { preserveScroll: true }),
+        title: 'Удалить дефект из справочника?',
+        description: (type) => (type ? `«${type.name}» перестанет предлагаться кладовщику.` : ''),
+    });
+
+    /** Один набор действий на строку: карандаш включает правку по месту, корзина — удаление. */
+    const actionsFor = (type) => ({
+        edit: {
+            onClick: () => setEditingId(type.id),
+            permission: 'wms-defect-types.edit',
+            disabled: editingId === type.id ? 'Формулировка уже правится' : false,
+        },
+        delete: { onClick: () => typeDelete.request(type), permission: 'wms-defect-types.delete' },
+    });
 
     const add = () => {
         if (!newName.trim()) return;
@@ -40,14 +58,6 @@ export default function WmsDefectTypesIndex() {
     const toggleActive = (type, checked) => {
         router.put(`/wms/defect-types/${type.id}`, { name: type.name, is_active: checked }, {
             preserveScroll: true,
-        });
-    };
-
-    const remove = () => {
-        if (!deleteTarget) return;
-        router.delete(`/wms/defect-types/${deleteTarget.id}`, {
-            preserveScroll: true,
-            onFinish: () => setDeleteTarget(null),
         });
     };
 
@@ -92,7 +102,7 @@ export default function WmsDefectTypesIndex() {
                                         <Table.ColumnHeader w="64px">ID</Table.ColumnHeader>
                                         <Table.ColumnHeader>Дефект</Table.ColumnHeader>
                                         <Table.ColumnHeader w="120px" textAlign="center">Активен</Table.ColumnHeader>
-                                        <Table.ColumnHeader w="60px" />
+                                        <Table.ColumnHeader w="100px" textAlign="end">Действия</Table.ColumnHeader>
                                     </Table.Row>
                                 </Table.Header>
                                 <Table.Body>
@@ -104,8 +114,8 @@ export default function WmsDefectTypesIndex() {
                                                 </Text>
                                             </Table.Cell>
                                             <Table.Cell>
-                                                {canEdit ? (
-                                                    <DefectTypeNameCell type={type} />
+                                                {canEdit && editingId === type.id ? (
+                                                    <DefectTypeNameCell type={type} onDone={() => setEditingId(null)} />
                                                 ) : (
                                                     <Text fontSize="sm" color={type.is_active ? undefined : 'fg.muted'}>
                                                         {type.name}
@@ -120,17 +130,7 @@ export default function WmsDefectTypesIndex() {
                                                 />
                                             </Table.Cell>
                                             <Table.Cell>
-                                                {canDelete && (
-                                                    <Button
-                                                        size="xs"
-                                                        variant="ghost"
-                                                        colorPalette="red"
-                                                        onClick={() => setDeleteTarget(type)}
-                                                        aria-label="Удалить дефект"
-                                                    >
-                                                        <LuTrash2 />
-                                                    </Button>
-                                                )}
+                                                <RowActions {...actionsFor(type)} size="sm" />
                                             </Table.Cell>
                                         </Table.Row>
                                     ))}
@@ -146,58 +146,31 @@ export default function WmsDefectTypesIndex() {
                 </Card.Root>
             </VStack>
 
-            <ConfirmDialog
-                open={deleteTarget !== null}
-                onClose={() => setDeleteTarget(null)}
-                onConfirm={remove}
-                title="Удалить дефект из справочника?"
-                description={deleteTarget ? `«${deleteTarget.name}» перестанет предлагаться кладовщику.` : ''}
-                confirmLabel="Удалить"
-            />
+            <ConfirmDialog {...typeDelete.dialogProps} />
         </>
     );
 }
 
 /**
- * Название дефекта с правкой по месту: клик → инпут, Enter/blur сохраняет,
- * Esc отменяет. В админке правки названия нет — складу она нужна, чтобы
- * не заводить дубль ради опечатки.
+ * Инпут правки названия по месту: режим включает карандаш в строке,
+ * Enter/blur сохраняет, Esc отменяет. В админке правки названия нет —
+ * складу она нужна, чтобы не заводить дубль ради опечатки.
  */
-function DefectTypeNameCell({ type }) {
-    const [editing, setEditing] = useState(false);
+function DefectTypeNameCell({ type, onDone }) {
     const [draft, setDraft] = useState(type.name);
 
     const save = () => {
         const name = draft.trim();
-        setEditing(false);
+        onDone();
 
         if (!name || name === type.name) {
-            setDraft(type.name);
             return;
         }
 
         router.put(`/wms/defect-types/${type.id}`, { name, is_active: type.is_active }, {
             preserveScroll: true,
-            onError: () => setDraft(type.name),
         });
     };
-
-    if (!editing) {
-        return (
-            <Text
-                fontSize="sm"
-                color={type.is_active ? undefined : 'fg.muted'}
-                cursor="text"
-                onClick={() => {
-                    setDraft(type.name);
-                    setEditing(true);
-                }}
-                title="Нажмите, чтобы изменить формулировку"
-            >
-                {type.name}
-            </Text>
-        );
-    }
 
     return (
         <Input
@@ -212,8 +185,7 @@ function DefectTypeNameCell({ type }) {
                     save();
                 }
                 if (event.key === 'Escape') {
-                    setDraft(type.name);
-                    setEditing(false);
+                    onDone();
                 }
             }}
         />

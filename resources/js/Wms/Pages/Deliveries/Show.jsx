@@ -30,7 +30,7 @@ import { PickupPointPicker } from '@/Wms/Components/PickupPointPicker';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { toaster } from '@/components/ui/toaster';
-import { usePermission } from '@/Admin/hooks/usePermission';
+import { usePermission } from '@/shared/Panel/usePermission';
 import { useFlashToast } from '@/hooks/useFlashToast';
 import { formatDays, formatMoney, formatWeight } from '@/Wms/Components/deliveryFormat';
 

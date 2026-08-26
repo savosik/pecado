@@ -15,7 +15,7 @@ import { MultipleImageUploader } from '@/Admin/Components/MultipleImageUploader'
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import { Field } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
-import { usePermission } from '@/Admin/hooks/usePermission';
+import { usePermission } from '@/shared/Panel/usePermission';
 import { useFlashToast } from '@/hooks/useFlashToast';
 import { DefectStatusBadge } from '@/Wms/Components/DefectStatusBadge';
 import { DefectDescriptionField } from '@/Wms/Components/DefectDescriptionField';

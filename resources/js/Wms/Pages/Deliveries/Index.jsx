@@ -19,7 +19,10 @@ import { Pagination } from '@/Admin/Components/Pagination';
 import { Button } from '@/components/ui/button';
 import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
 import MultiSelectFilter from '@/Crm/Components/MultiSelectFilter';
-import { usePermission } from '@/Admin/hooks/usePermission';
+import RowActions from '@/shared/Panel/RowActions';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
+import { usePermission } from '@/shared/Panel/usePermission';
 import { formatMoney, formatWeight } from '@/Wms/Components/deliveryFormat';
 
 const SORT_OPTIONS = [
@@ -73,14 +76,12 @@ function TrackCell({ delivery }) {
  * Строка журнала карточкой — мобильный вариант: журнал открывают со складского
  * телефона, а таблица из девяти колонок там не читается.
  */
-function DeliveryMobileCard({ delivery }) {
+function DeliveryMobileCard({ delivery, actions }) {
     return (
         <Box borderWidth="1px" borderColor="border" borderRadius="md" p={3}>
             <VStack align="stretch" gap={2}>
                 <HStack justify="space-between" align="start">
-                    <Link href={delivery.url}>
-                        <Text fontSize="sm" fontWeight="bold">{delivery.number}</Text>
-                    </Link>
+                    <Text fontSize="sm" fontWeight="bold">{delivery.number}</Text>
                     <Badge colorPalette={delivery.status_color} size="sm">{delivery.status_label}</Badge>
                 </HStack>
 
@@ -102,6 +103,8 @@ function DeliveryMobileCard({ delivery }) {
                 {delivery.apiship_status_label && (
                     <Text fontSize="xs" color="fg.muted">{delivery.apiship_status_label}</Text>
                 )}
+
+                <RowActions {...actions} size="md" />
             </VStack>
         </Box>
     );
@@ -112,6 +115,30 @@ export default function DeliveriesIndex() {
     const { can } = usePermission();
 
     const [search, setSearch] = useState(filters.search || '');
+
+    // Тот же запрос, что и на странице отправки: заявки у перевозчика нет,
+    // поэтому удаление просто возвращает реализации в список к доставке.
+    const deliveryDelete = useConfirmDelete({
+        onConfirm: (delivery) => router.delete(`/wms/deliveries/${delivery.id}`, { preserveScroll: true }),
+        title: (delivery) => `Удалить отправку ${delivery?.number ?? ''}?`,
+        description: 'Заявку перевозчику не передавали, поэтому удаление ни на что не влияет. Реализации вернутся в список к доставке.',
+        cancelLabel: 'Оставить',
+    });
+
+    /** Один набор действий для строки таблицы и мобильной карточки. */
+    const actionsFor = (delivery) => {
+        const submitted = Boolean(delivery.apiship_order_id);
+
+        return {
+            view: { href: delivery.url || `/wms/deliveries/${delivery.id}` },
+            edit: { href: `/wms/deliveries/${delivery.id}/edit`, permission: 'wms-deliveries.edit' },
+            delete: {
+                onClick: () => deliveryDelete.request(delivery),
+                permission: 'wms-deliveries.edit',
+                disabled: submitted ? 'Отправка передана в ApiShip' : false,
+            },
+        };
+    };
 
     const applyFilters = (next) => {
         router.get('/wms/deliveries', {
@@ -265,7 +292,11 @@ export default function DeliveriesIndex() {
                                 <Box display={{ base: 'block', lg: 'none' }}>
                                     <VStack align="stretch" gap={2}>
                                         {deliveries.data.map((delivery) => (
-                                            <DeliveryMobileCard key={delivery.id} delivery={delivery} />
+                                            <DeliveryMobileCard
+                                                key={delivery.id}
+                                                delivery={delivery}
+                                                actions={actionsFor(delivery)}
+                                            />
                                         ))}
                                     </VStack>
                                 </Box>
@@ -284,17 +315,16 @@ export default function DeliveriesIndex() {
                                                 <Table.ColumnHeader textAlign="end">Мест</Table.ColumnHeader>
                                                 <Table.ColumnHeader textAlign="end">Вес</Table.ColumnHeader>
                                                 <Table.ColumnHeader textAlign="end">Доставка</Table.ColumnHeader>
+                                                <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
                                             </Table.Row>
                                         </Table.Header>
                                         <Table.Body>
                                             {deliveries.data.map((delivery) => (
                                                 <Table.Row key={delivery.id}>
                                                     <Table.Cell>
-                                                        <Link href={delivery.url}>
-                                                            <Text fontSize="sm" fontWeight="medium" color="colorPalette.fg">
-                                                                {delivery.number}
-                                                            </Text>
-                                                        </Link>
+                                                        <Text fontSize="sm" fontWeight="medium">
+                                                            {delivery.number}
+                                                        </Text>
                                                         <Text fontSize="xs" color="fg.muted">
                                                             реализаций: {delivery.documents_count}
                                                         </Text>
@@ -337,6 +367,9 @@ export default function DeliveriesIndex() {
                                                     <Table.Cell textAlign="end" fontSize="sm" fontVariantNumeric="tabular-nums">
                                                         {formatMoney(delivery.delivery_cost)}
                                                     </Table.Cell>
+                                                    <Table.Cell>
+                                                        <RowActions {...actionsFor(delivery)} size="sm" />
+                                                    </Table.Cell>
                                                 </Table.Row>
                                             ))}
                                         </Table.Body>
@@ -360,6 +393,8 @@ export default function DeliveriesIndex() {
                     </Card.Body>
                 </Card.Root>
             </VStack>
+
+            <ConfirmDialog {...deliveryDelete.dialogProps} />
         </>
     );
 }
