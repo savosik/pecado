@@ -71,6 +71,9 @@ export default function PaymentCalendar({
 
     const selected = selectedDate ? days[selectedDate] : null;
 
+    // «в августе», а не «в август»: заголовок колонки — часть фразы.
+    const monthInCase = MONTHS_IN[Number((month ?? '').slice(5, 7)) - 1] ?? 'этом месяце';
+
     return (
         <CrmLayout breadcrumbs={[{ label: 'Финансы' }, { label: 'Календарь поступлений' }]}>
             <Head title="Календарь поступлений — CRM" />
@@ -89,6 +92,29 @@ export default function PaymentCalendar({
                 hidePeriod
                 passthrough={['month', 'axis']}
             />
+
+            {/* Объяснение на самой странице, а не в подсказках: раздел
+                показывает три разные величины, и без пары фраз они читаются
+                как три варианта одного числа, которые почему-то не сходятся. */}
+            <Box borderWidth="1px" borderRadius="lg" px={4} py={3} mb={3} bg="blue.subtle" borderColor="blue.muted">
+                <Text fontSize="sm" fontWeight="600" mb={1}>Что показывает раздел</Text>
+                <VStack align="start" gap={0} fontSize="xs" color="fg.muted">
+                    <Text>
+                        <b>Ждём</b> — какого числа партнёры обязались заплатить по графику из 1С.
+                        Это обязательство из учётной системы, без наших поправок и оценок.
+                    </Text>
+                    <Text>
+                        <b>Пришло</b> — какого числа деньги реально поступили. С графиком месяца эта
+                        сумма не обязана совпадать: платят и по старым долгам, и по документам,
+                        выставленным уже внутри месяца.
+                    </Text>
+                    <Text>
+                        <b>Долг с прошлых месяцев</b> — то, что ждали раньше и не дождались. В дни
+                        календаря он не ставится: его срок уже прошёл, и приписать его к какому-то
+                        числу было бы выдумкой. Он показан отдельной полосой ниже.
+                    </Text>
+                </VStack>
+            </Box>
 
             <Box borderWidth="1px" borderRadius="lg" px={4} py={3} mb={3} bg="bg.panel">
                 <Flex gap={{ base: 3, md: 6 }} wrap="wrap" align="center">
@@ -177,35 +203,55 @@ export default function PaymentCalendar({
                     selectedDate={selectedDate}
                     onSelectDate={setSelectedDate}
                     onChangeMonth={(value) => go({ month: value })}
-                    renderCell={(date) => <DayCell day={days[date]} peak={peak} />}
+                    renderCell={(date) => (
+                        <DayCell day={days[date]} peak={peak} isPast={date < today} />
+                    )}
                 />
 
-                <HStack gap={4} mt={3} wrap="wrap" fontSize="10px" color="fg.muted">
-                    <HStack gap={1}>
-                        <Box width="10px" height="10px" borderRadius="sm" bg="blue.subtle" borderWidth="1px" borderColor="blue.muted" />
-                        <Text>обещано по графику</Text>
-                    </HStack>
-                    <HStack gap={1}>
-                        <Box width="10px" height="10px" borderRadius="sm" bg="green.solid" />
-                        <Text>пришло фактически</Text>
-                    </HStack>
-                    <Text>· высота полосы — доля от самого денежного дня месяца</Text>
-                </HStack>
+                <Text fontSize="xs" color="fg.muted" mt={3}>
+                    В каждом дне две строки: <b>ждём</b> — сколько должны были заплатить по графику
+                    именно в этот день, <b>пришло</b> — сколько денег в этот день поступило.
+                    Длина заливки показывает размер суммы относительно самого денежного дня месяца.
+                    Красная подпись «не заплатили» — день прошёл, деньги ждали, но их не было.
+                    Нажмите на день, чтобы увидеть подробности.
+                </Text>
             </Box>
 
             {selected && (
                 <Box borderWidth="1px" borderRadius="lg" p={4} mb={3} bg="bg.subtle">
-                    <Text fontWeight="600" mb={1}>{selectedDate.split('-').reverse().join('.')}</Text>
-                    <HStack gap={6} wrap="wrap">
-                        <Text fontSize="sm">
-                            обещано <b>{formatRub(selected.plan)}</b>
-                            <Text as="span" color="fg.muted"> · {selected.plan_count} строк графика</Text>
+                    <Text fontWeight="600" mb={2}>{selectedDate.split('-').reverse().join('.')}</Text>
+
+                    <VStack align="start" gap={1} fontSize="sm">
+                        <Text>
+                            По графику в этот день ждали <b>{formatRub(selected.plan)}</b>
+                            {selected.plan_count > 0 && (
+                                <Text as="span" color="fg.muted">
+                                    {' '}— {selected.plan_count} {pluralLines(selected.plan_count)} оплаты
+                                </Text>
+                            )}
                         </Text>
-                        <Text fontSize="sm" color="green.fg">
-                            пришло <b>{formatRub(selected.fact)}</b>
-                            <Text as="span" color="fg.muted"> · {selected.fact_count} платежей</Text>
+
+                        <Text color={selected.fact > 0 ? 'green.fg' : 'red.fg'}>
+                            {selected.fact > 0 ? (
+                                <>
+                                    Пришло <b>{formatRub(selected.fact)}</b>
+                                    <Text as="span" color="fg.muted">
+                                        {' '}— {selected.fact_count} {pluralPayments(selected.fact_count)}
+                                    </Text>
+                                </>
+                            ) : (
+                                <>Денег в этот день не поступало</>
+                            )}
                         </Text>
-                    </HStack>
+
+                        {selected.plan > 0 && (
+                            <Text fontSize="xs" color="fg.muted">
+                                {selected.settled >= selected.plan
+                                    ? 'Все обязательства этого дня 1С уже закрыла.'
+                                    : `Из обязательств дня закрыто ${formatRub(selected.settled)} — осталось ${formatRub(selected.plan - selected.settled)}.`}
+                            </Text>
+                        )}
+                    </VStack>
                 </Box>
             )}
 
@@ -236,11 +282,36 @@ export default function PaymentCalendar({
                         <Table.Header>
                             <Table.Row>
                                 <Table.ColumnHeader>{axes.find((item) => item.value === axis)?.label ?? 'Строка'}</Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="end">Обещано в месяце</Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="end">Закрыто</Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="end">Пришло денег</Table.ColumnHeader>
-                                <Table.ColumnHeader width="150px">Соотношение</Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="end">Ждём с прошлых</Table.ColumnHeader>
+                                <Table.ColumnHeader textAlign="end">
+                                    <ColumnLabel
+                                        label={`Должен был заплатить в ${monthInCase}`}
+                                        hint="Сумма по графику оплаты из 1С со сроком внутри этого месяца — вместе с теми строками, которые уже оплачены. Это обязательство из учётной системы, а не наша оценка."
+                                    />
+                                </Table.ColumnHeader>
+                                <Table.ColumnHeader textAlign="end">
+                                    <ColumnLabel
+                                        label="Уже оплачено"
+                                        hint="Какую часть обязательства 1С отметила оплаченной. Может закрываться не только платежом, но и зачётом аванса — поэтому это отдельная колонка от «поступило денег»."
+                                    />
+                                </Table.ColumnHeader>
+                                <Table.ColumnHeader textAlign="end">
+                                    <ColumnLabel
+                                        label="Осталось оплатить"
+                                        hint="Незакрытая часть обязательств этого месяца: сколько ещё должны заплатить по графику до конца месяца."
+                                    />
+                                </Table.ColumnHeader>
+                                <Table.ColumnHeader textAlign="end">
+                                    <ColumnLabel
+                                        label="Поступило денег"
+                                        hint="Сколько денег реально пришло в этом месяце — по всем платежам, включая оплату долгов прошлых месяцев и документов, выставленных уже внутри месяца. Поэтому число может быть больше или меньше обязательства слева: это не «выполнение плана», а отдельный факт."
+                                    />
+                                </Table.ColumnHeader>
+                                <Table.ColumnHeader textAlign="end">
+                                    <ColumnLabel
+                                        label="Долг с прошлых месяцев"
+                                        hint="Просроченное: срок был раньше этого месяца, деньги так и не пришли. В обязательства месяца не входит, разбирается в разделе «Просрочка»."
+                                    />
+                                </Table.ColumnHeader>
                             </Table.Row>
                         </Table.Header>
 
@@ -281,7 +352,9 @@ export default function PaymentCalendar({
                                     <Table.Cell textAlign="end">
                                         <Text fontSize="sm" whiteSpace="nowrap">{formatRub(row.plan)}</Text>
                                         {row.plan_count > 0 && (
-                                            <Text fontSize="10px" color="fg.muted">{row.plan_count} строк</Text>
+                                            <Text fontSize="10px" color="fg.muted">
+                                                {row.plan_count} {pluralLines(row.plan_count)} графика
+                                            </Text>
                                         )}
                                     </Table.Cell>
 
@@ -291,8 +364,21 @@ export default function PaymentCalendar({
                                         </Text>
                                         {row.plan > 0 && (
                                             <Text fontSize="10px" color="fg.muted">
-                                                {Math.round((row.settled / row.plan) * 100)}% графика
+                                                это {Math.round((row.settled / row.plan) * 100)}% от обязательства
                                             </Text>
+                                        )}
+                                    </Table.Cell>
+
+                                    <Table.Cell textAlign="end">
+                                        {row.plan - row.settled > 1 ? (
+                                            <>
+                                                <Text fontSize="sm" fontWeight="600" color="orange.fg" whiteSpace="nowrap">
+                                                    {formatRub(row.plan - row.settled)}
+                                                </Text>
+                                                <Text fontSize="10px" color="fg.muted">ещё ждём в этом месяце</Text>
+                                            </>
+                                        ) : (
+                                            <Text fontSize="sm" color="green.fg" whiteSpace="nowrap">рассчитались</Text>
                                         )}
                                     </Table.Cell>
 
@@ -300,13 +386,11 @@ export default function PaymentCalendar({
                                         <Text fontSize="sm" fontWeight="600" whiteSpace="nowrap">
                                             {formatRub(row.fact)}
                                         </Text>
-                                        {row.fact_count > 0 && (
-                                            <Text fontSize="10px" color="fg.muted">{row.fact_count} платежей</Text>
-                                        )}
-                                    </Table.Cell>
-
-                                    <Table.Cell>
-                                                                <PlanFactBar plan={row.plan} fact={row.fact} />
+                                        <Text fontSize="10px" color="fg.muted">
+                                            {row.fact_count > 0
+                                                ? `${row.fact_count} ${pluralPayments(row.fact_count)}`
+                                                : 'платежей не было'}
+                                        </Text>
                                     </Table.Cell>
 
                                     <Table.Cell textAlign="end">
@@ -324,57 +408,86 @@ export default function PaymentCalendar({
     );
 }
 
+/** Заголовок колонки с пояснением: цифра без подписи читается как шум. */
+const ColumnLabel = ({ label, hint }) => (
+    <HStack gap={1} justify="inherit">
+        <Text fontSize="xs">{label}</Text>
+        <MetricHint text={hint} />
+    </HStack>
+);
+
+const pluralLines = (count) => {
+    const tail = count % 10;
+    const teen = count % 100 >= 11 && count % 100 <= 14;
+
+    if (! teen && tail === 1) return 'строка';
+    if (! teen && tail >= 2 && tail <= 4) return 'строки';
+
+    return 'строк';
+};
+
+const pluralPayments = (count) => {
+    const tail = count % 10;
+    const teen = count % 100 >= 11 && count % 100 <= 14;
+
+    if (! teen && tail === 1) return 'платёж';
+    if (! teen && tail >= 2 && tail <= 4) return 'платежа';
+
+    return 'платежей';
+};
+
+/** Месяцы в предложном падеже: заголовок колонки — часть фразы, а не ярлык. */
+const MONTHS_IN = [
+    'январе', 'феврале', 'марте', 'апреле', 'мае', 'июне',
+    'июле', 'августе', 'сентябре', 'октябре', 'ноябре', 'декабре',
+];
+
 /** Цвета навеса: от свежей задержки к застарелому долгу. */
 const THREAD_COLORS = ['orange.solid', 'orange.600', 'red.solid', 'red.700'];
 
 /**
- * Клетка дня: две полосы — обещано и пришло.
+ * Клетка дня: две подписанные строки — сколько ждали и сколько пришло.
  *
- * Полосами, а не числами: суммы в тридцати клетках сливаются, а разница высот
- * читается мгновенно — видно и ритм оплат, и дни, когда деньги не пришли.
+ * Раньше здесь были две безымянные полосы: угадать, какая из них план, а
+ * какая факт, было нельзя, и календарь читался как узор. Теперь у каждой
+ * цифры есть слово, а полоска осталась только фоном под ним.
  */
-function DayCell({ day, peak }) {
+function DayCell({ day, peak, isPast }) {
     if (! day || (day.plan <= 0 && day.fact <= 0)) {
         return null;
     }
 
-    const height = (value) => (peak > 0 ? Math.max(value > 0 ? 3 : 0, Math.round((value / peak) * 34)) : 0);
+    const width = (value) => (peak > 0 ? Math.max(value > 0 ? 6 : 0, Math.round((value / peak) * 100)) : 0);
+
+    // День прошёл, деньги ждали, но не пришли — единственное состояние, ради
+    // которого календарь вообще открывают.
+    const missed = isPast && day.plan > 0 && day.fact <= 0;
 
     return (
-        <VStack align="stretch" gap={1} mt={1}>
-            <Flex align="flex-end" gap={1} height="36px">
-                <Box flex="1" bg="blue.subtle" borderWidth="1px" borderColor="blue.muted" borderRadius="sm" height={`${height(day.plan)}px`} />
-                <Box flex="1" bg="green.solid" borderRadius="sm" height={`${height(day.fact)}px`} />
-            </Flex>
+        <VStack align="stretch" gap="2px" mt={1}>
+            {day.plan > 0 && (
+                <Box position="relative" borderRadius="sm" overflow="hidden" px="3px" py="1px">
+                    <Box position="absolute" inset="0" bg="blue.subtle" width={`${width(day.plan)}%`} />
+                    <HStack position="relative" gap={1} justify="space-between">
+                        <Text fontSize="9px" color="fg.muted">ждём</Text>
+                        <Text fontSize="10px" fontWeight="600">{formatCompact(day.plan)}</Text>
+                    </HStack>
+                </Box>
+            )}
 
-            <VStack align="start" gap={0}>
-                {day.plan > 0 && (
-                    <Text fontSize="10px" color="fg.muted" lineHeight="1.2">
-                        {formatCompact(day.plan)}
-                        {day.settled > 0 && day.settled < day.plan ? ` · закрыто ${Math.round((day.settled / day.plan) * 100)}%` : ''}
-                        {day.settled >= day.plan ? ' · закрыт' : ''}
-                    </Text>
-                )}
-                {day.fact > 0 && (
-                    <Text fontSize="10px" color="green.fg" fontWeight="600" lineHeight="1.2">{formatCompact(day.fact)}</Text>
-                )}
-            </VStack>
-        </VStack>
-    );
-}
+            {day.fact > 0 && (
+                <Box position="relative" borderRadius="sm" overflow="hidden" px="3px" py="1px">
+                    <Box position="absolute" inset="0" bg="green.subtle" width={`${width(day.fact)}%`} />
+                    <HStack position="relative" gap={1} justify="space-between">
+                        <Text fontSize="9px" color="green.fg">пришло</Text>
+                        <Text fontSize="10px" fontWeight="700" color="green.fg">{formatCompact(day.fact)}</Text>
+                    </HStack>
+                </Box>
+            )}
 
-/** Соотношение «обещано / пришло» одной полосой. */
-function PlanFactBar({ plan, fact }) {
-    const max = Math.max(plan, fact, 1);
-
-    return (
-        <VStack align="stretch" gap={1}>
-            <Box bg="bg.muted" borderRadius="full" height="5px" overflow="hidden">
-                <Box bg="blue.solid" height="5px" width={`${Math.round((plan / max) * 100)}%`} />
-            </Box>
-            <Box bg="bg.muted" borderRadius="full" height="5px" overflow="hidden">
-                <Box bg="green.solid" height="5px" width={`${Math.round((fact / max) * 100)}%`} />
-            </Box>
+            {missed && (
+                <Text fontSize="9px" color="red.fg" fontWeight="600">не заплатили</Text>
+            )}
         </VStack>
     );
 }
