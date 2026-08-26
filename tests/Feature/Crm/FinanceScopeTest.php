@@ -130,16 +130,18 @@ class FinanceScopeTest extends TestCase
         $otherCard = PersonalManager::create(['name' => 'Чужой']);
         $foreign = $this->makeClient($otherCard);
 
-        $this->makePlan($mine, $this->makeShipment($mine), 1000, Carbon::today()->addDays(5)->toDateString());
+        $this->makePlan($mine, $this->makeShipment($mine), 1000, Carbon::today()->subDays(5)->toDateString());
 
-        $this->makePlan($foreign, $this->makeShipment($foreign), 7777, Carbon::today()->addDays(5)->toDateString());
+        $this->makePlan($foreign, $this->makeShipment($foreign), 7777, Carbon::today()->subDays(5)->toDateString());
 
         $response = $this->actingAs($actor)->get('/crm/finance');
 
         $response->assertOk();
-        $summary = $response->viewData('page')['props']['summary'];
+        $money = $response->viewData('page')['props']['money'];
 
-        $this->assertSame(1000.0, $summary['expected_period']);
+        // Чужая просрочка в пульт не попадает — ни в сумму, ни в счётчик клиентов.
+        $this->assertSame(1000.0, $money['overdue']);
+        $this->assertSame(1, $money['overdue_clients']);
     }
 
     /**
@@ -156,29 +158,29 @@ class FinanceScopeTest extends TestCase
         $otherClient = $this->makeClient($otherCard);
 
         foreach ([[$ownClient, 500], [$otherClient, 300]] as [$client, $amount]) {
-            $this->makePlan($client, $this->makeShipment($client), $amount, Carbon::today()->addDays(3)->toDateString());
+            $this->makePlan($client, $this->makeShipment($client), $amount, Carbon::today()->subDays(3)->toDateString());
         }
 
         // По умолчанию — только свои, хотя права на отдел есть.
         $default = $this->actingAs($head)->get('/crm/finance');
-        $this->assertSame(500.0, $default->viewData('page')['props']['summary']['expected_period']);
+        $this->assertSame(500.0, $default->viewData('page')['props']['money']['overdue']);
 
         // Расфокус показывает отдел целиком.
         $all = $this->actingAs($head)->get('/crm/finance?scope=department');
-        $this->assertSame(800.0, $all->viewData('page')['props']['summary']['expected_period']);
+        $this->assertSame(800.0, $all->viewData('page')['props']['money']['overdue']);
 
         $filtered = $this->actingAs($head)->get('/crm/finance?scope=department&manager_ids[]='.$otherCard->id);
-        $this->assertSame(300.0, $filtered->viewData('page')['props']['summary']['expected_period']);
+        $this->assertSame(300.0, $filtered->viewData('page')['props']['money']['overdue']);
 
         // Рядовой менеджер тем же параметром чужие деньги не достанет.
         [$manager, $managerCard] = $this->makeManagerActor();
         $managerClient = $this->makeClient($managerCard);
 
-        $this->makePlan($managerClient, $this->makeShipment($managerClient), 100, Carbon::today()->addDays(3)->toDateString());
+        $this->makePlan($managerClient, $this->makeShipment($managerClient), 100, Carbon::today()->subDays(3)->toDateString());
 
         $attempt = $this->actingAs($manager)->get('/crm/finance?manager_ids[]='.$otherCard->id);
 
-        $this->assertSame(100.0, $attempt->viewData('page')['props']['summary']['expected_period']);
+        $this->assertSame(100.0, $attempt->viewData('page')['props']['money']['overdue']);
         $this->assertSame([], $attempt->viewData('page')['props']['filters']['manager_ids']);
     }
 
@@ -190,13 +192,12 @@ class FinanceScopeTest extends TestCase
         [$actor, $card] = $this->makeManagerActor();
         $client = $this->makeClient($card);
 
-        $this->makePlan($client, $this->makeShipment($client, ['currency_code' => 'BYN', 'total_amount' => 100]), 100, Carbon::today()->addDays(2)->toDateString());
+        $this->makePlan($client, $this->makeShipment($client, ['currency_code' => 'BYN', 'total_amount' => 100]), 100, Carbon::today()->subDays(2)->toDateString());
 
         $props = $this->actingAs($actor)->get('/crm/finance')->viewData('page')['props'];
 
-        $this->assertSame(3000.0, $props['summary']['expected_period']);
-        $this->assertSame(3000.0, $props['upcomingRows'][0]['unpaid_rub']);
-        $this->assertSame(100.0, $props['upcomingRows'][0]['unpaid_amount']);
+        // Сто белорусских рублей по курсу 30 — три тысячи наших.
+        $this->assertSame(3000.0, $props['money']['overdue']);
     }
 
     /**
@@ -214,9 +215,9 @@ class FinanceScopeTest extends TestCase
 
         $props = $this->actingAs($actor)->get('/crm/finance')->viewData('page')['props'];
 
-        $this->assertSame(0.0, $props['summary']['expected_period']);
-        $this->assertSame(0.0, $props['summary']['no_schedule_amount']);
-        $this->assertSame(0, $props['noScheduleCount']);
+        // Реализация без графика — не просрочка и не прогноз: срок неизвестен.
+        $this->assertSame(0.0, $props['money']['overdue']);
+        $this->assertSame(0.0, $props['money']['forecast']['promised']);
     }
 
     #[Test]
@@ -232,8 +233,8 @@ class FinanceScopeTest extends TestCase
 
         $this->assertSame(900.0, $buckets['31_60']['amount']);
         $this->assertSame(0.0, $buckets['1_7']['amount']);
-        $this->assertSame(900.0, $props['summary']['overdue_amount']);
-        $this->assertSame(1, $props['summary']['overdue_clients']);
+        $this->assertSame(900.0, $props['money']['overdue']);
+        $this->assertSame(1, $props['money']['overdue_clients']);
     }
 
     #[Test]
@@ -246,8 +247,9 @@ class FinanceScopeTest extends TestCase
 
         $props = $this->actingAs($actor)->get('/crm/finance')->viewData('page')['props'];
 
-        $this->assertSame(0.0, $props['summary']['expected_period']);
-        $this->assertSame([], $props['upcomingRows']);
+        // Строка закрыта: ни в прогноз, ни в просрочку она не идёт.
+        $this->assertSame(0.0, $props['money']['forecast']['promised']);
+        $this->assertSame(0.0, $props['money']['overdue']);
     }
 
     /**
@@ -311,9 +313,8 @@ class FinanceScopeTest extends TestCase
 
         $props = $this->actingAs($actor)->get('/crm/finance')->viewData('page')['props'];
 
-        $this->assertSame(0.0, $props['summary']['overdue_amount']);
-        $this->assertSame(0, $props['summary']['overdue_count']);
-        $this->assertSame([], $props['overdueRows']);
+        $this->assertSame(0.0, $props['money']['overdue']);
+        $this->assertSame(0, $props['money']['overdue_clients']);
     }
 
     /**

@@ -380,6 +380,31 @@ class LedgerPaymentForecastService implements PaymentForecast
     }
 
     /**
+     * Общий долг партнёров одним числом: сумма отрицательных сальдо.
+     *
+     * Чужие авансы чужой долг не гасят, поэтому положительные сальдо в сумму
+     * не идут — иначе дебиторка занижалась бы на переплаты других клиентов.
+     *
+     * Отдельный лёгкий запрос вместо полного дерева балансов: пульту нужен
+     * скаляр, а не названия, ИНН и даты обновления по каждой ячейке.
+     *
+     * @param  EloquentBuilder<\App\Models\User>  $clients
+     * @param  array<int, int>  $organizationIds
+     */
+    public function debtTotal(EloquentBuilder $clients, array $organizationIds = []): float
+    {
+        $rows = DB::table('settlement_entries as e')
+            ->where('e.nature', SettlementEntry::NATURE_FACT)
+            ->whereIn('e.user_id', (clone $clients))
+            ->when($organizationIds !== [], fn ($query) => $query->whereIn('e.organization_id', $organizationIds))
+            ->groupBy('e.user_id')
+            ->selectRaw('SUM(COALESCE(e.amount_rub, e.amount)) as balance')
+            ->pluck('balance');
+
+        return round($rows->sum(static fn ($balance): float => min(0.0, (float) $balance)) * -1, 2);
+    }
+
+    /**
      * Балансы по ленте движений, сгруппированные по партнёру.
      *
      * Нижний уровень — контрагент, как и раньше: 1С ведёт расчёты по ним, и

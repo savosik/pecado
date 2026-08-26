@@ -132,6 +132,14 @@ interface PaymentForecast
      * @param  EloquentBuilder<\App\Models\User>  $clients
      * @param  list<string>  $dimensions
      */
+    /**
+     * Общий долг партнёров одним числом: сумма отрицательных сальдо.
+     *
+     * @param  EloquentBuilder<\App\Models\User>  $clients
+     * @param  array<int, int>  $organizationIds
+     */
+    public function debtTotal(EloquentBuilder $clients, array $organizationIds = []): float;
+
     public function balances(EloquentBuilder $clients, ?CarbonImmutable $asOf = null, array $dimensions = ['partner', 'company'], array $organizationIds = [], ?FinanceFilters $overdueFilters = null): array;
 
     /**

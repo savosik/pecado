@@ -50,17 +50,17 @@ class FinanceController extends CrmController
     /**
      * Пульт платежей. GET /crm/finance
      */
-    public function index(Request $request): InertiaResponse
+    public function index(Request $request, CollectionForecastService $forecast): InertiaResponse
     {
-        return Inertia::render('Crm/Pages/Finance/Index', $this->dashboardPayload($request));
+        return Inertia::render('Crm/Pages/Finance/Index', $this->dashboardPayload($request, $forecast));
     }
 
     /**
      * JSON для XHR-обновления пульта при смене фильтров. GET /crm/finance/data
      */
-    public function data(Request $request): JsonResponse
+    public function data(Request $request, CollectionForecastService $forecast): JsonResponse
     {
-        return response()->json($this->dashboardPayload($request));
+        return response()->json($this->dashboardPayload($request, $forecast));
     }
 
     /**
@@ -214,28 +214,10 @@ class FinanceController extends CrmController
             // Общий долг по тому же отбору: доля просрочки в нём — главный
             // индикатор раздела, и считать её на клиенте из разных источников
             // значило бы получить два разных числа на одном экране.
-            'debtTotal' => $this->overdueDebtTotal($clients, $filters),
+            'debtTotal' => -$this->forecast->debtTotal($clients, $filters->organizationIds),
             'sort' => $this->overdueSort($request),
             ...$shared,
         ]);
-    }
-
-    /**
-     * Общий долг партнёров, попавших в отбор: сумма отрицательных сальдо.
-     *
-     * Просрочка сравнивается именно с ним, а не с оборотом: «просрочено 100
-     * тысяч» при долге 120 тысяч и при долге 5 миллионов — разные новости.
-     *
-     * @param  Builder<User>  $clients
-     */
-    private function overdueDebtTotal(Builder $clients, FinanceFilters $filters): float
-    {
-        $balances = $this->forecast->balances($clients, null, ['partner'], $filters->organizationIds);
-
-        return round(array_sum(array_map(
-            static fn (array $row): float => min(0.0, (float) $row['current_balance']),
-            $balances,
-        )), 2);
     }
 
     /**
@@ -832,38 +814,122 @@ class FinanceController extends CrmController
      *
      * @return array<string, mixed>
      */
-    private function dashboardPayload(Request $request): array
+    /**
+     * Пульт: выжимка для руководителя, который не ведёт клиентов.
+     *
+     * Пять чисел на пять вопросов — сколько должны, сколько просрочено,
+     * сколько придёт, сколько уже пришло и кто главные должники. Всё
+     * остальное живёт в своих разделах: пульт, набитый построчными
+     * таблицами, перестаёт быть пультом.
+     *
+     * @return array<string, mixed>
+     */
+    private function dashboardPayload(Request $request, CollectionForecastService $forecast): array
     {
         $filters = FinanceFilters::fromRequest($request);
         $clients = $this->visibleClients($request, $filters);
         $today = CarbonImmutable::today();
+        $monthEnd = $today->endOfMonth()->startOfDay();
 
-        $plan = $this->forecast->dailyPlan($clients, $filters);
-        $facts = $this->forecast->factsByDay($clients, $filters->dateFrom->toDateString(), $filters->dateTo->toDateString());
+        $summary = $this->forecast->summary($clients, $filters);
+        $debt = $this->forecast->debtTotal($clients, $filters->organizationIds);
 
-        $overdueRows = $this->forecast->applyDefaultOrder(
-            $this->forecast->overdueOnly($this->forecast->plannedQuery($clients, $filters), $today)
-        )->limit(self::DASHBOARD_ROWS)->get();
-
-        $upcomingRows = $this->forecast->applyDefaultOrder(
-            $this->forecast->dueBetween(
-                $this->forecast->plannedQuery($clients, $filters),
-                $today->toDateString(),
-                $filters->dateTo->toDateString(),
-            )
-        )->limit(self::DASHBOARD_ROWS)->get();
+        $overdue = round((float) ($summary['overdue_amount'] ?? 0), 2);
 
         return [
-            'summary' => $this->forecast->summary($clients, $filters),
-            'buckets' => $this->forecast->buckets($plan, $facts, $filters),
+            'money' => [
+                'debt' => $debt,
+                'overdue' => $overdue,
+                'overdue_share' => $debt > 0 ? (int) round($overdue / $debt * 100) : 0,
+                'overdue_clients' => (int) ($summary['overdue_clients'] ?? 0),
+                'forecast' => $forecast->forecast($clients, $filters, $monthEnd, $today),
+                'month' => $this->monthFact($clients, $filters, $today),
+            ],
+            'history' => $this->monthlyHistory($clients, $filters, $today),
+            'debtors' => $this->forecast->topDebtors($clients, $filters, 5),
             'aging' => $this->forecast->aging($clients, $filters),
-            'topDebtors' => $this->forecast->topDebtors($clients, $filters),
-            'overdueRows' => $overdueRows->map(fn (object $row): array => $this->forecast->row($row, $today))->all(),
-            'upcomingRows' => $upcomingRows->map(fn (object $row): array => $this->forecast->row($row, $today))->all(),
-            'noScheduleCount' => $filters->includeNoSchedule ? $this->forecast->noScheduleCount($clients, $filters) : 0,
             ...$this->sharedOptions($request, $filters),
         ];
     }
+
+    /**
+     * Деньги текущего месяца: сколько уже пришло и как это выглядит на фоне
+     * обычного месяца.
+     *
+     * @param  Builder<User>  $clients
+     * @return array<string, float|int>
+     */
+    private function monthFact(Builder $clients, FinanceFilters $filters, CarbonImmutable $today): array
+    {
+        $history = $this->monthlyHistory($clients, $filters, $today);
+        $closed = array_values(array_filter(
+            $history,
+            static fn (array $row): bool => ! $row['current'],
+        ));
+
+        $amounts = array_column($closed, 'amount');
+        sort($amounts);
+        $typical = $amounts === [] ? 0.0 : $amounts[(int) floor(count($amounts) / 2)];
+
+        $current = array_values(array_filter($history, static fn (array $row): bool => $row['current']));
+        $received = $current === [] ? 0.0 : $current[0]['amount'];
+
+        return [
+            'received' => round($received, 2),
+            'typical' => round($typical, 2),
+            'days_passed' => (int) $today->startOfMonth()->diffInDays($today) + 1,
+            'days_total' => $today->endOfMonth()->day,
+        ];
+    }
+
+    /**
+     * Поступления по месяцам за полгода — единственный график пульта.
+     *
+     * @param  Builder<User>  $clients
+     * @return list<array{month: string, label: string, amount: float, current: bool}>
+     */
+    private function monthlyHistory(Builder $clients, FinanceFilters $filters, CarbonImmutable $today): array
+    {
+        $from = $today->startOfMonth()->subMonths(5);
+        $expression = DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m', date)"
+            : "DATE_FORMAT(date, '%Y-%m')";
+
+        $rows = DB::table('settlement_entries')
+            ->where('nature', SettlementEntry::NATURE_FACT)
+            ->whereIn('type', [SettlementEntry::TYPE_PAYMENT_IN, SettlementEntry::TYPE_PAYMENT_OUT])
+            ->whereIn('user_id', (clone $clients))
+            ->when(
+                $filters->organizationIds !== [],
+                fn ($query) => $query->whereIn('organization_id', $filters->organizationIds),
+            )
+            ->whereDate('date', '>=', $from->toDateString())
+            ->groupByRaw($expression)
+            ->selectRaw($expression.' as month')
+            ->selectRaw('SUM(COALESCE(amount_rub, amount)) as amount')
+            ->pluck('amount', 'month');
+
+        $months = [];
+
+        for ($cursor = $from; $cursor->lessThanOrEqualTo($today); $cursor = $cursor->addMonth()) {
+            $key = $cursor->format('Y-m');
+
+            $months[] = [
+                'month' => $key,
+                'label' => self::MONTHS_SHORT[$cursor->month - 1],
+                'amount' => round((float) ($rows[$key] ?? 0), 2),
+                'current' => $key === $today->format('Y-m'),
+            ];
+        }
+
+        return $months;
+    }
+
+    /** @var list<string> */
+    private const MONTHS_SHORT = [
+        'январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
+        'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь',
+    ];
 
     /**
      * Лист «Сводка»: сначала итоги, затем разбивки по времени и давности долга.
