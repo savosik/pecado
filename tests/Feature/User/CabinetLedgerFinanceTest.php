@@ -150,12 +150,13 @@ class CabinetLedgerFinanceTest extends TestCase
     }
 
     /**
-     * v16.7.0 (круг 12): график заказа — план платежа, а не долг. Просроченный план
-     * заказа не показывается клиенту просрочкой ни на дашборде, ни в календаре —
-     * но из «к оплате сейчас» и строк месяца не исчезает: это счёт на предоплату.
+     * v16.7.0 (круг 12): график заказа — план платежа, а не долг. План заказа
+     * клиенту не показывается нигде: ни просрочкой, ни в «к оплате сейчас»,
+     * ни строкой календаря — 1С погашение по заказам не публикует, и после
+     * отгрузки он задваивал бы реализацию.
      */
     #[Test]
-    public function просроченный_план_заказа_не_показывается_клиенту_просрочкой(): void
+    public function план_заказа_не_показывается_клиенту_ни_долгом_ни_просрочкой(): void
     {
         $this->entry([
             'nature' => SettlementEntry::NATURE_PLAN,
@@ -172,7 +173,7 @@ class CabinetLedgerFinanceTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('balance.overdue', 0)
-                ->where('balance.due_now', 151291));
+                ->where('balance.due_now', 0));
 
         $this->actingAs($this->client)
             ->get('/cabinet/payments/calendar')
@@ -180,7 +181,64 @@ class CabinetLedgerFinanceTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('summary.overdue_amount', 0)
                 ->where('summary.overdue_count', 0)
-                ->has('overdueEntries', 0));
+                ->has('overdueEntries', 0)
+                ->has('entries', 0));
+    }
+
+    /**
+     * Кейс ИП Дорофеевой (27.08.2026): заказ на 33 910,15 отгружен двумя
+     * реализациями на ту же дату оплаты, план заказа 1С не погасила — календарь
+     * показал 68 311,05 «к оплате», и клиент чуть не заплатил дважды.
+     * В календаре и на дашборде — только реализации.
+     */
+    #[Test]
+    public function отгруженный_заказ_не_задваивает_реализацию_в_календаре(): void
+    {
+        $due = CarbonImmutable::today()->addDays(2)->toDateString();
+
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'amount' => 33910.15,
+            'settled_amount' => 0,
+            'date' => $due,
+            'document_kind' => 'order',
+            'document_number' => '29УТ-013310',
+        ]);
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'amount' => 32145.15,
+            'settled_amount' => 0,
+            'date' => $due,
+            'document_kind' => 'shipment',
+            'document_number' => '29УТ-007699',
+        ]);
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'amount' => 1765,
+            'settled_amount' => 0,
+            'date' => $due,
+            'document_kind' => 'shipment',
+            'document_number' => '29УТ-007700',
+        ]);
+
+        $this->actingAs($this->client)
+            ->get('/cabinet/payments/calendar')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('entries', 2)
+                ->where('entries.0.shipment.number', '29УТ-007699')
+                ->where('entries.1.shipment.number', '29УТ-007700')
+                ->where('summary.week_amount', 33910.15)
+                ->where('summary.month_amount', 33910.15));
+
+        $this->actingAs($this->client)
+            ->get('/cabinet/dashboard')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('balance.next_due_date', CarbonImmutable::parse($due)->format('d.m.Y')));
     }
 
     #[Test]
