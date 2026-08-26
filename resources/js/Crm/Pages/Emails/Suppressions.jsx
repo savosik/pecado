@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import axios from 'axios';
 import { Badge, Box, HStack, Input, Text, VStack } from '@chakra-ui/react';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
+import MailNav from '@/Crm/Pages/Emails/components/MailNav';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { Button } from '@/components/ui/button';
@@ -108,17 +109,9 @@ export default function Suppressions({ suppressions, canManage }) {
             <PageHeader
                 title="Стоп-лист"
                 description="Адреса, на которые письма не уходят, и почему"
-                actions={(
-                    <HStack gap={2}>
-                        <Link href={route('crm.emails.index')}>
-                            <Button size="sm" variant="outline"><LuMail /> К письмам</Button>
-                        </Link>
-                        <Link href={route('crm.emails.rules.index')}>
-                            <Button size="sm" variant="outline"><LuFilter /> Правила</Button>
-                        </Link>
-                    </HStack>
-                )}
             />
+
+            <MailNav description="Адреса, на которые письма не уходят: клиент отписался или почта отбивает доставку. Обычная отписка настраивается партнёром в кабинете — сюда попадает то, что мы гасим со своей стороны." />
 
             <VStack align="stretch" gap={4}>
                 <Alert status="info" title="Как адрес сюда попадает">

@@ -11,6 +11,7 @@ import { Alert } from '@/components/ui/alert';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
+import MailNav from '@/Crm/Pages/Emails/components/MailNav';
 import { usePermission } from '@/shared/Panel/usePermission';
 import { LuBot, LuEye, LuFilter, LuMail, LuPaperclip, LuPencil, LuSend, LuTrash2, LuUser } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
@@ -285,20 +286,16 @@ export default function Index({
             <Head title="CRM — Письма" />
             <PageHeader
                 title="Письма"
-                description="Один поток: что написали сами и что собрала система"
                 actions={(
                     <HStack gap={2}>
-                        {canManageRules && (
-                            <Link href={route('crm.emails.rules.index')}>
-                                <Button size="sm" variant="outline"><LuFilter /> Правила</Button>
-                            </Link>
-                        )}
                         {can('crm-emails.create') && (
                             <Button size="sm" onClick={() => openDialog(null)}><LuMail /> Написать письмо</Button>
                         )}
                     </HStack>
                 )}
             />
+
+            <MailNav description="Переписка менеджеров с партнёрами: черновики, отправленное и самолётик. Кому и что присылает система сама — настраивается в карточке партнёра, вкладка «Уведомления»." />
 
             <VStack align="stretch" gap={4}>
                 {!outboundEnabled && (
@@ -334,15 +331,13 @@ export default function Index({
                             {unmatchedSummary.rows.map((row) => (
                                 <HStack key={row.event} gap={3}>
                                     <Text fontSize="sm" flex="1">{row.label} — {row.total}</Text>
-                                    {canManageRules && row.tag && (
-                                        <Link href={route('crm.emails.rules.index', { tag: row.tag })}>
-                                            <Button size="xs" variant="outline"><LuFilter /> Настроить</Button>
-                                        </Link>
-                                    )}
+
                                 </HStack>
                             ))}
                             <Text fontSize="xs" color="fg.muted">
-                                Ни одно правило их не ловит. Письма хранятся {unmatchedSummary.retention_days} дн.
+                                Адресат настроен, но раскрыть его не удалось — например, у партнёра
+                                нет человека с нужной ролью. Проверьте вкладку «Уведомления»
+                                в карточке партнёра. Письма хранятся {unmatchedSummary.retention_days} дн.
                                 и удаляются.
                             </Text>
                         </VStack>
