@@ -72,7 +72,7 @@ export default function Index({ pages, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.pages', openDeleteDialog, { permissionPrefix: 'pages' , showView: true}),
+        createActionsColumn('admin.pages', openDeleteDialog, { permissionPrefix: 'pages' }),
     ];
 
     return (

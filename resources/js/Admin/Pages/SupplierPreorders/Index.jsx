@@ -13,7 +13,8 @@ import {
     SimpleGrid,
     Card,
 } from '@chakra-ui/react';
-import { LuRefreshCw, LuEye, LuCircleCheck, LuCircleX, LuFlaskConical, LuUndo2 } from 'react-icons/lu';
+import { LuRefreshCw, LuCircleCheck, LuCircleX, LuFlaskConical, LuUndo2 } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 import { useState, useCallback } from 'react';
 
 /**
@@ -298,11 +299,7 @@ export default function SupplierPreordersIndex({ requests, filters, stats, setti
                                                 <Text fontSize="sm" color="fg.muted">{item.created_at}</Text>
                                             </Table.Cell>
                                             <Table.Cell>
-                                                <Link href={route('admin.supplier-preorders.show', item.id)}>
-                                                    <IconButton size="xs" variant="ghost" colorPalette="purple" aria-label="Просмотр">
-                                                        <LuEye />
-                                                    </IconButton>
-                                                </Link>
+                                                <RowActions size="xs" view={{ href: route('admin.supplier-preorders.show', item.id) }} />
                                             </Table.Cell>
                                         </Table.Row>
                                     );

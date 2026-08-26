@@ -56,7 +56,7 @@ const OrganizationsIndex = ({ filters }) => {
                 </Badge>
             ),
         },
-        createActionsColumn('admin.organizations', (organization) => setDeleteId(organization.id), { permissionPrefix: 'organizations', showView: true }),
+        createActionsColumn('admin.organizations', (organization) => setDeleteId(organization.id), { permissionPrefix: 'organizations' }),
     ];
 
     const handleDelete = () => {

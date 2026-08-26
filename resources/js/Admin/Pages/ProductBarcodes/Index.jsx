@@ -60,7 +60,7 @@ export default function Index({ barcodes, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.product-barcodes', openDeleteDialog, { permissionPrefix: 'product-barcodes' , showView: true}),
+        createActionsColumn('admin.product-barcodes', openDeleteDialog, { permissionPrefix: 'product-barcodes' }),
     ];
 
     return (

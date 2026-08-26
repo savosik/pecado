@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "@inertiajs/react";
+import RowActions from "@/shared/Panel/RowActions";
 import {
     Box,
     Card,
@@ -54,10 +54,7 @@ export function RelatedOrdersSection({ orders }) {
                             order.erp_number || order.number || `#${order.id}`;
 
                         return (
-                            <Link
-                                key={order.id}
-                                href={route("admin.orders.show", order.id)}
-                            >
+                            <Box key={order.id}>
                                 <Box
                                     p={4}
                                     borderRadius="lg"
@@ -69,7 +66,6 @@ export function RelatedOrdersSection({ orders }) {
                                         shadow: "sm",
                                     }}
                                     transition="all 0.15s"
-                                    cursor="pointer"
                                 >
                                     <Flex
                                         gap={4}
@@ -237,10 +233,14 @@ export function RelatedOrdersSection({ orders }) {
                                                 {fmt(order.total_amount)}{" "}
                                                 {order.currency_code || "₽"}
                                             </Text>
+                                            <RowActions
+                                                size="xs"
+                                                view={{ href: route("admin.orders.show", order.id) }}
+                                            />
                                         </VStack>
                                     </Flex>
                                 </Box>
-                            </Link>
+                            </Box>
                         );
                     })}
                 </VStack>

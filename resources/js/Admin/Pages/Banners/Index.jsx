@@ -124,7 +124,7 @@ export default function Index({ banners, filters }) {
             sortable: true,
             width: '100px',
         },
-        createActionsColumn('admin.banners', openDeleteDialog, { permissionPrefix: 'banners' , showView: true}),
+        createActionsColumn('admin.banners', openDeleteDialog, { permissionPrefix: 'banners' }),
     ];
 
     return (

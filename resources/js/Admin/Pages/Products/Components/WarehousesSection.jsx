@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Box, Card, Stack, Input, Button, Table, IconButton } from '@chakra-ui/react';
 import { FormField, SelectRelation } from '@/Admin/Components';
-import { LuPlus, LuTrash2 } from 'react-icons/lu';
+import { LuPlus } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 
 export function WarehousesSection({ warehouses = [], availableWarehouses = [], onChange, error }) {
     const [selectedWarehouseId, setSelectedWarehouseId] = useState(null);
@@ -75,15 +76,7 @@ export function WarehousesSection({ warehouses = [], availableWarehouses = [], o
                                                 />
                                             </Table.Cell>
                                             <Table.Cell>
-                                                <IconButton
-                                                    aria-label="Удалить склад"
-                                                    size="sm"
-                                                    colorPalette="red"
-                                                    variant="ghost"
-                                                    onClick={() => handleRemove(warehouse.id)}
-                                                >
-                                                    <LuTrash2 />
-                                                </IconButton>
+                                                <RowActions delete={{ onClick: () => handleRemove(warehouse.id), label: 'Убрать склад' }} />
                                             </Table.Cell>
                                         </Table.Row>
                                     ))}

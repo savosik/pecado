@@ -212,7 +212,7 @@ const CartsIndex = ({ filters }) => {
                 </Text>
             ),
         },
-        createActionsColumn('admin.carts', (cart) => setDeleteId(cart.id), { permissionPrefix: 'carts' , showView: true}),
+        createActionsColumn('admin.carts', (cart) => setDeleteId(cart.id), { permissionPrefix: 'carts' }),
     ];
 
     const handleDelete = () => {

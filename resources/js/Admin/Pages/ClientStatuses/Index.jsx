@@ -96,7 +96,7 @@ export default function Index({ clientStatuses, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.client-statuses', openDeleteDialog, { permissionPrefix: 'client-statuses' , showView: true}),
+        createActionsColumn('admin.client-statuses', openDeleteDialog, { permissionPrefix: 'client-statuses' }),
     ];
 
     return (

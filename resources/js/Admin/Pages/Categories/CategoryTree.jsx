@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, HStack, IconButton, Text, Image, Badge, Collapsible } from '@chakra-ui/react';
-import { LuChevronRight, LuChevronDown, LuPencil, LuTrash2, LuFolder, LuFolderOpen } from 'react-icons/lu';
-import { router } from '@inertiajs/react';
+import { LuChevronRight, LuChevronDown, LuFolder, LuFolderOpen } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 
 const CategoryNode = ({ category, level = 0, onDelete }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -72,25 +72,12 @@ const CategoryNode = ({ category, level = 0, onDelete }) => {
                 </HStack>
 
                 {/* Actions */}
-                <HStack gap={1}>
-                    <IconButton
-                        size="xs"
-                        variant="ghost"
-                        aria-label="Редактировать"
-                        onClick={() => router.visit(route('admin.categories.edit', category.id))}
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="xs"
-                        variant="ghost"
-                        colorPalette="red"
-                        aria-label="Удалить"
-                        onClick={() => onDelete(category)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                </HStack>
+                <RowActions
+                    size="xs"
+                    view={{ href: route('admin.categories.show', category.id), permission: 'categories.view' }}
+                    edit={{ href: route('admin.categories.edit', category.id), permission: 'categories.edit' }}
+                    delete={{ onClick: () => onDelete(category), permission: 'categories.delete' }}
+                />
             </HStack>
 
             {hasChildren && (

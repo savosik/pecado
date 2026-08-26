@@ -10,6 +10,7 @@ import {
     Table,
 } from "@chakra-ui/react";
 import { LuTruck } from "react-icons/lu";
+import RowActions from "@/shared/Panel/RowActions";
 
 const STATUS_COLORS = {
     new: "blue",
@@ -143,20 +144,10 @@ export function RelatedShipmentsSection({ shipments }) {
                                             </Text>
                                         </Table.Cell>
                                         <Table.Cell>
-                                            <Link
-                                                href={route(
-                                                    "admin.shipments.show",
-                                                    shipment.id
-                                                )}
-                                            >
-                                                <Text
-                                                    color="blue.600"
-                                                    fontSize="xs"
-                                                    _hover={{ textDecoration: "underline" }}
-                                                >
-                                                    Открыть
-                                                </Text>
-                                            </Link>
+                                            <RowActions
+                                                size="xs"
+                                                view={{ href: route("admin.shipments.show", shipment.id) }}
+                                            />
                                         </Table.Cell>
                                     </Table.Row>
                                 );

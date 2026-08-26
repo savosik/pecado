@@ -4,6 +4,8 @@ import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, FileUploader, ProductSelector } from '@/Admin/Components';
 import { Box, Card, Input, Stack, SimpleGrid, Text, HStack, IconButton, Badge } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
 import { LuFile, LuX } from 'react-icons/lu';
 
 export default function Edit({ certificate }) {
@@ -46,20 +48,21 @@ export default function Edit({ certificate }) {
 
 
 
-    const removeMedia = (mediaId) => {
-        if (confirm('Вы уверены, что хотите удалить этот файл?')) {
-            router.post(route('admin.certificates.delete-media', certificate.id), {
-                media_id: mediaId
-            }, {
-                onSuccess: () => {
-                    toaster.create({
-                        title: 'Файл удален',
-                        type: 'success',
-                    });
-                }
-            });
-        }
-    };
+    const mediaDelete = useConfirmDelete({
+        title: 'Удалить файл?',
+        description: 'Файл будет удалён из сертификата.',
+        onConfirm: (mediaId) => router.post(route('admin.certificates.delete-media', certificate.id), {
+            media_id: mediaId,
+        }, {
+            onSuccess: () => {
+                toaster.create({
+                    title: 'Файл удалён',
+                    type: 'success',
+                });
+            },
+        }),
+    });
+    const removeMedia = (mediaId) => mediaDelete.request(mediaId);
 
     const handleSaveAndClose = (e) => {
         handleSubmit(e, true);
@@ -157,6 +160,7 @@ export default function Edit({ certificate }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
+            <ConfirmDialog {...mediaDelete.dialogProps} />
         </>
     );
 }

@@ -26,6 +26,7 @@ import {
     LuClockAlert,
 } from 'react-icons/lu';
 import { useState, useCallback } from 'react';
+import RowActions from '@/shared/Panel/RowActions';
 import { toaster } from '@/components/ui/toaster';
 
 /**
@@ -361,16 +362,7 @@ export default function Messages({ messages, eventTypes, filters }) {
                                             </Text>
                                         </Table.Cell>
                                         <Table.Cell>
-                                            <Link href={route('admin.erp-bus.messages.show', msg.id)}>
-                                                <IconButton
-                                                    size="xs"
-                                                    variant="ghost"
-                                                    colorPalette="purple"
-                                                    aria-label="Просмотр"
-                                                >
-                                                    <LuEye />
-                                                </IconButton>
-                                            </Link>
+                                            <RowActions size="xs" view={{ href: route('admin.erp-bus.messages.show', msg.id) }} />
                                         </Table.Cell>
                                     </Table.Row>
                                 ))}

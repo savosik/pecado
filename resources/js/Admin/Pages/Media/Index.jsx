@@ -21,6 +21,7 @@ import {
     Portal,
 } from '@chakra-ui/react';
 import { LuTrash2, LuImage, LuVideo, LuFileText, LuFile, LuEye, LuDownload } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 import { toaster } from '@/components/ui/toaster';
 import { usePermission } from '@/Admin/hooks/usePermission';
 
@@ -224,10 +225,6 @@ export default function Index({ media, filters, collections, modelTypes }) {
                             aspectRatio="4/3"
                             bg="gray.100"
                             _dark={{ bg: 'gray.800' }}
-                            cursor="pointer"
-                            onClick={() => handlePreview(item)}
-                            _hover={{ opacity: 0.85 }}
-                            transition="opacity 0.2s"
                         >
                             {item.mime_type?.startsWith('image/') ? (
                                 <Image
@@ -242,7 +239,6 @@ export default function Index({ media, filters, collections, modelTypes }) {
                                     <Box fontSize="4xl">
                                         <LuVideo />
                                     </Box>
-                                    <Text fontSize="xs" color="gray.500">Нажмите для просмотра</Text>
                                 </VStack>
                             ) : (
                                 <VStack height="100%" justify="center" align="center" color="gray.400">
@@ -251,20 +247,6 @@ export default function Index({ media, filters, collections, modelTypes }) {
                                     </Box>
                                 </VStack>
                             )}
-                            {/* Иконка просмотра при наведении */}
-                            <Box
-                                position="absolute"
-                                top={2}
-                                right={2}
-                                bg="blackAlpha.600"
-                                borderRadius="full"
-                                p={1}
-                                opacity={0}
-                                _groupHover={{ opacity: 1 }}
-                                transition="opacity 0.2s"
-                            >
-                                <LuEye color="white" size={16} />
-                            </Box>
                         </Box>
 
                         <Card.Body gap={2}>
@@ -299,18 +281,11 @@ export default function Index({ media, filters, collections, modelTypes }) {
                                 {new Date(item.created_at).toLocaleDateString('ru-RU')}
                             </Text>
 
-                            {can('media.delete') && (
-                            <Button
-                                size="sm"
-                                width="full"
-                                colorPalette="red"
-                                variant="outline"
-                                onClick={() => handleDelete(item)}
-                            >
-                                <LuTrash2 />
-                                Удалить
-                            </Button>
-                            )}
+                            <RowActions
+                                size="md"
+                                view={{ onClick: () => handlePreview(item) }}
+                                delete={{ onClick: () => handleDelete(item), permission: 'media.delete' }}
+                            />
                         </Card.Body>
                     </Card.Root>
                 ))}

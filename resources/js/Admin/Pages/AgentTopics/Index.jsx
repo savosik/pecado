@@ -4,6 +4,7 @@ import { PageHeader, DataTable, SearchInput } from '@/Admin/Components';
 import { Badge, Box, Text } from '@chakra-ui/react';
 import { Button } from '@/components/ui/button';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 
 const STATUS_META = {
     open: { label: 'Открыт', color: 'gray' },
@@ -60,19 +61,7 @@ export default function Index({ topics, filters }) {
             sortable: true,
             render: (_, row) => <Text fontSize="sm">{row.updated_at}</Text>,
         },
-        {
-            key: 'actions',
-            label: '',
-            render: (_, row) => (
-                <Button
-                    size="xs"
-                    variant="outline"
-                    onClick={() => router.visit(route('admin.agent-topics.show', row.id))}
-                >
-                    Открыть
-                </Button>
-            ),
-        },
+        createActionsColumn('admin.agent-topics', null, { showEdit: false, showDelete: false }),
     ];
 
     return (

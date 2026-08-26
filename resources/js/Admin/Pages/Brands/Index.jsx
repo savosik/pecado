@@ -114,7 +114,7 @@ export default function Index({ brands, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.brands', openDeleteDialog, { permissionPrefix: 'brands', showView: true }),
+        createActionsColumn('admin.brands', openDeleteDialog, { permissionPrefix: 'brands' }),
     ];
 
     return (

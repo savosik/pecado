@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import { Box, Card, HStack, Input, Table, Text, VStack } from '@chakra-ui/react';
-import { LuPlus, LuTrash2 } from 'react-icons/lu';
+import { LuPlus } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
@@ -112,14 +113,7 @@ export default function DefectTypesIndex() {
                                             </Table.Cell>
                                             <Table.Cell>
                                                 {canDelete && (
-                                                    <Button
-                                                        size="xs"
-                                                        variant="ghost"
-                                                        colorPalette="red"
-                                                        onClick={() => setDeleteTarget(type)}
-                                                    >
-                                                        <LuTrash2 />
-                                                    </Button>
+                                                    <RowActions size="xs" delete={{ onClick: () => setDeleteTarget(type) }} />
                                                 )}
                                             </Table.Cell>
                                         </Table.Row>

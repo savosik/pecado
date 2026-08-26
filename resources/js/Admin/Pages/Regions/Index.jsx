@@ -95,7 +95,7 @@ const RegionsIndex = ({ filters }) => {
                 </div>
             ),
         },
-        createActionsColumn('admin.regions', (region) => setDeleteId(region.id), { permissionPrefix: 'regions', showView: true }),
+        createActionsColumn('admin.regions', (region) => setDeleteId(region.id), { permissionPrefix: 'regions' }),
     ];
 
     const handleDelete = () => {

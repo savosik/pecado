@@ -3,7 +3,8 @@ import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, EntitySelector, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Text, Button, HStack, Badge, SimpleGrid } from '@chakra-ui/react';
-import { LuDownload, LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
+import { LuDownload, LuPlus } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 import { toaster } from '@/components/ui/toaster';
 import { usePermission } from '@/Admin/hooks/usePermission';
 
@@ -220,31 +221,13 @@ export default function Index({ prices, filters, stats, filterLabels }) {
         },
         {
             key: 'actions',
-            label: '',
+            label: 'Действия',
             render: (_, row) => (
-                <HStack gap={1} justifyContent="flex-end">
-                    {can('individual-prices.edit') && (
-                        <Button
-                            size="xs"
-                            variant="ghost"
-                            onClick={() => handleEdit(row)}
-                            title="Редактировать"
-                        >
-                            <LuPencil size={14} />
-                        </Button>
-                    )}
-                    {can('individual-prices.delete') && (
-                        <Button
-                            size="xs"
-                            variant="ghost"
-                            colorPalette="red"
-                            onClick={() => openDeleteDialog(row)}
-                            title="Удалить"
-                        >
-                            <LuTrash2 size={14} />
-                        </Button>
-                    )}
-                </HStack>
+                <RowActions
+                    size="xs"
+                    edit={{ onClick: () => handleEdit(row), permission: 'individual-prices.edit' }}
+                    delete={{ onClick: () => openDeleteDialog(row), permission: 'individual-prices.delete' }}
+                />
             ),
         },
     ];

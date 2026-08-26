@@ -98,7 +98,7 @@ export default function Index({ currencies, filters }) {
                 <Box fontSize="sm" color="fg.muted">—</Box>
             ),
         },
-        createActionsColumn('admin.currencies', openDeleteDialog, { permissionPrefix: 'currencies' , showView: true}),
+        createActionsColumn('admin.currencies', openDeleteDialog, { permissionPrefix: 'currencies' }),
     ];
 
     return (

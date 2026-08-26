@@ -214,23 +214,13 @@ const ReturnsIndex = ({ filters, statuses, reasons, trashedCount }) => {
             ),
         },
         isTrashed
-            ? {
-                key: 'actions',
-                label: 'Действия',
-                render: (_, returnItem) => can('returns.delete') ? (
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        aria-label="Удалить окончательно"
-                        title="Удалить окончательно"
-                        onClick={() => setForceDeleteId(returnItem.id)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                ) : null,
-            }
-            : createActionsColumn('admin.returns', (returnItem) => setDeleteId(returnItem.id), { permissionPrefix: 'returns', showView: true }),
+            ? createActionsColumn('admin.returns', (returnItem) => setForceDeleteId(returnItem.id), {
+                showView: false,
+                showEdit: false,
+                permissionPrefix: 'returns',
+                deleteLabel: 'Удалить окончательно',
+            })
+            : createActionsColumn('admin.returns', (returnItem) => setDeleteId(returnItem.id), { permissionPrefix: 'returns' }),
     ];
 
     const handleDelete = () => {

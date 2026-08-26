@@ -1,5 +1,8 @@
 import { Box, Text, VStack, HStack, Badge, Link, Icon, IconButton } from '@chakra-ui/react';
-import { LuExternalLink, LuMessageSquare, LuGlobe, LuUser, LuPaperclip, LuTrash2 } from 'react-icons/lu';
+import { LuExternalLink, LuMessageSquare, LuGlobe, LuUser, LuPaperclip } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
 import { router } from '@inertiajs/react';
 
 const TYPE_LABELS = {
@@ -34,11 +37,11 @@ export default function TaskCard({ task, onDragStart, onTaskClick }) {
     const attachmentCount = task.attachments?.length ?? 0;
     const canDelete = DELETABLE_STATUSES.includes(task.status);
 
-    const handleDelete = (e) => {
-        e.stopPropagation();
-        if (!confirm(`Удалить задачу "${task.title}"?`)) return;
-        router.delete(route('admin.kanban.destroy', task.id), { preserveScroll: true });
-    };
+    const taskDelete = useConfirmDelete({
+        title: 'Удалить задачу?',
+        description: `Задача «${task.title}» будет удалена без возможности восстановления.`,
+        onConfirm: () => router.delete(route('admin.kanban.destroy', task.id), { preserveScroll: true }),
+    });
 
     return (
         <Box
@@ -82,17 +85,11 @@ export default function TaskCard({ task, onDragStart, onTaskClick }) {
                             <Text>{attachmentCount}</Text>
                         </HStack>
                     )}
-                    {canDelete && (
-                        <IconButton
-                            size="2xs"
-                            variant="ghost"
-                            colorPalette="red"
-                            aria-label="Удалить задачу"
-                            onClick={handleDelete}
-                        >
-                            <LuTrash2 />
-                        </IconButton>
-                    )}
+                    <RowActions
+                        size="xs"
+                        view={{ onClick: () => onTaskClick(task), label: 'Открыть задачу' }}
+                        delete={canDelete ? { onClick: () => taskDelete.request(task), label: 'Удалить задачу' } : null}
+                    />
                 </HStack>
             </HStack>
 
@@ -122,6 +119,7 @@ export default function TaskCard({ task, onDragStart, onTaskClick }) {
                     </HStack>
                 )}
             </VStack>
+            <ConfirmDialog {...taskDelete.dialogProps} />
         </Box>
     );
 }

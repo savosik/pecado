@@ -48,7 +48,7 @@ export default function Index({ tags, filters }) {
             sortable: true,
             render: (_, row) => <Text fontSize="sm">{row.order_column}</Text>,
         },
-        createActionsColumn('admin.tags', openDeleteDialog, { permissionPrefix: 'tags' , showView: true}),
+        createActionsColumn('admin.tags', openDeleteDialog, { permissionPrefix: 'tags' }),
     ];
 
     return (

@@ -6,7 +6,7 @@ import {
     Box, Text, Badge, IconButton, HStack, VStack, Card,
     Input, Stack, Button, Flex, createListCollection,
 } from '@chakra-ui/react';
-import { LuEye, LuFilter, LuX, LuTrash2 } from 'react-icons/lu';
+import { LuFilter, LuX } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import { toaster } from '@/components/ui/toaster';
@@ -150,11 +150,7 @@ export default function Index({ shipments, filters, statuses, organizations, war
             key: 'number',
             label: 'Номер',
             render: (_, row) => (
-                <Link href={route('admin.shipments.show', row.id)}>
-                    <Text color="blue.600" _hover={{ textDecoration: 'underline' }} fontSize="sm" fontFamily="mono">
-                        {row.number || ("#" + row.id)}
-                    </Text>
-                </Link>
+                <Text fontSize="sm" fontFamily="mono">{row.number || ("#" + row.id)}</Text>
             ),
         },
         {
@@ -256,35 +252,15 @@ export default function Index({ shipments, filters, statuses, organizations, war
             ),
         },
         isTrashed
-            ? {
-                key: 'actions',
-                label: 'Действия',
-                render: (_, row) => (
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        aria-label="Удалить окончательно"
-                        title="Удалить окончательно"
-                        onClick={() => setForceDeleteId(row.id)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                ),
-            }
+            ? createActionsColumn('admin.shipments', (row) => setForceDeleteId(row.id), {
+                showView: false,
+                showEdit: false,
+                permissionPrefix: 'shipments',
+                deleteLabel: 'Удалить окончательно',
+            })
             : createActionsColumn('admin.shipments', openDeleteDialog, {
                 showEdit: false,
                 permissionPrefix: 'shipments',
-                extraActions: (row) => (
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        aria-label="Просмотр"
-                        onClick={() => router.visit(route('admin.shipments.show', row.id))}
-                    >
-                        <LuEye />
-                    </IconButton>
-                ),
             }),
     ];
 

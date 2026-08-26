@@ -12,7 +12,8 @@ import {
     Text,
     VStack,
 } from '@chakra-ui/react';
-import { LuImageOff, LuPackageX, LuTrash2 } from 'react-icons/lu';
+import { LuImageOff, LuPackageX } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { SearchInput } from '@/Admin/Components/SearchInput';
@@ -481,20 +482,15 @@ export default function DefectsIndex() {
                                                         </Table.Cell>
                                                         {canDelete && (
                                                             <Table.Cell textAlign="end">
-                                                                <Button
+                                                                <RowActions
                                                                     size="xs"
-                                                                    variant="ghost"
-                                                                    colorPalette="red"
-                                                                    disabled={defect.reserved_quantity > 0}
-                                                                    title={
-                                                                        defect.reserved_quantity > 0
+                                                                    delete={{
+                                                                        onClick: () => setConfirmTarget(defect),
+                                                                        disabled: defect.reserved_quantity > 0
                                                                             ? 'По партии есть заказы — удалить нельзя'
-                                                                            : 'Удалить партию'
-                                                                    }
-                                                                    onClick={() => setConfirmTarget(defect)}
-                                                                >
-                                                                    <LuTrash2 />
-                                                                </Button>
+                                                                            : false,
+                                                                    }}
+                                                                />
                                                             </Table.Cell>
                                                         )}
                                                     </Table.Row>

@@ -110,7 +110,7 @@ export default function Index({ personalManagers, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.personal-managers', openDeleteDialog, { permissionPrefix: 'personal-managers' , showView: true}),
+        createActionsColumn('admin.personal-managers', openDeleteDialog, { permissionPrefix: 'personal-managers' }),
     ];
 
     return (

@@ -59,7 +59,7 @@ const WarehousesIndex = ({ filters }) => {
                 </Badge>
             ),
         },
-        createActionsColumn('admin.warehouses', (warehouse) => setDeleteId(warehouse.id), { permissionPrefix: 'warehouses', showView: true }),
+        createActionsColumn('admin.warehouses', (warehouse) => setDeleteId(warehouse.id), { permissionPrefix: 'warehouses' }),
     ];
 
     const handleDelete = () => {

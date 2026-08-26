@@ -83,7 +83,7 @@ export default function Index({ bankAccounts, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.company-bank-accounts', openDeleteDialog, { permissionPrefix: 'company-bank-accounts' , showView: true}),
+        createActionsColumn('admin.company-bank-accounts', openDeleteDialog, { permissionPrefix: 'company-bank-accounts' }),
     ];
 
     return (

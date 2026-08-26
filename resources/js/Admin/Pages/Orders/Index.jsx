@@ -378,23 +378,13 @@ const OrdersIndex = ({ filters, statuses, types, companies, organizations, wareh
             ),
         },
         isTrashed
-            ? {
-                key: 'actions',
-                label: 'Действия',
-                render: (_, order) => can('orders.delete') ? (
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        aria-label="Удалить окончательно"
-                        title="Удалить окончательно"
-                        onClick={() => setForceDeleteId(order.id)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                ) : null,
-            }
-            : createActionsColumn('admin.orders', openDeleteDialog, { permissionPrefix: 'orders', showView: true }),
+            ? createActionsColumn('admin.orders', (order) => setForceDeleteId(order.id), {
+                showView: false,
+                showEdit: false,
+                permissionPrefix: 'orders',
+                deleteLabel: 'Удалить окончательно',
+            })
+            : createActionsColumn('admin.orders', openDeleteDialog, { permissionPrefix: 'orders' }),
     ], [selectedOrders.length, orders.data, selectedOrdersSet, isTrashed, organizationsEnabled, can, handleSelectAll, handleSelectOrder, openDeleteDialog]);
 
     const handleDelete = useCallback(() => {

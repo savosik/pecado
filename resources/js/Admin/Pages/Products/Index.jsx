@@ -187,7 +187,7 @@ export default function Index({ products, filters, can_view_cost: canViewCost = 
                 </Text>
             ),
         },
-        createActionsColumn('admin.products', openDeleteDialog, { permissionPrefix: 'products', showView: true }),
+        createActionsColumn('admin.products', openDeleteDialog, { permissionPrefix: 'products' }),
     ];
 
     return (

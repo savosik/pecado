@@ -10,6 +10,7 @@ import {
     Button,
 } from '@chakra-ui/react';
 import { LuSend } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 import { useState } from 'react';
 import { toaster } from '@/components/ui/toaster';
 
@@ -121,9 +122,7 @@ export const SupplierPreorderSection = ({ orderId, panel }) => {
                                             <Text fontSize="sm" color="fg.muted">{item.created_at}</Text>
                                         </Table.Cell>
                                         <Table.Cell>
-                                            <Link href={route('admin.supplier-preorders.show', item.id)}>
-                                                <Text fontSize="sm" color="blue.500">Подробнее</Text>
-                                            </Link>
+                                            <RowActions size="xs" view={{ href: route('admin.supplier-preorders.show', item.id) }} />
                                         </Table.Cell>
                                     </Table.Row>
                                 ))}

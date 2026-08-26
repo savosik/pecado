@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Badge, Box, HStack, IconButton, Input, Stack, Text } from '@chakra-ui/react';
 import { Head, router, usePage } from '@inertiajs/react';
-import { LuEye, LuFilter, LuPaperclip, LuTrash2, LuX } from 'react-icons/lu';
+import { LuFilter, LuPaperclip, LuX } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { PageHeader } from '@/Admin/Components/PageHeader';
@@ -113,27 +114,10 @@ export default function UserQuestionsIndex({ filters, statuses }) {
             key: 'actions',
             label: 'Действия',
             render: (_, row) => (
-                <HStack gap="1">
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        aria-label="Открыть"
-                        onClick={() => router.visit(route('admin.user-questions.show', row.id))}
-                    >
-                        <LuEye />
-                    </IconButton>
-                    {can('user-questions.delete') && (
-                        <IconButton
-                            size="sm"
-                            variant="ghost"
-                            colorPalette="red"
-                            aria-label="Удалить"
-                            onClick={() => setDeleteId(row.id)}
-                        >
-                            <LuTrash2 />
-                        </IconButton>
-                    )}
-                </HStack>
+                <RowActions
+                    view={{ href: route('admin.user-questions.show', row.id) }}
+                    delete={{ onClick: () => setDeleteId(row.id), permission: 'user-questions.delete' }}
+                />
             ),
         },
     ];

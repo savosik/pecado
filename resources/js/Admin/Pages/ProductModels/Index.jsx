@@ -59,7 +59,7 @@ export default function Index({ productModels, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.product-models', openDeleteDialog, { permissionPrefix: 'product-models', showView: true }),
+        createActionsColumn('admin.product-models', openDeleteDialog, { permissionPrefix: 'product-models' }),
     ];
 
     return (

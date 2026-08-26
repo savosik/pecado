@@ -4,7 +4,7 @@ import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } fr
 import { Box, Text, Badge, IconButton, HStack } from '@chakra-ui/react';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { usePermission } from '@/Admin/hooks/usePermission';
-import { LuEye, LuPencil, LuTrash2 } from 'react-icons/lu';
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 
 export default function Index({ balances, filters }) {
     const { can } = usePermission();
@@ -96,45 +96,7 @@ export default function Index({ balances, filters }) {
                 </Text>
             ),
         },
-        {
-            key: 'actions',
-            label: 'Действия',
-            render: (_, row) => (
-                <HStack gap={1}>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="blue"
-                        aria-label="Просмотр"
-                        onClick={() => router.visit(route('admin.contractor-balances.show', row.id))}
-                    >
-                        <LuEye />
-                    </IconButton>
-                    {can('contractor-balances.edit') && (
-                        <IconButton
-                            size="sm"
-                            variant="ghost"
-                            colorPalette="yellow"
-                            aria-label="Редактировать"
-                            onClick={() => router.visit(route('admin.contractor-balances.edit', row.id))}
-                        >
-                            <LuPencil />
-                        </IconButton>
-                    )}
-                    {can('contractor-balances.delete') && (
-                        <IconButton
-                            size="sm"
-                            variant="ghost"
-                            colorPalette="red"
-                            aria-label="Удалить"
-                            onClick={() => openDeleteDialog(row)}
-                        >
-                            <LuTrash2 />
-                        </IconButton>
-                    )}
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.contractor-balances', openDeleteDialog, { permissionPrefix: 'contractor-balances' }),
     ];
 
     return (

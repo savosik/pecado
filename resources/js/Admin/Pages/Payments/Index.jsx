@@ -6,7 +6,7 @@ import {
     Box, Text, Badge, IconButton, HStack, Card,
     Input, Stack, Button, Flex, createListCollection,
 } from '@chakra-ui/react';
-import { LuEye, LuFilter, LuX, LuTrash2, LuRotateCcw } from 'react-icons/lu';
+import { LuFilter, LuX, LuRotateCcw } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import { toaster } from '@/components/ui/toaster';
@@ -127,11 +127,7 @@ export default function Index({ payments, filters, directions, organizations, or
             label: 'Номер',
             sortable: true,
             render: (_, row) => (
-                <Link href={route('admin.payments.show', row.id)}>
-                    <Text color="blue.600" _hover={{ textDecoration: 'underline' }} fontSize="sm" fontFamily="mono">
-                        {row.number || `#${row.id}`}
-                    </Text>
-                </Link>
+                <Text fontSize="sm" fontFamily="mono">{row.number || `#${row.id}`}</Text>
             ),
         },
         {
@@ -215,46 +211,18 @@ export default function Index({ payments, filters, directions, organizations, or
             ),
         },
         isTrashed
-            ? {
-                key: 'actions',
-                label: 'Действия',
-                render: (_, row) => (
-                    <HStack gap={1}>
-                        <IconButton
-                            size="sm"
-                            variant="ghost"
-                            aria-label="Восстановить"
-                            title="Восстановить"
-                            onClick={() => handleRestore(row.id)}
-                        >
-                            <LuRotateCcw />
-                        </IconButton>
-                        <IconButton
-                            size="sm"
-                            variant="ghost"
-                            colorPalette="red"
-                            aria-label="Удалить окончательно"
-                            title="Удалить окончательно"
-                            onClick={() => setForceDeleteId(row.id)}
-                        >
-                            <LuTrash2 />
-                        </IconButton>
-                    </HStack>
-                ),
-            }
+            ? createActionsColumn('admin.payments', (row) => setForceDeleteId(row.id), {
+                showView: false,
+                showEdit: false,
+                permissionPrefix: 'payments',
+                deleteLabel: 'Удалить окончательно',
+                extraActions: (row) => [
+                    { icon: LuRotateCcw, label: 'Восстановить', onClick: () => handleRestore(row.id) },
+                ],
+            })
             : createActionsColumn('admin.payments', openDeleteDialog, {
                 showEdit: false,
                 permissionPrefix: 'payments',
-                extraActions: (row) => (
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        aria-label="Просмотр"
-                        onClick={() => router.visit(route('admin.payments.show', row.id))}
-                    >
-                        <LuEye />
-                    </IconButton>
-                ),
             }),
     ];
 

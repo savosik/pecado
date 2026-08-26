@@ -2,7 +2,10 @@ import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, EntitySelector, PhoneInput } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid, Tabs, Table, Badge, Button, IconButton, HStack, Text, Flex, Dialog, Portal, Switch } from '@chakra-ui/react';
-import { LuPlus, LuPencil, LuTrash2, LuSearch } from 'react-icons/lu';
+import { LuPlus, LuSearch } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
 import { useState, useRef } from 'react';
 import axios from 'axios';
 import { toaster } from '@/components/ui/toaster';
@@ -62,6 +65,14 @@ export default function Edit({ company, countries }) {
     const [bankErrors, setBankErrors] = useState({});
     const [bankSaving, setBankSaving] = useState(false);
     const [editingAccountId, setEditingAccountId] = useState(null);
+    const accountDelete = useConfirmDelete({
+        title: 'Удалить банковский счёт?',
+        description: (account) => `Счёт ${account?.account_number || ''} будет удалён.`,
+        onConfirm: (account) => router.delete(route('admin.company-bank-accounts.destroy', account.id), {
+            preserveState: true,
+            onSuccess: () => toaster.create({ title: 'Банковский счёт удалён', type: 'success' }),
+        }),
+    });
 
     const openAddDialog = () => {
         setBankForm({ ...emptyBankAccount });
@@ -344,36 +355,11 @@ export default function Edit({ company, countries }) {
                                                             )}
                                                         </Table.Cell>
                                                         <Table.Cell textAlign="right">
-                                                            <HStack gap={1} justifyContent="flex-end">
-                                                                <IconButton
-                                                                    size="xs"
-                                                                    variant="ghost"
-                                                                    colorPalette="blue"
-                                                                    aria-label="Редактировать"
-                                                                    onClick={() => openEditDialog(account)}
-                                                                >
-                                                                    <LuPencil />
-                                                                </IconButton>
-                                                                <IconButton
-                                                                    size="xs"
-                                                                    variant="ghost"
-                                                                    colorPalette="red"
-                                                                    aria-label="Удалить"
-                                                                    onClick={() => {
-                                                                        if (confirm('Удалить этот банковский счёт?')) {
-                                                                            router.delete(route('admin.company-bank-accounts.destroy', account.id), {
-                                                                                preserveState: true,
-                                                                                onSuccess: () => toaster.create({
-                                                                                    title: 'Банковский счёт удалён',
-                                                                                    type: 'success',
-                                                                                }),
-                                                                            });
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    <LuTrash2 />
-                                                                </IconButton>
-                                                            </HStack>
+                                                            <RowActions
+                                                                size="xs"
+                                                                edit={{ onClick: () => openEditDialog(account) }}
+                                                                delete={{ onClick: () => accountDelete.request(account) }}
+                                                            />
                                                         </Table.Cell>
                                                     </Table.Row>
                                                 ))}
@@ -491,6 +477,7 @@ export default function Edit({ company, countries }) {
                     </Dialog.Positioner>
                 </Portal>
             </Dialog.Root>
+            <ConfirmDialog {...accountDelete.dialogProps} />
         </>
     );
 }

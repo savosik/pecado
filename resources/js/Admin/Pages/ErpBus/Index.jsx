@@ -32,6 +32,8 @@ import {
 } from 'react-icons/lu';
 import { useState, useCallback } from 'react';
 import { toaster } from '@/components/ui/toaster';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
 
 /**
  * Карточка статуса одной очереди.
@@ -198,8 +200,7 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
     const [clearingBusMessages, setClearingBusMessages] = useState(false);
     const [clearingProcessed, setClearingProcessed] = useState(false);
 
-    const handleClearBusMessages = useCallback(() => {
-        if (!window.confirm('Очистить весь лог сообщений шины? Это действие необратимо.')) return;
+    const clearBusMessages = useCallback(() => {
         setClearingBusMessages(true);
         router.delete(route('admin.erp-bus.clear-messages'), {
             preserveScroll: true,
@@ -215,8 +216,7 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
         });
     }, []);
 
-    const handleClearProcessed = useCallback(() => {
-        if (!window.confirm('Очистить журнал обработанных сообщений и статистику? Это действие необратимо.')) return;
+    const clearProcessed = useCallback(() => {
         setClearingProcessed(true);
         router.delete(route('admin.erp-bus.clear-processed'), {
             preserveScroll: true,
@@ -231,6 +231,22 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
             },
         });
     }, []);
+
+    const busMessagesClear = useConfirmDelete({
+        title: 'Очистить лог сообщений шины?',
+        description: 'Весь лог будет удалён. Это действие необратимо.',
+        confirmLabel: 'Очистить',
+        onConfirm: clearBusMessages,
+    });
+    const handleClearBusMessages = () => busMessagesClear.request();
+
+    const processedClear = useConfirmDelete({
+        title: 'Очистить журнал обработанных сообщений?',
+        description: 'Журнал и статистика будут удалены. Это действие необратимо.',
+        confirmLabel: 'Очистить',
+        onConfirm: clearProcessed,
+    });
+    const handleClearProcessed = () => processedClear.request();
 
     const handleRefresh = useCallback(() => {
         router.reload({ preserveScroll: true });
@@ -818,6 +834,8 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
                     </>
                 )}
             </Box>
+            <ConfirmDialog {...busMessagesClear.dialogProps} />
+            <ConfirmDialog {...processedClear.dialogProps} />
         </>
     );
 }

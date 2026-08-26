@@ -53,7 +53,7 @@ export default function Index({ faqs, filters }) {
                 </Badge>
             ),
         },
-        createActionsColumn('admin.faqs', openDeleteDialog, { permissionPrefix: 'faqs' , showView: true}),
+        createActionsColumn('admin.faqs', openDeleteDialog, { permissionPrefix: 'faqs' }),
     ];
 
     return (

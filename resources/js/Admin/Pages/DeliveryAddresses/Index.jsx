@@ -1,4 +1,4 @@
-import { router } from '@inertiajs/react';
+import { router, Link } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Text, Button } from '@chakra-ui/react';
@@ -39,14 +39,9 @@ export default function Index({ deliveryAddresses, filters }) {
             key: 'user',
             label: 'Пользователь',
             render: (user) => user ? (
-                <Text
-                    cursor="pointer"
-                    color="blue.600"
-                    _hover={{ textDecoration: 'underline' }}
-                    onClick={() => router.visit(route('admin.users.edit', user.id))}
-                >
-                    {user.name}
-                </Text>
+                <Link href={route('admin.users.edit', user.id)}>
+                    <Text color="blue.600" _hover={{ textDecoration: 'underline' }}>{user.name}</Text>
+                </Link>
             ) : '—',
         },
         {
@@ -74,7 +69,7 @@ export default function Index({ deliveryAddresses, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.delivery-addresses', openDeleteDialog, { permissionPrefix: 'delivery-addresses' , showView: true}),
+        createActionsColumn('admin.delivery-addresses', openDeleteDialog, { permissionPrefix: 'delivery-addresses' }),
     ];
 
     return (

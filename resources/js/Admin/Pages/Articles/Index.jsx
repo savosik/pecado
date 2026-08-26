@@ -78,7 +78,7 @@ export default function Index({ articles, filters }) {
                 </HStack>
             ),
         },
-        createActionsColumn('admin.articles', openDeleteDialog, { permissionPrefix: 'articles' , showView: true}),
+        createActionsColumn('admin.articles', openDeleteDialog, { permissionPrefix: 'articles' }),
     ];
 
     return (

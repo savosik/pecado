@@ -119,7 +119,7 @@ export default function Index({ attributes, filters }) {
                 );
             },
         },
-        createActionsColumn('admin.attributes', openDeleteDialog, { permissionPrefix: 'attributes' , showView: true}),
+        createActionsColumn('admin.attributes', openDeleteDialog, { permissionPrefix: 'attributes' }),
     ];
 
     return (

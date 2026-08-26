@@ -147,7 +147,7 @@ export default function Index({ rules, promotions = [], filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.promotion-rules', openDeleteDialog, { permissionPrefix: 'promotion-rules' }),
+        createActionsColumn('admin.promotion-rules', openDeleteDialog, { permissionPrefix: 'promotion-rules', showView: false }),
     ];
 
     const groups = useMemo(() => groupByPromotion(rules.data), [rules.data]);

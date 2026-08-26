@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
+import { router, Link } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton, TrashedFilter } from '@/Admin/Components';
 import { Box, Text, Button, Badge, HStack, IconButton } from '@chakra-ui/react';
@@ -95,14 +95,9 @@ export default function Index({ companies, filters, trashedCount }) {
             key: 'user',
             label: 'Пользователь',
             render: (user) => user ? (
-                <Text
-                    cursor="pointer"
-                    color="blue.600"
-                    _hover={{ textDecoration: 'underline' }}
-                    onClick={() => router.visit(route('admin.users.edit', user.id))}
-                >
-                    {user.name}
-                </Text>
+                <Link href={route('admin.users.edit', user.id)}>
+                    <Text color="blue.600" _hover={{ textDecoration: 'underline' }}>{user.name}</Text>
+                </Link>
             ) : '—',
         },
         {
@@ -131,23 +126,13 @@ export default function Index({ companies, filters, trashedCount }) {
             ),
         },
         isTrashed
-            ? {
-                key: 'actions',
-                label: 'Действия',
-                render: (_, row) => can('companies.delete') ? (
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        aria-label="Удалить окончательно"
-                        title="Удалить окончательно"
-                        onClick={() => setForceDeleteId(row.id)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                ) : null,
-            }
-            : createActionsColumn('admin.companies', openDeleteDialog, { permissionPrefix: 'companies' , showView: true}),
+            ? createActionsColumn('admin.companies', (row) => setForceDeleteId(row.id), {
+                showView: false,
+                showEdit: false,
+                permissionPrefix: 'companies',
+                deleteLabel: 'Удалить окончательно',
+            })
+            : createActionsColumn('admin.companies', openDeleteDialog, { permissionPrefix: 'companies' }),
     ];
 
     return (
