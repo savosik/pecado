@@ -28,11 +28,16 @@ return [
         'default_destinations' => [['type' => 'login']],
         'default_enabled' => true,
         'client_visible' => true,
-        // Клиенту интересны переходы, которые он видит физически. Остальные
-        // шесть — внутренняя кухня: «Готов к закрытию» в почте клиента
-        // появляться не должен, а до матрицы поток собирал и его.
+        // Подтип уведомления: о каких именно статусах писать. Клиенту интересны
+        // переходы, которые он видит физически; остальные шесть — внутренняя
+        // кухня, и «Готов к закрытию» в его почте появляться не должен.
+        'subtype' => [
+            'field' => 'status',
+            'label' => 'О каких статусах писать',
+            'source' => \App\Enums\OrderStatus::class,
+        ],
         'default_options' => [
-            'statuses' => ['ready_for_shipment', 'shipping', 'awaiting_payment'],
+            'subtypes' => ['ready_for_shipment', 'shipping', 'awaiting_payment'],
         ],
     ],
     'orders.items_updated' => [
@@ -73,6 +78,13 @@ return [
 
     'documents.published' => [
         'label' => 'Опубликован документ',
+        // Кому-то нужны только счета, кому-то только акты сверки. Пустой набор
+        // означает «все типы»: незаполненная настройка не должна означать тишину.
+        'subtype' => [
+            'field' => 'document_type',
+            'label' => 'О каких документах писать',
+            'source' => \App\Enums\PrintedDocumentType::class,
+        ],
         'subject' => '{{document_title}} — Pecado.ru',
         'default_destinations' => [['type' => 'login']],
         'default_enabled' => true,

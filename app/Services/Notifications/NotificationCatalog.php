@@ -67,6 +67,43 @@ class NotificationCatalog
     }
 
     /**
+     * Подтип уведомления: о каких именно случаях писать.
+     *
+     * Обобщение вместо частных случаев. Сначала такой отбор был только
+     * у статусов заказа и жил условием в роутере; когда понадобился второй —
+     * по типам документов — стало ясно, что это одно умение, а не два
+     * исключения. Третьего исключения теперь и не потребуется.
+     *
+     * @return array{field: string, label: string, options: list<array{value: string, label: string}>}|null
+     */
+    public function subtype(string $key): ?array
+    {
+        $declared = $this->all()[$key]['subtype'] ?? null;
+
+        if (! is_array($declared)) {
+            return null;
+        }
+
+        $source = (string) ($declared['source'] ?? '');
+        $options = [];
+
+        if (enum_exists($source)) {
+            foreach ($source::cases() as $case) {
+                $options[] = [
+                    'value' => (string) $case->value,
+                    'label' => method_exists($case, 'label') ? $case->label() : (string) $case->value,
+                ];
+            }
+        }
+
+        return [
+            'field' => (string) ($declared['field'] ?? ''),
+            'label' => (string) ($declared['label'] ?? 'О чём писать'),
+            'options' => $options,
+        ];
+    }
+
+    /**
      * Семейство типа — часть ключа до точки. По нему уведомления
      * группируются на экране: «Заказы», «Документы», «Финансы».
      */

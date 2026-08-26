@@ -133,12 +133,11 @@ export default function NotificationMatrix({
                                             </Wrap>
                                         )}
 
-                                        {row.has_statuses && row.enabled && (
-                                            <StatusPicker
+                                        {row.subtype && row.enabled && (
+                                            <SubtypePicker
                                                 row={row}
-                                                statuses={data.statuses}
                                                 canEdit={canEdit}
-                                                onChange={(statuses) => save(row, { options: { statuses } })}
+                                                onChange={(subtypes) => save(row, { options: { subtypes } })}
                                             />
                                         )}
                                     </VStack>
@@ -190,31 +189,35 @@ export default function NotificationMatrix({
 }
 
 /**
- * Статусы заказа — единственная доп. настройка во всей матрице.
- * Пустой набор означает «все»: незаполненная настройка не должна означать тишину.
+ * Подтип уведомления: о каких именно случаях писать.
+ *
+ * Один и тот же выбор для статусов заказа и типов документов — кому-то нужны
+ * только счета, кому-то только акты сверки. Пустой набор означает «все»:
+ * незаполненная настройка не должна означать тишину.
  */
-function StatusPicker({ row, statuses, canEdit, onChange }) {
-    const chosen = row.options?.statuses || [];
+function SubtypePicker({ row, canEdit, onChange }) {
+    const chosen = row.options?.subtypes || [];
+    const { label, options } = row.subtype;
 
     return (
         <Box mt={1}>
             <Text fontSize="xs" color="fg.muted" mb={1}>
-                О каких статусах писать{chosen.length === 0 ? ' — сейчас обо всех' : ''}
+                {label}{chosen.length === 0 ? ' — сейчас обо всех' : ` — выбрано ${chosen.length}`}
             </Text>
             <Wrap gap={2}>
-                {statuses.map((status) => (
+                {options.map((option) => (
                     <Checkbox
-                        key={status.value}
+                        key={option.value}
                         size="sm"
                         disabled={!canEdit}
-                        checked={chosen.includes(status.value)}
+                        checked={chosen.includes(option.value)}
                         onCheckedChange={(e) => onChange(
                             e.checked
-                                ? [...chosen, status.value]
-                                : chosen.filter((s) => s !== status.value),
+                                ? [...chosen, option.value]
+                                : chosen.filter((s) => s !== option.value),
                         )}
                     >
-                        <Text fontSize="xs">{status.label}</Text>
+                        <Text fontSize="xs">{option.label}</Text>
                     </Checkbox>
                 ))}
             </Wrap>

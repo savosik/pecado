@@ -84,29 +84,32 @@ class NotificationRouter
     }
 
     /**
-     * Доп. условия типа. Сейчас единственное — набор статусов заказа.
+     * Отбор по подтипу: о каких именно случаях писать.
      *
-     * Это осознанное исключение, а не общий механизм условий: если таких
-     * исключений станет три, значит конструкция неверна и надо остановиться,
-     * а не обобщать.
+     * Один механизм на все поводы, у которых подтип объявлен, — статусы заказа
+     * и типы документов работают одинаково. Раньше это было частным условием
+     * для статусов, и второй такой случай превратил бы конструкцию в набор
+     * исключений.
      *
      * @param  array<string, mixed>  $options
      */
     private function passesOptions(Occasion $occasion, array $options): bool
     {
-        if ($occasion->key !== 'orders.status_changed') {
+        $subtype = $this->catalog->subtype($occasion->key);
+
+        if ($subtype === null) {
             return true;
         }
 
-        $statuses = (array) ($options['statuses'] ?? []);
+        $chosen = (array) ($options['subtypes'] ?? []);
 
-        // Пустой набор — все статусы. Иначе незаполненная настройка означала бы
+        // Пустой набор — все подтипы. Иначе незаполненная настройка означала бы
         // тишину, и молчание выглядело бы как поломка.
-        if ($statuses === []) {
+        if ($chosen === []) {
             return true;
         }
 
-        return in_array((string) ($occasion->data['status'] ?? ''), $statuses, true);
+        return in_array((string) ($occasion->data[$subtype['field']] ?? ''), $chosen, true);
     }
 
     /**

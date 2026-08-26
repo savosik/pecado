@@ -50,8 +50,8 @@ class NotificationPreferenceController extends CrmController
             'destinations.*.role' => ['nullable', 'string'],
             'destinations.*.contact_id' => ['nullable', 'integer'],
             'options' => ['nullable', 'array'],
-            'options.statuses' => ['nullable', 'array'],
-            'options.statuses.*' => ['string'],
+            'options.subtypes' => ['nullable', 'array'],
+            'options.subtypes.*' => ['string'],
         ], [
             'occasion_key.in' => 'Неизвестный тип уведомления.',
             'destinations.*.type.in' => 'Неизвестный тип адресата.',

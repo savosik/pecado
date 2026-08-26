@@ -3,7 +3,6 @@
 namespace App\Services\Notifications;
 
 use App\Enums\ContactRole;
-use App\Enums\OrderStatus;
 use App\Models\Contact;
 use App\Models\User;
 use App\Support\Notifications\Destination;
@@ -64,10 +63,10 @@ class NotificationMatrix
                 'overridden' => $effective['overridden'],
                 'changed_by_client' => $effective['changed_by_client'],
                 'client_visible' => $this->catalog->visibleToClient($key),
-                // Настройка статусов есть ровно у одного типа. Если их станет
-                // три — значит матрица снова превращается в движок условий,
-                // и это повод остановиться, а не обобщать.
-                'has_statuses' => $key === 'orders.status_changed',
+                // Подтип: о каких именно случаях писать. Объявляется поводом
+                // в конфиге, поэтому статусы заказа и типы документов
+                // рисуются и сохраняются одинаково.
+                'subtype' => $this->catalog->subtype($key),
             ];
         }
 
@@ -76,10 +75,6 @@ class NotificationMatrix
             'roles' => array_map(
                 fn (ContactRole $role): array => ['value' => $role->value, 'label' => $role->label()],
                 ContactRole::cases(),
-            ),
-            'statuses' => array_map(
-                fn (OrderStatus $status): array => ['value' => $status->value, 'label' => $status->label()],
-                OrderStatus::cases(),
             ),
             'has_contacts' => Contact::query()->where('client_user_id', $partner->getKey())->exists(),
         ];

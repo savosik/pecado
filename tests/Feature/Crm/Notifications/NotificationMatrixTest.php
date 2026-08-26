@@ -56,7 +56,8 @@ class NotificationMatrixTest extends TestCase
         $this->assertTrue($rows['orders.created']['enabled']);
         $this->assertFalse($rows['orders.created']['overridden']);
         $this->assertSame('login', $rows['orders.created']['destinations'][0]['type']);
-        $this->assertTrue($rows['orders.status_changed']['has_statuses']);
+        $this->assertSame('status', $rows['orders.status_changed']['subtype']['field']);
+        $this->assertSame('document_type', $rows['documents.published']['subtype']['field']);
     }
 
     #[Test]
@@ -191,19 +192,19 @@ class NotificationMatrixTest extends TestCase
     }
 
     #[Test]
-    public function набор_статусов_сохраняется(): void
+    public function набор_подтипов_сохраняется(): void
     {
         $this->actingAs($this->manager)
             ->patchJson(route('crm.clients.notifications.update', $this->client), [
                 'occasion_key' => 'orders.status_changed',
                 'is_enabled' => true,
                 'destinations' => [['type' => 'login']],
-                'options' => ['statuses' => ['ready_for_shipment']],
+                'options' => ['subtypes' => ['ready_for_shipment']],
             ])
             ->assertOk();
 
         $this->assertSame(
-            ['statuses' => ['ready_for_shipment']],
+            ['subtypes' => ['ready_for_shipment']],
             NotificationPreference::query()->first()->options,
         );
     }

@@ -51,8 +51,8 @@ class NotificationPreferenceController extends Controller
             'destinations.*.type' => ['required', 'string', Rule::in([Destination::LOGIN, Destination::EMAIL])],
             'destinations.*.email' => ['nullable', 'email', 'max:255'],
             'options' => ['nullable', 'array'],
-            'options.statuses' => ['nullable', 'array'],
-            'options.statuses.*' => ['string'],
+            'options.subtypes' => ['nullable', 'array'],
+            'options.subtypes.*' => ['string'],
         ], [
             'occasion_key.in' => 'Такое уведомление настроить нельзя.',
             'destinations.*.type.in' => 'Выберите почту аккаунта или укажите другой адрес.',

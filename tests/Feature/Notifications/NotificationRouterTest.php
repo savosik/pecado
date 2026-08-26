@@ -237,10 +237,10 @@ class NotificationRouterTest extends TestCase
     }
 
     #[Test]
-    public function набор_статусов_можно_сузить(): void
+    public function набор_подтипов_можно_сузить(): void
     {
         $this->prefer('orders.status_changed', [
-            'options' => ['statuses' => ['ready_for_shipment']],
+            'options' => ['subtypes' => ['ready_for_shipment']],
         ]);
 
         $this->assertSame(
@@ -250,6 +250,35 @@ class NotificationRouterTest extends TestCase
         $this->assertSame(
             [],
             $this->router->addressesFor($this->occasion('orders.status_changed', ['status' => 'shipping'])),
+        );
+    }
+
+    #[Test]
+    public function можно_выбрать_какие_документы_присылать(): void
+    {
+        // Кейс заказчика: кому-то счета, кому-то акты сверки. Тот же механизм,
+        // что и у статусов заказа, — подтип объявлен поводом в конфиге.
+        $this->prefer('documents.published', [
+            'options' => ['subtypes' => ['reconciliation_act']],
+        ]);
+
+        $act = $this->occasion('documents.published', ['document_type' => 'reconciliation_act']);
+        $invoice = $this->occasion('documents.published', ['document_type' => 'invoice']);
+
+        $this->assertSame(['client@example.com'], $this->router->addressesFor($act));
+        $this->assertSame([], $this->router->addressesFor($invoice));
+    }
+
+    #[Test]
+    public function пустой_набор_подтипов_означает_все(): void
+    {
+        // Незаполненная настройка не должна означать тишину: иначе молчание
+        // выглядело бы как поломка.
+        $this->prefer('documents.published', ['options' => ['subtypes' => []]]);
+
+        $this->assertSame(
+            ['client@example.com'],
+            $this->router->addressesFor($this->occasion('documents.published', ['document_type' => 'upd'])),
         );
     }
 
