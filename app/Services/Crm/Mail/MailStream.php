@@ -4,12 +4,14 @@ namespace App\Services\Crm\Mail;
 
 use App\Enums\Crm\EmailStatus;
 use App\Enums\PrintedDocumentType;
+use App\Jobs\SendNotificationJob;
 use App\Models\Company;
 use App\Models\CrmEmail;
 use App\Models\CrmEmailTemplate;
 use App\Models\PersonalManager;
 use App\Models\PrintedDocument;
 use App\Models\User;
+use App\Services\Notifications\NotificationRouter;
 use App\Support\Crm\CrmAttachments;
 use App\Support\Notifications\Occasion;
 use Illuminate\Database\Eloquent\Model;
@@ -30,7 +32,7 @@ class MailStream
     public function __construct(
         private readonly MailOccasions $occasions,
         private readonly MailTagBuilder $tags,
-        private readonly MailRuleEngine $rules,
+        private readonly NotificationRouter $router,
     ) {}
 
     /**
@@ -49,6 +51,13 @@ class MailStream
             ? null
             : User::query()->with('crmProfile')->find($occasion->clientUserId);
 
+        // Письмо, которое никому не уйдёт, незачем и создавать. Именно из
+        // таких состояла папка «Мимо фильтров»: она выглядела недоработкой,
+        // хотя была нормой.
+        if (! $this->router->wants($occasion)) {
+            return null;
+        }
+
         $data = $this->enrich($occasion, $client);
         $tags = $this->tags->build($occasion->key, $data, $client);
         $originKey = $this->originKey($occasion, $data);
@@ -57,7 +66,8 @@ class MailStream
             return null;
         }
 
-        $existing = $this->findForCoalescing($originKey);
+        $existing = $this->findForCoalescing($originKey)
+            ?? $this->findBatch($occasion);
 
         if ($existing !== null) {
             return $this->coalesce($existing, $occasion, $data, $tags);
@@ -100,7 +110,11 @@ class MailStream
 
         $this->attachInvoice($letter, $data);
 
-        $this->rules->apply($letter);
+        // Отправка откладывается на окно склейки: партия из 1С должна успеть
+        // прийти целиком. Задача ставится одна на партию — поводы, попавшие
+        // в окно, дописываются в это же письмо и своей задачи не заводят.
+        SendNotificationJob::dispatch((int) $letter->getKey())
+            ->delay(now()->addSeconds($this->batchWindowSeconds()));
 
         return $letter->refresh();
     }
@@ -280,9 +294,38 @@ class MailStream
         $letter->subject = $this->subject($occasion, $data);
         $letter->save();
 
-        $this->rules->apply($letter);
-
         return $letter->refresh();
+    }
+
+    /**
+     * Письмо этой же партии: тот же партнёр, тот же тип, окно в минуты.
+     *
+     * Отдельно от склейки по документу: та отвечает «об этом заказе уже писали»,
+     * эта — «1С провела партию, и клиенту это одно событие».
+     */
+    private function findBatch(Occasion $occasion): ?CrmEmail
+    {
+        if ($occasion->clientUserId === null) {
+            return null;
+        }
+
+        return CrmEmail::query()
+            ->where('client_user_id', $occasion->clientUserId)
+            ->where('origin_event', $occasion->key)
+            ->where('origin', CrmEmail::ORIGIN_SYSTEM)
+            ->whereIn('status', [EmailStatus::DRAFT->value, EmailStatus::UNMATCHED->value])
+            ->where('created_at', '>=', now()->subSeconds($this->batchWindowSeconds()))
+            ->latest('id')
+            ->first();
+    }
+
+    /**
+     * Окно склейки партии. Короткое намеренно: партия 1С проходит за секунды,
+     * а ждать полчаса с письмом о смене статуса нельзя.
+     */
+    private function batchWindowSeconds(): int
+    {
+        return (int) config('mail_stream.batch_seconds', 180);
     }
 
     /**

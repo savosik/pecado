@@ -25,6 +25,25 @@ class NotificationRouter
     ) {}
 
     /**
+     * Нужен ли этот повод партнёру вообще.
+     *
+     * Спрашивается **до** сборки письма: письмо, которое никому не уйдёт,
+     * незачем и создавать. Именно из таких писем состояла папка «Мимо
+     * фильтров», и она сбивала с толку — выглядела как недоработка,
+     * хотя была нормой.
+     */
+    public function wants(Occasion $occasion): bool
+    {
+        if (! $this->catalog->exists($occasion->key)) {
+            return false;
+        }
+
+        $effective = $this->settings->effective($occasion->clientUserId, $occasion->key);
+
+        return $effective['enabled'] && $this->passesOptions($occasion, $effective['options']);
+    }
+
+    /**
      * Адреса, на которые уйдёт этот повод. Пустой массив — не уходит никому,
      * и это нормальное состояние, а не ошибка.
      *
