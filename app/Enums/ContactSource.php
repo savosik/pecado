@@ -19,6 +19,7 @@ enum ContactSource: string
     case DIRECTORY_IMPORT = 'directory_import';
     case VCF = 'vcf';
     case ERP = 'erp';
+    case MANAGER_SHEET = 'manager_sheet';
 
     public function label(): string
     {
@@ -29,6 +30,7 @@ enum ContactSource: string
             self::DIRECTORY_IMPORT => 'Собрано из данных сайта',
             self::VCF => 'Импорт из телефона',
             self::ERP => 'Из 1С',
+            self::MANAGER_SHEET => 'Из таблицы менеджера',
         };
     }
 
@@ -44,6 +46,7 @@ enum ContactSource: string
             self::DIRECTORY_IMPORT => 'Собрано',
             self::VCF => 'Из телефона',
             self::ERP => '1С',
+            self::MANAGER_SHEET => 'Таблица',
         };
     }
 
@@ -55,6 +58,7 @@ enum ContactSource: string
             self::PROFILE_IMPORT, self::DIRECTORY_IMPORT => 'orange',
             self::VCF => 'cyan',
             self::ERP => 'purple',
+            self::MANAGER_SHEET => 'blue',
         };
     }
 
