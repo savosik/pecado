@@ -138,6 +138,23 @@ class WeeklyReconciliationTest extends TestCase
     }
 
     #[Test]
+    public function акты_при_долге_работают_без_подписки(): void
+    {
+        // Единственное клиентское уведомление, включённое умолчанием.
+        // Оно ограничивает себя само: письмо уходит только должникам,
+        // и новые должники подхватываются без ручной подписки.
+        $this->act(1);
+        $this->debt();
+
+        $this->artisan('mail:weekly-reconciliation')->assertSuccessful();
+
+        $this->assertSame(
+            1,
+            CrmEmail::query()->where('origin_event', 'documents.reconciliation_when_debt')->count(),
+        );
+    }
+
+    #[Test]
     public function при_долге_акты_уходят_подписанному(): void
     {
         // Отбор «только при долге» — свойство события, а не массовая подписка:
