@@ -100,6 +100,27 @@ return [
         'default_enabled' => false,
         'client_visible' => true,
     ],
+    // Периодические поводы. Их придумали не ради красоты: 1С выкладывает акты
+    // сверки каждый день, и подписка на «опубликован документ» дала бы клиенту
+    // ежедневное письмо, которое он перестанет замечать через неделю.
+    //
+    // Периодичность выражена **отдельным событием**, а не настройкой «раз
+    // в неделю» у существующего. Иначе в матрицу вернулись бы расписания
+    // и условия — то есть заново собрался бы движок правил.
+    'documents.reconciliation_weekly' => [
+        'label' => 'Акты сверки — сводка за неделю',
+        'subject' => 'Акты сверки за неделю — Pecado.ru',
+        'default_destinations' => [['type' => 'login']],
+        'default_enabled' => false,
+        'client_visible' => true,
+    ],
+    'finance.reconciliation_due' => [
+        'label' => 'Сверка при непогашенном долге',
+        'subject' => 'Сверка расчётов — Pecado.ru',
+        'default_destinations' => [['type' => 'login']],
+        'default_enabled' => false,
+        'client_visible' => true,
+    ],
     'documents.deleted' => [
         'label' => 'Документ отозван',
         'subject' => 'Документ отозван — Pecado.ru',

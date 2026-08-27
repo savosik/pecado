@@ -40,9 +40,13 @@ Schedule::command('crm:tasks-recur')->dailyAt('05:40')->withoutOverlapping(); //
 // Плановый обход, а не реакция на balance.updated: 1С шлёт снимок баланса часто
 // и не по порядку, и письмо на каждый пересчёт было бы шумом.
 Schedule::command('mail:finance-scan')->dailyAt('07:00')->withoutOverlapping();
-// Поток писем: непойманное правилами живёт MAIL_STREAM_UNMATCHED_DAYS и удаляется —
-// иначе папка «Мимо фильтров» превратится в бесконечно растущую свалку.
+// Поток писем: письма без получателя живут MAIL_STREAM_UNMATCHED_DAYS и удаляются —
+// иначе папка превратится в бесконечно растущую свалку.
 Schedule::command('mail:prune-unmatched')->dailyAt('04:40')->withoutOverlapping();
+// Понедельничные поводы вокруг сверки. 1С выкладывает акты каждый день, и письмо
+// на каждый акт клиент перестаёт замечать через неделю; сводка раз в неделю —
+// отдельное событие, на которое подписываются осознанно.
+Schedule::command('mail:weekly-reconciliation')->mondays()->at('09:00')->withoutOverlapping();
 // Дни рождения контактов: задача «Поздравить» ставится персональному менеджеру
 // накануне. Идемпотентно — повторный прогон задачи не плодит.
 Schedule::command('contacts:birthday-tasks')->dailyAt('06:20')->withoutOverlapping();

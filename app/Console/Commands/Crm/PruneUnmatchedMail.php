@@ -21,24 +21,37 @@ class PruneUnmatchedMail extends Command
 
     public function handle(): int
     {
-        $days = (int) ($this->option('days') ?: config('mail_stream.unmatched_retention_days', 14));
-        $cutoff = now()->subDays($days);
-
+        // Не `?:` — ноль в PHP пустой, и «--days=0» молча превращался
+        // в умолчание: команда отвечала «удалено 0» и выглядела отработавшей.
+        $option = $this->option('days');
+        $days = $option === null || $option === ''
+            ? (int) config('mail_stream.unmatched_retention_days', 14)
+            : max(0, (int) $option);
         $query = CrmEmail::query()
-            ->where('status', EmailStatus::UNMATCHED->value)
-            ->where('created_at', '<', $cutoff);
+            ->where('status', EmailStatus::UNMATCHED->value);
+
+        // Ноль дней — «убрать всё», включая созданное только что. Через
+        // `created_at < now` это не работает: даты хранятся с точностью
+        // до секунды, и письмо из текущей секунды пережило бы уборку.
+        if ($days > 0) {
+            $query->where('created_at', '<', now()->subDays($days));
+        }
 
         $count = (clone $query)->count();
 
         if ($this->option('dry-run')) {
-            $this->info("Удалилось бы писем: {$count} (старше {$days} дн.)");
+            $this->info($days > 0
+                ? "Удалилось бы писем: {$count} (старше {$days} дн.)"
+                : "Удалилось бы писем: {$count} (все)");
 
             return self::SUCCESS;
         }
 
         $query->delete();
 
-        $this->info("Удалено писем без получателя: {$count} (старше {$days} дн.)");
+        $this->info($days > 0
+            ? "Удалено писем без получателя: {$count} (старше {$days} дн.)"
+            : "Удалено писем без получателя: {$count} (все)");
 
         return self::SUCCESS;
     }
