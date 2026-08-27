@@ -350,6 +350,7 @@ export default function Show() {
                                             index: route('crm.clients.notifications.index', client.id),
                                             update: route('crm.clients.notifications.update', client.id),
                                             contacts: route('crm.clients.notifications.contacts', client.id),
+                                            marketing: route('crm.clients.notifications.marketing', client.id),
                                         }}
                                     />
                                 </Tabs.Content>

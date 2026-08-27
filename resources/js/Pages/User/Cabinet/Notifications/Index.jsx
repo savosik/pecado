@@ -32,6 +32,7 @@ export default function Index() {
                         index: route('cabinet.notifications.data'),
                         update: route('cabinet.notifications.update'),
                         contacts: null,
+                        marketing: route('cabinet.notifications.marketing'),
                     }}
                 />
             </VStack>

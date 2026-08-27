@@ -73,6 +73,15 @@ export default function NotificationMatrix({
         <VStack align="stretch" gap={5}>
             {intro && <Text fontSize="sm" color="fg.muted">{intro}</Text>}
 
+            {(data.extras || []).length > 0 && (
+                <ExtraFamilies
+                    extras={data.extras}
+                    canEdit={canEdit}
+                    endpoint={endpoints.marketing}
+                    onSaved={setData}
+                />
+            )}
+
             {groups.map(([family, rows]) => (
                 <Box key={family}>
                     <Text fontSize="sm" fontWeight="700" mb={2}>{family}</Text>
@@ -185,6 +194,67 @@ export default function NotificationMatrix({
                 </Box>
             ))}
         </VStack>
+    );
+}
+
+/**
+ * Рассылки и письма менеджера.
+ *
+ * Не поводы: рассылка хранится отказом в стоп-листе, а письма менеджера
+ * отключить нельзя вовсе. Но показать их надо — клиент должен видеть всю
+ * почту, которую мы ему шлём, иначе ищет пропавший канал и звонит менеджеру.
+ */
+function ExtraFamilies({ extras, canEdit, endpoint, onSaved }) {
+    const [busy, setBusy] = useState(false);
+
+    const toggle = async (enabled) => {
+        if (!endpoint) return;
+        setBusy(true);
+        try {
+            const res = await axios.patch(endpoint, { enabled });
+            onSaved(res.data);
+            toastSuccess('Сохранено');
+        } catch {
+            toastError('Не получилось', 'Попробуйте ещё раз.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <>
+            {extras.map((extra) => (
+                <Box key={extra.key}>
+                    <Text fontSize="sm" fontWeight="700" mb={2}>{extra.family_label}</Text>
+
+                    <Box borderWidth="1px" borderRadius="md" p={3}>
+                        <HStack justify="space-between" align="start" gap={4} flexWrap="wrap">
+                            <VStack align="stretch" gap={1} flex="1" minW="220px">
+                                <Text fontSize="sm" fontWeight="600">{extra.label}</Text>
+                                <Text fontSize="xs" color="fg.muted">{extra.hint}</Text>
+                                {!extra.enabled && (
+                                    <HStack gap={1} color="fg.muted">
+                                        <LuBellOff size={13} />
+                                        <Text fontSize="xs">Отключено</Text>
+                                    </HStack>
+                                )}
+                            </VStack>
+
+                            {canEdit && extra.toggleable && (
+                                <Button
+                                    size="xs"
+                                    variant={extra.enabled ? 'ghost' : 'solid'}
+                                    disabled={busy}
+                                    onClick={() => toggle(!extra.enabled)}
+                                >
+                                    {extra.enabled ? 'Отключить' : 'Включить'}
+                                </Button>
+                            )}
+                        </HStack>
+                    </Box>
+                </Box>
+            ))}
+        </>
     );
 }
 

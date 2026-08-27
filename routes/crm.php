@@ -99,6 +99,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/partners/{client}/notifications/contacts', [NotificationPreferenceController::class, 'contacts'])
             ->name('clients.notifications.contacts')
             ->whereNumber('client');
+        Route::patch('/partners/{client}/notifications/marketing', [NotificationPreferenceController::class, 'marketing'])
+            ->name('clients.notifications.marketing')
+            ->whereNumber('client');
 
         // Закупки партнёра для карточки — отдельным запросом, а не в пропсах
         // страницы: разрез по брендам и категориям нужен не при каждом открытии

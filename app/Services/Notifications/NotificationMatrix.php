@@ -4,6 +4,7 @@ namespace App\Services\Notifications;
 
 use App\Enums\ContactRole;
 use App\Models\Contact;
+use App\Models\NotificationSuppression;
 use App\Models\User;
 use App\Support\Notifications\Destination;
 
@@ -72,12 +73,82 @@ class NotificationMatrix
 
         return [
             'rows' => $rows,
+            'extras' => $this->extras($partner),
             'roles' => array_map(
                 fn (ContactRole $role): array => ['value' => $role->value, 'label' => $role->label()],
                 ContactRole::cases(),
             ),
             'has_contacts' => Contact::query()->where('client_user_id', $partner->getKey())->exists(),
         ];
+    }
+
+    /**
+     * Два семейства, которые не описываются поводами.
+     *
+     * Клиент должен видеть **всю** почту, которую мы ему шлём, иначе он ищет
+     * пропавший канал и звонит менеджеру. Поэтому рассылки и письма менеджера
+     * стоят в матрице рядом с уведомлениями, хотя настраиваются иначе.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function extras(User $partner): array
+    {
+        $email = mb_strtolower(trim((string) $partner->email));
+
+        $marketingOff = $email !== '' && NotificationSuppression::query()
+            ->active()
+            ->where('email', $email)
+            ->whereIn('scope', [NotificationSuppression::SCOPE_ALL, NotificationSuppression::SCOPE_MARKETING])
+            ->exists();
+
+        return [
+            [
+                'key' => 'extra.campaigns',
+                'label' => 'Рассылки и акции',
+                'family_label' => 'Рассылки',
+                'enabled' => ! $marketingOff,
+                'hint' => 'Новости, акции и подборки. К заказам и документам отношения не имеют.',
+                'toggleable' => true,
+            ],
+            [
+                'key' => 'extra.manager',
+                'label' => 'Письма менеджера',
+                'family_label' => 'Письма менеджера',
+                'enabled' => true,
+                'hint' => 'Личная переписка с менеджером приходит всегда: это человек пишет человеку, а не рассылка.',
+                'toggleable' => false,
+            ],
+        ];
+    }
+
+    /**
+     * Переключить рассылки. Отписка от рекламы — единственное, что здесь
+     * настраивается: письма менеджера отключить нельзя, и это не упущение.
+     */
+    public function setMarketing(User $partner, bool $enabled): void
+    {
+        $email = mb_strtolower(trim((string) $partner->email));
+
+        if ($email === '') {
+            return;
+        }
+
+        if ($enabled) {
+            NotificationSuppression::query()
+                ->where('email', $email)
+                ->where('scope', NotificationSuppression::SCOPE_MARKETING)
+                ->delete();
+
+            return;
+        }
+
+        NotificationSuppression::query()->updateOrCreate(
+            ['email' => $email, 'scope' => NotificationSuppression::SCOPE_MARKETING],
+            [
+                'reason' => NotificationSuppression::REASON_UNSUBSCRIBED,
+                'note' => 'Отказ от рассылок в матрице уведомлений',
+            ],
+        );
     }
 
     /**

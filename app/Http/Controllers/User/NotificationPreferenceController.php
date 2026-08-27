@@ -72,4 +72,16 @@ class NotificationPreferenceController extends Controller
 
         return response()->json($this->matrix->forClient($user->refresh()));
     }
+
+    /**
+     * Отказ от рассылок — единственное, что клиент переключает вне поводов.
+     */
+    public function marketing(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $this->matrix->setMarketing($user, (bool) $request->boolean('enabled'));
+
+        return response()->json($this->matrix->forClient($user));
+    }
 }

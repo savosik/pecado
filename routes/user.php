@@ -298,6 +298,8 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
         ->name('notifications.data');
     Route::patch('/notifications', [NotificationPreferenceController::class, 'update'])
         ->name('notifications.update');
+    Route::patch('/notifications/marketing', [NotificationPreferenceController::class, 'marketing'])
+        ->name('notifications.marketing');
 
     // Подписки на изменения сущностей раздела (email; универсальный CRUD).
     Route::get('/subscriptions/{section}', [SubscriptionController::class, 'index'])->name('subscriptions.index');

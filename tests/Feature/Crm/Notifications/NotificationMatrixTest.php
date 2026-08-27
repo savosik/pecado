@@ -4,6 +4,7 @@ namespace Tests\Feature\Crm\Notifications;
 
 use App\Models\Contact;
 use App\Models\NotificationPreference;
+use App\Models\NotificationSuppression;
 use App\Models\PersonalManager;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -189,6 +190,35 @@ class NotificationMatrixTest extends TestCase
 
         // Вернулись к умолчанию — строка отклонения исчезла.
         $this->assertSame(0, NotificationPreference::query()->count());
+    }
+
+    #[Test]
+    public function матрица_показывает_рассылки_и_письма_менеджера(): void
+    {
+        $response = $this->actingAs($this->manager)
+            ->getJson(route('crm.clients.notifications.index', $this->client))
+            ->assertOk();
+
+        $extras = collect($response->json('extras'))->keyBy('key');
+
+        $this->assertTrue($extras['extra.campaigns']['toggleable']);
+        // Письма менеджера отключить нельзя — это человек пишет человеку.
+        // Строка нужна ради полноты картины, а не ради настройки.
+        $this->assertFalse($extras['extra.manager']['toggleable']);
+        $this->assertTrue($extras['extra.manager']['enabled']);
+    }
+
+    #[Test]
+    public function отказ_от_рассылок_гасит_только_рекламу(): void
+    {
+        $this->actingAs($this->manager)
+            ->patchJson(route('crm.clients.notifications.marketing', $this->client), ['enabled' => false])
+            ->assertOk()
+            ->assertJsonPath('extras.0.enabled', false);
+
+        // Реклама погашена, а уведомления о заказах продолжают работать.
+        $this->assertTrue(NotificationSuppression::blocks($this->client->email, 'campaigns.promo'));
+        $this->assertFalse(NotificationSuppression::blocks($this->client->email, 'orders.status_changed'));
     }
 
     #[Test]

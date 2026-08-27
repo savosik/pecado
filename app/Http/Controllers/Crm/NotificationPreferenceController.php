@@ -72,6 +72,22 @@ class NotificationPreferenceController extends CrmController
     }
 
     /**
+     * Переключить рассылки. Отдельным действием, а не строкой матрицы:
+     * они не повод, и хранятся не в настройках, а в стоп-листе.
+     */
+    public function marketing(Request $request, int $client): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        $partner = $this->partner($request, $client);
+
+        abort_unless($actor->can('crm-clients.edit'), 403);
+
+        $this->matrix->setMarketing($partner, (bool) $request->boolean('enabled'));
+
+        return response()->json($this->matrix->forManager($partner));
+    }
+
+    /**
      * Люди партнёра для выбора адресата.
      */
     public function contacts(Request $request, int $client, CrmEntitySearch $search): JsonResponse
