@@ -36,7 +36,25 @@ class NotificationMatrix
      */
     public function forClient(User $partner): array
     {
-        return $this->build($partner, $this->catalog->clientVisibleKeys());
+        $view = $this->build($partner, $this->catalog->clientVisibleKeys());
+
+        // Клиенту показываем только то, что касается его самого. Финансовые
+        // уведомления по умолчанию адресованы нашему менеджеру: партнёр не
+        // должен видеть в своём кабинете «включено» под письмом, которого
+        // он не получает, и уж тем более нашу внутреннюю маршрутизацию.
+        $view['rows'] = array_map(function (array $row): array {
+            $mine = array_values(array_filter(
+                $row['destinations'],
+                fn (array $d): bool => in_array($d['type'], [Destination::LOGIN, Destination::EMAIL], true),
+            ));
+
+            return array_merge($row, [
+                'destinations' => $mine,
+                'enabled' => $row['enabled'] && $mine !== [],
+            ]);
+        }, $view['rows']);
+
+        return $view;
     }
 
     /**

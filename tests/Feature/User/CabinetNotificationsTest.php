@@ -44,6 +44,43 @@ class CabinetNotificationsTest extends TestCase
     }
 
     #[Test]
+    public function клиент_не_видит_нашу_внутреннюю_маршрутизацию(): void
+    {
+        // Финансовые уведомления по умолчанию адресованы персональному
+        // менеджеру. В кабинете партнёра такая строка обязана выглядеть
+        // выключенной: письма он не получает, а кому оно уходит внутри —
+        // не его дело.
+        $response = $this->actingAs($this->client)
+            ->getJson(route('cabinet.notifications.data'))
+            ->assertOk();
+
+        $row = collect($response->json('rows'))->firstWhere('key', 'finance.overdue_started');
+
+        $this->assertFalse($row['enabled']);
+        $this->assertSame([], $row['destinations']);
+    }
+
+    #[Test]
+    public function клиент_видит_включённым_то_что_адресовано_ему(): void
+    {
+        \App\Models\NotificationPreference::query()->create([
+            'user_id' => $this->client->id,
+            'occasion_key' => 'documents.published',
+            'is_enabled' => true,
+            'destinations' => [['type' => 'login']],
+        ]);
+
+        $response = $this->actingAs($this->client)
+            ->getJson(route('cabinet.notifications.data'))
+            ->assertOk();
+
+        $row = collect($response->json('rows'))->firstWhere('key', 'documents.published');
+
+        $this->assertTrue($row['enabled']);
+        $this->assertSame('login', $row['destinations'][0]['type']);
+    }
+
+    #[Test]
     public function правка_клиента_помечается(): void
     {
         $this->actingAs($this->client)
