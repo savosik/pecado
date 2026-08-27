@@ -21,7 +21,8 @@ class CrmImportManagerContacts extends Command
         {file : JSON с разобранными строками таблицы}
         {--authors=kurochkina:b2b@pecado.ru,sukhov:opt@pecado.ru : Кто автор записей по каждой вкладке, «ключ:e-mail» через запятую}
         {--dry-run : Только показать результат, ничего не записывая}
-        {--overwrite : Перезаписывать уже заполненные поля контактов и паспорта}';
+        {--overwrite : Перезаписывать уже заполненные поля контактов и паспорта}
+        {--orphans : Людей из строк, чей партнёр в базе не найден, заводить «ничьими» карточками}';
 
     protected $description = 'Перенести контакты, условия и комментарии из таблицы менеджеров в справочник и паспорта партнёров';
 
@@ -52,7 +53,7 @@ class CrmImportManagerContacts extends Command
         $dryRun = (bool) $this->option('dry-run');
 
         try {
-            $report = $importer->import($document, $authors, $dryRun, (bool) $this->option('overwrite'));
+            $report = $importer->import($document, $authors, $dryRun, (bool) $this->option('overwrite'), (bool) $this->option('orphans'));
         } catch (Throwable $exception) {
             $this->error($exception->getMessage());
 
@@ -111,6 +112,8 @@ class CrmImportManagerContacts extends Command
             ['Привязок создано', $report->linksCreated],
             ['Паспортов обновлено', $report->profilesUpdated],
             ['Комментариев-прогнозов', $report->commentsCreated],
+            ['Ничьих контактов заведено', $report->orphansCreated],
+            ['Ничьих контактов дополнено', $report->orphansUpdated],
         ]);
 
         if ($report->ambiguous !== []) {

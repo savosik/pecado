@@ -219,6 +219,35 @@ class ManagerSheetImportTest extends TestCase
     }
 
     #[Test]
+    public function unmatched_row_people_become_orphans_only_when_asked(): void
+    {
+        $row = ['client' => 'Славный Сергей Сергеевич, г.Бишкек', 'payment' => 'предоплата', 'forecast' => 'сентябрь', 'contacts' => [[
+            'full_name' => 'Славный Сергей Сергеевич', 'role' => 'owner', 'phone' => '+996 555 153 014',
+        ]]];
+
+        $this->import($this->document($row));
+        $this->assertSame(0, Contact::query()->count());
+
+        $report = app(ManagerSheetImporter::class)->import($this->document($row), ['kurochkina' => $this->author], orphans: true);
+        $this->assertSame(1, $report->orphansCreated);
+
+        $contact = Contact::query()->firstOrFail();
+        $this->assertNull($contact->client_user_id);
+        $this->assertSame('+996 555 153-014', $contact->phone);
+        $this->assertSame($this->author->id, $contact->created_by_user_id);
+        $this->assertStringContainsString('Славный Сергей Сергеевич, г.Бишкек — в базе сайта не найден', (string) $contact->notes);
+        $this->assertStringContainsString('Условия оплаты: предоплата', (string) $contact->notes);
+        $this->assertStringContainsString('Прогноз заказа: сентябрь', (string) $contact->notes);
+        $this->assertSame(0, ContactLink::query()->count());
+
+        $report = app(ManagerSheetImporter::class)->import($this->document($row), ['kurochkina' => $this->author], orphans: true);
+        $this->assertSame(0, $report->orphansCreated);
+        $this->assertSame(1, $report->orphansUpdated);
+        $this->assertSame(1, Contact::query()->count());
+        $this->assertSame(1, substr_count((string) Contact::query()->firstOrFail()->notes, 'в базе сайта не найден'));
+    }
+
+    #[Test]
     public function dry_run_counts_but_writes_nothing(): void
     {
         $report = $this->import($this->document(), dryRun: true);

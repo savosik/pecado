@@ -52,7 +52,10 @@ class ManagerSheetImporter
      * @param  array<string, mixed>  $document  разобранная таблица: rows[] со строками
      * @param  array<string, User>  $authors  автор по ключу менеджера («kurochkina» → сотрудник)
      */
-    public function import(array $document, array $authors, bool $dryRun = false, bool $overwrite = false): ManagerSheetReport
+    /**
+     * @param  bool  $orphans  людей из строк без партнёра в базе заводить «ничьими» карточками
+     */
+    public function import(array $document, array $authors, bool $dryRun = false, bool $overwrite = false, bool $orphans = false): ManagerSheetReport
     {
         $report = new ManagerSheetReport;
         $this->index = $this->buildIndex();
@@ -82,6 +85,12 @@ class ManagerSheetImporter
 
             if ($candidates === []) {
                 $report->unmatched[] = ['line' => $line, 'name' => $name];
+
+                if ($orphans) {
+                    $dryRun
+                        ? $this->previewOrphans($row, $author, $report)
+                        : DB::transaction(fn () => $this->applyOrphans($row, $author, $stamp, $overwrite, $report));
+                }
 
                 continue;
             }
@@ -163,6 +172,114 @@ class ManagerSheetImporter
         if (filled($row['forecast'] ?? null)) {
             $report->commentsCreated++;
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function previewOrphans(array $row, User $author, ManagerSheetReport $report): void
+    {
+        foreach ($this->people($row) as $person) {
+            $this->findOrphan($author, $person) === null
+                ? $report->orphansCreated++
+                : $report->orphansUpdated++;
+        }
+    }
+
+    /**
+     * Партнёра в базе нет — человек заводится «ничьим»: карточка видна автору
+     * и тем, кто видит всю базу, а с появлением партнёра её привяжут вручную.
+     *
+     * Паспорта у такого партнёра нет, поэтому всё, что таблица знает о нём
+     * (название, условия, документы, комментарий, прогноз), ложится в заметки
+     * самого контакта — иначе эти сведения пропали бы вовсе.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function applyOrphans(array $row, User $author, string $stamp, bool $overwrite, ManagerSheetReport $report): void
+    {
+        $partnerNote = $this->orphanNote($row, $stamp);
+
+        foreach ($this->people($row) as $person) {
+            $contact = $this->findOrphan($author, $person);
+            $isNew = $contact === null;
+
+            $contact ??= new Contact;
+
+            $this->fillContact($contact, $person, $overwrite || $isNew);
+
+            if ($isNew) {
+                $contact->client_user_id = null;
+                $contact->source = ContactSource::MANAGER_SHEET;
+                $contact->is_active = true;
+                $contact->created_by_user_id = $author->getKey();
+            }
+
+            if (! str_contains((string) $contact->notes, $partnerNote)) {
+                $contact->notes = trim(rtrim((string) $contact->notes)."\n\n".$partnerNote);
+            }
+
+            $contact->updated_by_user_id = $author->getKey();
+            $contact->save();
+
+            $isNew ? $report->orphansCreated++ : $report->orphansUpdated++;
+        }
+    }
+
+    /**
+     * Ничья карточка того же автора: по телефону, почте или имени.
+     *
+     * @param  array<string, mixed>  $person
+     */
+    private function findOrphan(User $author, array $person): ?Contact
+    {
+        $digits = Contact::digitsOf($person['phone'] ?? null);
+        $email = filled($person['email'] ?? null) ? mb_strtolower(trim((string) $person['email'])) : null;
+        $name = trim((string) $person['full_name']);
+
+        return Contact::query()
+            ->whereNull('client_user_id')
+            ->whereNull('merged_into_id')
+            ->where('created_by_user_id', $author->getKey())
+            ->where(function ($inner) use ($digits, $email, $name): void {
+                $inner->whereRaw('1 = 0');
+
+                if ($digits !== null) {
+                    $inner->orWhere('phone_digits', $digits);
+                }
+
+                if ($email !== null) {
+                    $inner->orWhere('email', $email);
+                }
+
+                $inner->orWhere('full_name', $name);
+            })
+            ->orderBy('id')
+            ->first();
+    }
+
+    /**
+     * Что таблица знает о партнёре, которого нет в базе, — текстом для заметок контакта.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function orphanNote(array $row, string $stamp): string
+    {
+        $lines = ['Партнёр по таблице менеджера ('.$this->humanDate($stamp).'): '.trim((string) ($row['client'] ?? '')).' — в базе сайта не найден.'];
+
+        foreach ([
+            'new_status' => 'Статус',
+            'payment' => 'Условия оплаты',
+            'docs' => 'Документы',
+            'comment' => 'Особенности работы',
+            'forecast' => 'Прогноз заказа',
+        ] as $field => $label) {
+            if (($value = $this->text($row[$field] ?? null)) !== null) {
+                $lines[] = $label.': '.$value;
+            }
+        }
+
+        return implode("\n", $lines);
     }
 
     /**

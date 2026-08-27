@@ -25,6 +25,10 @@ final class ManagerSheetReport
 
     public int $commentsCreated = 0;
 
+    public int $orphansCreated = 0;
+
+    public int $orphansUpdated = 0;
+
     /** @var list<array{line: int, name: string}> */
     public array $unmatched = [];
 
