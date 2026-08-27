@@ -105,6 +105,9 @@ class HandleInertiaRequests extends Middleware
                 // сверяют печатные формы раньше, чем их увидит клиент.
                 'documents_enabled' => (bool) config('documents.enabled'),
                 'documents_crm_enabled' => (bool) config('documents.crm_enabled'),
+                // Раздел «Договоры» в кабинете партнёра: выключатель на случай,
+                // если реестр ещё не выверен и показывать его клиентам рано.
+                'contracts_cabinet_enabled' => (bool) config('contracts.cabinet_enabled'),
             ],
         ];
     }

@@ -26,6 +26,7 @@ import TaskPanel from '@/Crm/Components/TaskPanel';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import ClientKindDialog from '@/Crm/Components/ClientKindDialog';
 import PartnerContractors from '@/Crm/Components/PartnerContractors';
+import PartnerContracts from '@/Crm/Components/PartnerContracts';
 import PartnerPurchases from '@/Crm/Components/PartnerPurchases';
 import ClientSummaryBar from './components/ClientSummaryBar';
 import StockBufferPanel from './components/StockBufferPanel';
@@ -50,6 +51,8 @@ export default function Show() {
         organizationsEnabled,
         contractors = [],
         canSeeContractors = false,
+        contracts = [],
+        canSeeContracts = false,
     } = usePage().props;
     const { can } = usePermission();
 
@@ -247,6 +250,12 @@ export default function Show() {
                                             {contractors.length > 0 && ` (${contractors.length})`}
                                         </Tabs.Trigger>
                                     )}
+                                    {canSeeContracts && (
+                                        <Tabs.Trigger value="contracts">
+                                            Договоры
+                                            {contracts.length > 0 && ` (${contracts.length})`}
+                                        </Tabs.Trigger>
+                                    )}
                                     {canViewComments && <Tabs.Trigger value="orders">Заказы</Tabs.Trigger>}
                                     {canViewComments && <Tabs.Trigger value="shipments">Реализации</Tabs.Trigger>}
                                     {canViewFiles && <Tabs.Trigger value="files">Файлы</Tabs.Trigger>}
@@ -292,6 +301,18 @@ export default function Show() {
                                             а не по каждому юрлицу отдельно.
                                         </Text>
                                         <PartnerContractors contractors={contractors} />
+                                    </Tabs.Content>
+                                )}
+
+                                {canSeeContracts && (
+                                    <Tabs.Content value="contracts">
+                                        <Text fontSize="xs" color="fg.muted" mb={3}>
+                                            Договоры из реестра по всем юрлицам партнёра.
+                                        </Text>
+                                        <PartnerContracts
+                                            contracts={contracts}
+                                            createHref={route('crm.contracts.index', { create: 1, client_id: client.id })}
+                                        />
                                     </Tabs.Content>
                                 )}
 

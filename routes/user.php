@@ -265,6 +265,17 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
             ->whereNumber('document');
     });
 
+    // Договоры из реестра CRM. Только чтение и скачивание сканов: договор
+    // ведёт менеджер. Раздел закрыт флагом contracts.cabinet_enabled.
+    Route::middleware(\App\Http\Middleware\EnsureContractsCabinetEnabled::class)->group(function () {
+        Route::get('/contracts', [\App\Http\Controllers\User\ContractController::class, 'index'])
+            ->name('contracts.index');
+        Route::get('/contracts/{contract}/files/{media}', [\App\Http\Controllers\User\ContractController::class, 'download'])
+            ->name('contracts.download')
+            ->whereNumber('contract')
+            ->whereNumber('media');
+    });
+
     // Оплаты (платёжные документы из 1С). Только чтение: платёж заводит 1С.
     // Раздел закрыт флагом cabinet.finance_enabled, пока цифры долга не сверены
     // с 1С: остаток по документам систематически больше реальной задолженности.

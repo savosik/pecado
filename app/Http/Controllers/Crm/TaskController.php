@@ -322,6 +322,10 @@ class TaskController extends CrmController
             $hidden[] = CrmEntityMap::LEAD;
         }
 
+        if (! $actor->can('crm-contracts.view')) {
+            $hidden[] = CrmEntityMap::CONTRACT;
+        }
+
         return array_values(array_diff(CrmEntityMap::taskableTypes(), $hidden));
     }
 

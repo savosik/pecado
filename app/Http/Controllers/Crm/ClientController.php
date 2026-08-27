@@ -17,6 +17,7 @@ use App\Services\Crm\ClientInsightService;
 use App\Services\Crm\ClientLifecycleService;
 use App\Services\Crm\ClientListService;
 use App\Services\Crm\ClientProfileService;
+use App\Services\Crm\ContractListService;
 use App\Services\Crm\ContractorListService;
 use App\Services\Crm\CrmTaskService;
 use App\Support\Crm\ClientListFilters;
@@ -128,6 +129,7 @@ class ClientController extends CrmController
         ClientProfileService $profiles,
         ClientLifecycleService $lifecycle,
         ContractorListService $contractors,
+        ContractListService $contractList,
     ): Response {
         // Резолвим через тот же scope: чужой партнёр — 404, а не 403.
         $user = User::query()
@@ -139,10 +141,13 @@ class ClientController extends CrmController
         // Юрлица партнёра — отдельное право: у раздела «Контрагенты» оно своё,
         // и вкладка в карточке не должна открывать то, что раздел закрывает.
         $canSeeContractors = $this->crmActor($request)->can('crm-contractors.view');
+        $canSeeContracts = $this->crmActor($request)->can('crm-contracts.view');
 
         return Inertia::render('Crm/Pages/Clients/Show', [
             'contractors' => $canSeeContractors ? $contractors->forPartner($user) : [],
             'canSeeContractors' => $canSeeContractors,
+            'contracts' => $canSeeContracts ? $contractList->forPartner($user) : [],
+            'canSeeContracts' => $canSeeContracts,
             'profile' => $canSeeProfile ? $this->profilePayload($user, $profiles) : null,
             'profileOptions' => $canSeeProfile ? ClientPassport::options() + [
                 'payment_behavior' => PaymentBehavior::options(),

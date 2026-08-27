@@ -10,7 +10,7 @@ import {
     LuLayoutDashboard, LuShoppingBag, LuShoppingCart,
     LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin, LuContact,
     LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuReceipt, LuLayoutGrid, LuWrench, LuCode,
-    LuChartPie, LuMessageSquare, LuArrowRightLeft, LuFileText, LuBell,
+    LuChartPie, LuMessageSquare, LuArrowRightLeft, LuFileText, LuBell, LuFilePen,
 } from 'react-icons/lu';
 
 const menuGroups = [
@@ -30,6 +30,9 @@ const menuGroups = [
             // Печатные формы из 1С. Скрыт, пока раздел не открыт (config.documents_enabled);
             // приём документов из 1С при этом работает всегда.
             { href: '/cabinet/documents', label: 'Документы', icon: LuFileText, feature: 'documents' },
+            // Договоры из реестра CRM: показываются те, что менеджер отметил
+            // видимыми партнёру (config.contracts_cabinet_enabled).
+            { href: '/cabinet/contracts', label: 'Договоры', icon: LuFilePen, feature: 'contracts' },
             // Раздел скрыт, пока цифры долга не сверены с 1С (config.cabinet_finance_enabled).
             { href: '/cabinet/payments', label: 'Оплаты', icon: LuReceipt, feature: 'finance' },
             { href: '/cabinet/returns', label: 'Возвраты', icon: LuRotateCcw },
@@ -110,6 +113,7 @@ function SidebarContent({ currentPath }) {
     const features = {
         finance: !!config?.cabinet_finance_enabled,
         documents: !!config?.documents_enabled,
+        contracts: !!config?.contracts_cabinet_enabled,
     };
 
     const visibleGroups = menuGroups
