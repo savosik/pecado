@@ -101,9 +101,15 @@ export default function Index({
                 <VStack align="start" gap={1}>
                     <Text fontSize="sm" fontWeight="600">{row.number}</Text>
                     <Text fontSize="xs" color="fg.muted">{row.date ? `от ${row.date}` : 'без даты'}</Text>
-                    {quick
-                        ? <QuickSelect contractId={row.id} field="category_id" value={row.category?.id} options={categoryOptions} width="160px" />
-                        : (row.category && <Text fontSize="xs" color="fg.muted">{row.category.name}</Text>)}
+                    <QuickSelect
+                        contractId={row.id}
+                        field="category_id"
+                        value={row.category?.id}
+                        options={categoryOptions}
+                        editable={quick}
+                        width="160px"
+                        display={<Text fontSize="xs" color="fg.muted">{row.category?.name || 'без категории'}</Text>}
+                    />
                 </VStack>
             ),
         },
@@ -125,9 +131,15 @@ export default function Index({
             label: 'Статус',
             render: (_, row) => (
                 <VStack align="start" gap={1}>
-                    {quick
-                        ? <QuickSelect contractId={row.id} field="status" value={row.status} options={statuses} width="140px" />
-                        : <Badge size="sm" colorPalette={row.status_color}>{row.status_label}</Badge>}
+                    <QuickSelect
+                        contractId={row.id}
+                        field="status"
+                        value={row.status}
+                        options={statuses}
+                        editable={quick}
+                        width="140px"
+                        display={<Badge size="sm" colorPalette={row.status_color}>{row.status_label}</Badge>}
+                    />
                     {row.signed_at && <Text fontSize="xs" color="fg.muted">подписан {row.signed_at}</Text>}
                 </VStack>
             ),
@@ -135,18 +147,34 @@ export default function Index({
         {
             key: 'terms',
             label: 'Оплата / форма',
-            render: (_, row) => (quick ? (
-                <VStack align="start" gap={1}>
-                    <QuickSelect contractId={row.id} field="payment_terms" value={row.payment_terms} options={paymentTerms} placeholder="Оплата —" width="140px" />
-                    <QuickSelect contractId={row.id} field="form" value={row.form} options={forms} placeholder="Форма —" width="140px" />
-                </VStack>
-            ) : (
+            render: (_, row) => (
                 <HStack gap={1} flexWrap="wrap">
-                    {row.payment_terms_label && <Badge size="sm" variant="subtle" colorPalette={row.payment_terms_color}>{row.payment_terms_label}</Badge>}
-                    {row.form_label && <Badge size="sm" variant="outline" colorPalette={row.form_color}>{row.form_label}</Badge>}
-                    {!row.payment_terms_label && !row.form_label && <Text fontSize="xs" color="fg.muted">—</Text>}
+                    <QuickSelect
+                        contractId={row.id}
+                        field="payment_terms"
+                        value={row.payment_terms}
+                        options={paymentTerms}
+                        placeholder="Не указана"
+                        editable={quick}
+                        width="140px"
+                        display={row.payment_terms_label
+                            ? <Badge size="sm" variant="subtle" colorPalette={row.payment_terms_color}>{row.payment_terms_label}</Badge>
+                            : <Badge size="sm" variant="subtle" colorPalette="gray">оплата —</Badge>}
+                    />
+                    <QuickSelect
+                        contractId={row.id}
+                        field="form"
+                        value={row.form}
+                        options={forms}
+                        placeholder="Не указана"
+                        editable={quick}
+                        width="140px"
+                        display={row.form_label
+                            ? <Badge size="sm" variant="outline" colorPalette={row.form_color}>{row.form_label}</Badge>
+                            : <Badge size="sm" variant="outline" colorPalette="gray">форма —</Badge>}
+                    />
                 </HStack>
-            )),
+            ),
         },
         {
             key: 'valid_until',
@@ -164,9 +192,18 @@ export default function Index({
         {
             key: 'manager',
             label: 'Ответственный',
-            render: (_, row) => (quick
-                ? <QuickSelect contractId={row.id} field="responsible_manager_id" value={row.manager?.id} options={managerOptions} placeholder="Не назначен" width="150px" />
-                : <Text fontSize="sm">{row.manager?.name || '—'}</Text>),
+            render: (_, row) => (
+                <QuickSelect
+                    contractId={row.id}
+                    field="responsible_manager_id"
+                    value={row.manager?.id}
+                    options={managerOptions}
+                    placeholder="Не назначен"
+                    editable={quick}
+                    width="150px"
+                    display={<Text fontSize="sm" color={row.manager ? undefined : 'fg.muted'}>{row.manager?.name || 'не назначен'}</Text>}
+                />
+            ),
         },
         {
             key: 'extras',
