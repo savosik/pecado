@@ -25,6 +25,7 @@ use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
 use App\Http\Controllers\Crm\ShortageController;
+use App\Http\Controllers\Crm\StaffNotificationController;
 use App\Http\Controllers\Crm\TaskChecklistController;
 use App\Http\Controllers\Crm\TaskController;
 use App\Http\Controllers\Crm\TaskRecurrenceController;
@@ -52,6 +53,16 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(function () {
+    // Мои уведомления: что получаю я. Отдельного права нет намеренно — свои
+    // настройки правит каждый, у кого вообще есть доступ в CRM. Чужие
+    // (параметр manager) открываются только с правом на команду.
+    Route::get('/my-notifications', [StaffNotificationController::class, 'mine'])
+        ->name('my-notifications.index');
+    Route::get('/my-notifications/data', [StaffNotificationController::class, 'data'])
+        ->name('my-notifications.data');
+    Route::patch('/my-notifications', [StaffNotificationController::class, 'update'])
+        ->name('my-notifications.update');
+
     Route::middleware('permission:crm-dashboard.view')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 

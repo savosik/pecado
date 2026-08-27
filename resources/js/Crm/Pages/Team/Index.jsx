@@ -5,8 +5,20 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { Badge, Box, HStack, Image, Text } from '@chakra-ui/react';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
-import { LuArchive, LuUndo2 } from 'react-icons/lu';
+import { LuArchive, LuBellRing, LuUndo2 } from 'react-icons/lu';
 import RowActions from '@/shared/Panel/RowActions';
+import StaffNotificationList from '@/Crm/Components/StaffNotificationList';
+import { Button } from '@/components/ui/button';
+import {
+    DrawerBackdrop,
+    DrawerBody,
+    DrawerCloseTrigger,
+    DrawerContent,
+    DrawerFooter,
+    DrawerHeader,
+    DrawerRoot,
+    DrawerTitle,
+} from '@/components/ui/drawer';
 
 /**
  * Команда: карточки персональных менеджеров.
@@ -17,6 +29,10 @@ import RowActions from '@/shared/Panel/RowActions';
  */
 export default function Index() {
     const { managers, canEdit = false } = usePage().props;
+    // Настройки уведомлений сотрудника: открываются из строки, потому что
+    // отдельной карточки сотрудника в разделе нет и заводить её ради одного
+    // экрана незачем.
+    const [notificationsFor, setNotificationsFor] = useState(null);
     const [hideFor, setHideFor] = useState(null);
     const [busy, setBusy] = useState(false);
 
@@ -83,6 +99,12 @@ export default function Index() {
                 <RowActions
                     size="xs"
                     extra={[
+                        ...(row.account ? [{
+                            key: 'notifications',
+                            icon: LuBellRing,
+                            label: 'Какие письма получает этот сотрудник',
+                            onClick: () => setNotificationsFor(row),
+                        }] : []),
                         row.is_active
                             ? {
                                 key: 'hide',
@@ -127,6 +149,31 @@ export default function Index() {
                 isLoading={busy}
                 colorPalette="red"
             />
+
+            <DrawerRoot
+                open={!!notificationsFor}
+                onOpenChange={(e) => !e.open && setNotificationsFor(null)}
+                size="md"
+            >
+                <DrawerBackdrop />
+                <DrawerContent>
+                    <DrawerHeader>
+                        <DrawerTitle>
+                            Уведомления: {notificationsFor?.name}
+                        </DrawerTitle>
+                    </DrawerHeader>
+                    <DrawerBody>
+                        {notificationsFor && (
+                            <StaffNotificationList managerId={notificationsFor.id} />
+                        )}
+                    </DrawerBody>
+                    <DrawerFooter>
+                        <DrawerCloseTrigger asChild>
+                            <Button variant="outline" size="sm">Закрыть</Button>
+                        </DrawerCloseTrigger>
+                    </DrawerFooter>
+                </DrawerContent>
+            </DrawerRoot>
         </>
     );
 }

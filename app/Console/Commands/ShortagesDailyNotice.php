@@ -79,6 +79,10 @@ class ShortagesDailyNotice extends Command
                 continue;
             }
 
+            if (! app(\App\Services\Notifications\StaffNotifications::class)->wants($recipient, 'staff.shortage_digest')) {
+                continue;
+            }
+
             $recipient->notify(new DailyShortageNoticeNotification(
                 items: $items,
                 amount: (float) $group['amount'],

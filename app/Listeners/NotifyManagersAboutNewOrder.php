@@ -49,6 +49,12 @@ class NotifyManagersAboutNewOrder
         // Каждому — своё письмо: список в одном `to` показал бы получателям
         // адреса друг друга, а резервных адресов может быть несколько.
         foreach ($recipients as $recipient) {
+            // Менеджер может отписаться у себя в «Моих уведомлениях».
+            // Фолбэк-ящик отдела учётки не имеет — ему письмо уходит всегда.
+            if (! app(\App\Services\Notifications\StaffNotifications::class)->wantsByEmail($recipient, 'staff.order_created')) {
+                continue;
+            }
+
             Notification::route('mail', $recipient)
                 ->notify(new NewOrderForManagerNotification($primary));
         }

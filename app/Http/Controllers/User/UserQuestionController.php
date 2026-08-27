@@ -66,7 +66,15 @@ class UserQuestionController extends Controller
         // права, а не почту, и любая новая роль у сотрудника молча подписывала бы
         // его на переписку с клиентами. Пустой список — письма не уходят, вопрос
         // всё равно виден в админке.
+        $staff = app(\App\Services\Notifications\StaffNotifications::class);
+
         foreach (config('notifications.mail.user_question_recipients', []) as $recipient) {
+            // Сотрудник может отписаться у себя в «Моих уведомлениях».
+            // Общий ящик отдела учётки не имеет — ему письмо уходит всегда.
+            if (! $staff->wantsByEmail($recipient, 'staff.question_received')) {
+                continue;
+            }
+
             Notification::route('mail', $recipient)
                 ->notify(new NewQuestionAdminNotification($question));
         }

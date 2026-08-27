@@ -95,6 +95,8 @@ export const menuConfig: MenuGroup[] = [
         icon: LuMail,
         items: [
             { label: "Письма", icon: LuMail, path: "/crm/emails", permission: "crm-emails.view" },
+            // Без права: свои настройки правит каждый, у кого есть доступ в CRM.
+            { label: "Мои уведомления", icon: LuBellRing, path: "/crm/my-notifications" },
         ],
     },
     {

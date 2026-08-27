@@ -404,6 +404,10 @@ class CrmTaskService
             ->get();
 
         foreach ($watchers as $watcher) {
+            if (! app(\App\Services\Notifications\StaffNotifications::class)->wants($watcher, 'staff.task_watched')) {
+                continue;
+            }
+
             $watcher->notify(new WatchedTaskEventNotification($task, $event, $detail));
         }
     }
@@ -425,7 +429,9 @@ class CrmTaskService
         }
 
         $task->loadMissing('assignee');
-        $task->assignee->notify(new TaskAssignedNotification($task));
+        if (app(\App\Services\Notifications\StaffNotifications::class)->wants($task->assignee, 'staff.task_assigned')) {
+            $task->assignee->notify(new TaskAssignedNotification($task));
+        }
     }
 
     /**
@@ -445,6 +451,10 @@ class CrmTaskService
             ->get();
 
         foreach ($recipients as $recipient) {
+            if (! app(\App\Services\Notifications\StaffNotifications::class)->wants($recipient, 'staff.task_assigned')) {
+                continue;
+            }
+
             $recipient->notify(new TaskAssignedNotification($task));
         }
     }
