@@ -646,9 +646,12 @@ class ContactController extends CrmController
             'client_id' => $validated['client_id'] ?? null,
             'company_id' => $validated['company_id'] ?? null,
             'activity' => $validated['activity'] ?? 'active',
-            'with_email' => (bool) ($validated['with_email'] ?? false),
-            'with_phone' => (bool) ($validated['with_phone'] ?? false),
-            'with_birthday' => (bool) ($validated['with_birthday'] ?? false),
+            // Снимок уходит на фронт и возвращается тем же запросом. Булево `false`
+            // приехало бы строкой «false», которую правило boolean не принимает,
+            // и первый же клик по фильтру заканчивался бы 422 — поэтому 1 или null.
+            'with_email' => ($validated['with_email'] ?? false) ? 1 : null,
+            'with_phone' => ($validated['with_phone'] ?? false) ? 1 : null,
+            'with_birthday' => ($validated['with_birthday'] ?? false) ? 1 : null,
             'sort' => $validated['sort'] ?? 'name',
             'direction' => $validated['direction'] ?? 'asc',
             'per_page' => min(max((int) ($validated['per_page'] ?? 25), 10), 100),

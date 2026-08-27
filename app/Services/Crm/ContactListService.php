@@ -172,6 +172,7 @@ class ContactListService
             'email' => $contact->email,
             'phone' => $contact->phone,
             'telegram' => $contact->telegram,
+            'whatsapp' => $contact->whatsapp,
             'preferred_channel' => $contact->preferred_channel?->value,
             'preferred_channel_label' => $contact->preferred_channel?->label(),
             'birthday_label' => $this->birthdayLabel($contact),

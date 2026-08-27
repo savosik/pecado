@@ -14,7 +14,7 @@ import DuplicatesPanel from '@/Crm/Pages/Contacts/components/DuplicatesPanel';
 import RowActions from '@/shared/Panel/RowActions';
 import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
 import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
-import { LuCake, LuCopy, LuDownload, LuMail, LuPhone, LuSparkles, LuUserPlus } from 'react-icons/lu';
+import { LuCake, LuCopy, LuDownload, LuMail, LuMessageCircle, LuPhone, LuSend, LuSparkles, LuUserPlus } from 'react-icons/lu';
 
 const selectStyle = {
     padding: '0.5rem',
@@ -122,6 +122,12 @@ export default function Index({
                     )}
                     {row.email && (
                         <HStack gap={1}><LuMail size={12} /><Text fontSize="xs">{row.email}</Text></HStack>
+                    )}
+                    {row.telegram && (
+                        <HStack gap={1}><LuSend size={12} /><Text fontSize="xs">{row.telegram}</Text></HStack>
+                    )}
+                    {row.whatsapp && (
+                        <HStack gap={1}><LuMessageCircle size={12} /><Text fontSize="xs">{row.whatsapp}</Text></HStack>
                     )}
                     {row.preferred_channel_label && (
                         <Text fontSize="xs" color="fg.muted">предпочитает: {row.preferred_channel_label}</Text>

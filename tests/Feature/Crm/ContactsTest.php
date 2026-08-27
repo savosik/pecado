@@ -107,6 +107,24 @@ class ContactsTest extends TestCase
     }
 
     #[Test]
+    public function filters_snapshot_survives_the_round_trip(): void
+    {
+        // Фронт отправляет обратно то, что получил в filters. Булево false
+        // уехало бы строкой «false» и упёрлось бы в правило boolean — 422.
+        Contact::factory()->forClient($this->client)->create(['email' => null]);
+
+        $filters = $this->props(['with_email' => 1, 'role' => 'buyer'])['filters'];
+
+        $this->assertSame(1, $filters['with_email']);
+        $this->assertNull($filters['with_phone']);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.contacts.index', $filters))
+            ->assertOk()
+            ->assertSessionHasNoErrors();
+    }
+
+    #[Test]
     public function inactive_contacts_are_hidden_by_default(): void
     {
         Contact::factory()->forClient($this->client)->create(['full_name' => 'Работает']);

@@ -248,6 +248,23 @@ class ManagerSheetImportTest extends TestCase
     }
 
     #[Test]
+    public function short_names_are_completed_from_the_partner_card(): void
+    {
+        $this->import($this->document(['contacts' => [
+            ['full_name' => 'Владимир Зольников', 'role' => 'manager', 'phone' => '+7 900 000-00-01'],
+            ['full_name' => 'Владимир', 'role' => 'owner', 'phone' => '+7 900 000-00-02'],
+            ['full_name' => 'Владимир', 'role' => 'manager', 'phone' => '+7 900 000-00-03'],
+            ['full_name' => 'Ольга', 'role' => 'owner', 'phone' => '+7 900 000-00-04'],
+        ]]));
+
+        // «Владимир Зольников» и собственник «Владимир» — один человек: после
+        // достройки имени второй нашёл первого и дополнил его, а не задвоил.
+        $names = Contact::query()->orderBy('phone')->pluck('full_name')->all();
+
+        $this->assertSame(['Зольников Владимир Алексеевич', 'Владимир', 'Ольга'], $names);
+    }
+
+    #[Test]
     public function dry_run_counts_but_writes_nothing(): void
     {
         $report = $this->import($this->document(), dryRun: true);

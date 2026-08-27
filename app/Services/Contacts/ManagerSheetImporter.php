@@ -377,6 +377,8 @@ class ManagerSheetImporter
     private function applyContacts(array $row, User $client, User $author, bool $overwrite, ManagerSheetReport $report): void
     {
         foreach ($this->people($row) as $person) {
+            $person['full_name'] = $this->expandName((string) $person['full_name'], $client, ContactRole::tryFrom((string) ($person['role'] ?? '')));
+
             $contact = $this->findExisting($client, $person);
             $isNew = $contact === null;
 
@@ -431,6 +433,48 @@ class ManagerSheetImporter
         }
 
         return $people;
+    }
+
+    /**
+     * Полное ФИО из карточки партнёра, когда таблица записала человека коротко.
+     *
+     * «Иван Князев» у партнёра «Князев Иван Валерьевич ИП» — тот же человек,
+     * и отчество берётся из 1С, а не выдумывается. Одно имя («Дмитрий»)
+     * достраивается только у собственника: у ИП контактное лицо с именем
+     * владельца — обычно сам владелец, а у ООО это ни о чём не говорит.
+     */
+    private function expandName(string $name, User $client, ?ContactRole $role): string
+    {
+        $full = app(PersonNameParser::class)->parse((string) ($client->erp_name ?: $client->name));
+
+        if ($full === null) {
+            return $name;
+        }
+
+        $words = preg_split('/\s+/u', trim($name)) ?: [];
+        $fullWords = preg_split('/\s+/u', $full) ?: [];
+
+        if (count($fullWords) < 3) {
+            return $name;
+        }
+
+        $lower = fn (string $word): string => mb_strtolower(str_replace('ё', 'е', $word));
+        [$surname, $firstName] = [$lower($fullWords[0]), $lower($fullWords[1])];
+        $given = array_map($lower, $words);
+        sort($given);
+
+        $pair = [$surname, $firstName];
+        sort($pair);
+
+        if (count($words) === 2 && $given === $pair) {
+            return $full;
+        }
+
+        if (count($words) === 1 && $given[0] === $firstName && $role === ContactRole::OWNER) {
+            return $full;
+        }
+
+        return $name;
     }
 
     /**
