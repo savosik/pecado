@@ -23,6 +23,7 @@ import {
     LuCalendarCheck,
     LuUserPlus,
     LuFileDown,
+    LuFilePen,
     LuPackageX,
     LuBellRing,
     LuHistory,
@@ -164,6 +165,9 @@ export const menuConfig: MenuGroup[] = [
             // что и у журналов выше: «вижу партнёра, но не вижу его документы»
             // это состояние, которого быть не должно.
             { label: "Печатные формы", icon: LuFileDown, path: "/crm/printed-documents", permission: "crm-clients.view", feature: "documents_crm_enabled" },
+            // Реестр договоров: своё право — раздел заведён взамен Google-таблицы,
+            // и выдавать его нужно тем же, кто вёл таблицу.
+            { label: "Договоры", icon: LuFilePen, path: "/crm/contracts", permission: "crm-contracts.view" },
         ],
     },
     {

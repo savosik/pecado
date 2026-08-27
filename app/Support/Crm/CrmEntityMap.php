@@ -4,6 +4,7 @@ namespace App\Support\Crm;
 
 use App\Models\Company;
 use App\Models\Contact;
+use App\Models\Contract;
 use App\Models\CrmCall;
 use App\Models\CrmComment;
 use App\Models\CrmEmail;
@@ -87,6 +88,15 @@ final class CrmEntityMap
     public const PRINTED_DOCUMENT = 'printed_document';
 
     /**
+     * Договор из реестра отдела продаж (эпик contracts).
+     *
+     * В карте он ради задач («дожать подпись до пятницы»), комментариев
+     * («ЭДО у них не работает») и сканов. Партнёра договор знает сам —
+     * `user_id` денормализован с контрагента при сохранении.
+     */
+    public const CONTRACT = 'contract';
+
+    /**
      * Строковый тип для API → класс модели.
      *
      * @var array<string, class-string<Model>>
@@ -104,6 +114,7 @@ final class CrmEntityMap
         self::LEAD => CrmLead::class,
         self::CONTACT => Contact::class,
         self::PRINTED_DOCUMENT => PrintedDocument::class,
+        self::CONTRACT => Contract::class,
     ];
 
     /**
@@ -124,6 +135,7 @@ final class CrmEntityMap
         self::LEAD => 'Лид',
         self::CONTACT => 'Контакт',
         self::PRINTED_DOCUMENT => 'Печатная форма',
+        self::CONTRACT => 'Договор',
     ];
 
     /**
@@ -237,7 +249,7 @@ final class CrmEntityMap
             // чем оно привязано к партнёру. Такой контрагент комментируется, но
             // в ленту партнёра не идёт — попадать ей некуда.
             self::CONTRACTOR, self::ORDER, self::SHIPMENT, self::PAYMENT,
-            self::PRINTED_DOCUMENT => $entity->getAttribute('user_id'),
+            self::PRINTED_DOCUMENT, self::CONTRACT => $entity->getAttribute('user_id'),
             // Комментарий и задача уже знают своего партнёра — денормализация из crm-01.
             self::COMMENT, self::TASK, self::EMAIL, self::CALL, self::CONTACT => $entity->getAttribute('client_user_id'),
             // Лид сводится к партнёру только после конверсии: до неё
@@ -298,6 +310,13 @@ final class CrmEntityMap
             self::EMAIL => 'Письмо: '.$entity->getAttribute('subject'),
             self::CALL => 'Звонок от '.($entity->getAttribute('started_at')?->format('d.m.Y H:i') ?? '—'),
             self::CONTACT => (string) $entity->getAttribute('full_name'),
+            // Номер и контрагент: «Договор № 12-Т/2024 — Ромашка ООО». Один номер
+            // без стороны в списке задач не узнаётся.
+            self::CONTRACT => 'Договор '.$entity->getAttribute('number').(
+                filled($entity->getAttribute('counterparty_name'))
+                    ? ' — '.$entity->getAttribute('counterparty_name')
+                    : ''
+            ),
             self::PRINTED_DOCUMENT => trim(
                 ($entity->getAttribute('type')?->label() ?? 'Документ')
                 .($entity->getAttribute('number') ? ' № '.$entity->getAttribute('number') : '')
@@ -342,6 +361,10 @@ final class CrmEntityMap
 
         if ($type === self::CONTACT) {
             return route('crm.contacts.show', $entity->getKey());
+        }
+
+        if ($type === self::CONTRACT) {
+            return route('crm.contracts.show', $entity->getKey());
         }
 
         // Своей страницы у печатной формы нет — она живёт строкой в журнале.

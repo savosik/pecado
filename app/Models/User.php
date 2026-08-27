@@ -359,6 +359,16 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
+     * Договоры реестра, заведённые на партнёра (по любому из его юрлиц).
+     *
+     * @return HasMany<Contract, $this>
+     */
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(Contract::class);
+    }
+
+    /**
      * Get the delivery addresses for the user.
      */
     public function deliveryAddresses(): HasMany

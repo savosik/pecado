@@ -4,6 +4,7 @@ namespace App\Services\Crm;
 
 use App\Models\Company;
 use App\Models\Contact;
+use App\Models\Contract;
 use App\Models\CrmComment;
 use App\Models\CrmLead;
 use App\Models\CrmTask;
@@ -89,6 +90,12 @@ class CrmEntityResolver
         // (водитель перевозчика) доступна только тому, кто видит всю базу,
         // а правило ниже отдало бы её каждому, у кого есть видимость отдела.
         if ($entity instanceof Contact) {
+            return $actor->can('view', $entity);
+        }
+
+        // Договор — отдельный раздел со своим правом; договор без партнёра
+        // (иностранный поставщик) политика отдаёт только видящим отдел.
+        if ($entity instanceof Contract) {
             return $actor->can('view', $entity);
         }
 

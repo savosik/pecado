@@ -197,6 +197,26 @@ class Company extends Model
     }
 
     /**
+     * Реализации, проведённые на это юрлицо.
+     *
+     * @return HasMany<Shipment, $this>
+     */
+    public function shipments(): HasMany
+    {
+        return $this->hasMany(Shipment::class);
+    }
+
+    /**
+     * Договоры реестра, подписанные с этим юрлицом.
+     *
+     * @return HasMany<Contract, $this>
+     */
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(Contract::class);
+    }
+
+    /**
      * Задачи CRM, поставленные по этому контрагенту.
      *
      * @return \Illuminate\Database\Eloquent\Relations\MorphMany<CrmTask, $this>

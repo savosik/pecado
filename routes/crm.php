@@ -11,6 +11,8 @@ use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientProfileController;
 use App\Http\Controllers\Crm\CommentController;
 use App\Http\Controllers\Crm\ContactController;
+use App\Http\Controllers\Crm\ContractCategoryController;
+use App\Http\Controllers\Crm\ContractController;
 use App\Http\Controllers\Crm\ContractorController;
 use App\Http\Controllers\Crm\DashboardController;
 use App\Http\Controllers\Crm\DocumentController;
@@ -450,6 +452,43 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::delete('/contacts/{contact}', [ContactController::class, 'destroy'])
             ->name('contacts.destroy')
             ->whereNumber('contact');
+    });
+
+    // Реестр договоров. Категории — вкладки реестра, их ведёт тот, кто вправе
+    // править договоры. «Без договора» — контрагенты с реализациями или
+    // заказами, по которым в реестре нет действующего договора.
+    // Статические сегменты строго до /{contract}.
+    Route::middleware('permission:crm-contracts.view')->group(function () {
+        Route::get('/contracts', [ContractController::class, 'index'])->name('contracts.index');
+        Route::get('/contracts/missing', [ContractController::class, 'missing'])->name('contracts.missing');
+        Route::get('/contracts/entities', [ContractController::class, 'entities'])->name('contracts.entities');
+        Route::get('/contracts/{contract}', [ContractController::class, 'show'])
+            ->name('contracts.show')
+            ->whereNumber('contract');
+    });
+
+    Route::middleware('permission:crm-contracts.create')->group(function () {
+        Route::post('/contracts', [ContractController::class, 'store'])->name('contracts.store');
+    });
+
+    Route::middleware('permission:crm-contracts.edit')->group(function () {
+        Route::patch('/contracts/{contract}', [ContractController::class, 'update'])
+            ->name('contracts.update')
+            ->whereNumber('contract');
+        Route::post('/contract-categories', [ContractCategoryController::class, 'store'])
+            ->name('contract-categories.store');
+        Route::patch('/contract-categories/{category}', [ContractCategoryController::class, 'update'])
+            ->name('contract-categories.update')
+            ->whereNumber('category');
+    });
+
+    Route::middleware('permission:crm-contracts.delete')->group(function () {
+        Route::delete('/contracts/{contract}', [ContractController::class, 'destroy'])
+            ->name('contracts.destroy')
+            ->whereNumber('contract');
+        Route::delete('/contract-categories/{category}', [ContractCategoryController::class, 'destroy'])
+            ->name('contract-categories.destroy')
+            ->whereNumber('category');
     });
 
     // Письма. Отправка гейтится фича-флагом MAIL_FEATURE_CRM_OUTBOUND,
