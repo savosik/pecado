@@ -1,27 +1,24 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import axios from 'axios';
 import { Head, router } from '@inertiajs/react';
 import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
+import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
+import { usePermission } from '@/shared/Panel/usePermission';
+import { toastError, toastSuccess } from '@/utils/toast';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { DataTable } from '@/Admin/Components/DataTable';
 import { SearchInput } from '@/Admin/Components/SearchInput';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import ScopeToggle from '@/Crm/Components/ScopeToggle';
 import ContractForm from '@/Crm/Components/ContractForm';
 import ContractsTabs from '@/Crm/Pages/Contracts/components/ContractsTabs';
 import CategoryManager from '@/Crm/Pages/Contracts/components/CategoryManager';
+import QuickSelect from '@/Crm/Pages/Contracts/components/QuickSelect';
 import RowActions from '@/shared/Panel/RowActions';
 import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
 import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
-import { LuFilePlus, LuFolderCog, LuListChecks, LuPaperclip } from 'react-icons/lu';
-
-const selectStyle = {
-    padding: '0.5rem',
-    borderRadius: '0.375rem',
-    border: '1px solid var(--chakra-colors-border)',
-    minWidth: '160px',
-};
+import { LuFilePlus, LuFolderCog, LuListChecks, LuPaperclip, LuX } from 'react-icons/lu';
 
 /**
  * Реестр договоров.
@@ -47,6 +44,41 @@ export default function Index({
 }) {
     const [creating, setCreating] = useState(!!preselect?.create);
     const [managingCategories, setManagingCategories] = useState(false);
+    const { can: hasPermission } = usePermission();
+    const canAttach = hasPermission('crm-attachments.create');
+    const quick = !!can.edit;
+
+    // Скрепка в строке: один скрытый input на таблицу, цель — договор,
+    // по которому кликнули. Файлы уходят по одному, как в AttachmentPanel.
+    const fileInput = useRef(null);
+    const [attachTarget, setAttachTarget] = useState(null);
+    const pickFiles = (row) => { setAttachTarget(row); fileInput.current?.click(); };
+    const uploadFiles = async (event) => {
+        const files = Array.from(event.target.files || []);
+        event.target.value = '';
+        if (!files.length || !attachTarget) return;
+        let uploaded = 0;
+        for (const file of files) {
+            const form = new FormData();
+            form.append('entity_type', 'contract');
+            form.append('entity_id', attachTarget.id);
+            form.append('file', file);
+            try {
+                await axios.post(route('crm.attachments.store'), form, { headers: { 'Content-Type': 'multipart/form-data' } });
+                uploaded += 1;
+            } catch (e) {
+                toastError(`Файл «${file.name}» не загружен`, e?.response?.data?.errors?.file?.[0] || e?.response?.data?.message || 'Попробуйте ещё раз.');
+            }
+        }
+        if (uploaded) {
+            toastSuccess(uploaded === 1 ? 'Скан прикреплён' : `Прикреплено файлов: ${uploaded}`);
+            router.reload({ only: ['contracts'], preserveScroll: true });
+        }
+    };
+
+    const categoryOptions = categories.filter((item) => item.is_active !== false).map((item) => ({ value: item.id, label: item.name }));
+    const managerOptions = managers.map((item) => ({ value: item.id, label: item.name }));
+    const activeFilters = ['status', 'payment_terms', 'form', 'manager_id', 'expiring'].filter((key) => filters[key]);
 
     const del = useConfirmDelete({
         title: 'Удалить договор?',
@@ -66,12 +98,12 @@ export default function Index({
             key: 'number',
             label: 'Договор',
             render: (_, row) => (
-                <VStack align="start" gap={0}>
+                <VStack align="start" gap={1}>
                     <Text fontSize="sm" fontWeight="600">{row.number}</Text>
-                    <Text fontSize="xs" color="fg.muted">
-                        {row.date ? `от ${row.date}` : 'без даты'}
-                        {row.category ? ` · ${row.category.name}` : ''}
-                    </Text>
+                    <Text fontSize="xs" color="fg.muted">{row.date ? `от ${row.date}` : 'без даты'}</Text>
+                    {quick
+                        ? <QuickSelect contractId={row.id} field="category_id" value={row.category?.id} options={categoryOptions} width="160px" />
+                        : (row.category && <Text fontSize="xs" color="fg.muted">{row.category.name}</Text>)}
                 </VStack>
             ),
         },
@@ -93,7 +125,9 @@ export default function Index({
             label: 'Статус',
             render: (_, row) => (
                 <VStack align="start" gap={1}>
-                    <Badge size="sm" colorPalette={row.status_color}>{row.status_label}</Badge>
+                    {quick
+                        ? <QuickSelect contractId={row.id} field="status" value={row.status} options={statuses} width="140px" />
+                        : <Badge size="sm" colorPalette={row.status_color}>{row.status_label}</Badge>}
                     {row.signed_at && <Text fontSize="xs" color="fg.muted">подписан {row.signed_at}</Text>}
                 </VStack>
             ),
@@ -101,13 +135,18 @@ export default function Index({
         {
             key: 'terms',
             label: 'Оплата / форма',
-            render: (_, row) => (
+            render: (_, row) => (quick ? (
+                <VStack align="start" gap={1}>
+                    <QuickSelect contractId={row.id} field="payment_terms" value={row.payment_terms} options={paymentTerms} placeholder="Оплата —" width="140px" />
+                    <QuickSelect contractId={row.id} field="form" value={row.form} options={forms} placeholder="Форма —" width="140px" />
+                </VStack>
+            ) : (
                 <HStack gap={1} flexWrap="wrap">
                     {row.payment_terms_label && <Badge size="sm" variant="subtle" colorPalette={row.payment_terms_color}>{row.payment_terms_label}</Badge>}
                     {row.form_label && <Badge size="sm" variant="outline" colorPalette={row.form_color}>{row.form_label}</Badge>}
                     {!row.payment_terms_label && !row.form_label && <Text fontSize="xs" color="fg.muted">—</Text>}
                 </HStack>
-            ),
+            )),
         },
         {
             key: 'valid_until',
@@ -125,7 +164,9 @@ export default function Index({
         {
             key: 'manager',
             label: 'Ответственный',
-            render: (_, row) => <Text fontSize="sm">{row.manager?.name || '—'}</Text>,
+            render: (_, row) => (quick
+                ? <QuickSelect contractId={row.id} field="responsible_manager_id" value={row.manager?.id} options={managerOptions} placeholder="Не назначен" width="150px" />
+                : <Text fontSize="sm">{row.manager?.name || '—'}</Text>),
         },
         {
             key: 'extras',
@@ -150,6 +191,7 @@ export default function Index({
                     size="xs"
                     view={{ href: route('crm.contracts.show', row.id) }}
                     edit={{ href: route('crm.contracts.show', { contract: row.id, edit: 1 }), allowed: !!can.edit }}
+                    extra={[{ icon: LuPaperclip, label: 'Прикрепить скан', onClick: () => pickFiles(row), allowed: canAttach }]}
                     delete={{ onClick: () => del.request(row), allowed: !!can.delete }}
                 />
             ),
@@ -200,64 +242,53 @@ export default function Index({
                 )}
 
                 {creating && (
-                    <Box borderWidth="1px" borderRadius="lg" p={4}>
-                        <ContractForm
-                            categories={categories.filter((item) => item.is_active !== false)}
-                            statuses={statuses}
-                            paymentTerms={paymentTerms}
-                            forms={forms}
-                            managers={managers}
-                            initialCategoryId={filters.category_id}
-                            initialCompany={preselect?.company || null}
-                            initialClient={preselect?.client || null}
-                            onSaved={(saved) => { setCreating(false); router.visit(route('crm.contracts.show', saved.id)); }}
-                            onCancel={() => setCreating(false)}
-                        />
-                    </Box>
+                    <ContractForm
+                        open
+                        categories={categories.filter((item) => item.is_active !== false)}
+                        statuses={statuses}
+                        paymentTerms={paymentTerms}
+                        forms={forms}
+                        managers={managers}
+                        initialCategoryId={filters.category_id}
+                        initialCompany={preselect?.company || null}
+                        initialClient={preselect?.client || null}
+                        onSaved={(saved) => { setCreating(false); router.visit(route('crm.contracts.show', saved.id)); }}
+                        onCancel={() => setCreating(false)}
+                    />
                 )}
 
-                <HStack gap={3} flexWrap="wrap" align="center">
-                    <Box flex="1" minW="240px">
-                        <SearchInput
-                            value={filters.search || ''}
-                            onChange={(value) => apply({ search: value || undefined })}
-                            placeholder="Номер, контрагент, ИНН, партнёр, комментарий…"
-                        />
-                    </Box>
-
-                    <select value={filters.status || ''} onChange={(e) => apply({ status: e.target.value || undefined })} style={selectStyle}>
-                        <option value="">Любой статус</option>
-                        {statuses.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                    </select>
-
-                    <select value={filters.payment_terms || ''} onChange={(e) => apply({ payment_terms: e.target.value || undefined })} style={selectStyle}>
-                        <option value="">Любая оплата</option>
-                        {paymentTerms.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                    </select>
-
-                    <select value={filters.form || ''} onChange={(e) => apply({ form: e.target.value || undefined })} style={selectStyle}>
-                        <option value="">Любая форма</option>
-                        {forms.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                    </select>
-
-                    {canFilterByManager && (
-                        <select value={filters.manager_id || ''} onChange={(e) => apply({ manager_id: e.target.value || undefined })} style={selectStyle}>
-                            <option value="">Любой ответственный</option>
-                            {managers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                        </select>
-                    )}
-
-                    <ScopeToggle section="contracts" scope={filters.scope} available={canSeeDepartment} />
-                </HStack>
-
-                <HStack gap={4} flexWrap="wrap">
-                    <Checkbox
-                        checked={!!filters.expiring}
-                        onCheckedChange={(e) => apply({ expiring: e.checked ? 1 : undefined })}
-                    >
-                        Истекают в ближайшие {expiringDays} дн. или уже истекли
-                    </Checkbox>
-                </HStack>
+                <Box bg="bg.subtle" borderWidth="1px" borderRadius="lg" px={3} py={2}>
+                    <HStack gap={2} flexWrap="wrap" align="center">
+                        <Box flex="1" minW="220px">
+                            <SearchInput
+                                value={filters.search || ''}
+                                onChange={(value) => apply({ search: value || undefined })}
+                                placeholder="Номер, контрагент, ИНН, партнёр…"
+                            />
+                        </Box>
+                        <FilterSelect value={filters.status} onChange={(v) => apply({ status: v })} placeholder="Статус" options={statuses} />
+                        <FilterSelect value={filters.payment_terms} onChange={(v) => apply({ payment_terms: v })} placeholder="Оплата" options={paymentTerms} />
+                        <FilterSelect value={filters.form} onChange={(v) => apply({ form: v })} placeholder="Форма" options={forms} />
+                        {canFilterByManager && (
+                            <FilterSelect value={filters.manager_id} onChange={(v) => apply({ manager_id: v })} placeholder="Ответственный" options={managerOptions} width="170px" />
+                        )}
+                        <Button
+                            size="sm"
+                            variant={filters.expiring ? 'solid' : 'outline'}
+                            colorPalette={filters.expiring ? 'orange' : 'gray'}
+                            onClick={() => apply({ expiring: filters.expiring ? undefined : 1 })}
+                            title={`Истекают в ближайшие ${expiringDays} дн. или уже истекли`}
+                        >
+                            Истекают
+                        </Button>
+                        <ScopeToggle section="contracts" scope={filters.scope} available={canSeeDepartment} />
+                        {activeFilters.length > 0 && (
+                            <Button size="sm" variant="ghost" onClick={() => apply({ status: undefined, payment_terms: undefined, form: undefined, manager_id: undefined, expiring: undefined })}>
+                                <LuX /> Сбросить
+                            </Button>
+                        )}
+                    </HStack>
+                </Box>
 
                 <DataTable
                     data={contracts.data}
@@ -267,8 +298,24 @@ export default function Index({
                 />
             </VStack>
 
+            <input ref={fileInput} type="file" multiple hidden onChange={uploadFiles} accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx" />
             <ConfirmDialog {...del.dialogProps} />
         </>
+    );
+}
+
+/**
+ * Фильтр-выпадашка панели: пустое значение = «любой», подпись — сам
+ * placeholder, чтобы ряд фильтров читался как набор коротких чипов.
+ */
+function FilterSelect({ value, onChange, placeholder, options, width = '140px' }) {
+    return (
+        <NativeSelectRoot size="sm" width={width}>
+            <NativeSelectField value={value || ''} onChange={(e) => onChange(e.target.value || undefined)}>
+                <option value="">{placeholder}</option>
+                {options.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </NativeSelectField>
+        </NativeSelectRoot>
     );
 }
 

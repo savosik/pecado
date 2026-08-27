@@ -1,26 +1,37 @@
 import { useState } from 'react';
 import axios from 'axios';
-import { Box, HStack, Input, SimpleGrid, Text, Textarea, VStack } from '@chakra-ui/react';
+import { Box, Dialog, HStack, Input, Portal, SimpleGrid, Text, Textarea, VStack } from '@chakra-ui/react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Field } from '@/components/ui/field';
+import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
 import { EntitySelector } from '@/Admin/Components/EntitySelector';
 import { toastError, toastSuccess } from '@/utils/toast';
 
-const controlStyle = {
-    padding: '0.5rem',
-    borderRadius: '0.375rem',
-    border: '1px solid var(--chakra-colors-border)',
-    width: '100%',
-};
+/**
+ * Заголовок секции формы: тонкая линия с подписью, чтобы 14 полей читались
+ * блоками «документ → стороны → подписание → срок», а не сплошной простынёй.
+ */
+function Section({ title, children }) {
+    return (
+        <Box>
+            <Text fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide" color="fg.muted" mb={2}>
+                {title}
+            </Text>
+            {children}
+        </Box>
+    );
+}
 
 /**
- * Форма договора — одна на создание и правку.
+ * Форма договора — одна на создание и правку, открывается диалогом.
  *
  * Контрагент выбирается из базы; если юрлица в базе нет (иностранный
  * поставщик), сторону вписывают текстом. Партнёр подтягивается с контрагента
  * сам, выбирать его нужно только для договора без юрлица.
  */
 export default function ContractForm({
+    open,
     contract = null,
     categories = [],
     statuses = [],
@@ -102,12 +113,23 @@ export default function ContractForm({
         }
     };
 
-    const field = (key, label, control) => (
-        <Box>
-            <Text fontSize="xs" color="fg.muted" mb={1}>{label}</Text>
+    const field = (key, label, control, extra = {}) => (
+        <Field label={label} invalid={!!errorOf(key)} errorText={errorOf(key)} {...extra}>
             {control}
-            {errorOf(key) && <Text fontSize="xs" color="red.500" mt={1}>{errorOf(key)}</Text>}
-        </Box>
+        </Field>
+    );
+
+    const select = (key, options, placeholder = null) => (
+        <NativeSelectRoot size="sm">
+            <NativeSelectField value={form[key]} onChange={(e) => patch({ [key]: e.target.value })}>
+                {placeholder !== null && <option value="">{placeholder}</option>}
+                {options}
+            </NativeSelectField>
+        </NativeSelectRoot>
+    );
+
+    const dateInput = (key) => (
+        <Input size="sm" type="date" value={form[key]} onChange={(e) => patch({ [key]: e.target.value })} />
     );
 
     const renderEntity = (item) => (
@@ -118,128 +140,129 @@ export default function ContractForm({
     );
 
     return (
-        <VStack align="stretch" gap={4}>
-            <SimpleGrid columns={{ base: 1, md: 3 }} gap={3}>
-                {field('category_id', 'Категория (вкладка)', (
-                    <select
-                        value={form.category_id}
-                        onChange={(e) => patch({ category_id: e.target.value })}
-                        style={controlStyle}
-                    >
-                        {categories.map((item) => (
-                            <option key={item.id} value={item.id}>{item.name}{item.is_active === false ? ' (отключена)' : ''}</option>
-                        ))}
-                    </select>
-                ))}
-                {field('number', 'Номер договора', (
-                    <Input size="sm" value={form.number} onChange={(e) => patch({ number: e.target.value })} placeholder="№ 12-Т/2024" />
-                ))}
-                {field('date', 'Дата договора', (
-                    <Input size="sm" type="date" value={form.date} onChange={(e) => patch({ date: e.target.value })} />
-                ))}
-            </SimpleGrid>
+        <Dialog.Root open={open} onOpenChange={(e) => { if (!e.open) onCancel?.(); }} size="lg" scrollBehavior="inside">
+            <Portal>
+                <Dialog.Backdrop />
+                <Dialog.Positioner>
+                    <Dialog.Content maxW="720px">
+                        <Dialog.Header>
+                            <Dialog.Title>{contract ? `Договор ${contract.number}` : 'Новый договор'}</Dialog.Title>
+                        </Dialog.Header>
 
-            <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-                {field('company_id', 'Контрагент (юрлицо из базы)', (
-                    <EntitySelector
-                        value={company}
-                        onChange={setCompany}
-                        searchUrl={route('crm.contracts.entities')}
-                        searchParams={{ type: 'contractor' }}
-                        placeholder="Название, ИНН…"
-                        renderItem={renderEntity}
-                    />
-                ))}
-                {company
-                    ? field('client_id', 'Партнёр', (
-                        <Text fontSize="sm" py={2} color="fg.muted">Подтянется с контрагента</Text>
-                    ))
-                    : field('client_id', 'Партнёр (если договор без юрлица)', (
-                        <EntitySelector
-                            value={client}
-                            onChange={setClient}
-                            searchUrl={route('crm.contracts.entities')}
-                            searchParams={{ type: 'client' }}
-                            placeholder="Имя, почта, телефон…"
-                            renderItem={renderEntity}
-                        />
-                    ))}
-            </SimpleGrid>
+                        <Dialog.Body>
+                            <VStack align="stretch" gap={5}>
+                                <Section title="Документ">
+                                    <SimpleGrid columns={{ base: 1, sm: 2 }} gap={3}>
+                                        {field('number', 'Номер договора', (
+                                            <Input size="sm" value={form.number} onChange={(e) => patch({ number: e.target.value })} placeholder="№ 12-Т/2024" autoFocus />
+                                        ), { required: true })}
+                                        {field('date', 'Дата договора', dateInput('date'))}
+                                        {field('category_id', 'Категория', select('category_id', categories.map((item) => (
+                                            <option key={item.id} value={item.id}>{item.name}{item.is_active === false ? ' (отключена)' : ''}</option>
+                                        ))))}
+                                        {field('responsible_manager_id', 'Ответственный', select(
+                                            'responsible_manager_id',
+                                            managers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>),
+                                            'Не назначен',
+                                        ))}
+                                    </SimpleGrid>
+                                </Section>
 
-            {!company && field('counterparty_name', 'Название стороны текстом (если юрлица нет в базе)', (
-                <Input
-                    size="sm"
-                    value={form.counterparty_name}
-                    onChange={(e) => patch({ counterparty_name: e.target.value })}
-                    placeholder="Loma Inc., Андрей-К ТОО…"
-                />
-            ))}
+                                <Section title="Стороны">
+                                    <VStack align="stretch" gap={3}>
+                                        {field('company_id', 'Контрагент', (
+                                            <EntitySelector
+                                                value={company}
+                                                onChange={setCompany}
+                                                searchUrl={route('crm.contracts.entities')}
+                                                searchParams={{ type: 'contractor' }}
+                                                placeholder="Юрлицо из базы: название, ИНН…"
+                                                renderItem={renderEntity}
+                                            />
+                                        ), { helperText: company ? 'Партнёр подтянется с контрагента' : null })}
+                                        {!company && (
+                                            <SimpleGrid columns={{ base: 1, sm: 2 }} gap={3}>
+                                                {field('counterparty_name', 'Или сторона текстом', (
+                                                    <Input
+                                                        size="sm"
+                                                        value={form.counterparty_name}
+                                                        onChange={(e) => patch({ counterparty_name: e.target.value })}
+                                                        placeholder="Loma Inc., Андрей-К ТОО…"
+                                                    />
+                                                ), { helperText: 'Если юрлица нет в базе' })}
+                                                {field('client_id', 'Партнёр', (
+                                                    <EntitySelector
+                                                        value={client}
+                                                        onChange={setClient}
+                                                        searchUrl={route('crm.contracts.entities')}
+                                                        searchParams={{ type: 'client' }}
+                                                        placeholder="Имя, почта, телефон…"
+                                                        renderItem={renderEntity}
+                                                    />
+                                                ))}
+                                            </SimpleGrid>
+                                        )}
+                                    </VStack>
+                                </Section>
 
-            <SimpleGrid columns={{ base: 1, md: 4 }} gap={3}>
-                {field('status', 'Статус подписания', (
-                    <select value={form.status} onChange={(e) => patch({ status: e.target.value })} style={controlStyle}>
-                        {statuses.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                    </select>
-                ))}
-                {field('signed_at', 'Дата подписания', (
-                    <Input size="sm" type="date" value={form.signed_at} onChange={(e) => patch({ signed_at: e.target.value })} />
-                ))}
-                {field('payment_terms', 'Вариант оплаты', (
-                    <select value={form.payment_terms} onChange={(e) => patch({ payment_terms: e.target.value })} style={controlStyle}>
-                        <option value="">Не указан</option>
-                        {paymentTerms.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                    </select>
-                ))}
-                {field('form', 'Форма (скан / оригинал / ЭДО)', (
-                    <select value={form.form} onChange={(e) => patch({ form: e.target.value })} style={controlStyle}>
-                        <option value="">Не указана</option>
-                        {forms.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                    </select>
-                ))}
-            </SimpleGrid>
+                                <Section title="Подписание и оплата">
+                                    <SimpleGrid columns={{ base: 1, sm: 2 }} gap={3}>
+                                        {field('status', 'Статус', select('status', statuses.map((item) => (
+                                            <option key={item.value} value={item.value}>{item.label}</option>
+                                        ))))}
+                                        {field('signed_at', 'Дата подписания', dateInput('signed_at'))}
+                                        {field('payment_terms', 'Вариант оплаты', select(
+                                            'payment_terms',
+                                            paymentTerms.map((item) => <option key={item.value} value={item.value}>{item.label}</option>),
+                                            'Не указан',
+                                        ))}
+                                        {field('form', 'Форма', select(
+                                            'form',
+                                            forms.map((item) => <option key={item.value} value={item.value}>{item.label}</option>),
+                                            'Не указана',
+                                        ))}
+                                    </SimpleGrid>
+                                </Section>
 
-            <SimpleGrid columns={{ base: 1, md: 3 }} gap={3}>
-                {field('valid_from', 'Действует с', (
-                    <Input size="sm" type="date" value={form.valid_from} onChange={(e) => patch({ valid_from: e.target.value })} />
-                ))}
-                {field('valid_until', 'Действует до (пусто — бессрочный)', (
-                    <Input size="sm" type="date" value={form.valid_until} onChange={(e) => patch({ valid_until: e.target.value })} />
-                ))}
-                {field('responsible_manager_id', 'Ответственный менеджер', (
-                    <select
-                        value={form.responsible_manager_id}
-                        onChange={(e) => patch({ responsible_manager_id: e.target.value })}
-                        style={controlStyle}
-                    >
-                        <option value="">Не назначен</option>
-                        {managers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                    </select>
-                ))}
-            </SimpleGrid>
+                                <Section title="Срок действия">
+                                    <SimpleGrid columns={{ base: 1, sm: 2 }} gap={3}>
+                                        {field('valid_from', 'Действует с', dateInput('valid_from'))}
+                                        {field('valid_until', 'Действует до', dateInput('valid_until'), { helperText: 'Пусто — бессрочный' })}
+                                    </SimpleGrid>
+                                </Section>
 
-            {field('comment', 'Комментарий', (
-                <Textarea
-                    size="sm"
-                    rows={2}
-                    value={form.comment}
-                    onChange={(e) => patch({ comment: e.target.value })}
-                    placeholder="Не работает ЭДО, организация закрыта…"
-                />
-            ))}
+                                <VStack align="stretch" gap={3}>
+                                    {field('comment', 'Комментарий', (
+                                        <Textarea
+                                            size="sm"
+                                            rows={2}
+                                            value={form.comment}
+                                            onChange={(e) => patch({ comment: e.target.value })}
+                                            placeholder="Не работает ЭДО, организация закрыта…"
+                                        />
+                                    ))}
+                                    <Checkbox
+                                        size="sm"
+                                        checked={!!form.is_visible_in_cabinet}
+                                        onCheckedChange={(e) => patch({ is_visible_in_cabinet: !!e.checked })}
+                                    >
+                                        Показывать партнёру в личном кабинете
+                                    </Checkbox>
+                                </VStack>
+                            </VStack>
+                        </Dialog.Body>
 
-            <Checkbox
-                checked={!!form.is_visible_in_cabinet}
-                onCheckedChange={(e) => patch({ is_visible_in_cabinet: !!e.checked })}
-            >
-                Показывать партнёру в личном кабинете
-            </Checkbox>
-
-            <HStack gap={2} justify="flex-end">
-                {onCancel && <Button size="sm" variant="ghost" onClick={onCancel} disabled={saving}>Отмена</Button>}
-                <Button size="sm" onClick={save} loading={saving}>
-                    {contract ? 'Сохранить' : 'Завести договор'}
-                </Button>
-            </HStack>
-        </VStack>
+                        <Dialog.Footer>
+                            <HStack gap={2}>
+                                <Button size="sm" variant="ghost" onClick={onCancel} disabled={saving}>Отмена</Button>
+                                <Button size="sm" onClick={save} loading={saving}>
+                                    {contract ? 'Сохранить' : 'Завести договор'}
+                                </Button>
+                            </HStack>
+                        </Dialog.Footer>
+                    </Dialog.Content>
+                </Dialog.Positioner>
+            </Portal>
+        </Dialog.Root>
     );
 }

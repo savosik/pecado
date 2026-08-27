@@ -475,6 +475,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::patch('/contracts/{contract}', [ContractController::class, 'update'])
             ->name('contracts.update')
             ->whereNumber('contract');
+        Route::patch('/contracts/{contract}/quick', [ContractController::class, 'quick'])
+            ->name('contracts.quick')
+            ->whereNumber('contract');
         Route::post('/contract-categories', [ContractCategoryController::class, 'store'])
             ->name('contract-categories.store');
         Route::patch('/contract-categories/{category}', [ContractCategoryController::class, 'update'])

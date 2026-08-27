@@ -77,23 +77,20 @@ export default function Show({
             />
 
             <VStack align="stretch" gap={4}>
-                {editing ? (
-                    <Card.Root>
-                        <Card.Body>
-                            <ContractForm
-                                contract={contract}
-                                categories={categories}
-                                statuses={statuses}
-                                paymentTerms={paymentTerms}
-                                forms={forms}
-                                managers={managers}
-                                onSaved={() => { setEditing(false); router.reload(); }}
-                                onCancel={() => setEditing(false)}
-                            />
-                        </Card.Body>
-                    </Card.Root>
-                ) : (
-                    <Card.Root>
+                {editing && (
+                    <ContractForm
+                        open
+                        contract={contract}
+                        categories={categories}
+                        statuses={statuses}
+                        paymentTerms={paymentTerms}
+                        forms={forms}
+                        managers={managers}
+                        onSaved={() => { setEditing(false); router.reload(); }}
+                        onCancel={() => setEditing(false)}
+                    />
+                )}
+                <Card.Root>
                         <Card.Body>
                             <HStack gap={2} mb={4} flexWrap="wrap">
                                 <Badge colorPalette={contract.status_color}>{contract.status_label}</Badge>
@@ -152,7 +149,6 @@ export default function Show({
                             )}
                         </Card.Body>
                     </Card.Root>
-                )}
 
                 {/* Сканы, задачи и комментарии — общие панели CRM: договор в CrmEntityMap. */}
                 <EntityCrmPanel entityType="contract" entityId={contract.id} title="Сканы, задачи и комментарии" />

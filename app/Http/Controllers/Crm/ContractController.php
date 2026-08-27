@@ -185,6 +185,54 @@ class ContractController extends CrmController
         ])));
     }
 
+    /**
+     * Быстрая правка из строки реестра: статус, оплата, форма, категория,
+     * ответственный — по одному полю, без полной формы.
+     *
+     * Отдельный метод, а не update(): у полной формы `number` и `category_id`
+     * обязательны, и одиночный PATCH статуса упирался бы в «укажите номер».
+     * Статус «подписан» без даты подписания получает сегодняшнюю: в таблице
+     * менеджеров дата подписания не велась вовсе, а пустая колонка у подписанного
+     * договора читается как «не подписан».
+     */
+    public function quick(Request $request, Contract $contract): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        $this->assertVisible($actor, $contract);
+        Gate::authorize('update', $contract);
+
+        $validated = $request->validate([
+            'status' => ['sometimes', 'required', Rule::enum(ContractStatus::class)],
+            'payment_terms' => ['sometimes', 'nullable', Rule::enum(ContractPaymentTerms::class)],
+            'form' => ['sometimes', 'nullable', Rule::enum(ContractForm::class)],
+            'category_id' => ['sometimes', 'required', 'integer', 'exists:contract_categories,id'],
+            'responsible_manager_id' => ['sometimes', 'nullable', 'integer', 'exists:personal_managers,id'],
+        ], [
+            'status.required' => 'Укажите статус подписания.',
+            'category_id.required' => 'Выберите категорию.',
+            'category_id.exists' => 'Такой категории нет.',
+            'responsible_manager_id.exists' => 'Такого менеджера нет.',
+        ]);
+
+        if ($validated === []) {
+            throw ValidationException::withMessages(['status' => 'Нечего менять.']);
+        }
+
+        $contract->fill($validated);
+
+        if ($contract->status === ContractStatus::SIGNED && $contract->signed_at === null) {
+            $contract->signed_at = now()->toDateString();
+        }
+
+        $contract->updated_by_user_id = $actor->getKey();
+        $contract->save();
+
+        return response()->json($this->payload($contract->fresh([
+            'category:id,name', 'user:id,name,erp_name,email', 'company:id,user_id,name,legal_name,tax_id,tax_code',
+            'responsibleManager:id,name', 'createdBy:id,name',
+        ])));
+    }
+
     public function destroy(Request $request, Contract $contract): JsonResponse
     {
         $actor = $this->crmActor($request);

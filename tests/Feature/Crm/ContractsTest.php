@@ -319,6 +319,36 @@ class ContractsTest extends TestCase
     }
 
     #[Test]
+    public function quick_edit_changes_one_field_and_dates_the_signature(): void
+    {
+        // Из строки реестра меняют один статус — полная форма с обязательным
+        // номером здесь мешала бы. Подписанный договор без даты получает сегодняшнюю.
+        $contract = Contract::factory()->create([
+            'category_id' => $this->category->id,
+            'company_id' => $this->company->id,
+            'user_id' => $this->client->id,
+            'status' => 'sent',
+            'signed_at' => null,
+        ]);
+
+        $this->actingAs($this->manager)
+            ->patchJson(route('crm.contracts.quick', $contract), ['status' => 'signed'])
+            ->assertOk()
+            ->assertJsonPath('status_label', 'Подписан')
+            ->assertJsonPath('signed_at', now()->format('d.m.Y'));
+
+        $this->actingAs($this->manager)
+            ->patchJson(route('crm.contracts.quick', $contract), ['payment_terms' => 'nonsense'])
+            ->assertStatus(422);
+
+        $this->actingAs($this->manager)
+            ->patchJson(route('crm.contracts.quick', $contract), [])
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('contracts', ['id' => $contract->id, 'status' => 'signed']);
+    }
+
+    #[Test]
     public function without_permission_the_section_is_closed(): void
     {
         $role = \Spatie\Permission\Models\Role::findByName('sales-manager');
