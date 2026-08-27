@@ -14,19 +14,29 @@
  * Ключ, которого здесь нет, письма не порождает. Это и защита от опечатки
  * в доменном коде, и способ выключить повод, не трогая место, где он случается.
  */
+// Клиентские уведомления по умолчанию ВЫКЛЮЧЕНЫ. Решение заказчика 27.08.2026:
+// «в матрицах клиентов просто отключи получение писем, мы потом будем настраивать
+// каждому индивидуально».
+//
+// Сделано умолчанием, а не записью строк каждому: ноль строк в базе, новые
+// партнёры из 1С выключены сразу, откат — одна правка здесь. Партнёры, которым
+// уведомление включили руками, от смены умолчания не страдают: у них своя строка.
+//
+// Внутренние поводы (адресат — менеджер) остаются включёнными: ослепить отдел
+// продаж заодно с клиентами не просили.
 return [
     'orders.created' => [
         'label' => 'Оформлен заказ',
         'subject' => 'Заказ {{order_number}} принят',
         'default_destinations' => [['type' => 'login']],
-        'default_enabled' => true,
+        'default_enabled' => false,
         'client_visible' => true,
     ],
     'orders.status_changed' => [
         'label' => 'Смена статуса заказа',
         'subject' => 'Заказ {{order_number}}: {{status_label}}',
         'default_destinations' => [['type' => 'login']],
-        'default_enabled' => true,
+        'default_enabled' => false,
         'client_visible' => true,
         // Подтип уведомления: о каких именно статусах писать. Клиенту интересны
         // переходы, которые он видит физически; остальные шесть — внутренняя
@@ -44,14 +54,14 @@ return [
         'label' => 'Изменился состав заказа',
         'subject' => 'Заказ {{order_number}}: изменился состав',
         'default_destinations' => [['type' => 'login']],
-        'default_enabled' => true,
+        'default_enabled' => false,
         'client_visible' => true,
     ],
     'orders.attributes_updated' => [
         'label' => 'Изменились реквизиты заказа',
         'subject' => 'Заказ {{order_number}}: изменились реквизиты',
         'default_destinations' => [['type' => 'login']],
-        'default_enabled' => true,
+        'default_enabled' => false,
         'client_visible' => true,
     ],
     'orders.shortfall' => [
@@ -65,14 +75,14 @@ return [
         'label' => 'Подобрана замена по недобору',
         'subject' => 'Заказ {{order_number}}: подобрали замену',
         'default_destinations' => [['type' => 'login']],
-        'default_enabled' => true,
+        'default_enabled' => false,
         'client_visible' => true,
     ],
     'orders.shipped' => [
         'label' => 'Отгрузка по заказу',
         'subject' => 'Заказ {{order_number}}: отгружен',
         'default_destinations' => [['type' => 'login']],
-        'default_enabled' => true,
+        'default_enabled' => false,
         'client_visible' => true,
     ],
 
@@ -87,7 +97,7 @@ return [
         ],
         'subject' => '{{document_title}} — Pecado.ru',
         'default_destinations' => [['type' => 'login']],
-        'default_enabled' => true,
+        'default_enabled' => false,
         'client_visible' => true,
     ],
     'documents.deleted' => [
@@ -131,14 +141,14 @@ return [
         'label' => 'Оформлен возврат',
         'subject' => 'Возврат {{order_number}} принят',
         'default_destinations' => [['type' => 'login']],
-        'default_enabled' => true,
+        'default_enabled' => false,
         'client_visible' => true,
     ],
     'system.return_status_changed' => [
         'label' => 'Смена статуса возврата',
         'subject' => 'Возврат {{order_number}}: изменился статус',
         'default_destinations' => [['type' => 'login']],
-        'default_enabled' => true,
+        'default_enabled' => false,
         'client_visible' => true,
     ],
     'system.question_received' => [

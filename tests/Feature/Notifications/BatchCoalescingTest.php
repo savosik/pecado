@@ -24,6 +24,7 @@ use Tests\TestCase;
 class BatchCoalescingTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Feature\Concerns\EnablesClientNotifications;
 
     private User $client;
 
@@ -44,6 +45,8 @@ class BatchCoalescingTest extends TestCase
             'mail_stream.autosend' => false,
             'mail_stream.batch_seconds' => 180,
         ]);
+
+        $this->enableNotificationsFor($this->client);
     }
 
     private function statusLetter(string $orderNumber, string $status = 'shipping', ?User $client = null): ?CrmEmail
@@ -94,6 +97,7 @@ class BatchCoalescingTest extends TestCase
             'personal_manager_id' => $this->client->personal_manager_id,
             'email' => 'other@example.com',
         ]);
+        $this->enableNotificationsFor($other);
 
         $this->statusLetter('1001');
         $this->statusLetter('1002', client: $other);
@@ -127,11 +131,11 @@ class BatchCoalescingTest extends TestCase
     #[Test]
     public function невостребованный_повод_письма_не_создаёт(): void
     {
-        NotificationPreference::query()->create([
-            'user_id' => $this->client->id,
-            'occasion_key' => 'orders.status_changed',
-            'is_enabled' => false,
-        ]);
+        NotificationPreference::query()->updateOrCreate(
+            ['user_id' => $this->client->id, 'occasion_key' => 'orders.status_changed'],
+            [
+                'is_enabled' => false,
+            ]);
 
         $this->statusLetter('1001');
 

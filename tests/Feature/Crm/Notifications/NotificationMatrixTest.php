@@ -54,8 +54,12 @@ class NotificationMatrixTest extends TestCase
         $rows = collect($response->json('rows'))->keyBy('key');
 
         $this->assertCount(count(config('mail_occasions')), $rows);
-        $this->assertTrue($rows['orders.created']['enabled']);
+        // Клиентские уведомления выключены умолчанием: начинаем с тишины
+        // и настраиваем каждому партнёру индивидуально.
+        $this->assertFalse($rows['orders.created']['enabled']);
         $this->assertFalse($rows['orders.created']['overridden']);
+        // Внутренние остались включёнными — отдел продаж не ослепляем.
+        $this->assertTrue($rows['finance.overdue_started']['enabled']);
         $this->assertSame('login', $rows['orders.created']['destinations'][0]['type']);
         $this->assertSame('status', $rows['orders.status_changed']['subtype']['field']);
         $this->assertSame('document_type', $rows['documents.published']['subtype']['field']);
@@ -86,13 +90,15 @@ class NotificationMatrixTest extends TestCase
         NotificationPreference::query()->create([
             'user_id' => $this->client->id,
             'occasion_key' => 'orders.created',
-            'is_enabled' => false,
+            'is_enabled' => true,
+            'destinations' => [['type' => 'login']],
         ]);
 
+        // Возврат к умолчанию — теперь это «выключено».
         $this->actingAs($this->manager)
             ->patchJson(route('crm.clients.notifications.update', $this->client), [
                 'occasion_key' => 'orders.created',
-                'is_enabled' => true,
+                'is_enabled' => false,
                 'destinations' => [['type' => 'login']],
             ])
             ->assertOk();

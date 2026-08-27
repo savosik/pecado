@@ -29,6 +29,7 @@ class MailNavigationTest extends TestCase
 {
     use RefreshDatabase;
     use RestrictsManagersToOwnClients;
+    use \Tests\Feature\Concerns\EnablesClientNotifications;
 
     private User $manager;
 
@@ -50,6 +51,8 @@ class MailNavigationTest extends TestCase
         ]);
 
         config(['mail_stream.enabled' => true]);
+
+        $this->enableNotificationsFor($this->client);
     }
 
     private function documentLetter(): CrmEmail

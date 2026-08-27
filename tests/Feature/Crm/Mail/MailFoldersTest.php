@@ -25,6 +25,7 @@ class MailFoldersTest extends TestCase
 {
     use RefreshDatabase;
     use RestrictsManagersToOwnClients;
+    use \Tests\Feature\Concerns\EnablesClientNotifications;
 
     private User $manager;
 
@@ -46,6 +47,8 @@ class MailFoldersTest extends TestCase
             'mail_stream.enabled' => true,
             'notifications.mail.features.crm_outbound' => true,
         ]);
+
+        $this->enableNotificationsFor($this->client);
     }
 
     private function props(array $query = []): array

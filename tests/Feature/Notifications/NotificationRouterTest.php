@@ -57,9 +57,36 @@ class NotificationRouterTest extends TestCase
     }
 
     #[Test]
-    public function без_настройки_действует_умолчание(): void
+    public function по_умолчанию_клиент_не_получает_ничего(): void
     {
+        // Решение заказчика 27.08.2026: сначала тишина, потом настройка каждому
+        // партнёру индивидуально. Сделано умолчанием, а не строками в базе —
+        // новые партнёры из 1С выключены сразу.
+        foreach (['orders.created', 'orders.status_changed', 'documents.published'] as $key) {
+            $this->assertSame([], $this->router->addressesFor($this->occasion($key)), $key);
+        }
+    }
+
+    #[Test]
+    public function включённое_вручную_уведомление_адресуется(): void
+    {
+        $this->prefer('orders.created', ['destinations' => [['type' => 'login']]]);
+
         $this->assertSame(['client@example.com'], $this->router->addressesFor($this->occasion()));
+    }
+
+    #[Test]
+    public function внутренние_уведомления_остались_включёнными(): void
+    {
+        // Ослеплять отдел продаж заодно с клиентами не просили: о просрочке
+        // менеджер узнаёт по-прежнему.
+        $manager = PersonalManager::factory()->create(['email' => 'manager@pecado.ru']);
+        $this->client->forceFill(['personal_manager_id' => $manager->id])->save();
+
+        $this->assertSame(
+            ['manager@pecado.ru'],
+            $this->router->addressesFor($this->occasion('finance.overdue_started')),
+        );
     }
 
     #[Test]
@@ -228,10 +255,14 @@ class NotificationRouterTest extends TestCase
     #[Test]
     public function статус_вне_набора_письма_не_порождает(): void
     {
+        // Уведомление включено вручную: умолчание теперь «выключено».
+        $this->prefer('orders.status_changed', ['destinations' => [['type' => 'login']]]);
+
         $shipping = $this->occasion('orders.status_changed', ['status' => 'shipping']);
         $closure = $this->occasion('orders.status_changed', ['status' => 'ready_for_closure']);
 
-        // Умолчание — три «физических» статуса; «Готов к закрытию» внутренний.
+        // Набор статусов — из умолчания повода: три «физических» перехода;
+        // «Готов к закрытию» внутренний и в почту клиента не идёт.
         $this->assertSame(['client@example.com'], $this->router->addressesFor($shipping));
         $this->assertSame([], $this->router->addressesFor($closure));
     }

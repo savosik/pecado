@@ -26,6 +26,7 @@ class MailLegacyConflictTest extends TestCase
 {
     use RefreshDatabase;
     use RestrictsManagersToOwnClients;
+    use \Tests\Feature\Concerns\EnablesClientNotifications;
 
     private User $manager;
 
@@ -55,6 +56,7 @@ class MailLegacyConflictTest extends TestCase
             'notifications.mail.features.crm_outbound' => true,
         ]);
 
+        $this->enableNotificationsFor($this->client);
     }
 
     private function statusLetter(): CrmEmail

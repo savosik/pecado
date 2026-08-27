@@ -23,6 +23,7 @@ use Tests\TestCase;
 class MailStreamTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Feature\Concerns\EnablesClientNotifications;
 
     private User $manager;
 
@@ -42,6 +43,8 @@ class MailStreamTest extends TestCase
         ]);
 
         config(['mail_stream.enabled' => true]);
+
+        $this->enableNotificationsFor($this->client);
     }
 
     private function capture(array $overrides = []): ?CrmEmail

@@ -28,6 +28,7 @@ use Tests\TestCase;
 class MailDeliveryLedgerTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Feature\Concerns\EnablesClientNotifications;
 
     private User $manager;
 
@@ -53,6 +54,8 @@ class MailDeliveryLedgerTest extends TestCase
             'mail_stream.notifications_live' => true,
             'notifications.mail.features.crm_outbound' => true,
         ]);
+
+        $this->enableNotificationsFor($this->client);
     }
 
     private function letter(): CrmEmail
@@ -72,16 +75,16 @@ class MailDeliveryLedgerTest extends TestCase
         // Письмо обязано уйти на него ровно один раз.
         config(['mail_stream.autosend' => true, 'mail_stream.notifications_live' => true]);
 
-        \App\Models\NotificationPreference::query()->create([
-            'user_id' => $this->client->id,
-            'occasion_key' => 'documents.published',
-            'is_enabled' => true,
-            'destinations' => [
-                ['type' => 'email', 'email' => 'buh@romashka.ru'],
-                ['type' => 'email', 'email' => 'BUH@romashka.ru'],
-                ['type' => 'email', 'email' => 'dir@romashka.ru'],
-            ],
-        ]);
+        \App\Models\NotificationPreference::query()->updateOrCreate(
+            ['user_id' => $this->client->id, 'occasion_key' => 'documents.published'],
+            [
+                'is_enabled' => true,
+                'destinations' => [
+                    ['type' => 'email', 'email' => 'buh@romashka.ru'],
+                    ['type' => 'email', 'email' => 'BUH@romashka.ru'],
+                    ['type' => 'email', 'email' => 'dir@romashka.ru'],
+                ],
+            ]);
 
         $letter = $this->letter();
 
@@ -112,12 +115,12 @@ class MailDeliveryLedgerTest extends TestCase
     {
         // Задание очереди повторяется при сбое сети: если письмо успело уйти,
         // а результат записаться не успел, клиент не должен получить его дважды.
-        \App\Models\NotificationPreference::query()->create([
-            'user_id' => $this->client->id,
-            'occasion_key' => 'documents.published',
-            'is_enabled' => true,
-            'destinations' => [['type' => 'email', 'email' => 'buh@romashka.ru']],
-        ]);
+        \App\Models\NotificationPreference::query()->updateOrCreate(
+            ['user_id' => $this->client->id, 'occasion_key' => 'documents.published'],
+            [
+                'is_enabled' => true,
+                'destinations' => [['type' => 'email', 'email' => 'buh@romashka.ru']],
+            ]);
 
         $letter = $this->letter();
         $this->assertSame(EmailStatus::SENT, $letter->status);
@@ -138,12 +141,12 @@ class MailDeliveryLedgerTest extends TestCase
         // не получает, новый — получает.
         config(['mail_stream.autosend' => false]);
 
-        \App\Models\NotificationPreference::query()->create([
-            'user_id' => $this->client->id,
-            'occasion_key' => 'documents.published',
-            'is_enabled' => true,
-            'destinations' => [['type' => 'email', 'email' => 'dir@romashka.ru']],
-        ]);
+        \App\Models\NotificationPreference::query()->updateOrCreate(
+            ['user_id' => $this->client->id, 'occasion_key' => 'documents.published'],
+            [
+                'is_enabled' => true,
+                'destinations' => [['type' => 'email', 'email' => 'dir@romashka.ru']],
+            ]);
 
         $letter = $this->letter();
         $ledger = app(\App\Services\Crm\Mail\MailDeliveryLedger::class);
