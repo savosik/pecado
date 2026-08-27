@@ -78,8 +78,24 @@ class ContactListService
 
             $query->where(function (Builder $inner) use ($search, $digits) {
                 $inner->where('full_name', 'like', "%{$search}%")
+                    ->orWhere('greeting_name', 'like', "%{$search}%")
                     ->orWhere('position', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('telegram', 'like', "%{$search}%")
+                    ->orWhere('notes', 'like', "%{$search}%")
+                    // Менеджер помнит не человека, а чей он: «тихонов» должен
+                    // найти Оксану, которая у ИП Тихонова, — по партнёру и по
+                    // юрлицу, к которому она привязана.
+                    ->orWhereHas('client', fn (Builder $client) => $client
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('erp_name', 'like', "%{$search}%"))
+                    ->orWhereHas('links', fn (Builder $links) => $links
+                        ->where('subject_type', Company::class)
+                        ->whereIn('subject_id', Company::query()
+                            ->withoutGlobalScopes()
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('legal_name', 'like', "%{$search}%")
+                            ->select('id')));
 
                 // Телефон ищем по цифрам: «+7 (912) 345-67-89» и «9123456789» —
                 // один и тот же номер, и человек набирает то одно, то другое.

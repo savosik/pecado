@@ -107,6 +107,29 @@ class ContactsTest extends TestCase
     }
 
     #[Test]
+    public function search_finds_people_by_partner_contractor_and_telegram(): void
+    {
+        $this->client->update(['erp_name' => 'Тихонов Игорь Алексеевич ИП, г.Москва']);
+        $company = Company::factory()->create(['user_id' => $this->client->id, 'name' => 'Ромашка ООО', 'legal_name' => 'ООО «Ромашка»']);
+
+        $oksana = Contact::factory()->forClient($this->client)->create(['full_name' => 'Оксана', 'telegram' => '@oksana_t']);
+        $buh = Contact::factory()->forClient($this->client)->create(['full_name' => 'Мария', 'telegram' => null]);
+        ContactLink::factory()->create([
+            'contact_id' => $buh->id, 'subject_type' => Company::class, 'subject_id' => $company->id,
+            'role' => ContactRole::ACCOUNTANT->value, 'client_user_id' => $this->client->id,
+        ]);
+        Contact::factory()->forClient($this->client)->create(['full_name' => 'Посторонний', 'telegram' => null]);
+
+        $names = fn (string $search): array => collect($this->props(['search' => $search])['contacts']['data'])->pluck('full_name')->sort()->values()->all();
+
+        // Заглавная буква сознательно: SQLite в тестах сравнивает кириллицу
+        // в LIKE с учётом регистра, MySQL на проде — без.
+        $this->assertSame(['Мария', 'Оксана', 'Посторонний'], $names('Тихоно'));
+        $this->assertSame(['Мария'], $names('Ромашк'));
+        $this->assertSame(['Оксана'], $names('oksana_t'));
+    }
+
+    #[Test]
     public function filters_snapshot_survives_the_round_trip(): void
     {
         // Фронт отправляет обратно то, что получил в filters. Булево false
