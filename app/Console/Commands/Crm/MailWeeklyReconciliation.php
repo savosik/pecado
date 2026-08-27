@@ -15,7 +15,7 @@ class MailWeeklyReconciliation extends Command
 {
     protected $signature = 'mail:weekly-reconciliation {--dry-run : Только показать, скольким ушло бы}';
 
-    protected $description = 'Собрать понедельничные поводы: сводка актов сверки и напоминание должникам';
+    protected $description = 'Собрать понедельничные поводы: сводка актов сверки и акты для должников';
 
     public function handle(WeeklyReconciliation $source): int
     {
@@ -24,7 +24,7 @@ class MailWeeklyReconciliation extends Command
         $prefix = $this->option('dry-run') ? 'Ушло бы' : 'Собрано';
 
         $this->info("{$prefix} сводок актов за неделю: {$result['summaries']}");
-        $this->info("{$prefix} напоминаний о сверке должникам: {$result['debtors']}");
+        $this->info("{$prefix} актов сверки должникам: {$result['debtors']}");
 
         return self::SUCCESS;
     }

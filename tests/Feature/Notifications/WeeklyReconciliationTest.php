@@ -48,6 +48,21 @@ class WeeklyReconciliationTest extends TestCase
         );
     }
 
+    private function debt(string $kind = 'shipment'): void
+    {
+        $company = \App\Models\Company::factory()->create(['user_id' => $this->client->id]);
+
+        \App\Models\SettlementEntry::factory()->create([
+            'user_id' => $this->client->id,
+            'company_id' => $company->id,
+            'nature' => 'plan',
+            'document_kind' => $kind,
+            'amount' => 5000,
+            'settled_amount' => 0,
+            'date' => now()->subDays(10),
+        ]);
+    }
+
     private function act(int $daysAgo = 1): PrintedDocument
     {
         $doc = PrintedDocument::factory()->create([
@@ -110,15 +125,57 @@ class WeeklyReconciliationTest extends TestCase
     }
 
     #[Test]
-    public function напоминание_должникам_отдельное_событие(): void
+    public function акты_при_долге_отдельное_событие(): void
     {
-        // Подписка на сводку не включает напоминание о долге: это другой
-        // разговор с клиентом, и подписываются на него отдельно.
+        // Подписка на сводку не включает вариант «только при долге»: это
+        // разные строки в матрице, и выбирает клиент.
         $this->subscribe('documents.reconciliation_weekly');
         $this->act(1);
 
         $this->artisan('mail:weekly-reconciliation')->assertSuccessful();
 
-        $this->assertSame(0, CrmEmail::query()->where('origin_event', 'finance.reconciliation_due')->count());
+        $this->assertSame(0, CrmEmail::query()->where('origin_event', 'documents.reconciliation_when_debt')->count());
+    }
+
+    #[Test]
+    public function при_долге_акты_уходят_подписанному(): void
+    {
+        // Отбор «только при долге» — свойство события, а не массовая подписка:
+        // клиент включает строку один раз, а система решает, в какой
+        // понедельник письмо уместно.
+        $this->subscribe('documents.reconciliation_when_debt');
+        $this->act(1);
+        $this->debt();
+
+        $this->artisan('mail:weekly-reconciliation')->assertSuccessful();
+
+        $letter = CrmEmail::query()->where('origin_event', 'documents.reconciliation_when_debt')->firstOrFail();
+
+        $this->assertSame(1, $letter->origin_data['documents_count']);
+        $this->assertGreaterThan(0, $letter->origin_data['overdue_amount']);
+    }
+
+    #[Test]
+    public function без_долга_подписанному_ничего_не_уходит(): void
+    {
+        $this->subscribe('documents.reconciliation_when_debt');
+        $this->act(1);
+
+        $this->artisan('mail:weekly-reconciliation')->assertSuccessful();
+
+        $this->assertSame(0, CrmEmail::query()->where('origin_event', 'documents.reconciliation_when_debt')->count());
+    }
+
+    #[Test]
+    public function план_по_заказу_долгом_не_считается(): void
+    {
+        // Заказ — это план, а не долг: долг создаёт отгрузка.
+        $this->subscribe('documents.reconciliation_when_debt');
+        $this->act(1);
+        $this->debt('order');
+
+        $this->artisan('mail:weekly-reconciliation')->assertSuccessful();
+
+        $this->assertSame(0, CrmEmail::query()->where('origin_event', 'documents.reconciliation_when_debt')->count());
     }
 }

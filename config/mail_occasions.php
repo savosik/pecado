@@ -114,9 +114,9 @@ return [
         'default_enabled' => false,
         'client_visible' => true,
     ],
-    'finance.reconciliation_due' => [
-        'label' => 'Сверка при непогашенном долге',
-        'subject' => 'Сверка расчётов — Pecado.ru',
+    'documents.reconciliation_when_debt' => [
+        'label' => 'Акты сверки — только при долге',
+        'subject' => 'Акты сверки и состояние расчётов — Pecado.ru',
         'default_destinations' => [['type' => 'login']],
         'default_enabled' => false,
         'client_visible' => true,

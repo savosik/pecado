@@ -7,7 +7,6 @@ use App\Models\PrintedDocument;
 use App\Models\SettlementEntry;
 use App\Services\Crm\Mail\MailStream;
 use App\Support\Notifications\Occasion;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -91,19 +90,27 @@ class WeeklyReconciliation
     }
 
     /**
-     * Напоминание о сверке тем, у кого есть непогашенный долг.
+     * Акты сверки тем, у кого есть непогашенный долг.
      *
-     * Отдельное событие, а не условие у сводки: «сверка при долге» — другой
-     * разговор с клиентом, и подписываться на него он решает отдельно.
+     * Отбор «только при долге» — **свойство самого события**, а не настройка
+     * и не массовая подписка. Клиент один раз включает эту строку, и письмо
+     * приходит только в те понедельники, когда долг действительно есть.
+     *
+     * Иначе пришлось бы держать список должников где-то ещё и пересобирать
+     * его по мере изменения — то есть вести вторую правду о том же факте.
      */
     private function debtorReminders(bool $dryRun): int
     {
         $debtors = SettlementEntry::query()
-            ->overdue(Carbon::today())
+            ->outstanding()
+            // Заказ — это план, а не долг: долг создаёт отгрузка. Иначе
+            // просроченный план заказа числился бы долгом навсегда.
+            ->where(fn ($query) => $query->whereNull('document_kind')->orWhere('document_kind', '<>', 'order'))
             ->whereNotNull('user_id')
             ->get(['user_id', 'nature', 'document_kind', 'amount', 'settled_amount', 'amount_rub', 'currency_code', 'date'])
             ->groupBy('user_id');
 
+        $since = now()->subWeek();
         $sent = 0;
 
         foreach ($debtors as $clientId => $lines) {
@@ -119,18 +126,32 @@ class WeeklyReconciliation
                 continue;
             }
 
+            $acts = PrintedDocument::query()
+                ->where('type', PrintedDocumentType::RECONCILIATION_ACT->value)
+                ->where('user_id', $clientId)
+                ->where('created_at', '>=', $since)
+                ->get(['number', 'date']);
+
             $this->stream->captureQuietly(new Occasion(
-                key: 'finance.reconciliation_due',
+                key: 'documents.reconciliation_when_debt',
                 clientUserId: (int) $clientId,
                 data: [
                     'overdue_amount' => $amount,
                     'positions_count' => $lines->count(),
+                    'documents_count' => $acts->count(),
                 ],
                 view: [
-                    'title' => 'Сверка расчётов',
-                    'body' => 'По нашим данным за вами числится непогашенная задолженность. '
-                        .'Акты сверки доступны в личном кабинете — сверьте, пожалуйста, расчёты.',
+                    'title' => 'Акты сверки и состояние расчётов',
+                    'body' => $acts->isEmpty()
+                        ? 'По нашим данным за вами числится непогашенная задолженность. '
+                            .'Акты сверки доступны в личном кабинете — сверьте, пожалуйста, расчёты.'
+                        : 'За неделю мы выложили актов сверки: '.$acts->count()
+                            .'. За вами числится непогашенная задолженность — сверьте, пожалуйста, расчёты.',
                     'url' => url(route('cabinet.documents.index', [], false)),
+                    'rows' => $acts->map(fn ($row): array => [
+                        'kind' => 'note',
+                        'text' => 'Акт сверки № '.$row->number.' от '.($row->date?->format('d.m.Y') ?? '—'),
+                    ])->values()->all(),
                 ],
             ));
 
