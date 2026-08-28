@@ -369,8 +369,6 @@ jobs:
             "MAIL_FEATURE_RETURN_CREATED=false" \
             "MAIL_FEATURE_RETURN_STATUS=false" \
             "MAIL_FEATURE_ENTITY_SUBSCRIPTIONS=false" \
-            "DEBT_CONTROL_ENABLED=true" \
-            "DEBT_CONTROL_MODE=live" \
             "DEBT_CONTROL_LIVE_ACTIONS=gate,tasks,cabinet" \
           ; do
             key="${pair%%=*}"
@@ -412,11 +410,10 @@ jobs:
           sg docker -c 'docker compose exec -T app php artisan route:cache'
           sg docker -c 'docker compose exec -T app php artisan view:cache'
 
-          # Лестница долга (debt-00 v2) на dev в бою: ограничения, задачи и кабинет.
-          # Письма (mail) не включены, пока не подтверждено, что почта стенда идёт
-          # в mailpit, а не реальным клиентам. Пересчёт при каждом деплое —
-          # чтобы стенд показывал лестницу, не дожидаясь ночного 07:10; на проде
-          # только ночной пересчёт (одна ступень за ночь).
+          # Лестница долга (debt-00 v2): домен включён умолчанием конфига; на dev
+          # без писем (mail), пока не подтверждено, что почта стенда идёт в mailpit,
+          # а не реальным клиентам. Пересчёт при деплое — чтобы стенд показывал
+          # состояние сразу, не дожидаясь ночного 07:10.
           sg docker -c 'docker compose exec -T app php artisan debt:recalculate' || true
           sg docker -c 'docker compose exec -T app php artisan optimize'
 

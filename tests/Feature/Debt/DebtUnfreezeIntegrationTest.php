@@ -82,10 +82,8 @@ class DebtUnfreezeIntegrationTest extends TestCase
     public function balance_update_from_bus_lifts_the_level_once_debt_is_settled(): void
     {
         $line = $this->overduePlan(50000, 40);
-        $service = app(DebtStateService::class);
-        $service->recalculate($this->today);
-        $service->recalculate($this->today->addDay());
-        $this->assertSame(DebtLevel::NO_PREORDERS, $this->partnerLevel());
+        app(DebtStateService::class)->recalculate($this->today);
+        $this->assertSame(DebtLevel::NO_ORDERS, $this->partnerLevel());
 
         // 1С разнесла оплату по графику, следом прислала баланс.
         $line->update(['settled_amount' => 50000]);

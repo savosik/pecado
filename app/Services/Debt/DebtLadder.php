@@ -135,14 +135,12 @@ final class DebtLadder
     }
 
     /**
-     * Ужесточение — не больше чем на одну ступень за пересчёт.
+     * Ужесточение — сразу до замеренной ступени (решение заказчика 28.08.2026:
+     * «выкати в конечной точке»). Постепенного спуска по одной ступени за ночь
+     * нет: исключения закрывает разблокировка менеджера до даты, а не механика.
      */
     public function stepDown(DebtLevel $previous, DebtLevel $measured): DebtLevel
     {
-        if (! $measured->isWorseThan($previous)) {
-            return $measured;
-        }
-
-        return DebtLevel::fromRank(min($measured->rank(), $previous->rank() + 1));
+        return $measured;
     }
 }

@@ -20,7 +20,7 @@ use Tests\TestCase;
 
 /**
  * Лестница долга: отсечка, льготный период, возрастные пороги, стоп-отгрузка,
- * одна ступень за раз, гейт свежести, разблокировка, тень и бой.
+ * гейт свежести, разблокировка, тень и бой.
  */
 class DebtStateServiceTest extends TestCase
 {
@@ -86,7 +86,7 @@ class DebtStateServiceTest extends TestCase
     }
 
     #[Test]
-    public function escalates_one_step_per_run_by_age(): void
+    public function level_is_set_by_age_at_once(): void
     {
         [$user, $company] = $this->partner();
         $this->overdueLine($user, $company, 50000, 45);
@@ -95,17 +95,32 @@ class DebtStateServiceTest extends TestCase
 
         $service = $this->service();
 
+        // Без постепенного спуска: 45 дней — сразу «заказы закрыты».
         $service->recalculate($this->today);
-        $this->assertSame(DebtLevel::OVERDUE, $this->partnerLevel($user));
-
-        $service->recalculate($this->today->addDay());
-        $this->assertSame(DebtLevel::NO_PREORDERS, $this->partnerLevel($user));
-
-        $service->recalculate($this->today->addDays(2));
         $this->assertSame(DebtLevel::NO_ORDERS, $this->partnerLevel($user));
 
-        // Дальше некуда: доля просрочки в долге мала.
-        $service->recalculate($this->today->addDays(3));
+        // Повторный пересчёт ничего не меняет и переходов не порождает.
+        $report = $service->recalculate($this->today->addDay());
+        $this->assertSame(DebtLevel::NO_ORDERS, $this->partnerLevel($user));
+        $this->assertSame([], $report['transitions']);
+    }
+
+    #[Test]
+    public function thresholds_by_age(): void
+    {
+        [$user, $first] = $this->partner();
+        $second = Company::factory()->create(['user_id' => $user->id]);
+        $third = Company::factory()->create(['user_id' => $user->id]);
+        $this->overdueLine($user, $first, 50000, 10);
+        $this->overdueLine($user, $second, 50000, 20);
+        $this->overdueLine($user, $third, 50000, 35);
+        $this->fact($user, $first, -500000, 1);
+
+        $this->service()->recalculate($this->today);
+
+        $this->assertSame(DebtLevel::OVERDUE, $this->contractorRow($user, $first)->level);
+        $this->assertSame(DebtLevel::NO_PREORDERS, $this->contractorRow($user, $second)->level);
+        $this->assertSame(DebtLevel::NO_ORDERS, $this->contractorRow($user, $third)->level);
         $this->assertSame(DebtLevel::NO_ORDERS, $this->partnerLevel($user));
     }
 
@@ -115,10 +130,7 @@ class DebtStateServiceTest extends TestCase
         [$user, $company] = $this->partner();
         $this->overdueLine($user, $company, 50000, 70);
 
-        $service = $this->service();
-        foreach (range(0, 3) as $day) {
-            $service->recalculate($this->today->addDays($day));
-        }
+        $this->service()->recalculate($this->today);
 
         $this->assertSame(DebtLevel::HOLD, $this->partnerLevel($user));
         $this->assertSame(DebtLevel::HOLD, $this->contractorRow($user, $company)->level);
@@ -146,8 +158,10 @@ class DebtStateServiceTest extends TestCase
         $this->overdueLine($user, $company, 50000, 40);
         $service = $this->service();
         $service->recalculate($this->today);
-        $this->assertSame(DebtLevel::OVERDUE, $this->partnerLevel($user));
+        $this->assertSame(DebtLevel::NO_ORDERS, $this->partnerLevel($user));
 
+        // Добавилась просрочка на 70 дней — под разблокировкой ступень не растёт.
+        $this->overdueLine($user, $company, 50000, 70);
         DebtPause::create([
             'user_id' => $user->id,
             'company_id' => null,
@@ -157,7 +171,7 @@ class DebtStateServiceTest extends TestCase
         ]);
 
         $service->recalculate($this->today->addDay());
-        $this->assertSame(DebtLevel::OVERDUE, $this->partnerLevel($user));
+        $this->assertSame(DebtLevel::NO_ORDERS, $this->partnerLevel($user));
         $this->assertStringContainsString('разблокировка', $this->contractorRow($user, $company)->reason);
     }
 
@@ -170,8 +184,7 @@ class DebtStateServiceTest extends TestCase
         $line = $this->overdueLine($user, $company, 50000, 40);
         $service = $this->service();
         $service->recalculate($this->today);
-        $service->recalculate($this->today->addDay());
-        $this->assertSame(DebtLevel::NO_PREORDERS, $this->partnerLevel($user));
+        $this->assertSame(DebtLevel::NO_ORDERS, $this->partnerLevel($user));
 
         // Оплата погасила строку — событийный пересчёт снимает ступень сразу.
         $line->update(['settled_amount' => 50000]);
@@ -179,7 +192,7 @@ class DebtStateServiceTest extends TestCase
 
         $this->assertSame(DebtLevel::CLEAN, $this->partnerLevel($user));
         Event::assertDispatched(DebtLevelChanged::class, fn (DebtLevelChanged $event): bool => $event->to === DebtLevel::CLEAN
-            && $event->from === DebtLevel::NO_PREORDERS
+            && $event->from === DebtLevel::NO_ORDERS
             && $event->isRelief());
     }
 
@@ -206,7 +219,7 @@ class DebtStateServiceTest extends TestCase
         $report = $this->service()->recalculate($this->today);
 
         $this->assertTrue($report['dry_run']);
-        $this->assertSame(1, $report['levels']['overdue']);
+        $this->assertSame(1, $report['levels']['no_orders']);
         $this->assertTrue($this->partnerRow($user)->dry_run);
         Event::assertNotDispatched(DebtLevelChanged::class);
     }
@@ -221,16 +234,16 @@ class DebtStateServiceTest extends TestCase
         config(['debt.mode' => 'shadow']);
         $service = $this->service();
         $service->recalculate($this->today);
-        $service->recalculate($this->today->addDay());
-        $this->assertSame(DebtLevel::NO_PREORDERS, $this->partnerLevel($user, live: false));
+        $this->assertSame(DebtLevel::NO_ORDERS, $this->partnerLevel($user, live: false));
 
-        // Включили бой: тень не считается предупреждением — идём заново по ступеням.
+        // Включили бой: тень не считается предупреждением — переход из clean,
+        // письмо о достигнутой ступени уходит один раз.
         config(['debt.mode' => 'live']);
-        $service->recalculate($this->today->addDays(2));
+        $service->recalculate($this->today->addDay());
 
-        $this->assertSame(DebtLevel::OVERDUE, $this->partnerLevel($user));
+        $this->assertSame(DebtLevel::NO_ORDERS, $this->partnerLevel($user));
         $this->assertFalse($this->partnerRow($user)->dry_run);
-        Event::assertDispatched(DebtLevelChanged::class, fn (DebtLevelChanged $event): bool => $event->from === DebtLevel::CLEAN && $event->to === DebtLevel::OVERDUE);
+        Event::assertDispatched(DebtLevelChanged::class, fn (DebtLevelChanged $event): bool => $event->from === DebtLevel::CLEAN && $event->to === DebtLevel::NO_ORDERS);
     }
 
     #[Test]
@@ -242,13 +255,11 @@ class DebtStateServiceTest extends TestCase
         $this->overdueLine($user, $second, 50000, 8);
         $this->fact($user, $first, -300000, 2);
 
-        $service = $this->service();
-        $service->recalculate($this->today);
-        $service->recalculate($this->today->addDay());
+        $this->service()->recalculate($this->today);
 
-        $this->assertSame(DebtLevel::NO_PREORDERS, $this->contractorRow($user, $first)->level);
+        $this->assertSame(DebtLevel::NO_ORDERS, $this->contractorRow($user, $first)->level);
         $this->assertSame(DebtLevel::OVERDUE, $this->contractorRow($user, $second)->level);
-        $this->assertSame(DebtLevel::NO_PREORDERS, $this->partnerLevel($user));
+        $this->assertSame(DebtLevel::NO_ORDERS, $this->partnerLevel($user));
     }
 
     #[Test]
@@ -281,7 +292,7 @@ class DebtStateServiceTest extends TestCase
 
         $explain = $this->service()->explain($user, $this->today);
 
-        $this->assertSame('overdue', $explain['partner']['level']);
+        $this->assertSame('no_orders', $explain['partner']['level']);
         $this->assertCount(1, $explain['contractors']);
         $this->assertSame(5000.0, $explain['thresholds']['min_overdue']);
     }
