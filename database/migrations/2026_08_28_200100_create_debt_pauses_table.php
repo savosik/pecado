@@ -18,14 +18,15 @@ return new class extends Migration
         Schema::create('debt_pauses', function (Blueprint $table) {
             $table->comment('Разблокировки лестницы долга до даты (обещания оплаты)');
             $table->id()->comment('Первичный ключ');
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete()->comment('Партнёр (users.id)');
-            $table->foreignId('company_id')->nullable()->constrained('companies')->nullOnDelete()->comment('Контрагент (companies.id); NULL — разблокировка на партнёра целиком');
+            $table->foreignId('user_id')->comment('Партнёр (users.id)')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('company_id')->nullable()->comment('Контрагент (companies.id); NULL — разблокировка на партнёра целиком')->constrained('companies')->nullOnDelete();
             $table->date('until')->comment('Действует по эту дату включительно');
             $table->string('reason', 500)->comment('Причина — обязательна: что обещал клиент');
-            $table->foreignId('created_by')->constrained('users')->comment('Кто поставил (users.id сотрудника)');
+            $table->foreignId('created_by')->comment('Кто поставил (users.id сотрудника)')->constrained('users');
             $table->timestamp('released_at')->nullable()->comment('Когда снята досрочно или истекла; NULL — действует');
             $table->string('released_reason', 100)->nullable()->comment("Как снята: 'expired' — истекла, 'manual' — снята сотрудником, 'paid' — долг погашен");
-            $table->timestamps();
+            $table->timestamp('created_at')->nullable()->comment('Когда строка создана');
+            $table->timestamp('updated_at')->nullable()->comment('Когда строка менялась последний раз');
 
             $table->index(['user_id', 'until'], 'debt_pauses_user_until_index');
         });

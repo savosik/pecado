@@ -18,8 +18,8 @@ return new class extends Migration
         Schema::create('debt_states', function (Blueprint $table) {
             $table->comment('Ступень лестницы долга по паре партнёр × контрагент; company_id NULL — сводка по партнёру');
             $table->id()->comment('Первичный ключ');
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete()->comment('Партнёр (users.id)');
-            $table->foreignId('company_id')->nullable()->constrained('companies')->cascadeOnDelete()->comment('Контрагент клиента (companies.id); NULL — сводная строка партнёра');
+            $table->foreignId('user_id')->comment('Партнёр (users.id)')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('company_id')->nullable()->comment('Контрагент клиента (companies.id); NULL — сводная строка партнёра')->constrained('companies')->cascadeOnDelete();
             $table->string('level', 20)->default('clean')->comment("Ступень: 'clean' — чисто, 'overdue' — просрочка, 'no_preorders' — предзаказы закрыты, 'no_orders' — заказы контрагента закрыты, 'hold' — стоп всех заказов партнёра");
             $table->string('previous_level', 20)->nullable()->comment('Ступень до последнего перехода — для истории и писем');
             $table->date('since')->nullable()->comment('С какой даты действует текущая ступень (начало эпизода просрочки у ступени overdue)');
@@ -34,7 +34,8 @@ return new class extends Migration
             $table->boolean('is_stale')->default(false)->comment('Баланс 1С устарел — ужесточение запрещено');
             $table->boolean('dry_run')->default(true)->comment('Теневой расчёт: ступень посчитана, действий не было');
             $table->timestamp('computed_at')->nullable()->comment('Когда посчитано');
-            $table->timestamps();
+            $table->timestamp('created_at')->nullable()->comment('Когда строка создана');
+            $table->timestamp('updated_at')->nullable()->comment('Когда строка менялась последний раз');
 
             $table->unique(['user_id', 'company_id'], 'debt_states_pair_unique');
             $table->index(['level', 'dry_run'], 'debt_states_level_index');
