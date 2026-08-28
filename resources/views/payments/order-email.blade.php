@@ -10,6 +10,7 @@
 <div style="{{ $box }}">
     <div><strong>Получатель:</strong> {{ $order->payee['legal_name'] ?: $order->payee['name'] }}, ИНН {{ $order->payee['tax_id'] ?: '—' }}@if($order->payee['tax_code']), КПП {{ $order->payee['tax_code'] }}@endif</div>
     <div><strong>Счёт:</strong> {{ $order->payee['account_number'] }} в {{ $order->payee['bank_name'] ?: '—' }}, БИК {{ $order->payee['bank_bik'] }}</div>
+    @if ($order->contract)<div><strong>Основание:</strong> {{ $order->contract['label'] }}</div>@endif
     <div><strong>Назначение:</strong> {{ $order->purpose }}</div>
 </div>
 @if ($order->documents !== [])

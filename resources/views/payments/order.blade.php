@@ -27,6 +27,9 @@
             <td style="width:70%;vertical-align:top;">
                 <h1>ПЛАТЁЖНОЕ ПОРУЧЕНИЕ № {{ $order->number }}</h1>
                 <div class="muted">от {{ $order->date->format('d.m.Y') }} · {{ $order->scenarioLabel }} · подготовлено на Pecado.ru</div>
+                @if ($order->contract)
+                    <div style="margin-top:3px;font-size:10px;">Основание: {{ $order->contract['label'] }}</div>
+                @endif
                 <div class="muted" style="margin-top:4px;">
                     Заготовка для вашего клиент-банка: реквизиты получателя и назначение уже заполнены.
                     Номер и дату документа проставит ваша бухгалтерия.

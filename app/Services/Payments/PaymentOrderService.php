@@ -4,9 +4,11 @@ namespace App\Services\Payments;
 
 use App\Enums\ContactRole;
 use App\Enums\ContactSource;
+use App\Enums\Crm\ContractStatus;
 use App\Models\Company;
 use App\Models\Contact;
 use App\Models\ContactLink;
+use App\Models\Contract;
 use App\Models\CrmEmail;
 use App\Models\Organization;
 use App\Models\PersonalManager;
@@ -174,6 +176,7 @@ class PaymentOrderService
         }
 
         $account = $company->bankAccounts()->orderByDesc('is_primary')->orderBy('id')->first();
+        $contract = $this->contractFor($companyId, $organizationId, $today);
 
         return new PaymentOrder(
             number: (string) $company->getKey().'-'.$today->format('Ymd'),
@@ -181,7 +184,7 @@ class PaymentOrderService
             scenario: $scenario,
             scenarioLabel: self::SCENARIOS[$scenario],
             amount: $sum,
-            purpose: $this->purpose($documents, $sum, $scenario),
+            purpose: $this->purpose($documents, $sum, $scenario, $contract),
             payer: [
                 'name' => $company->name,
                 'legal_name' => $company->legal_name,
@@ -205,7 +208,40 @@ class PaymentOrderService
             documents: $documents,
             companyId: $companyId,
             organizationId: $organizationId,
+            contract: $contract,
         );
+    }
+
+    /**
+     * Действующий договор пары контрагент × наше юрлицо из реестра: подписан,
+     * не расторгнут, срок не истёк. Несколько — берём самый свежий.
+     *
+     * @return array{id: int, number: string, date: ?string, label: string}|null
+     */
+    private function contractFor(int $companyId, int $organizationId, CarbonImmutable $today): ?array
+    {
+        $contract = Contract::query()
+            ->where('company_id', $companyId)
+            ->where('organization_id', $organizationId)
+            ->where('status', ContractStatus::SIGNED->value)
+            ->where(fn ($query) => $query->whereNull('valid_from')->orWhereDate('valid_from', '<=', $today->toDateString()))
+            ->where(fn ($query) => $query->whereNull('valid_until')->orWhereDate('valid_until', '>=', $today->toDateString()))
+            ->orderByDesc('date')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($contract === null || blank($contract->number)) {
+            return null;
+        }
+
+        $date = $contract->date ?? $contract->signed_at;
+
+        return [
+            'id' => (int) $contract->getKey(),
+            'number' => (string) $contract->number,
+            'date' => $date?->format('d.m.Y'),
+            'label' => 'Договор № '.$contract->number.($date ? ' от '.$date->format('d.m.Y') : ''),
+        ];
     }
 
     /**
@@ -383,27 +419,52 @@ class PaymentOrderService
     /**
      * @param  list<array<string, mixed>>  $documents
      */
-    private function purpose(array $documents, float $sum, string $scenario): string
+    /**
+     * Назначение платежа. Есть действующий договор — ссылаемся на него,
+     * документы идут уточнением; нет — только документы. Список документов
+     * режется под лимит банка, договор и сумма остаются всегда.
+     *
+     * @param  list<array<string, mixed>>  $documents
+     * @param  array{number: string, date: ?string, label: string}|null  $contract
+     */
+    private function purpose(array $documents, float $sum, string $scenario, ?array $contract = null): string
     {
-        $prefix = match ($scenario) {
-            'overdue' => 'Оплата просроченной задолженности по документам',
-            'all' => 'Оплата задолженности по документам',
-            'document' => 'Оплата по документу',
-            default => 'Оплата по договору поставки',
-        };
-
         $refs = array_map(
             static fn (array $document): string => '№ '.$document['number'].($document['date'] ? ' от '.$document['date'] : ''),
             $documents,
         );
 
-        $tail = sprintf(' Сумма %s руб. НДС — по счёту.', number_format($sum, 2, ',', ' '));
-        $text = $prefix.($refs !== [] ? ' '.implode(', ', $refs).'.' : '.').$tail;
+        if ($contract !== null) {
+            $prefix = 'Оплата по договору № '.$contract['number'].($contract['date'] ? ' от '.$contract['date'] : '');
+            $docsWord = match ($scenario) {
+                'overdue' => ' за товар по просроченным документам',
+                'document' => ' за товар по документу',
+                'custom' => ' (предоплата)',
+                default => ' за товар по документам',
+            };
+            $withDocs = static fn (array $list, bool $more): string => $list === [] || $scenario === 'custom'
+                ? $prefix.($scenario === 'custom' ? $docsWord : '').'.'
+                : $prefix.$docsWord.' '.implode(', ', $list).($more ? ' и др.' : '').'.';
+        } else {
+            $prefix = match ($scenario) {
+                'overdue' => 'Оплата просроченной задолженности по документам',
+                'all' => 'Оплата задолженности по документам',
+                'document' => 'Оплата по документу',
+                default => 'Оплата за товар',
+            };
+            $withDocs = static fn (array $list, bool $more): string => $list === []
+                ? $prefix.'.'
+                : $prefix.' '.implode(', ', $list).($more ? ' и др.' : '').'.';
+        }
 
-        // Не влезает — режем список документов, а не сумму.
-        while (mb_strlen($text) > self::PURPOSE_LIMIT && count($refs) > 1) {
-            array_pop($refs);
-            $text = $prefix.' '.implode(', ', $refs).' и др.'.$tail;
+        $tail = sprintf(' Сумма %s руб. НДС — по счёту.', number_format($sum, 2, ',', ' '));
+        $list = $refs;
+        $text = $withDocs($list, false).$tail;
+
+        // Не влезает — режем список документов, а не договор и сумму.
+        while (mb_strlen($text) > self::PURPOSE_LIMIT && $list !== []) {
+            array_pop($list);
+            $text = $withDocs($list, $list !== []).$tail;
         }
 
         return mb_substr($text, 0, self::PURPOSE_LIMIT);

@@ -10,6 +10,7 @@ use Carbon\CarbonImmutable;
  * видах — PDF, файл клиент-банка и QR — из одних данных.
  *
  * @param  list<array{id: int, number: string, date: ?string, due: ?string, amount: float, overdue: bool}>  $documents
+ * @param  array{id: int, number: string, date: ?string, label: string}|null  $contract  действующий договор пары — в назначение платежа
  */
 final class PaymentOrder
 {
@@ -25,6 +26,7 @@ final class PaymentOrder
         public readonly array $documents,
         public readonly int $companyId,
         public readonly int $organizationId,
+        public readonly ?array $contract = null,
     ) {}
 
     public function fileStem(): string
@@ -95,6 +97,7 @@ final class PaymentOrder
             'documents' => $this->documents,
             'company_id' => $this->companyId,
             'organization_id' => $this->organizationId,
+            'contract' => $this->contract,
             'qr_payload' => $this->qrPayload(),
         ];
     }

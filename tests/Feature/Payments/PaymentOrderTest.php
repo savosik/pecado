@@ -121,6 +121,42 @@ class PaymentOrderTest extends TestCase
     }
 
     #[Test]
+    public function purpose_references_signed_contract_of_the_pair(): void
+    {
+        $category = \App\Models\ContractCategory::factory()->create();
+        \App\Models\Contract::factory()->create([
+            'category_id' => $category->id,
+            'organization_id' => $this->organization->id,
+            'user_id' => $this->client->id,
+            'company_id' => $this->company->id,
+            'number' => 'П-17/2026',
+            'date' => '2026-02-10',
+            'valid_until' => null,
+            'status' => \App\Enums\Crm\ContractStatus::SIGNED->value,
+        ]);
+        // Расторгнутый договор в назначение не попадает.
+        \App\Models\Contract::factory()->create([
+            'category_id' => $category->id,
+            'organization_id' => $this->organization->id,
+            'user_id' => $this->client->id,
+            'company_id' => $this->company->id,
+            'number' => 'СТАРЫЙ',
+            'date' => '2025-01-01',
+            'status' => \App\Enums\Crm\ContractStatus::TERMINATED->value,
+        ]);
+
+        $order = $this->service()->build($this->client, $this->company->id, $this->organization->id, 'overdue');
+
+        $this->assertSame('П-17/2026', $order->contract['number']);
+        $this->assertStringStartsWith('Оплата по договору № П-17/2026 от 10.02.2026 за товар по просроченным документам № 29УТ-000001 от 01.07.2026.', $order->purpose);
+        $this->assertStringContainsString('Сумма 40 000,00 руб.', $order->purpose);
+        $this->assertStringContainsString('Purpose=Оплата по договору № П-17/2026', $order->qrPayload());
+
+        $custom = $this->service()->build($this->client, $this->company->id, $this->organization->id, 'custom', null, 5000);
+        $this->assertStringStartsWith('Оплата по договору № П-17/2026 от 10.02.2026 (предоплата).', $custom->purpose);
+    }
+
+    #[Test]
     public function client_bank_exchange_is_cp1251_with_payee_requisites(): void
     {
         $order = $this->service()->build($this->client, $this->company->id, $this->organization->id, 'overdue');

@@ -202,6 +202,12 @@ export default function PaymentOrderForm({ options, previewUrl, downloadUrl, onS
                             <Text color="fg.muted">Получатель</Text>
                             <Text color="fg">{preview.payee.legal_name || preview.payee.name}, ИНН {preview.payee.tax_id || '—'}{preview.payee.tax_code ? `, КПП ${preview.payee.tax_code}` : ''}</Text>
                             <Text color="fg">р/с {preview.payee.account_number}, {preview.payee.bank_name}, БИК {preview.payee.bank_bik}</Text>
+                            {preview.contract && (
+                                <>
+                                    <Text color="fg.muted">Основание</Text>
+                                    <Text color="fg">{preview.contract.label}</Text>
+                                </>
+                            )}
                             <Text color="fg.muted">Назначение платежа</Text>
                             <Text color="fg">{preview.purpose}</Text>
                             {!preview.payer.account_number && (
