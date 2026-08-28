@@ -162,6 +162,48 @@ return [
         'client_visible' => true,
     ],
 
+    /*
+    | Лестница долга (эпик debt-00 v2). Свои типы, а не общие finance.*:
+    | те по каждому пересчёту, эти — только на переходах ступени, поэтому их
+    | можно держать включёнными умолчанием. Роль бухгалтера сужается до
+    | контрагента письма через Occasion::$companyId.
+    */
+    'finance.debt_overdue' => [
+        'label' => 'Просрочка: напоминание с актом сверки',
+        'subject' => 'Просроченная оплата по {{company_name}} — Pecado.ru',
+        'default_destinations' => [['type' => 'login'], ['type' => 'contact_role', 'role' => 'accountant']],
+        'default_enabled' => true,
+        'client_visible' => true,
+    ],
+    'finance.debt_no_preorders' => [
+        'label' => 'Просрочка: предзаказы приостановлены',
+        'subject' => 'Оформление предзаказов приостановлено — Pecado.ru',
+        'default_destinations' => [['type' => 'login'], ['type' => 'contact_role', 'role' => 'accountant']],
+        'default_enabled' => true,
+        'client_visible' => true,
+    ],
+    'finance.debt_no_orders' => [
+        'label' => 'Просрочка: заказы контрагента приостановлены',
+        'subject' => 'Оформление заказов по {{company_name}} приостановлено — Pecado.ru',
+        'default_destinations' => [['type' => 'login'], ['type' => 'contact_role', 'role' => 'accountant']],
+        'default_enabled' => true,
+        'client_visible' => true,
+    ],
+    'finance.debt_hold' => [
+        'label' => 'Просрочка: отгрузки остановлены',
+        'subject' => 'Отгрузки приостановлены до погашения задолженности — Pecado.ru',
+        'default_destinations' => [['type' => 'login'], ['type' => 'contact_role', 'role' => 'accountant']],
+        'default_enabled' => true,
+        'client_visible' => true,
+    ],
+    'finance.debt_cleared' => [
+        'label' => 'Просрочка погашена, ограничения сняты',
+        'subject' => 'Оплата получена — ограничения сняты. Спасибо!',
+        'default_destinations' => [['type' => 'login'], ['type' => 'contact_role', 'role' => 'accountant']],
+        'default_enabled' => true,
+        'client_visible' => true,
+    ],
+
     'system.return_created' => [
         'label' => 'Оформлен возврат',
         'subject' => 'Возврат {{order_number}} принят',

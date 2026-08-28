@@ -77,7 +77,7 @@ class WeeklyReconciliation
                     'body' => $this->summaryBody($rows),
                     'url' => url(route('cabinet.documents.index', [], false)),
                     'rows' => $rows->map(fn ($row): array => [
-                        'kind' => 'note',
+                        'type' => 'note',
                         'text' => 'Акт сверки № '.$row->number.' от '.($row->date?->format('d.m.Y') ?? '—'),
                     ])->values()->all(),
                 ],
@@ -149,7 +149,7 @@ class WeeklyReconciliation
                             .'. За вами числится непогашенная задолженность — сверьте, пожалуйста, расчёты.',
                     'url' => url(route('cabinet.documents.index', [], false)),
                     'rows' => $acts->map(fn ($row): array => [
-                        'kind' => 'note',
+                        'type' => 'note',
                         'text' => 'Акт сверки № '.$row->number.' от '.($row->date?->format('d.m.Y') ?? '—'),
                     ])->values()->all(),
                 ],

@@ -5,6 +5,7 @@ import {
 } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
 import UserLayout from '../UserLayout';
+import { DebtBanner } from './components/DebtNotices';
 import CollapsibleFilterCard from '../Products/filters/CollapsibleFilterCard';
 import {
     LuLayoutDashboard, LuShoppingBag, LuShoppingCart,
@@ -253,6 +254,7 @@ export default function CabinetLayout({ title, children, actions }) {
                         </Heading>
                         {actions && <Box>{actions}</Box>}
                     </Flex>
+                    <DebtBanner />
                     <Box>
                         {children}
                     </Box>

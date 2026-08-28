@@ -109,6 +109,7 @@ class MailStream
         $letter->save();
 
         $this->attachInvoice($letter, $data);
+        $this->attachReconciliationAct($letter, $occasion);
 
         // Отправка откладывается на окно склейки: партия из 1С должна успеть
         // прийти целиком. Задача ставится одна на партию — поводы, попавшие
@@ -222,6 +223,15 @@ class MailStream
 
         if (str_starts_with($occasion->key, 'finance.overdue')) {
             $parts[] = 'step'.$this->overdueStep((int) ($data['days_overdue'] ?? 0));
+        }
+
+        // Лестница долга: письмо на переход ступени в рамках эпизода. Контрагент
+        // и дата перехода в ключе — повторный пересчёт той же ночью письма
+        // не дублирует, а новый эпизод просрочки даёт новое письмо.
+        if (str_starts_with($occasion->key, 'finance.debt_')) {
+            $parts[] = 'k'.($occasion->companyId ?? 0);
+            $parts[] = 'lvl'.(string) ($data['level'] ?? '');
+            $parts[] = 'since'.(string) ($data['since'] ?? '');
         }
 
         return implode(':', $parts);
@@ -415,6 +425,52 @@ class MailStream
         } catch (\Throwable $exception) {
             // Отсутствие счёта не повод не отправить напоминание об оплате.
             Log::warning('Поток писем: счёт не приложился', [
+                'letter' => $letter->getKey(),
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Письмам лестницы долга прикладывается свежий акт сверки из 1С —
+     * по контрагенту письма, а если такого нет, то по партнёру. Собственного
+     * генератора PDF у сайта нет, а акт 1С и есть официальный документ.
+     */
+    private function attachReconciliationAct(CrmEmail $letter, Occasion $occasion): void
+    {
+        if (! str_starts_with((string) $letter->origin_event, 'finance.debt_') || $occasion->clientUserId === null) {
+            return;
+        }
+
+        $query = PrintedDocument::query()
+            ->where('user_id', $occasion->clientUserId)
+            ->where('file_status', PrintedDocument::FILE_STORED)
+            ->where('type', PrintedDocumentType::RECONCILIATION_ACT)
+            ->latest('date')
+            ->latest('id');
+
+        $act = $occasion->companyId === null
+            ? $query->first()
+            : ((clone $query)->where('company_id', $occasion->companyId)->first() ?? $query->first());
+
+        if ($act === null || blank($act->path)) {
+            return;
+        }
+
+        $limit = (int) config('mail_stream.max_attachment_bytes', 5 * 1024 * 1024);
+
+        if ((int) ($act->size_bytes ?? 0) > $limit) {
+            return;
+        }
+
+        try {
+            $letter
+                ->addMediaFromDisk($act->path, (string) ($act->disk ?: config('filesystems.default')))
+                ->preservingOriginal()
+                ->usingFileName($act->original_filename ?: 'akt-sverki.pdf')
+                ->toMediaCollection(CrmAttachments::COLLECTION);
+        } catch (\Throwable $exception) {
+            Log::warning('Поток писем: акт сверки не приложился', [
                 'letter' => $letter->getKey(),
                 'error' => $exception->getMessage(),
             ]);

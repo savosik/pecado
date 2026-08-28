@@ -96,6 +96,9 @@ class HandleInertiaRequests extends Middleware
             'footerMenuItems' => Cache::remember('menu.footer', 3600, fn () => MenuItem::published()->forFooter()->ordered()->get()
             ),
             'bugReportMode' => (bool) config('app.bug_report_mode'),
+            // Лестница долга в кабинете: плашка, сквозной баннер и тост при смене
+            // ступени. null — норма невидима (или домен не в бою).
+            'debt' => fn () => app(\App\Services\Debt\CabinetDebtStatus::class)->forUser($request->user()),
             'config' => [
                 'yandex_maps_api_key' => (string) config('services.yandex_maps.api_key', ''),
                 // Показывать ли клиенту его долги. Флаг нужен и на фронте: пункт меню
