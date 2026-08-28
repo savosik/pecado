@@ -152,7 +152,7 @@ class DebtStateServiceTest extends TestCase
     }
 
     #[Test]
-    public function active_pause_freezes_escalation(): void
+    public function active_pause_keeps_level_visible_with_a_note(): void
     {
         [$user, $company] = $this->partner();
         $this->overdueLine($user, $company, 50000, 40);
@@ -171,7 +171,8 @@ class DebtStateServiceTest extends TestCase
         ]);
 
         $service->recalculate($this->today->addDay());
-        $this->assertSame(DebtLevel::NO_ORDERS, $this->partnerLevel($user));
+        // Ступень считается и видна — под разблокировкой молчат письма, гейт и задачи.
+        $this->assertSame(DebtLevel::HOLD, $this->partnerLevel($user));
         $this->assertStringContainsString('разблокировка', $this->contractorRow($user, $company)->reason);
     }
 

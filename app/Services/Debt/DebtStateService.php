@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\DB;
  * регистра и сводку по партнёру. Правила движения:
  *
  *  - вниз (ужесточение) — сразу до замеренной ступени, но не по устаревшему
- *    балансу 1С и не под действующей разблокировкой;
+ *    балансу 1С; разблокировка ступень не прячет — она снимает действия;
  *  - вверх (смягчение) — сразу и без ограничений; событийный `refresh()`
  *    умеет только вверх.
  *
@@ -341,11 +341,9 @@ class DebtStateService
             return [$previous, 'баланс 1С устарел — ступень не ужесточается'];
         }
 
-        if ($paused) {
-            return [$previous, 'действует разблокировка'];
-        }
-
-        return [$this->ladder->stepDown($previous, $measured), null];
+        // Разблокировка не прячет ступень: она видна в CRM и кабинете с пометкой
+        // «до даты», а письма, гейт и задачи проверяют разблокировку сами.
+        return [$this->ladder->stepDown($previous, $measured), $paused ? 'действует разблокировка' : null];
     }
 
     private function reason(DebtLevel $level, float $overdue, int $age, ?string $oldest, ?string $note): string
