@@ -414,6 +414,7 @@ jobs:
           # без писем (mail), пока не подтверждено, что почта стенда идёт в mailpit,
           # а не реальным клиентам. Пересчёт при деплое — чтобы стенд показывал
           # состояние сразу, не дожидаясь ночного 07:10.
+          sg docker -c "docker compose exec -T app php artisan debt:pause 675 --days=30 --if-never --reason='Решение руководства 28.08.2026: работаем по договорённости менеджера'" || true
           sg docker -c 'docker compose exec -T app php artisan debt:recalculate' || true
           sg docker -c 'docker compose exec -T app php artisan optimize'
 

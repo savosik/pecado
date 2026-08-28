@@ -4,6 +4,7 @@ namespace App\Listeners;
 
 use App\Enums\DebtLevel;
 use App\Events\DebtLevelChanged;
+use App\Models\DebtPause;
 use App\Models\DebtState;
 use App\Models\SettlementEntry;
 use App\Services\Crm\Mail\MailStream;
@@ -36,6 +37,13 @@ class SendDebtNotification
         }
 
         $state = $event->state;
+
+        // Действующая разблокировка = договорённость есть: писать «заказы
+        // закрыты» было бы неправдой, гейт по ней снят. Письмо «погашено» уходит.
+        if ($event->isEscalation() && $this->paused($state)) {
+            return;
+        }
+
         $lines = $this->overdueLines($state);
 
         $this->stream->captureQuietly(new Occasion(
@@ -60,6 +68,15 @@ class SendDebtNotification
                 'url' => $this->url($state),
             ],
         ));
+    }
+
+    private function paused(DebtState $state): bool
+    {
+        return DebtPause::query()
+            ->active()
+            ->where('user_id', $state->user_id)
+            ->where(fn ($query) => $query->whereNull('company_id')->orWhere('company_id', $state->company_id))
+            ->exists();
     }
 
     private function occasionKey(DebtLevelChanged $event): ?string

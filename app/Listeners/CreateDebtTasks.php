@@ -8,6 +8,8 @@ use App\Enums\DebtLevel;
 use App\Events\DebtLevelChanged;
 use App\Events\DebtPauseExpired;
 use App\Models\CrmTask;
+use App\Models\DebtPause;
+use App\Models\DebtState;
 use App\Models\User;
 use App\Services\Crm\CrmTaskService;
 use App\Services\Crm\ManagerAbsenceResolver;
@@ -46,7 +48,7 @@ class CreateDebtTasks
             return;
         }
 
-        if (! $event->isEscalation()) {
+        if (! $event->isEscalation() || $this->paused($event->state)) {
             return;
         }
 
@@ -156,6 +158,18 @@ class CreateDebtTasks
                 'error' => $exception->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Под действующей разблокировкой договорённость уже есть — звонить не о чем.
+     */
+    private function paused(DebtState $state): bool
+    {
+        return DebtPause::query()
+            ->active()
+            ->where('user_id', $state->user_id)
+            ->where(fn ($query) => $query->whereNull('company_id')->orWhere('company_id', $state->company_id))
+            ->exists();
     }
 
     /**

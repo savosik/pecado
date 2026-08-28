@@ -120,6 +120,25 @@ class DebtNotificationTest extends TestCase
     }
 
     #[Test]
+    public function active_pause_silences_escalation_letters(): void
+    {
+        \App\Models\DebtPause::create([
+            'user_id' => $this->partner->id,
+            'until' => now()->addDays(10)->toDateString(),
+            'reason' => 'Договорённость с менеджером',
+            'created_by' => User::factory()->create()->id,
+        ]);
+
+        $state = $this->state(DebtLevel::NO_ORDERS);
+        $this->fire($state, DebtLevel::CLEAN, DebtLevel::NO_ORDERS);
+        $this->assertSame(0, CrmEmail::query()->count());
+
+        $clean = $this->state(DebtLevel::CLEAN, $state);
+        $this->fire($clean, DebtLevel::NO_ORDERS, DebtLevel::CLEAN);
+        $this->assertSame(1, CrmEmail::query()->where('origin_event', 'finance.debt_cleared')->count());
+    }
+
+    #[Test]
     public function shadow_or_disabled_mail_action_sends_nothing(): void
     {
         config(['debt.live_actions' => 'gate']);

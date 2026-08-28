@@ -98,6 +98,21 @@ class DebtTasksTest extends TestCase
     }
 
     #[Test]
+    public function active_pause_means_no_call_task(): void
+    {
+        DebtPause::create([
+            'user_id' => $this->client->id,
+            'until' => now()->addDays(10)->toDateString(),
+            'reason' => 'Договорённость есть',
+            'created_by' => $this->manager->id,
+        ]);
+        $state = $this->state(DebtLevel::NO_ORDERS);
+        $this->fire($state, DebtLevel::CLEAN, DebtLevel::NO_ORDERS);
+
+        $this->assertSame(0, CrmTask::query()->count());
+    }
+
+    #[Test]
     public function tasks_action_off_means_silence(): void
     {
         config(['debt.live_actions' => 'mail']);
