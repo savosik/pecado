@@ -30,6 +30,7 @@ import PartnerContracts from '@/Crm/Components/PartnerContracts';
 import PartnerPurchases from '@/Crm/Components/PartnerPurchases';
 import ClientSummaryBar from './components/ClientSummaryBar';
 import StockBufferPanel from './components/StockBufferPanel';
+import PartnerDebt from '@/Crm/Components/PartnerDebt';
 
 function InfoRow({ label, value }) {
     return (
@@ -43,6 +44,9 @@ function InfoRow({ label, value }) {
 export default function Show() {
     const {
         client,
+        debt = null,
+        canSeeDebt = false,
+        pauseMaxDays = 14,
         profile,
         profileOptions,
         passportSections,
@@ -110,6 +114,7 @@ export default function Show() {
 
             <VStack gap={3} align="stretch">
                 <ClientSummaryBar
+                    debt={canSeeDebt ? debt : null}
                     client={client}
                     lifecycle={canViewProfile ? lifecycle : null}
                     lifecycleOptions={profileOptions?.lifecycle_status || []}
@@ -256,6 +261,9 @@ export default function Show() {
                                             {contracts.length > 0 && ` (${contracts.length})`}
                                         </Tabs.Trigger>
                                     )}
+                                    {canSeeDebt && debt?.partner && (
+                                        <Tabs.Trigger value="debt">Дебиторка</Tabs.Trigger>
+                                    )}
                                     {canViewComments && <Tabs.Trigger value="orders">Заказы</Tabs.Trigger>}
                                     {canViewComments && <Tabs.Trigger value="shipments">Реализации</Tabs.Trigger>}
                                     {canViewFiles && <Tabs.Trigger value="files">Файлы</Tabs.Trigger>}
@@ -301,6 +309,12 @@ export default function Show() {
                                             а не по каждому юрлицу отдельно.
                                         </Text>
                                         <PartnerContractors contractors={contractors} />
+                                    </Tabs.Content>
+                                )}
+
+                                {canSeeDebt && debt?.partner && (
+                                    <Tabs.Content value="debt">
+                                        <PartnerDebt client={client} debt={debt} pauseMaxDays={pauseMaxDays} />
                                     </Tabs.Content>
                                 )}
 

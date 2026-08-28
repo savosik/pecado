@@ -507,6 +507,9 @@ class ClientListService
         $lastComments = $this->lastComments($ids);
         $planFact = $canSeePlans ? $this->planFact->forClients($ids, CarbonImmutable::now()) : [];
         $lastOrders = $this->enricher->lastOrders($ids);
+        // Ступень долга — бейдж в строке: закрытые заказы менеджер должен видеть
+        // до того, как заведёт заказ в 1С.
+        $debtLevels = $actor->can('crm-finance.view') ? app(\App\Services\Debt\DebtOverview::class)->levelsFor($ids) : [];
 
         /** @var LengthAwarePaginator<int, array<string, mixed>> $hydrated */
         $hydrated = $paginator->through(fn (User $client): array => $this->row(
@@ -517,6 +520,7 @@ class ClientListService
             $lastOrders[(int) $client->getKey()] ?? null,
             $canSeeTasks,
             $canSeeProfile,
+            $debtLevels[(int) $client->getKey()] ?? null,
         ));
 
         return $hydrated;
@@ -564,6 +568,7 @@ class ClientListService
         ?array $lastOrder,
         bool $canSeeTasks,
         bool $canSeeProfile,
+        ?array $debt = null,
     ): array {
         $profile = $canSeeProfile ? $client->crmProfile : null;
         // Партнёр без профиля читается как активный — тот же дефолт, что в колонке БД.
@@ -601,6 +606,8 @@ class ClientListService
             // Страховой запас (buf-02) — бейдж в строке: включённых ~50,
             // менеджер должен видеть их без открытия карточки.
             'stock_buffer_enabled' => (bool) $client->stock_buffer_enabled,
+            // Лестница долга (debt-05): ступень партнёра, если она не «чисто».
+            'debt' => $debt,
             'manager' => $client->personalManager === null ? null : [
                 'id' => (int) $client->personalManager->getKey(),
                 'name' => $client->personalManager->name,

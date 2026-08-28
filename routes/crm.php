@@ -15,6 +15,7 @@ use App\Http\Controllers\Crm\ContractCategoryController;
 use App\Http\Controllers\Crm\ContractController;
 use App\Http\Controllers\Crm\ContractorController;
 use App\Http\Controllers\Crm\DashboardController;
+use App\Http\Controllers\Crm\DebtController;
 use App\Http\Controllers\Crm\DocumentController;
 use App\Http\Controllers\Crm\EmailController;
 use App\Http\Controllers\Crm\FinanceController;
@@ -688,6 +689,12 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // рискует быть съеденной параметром, если у страницы появится сегмент.
         Route::get('/finance/reconciliation/export', [FinanceController::class, 'reconciliationExport'])->name('finance.reconciliation.export');
         Route::get('/finance/reconciliation', [FinanceController::class, 'reconciliation'])->name('finance.reconciliation');
+
+        // Дебиторка (debt-00 v2): партнёры со ступенью и разблокировка до даты.
+        // Своего права нет намеренно — это те же деньги, что и просрочка.
+        Route::get('/debt', [DebtController::class, 'index'])->name('debt.index');
+        Route::post('/debt/pauses', [DebtController::class, 'storePause'])->name('debt.pauses.store');
+        Route::delete('/debt/pauses/{pause}', [DebtController::class, 'releasePause'])->name('debt.pauses.release');
     });
 
     // Недоборы: журнал отменённых строк заказов. view — журнал и сводки,

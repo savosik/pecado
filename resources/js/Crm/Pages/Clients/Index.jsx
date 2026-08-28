@@ -27,6 +27,7 @@ import LastOrderCell from '@/Crm/Components/LastOrderCell';
 import LifecycleCell from './components/LifecycleCell';
 import ActivityHint from './components/ActivityHint';
 import LastVisitHint from '@/Crm/Components/LastVisitHint';
+import DebtLevelBadge from '@/Crm/Components/DebtLevelBadge';
 import { EmailCell, PhoneCell } from './components/ContactCells';
 import { toastError, toastSuccess } from '@/utils/toast';
 
@@ -132,6 +133,9 @@ export default function Index({
                             <Badge colorPalette="blue" variant="subtle" size="xs">
                                 страховой запас
                             </Badge>
+                        )}
+                        {row.debt && (
+                            <DebtLevelBadge debt={row.debt} size="xs" />
                         )}
                     </HStack>
                     {/* Имя из кабинета — только когда партнёр назвал себя иначе,

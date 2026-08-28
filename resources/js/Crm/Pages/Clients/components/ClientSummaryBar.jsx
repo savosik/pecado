@@ -3,6 +3,7 @@ import { LuBuilding, LuMail, LuPhone, LuUser } from 'react-icons/lu';
 import { Tooltip } from '@/components/ui/tooltip';
 import LifecycleCell from './LifecycleCell';
 import LastVisitHint from '@/Crm/Components/LastVisitHint';
+import DebtLevelBadge from '@/Crm/Components/DebtLevelBadge';
 
 /**
  * Один факт о партнёре: подпись мелко, значение рядом.
@@ -38,10 +39,19 @@ export default function ClientSummaryBar({
     lifecycle = null,
     lifecycleOptions = [],
     canEditLifecycle = false,
+    debt = null,
 }) {
     return (
         <Box borderWidth="1px" borderColor="border" borderRadius="lg" bg="bg.panel" px={3} py={2}>
             <Wrap gap={4} align="center">
+                {debt?.partner && debt.partner.level !== 'clean' && (
+                    <WrapItem>
+                        <DebtLevelBadge
+                            debt={{ ...debt.partner, label: debt.partner.level_label, color: debt.partner.level_color }}
+                            pause={debt.active_pause}
+                        />
+                    </WrapItem>
+                )}
                 {lifecycle && (
                     <WrapItem>
                         <LifecycleCell

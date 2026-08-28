@@ -142,8 +142,15 @@ class ClientController extends CrmController
         // и вкладка в карточке не должна открывать то, что раздел закрывает.
         $canSeeContractors = $this->crmActor($request)->can('crm-contractors.view');
         $canSeeContracts = $this->crmActor($request)->can('crm-contracts.view');
+        // Лестница долга — те же деньги, что раздел «Финансы», право то же.
+        $canSeeDebt = $this->crmActor($request)->can('crm-finance.view') && config('debt.enabled');
 
         return Inertia::render('Crm/Pages/Clients/Show', [
+            'debt' => $canSeeDebt ? app(\App\Services\Debt\DebtStateService::class)->explain($user) : null,
+            'canSeeDebt' => $canSeeDebt,
+            'pauseMaxDays' => $this->crmActor($request)->can('crm-clients-all.view')
+                ? (int) config('debt.pause_max_days_head', 30)
+                : (int) config('debt.pause_max_days_manager', 14),
             'contractors' => $canSeeContractors ? $contractors->forPartner($user) : [],
             'canSeeContractors' => $canSeeContractors,
             'contracts' => $canSeeContracts ? $contractList->forPartner($user) : [],
