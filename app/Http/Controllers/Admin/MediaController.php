@@ -33,7 +33,7 @@ class MediaController extends Controller
             })->paginate($perPage)->withQueryString();
         } else {
             // Без поиска — обычный Eloquent запрос с фильтрами
-            $query = Media::query()->with('model');
+            $query = Media::query()->library()->with('model');
 
             if ($type) {
                 match ($type) {
@@ -75,6 +75,7 @@ class MediaController extends Controller
 
         // Получить уникальные коллекции для фильтра
         $collections = Media::query()
+            ->library()
             ->select('collection_name')
             ->distinct()
             ->pluck('collection_name')
@@ -83,6 +84,7 @@ class MediaController extends Controller
 
         // Получить уникальные типы моделей для фильтра
         $modelTypes = Media::query()
+            ->library()
             ->select('model_type')
             ->distinct()
             ->pluck('model_type')
@@ -102,7 +104,11 @@ class MediaController extends Controller
      */
     private function buildMeilisearchFilters(?string $type, ?string $collection, ?string $modelType): string
     {
-        $filters = [];
+        // Служебные коллекции CRM в индекс не попадают (shouldBeSearchable),
+        // фильтр здесь — на случай записей, проиндексированных до этого правила.
+        $filters = [
+            'collection_name NOT IN ['.implode(', ', array_map(fn (string $name): string => '"'.addslashes($name).'"', Media::HIDDEN_COLLECTIONS)).']',
+        ];
 
         if ($type) {
             $filters[] = 'mime_type_group = "'.addslashes($type).'"';

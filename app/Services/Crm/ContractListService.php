@@ -49,6 +49,7 @@ class ContractListService
             ->scopedInCrm($actor, $scope)
             ->with([
                 'category:id,name',
+                'organization:id,name',
                 'user:id,name,erp_name',
                 'company:id,user_id,name,legal_name,tax_id',
                 'responsibleManager:id,name',
@@ -157,7 +158,7 @@ class ContractListService
     {
         return Contract::query()
             ->where('contracts.user_id', $partner->getKey())
-            ->with(['category:id,name', 'user:id,name,erp_name', 'company:id,user_id,name,legal_name,tax_id', 'responsibleManager:id,name'])
+            ->with(['category:id,name', 'organization:id,name', 'user:id,name,erp_name', 'company:id,user_id,name,legal_name,tax_id', 'responsibleManager:id,name'])
             ->orderByDesc('date')
             ->orderByDesc('id')
             ->get()
@@ -174,7 +175,7 @@ class ContractListService
     {
         return Contract::query()
             ->where('contracts.company_id', $company->getKey())
-            ->with(['category:id,name', 'user:id,name,erp_name', 'company:id,user_id,name,legal_name,tax_id', 'responsibleManager:id,name'])
+            ->with(['category:id,name', 'organization:id,name', 'user:id,name,erp_name', 'company:id,user_id,name,legal_name,tax_id', 'responsibleManager:id,name'])
             ->orderByDesc('date')
             ->orderByDesc('id')
             ->get()
@@ -249,6 +250,10 @@ class ContractListService
             'category' => [
                 'id' => (int) $contract->category->getKey(),
                 'name' => $contract->category->name,
+            ],
+            'organization' => $contract->organization === null ? null : [
+                'id' => (int) $contract->organization->getKey(),
+                'name' => $contract->organization->name,
             ],
             'counterparty_name' => $contract->counterparty_label,
             'company' => $contract->company instanceof Company ? [

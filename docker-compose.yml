@@ -181,6 +181,7 @@ services:
       /usr/bin/mc mb --ignore-existing myminio/prices-exchange;
       /usr/bin/mc mb --ignore-existing myminio/documents-exchange;
       /usr/bin/mc mb --ignore-existing myminio/printed-documents;
+      /usr/bin/mc mb --ignore-existing myminio/crm-attachments;
       exit 0;
       "
     networks:

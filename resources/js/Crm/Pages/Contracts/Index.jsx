@@ -123,6 +123,9 @@ export default function Index({
                     {row.partner && row.partner.name !== row.counterparty_name && (
                         <Text fontSize="xs" color="fg.muted">{row.partner.name}</Text>
                     )}
+                    <Text fontSize="xs" color={row.organization ? 'fg.muted' : 'orange.fg'}>
+                        {row.organization ? `от ${row.organization.name}` : 'наше юрлицо не указано'}
+                    </Text>
                 </VStack>
             ),
         },
@@ -282,6 +285,7 @@ export default function Index({
                     <ContractForm
                         open
                         categories={categories.filter((item) => item.is_active !== false)}
+                        organizations={organizations}
                         statuses={statuses}
                         paymentTerms={paymentTerms}
                         forms={forms}

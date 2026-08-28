@@ -44,10 +44,7 @@ export default function Index({ contracts = [] }) {
                             <HStack justify="space-between" align="start" mb={3} flexWrap="wrap" gap={2}>
                                 <Box>
                                     <Text fontWeight="600">Договор {contract.number}</Text>
-                                    <Text fontSize="xs" color="fg.muted">
-                                        {contract.date ? `от ${contract.date}` : ''}
-                                        {contract.category ? ` · ${contract.category}` : ''}
-                                    </Text>
+                                    {contract.date && <Text fontSize="xs" color="fg.muted">от {contract.date}</Text>}
                                 </Box>
                                 <HStack gap={1} flexWrap="wrap">
                                     <Badge colorPalette={contract.status_color}>{contract.status_label}</Badge>
@@ -57,11 +54,16 @@ export default function Index({ contracts = [] }) {
                                 </HStack>
                             </HStack>
 
-                            <SimpleGrid columns={{ base: 1, md: 4 }} gap={3}>
+                            <SimpleGrid columns={{ base: 1, md: 2, lg: 5 }} gap={3}>
                                 <Box>
                                     <Text fontSize="xs" color="gray.500" mb="0.5">Ваша организация</Text>
                                     <Text fontSize="sm" fontWeight="500">{contract.company?.name || '—'}</Text>
                                     {contract.company?.tax_id && <Text fontSize="xs" color="fg.muted">ИНН {contract.company.tax_id}</Text>}
+                                </Box>
+                                <Box>
+                                    <Text fontSize="xs" color="gray.500" mb="0.5">Наша организация</Text>
+                                    <Text fontSize="sm" fontWeight="500">{contract.organization?.name || '—'}</Text>
+                                    {contract.organization?.tax_id && <Text fontSize="xs" color="fg.muted">ИНН {contract.organization.tax_id}</Text>}
                                 </Box>
                                 <InfoRow label="Дата подписания" value={contract.signed_at} />
                                 <InfoRow

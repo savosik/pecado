@@ -15,9 +15,9 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 /**
  * Договоры партнёра в личном кабинете.
  *
- * Только чтение: договор ведёт менеджер. Партнёр видит номер, стороны, статус,
- * срок и сканы, отмеченные менеджером как видимые. Заметки менеджера сюда
- * не отдаются.
+ * Только чтение: договор ведёт менеджер. Партнёр видит номер, обе стороны,
+ * статус, срок и сканы, отмеченные менеджером как видимые. Заметки менеджера,
+ * категория-вкладка (внутренняя папка реестра) и черновики сюда не отдаются.
  *
  * Ось видимости — юрлица партнёра, как у печатных форм. Чужой договор или
  * файл отвечает 404: 403 подтвердил бы его существование.
@@ -30,7 +30,7 @@ class ContractController extends Controller
 
         $contracts = Contract::query()
             ->visibleTo($user)
-            ->with(['category:id,name', 'company:id,name,legal_name,tax_id', 'responsibleManager:id,name,phone,email', 'media'])
+            ->with(['organization:id,name,legal_name,tax_id', 'company:id,name,legal_name,tax_id', 'responsibleManager:id,name,phone,email', 'media'])
             ->orderByDesc('date')
             ->orderByDesc('id')
             ->get()
@@ -46,7 +46,10 @@ class ContractController extends Controller
                 'status_color' => $contract->status->color(),
                 'payment_terms_label' => $contract->payment_terms?->label(),
                 'form_label' => $contract->form?->label(),
-                'category' => $contract->category->name,
+                'organization' => $contract->organization === null ? null : [
+                    'name' => (string) ($contract->organization->name ?: $contract->organization->legal_name),
+                    'tax_id' => $contract->organization->tax_id,
+                ],
                 'company' => $contract->company instanceof Company ? [
                     'name' => (string) ($contract->company->name ?: $contract->company->legal_name),
                     'tax_id' => $contract->company->tax_id,

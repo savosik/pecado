@@ -687,6 +687,9 @@ jobs:
           sg docker -c "$DC exec -T app php artisan scout:sync-index-settings" || true
           sg docker -c "$DC exec -T app php artisan meilisearch:sync-synonyms" || true
 
+          # Приватный бакет для сканов договоров + перенос ранее загруженных с публичного диска
+          sg docker -c "$DC exec -T app php artisan crm:contracts-private-storage" || true
+
           echo "==> [8/9] Применение compose-конфигурации и рестарт..."
           # up -d пересоздаёт ровно те сервисы, у которых изменились порты/env/volumes
           # (mysql, redis, meilisearch, minio и пр., которые иначе нигде не trogаются).

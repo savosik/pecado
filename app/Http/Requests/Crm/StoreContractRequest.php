@@ -30,6 +30,7 @@ class StoreContractRequest extends FormRequest
     {
         return [
             'category_id' => ['required', 'integer', 'exists:contract_categories,id'],
+            'organization_id' => ['nullable', 'integer', 'exists:organizations,id'],
             'number' => ['required', 'string', 'max:100'],
             'company_id' => ['nullable', 'integer', 'exists:companies,id'],
             'client_id' => ['nullable', 'integer', 'exists:users,id'],
@@ -55,6 +56,7 @@ class StoreContractRequest extends FormRequest
         return [
             'category_id.required' => 'Выберите категорию (вкладку) реестра.',
             'category_id.exists' => 'Такой категории нет.',
+            'organization_id.exists' => 'Такой организации нет в справочнике.',
             'number.required' => 'Укажите номер договора.',
             'number.max' => 'Номер договора не длиннее 100 символов.',
             'company_id.exists' => 'Контрагент не найден.',

@@ -491,6 +491,8 @@ jobs:
 
           echo "==> [5.4/7] Синхронизация настроек Meilisearch (typoTolerance, searchable, synonyms)..."
           sg docker -c 'docker compose exec -T app php artisan scout:sync-index-settings' || true
+          # Приватный бакет для сканов договоров + перенос ранее загруженных с публичного диска
+          sg docker -c 'docker compose exec -T app php artisan crm:contracts-private-storage' || true
           sg docker -c 'docker compose exec -T app php artisan meilisearch:sync-synonyms' || true
 
           echo "==> [6/7] Применение compose-конфигурации и перезапуск очередей..."

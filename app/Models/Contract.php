@@ -7,6 +7,7 @@ use App\Enums\Crm\ContractPaymentTerms;
 use App\Enums\Crm\ContractStatus;
 use App\Enums\Crm\CrmScope;
 use App\Models\Concerns\HasCrmAttachments;
+use App\Support\Crm\CrmAttachments;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -28,6 +29,7 @@ use Spatie\MediaLibrary\HasMedia;
  *
  * @property int $id
  * @property int $category_id
+ * @property int|null $organization_id
  * @property int|null $user_id
  * @property int|null $company_id
  * @property string|null $counterparty_name
@@ -45,6 +47,7 @@ use Spatie\MediaLibrary\HasMedia;
  * @property int|null $created_by_user_id
  * @property int|null $updated_by_user_id
  * @property-read ContractCategory $category
+ * @property-read Organization|null $organization
  * @property-read User|null $user
  * @property-read Company|null $company
  * @property-read PersonalManager|null $responsibleManager
@@ -58,12 +61,39 @@ use Spatie\MediaLibrary\HasMedia;
  */
 class Contract extends Model implements HasMedia
 {
-    use HasCrmAttachments;
+    use HasCrmAttachments {
+        registerMediaCollections as private registerCrmMediaCollections;
+    }
     use HasFactory;
     use SoftDeletes;
 
+    /**
+     * Те же коллекции, что у остальных сущностей CRM, но на приватном диске:
+     * скан договора нельзя отдавать публичной ссылкой, а общий MEDIA_DISK —
+     * публичный бакет медиатеки. Файл партнёру и менеджеру отдаёт контроллер
+     * после проверки принадлежности.
+     */
+    public function registerMediaCollections(): void
+    {
+        $disk = self::attachmentsDisk();
+
+        $this->addMediaCollection(CrmAttachments::COLLECTION)
+            ->acceptsMimeTypes(CrmAttachments::MIMES)
+            ->useDisk($disk);
+
+        $this->addMediaCollection(CrmAttachments::VOICE_COLLECTION)
+            ->acceptsMimeTypes(CrmAttachments::VOICE_MIMES)
+            ->useDisk($disk);
+    }
+
+    public static function attachmentsDisk(): string
+    {
+        return (string) config('contracts.attachments_disk', 'crm-attachments');
+    }
+
     protected $fillable = [
         'category_id',
+        'organization_id',
         'user_id',
         'company_id',
         'counterparty_name',
@@ -116,6 +146,14 @@ class Contract extends Model implements HasMedia
                 }
             }
 
+            // Наше юрлицо по умолчанию — из категории: вкладки заведены по юрлицу,
+            // и менеджер, выбравший «ООО Пекадо», не должен выбирать его дважды.
+            if ($contract->organization_id === null && $contract->category_id !== null) {
+                $contract->organization_id = ContractCategory::query()
+                    ->whereKey($contract->category_id)
+                    ->value('organization_id');
+            }
+
             $contract->number = trim((string) $contract->number);
         });
     }
@@ -123,6 +161,11 @@ class Contract extends Model implements HasMedia
     public function category(): BelongsTo
     {
         return $this->belongsTo(ContractCategory::class, 'category_id');
+    }
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
     }
 
     public function user(): BelongsTo
@@ -206,6 +249,10 @@ class Contract extends Model implements HasMedia
      * форм — 1С перепривязывает юрлица, и снимок user_id устаревает) плюс
      * договоры без юрлица, заведённые на самого партнёра.
      *
+     * Черновик («не отправлен») партнёру не показывается: документа у него
+     * ещё нет, и строка в кабинете выглядела бы как обязательство, которого
+     * мы не давали.
+     *
      * @param  Builder<self>  $query
      */
     public function scopeVisibleTo(Builder $query, User $partner): void
@@ -216,6 +263,7 @@ class Contract extends Model implements HasMedia
 
         $query
             ->where('is_visible_in_cabinet', true)
+            ->where('status', '<>', ContractStatus::DRAFT->value)
             ->where(fn (Builder $inner) => $inner
                 ->whereIn('contracts.company_id', $companies)
                 ->orWhere(fn (Builder $own) => $own

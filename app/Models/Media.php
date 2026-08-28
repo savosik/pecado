@@ -72,6 +72,37 @@ class Media extends SpatieMedia
     use HasTags, Searchable;
 
     /**
+     * Коллекции, которых нет в медиатеке и поисковом индексе.
+     *
+     * Медиатека — витрина контента: картинки товаров, баннеры, сертификаты.
+     * Вложения CRM (сканы договоров, счета, голосовые досье, аватары
+     * контактов) — рабочие документы отдела продаж; в общей ленте они
+     * выглядели бы как утечка, а публичная ссылка на скан договора — она и есть.
+     *
+     * @var list<string>
+     */
+    public const HIDDEN_COLLECTIONS = [
+        \App\Support\Crm\CrmAttachments::COLLECTION,
+        \App\Support\Crm\CrmAttachments::VOICE_COLLECTION,
+        \App\Models\Contact::AVATAR_COLLECTION,
+    ];
+
+    /**
+     * Медиатека: всё, кроме служебных коллекций CRM.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<self>  $query
+     */
+    public function scopeLibrary(\Illuminate\Database\Eloquent\Builder $query): void
+    {
+        $query->whereNotIn('collection_name', self::HIDDEN_COLLECTIONS);
+    }
+
+    public function shouldBeSearchable(): bool
+    {
+        return ! in_array((string) $this->collection_name, self::HIDDEN_COLLECTIONS, true);
+    }
+
+    /**
      * Get the indexable data array for the model.
      *
      * @return array<string, mixed>

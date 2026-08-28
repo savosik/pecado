@@ -7,12 +7,16 @@ use App\Models\Company;
 use App\Models\Contract;
 use App\Models\ContractCategory;
 use App\Models\CrmTask;
+use App\Models\Media;
 use App\Models\Order;
+use App\Models\Organization;
 use App\Models\PersonalManager;
 use App\Models\Shipment;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
@@ -356,5 +360,129 @@ class ContractsTest extends TestCase
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->actingAs($this->manager)->get(route('crm.contracts.index'))->assertForbidden();
+    }
+
+    #[Test]
+    public function partner_sees_both_parties_but_not_drafts_and_folders(): void
+    {
+        config(['contracts.cabinet_enabled' => true]);
+
+        $ours = Organization::factory()->create(['name' => 'ООО «Пекадо»', 'tax_id' => '7735195479']);
+        $category = ContractCategory::factory()->create(['name' => 'Тест: ИП Елисеев (клиенты)', 'organization_id' => $ours->id]);
+
+        Contract::factory()->forCompany($this->company)->create(['category_id' => $category->id, 'number' => '№ подписан', 'status' => ContractStatus::SIGNED]);
+        Contract::factory()->forCompany($this->company)->create(['category_id' => $category->id, 'number' => '№ отправлен', 'status' => ContractStatus::SENT]);
+        Contract::factory()->forCompany($this->company)->create(['category_id' => $category->id, 'number' => '№ черновик', 'status' => ContractStatus::DRAFT]);
+
+        $props = $this->actingAs($this->client)
+            ->get(route('cabinet.contracts.index'))
+            ->assertOk()
+            ->viewData('page')['props'];
+
+        $rows = collect($props['contracts']);
+
+        // Черновик («не отправлен») — документа у партнёра ещё нет.
+        $this->assertEqualsCanonicalizing(['№ подписан', '№ отправлен'], $rows->pluck('number')->all());
+
+        // Папка реестра — внутренняя кухня, наша сторона — обязательна.
+        $this->assertArrayNotHasKey('category', $rows->first());
+        $this->assertSame('ООО «Пекадо»', $rows->first()['organization']['name']);
+        $this->assertSame('7735195479', $rows->first()['organization']['tax_id']);
+        $this->assertSame('Ромашка ООО', $rows->first()['company']['name']);
+    }
+
+    #[Test]
+    public function our_organization_defaults_to_the_category_one_and_can_be_overridden(): void
+    {
+        $pecado = Organization::factory()->create(['name' => 'ООО «Пекадо»']);
+        $eliseev = Organization::factory()->create(['name' => 'ИП Елисеев П.А.']);
+        $this->category->update(['organization_id' => $pecado->id]);
+
+        $byCategory = $this->actingAs($this->manager)
+            ->postJson(route('crm.contracts.store'), $this->payload())
+            ->assertCreated()
+            ->json();
+        $this->assertSame('ООО «Пекадо»', $byCategory['organization']['name']);
+
+        $explicit = $this->actingAs($this->manager)
+            ->postJson(route('crm.contracts.store'), $this->payload(['number' => '№ 2-Т/2026', 'organization_id' => $eliseev->id]))
+            ->assertCreated()
+            ->json();
+        $this->assertSame('ИП Елисеев П.А.', $explicit['organization']['name']);
+
+        $this->actingAs($this->manager)
+            ->postJson(route('crm.contracts.store'), $this->payload(['number' => '№ 3-Т/2026', 'organization_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['organization_id']);
+    }
+
+    #[Test]
+    public function assign_command_fills_organization_from_categories(): void
+    {
+        $pecado = Organization::factory()->create(['name' => 'ООО «Пекадо»']);
+        $linked = ContractCategory::factory()->create(['name' => 'Тест: ООО Пекадо', 'organization_id' => $pecado->id]);
+        $orphan = ContractCategory::factory()->create(['name' => 'Тест: ИП Кербер', 'organization_id' => null]);
+
+        $a = Contract::factory()->forCompany($this->company)->create(['category_id' => $linked->id]);
+        $b = Contract::factory()->forCompany($this->company)->create(['category_id' => $orphan->id]);
+        Contract::query()->whereKey($a->id)->update(['organization_id' => null]);
+
+        $this->artisan('crm:contracts-assign-organizations', ['--dry-run' => true])->assertSuccessful();
+        $this->assertNull($a->fresh()->organization_id);
+
+        $this->artisan('crm:contracts-assign-organizations')->assertSuccessful();
+        $this->assertSame($pecado->id, $a->fresh()->organization_id);
+        $this->assertNull($b->fresh()->organization_id);
+    }
+
+    #[Test]
+    public function contract_scans_live_on_the_private_disk_and_stay_out_of_the_media_library(): void
+    {
+        Storage::fake(config('media-library.disk_name'));
+        Storage::fake(Contract::attachmentsDisk());
+
+        $contract = Contract::factory()->forCompany($this->company)->create(['category_id' => $this->category->id]);
+
+        $mediaId = $this->actingAs($this->manager)
+            ->postJson(route('crm.attachments.store'), [
+                'entity_type' => 'contract',
+                'entity_id' => $contract->id,
+                'file' => UploadedFile::fake()->image('скан.jpg'),
+            ])
+            ->assertCreated()
+            ->json('id');
+
+        $media = Media::query()->findOrFail($mediaId);
+        $this->assertSame(Contract::attachmentsDisk(), $media->disk);
+        Storage::disk(Contract::attachmentsDisk())->assertExists($media->getPathRelativeToRoot());
+        Storage::disk(config('media-library.disk_name'))->assertMissing($media->getPathRelativeToRoot());
+        $this->assertFalse($media->shouldBeSearchable());
+        $this->assertSame(0, Media::query()->library()->count());
+
+        // Партнёр скачивает скан через контроллер, а не по публичной ссылке.
+        config(['contracts.cabinet_enabled' => true]);
+        $this->actingAs($this->client)
+            ->get(route('cabinet.contracts.download', [$contract->id, $media->id]))
+            ->assertOk();
+    }
+
+    #[Test]
+    public function private_storage_command_moves_old_scans_from_the_public_disk(): void
+    {
+        $public = config('media-library.disk_name');
+        Storage::fake($public);
+        Storage::fake(Contract::attachmentsDisk());
+
+        $contract = Contract::factory()->forCompany($this->company)->create(['category_id' => $this->category->id]);
+        $media = $contract->addMedia(UploadedFile::fake()->image('старый-скан.jpg'))
+            ->toMediaCollection(\App\Support\Crm\CrmAttachments::COLLECTION, $public);
+        $path = $media->getPathRelativeToRoot();
+        Storage::disk($public)->assertExists($path);
+
+        $this->artisan('crm:contracts-private-storage')->assertSuccessful();
+
+        $this->assertSame(Contract::attachmentsDisk(), $media->fresh()->disk);
+        Storage::disk(Contract::attachmentsDisk())->assertExists($path);
+        Storage::disk($public)->assertMissing($path);
     }
 }

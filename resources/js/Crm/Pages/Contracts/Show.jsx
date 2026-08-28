@@ -28,6 +28,7 @@ function InfoRow({ label, value, color }) {
 export default function Show({
     contract,
     categories = [],
+    organizations = [],
     statuses = [],
     paymentTerms = [],
     forms = [],
@@ -82,6 +83,7 @@ export default function Show({
                         open
                         contract={contract}
                         categories={categories}
+                        organizations={organizations}
                         statuses={statuses}
                         paymentTerms={paymentTerms}
                         forms={forms}
@@ -103,6 +105,7 @@ export default function Show({
 
                             <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
                                 <InfoRow label="Категория" value={contract.category?.name} />
+                                <InfoRow label="Наша организация" value={contract.organization?.name} color={contract.organization ? undefined : 'orange.500'} />
                                 <InfoRow label="Дата договора" value={contract.date} />
                                 <InfoRow label="Дата подписания" value={contract.signed_at} />
                                 <InfoRow

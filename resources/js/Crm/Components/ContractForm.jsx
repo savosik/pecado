@@ -34,6 +34,7 @@ export default function ContractForm({
     open,
     contract = null,
     categories = [],
+    organizations = [],
     statuses = [],
     paymentTerms = [],
     forms = [],
@@ -46,6 +47,7 @@ export default function ContractForm({
 }) {
     const [form, setForm] = useState(() => ({
         category_id: contract?.category?.id || initialCategoryId || categories[0]?.id || '',
+        organization_id: contract?.organization?.id || '',
         number: contract?.number || '',
         counterparty_name: contract?.company ? '' : (contract?.counterparty_name || ''),
         date: contract?.date_iso || '',
@@ -82,6 +84,7 @@ export default function ContractForm({
         const payload = {
             ...form,
             category_id: form.category_id || null,
+            organization_id: form.organization_id || null,
             company_id: company?.id || null,
             client_id: client?.id || null,
             counterparty_name: company ? null : (form.counterparty_name || null),
@@ -157,9 +160,31 @@ export default function ContractForm({
                                             <Input size="sm" value={form.number} onChange={(e) => patch({ number: e.target.value })} placeholder="№ 12-Т/2024" autoFocus />
                                         ), { required: true })}
                                         {field('date', 'Дата договора', dateInput('date'))}
-                                        {field('category_id', 'Категория', select('category_id', categories.map((item) => (
-                                            <option key={item.id} value={item.id}>{item.name}{item.is_active === false ? ' (отключена)' : ''}</option>
-                                        ))))}
+                                        {field('category_id', 'Категория', (
+                                            <NativeSelectRoot size="sm">
+                                                <NativeSelectField
+                                                    value={form.category_id}
+                                                    onChange={(e) => {
+                                                        // Вкладки заведены по нашему юрлицу: сменил вкладку —
+                                                        // юрлицо подставляется, пока его не выбрали руками.
+                                                        const next = categories.find((item) => String(item.id) === e.target.value);
+                                                        patch({
+                                                            category_id: e.target.value,
+                                                            organization_id: form.organization_id || next?.organization_id || '',
+                                                        });
+                                                    }}
+                                                >
+                                                    {categories.map((item) => (
+                                                        <option key={item.id} value={item.id}>{item.name}{item.is_active === false ? ' (отключена)' : ''}</option>
+                                                    ))}
+                                                </NativeSelectField>
+                                            </NativeSelectRoot>
+                                        ))}
+                                        {field('organization_id', 'Наша организация', select(
+                                            'organization_id',
+                                            organizations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>),
+                                            'Как у категории',
+                                        ))}
                                         {field('responsible_manager_id', 'Ответственный', select(
                                             'responsible_manager_id',
                                             managers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>),

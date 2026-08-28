@@ -140,6 +140,7 @@ class ContractController extends CrmController
 
         $contract->load([
             'category:id,name',
+            'organization:id,name',
             'user:id,name,erp_name,email',
             'company:id,user_id,name,legal_name,tax_id,tax_code',
             'responsibleManager:id,name',
@@ -164,7 +165,7 @@ class ContractController extends CrmController
         $contract->save();
 
         return response()->json($this->payload($contract->fresh([
-            'category:id,name', 'user:id,name,erp_name,email', 'company:id,user_id,name,legal_name,tax_id,tax_code',
+            'category:id,name', 'organization:id,name', 'user:id,name,erp_name,email', 'company:id,user_id,name,legal_name,tax_id,tax_code',
             'responsibleManager:id,name', 'createdBy:id,name',
         ])), 201);
     }
@@ -180,7 +181,7 @@ class ContractController extends CrmController
         $contract->save();
 
         return response()->json($this->payload($contract->fresh([
-            'category:id,name', 'user:id,name,erp_name,email', 'company:id,user_id,name,legal_name,tax_id,tax_code',
+            'category:id,name', 'organization:id,name', 'user:id,name,erp_name,email', 'company:id,user_id,name,legal_name,tax_id,tax_code',
             'responsibleManager:id,name', 'createdBy:id,name',
         ])));
     }
@@ -206,11 +207,13 @@ class ContractController extends CrmController
             'payment_terms' => ['sometimes', 'nullable', Rule::enum(ContractPaymentTerms::class)],
             'form' => ['sometimes', 'nullable', Rule::enum(ContractForm::class)],
             'category_id' => ['sometimes', 'required', 'integer', 'exists:contract_categories,id'],
+            'organization_id' => ['sometimes', 'nullable', 'integer', 'exists:organizations,id'],
             'responsible_manager_id' => ['sometimes', 'nullable', 'integer', 'exists:personal_managers,id'],
         ], [
             'status.required' => 'Укажите статус подписания.',
             'category_id.required' => 'Выберите категорию.',
             'category_id.exists' => 'Такой категории нет.',
+            'organization_id.exists' => 'Такой организации нет в справочнике.',
             'responsible_manager_id.exists' => 'Такого менеджера нет.',
         ]);
 
@@ -228,7 +231,7 @@ class ContractController extends CrmController
         $contract->save();
 
         return response()->json($this->payload($contract->fresh([
-            'category:id,name', 'user:id,name,erp_name,email', 'company:id,user_id,name,legal_name,tax_id,tax_code',
+            'category:id,name', 'organization:id,name', 'user:id,name,erp_name,email', 'company:id,user_id,name,legal_name,tax_id,tax_code',
             'responsibleManager:id,name', 'createdBy:id,name',
         ])));
     }
@@ -370,6 +373,7 @@ class ContractController extends CrmController
 
         return [
             'category_id' => (int) $validated['category_id'],
+            'organization_id' => isset($validated['organization_id']) ? (int) $validated['organization_id'] : null,
             'number' => trim((string) $validated['number']),
             'company_id' => $companyId === null ? null : (int) $companyId,
             'user_id' => $clientId === null ? null : (int) $clientId,

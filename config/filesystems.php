@@ -113,6 +113,24 @@ return [
             'throw' => true,
         ],
 
+        // Сканы договоров и другие вложения CRM, которые нельзя выдавать по
+        // публичной ссылке. Тот же MinIO и те же ключи, что у медиатеки, но
+        // отдельный приватный бакет: анонимный GET по нему даёт 403, а файл
+        // отдаётся только через контроллер с проверкой принадлежности.
+        // Бакет создаёт `crm:contracts-private-storage` (он же переносит
+        // ранее загруженные сканы с публичного диска).
+        'crm-attachments' => [
+            'driver' => 's3',
+            'key' => env('CRM_ATTACHMENTS_S3_ACCESS_KEY', env('AWS_ACCESS_KEY_ID')),
+            'secret' => env('CRM_ATTACHMENTS_S3_SECRET_KEY', env('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('CRM_ATTACHMENTS_S3_REGION', env('AWS_DEFAULT_REGION', 'us-east-1')),
+            'bucket' => env('CRM_ATTACHMENTS_S3_BUCKET', 'crm-attachments'),
+            'endpoint' => env('CRM_ATTACHMENTS_S3_ENDPOINT', env('AWS_ENDPOINT')),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', true),
+            'visibility' => 'private',
+            'throw' => true,
+        ],
+
         // Холодное хранилище архива лога шины ERP (Yandex Object Storage,
         // ледяной класс — там же, куда ночной скрипт кладёт бэкапы БД).
         // throw => true обязателен: команда удаляет строки из БД сразу после
