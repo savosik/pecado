@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import { Badge, Box, Flex, HStack, Table, Text, VStack } from '@chakra-ui/react';
-import { LuLock, LuLockOpen } from 'react-icons/lu';
+import { LuLock, LuLockOpen, LuReceipt } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
 import DebtLevelBadge from '@/Crm/Components/DebtLevelBadge';
 import DebtPauseDialog from '@/Crm/Components/DebtPauseDialog';
+import PaymentOrderDialog from '@/Crm/Components/PaymentOrderDialog';
 
 const rub = (value) => `${Number(value || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽`;
 
@@ -22,6 +23,7 @@ const rub = (value) => `${Number(value || 0).toLocaleString('ru-RU', { minimumFr
  */
 export default function PartnerDebt({ client, debt, pauseMaxDays = 14 }) {
     const [pauseOpen, setPauseOpen] = useState(false);
+    const [orderOpen, setOrderOpen] = useState(false);
     const [releaseFor, setReleaseFor] = useState(null);
     const [releasing, setReleasing] = useState(false);
 
@@ -62,6 +64,9 @@ export default function PartnerDebt({ client, debt, pauseMaxDays = 14 }) {
                     <Text fontSize="sm" color="fg">{partner.reason}</Text>
                 </HStack>
                 <HStack gap={2}>
+                    <Button size="sm" variant="outline" onClick={() => setOrderOpen(true)}>
+                        <LuReceipt /> Платёжка
+                    </Button>
                     {debt.active_pause ? (
                         <Button size="sm" variant="outline" colorPalette="red" onClick={() => setReleaseFor(debt.active_pause)}>
                             <LuLock /> Снять разблокировку
@@ -135,6 +140,8 @@ export default function PartnerDebt({ client, debt, pauseMaxDays = 14 }) {
                 предзаказы закрываются с {thresholds.no_preorders_days} дн., заказы контрагента — с {thresholds.no_orders_days} дн.,
                 стоп — с {thresholds.hold_days} дн. при просрочке ≥ {Math.round((thresholds.hold_share || 0) * 100)} % долга.
             </Text>
+
+            <PaymentOrderDialog open={orderOpen} client={{ id: client.id, name: client.name }} onClose={() => setOrderOpen(false)} />
 
             <DebtPauseDialog
                 open={pauseOpen}

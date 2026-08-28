@@ -281,6 +281,13 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     // Раздел закрыт флагом cabinet.finance_enabled, пока цифры долга не сверены
     // с 1С: остаток по документам систематически больше реальной задолженности.
     // export строго до /{payment}, иначе «export» уйдёт в биндинг модели.
+    // Платёжка «бери и плати» (pay-01): открыта там же, где клиент видит долг —
+    // гейт внутри контроллера (раздел «Оплаты» или боевая лестница долга).
+    Route::get('/payment-orders', [\App\Http\Controllers\User\PaymentOrderController::class, 'index'])->name('payment-orders.index');
+    Route::get('/payment-orders/preview', [\App\Http\Controllers\User\PaymentOrderController::class, 'preview'])->name('payment-orders.preview');
+    Route::get('/payment-orders/download', [\App\Http\Controllers\User\PaymentOrderController::class, 'download'])->name('payment-orders.download');
+    Route::post('/payment-orders/send', [\App\Http\Controllers\User\PaymentOrderController::class, 'send'])->name('payment-orders.send');
+
     Route::middleware(\App\Http\Middleware\EnsureCabinetFinanceEnabled::class)->group(function () {
         Route::get('/payments', [\App\Http\Controllers\User\PaymentController::class, 'index'])->name('payments.index');
         Route::get('/payments/export', [\App\Http\Controllers\User\PaymentController::class, 'export'])->name('payments.export');

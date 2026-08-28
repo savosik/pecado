@@ -25,6 +25,7 @@ use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\MailSuppressionController;
 use App\Http\Controllers\Crm\NotificationPreferenceController;
 use App\Http\Controllers\Crm\OpportunityController;
+use App\Http\Controllers\Crm\PaymentOrderController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
 use App\Http\Controllers\Crm\ShortageController;
@@ -695,6 +696,12 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/debt', [DebtController::class, 'index'])->name('debt.index');
         Route::post('/debt/pauses', [DebtController::class, 'storePause'])->name('debt.pauses.store');
         Route::delete('/debt/pauses/{pause}', [DebtController::class, 'releasePause'])->name('debt.pauses.release');
+
+        // Платёжка из карточки партнёра (pay-01): менеджер собирает и шлёт сам.
+        Route::get('/partners/{client}/payment-orders/options', [PaymentOrderController::class, 'options'])->name('clients.payment-orders.options')->whereNumber('client');
+        Route::get('/partners/{client}/payment-orders/preview', [PaymentOrderController::class, 'preview'])->name('clients.payment-orders.preview')->whereNumber('client');
+        Route::get('/partners/{client}/payment-orders/download', [PaymentOrderController::class, 'download'])->name('clients.payment-orders.download')->whereNumber('client');
+        Route::post('/partners/{client}/payment-orders/send', [PaymentOrderController::class, 'send'])->name('clients.payment-orders.send')->whereNumber('client');
     });
 
     // Недоборы: журнал отменённых строк заказов. view — журнал и сводки,

@@ -57,6 +57,9 @@ function DebtActions({ debt, size = 'sm' }) {
                     <LuFileText /> Акт сверки
                 </Button>
             )}
+            <Button as={Link} href="/cabinet/payment-orders" size={size} variant={links.payments ? 'outline' : 'solid'} colorPalette={links.payments ? undefined : 'red'}>
+                <LuFileText /> Платёжное поручение
+            </Button>
             {!links.payments && links.documents && (
                 <Button as={Link} href={links.documents} size={size} variant="outline">
                     <LuFileText /> Документы

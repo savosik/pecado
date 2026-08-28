@@ -105,6 +105,8 @@ class HandleInertiaRequests extends Middleware
                 // Показывать ли клиенту его долги. Флаг нужен и на фронте: пункт меню
                 // и денежные блоки прячутся здесь, а данные — в контроллерах.
                 'cabinet_finance_enabled' => \App\Support\Cabinet\CabinetFinance::enabledFor($request->user()),
+                // Платёжка (pay-01) видна там же, где клиент видит долг.
+                'debt_cabinet_live' => \App\Support\Debt\DebtControl::live(\App\Support\Debt\DebtControl::ACTION_CABINET),
                 // Раздел «Документы» (v16.1.0). Два флага, а не один: менеджеры
                 // сверяют печатные формы раньше, чем их увидит клиент.
                 'documents_enabled' => (bool) config('documents.enabled'),

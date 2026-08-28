@@ -36,6 +36,7 @@ const menuGroups = [
             { href: '/cabinet/contracts', label: 'Договоры', icon: LuFilePen, feature: 'contracts' },
             // Раздел скрыт, пока цифры долга не сверены с 1С (config.cabinet_finance_enabled).
             { href: '/cabinet/payments', label: 'Оплаты', icon: LuReceipt, feature: 'finance' },
+            { href: '/cabinet/payment-orders', label: 'Платёжное поручение', icon: LuReceipt, feature: 'payment_orders' },
             { href: '/cabinet/returns', label: 'Возвраты', icon: LuRotateCcw },
             { href: '/cabinet/carts', label: 'Мои корзины', icon: LuShoppingCart },
         ],
@@ -113,6 +114,7 @@ function SidebarContent({ currentPath }) {
     // писать цепочку условий вместо одной проверки.
     const features = {
         finance: !!config?.cabinet_finance_enabled,
+        payment_orders: !!config?.cabinet_finance_enabled || !!config?.debt_cabinet_live,
         documents: !!config?.documents_enabled,
         contracts: !!config?.contracts_cabinet_enabled,
     };
