@@ -3,6 +3,7 @@
 namespace App\Services\Analytics;
 
 use App\Models\Currency;
+use App\Models\Organization;
 use App\Models\User;
 
 /**
@@ -26,11 +27,13 @@ class AnalyticsContext
 
     /**
      * @param  array<int, int>  $userIds  shipments.user_id IN (...)
+     * @param  array<int, int>  $hiddenOrganizationIds  юрлица, чьи отгрузки в расчёт не входят вовсе
      */
     public function __construct(
         public readonly array $userIds,
         public readonly string $dateColumn = self::DATE_SHIPMENT,
         public readonly ?Currency $currency = null,
+        public readonly array $hiddenOrganizationIds = [],
     ) {
         if (! in_array($this->dateColumn, self::ALLOWED_DATE_COLUMNS, true)) {
             throw new \InvalidArgumentException("Недопустимая колонка даты: {$this->dateColumn}");
@@ -40,6 +43,11 @@ class AnalyticsContext
     /**
      * Контекст кабинета партнёра — поведение как до рефакторинга:
      * скоуп по одному пользователю, дата отгрузки, валюта его региона.
+     *
+     * Отгрузки внутренних юрлиц («Реклама» с образцами) клиенту не показываются
+     * нигде, и в его аналитику они тоже не входят — иначе подарок на 2 785 ₽
+     * лёг бы в «закупки» и в подсказку «пора повторить заказ». В CRM то же
+     * исключение менеджер ставит фильтром сам: там оно — выбор, а не правило.
      */
     public static function forUser(User $user): self
     {
@@ -47,6 +55,7 @@ class AnalyticsContext
             userIds: [(int) $user->id],
             dateColumn: self::DATE_SHIPMENT,
             currency: $user->region?->currency,
+            hiddenOrganizationIds: Organization::settlementsExcludedIds(),
         );
     }
 

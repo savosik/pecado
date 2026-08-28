@@ -502,11 +502,16 @@ class ShipmentAnalyticsService
             ])
             ->all();
 
+        // Опции — по тем же отгрузкам, что и цифры: бренд из образцов «Рекламы»
+        // в фильтре кабинета дал бы пустой результат.
+        $ctx = AnalyticsContext::forUser($user);
+
         $brands = DB::table('shipments')
             ->join('shipment_items', 'shipment_items.shipment_id', '=', 'shipments.id')
             ->leftJoin('products', 'products.id', '=', 'shipment_items.product_id')
             ->leftJoin('brands', 'brands.id', '=', 'products.brand_id')
             ->where('shipments.user_id', $user->id)
+            ->tap(fn (Builder $q) => $this->applyHiddenOrganizations($q, $ctx))
             ->whereNotNull('brands.id')
             ->select('brands.id', 'brands.name')
             ->distinct()
@@ -519,6 +524,7 @@ class ShipmentAnalyticsService
             ->join('shipment_items', 'shipment_items.shipment_id', '=', 'shipments.id')
             ->leftJoin('products', 'products.id', '=', 'shipment_items.product_id')
             ->where('shipments.user_id', $user->id)
+            ->tap(fn (Builder $q) => $this->applyHiddenOrganizations($q, $ctx))
             ->whereNotNull('products.category_id')
             ->distinct()
             ->pluck('products.category_id')
@@ -713,6 +719,22 @@ class ShipmentAnalyticsService
     }
 
     /**
+     * Юрлица, скрытые контекстом (кабинет: «Реклама»), — вне расчёта целиком.
+     * Документы без организации остаются: у них нечего исключать.
+     */
+    private function applyHiddenOrganizations(Builder $query, AnalyticsContext $ctx): void
+    {
+        if ($ctx->hiddenOrganizationIds === []) {
+            return;
+        }
+
+        $query->where(function ($q) use ($ctx) {
+            $q->whereNull('shipments.organization_id')
+                ->orWhereNotIn('shipments.organization_id', $ctx->hiddenOrganizationIds);
+        });
+    }
+
+    /**
      * Базовый JOIN-запрос: shipment_items + shipments + currencies + фильтры.
      */
     private function itemsBaseQuery(AnalyticsContext $ctx, AnalyticsFilters $filters): Builder
@@ -724,6 +746,8 @@ class ShipmentAnalyticsService
             ->whereIn('shipments.user_id', $ctx->userIds)
             ->where($ctx->dateColumn, '>=', $filters->dateFrom->format('Y-m-d H:i:s'))
             ->where($ctx->dateColumn, '<=', $filters->dateTo->format('Y-m-d H:i:s'));
+
+        $this->applyHiddenOrganizations($query, $ctx);
 
         if ($filters->companyIds !== []) {
             $query->whereIn('shipments.company_id', $filters->companyIds);
@@ -1232,6 +1256,7 @@ class ShipmentAnalyticsService
             ->leftJoin('products', 'products.id', '=', 'shipment_items.product_id')
             ->whereNull('shipments.deleted_at')
             ->whereIn('shipments.user_id', $ctx->userIds)
+            ->tap(fn (Builder $q) => $this->applyHiddenOrganizations($q, $ctx))
             ->where($ctx->dateColumn, '>=', $since)
             ->whereNotNull('shipment_items.product_id')
             ->selectRaw('

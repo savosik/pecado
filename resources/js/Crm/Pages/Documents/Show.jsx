@@ -204,7 +204,7 @@ export default function Show() {
                                 <Text fontWeight="semibold">Оплата</Text>
                                 <Badge
                                     colorPalette={{
-                                        paid: 'green', partial: 'orange', overpaid: 'purple', unpaid: 'gray',
+                                        paid: 'green', partial: 'orange', overpaid: 'purple', unpaid: 'gray', excluded: 'blue',
                                     }[document.payment_summary.status] || 'gray'}
                                     variant="subtle"
                                 >
@@ -213,10 +213,17 @@ export default function Show() {
                             </HStack>
                         </Card.Header>
                         <Card.Body>
+                            {document.payment_summary.note && (
+                                <Text fontSize="sm" color="fg.muted" mb={3}>{document.payment_summary.note}</Text>
+                            )}
                             <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} mb={document.payments?.length ? 4 : 0}>
                                 <InfoRow label="Сумма реализации" value={document.payment_summary.total_label} />
-                                <InfoRow label="Оплачено" value={document.payment_summary.paid_label} />
-                                <InfoRow label="Остаток к оплате" value={document.payment_summary.unpaid_label} />
+                                {document.payment_summary.paid_label && (
+                                    <InfoRow label="Оплачено" value={document.payment_summary.paid_label} />
+                                )}
+                                {document.payment_summary.unpaid_label && (
+                                    <InfoRow label="Остаток к оплате" value={document.payment_summary.unpaid_label} />
+                                )}
                             </SimpleGrid>
 
                             {document.payments?.length > 0 ? (

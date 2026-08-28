@@ -78,9 +78,20 @@ class Organization extends Model
     public static function settlementsExcludedIds(): array
     {
         return self::withTrashed()
-            ->where('is_settlements_excluded', true)
+            ->settlementsExcluded()
             ->pluck('id')
             ->all();
+    }
+
+    /**
+     * Внутренние юрлица, исключённые из взаиморасчётов («Реклама»).
+     *
+     * Подзапрос для скоупов документов (`HidesInternalOrganizations`): один
+     * критерий на регистр и на выдачу клиенту, чтобы списки не разъехались.
+     */
+    public function scopeSettlementsExcluded(Builder $query): Builder
+    {
+        return $query->where('is_settlements_excluded', true);
     }
 
     /**

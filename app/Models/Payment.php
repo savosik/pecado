@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\FiltersClientDocuments;
 use App\Models\Concerns\HasCrmAttachments;
+use App\Models\Concerns\HidesInternalOrganizations;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -60,7 +61,7 @@ use Spatie\MediaLibrary\HasMedia;
  */
 class Payment extends Model implements HasMedia
 {
-    use FiltersClientDocuments, HasCrmAttachments, HasFactory, SoftDeletes;
+    use FiltersClientDocuments, HasCrmAttachments, HasFactory, HidesInternalOrganizations, SoftDeletes;
 
     /** Поступление оплаты от клиента. */
     public const DIRECTION_IN = 'in';

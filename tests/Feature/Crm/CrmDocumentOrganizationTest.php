@@ -105,6 +105,41 @@ class CrmDocumentOrganizationTest extends TestCase
     }
 
     /**
+     * Реализация внутреннего юрлица («Реклама») в регистр взаиморасчётов не
+     * попадает, и «не оплачена» для неё — ложь: долга нет и не будет. Менеджер
+     * видит «Вне взаиморасчётов» без сумм «оплачено/остаток».
+     */
+    #[Test]
+    public function shipment_of_internal_organization_is_marked_out_of_settlements(): void
+    {
+        $shipment = $this->shipmentFor([
+            'organization_id' => Organization::factory()->create([
+                'name' => 'Реклама',
+                'is_settlements_excluded' => true,
+            ])->id,
+            'payment_status' => Shipment::PAYMENT_UNPAID,
+        ]);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.shipments.show', $shipment))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('document.payment_summary.status', Shipment::PAYMENT_EXCLUDED)
+                ->where('document.payment_summary.status_label', 'Вне взаиморасчётов')
+                ->where('document.payment_summary.paid_label', null)
+                ->where('document.payment_summary.unpaid_label', null)
+            );
+
+        $regular = $this->shipmentFor(['payment_status' => Shipment::PAYMENT_UNPAID]);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.shipments.show', $regular))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('document.payment_summary.status', Shipment::PAYMENT_UNPAID)
+                ->where('document.payment_summary.status_label', 'Не оплачена')
+            );
+    }
+
+    /**
      * У заглушки вместо названия лежит UUID — менеджер должен видеть, что юрлицо
      * ещё не заведено, а не гадать над строкой из тридцати шести символов.
      */

@@ -21,7 +21,10 @@ trait ListsOrganizations
             return [];
         }
 
+        // Внутренние юрлица («Реклама») из взаиморасчётов исключены на входе —
+        // в фильтре денег такой пункт всегда пуст и только путает.
         return Organization::query()
+            ->where('is_settlements_excluded', false)
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get(['id', 'name'])

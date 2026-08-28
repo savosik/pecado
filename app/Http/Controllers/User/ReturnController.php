@@ -430,6 +430,8 @@ class ReturnController extends Controller
         $query = Shipment::query()
             ->select('shipments.*')
             ->where('user_id', $user->id)
+            // Образцы «Рекламы» не покупались — возвращать по ним нечего.
+            ->withoutInternalOrganizations()
             ->with(['items.product.brand'])
             ->withCount('items')
             ->selectSub(function ($sub) {
@@ -556,6 +558,7 @@ class ReturnController extends Controller
 
         $shipment = Shipment::where('id', $shipmentId)
             ->where('user_id', $user->id)
+            ->withoutInternalOrganizations()
             ->firstOrFail();
 
         $items = ShipmentItem::with('product')

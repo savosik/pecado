@@ -1879,7 +1879,7 @@ class DocumentController extends CrmController
             'company:id,name,tax_id',
             // is_stub обязателен в выборке: без него незаведённое юрлицо
             // показалось бы менеджеру голым UUID-ом вместо названия.
-            'organization:id,name,is_stub',
+            'organization:id,name,is_stub,is_settlements_excluded',
             'warehouse:id,name',
             'items.product:id,name,slug,sku',
         ]);
@@ -1940,13 +1940,25 @@ class DocumentController extends CrmController
                 // Оплата реализации: чем закрыта и сколько осталось. По денормали-
                 // зованным полям — их ведёт проекция плановых строк регистра
                 // (SettlementProjector), а не расчёт сайта.
-                'payment_summary' => [
-                    'status' => $model->payment_status,
-                    'status_label' => $model->payment_status_label,
-                    'paid_label' => $this->money((float) $model->paid_amount, $model->currency_code),
-                    'unpaid_label' => $this->money($model->unpaid_amount, $model->currency_code),
-                    'total_label' => $this->money((float) $model->total_amount, $model->currency_code),
-                ],
+                // Реализация внутреннего юрлица («Реклама») в регистр не попадает:
+                // ни «оплачено», ни «остаток» у неё нет — и клиенту она не видна.
+                'payment_summary' => $model->isFromInternalOrganization()
+                    ? [
+                        'status' => Shipment::PAYMENT_EXCLUDED,
+                        'status_label' => $model->payment_status_label,
+                        'paid_label' => null,
+                        'unpaid_label' => null,
+                        'total_label' => $this->money((float) $model->total_amount, $model->currency_code),
+                        'note' => 'Внутреннее юрлицо: реализация в расчёты с клиентом не входит и в его кабинете не показывается.',
+                    ]
+                    : [
+                        'status' => $model->payment_status,
+                        'status_label' => $model->payment_status_label,
+                        'paid_label' => $this->money((float) $model->paid_amount, $model->currency_code),
+                        'unpaid_label' => $this->money($model->unpaid_amount, $model->currency_code),
+                        'total_label' => $this->money((float) $model->total_amount, $model->currency_code),
+                        'note' => null,
+                    ],
                 // Список закрывших платежей снят вместе с расшифровкой: 1С её
                 // не присылает, а угадывать связь по датам и суммам нельзя.
                 'payments' => [],

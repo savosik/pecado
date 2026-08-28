@@ -82,11 +82,15 @@ class DocumentOccasions
 
     /**
      * Готов ли документ к рассылке: файл на месте и контрагент известен.
+     *
+     * Формы внутренних юрлиц («Реклама») клиенту не показываются, значит и
+     * письмо «появился документ» о них — ссылка в пустоту.
      */
     private function isReady(PrintedDocument $document): bool
     {
         return $document->file_status === PrintedDocument::FILE_STORED
-            && $document->company_id !== null;
+            && $document->company_id !== null
+            && ! $document->isFromInternalOrganization();
     }
 
     private function title(PrintedDocument $document): string

@@ -493,7 +493,8 @@ class OrderController extends Controller
             'items.product.media',
             'statusHistories.user',
             'changeLogs.user',
-            'shipments',
+            // Реализации внутренних юрлиц («Реклама») клиенту не показываем — как и в списке.
+            'shipments' => fn ($query) => $query->withoutInternalOrganizations(),
         ]);
 
         return Inertia::render('User/Cabinet/Orders/Show', [

@@ -269,8 +269,11 @@ class ClientApiController extends Controller
         $financeEnabled = \App\Support\Cabinet\CabinetFinance::enabledFor($user);
         $withItems = $request->boolean('with_items');
 
+        // Реализации внутренних юрлиц («Реклама») в интеграцию клиента не отдаём —
+        // та же граница, что в кабинете.
         $query = Shipment::query()
             ->where('user_id', $user->id)
+            ->withoutInternalOrganizations()
             ->with(['company:id,name,legal_name,tax_id'])
             ->withCount('items');
 
@@ -414,7 +417,7 @@ class ClientApiController extends Controller
      */
     protected function resolveShipment(string $identifier, int $userId): Shipment
     {
-        $base = fn () => Shipment::query()->where('user_id', $userId);
+        $base = fn () => Shipment::query()->where('user_id', $userId)->withoutInternalOrganizations();
 
         $shipment = (ctype_digit($identifier) ? $base()->whereKey((int) $identifier)->first() : null)
             ?? $base()->where('uuid', $identifier)->first()

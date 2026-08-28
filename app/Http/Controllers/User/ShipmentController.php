@@ -235,8 +235,11 @@ class ShipmentController extends Controller
     {
         $search = trim((string) $request->input('search', ''));
 
+        // Реализации внутренних юрлиц («Реклама» с образцами) клиенту не показываем:
+        // строка «не оплачена» на 0,58 ₽ читается как долг.
         $query = Shipment::query()
             ->where('user_id', $user->id)
+            ->withoutInternalOrganizations()
             ->with(['company', 'organization', 'items.product']);
 
         if ($search !== '') {
@@ -385,6 +388,8 @@ class ShipmentController extends Controller
         $user = $request->user();
 
         abort_unless($shipment->user_id === $user->id, 403);
+        // Прямая ссылка на реализацию «Рекламы» — как на несуществующую.
+        abort_if($shipment->isFromInternalOrganization(), 404);
 
         // is_stub обязателен в выборке: без него sellerPayload() покажет клиенту
         // UUID вместо названия продавца
@@ -596,6 +601,8 @@ class ShipmentController extends Controller
     {
         $user = $request->user();
         abort_unless($shipment->user_id === $user->id, 403);
+        // Прямая ссылка на реализацию «Рекламы» — как на несуществующую.
+        abort_if($shipment->isFromInternalOrganization(), 404);
 
         $shipment->load(['items.product:id,name,sku', 'items.order:id,uuid,number,erp_number']);
 

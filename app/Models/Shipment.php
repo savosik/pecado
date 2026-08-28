@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\FiltersClientDocuments;
 use App\Models\Concerns\HasCrmAttachments;
+use App\Models\Concerns\HidesInternalOrganizations;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -73,7 +74,7 @@ use Spatie\MediaLibrary\HasMedia;
  */
 class Shipment extends Model implements HasMedia
 {
-    use FiltersClientDocuments, HasCrmAttachments, HasFactory, SoftDeletes;
+    use FiltersClientDocuments, HasCrmAttachments, HasFactory, HidesInternalOrganizations, SoftDeletes;
 
     protected $fillable = [
         'uuid',
@@ -223,11 +224,21 @@ class Shipment extends Model implements HasMedia
         return $this->payment_due_date->startOfDay()->isBefore(\Illuminate\Support\Carbon::today());
     }
 
+    /** Статус оплаты для витрины: реализация внутреннего юрлица, расчётов по ней нет. */
+    public const PAYMENT_EXCLUDED = 'excluded';
+
     /**
      * Метка статуса оплаты на русском.
+     *
+     * Реализация «Рекламы» в регистр взаиморасчётов не попадает, и «не оплачена»
+     * для неё — ложь: долга нет и не будет. Показываем это словами.
      */
     public function getPaymentStatusLabelAttribute(): string
     {
+        if ($this->isFromInternalOrganization()) {
+            return 'Вне взаиморасчётов';
+        }
+
         return match ($this->payment_status) {
             self::PAYMENT_PAID => 'Оплачена',
             self::PAYMENT_PARTIAL => 'Оплачена частично',

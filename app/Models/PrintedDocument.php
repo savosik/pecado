@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Casts\ErpDatetime;
 use App\Enums\PrintedDocumentFormat;
 use App\Enums\PrintedDocumentType;
+use App\Models\Concerns\HidesInternalOrganizations;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -79,6 +80,7 @@ use Illuminate\Support\Str;
 class PrintedDocument extends Model
 {
     use HasFactory;
+    use HidesInternalOrganizations;
     use SoftDeletes;
 
     /** Запись создана, файл ещё не перенесён из обменного бакета. */
@@ -195,18 +197,26 @@ class PrintedDocument extends Model
      *
      * Вторая ветка — документы, у которых контрагента на сайте ещё нет. Без неё
      * клиент не увидел бы собственный счёт до того, как приедет `contractor.created`.
+     *
+     * Формы внутренних юрлиц («Реклама») клиенту не показываются вовсе: счёт
+     * на рекламные образцы и акт сверки с «Рекламой» — не его расчёты.
+     *
+     * @param  Builder<PrintedDocument>  $query
+     * @return Builder<PrintedDocument>
      */
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        return $query->where(function (Builder $query) use ($user) {
-            $query
-                ->whereIn('company_id', Company::withoutGlobalScopes()
-                    ->where('user_id', $user->id)
-                    ->select('id'))
-                ->orWhere(function (Builder $query) use ($user) {
-                    $query->whereNull('company_id')->where('user_id', $user->id);
-                });
-        });
+        return $query
+            ->withoutInternalOrganizations()
+            ->where(function (Builder $query) use ($user) {
+                $query
+                    ->whereIn('company_id', Company::withoutGlobalScopes()
+                        ->where('user_id', $user->id)
+                        ->select('id'))
+                    ->orWhere(function (Builder $query) use ($user) {
+                        $query->whereNull('company_id')->where('user_id', $user->id);
+                    });
+            });
     }
 
     /**

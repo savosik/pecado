@@ -81,6 +81,7 @@ class PaymentController extends Controller
         $user = $request->user();
 
         abort_unless($payment->user_id === $user->id, 403);
+        abort_if($payment->isFromInternalOrganization(), 404);
 
         $payment->load([
             'company',
@@ -297,6 +298,8 @@ class PaymentController extends Controller
 
         $query = Payment::query()
             ->where('user_id', $user->id)
+            // Платежи внутренних юрлиц («Реклама») — не расчёты клиента.
+            ->withoutInternalOrganizations()
             ->with(['company', 'organization']);
 
         if ($search !== '') {
