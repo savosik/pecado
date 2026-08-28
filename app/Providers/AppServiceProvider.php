@@ -33,6 +33,13 @@ class AppServiceProvider extends ServiceProvider
             \App\Services\Crm\Finance\LedgerPaymentForecastService::class,
         );
 
+        // Пороги лестницы долга читаются из config/debt.php в одной точке:
+        // сервисам достаётся готовый калькулятор, а не массив конфига.
+        $this->app->bind(
+            \App\Services\Debt\DebtLadder::class,
+            static fn (): \App\Services\Debt\DebtLadder => \App\Services\Debt\DebtLadder::fromConfig(),
+        );
+
         $this->app->bind(
             \App\Contracts\Currency\CurrencyConversionServiceInterface::class,
             \App\Services\Currency\CurrencyConversionService::class

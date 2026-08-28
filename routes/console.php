@@ -40,6 +40,11 @@ Schedule::command('crm:tasks-recur')->dailyAt('05:40')->withoutOverlapping(); //
 // Плановый обход, а не реакция на balance.updated: 1С шлёт снимок баланса часто
 // и не по порядку, и письмо на каждый пересчёт было бы шумом.
 Schedule::command('mail:finance-scan')->dailyAt('07:00')->withoutOverlapping();
+
+// Лестница долга: ступень каждой пары партнёр × контрагент по регистру.
+// После финансового обхода, чтобы письма о переходах шли следом за письмами
+// о просрочке, а не вперемешку. В тени пишет «я бы сделала».
+Schedule::command('debt:recalculate')->dailyAt('07:10')->withoutOverlapping();
 // Поток писем: письма без получателя живут MAIL_STREAM_UNMATCHED_DAYS и удаляются —
 // иначе папка превратится в бесконечно растущую свалку.
 Schedule::command('mail:prune-unmatched')->dailyAt('04:40')->withoutOverlapping();
