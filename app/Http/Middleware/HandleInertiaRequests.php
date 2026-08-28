@@ -88,6 +88,7 @@ class HandleInertiaRequests extends Middleware
                 'info' => fn () => $request->session()->get('info'),
                 'onboarding_completed' => fn () => $request->session()->get('onboarding_completed'),
                 'stock_conflicts' => fn () => $request->session()->get('stock_conflicts'),
+                'debt_restriction' => fn () => $request->session()->get('debt_restriction'),
             ],
             'footerCategories' => Cache::remember('footer.categories', 3600, fn () => Category::active()->whereIsRoot()->select('id', 'name', 'slug')->limit(5)->get()
             ),

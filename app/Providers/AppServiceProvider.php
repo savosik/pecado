@@ -159,6 +159,26 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\PublishContractorToErp::class,
         );
 
+        // Лестница долга (debt-00 v2): переход ступени → письмо клиенту и задача
+        // менеджеру; новые движения/баланс из 1С → пересчёт только вверх;
+        // истёкшая разблокировка → задача поставившему.
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\DebtLevelChanged::class,
+            \App\Listeners\SendDebtNotification::class,
+        );
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\DebtLevelChanged::class,
+            \App\Listeners\CreateDebtTasks::class,
+        );
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\DebtPauseExpired::class,
+            \App\Listeners\CreateDebtTasks::class,
+        );
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\PartnerSettlementsChanged::class,
+            \App\Listeners\RefreshDebtLevel::class,
+        );
+
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\CompanyUpdated::class,
             \App\Listeners\PublishContractorToErp::class,

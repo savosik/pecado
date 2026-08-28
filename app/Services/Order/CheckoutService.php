@@ -16,6 +16,7 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Scopes\HiddenScope;
+use App\Services\Debt\DebtGate;
 use App\Services\Defect\DefectPickListFormatter;
 use App\Services\Promotion\DTO\AppliedReward;
 use App\Services\Promotion\DTO\PromoContext;
@@ -35,6 +36,7 @@ class CheckoutService implements CheckoutServiceInterface
         protected OrderAssembler $assembler,
         protected PromotionEngine $promotionEngine,
         protected PromoPickListFormatter $promoPickListFormatter,
+        protected DebtGate $debtGate,
     ) {}
 
     /**
@@ -52,6 +54,10 @@ class CheckoutService implements CheckoutServiceInterface
         ?string $warehouseComment = null,
         DeliveryMethod $deliveryMethod = DeliveryMethod::DELIVERY
     ): Collection {
+        // Лестница долга — до транзакции и до остатков: отказ по долгу
+        // объясняется одной фразой, и резервировать под него нечего.
+        $this->debtGate->check($cart->user, $company, $cart);
+
         return DB::transaction(function () use ($cart, $company, $deliveryAddress, $comment, $managerComment, $warehouseComment, $deliveryMethod) {
             $user = $cart->user;
             $currency = $this->currencyResolver->resolve($user);

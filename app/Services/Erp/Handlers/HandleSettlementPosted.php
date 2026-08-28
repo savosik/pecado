@@ -96,6 +96,17 @@ class HandleSettlementPosted
 
         app(SettlementProjector::class)->projectDocument($documentUuid);
 
+        // Лестница долга: оплата размораживает сразу. Партнёры — из строк
+        // движений, документ может касаться нескольких (переход субпартнёра).
+        $partnerIds = array_values(array_unique(array_filter(array_map(
+            static fn (array $row): int => (int) ($row['user_id'] ?? 0),
+            $rows,
+        ))));
+
+        if ($partnerIds !== []) {
+            \App\Events\PartnerSettlementsChanged::dispatch($partnerIds, 'settlement.posted');
+        }
+
         Log::info('settlement.posted: движения документа применены', [
             'document_uuid' => $documentUuid,
             'entries' => count($rows),

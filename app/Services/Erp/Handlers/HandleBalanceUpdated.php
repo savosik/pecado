@@ -141,6 +141,9 @@ class HandleBalanceUpdated
                 ]);
             }
         });
+
+        // Лестница долга: свежий баланс — повод пересчитать ступень вверх.
+        \App\Events\PartnerSettlementsChanged::dispatch([(int) $user->id], 'balance.updated');
     }
 
     /**

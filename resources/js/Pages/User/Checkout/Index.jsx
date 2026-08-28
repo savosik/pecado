@@ -45,7 +45,8 @@ export default function CheckoutIndex({
     countries = [],
     defaultDeliveryMethod = 'delivery',
 }) {
-    const { currency, errors: serverErrors, flash } = usePage().props;
+    const { currency, errors: serverErrors, flash, debt } = usePage().props;
+    const debtRestriction = flash?.debt_restriction || null;
     const currencySymbol = currency?.symbol ?? '₽';
 
     const breadcrumbs = [
@@ -116,6 +117,18 @@ export default function CheckoutIndex({
 
     const hasConflicts = conflictItems.length > 0;
 
+    // Отказ по лестнице долга — тост при появлении, подробности в панели ниже.
+    useEffect(() => {
+        if (serverErrors?.debt) {
+            toaster.create({
+                title: 'Заказ не оформлен',
+                description: serverErrors.debt,
+                type: 'error',
+                duration: 9000,
+            });
+        }
+    }, [serverErrors?.debt]);
+
     // Серверная ошибка stock — показываем тостер только при появлении/изменении.
     useEffect(() => {
         if (serverErrors?.stock) {
@@ -154,6 +167,9 @@ export default function CheckoutIndex({
                     Оформление заказа
                 </Heading>
 
+                {(debtRestriction || debt?.restricted) && (
+                    <DebtRestrictionPanel restriction={debtRestriction} debt={debt} />
+                )}
                 {hasConflicts && (
                     <StockConflictsPanel
                         items={conflictItems}
@@ -633,8 +649,8 @@ export default function CheckoutIndex({
                                 colorPalette="pecado"
                                 size="lg"
                                 loading={processing}
-                                disabled={processing || companies.length === 0 || hasConflicts}
-                                title={hasConflicts ? 'Сначала уточните корзину — есть позиции с изменившимся остатком' : undefined}
+                                disabled={processing || companies.length === 0 || hasConflicts || !!debtRestriction?.blocks_all_orders}
+                                title={hasConflicts ? 'Сначала уточните корзину — есть позиции с изменившимся остатком' : (debtRestriction?.blocks_all_orders ? 'Оформление приостановлено до погашения задолженности' : undefined)}
                             >
                                 <LuSend size={16} />
                                 Оформить заказ
@@ -1184,6 +1200,52 @@ function StockBadge({ it, ...flexProps }) {
  *     (квантити уменьшаются до available, недоступные удаляются).
  *   • «Изменить вручную» — переход на /cart.
  */
+// Лестница долга: панель с причиной отказа (после попытки) или предупреждение
+// до неё (по общему пропсу debt). Деловой тон, без обратных отсчётов.
+function DebtRestrictionPanel({ restriction, debt }) {
+    const links = debt?.links || {};
+    const title = restriction
+        ? (restriction.blocks_all_orders ? 'Оформление приостановлено' : restriction.level_label)
+        : debt?.level_label;
+    const message = restriction
+        ? restriction.message
+        : `${debt?.hint || ''} Ограничение снимается автоматически в день поступления оплаты.`;
+    const amount = restriction?.overdue_amount ?? debt?.overdue_amount;
+
+    return (
+        <Box
+            bg="red.subtle"
+            borderWidth="1px"
+            borderColor="red.muted"
+            rounded="lg"
+            p={{ base: '4', md: '5' }}
+            mb="4"
+            role="status"
+        >
+            <Flex align="center" gap="2" mb="2" color="red.fg">
+                <LuTriangleAlert size={20} />
+                <Text fontWeight="600" fontSize="lg">{title}</Text>
+                {amount > 0 && (
+                    <Badge colorPalette="red" variant="subtle">
+                        просрочено {Number(amount).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}&nbsp;₽
+                    </Badge>
+                )}
+            </Flex>
+            <Text fontSize="sm" color="fg.muted" mb={links.payments || links.reconciliation ? '3' : '0'}>
+                {message}
+            </Text>
+            <HStack gap="2" wrap="wrap">
+                {links.payments && (
+                    <Button as={Link} href={links.payments} size="sm" colorPalette="red">К оплатам</Button>
+                )}
+                {links.reconciliation && (
+                    <Button as={Link} href={links.reconciliation} size="sm" variant="outline">Акт сверки</Button>
+                )}
+            </HStack>
+        </Box>
+    );
+}
+
 function StockConflictsPanel({ items, onNormalize, normalizing }) {
     const partial = items.filter((c) => c.status === 'partial');
     const unavailable = items.filter((c) => c.status === 'unavailable');

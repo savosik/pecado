@@ -194,6 +194,11 @@ class CheckoutController extends Controller
                     'stock' => 'Количество товаров на складе изменилось. Уточните корзину перед оформлением.',
                 ])
                 ->with('stock_conflicts', $e->getItems());
+        } catch (\App\Exceptions\DebtRestrictionException $e) {
+            // Лестница долга: причина, сумма и что закрыто — клиенту, без угроз.
+            return back()
+                ->withErrors(['debt' => $e->getMessage()])
+                ->with('debt_restriction', $e->toPayload());
         }
     }
 
