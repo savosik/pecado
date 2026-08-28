@@ -645,6 +645,12 @@ jobs:
           echo "==> [5/9] Синхронизация ролей и прав..."
           sg docker -c "$DC exec -T app php artisan db:seed --class=RolesAndPermissionsSeeder --force"
 
+          echo "==> [5.2/9] Лестница долга: ступени по регистру..."
+          # debt-00 v2: ступень ставится сразу по замеру, пересчёт идемпотентен.
+          # При деплое — чтобы состояние появилось сразу, а не в 07:10 следующего дня.
+          # Ошибка пересчёта релиз не роняет: ночной запуск повторит.
+          sg docker -c "$DC exec -T app php artisan debt:recalculate" || echo "::warning::debt:recalculate завершился с ошибкой — проверьте после релиза"
+
           echo "==> [5.1/9] Юридические страницы и пункты меню (идемпотентно)..."
           sg docker -c "$DC exec -T app php artisan db:seed --class=LegalPagesSeeder --force"
 
