@@ -201,4 +201,37 @@ class CabinetContactsTest extends TestCase
     {
         $this->getJson(route('cabinet.contacts.list'))->assertUnauthorized();
     }
+
+    #[Test]
+    public function one_person_can_hold_roles_in_several_companies(): void
+    {
+        $first = Company::factory()->create(['user_id' => $this->partner->id, 'name' => 'Ромашка ООО']);
+        $second = Company::factory()->create(['user_id' => $this->partner->id, 'name' => 'Василёк ИП']);
+        $stranger = Company::factory()->create(['user_id' => User::factory()->create()->id]);
+
+        $id = $this->actingAs($this->partner)->postJson(route('cabinet.contacts.store'), [
+            'full_name' => 'Афонина Мария',
+            'phone' => '+79123456789',
+            'links' => [
+                ['company_id' => $first->id, 'role' => 'accountant'],
+                ['company_id' => $second->id, 'role' => 'accountant'],
+                ['company_id' => $stranger->id, 'role' => 'director'],
+            ],
+        ])->assertCreated()->json('id');
+
+        $links = \App\Models\ContactLink::query()->where('contact_id', $id)->get();
+        $this->assertEqualsCanonicalizing([$first->id, $second->id], $links->pluck('subject_id')->map(fn ($v) => (int) $v)->all());
+
+        $row = collect($this->actingAs($this->partner)->getJson(route('cabinet.contacts.list'))->json('data'))->firstWhere('id', $id);
+        $this->assertEqualsCanonicalizing(['Ромашка ООО', 'Василёк ИП'], collect($row['links'])->pluck('company_name')->all());
+
+        // Снятая галочка — снятая привязка.
+        $this->actingAs($this->partner)->patchJson(route('cabinet.contacts.update', $id), [
+            'full_name' => 'Афонина Мария',
+            'phone' => '+79123456789',
+            'links' => [['company_id' => $second->id, 'role' => 'director']],
+        ])->assertOk();
+
+        $this->assertSame([$second->id], \App\Models\ContactLink::query()->where('contact_id', $id)->pluck('subject_id')->map(fn ($v) => (int) $v)->all());
+    }
 }

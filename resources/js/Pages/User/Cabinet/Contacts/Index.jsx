@@ -7,7 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert } from '@/components/ui/alert';
 import { toastError, toastSuccess } from '@/utils/toast';
-import { LuDownload, LuPencil, LuTrash2, LuUserPlus } from 'react-icons/lu';
+import { LuDownload, LuUserPlus, LuUserX } from 'react-icons/lu';
+import RowActions from '@/shared/Panel/RowActions';
+import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
 
 const controlStyle = {
     padding: '0.5rem',
@@ -30,8 +33,7 @@ const emptyForm = {
     birthday_has_year: true,
     preferred_channel: '',
     is_active: true,
-    company_id: '',
-    role: 'manager',
+    links: [],
 };
 
 /**
@@ -77,8 +79,7 @@ export default function Index({ roles = [], channels = [], limit = 50 }) {
             ...contact,
             birthday: contact.birthday || '',
             preferred_channel: contact.preferred_channel || '',
-            company_id: contact.company_id || '',
-            role: contact.role || 'manager',
+            links: (contact.links || []).map((link) => ({ company_id: link.company_id, role: link.role })),
         });
         setEditingId(contact.id);
         setErrors({});
@@ -93,7 +94,6 @@ export default function Index({ roles = [], channels = [], limit = 50 }) {
             ...form,
             birthday: form.birthday || null,
             preferred_channel: form.preferred_channel || null,
-            company_id: form.company_id || null,
         };
 
         try {
@@ -117,6 +117,12 @@ export default function Index({ roles = [], channels = [], limit = 50 }) {
             setBusy(false);
         }
     };
+
+    const del = useConfirmDelete({
+        title: 'Удалить контакт?',
+        description: (contact) => `${contact?.full_name ?? 'Контакт'} будет удалён из вашей адресной книги.`,
+        onConfirm: (contact) => remove(contact),
+    });
 
     const remove = async (contact) => {
         setBusy(true);
@@ -173,20 +179,12 @@ export default function Index({ roles = [], channels = [], limit = 50 }) {
                 </Text>
 
                 {open && (
-                    <Box borderWidth="1px" borderRadius="lg" p={4}>
+                    <Box border="1px solid" borderColor="border.muted" borderRadius="xl" bg="bg" p={4}>
                         <VStack align="stretch" gap={3}>
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
                                 {field('full_name', 'ФИО', { placeholder: 'Афонина Мария Петровна' })}
                                 {field('greeting_name', 'Как обращаться', { placeholder: 'Мария Петровна' })}
                                 {field('position', 'Должность', { placeholder: 'Главный бухгалтер' })}
-                                <Box>
-                                    <Text fontSize="sm" fontWeight="600" mb={1}>Кем приходится</Text>
-                                    <select value={form.role} onChange={(e) => patch({ role: e.target.value })} style={controlStyle}>
-                                        {roles.map((item) => (
-                                            <option key={item.value} value={item.value}>{item.label}</option>
-                                        ))}
-                                    </select>
-                                </Box>
                                 {field('phone', 'Телефон', { placeholder: '+7 912 345-67-89' })}
                                 {field('email', 'Почта')}
                                 {field('telegram', 'Telegram', { placeholder: '@username' })}
@@ -216,22 +214,48 @@ export default function Index({ roles = [], channels = [], limit = 50 }) {
                                         Год неизвестен
                                     </Checkbox>
                                 </Box>
-                                {companies.length > 0 && (
-                                    <Box>
-                                        <Text fontSize="sm" fontWeight="600" mb={1}>В какой компании</Text>
-                                        <select
-                                            value={form.company_id || ''}
-                                            onChange={(e) => patch({ company_id: e.target.value })}
-                                            style={controlStyle}
-                                        >
-                                            <option value="">Не указано</option>
-                                            {companies.map((item) => (
-                                                <option key={item.id} value={item.id}>{item.name}</option>
-                                            ))}
-                                        </select>
-                                    </Box>
-                                )}
                             </SimpleGrid>
+
+                            {companies.length > 0 && (
+                                <Box>
+                                    <Text fontSize="sm" fontWeight="600" mb={1}>В каких компаниях и кем</Text>
+                                    <Text fontSize="xs" color="fg.muted" mb={2}>
+                                        Один человек может быть, например, бухгалтером сразу в нескольких ваших организациях — отметьте каждую.
+                                    </Text>
+                                    <VStack align="stretch" gap={2}>
+                                        {companies.map((item) => {
+                                            const link = form.links.find((row) => row.company_id === item.id);
+                                            return (
+                                                <HStack key={item.id} gap={3} flexWrap="wrap">
+                                                    <Checkbox
+                                                        checked={!!link}
+                                                        onCheckedChange={(e) => patch({
+                                                            links: e.checked
+                                                                ? [...form.links, { company_id: item.id, role: 'manager' }]
+                                                                : form.links.filter((row) => row.company_id !== item.id),
+                                                        })}
+                                                    >
+                                                        {item.name}
+                                                    </Checkbox>
+                                                    {link && (
+                                                        <select
+                                                            value={link.role}
+                                                            onChange={(e) => patch({
+                                                                links: form.links.map((row) => (row.company_id === item.id ? { ...row, role: e.target.value } : row)),
+                                                            })}
+                                                            style={{ ...controlStyle, width: 'auto', minWidth: '180px' }}
+                                                        >
+                                                            {roles.map((role) => (
+                                                                <option key={role.value} value={role.value}>{role.label}</option>
+                                                            ))}
+                                                        </select>
+                                                    )}
+                                                </HStack>
+                                            );
+                                        })}
+                                    </VStack>
+                                </Box>
+                            )}
 
                             <HStack gap={2}>
                                 <Button size="sm" onClick={save} loading={busy}>Сохранить</Button>
@@ -252,9 +276,11 @@ export default function Index({ roles = [], channels = [], limit = 50 }) {
                     {contacts.map((contact) => (
                         <HStack
                             key={contact.id}
-                            borderWidth="1px"
-                            borderRadius="lg"
-                            p={3}
+                            border="1px solid"
+                            borderColor="border.muted"
+                            borderRadius="xl"
+                            bg="bg"
+                            p={4}
                             justifyContent="space-between"
                             flexWrap="wrap"
                             gap={3}
@@ -262,33 +288,30 @@ export default function Index({ roles = [], channels = [], limit = 50 }) {
                         >
                             <VStack align="start" gap={0} flex="1" minW="220px">
                                 <HStack gap={2} flexWrap="wrap">
-                                    <Text fontWeight="600">{contact.full_name}</Text>
-                                    {contact.role_label && <Badge variant="subtle">{contact.role_label}</Badge>}
+                                    <Text fontWeight="600" color="fg">{contact.full_name}</Text>
+                                    {(contact.links || []).map((link) => (
+                                        <Badge key={`${link.company_id}-${link.role}`} variant="subtle">
+                                            {link.role_label}{link.company_name ? ` · ${link.company_name}` : ''}
+                                        </Badge>
+                                    ))}
                                     <Badge variant="outline" colorPalette={contact.is_mine ? 'green' : 'gray'}>
                                         {contact.source_label}
                                     </Badge>
                                     {!contact.is_active && <Badge colorPalette="gray">больше не работает</Badge>}
                                 </HStack>
                                 {contact.position && <Text fontSize="sm" color="fg.muted">{contact.position}</Text>}
-                                <Text fontSize="sm" color="fg.muted">
-                                    {[contact.phone, contact.email].filter(Boolean).join(' · ') || 'Контакты не указаны'}
-                                </Text>
+                                {[contact.phone, contact.email].filter(Boolean).length > 0
+                                    ? <Text fontSize="sm" color="fg">{[contact.phone, contact.email].filter(Boolean).join(' · ')}</Text>
+                                    : <Text fontSize="sm" color="orange.fg">Телефон и почта не указаны — добавьте, чтобы мы могли писать этому человеку</Text>}
                             </VStack>
 
-                            <HStack gap={1}>
-                                <Button size="xs" variant="outline" onClick={() => startEdit(contact)}>
-                                    <LuPencil /> Изменить
-                                </Button>
-                                {contact.is_mine ? (
-                                    <Button size="xs" variant="ghost" colorPalette="red" disabled={busy} onClick={() => remove(contact)}>
-                                        <LuTrash2 />
-                                    </Button>
-                                ) : contact.is_active && (
-                                    <Button size="xs" variant="ghost" disabled={busy} onClick={() => deactivate(contact)}>
-                                        Больше не работает
-                                    </Button>
-                                )}
-                            </HStack>
+                            <RowActions
+                                edit={{ onClick: () => startEdit(contact), label: 'Изменить' }}
+                                extra={!contact.is_mine && contact.is_active ? [
+                                    { icon: LuUserX, label: 'Больше не работает', onClick: () => deactivate(contact), disabled: busy },
+                                ] : []}
+                                delete={contact.is_mine ? { onClick: () => del.request(contact), disabled: busy } : null}
+                            />
                         </HStack>
                     ))}
                 </VStack>
@@ -298,6 +321,8 @@ export default function Index({ roles = [], channels = [], limit = 50 }) {
                     вы можете дополнить, но не удалить — за ней могут стоять отправленные письма.
                 </Text>
             </VStack>
+
+            <ConfirmDialog {...del.dialogProps} />
         </CabinetLayout>
     );
 }

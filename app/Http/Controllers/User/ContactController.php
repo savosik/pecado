@@ -84,7 +84,7 @@ class ContactController extends Controller
         $contact->updated_by_user_id = $partner->id;
         $contact->save();
 
-        $this->syncCompanyLink($contact, $partner->id, $data['company_id'], $data['role']);
+        $this->syncCompanyLinks($contact, $partner->id, $data['links']);
 
         return response()->json($this->payload($contact->fresh('links.subject')), 201);
     }
@@ -102,7 +102,7 @@ class ContactController extends Controller
         $contact->updated_by_user_id = $partner->id;
         $contact->save();
 
-        $this->syncCompanyLink($contact, $partner->id, $data['company_id'], $data['role']);
+        $this->syncCompanyLinks($contact, $partner->id, $data['links']);
 
         return response()->json($this->payload($contact->fresh('links.subject')));
     }
@@ -189,7 +189,7 @@ class ContactController extends Controller
     }
 
     /**
-     * @return array{attributes: array<string, mixed>, company_id: int|null, role: ContactRole}
+     * @return array{attributes: array<string, mixed>, links: list<array{company_id: int, role: ContactRole}>}
      */
     private function validated(Request $request): array
     {
@@ -209,6 +209,12 @@ class ContactController extends Controller
             'is_active' => ['boolean'],
             'company_id' => ['nullable', 'integer'],
             'role' => ['nullable', \Illuminate\Validation\Rule::enum(ContactRole::class)],
+            // Один человек — бухгалтер в нескольких юрлицах партнёра: привязок
+            // столько, сколько компаний. Старая пара company_id/role принимается
+            // как одна привязка.
+            'links' => ['nullable', 'array', 'max:50'],
+            'links.*.company_id' => ['required', 'integer'],
+            'links.*.role' => ['required', \Illuminate\Validation\Rule::enum(ContactRole::class)],
         ], [
             'full_name.required' => 'Укажите ФИО.',
             'email.email' => 'Это не похоже на адрес электронной почты.',
@@ -221,15 +227,33 @@ class ContactController extends Controller
             }
         })->validate();
 
-        $companyId = null;
+        $requested = collect($validated['links'] ?? []);
 
-        if (filled($validated['company_id'] ?? null)) {
-            // Юрлицо должно быть своим: чужое даёт пустоту, а не чужую привязку.
-            $companyId = Company::query()
-                ->where('user_id', $request->user()->id)
-                ->whereKey((int) $validated['company_id'])
-                ->value('id');
+        if ($requested->isEmpty() && filled($validated['company_id'] ?? null)) {
+            $requested = collect([[
+                'company_id' => (int) $validated['company_id'],
+                'role' => (string) ($validated['role'] ?? ContactRole::MANAGER->value),
+            ]]);
         }
+
+        // Юрлицо должно быть своим: чужое отбрасывается молча — пустота,
+        // а не чужая привязка.
+        $own = Company::query()
+            ->where('user_id', $request->user()->id)
+            ->whereIn('id', $requested->pluck('company_id')->map(fn ($id) => (int) $id)->all())
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $links = $requested
+            ->filter(fn (array $link): bool => in_array((int) $link['company_id'], $own, true))
+            ->map(fn (array $link): array => [
+                'company_id' => (int) $link['company_id'],
+                'role' => ContactRole::tryFrom((string) ($link['role'] ?? '')) ?? ContactRole::MANAGER,
+            ])
+            ->unique(fn (array $link): string => $link['company_id'].':'.$link['role']->value)
+            ->values()
+            ->all();
 
         return [
             'attributes' => collect($validated)->only([
@@ -237,35 +261,34 @@ class ContactController extends Controller
                 'telegram', 'whatsapp', 'instagram', 'birthday', 'birthday_has_year',
                 'preferred_channel', 'is_active',
             ])->all(),
-            'company_id' => $companyId === null ? null : (int) $companyId,
-            'role' => ContactRole::tryFrom((string) ($validated['role'] ?? '')) ?? ContactRole::MANAGER,
+            'links' => $links,
         ];
     }
 
     /**
-     * Привязка к юрлицу партнёра: одна на карточку в кабинете.
+     * Привязки к юрлицам партнёра: по одной на компанию, со своей ролью.
      *
-     * Больше одной роли партнёру не даём — это усложнение, которое в кабинете
-     * никому не нужно, а менеджер при необходимости добавит в CRM.
+     * Список заменяется целиком тем, что прислала форма: снятая галочка —
+     * снятая привязка.
+     *
+     * @param  list<array{company_id: int, role: ContactRole}>  $links
      */
-    private function syncCompanyLink(Contact $contact, int $partnerId, ?int $companyId, ContactRole $role): void
+    private function syncCompanyLinks(Contact $contact, int $partnerId, array $links): void
     {
         $contact->links()->where('subject_type', Company::class)->delete();
 
-        if ($companyId === null) {
-            return;
+        foreach ($links as $link) {
+            ContactLink::query()->updateOrCreate([
+                'contact_id' => $contact->getKey(),
+                'subject_type' => Company::class,
+                'subject_id' => $link['company_id'],
+                'role' => $link['role']->value,
+            ], [
+                'client_user_id' => $partnerId,
+                'source' => ContactSource::SELF,
+                'created_by_user_id' => $partnerId,
+            ]);
         }
-
-        ContactLink::query()->updateOrCreate([
-            'contact_id' => $contact->getKey(),
-            'subject_type' => Company::class,
-            'subject_id' => $companyId,
-            'role' => $role->value,
-        ], [
-            'client_user_id' => $partnerId,
-            'source' => ContactSource::SELF,
-            'created_by_user_id' => $partnerId,
-        ]);
     }
 
     /**
@@ -278,7 +301,11 @@ class ContactController extends Controller
      */
     private function payload(Contact $contact): array
     {
-        $companyLink = $contact->links->firstWhere('subject_type', Company::class);
+        $companyLinks = $contact->links
+            ->where('subject_type', Company::class)
+            ->sortBy(fn (ContactLink $link) => $link->subject?->name ?? '')
+            ->values();
+        $companyLink = $companyLinks->first();
 
         return [
             'id' => (int) $contact->getKey(),
@@ -302,6 +329,12 @@ class ContactController extends Controller
             'company_id' => $companyLink === null ? null : (int) $companyLink->subject_id,
             'role' => $companyLink?->role->value,
             'role_label' => $companyLink?->role->label(),
+            'links' => $companyLinks->map(fn (ContactLink $link): array => [
+                'company_id' => (int) $link->subject_id,
+                'company_name' => (string) ($link->subject?->name ?: $link->subject?->legal_name ?: ''),
+                'role' => $link->role->value,
+                'role_label' => $link->role->label(),
+            ])->all(),
         ];
     }
 }
