@@ -1,13 +1,24 @@
 import { Head } from '@inertiajs/react';
-import { Badge, Box, Card, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, Card, Flex, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
 import CabinetLayout from '@/Pages/User/Cabinet/CabinetLayout';
+import { Button } from '@/components/ui/button';
 import { LuDownload, LuFilePen } from 'react-icons/lu';
 
-function InfoRow({ label, value }) {
+// Карточки — как в остальных разделах кабинета («Мои заказы»): белый фон,
+// скруглённый xl, тонкая рамка. Без bg карточка сливается с песочной подложкой.
+const cardProps = {
+    bg: 'bg',
+    borderRadius: 'xl',
+    border: '1px solid',
+    borderColor: 'border.muted',
+};
+
+function InfoRow({ label, value, children }) {
     return (
         <Box>
-            <Text fontSize="xs" color="gray.500" mb="0.5">{label}</Text>
-            <Text fontSize="sm" fontWeight="500">{value || '—'}</Text>
+            <Text fontSize="xs" color="fg.muted" mb="0.5">{label}</Text>
+            <Text fontSize="sm" fontWeight="600" color="fg">{value || '—'}</Text>
+            {children}
         </Box>
     );
 }
@@ -28,22 +39,31 @@ export default function Index({ contracts = [] }) {
                 </Text>
 
                 {!contracts.length && (
-                    <Card.Root>
-                        <Card.Body>
-                            <HStack gap={3} color="fg.muted">
-                                <LuFilePen />
-                                <Text fontSize="sm">Договоров пока нет. Когда менеджер заведёт договор, он появится здесь.</Text>
-                            </HStack>
+                    <Card.Root {...cardProps}>
+                        <Card.Body p="10" textAlign="center">
+                            <VStack gap={3}>
+                                <Flex
+                                    align="center" justify="center"
+                                    w="16" h="16" borderRadius="full"
+                                    bg="bg.muted" mx="auto"
+                                >
+                                    <LuFilePen size={28} color="var(--chakra-colors-gray-400)" />
+                                </Flex>
+                                <Text fontWeight="600" fontSize="lg">Договоров пока нет</Text>
+                                <Text color="gray.500" fontSize="sm">Когда менеджер заведёт договор, он появится здесь</Text>
+                            </VStack>
                         </Card.Body>
                     </Card.Root>
                 )}
 
                 {contracts.map((contract) => (
-                    <Card.Root key={contract.id}>
-                        <Card.Body>
-                            <HStack justify="space-between" align="start" mb={3} flexWrap="wrap" gap={2}>
+                    <Card.Root key={contract.id} {...cardProps}>
+                        <Card.Body p="5">
+                            <HStack justify="space-between" align="start" mb={4} flexWrap="wrap" gap={2}>
                                 <Box>
-                                    <Text fontWeight="600">Договор {contract.number}</Text>
+                                    <Text fontWeight="700" fontSize="lg" color="fg" lineHeight="short">
+                                        Договор {contract.number}
+                                    </Text>
                                     {contract.date && <Text fontSize="xs" color="fg.muted">от {contract.date}</Text>}
                                 </Box>
                                 <HStack gap={1} flexWrap="wrap">
@@ -54,44 +74,42 @@ export default function Index({ contracts = [] }) {
                                 </HStack>
                             </HStack>
 
-                            <SimpleGrid columns={{ base: 1, md: 2, lg: 5 }} gap={3}>
-                                <Box>
-                                    <Text fontSize="xs" color="gray.500" mb="0.5">Ваша организация</Text>
-                                    <Text fontSize="sm" fontWeight="500">{contract.company?.name || '—'}</Text>
+                            <SimpleGrid columns={{ base: 1, md: 2, lg: 5 }} gap={4}>
+                                <InfoRow label="Ваша организация" value={contract.company?.name}>
                                     {contract.company?.tax_id && <Text fontSize="xs" color="fg.muted">ИНН {contract.company.tax_id}</Text>}
-                                </Box>
-                                <Box>
-                                    <Text fontSize="xs" color="gray.500" mb="0.5">Наша организация</Text>
-                                    <Text fontSize="sm" fontWeight="500">{contract.organization?.name || '—'}</Text>
+                                </InfoRow>
+                                <InfoRow label="Наша организация" value={contract.organization?.name}>
                                     {contract.organization?.tax_id && <Text fontSize="xs" color="fg.muted">ИНН {contract.organization.tax_id}</Text>}
-                                </Box>
+                                </InfoRow>
                                 <InfoRow label="Дата подписания" value={contract.signed_at} />
                                 <InfoRow
                                     label="Срок действия"
                                     value={contract.valid_until ? `до ${contract.valid_until}` : 'бессрочный'}
                                 />
-                                <Box>
-                                    <Text fontSize="xs" color="gray.500" mb="0.5">Ваш менеджер</Text>
-                                    <Text fontSize="sm" fontWeight="500">{contract.manager?.name || '—'}</Text>
+                                <InfoRow label="Ваш менеджер" value={contract.manager?.name}>
                                     {contract.manager?.phone && <Text fontSize="xs" color="fg.muted">{contract.manager.phone}</Text>}
                                     {contract.manager?.email && <Text fontSize="xs" color="fg.muted">{contract.manager.email}</Text>}
-                                </Box>
+                                </InfoRow>
                             </SimpleGrid>
 
                             {contract.files.length > 0 && (
-                                <Box mt={4}>
-                                    <Text fontSize="xs" color="gray.500" mb={1}>Файлы</Text>
-                                    <VStack align="start" gap={1}>
+                                <Box mt={4} pt={4} borderTop="1px solid" borderColor="border.muted">
+                                    <Text fontSize="xs" color="fg.muted" mb={2}>Сканы договора</Text>
+                                    <HStack gap={2} flexWrap="wrap">
                                         {contract.files.map((file) => (
-                                            <a key={file.id} href={file.url}>
-                                                <HStack gap={2} fontSize="sm" color="blue.600">
+                                            <Button key={file.id} asChild size="sm" variant="outline" colorPalette="pecado">
+                                                <a href={file.url}>
                                                     <LuDownload size={14} />
-                                                    <Text>{file.name}</Text>
-                                                    <Text fontSize="xs" color="fg.muted">{file.size_label}</Text>
-                                                </HStack>
-                                            </a>
+                                                    {file.name}
+                                                    {file.size_label && (
+                                                        <Text as="span" fontSize="xs" color="fg.muted" fontWeight="400">
+                                                            {file.size_label}
+                                                        </Text>
+                                                    )}
+                                                </a>
+                                            </Button>
                                         ))}
-                                    </VStack>
+                                    </HStack>
                                 </Box>
                             )}
                         </Card.Body>

@@ -3,10 +3,13 @@ import {
     Box, Flex, HStack, VStack, Text, Badge, Button, Input, InputGroup,
     Card, Stack, IconButton, createListCollection,
 } from '@chakra-ui/react';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     LuFilter, LuX, LuArrowUpDown, LuArrowUp, LuArrowDown,
     LuChevronLeft, LuChevronRight, LuSearch, LuFileText, LuFileDown,
+    LuCalendar, LuBuilding2, LuShoppingBag, LuTruck, LuFileSpreadsheet,
+    LuReceipt, LuReceiptText, LuFileDiff, LuPackageCheck, LuFileCheck,
+    LuScale, LuHandshake, LuScrollText, LuTags, LuFile,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Field } from '@/components/ui/field';
@@ -24,6 +27,183 @@ const SORT_OPTIONS = [
     { value: 'number', order: 'asc', label: 'По номеру' },
     { value: 'type', order: 'asc', label: 'По виду документа' },
 ];
+
+// Иконка по виду документа (коды — App\Enums\PrintedDocumentType). Цвет круга
+// берётся из type_color того же перечисления, чтобы чипы фильтра и строки
+// списка были одной палитры.
+const TYPE_ICONS = {
+    contract: LuHandshake,
+    agreement: LuHandshake,
+    specification: LuScrollText,
+    invoice: LuReceipt,
+    tax_invoice: LuReceiptText,
+    correction_invoice: LuFileDiff,
+    upd: LuPackageCheck,
+    ukd: LuFileDiff,
+    waybill: LuTruck,
+    consignment_note: LuTruck,
+    act: LuFileCheck,
+    reconciliation_act: LuScale,
+    price_list: LuTags,
+    other: LuFile,
+};
+
+/**
+ * Строка списка — карточка в стиле «Мои заказы»: иконка вида слева, номер
+ * основным цветом, контрагент второй строкой, мелкие пилюли с продавцом и
+ * основанием, справа — «Скачать».
+ *
+ * Строка не ссылка: у документа нет своей страницы, единственное действие —
+ * скачать файл, и оно на кнопке. Поэтому hover мягче, чем у заказов.
+ */
+function DocumentRow({ document }) {
+    const color = document.type_color || 'gray';
+    const TypeIcon = TYPE_ICONS[document.type] || LuFile;
+    const BaseIcon = document.base?.label?.startsWith('Отгрузка') ? LuTruck : LuShoppingBag;
+    const isSpreadsheet = document.format && document.format !== 'pdf';
+    // Формат и размер — одной подписью под кнопкой: «PDF · 0,1 МБ». Бейдж
+    // формата на каждой строке был шумом, а размер сам по себе ни о чём.
+    const fileMeta = [
+        isSpreadsheet ? 'Excel' : 'PDF',
+        document.size,
+    ].filter(Boolean).join(' · ');
+
+    return (
+        <Box
+            bg="bg"
+            borderRadius="xl"
+            border="1px solid"
+            borderColor="border.muted"
+            p="4"
+            _hover={{ borderColor: 'pecado.200', shadow: 'sm', _dark: { borderColor: 'pecado.700' } }}
+            transition="all 0.15s"
+        >
+            <Flex gap="4" align={{ base: 'start', md: 'center' }} direction={{ base: 'column', md: 'row' }}>
+                <Flex gap="4" align="start" flex="1" minW="0" w="100%">
+                    <Flex
+                        align="center" justify="center"
+                        w="11" h="11" borderRadius="full" flexShrink="0"
+                        bg={`${color}.subtle`} color={`${color}.fg`}
+                        display={{ base: 'none', sm: 'flex' }}
+                    >
+                        <TypeIcon size={20} />
+                    </Flex>
+
+                    <Box flex="1" minW="0">
+                        {/* Мета-строка: вид документа + дата + период */}
+                        <Flex gap="2" align="center" flexWrap="wrap" mb="1" fontSize="xs">
+                            <Text fontWeight="600" color={`${color}.fg`} whiteSpace="nowrap">
+                                {document.type_label}
+                            </Text>
+                            {document.date && (
+                                <>
+                                    <Text as="span" color="gray.300" _dark={{ color: 'gray.600' }}>•</Text>
+                                    <HStack gap="1" color="gray.500" _dark={{ color: 'gray.400' }} fontWeight="500">
+                                        <LuCalendar size={12} />
+                                        <Text whiteSpace="nowrap">{document.date}</Text>
+                                    </HStack>
+                                </>
+                            )}
+                            {document.period && (
+                                <>
+                                    <Text as="span" color="gray.300" _dark={{ color: 'gray.600' }}>•</Text>
+                                    <Text color="gray.500" _dark={{ color: 'gray.400' }}>
+                                        Период {document.period}
+                                    </Text>
+                                </>
+                            )}
+                        </Flex>
+
+                        {/* Заголовок: номер (или название, если номера нет) */}
+                        <Flex gap="2.5" align="center" flexWrap="wrap" mb="1.5">
+                            <Text
+                                fontWeight="700"
+                                fontSize="lg"
+                                fontFamily={document.number ? 'mono' : undefined}
+                                color="gray.800"
+                                _dark={{ color: 'gray.100' }}
+                                lineHeight="short"
+                            >
+                                {document.number ? `№ ${document.number}` : document.title}
+                            </Text>
+                            {isSpreadsheet && (
+                                <Badge
+                                    colorPalette="green" variant="subtle"
+                                    fontSize="2xs" px="2" py="0.5" borderRadius="full" gap="1"
+                                >
+                                    <LuFileSpreadsheet size={11} />
+                                    {document.format_label}
+                                </Badge>
+                            )}
+                        </Flex>
+
+                        {/* Контрагент — главное после номера, поэтому не серым */}
+                        {document.company && (
+                            <Text
+                                fontSize="sm"
+                                fontWeight="500"
+                                color="gray.700"
+                                _dark={{ color: 'gray.300' }}
+                                mb={document.organization || document.base ? '2' : '0'}
+                                truncate
+                            >
+                                {document.company}
+                            </Text>
+                        )}
+
+                        {/* Нижняя строка: продавец + основание */}
+                        {(document.organization || document.base) && (
+                            <Flex gap="2" align="center" flexWrap="wrap">
+                                {document.organization && (
+                                    <Badge
+                                        variant="outline" colorPalette="gray"
+                                        fontSize="2xs" px="2" py="0.5" borderRadius="full" gap="1"
+                                    >
+                                        <LuBuilding2 size={11} />
+                                        {document.organization}
+                                    </Badge>
+                                )}
+                                {document.base && (
+                                    <Link href={document.base.url}>
+                                        <Badge
+                                            variant="outline" colorPalette="gray"
+                                            fontSize="2xs" px="2" py="0.5" borderRadius="full" gap="1"
+                                            cursor="pointer"
+                                            _hover={{ borderColor: 'pecado.400', color: 'pecado.fg' }}
+                                            transition="all 0.15s"
+                                        >
+                                            <BaseIcon size={11} />
+                                            {document.base.label}
+                                        </Badge>
+                                    </Link>
+                                )}
+                            </Flex>
+                        )}
+                    </Box>
+                </Flex>
+
+                {/* Обычная ссылка, а не Inertia: сервер отдаёт файл,
+                    а Inertia ждёт JSON и такой ответ не поймёт. */}
+                <VStack gap="1" align={{ base: 'stretch', md: 'end' }} flexShrink="0" w={{ base: '100%', md: 'auto' }}>
+                    <Button
+                        as="a"
+                        href={document.download_url}
+                        variant="outline"
+                        colorPalette="pecado"
+                        size="sm"
+                        minW="32"
+                    >
+                        <LuFileDown size={16} />
+                        Скачать
+                    </Button>
+                    <Text fontSize="xs" color="gray.400" _dark={{ color: 'gray.500' }} textAlign={{ md: 'end' }}>
+                        {fileMeta}
+                    </Text>
+                </VStack>
+            </Flex>
+        </Box>
+    );
+}
 
 /**
  * Раздел «Документы» в личном кабинете.
@@ -263,8 +443,8 @@ export default function DocumentsIndex({
                 />
 
                 {showFilters && (
-                    <Card.Root>
-                        <Card.Body>
+                    <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
+                        <Card.Body p="4">
                             <Stack gap="4">
                                 <Flex gap="4" wrap="wrap">
                                     {companies.length > 0 && (
@@ -373,13 +553,21 @@ export default function DocumentsIndex({
             </VStack>
 
             {documents.data.length === 0 ? (
-                <Card.Root>
-                    <Card.Body>
-                        <VStack gap="3" py="8">
-                            <LuFileText size={40} opacity={0.4} />
-                            <Text color="fg.muted" textAlign="center">
-                                Документы не найдены. Они появляются здесь после того,
-                                как их оформит бухгалтерия.
+                <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
+                    <Card.Body p="10" textAlign="center">
+                        <VStack gap="3">
+                            <Flex
+                                align="center" justify="center"
+                                w="16" h="16" borderRadius="full"
+                                bg="bg.muted" mx="auto"
+                            >
+                                <LuFileText size={28} color="var(--chakra-colors-gray-400)" />
+                            </Flex>
+                            <Text fontWeight="600" fontSize="lg">Документов не найдено</Text>
+                            <Text color="gray.500" fontSize="sm">
+                                {activeFiltersCount > 0 || search || selectedTypes.length > 0
+                                    ? 'Попробуйте изменить условия отбора'
+                                    : 'Счета, УПД и акты сверки появляются здесь после того, как их оформит бухгалтерия'}
                             </Text>
                         </VStack>
                     </Card.Body>
@@ -388,67 +576,7 @@ export default function DocumentsIndex({
                 <>
                     <VStack gap="2" align="stretch">
                         {documents.data.map((document) => (
-                            <Box
-                                key={document.id}
-                                borderRadius="xl"
-                                border="1px solid"
-                                borderColor="border.muted"
-                                p="4"
-                            >
-                                <Flex gap="4" align="center" wrap="wrap">
-                                    <VStack align="start" gap="1" flex="1" minW="220px">
-                                        <HStack gap="2" wrap="wrap">
-                                            <Badge colorPalette={document.type_color} variant="subtle">
-                                                {document.type_label}
-                                            </Badge>
-                                            {document.number && (
-                                                <Text fontWeight="600">№ {document.number}</Text>
-                                            )}
-                                            {document.date && (
-                                                <Text fontSize="sm" color="fg.muted">от {document.date}</Text>
-                                            )}
-                                            {/* Формат подписан только у не-PDF: почти все формы
-                                                приходят в PDF, и бейдж на каждой строке был бы шумом. */}
-                                            {document.format && document.format !== 'pdf' && (
-                                                <Badge colorPalette="green" variant="subtle">
-                                                    {document.format_label}
-                                                </Badge>
-                                            )}
-                                        </HStack>
-
-                                        <HStack gap="3" wrap="wrap" fontSize="sm" color="fg.muted">
-                                            {document.period && <Text>Период: {document.period}</Text>}
-                                            {document.company && <Text>{document.company}</Text>}
-                                            {document.organization && <Text>Продавец: {document.organization}</Text>}
-                                            {document.base && (
-                                                <Box
-                                                    as="a"
-                                                    href={document.base.url}
-                                                    _hover={{ color: 'pecado.fg', textDecoration: 'underline' }}
-                                                >
-                                                    {document.base.label}
-                                                </Box>
-                                            )}
-                                        </HStack>
-                                    </VStack>
-
-                                    {document.size && (
-                                        <Text fontSize="xs" color="fg.muted">{document.size}</Text>
-                                    )}
-
-                                    {/* Обычная ссылка, а не Inertia: сервер отдаёт файл,
-                                        а Inertia ждёт JSON и такой ответ не поймёт. */}
-                                    <Button
-                                        as="a"
-                                        href={document.download_url}
-                                        variant="outline"
-                                        size="sm"
-                                    >
-                                        <LuFileDown size={16} />
-                                        Скачать
-                                    </Button>
-                                </Flex>
-                            </Box>
+                            <DocumentRow key={document.id} document={document} />
                         ))}
                     </VStack>
 

@@ -70,6 +70,7 @@ use Illuminate\Support\Str;
  * @property-read string $type_label
  * @property-read string $display_title
  * @property-read string|null $period_label
+ * @property-read string|null $size_label
  * @property-read PrintedDocumentFormat $format
  * @property-read string $download_name
  *
@@ -272,6 +273,25 @@ class PrintedDocument extends Model
         }
 
         return $this->period_from->format('d.m.Y').' — '.$this->period_to->format('d.m.Y');
+    }
+
+    /**
+     * Размер файла для подписи в списках: «12 КБ», «1,3 МБ». null — размер неизвестен.
+     *
+     * Ниже мегабайта — в килобайтах: округление до десятых мегабайта давало
+     * «0 МБ» у каждого акта сверки, и клиент читал это как пустой файл.
+     */
+    public function getSizeLabelAttribute(): ?string
+    {
+        if ($this->size_bytes === null) {
+            return null;
+        }
+
+        if ($this->size_bytes < 1024 * 1024) {
+            return max(1, (int) round($this->size_bytes / 1024)).' КБ';
+        }
+
+        return number_format($this->size_bytes / 1024 / 1024, 1, ',', ' ').' МБ';
     }
 
     /**

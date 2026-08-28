@@ -55,11 +55,9 @@ class PrintedDocumentController extends Controller
                 ? $document->organization->name
                 : null,
             'base' => $this->basePayload($document),
-            // Размер в мегабайтах с одним знаком: клиенту важно понять,
-            // «откроется ли это на телефоне», а не точное число байтов.
-            'size' => $document->size_bytes === null
-                ? null
-                : round($document->size_bytes / 1024 / 1024, 1).' МБ',
+            // Размер округлённый: клиенту важно понять, «откроется ли это
+            // на телефоне», а не точное число байтов.
+            'size' => $document->size_label,
             'download_url' => route('cabinet.documents.download', $document->id),
         ]);
 

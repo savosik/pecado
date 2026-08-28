@@ -210,6 +210,24 @@ class PrintedDocumentCabinetTest extends TestCase
     }
 
     #[Test]
+    public function size_is_shown_in_kilobytes_below_a_megabyte(): void
+    {
+        // Акты сверки весят 10–50 КБ: округление до десятых мегабайта давало
+        // «0 МБ», и клиент читал это как пустой файл.
+        $this->document(['number' => 'small', 'size_bytes' => 10 * 1024, 'date' => '2026-08-20']);
+        $this->document(['number' => 'large', 'size_bytes' => (int) (1.5 * 1024 * 1024), 'date' => '2026-08-19']);
+        $this->document(['number' => 'unknown', 'size_bytes' => null, 'date' => '2026-08-18']);
+
+        $this->actingAs($this->user)
+            ->get('/cabinet/documents')
+            ->assertInertia(fn ($page) => $page
+                ->where('documents.data.0.size', '10 КБ')
+                ->where('documents.data.1.size', '1,5 МБ')
+                ->where('documents.data.2.size', null)
+            );
+    }
+
+    #[Test]
     public function type_filter_and_counts_work(): void
     {
         $this->document(['type' => PrintedDocumentType::TAX_INVOICE]);
