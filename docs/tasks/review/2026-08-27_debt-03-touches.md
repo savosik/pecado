@@ -35,3 +35,17 @@
 - [ ] Пять типов уведомлений заведены; тесты с трейтом `EnablesClientNotifications`
 - [ ] Акт сверки во вложении; письмо уходит один раз на переход — тест
 - [ ] Тексты согласованы с РОП
+
+## Итог (28.08.2026) — сделано, ветка feature/debt-ladder
+
+- Пять типов уведомлений `finance.debt_*` в `config/mail_occasions.php` (login + бухгалтер
+  контрагента, включены умолчанием); `MailStream::originKey` расширен ключом эпизода
+  (контрагент + ступень + дата), акт сверки 1С прикладывается `attachReconciliationAct()`.
+- Слушатель `SendDebtNotification` на `DebtLevelChanged`; тексты писем деловые, по ступеням.
+- Кабинет: `CabinetDebtStatus` → shared-проп `debt`; `DebtStatusCard` и `DueSoonCard` на
+  дашборде, сквозной `DebtBanner` в `CabinetLayout` при ограничении, тост один раз
+  за смену ступени (localStorage). Норма невидима.
+- Не сделано осознанно: отправитель «от компании» на жёстких ступенях — у потока один
+  автор (менеджер, reply-to); отдельный отправитель потребовал бы правки `CrmManagerMail`.
+- Попутно: строки актов в понедельничной рассылке не рендерились (`'kind'` вместо `'type'`).
+- Тесты: `DebtNotificationTest` (5), `CabinetDebtStatusTest` (5).

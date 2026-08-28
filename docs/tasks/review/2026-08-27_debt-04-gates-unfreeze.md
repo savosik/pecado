@@ -37,3 +37,16 @@
       об оплате); дальше продлевается по мере обещаний. Без этого первый ночной пересчёт
       закроет ей 5 юрлиц из 12 (1,37 млн у Литвиненко). Проверить на shadow-отчёте
       накануне, что разблокировка учтена
+
+## Итог (28.08.2026) — сделано, ветка feature/debt-ladder
+
+- `DebtGate` в `CheckoutService::checkout()` до транзакции; `DebtRestrictionException` →
+  ошибка формы `debt` + flash `debt_restriction`; на странице оформления панель с причиной,
+  суммой и кнопками «К оплатам»/«Акт сверки», тост, кнопка заблокирована при стопе.
+- `settlement.posted` и `balance.updated` бросают `PartnerSettlementsChanged` →
+  `RefreshDebtLevel` → пересчёт только вверх. Слушатели зарегистрированы явно
+  (`withEvents(discover: false)`).
+- Клиентское API (`ClientApiController::orders`) гейт не проходит — второй путь заказа,
+  отмечен в разборе; при необходимости `DebtGate::check()` вызывается там же.
+- Тесты: `DebtGateTest` (6), `DebtUnfreezeIntegrationTest` (4, через `ErpIncomingJob` и схему).
+- Чек-лист выкатки по Гевее остаётся ручным шагом в день включения гейта.
