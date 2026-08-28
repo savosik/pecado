@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { Badge, Box, Card, Heading, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, Card, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
 import CabinetLayout from '@/Pages/User/Cabinet/CabinetLayout';
 import { LuDownload, LuFilePen } from 'react-icons/lu';
 
@@ -20,10 +20,9 @@ function InfoRow({ label, value }) {
  */
 export default function Index({ contracts = [] }) {
     return (
-        <>
+        <CabinetLayout title="Договоры">
             <Head title="Договоры" />
             <VStack align="stretch" gap={4}>
-                <Heading size="lg">Договоры</Heading>
                 <Text fontSize="sm" color="fg.muted">
                     Договоры, заключённые с вашими организациями. По вопросам подписания обращайтесь к своему менеджеру.
                 </Text>
@@ -97,8 +96,6 @@ export default function Index({ contracts = [] }) {
                     </Card.Root>
                 ))}
             </VStack>
-        </>
+        </CabinetLayout>
     );
 }
-
-Index.layout = (page) => <CabinetLayout>{page}</CabinetLayout>;

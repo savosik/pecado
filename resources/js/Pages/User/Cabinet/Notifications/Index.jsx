@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { Box, Heading, Text, VStack } from '@chakra-ui/react';
+import { Text, VStack } from '@chakra-ui/react';
 import CabinetLayout from '@/Pages/User/Cabinet/CabinetLayout';
 import NotificationMatrix from '@/Crm/Components/NotificationMatrix';
 
@@ -11,17 +11,14 @@ import NotificationMatrix from '@/Crm/Components/NotificationMatrix';
  */
 export default function Index() {
     return (
-        <>
-            <Head title="Уведомления — Pecado.ru" />
+        <CabinetLayout title="Уведомления">
+            <Head title="Уведомления" />
 
-            <VStack align="stretch" gap={4}>
-                <Box>
-                    <Heading size="md" mb={1}>Уведомления</Heading>
-                    <Text fontSize="sm" color="fg.muted">
-                        Здесь вы решаете, о чём мы вам пишем и на какие адреса.
-                        Настройка действует сразу — обращаться к менеджеру не нужно.
-                    </Text>
-                </Box>
+            <VStack align="stretch" gap={5}>
+                <Text fontSize="sm" color="fg.muted">
+                    Здесь вы решаете, о чём мы вам пишем и на какие адреса.
+                    Настройка действует сразу — обращаться к менеджеру не нужно.
+                </Text>
 
                 <NotificationMatrix
                     canEdit
@@ -36,8 +33,6 @@ export default function Index() {
                     }}
                 />
             </VStack>
-        </>
+        </CabinetLayout>
     );
 }
-
-Index.layout = (page) => <CabinetLayout>{page}</CabinetLayout>;

@@ -84,19 +84,20 @@ export default function NotificationMatrix({
 
             {groups.map(([family, rows]) => (
                 <Box key={family}>
-                    <Text fontSize="sm" fontWeight="700" mb={2}>{family}</Text>
+                    <Text fontSize="md" fontWeight="700" color="fg" mb={2}>{family}</Text>
 
-                    <VStack align="stretch" gap={0} borderWidth="1px" borderRadius="md">
+                    <VStack align="stretch" gap={0} borderWidth="1px" borderColor="border.muted" borderRadius="xl" bg="bg" overflow="hidden">
                         {rows.map((row, index) => (
                             <Box
                                 key={row.key}
-                                p={3}
+                                p={4}
                                 borderTopWidth={index === 0 ? 0 : '1px'}
+                                borderColor="border.muted"
                             >
                                 <HStack justify="space-between" align="start" gap={4} flexWrap="wrap">
                                     <VStack align="stretch" gap={1} flex="1" minW="220px">
                                         <HStack gap={2}>
-                                            <Text fontSize="sm" fontWeight="600">{row.label}</Text>
+                                            <Text fontSize="sm" fontWeight="600" color="fg">{row.label}</Text>
                                             {row.changed_by_client && (
                                                 <Badge size="sm" colorPalette="purple" variant="subtle">
                                                     правил клиент
@@ -225,12 +226,12 @@ function ExtraFamilies({ extras, canEdit, endpoint, onSaved }) {
         <>
             {extras.map((extra) => (
                 <Box key={extra.key}>
-                    <Text fontSize="sm" fontWeight="700" mb={2}>{extra.family_label}</Text>
+                    <Text fontSize="md" fontWeight="700" color="fg" mb={2}>{extra.family_label}</Text>
 
-                    <Box borderWidth="1px" borderRadius="md" p={3}>
+                    <Box borderWidth="1px" borderColor="border.muted" borderRadius="xl" bg="bg" p={4}>
                         <HStack justify="space-between" align="start" gap={4} flexWrap="wrap">
                             <VStack align="stretch" gap={1} flex="1" minW="220px">
-                                <Text fontSize="sm" fontWeight="600">{extra.label}</Text>
+                                <Text fontSize="sm" fontWeight="600" color="fg">{extra.label}</Text>
                                 <Text fontSize="xs" color="fg.muted">{extra.hint}</Text>
                                 {!extra.enabled && (
                                     <HStack gap={1} color="fg.muted">

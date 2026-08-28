@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import axios from 'axios';
-import { Badge, Box, Heading, HStack, Input, SimpleGrid, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, HStack, Input, SimpleGrid, Text, VStack } from '@chakra-ui/react';
 import CabinetLayout from '@/Pages/User/Cabinet/CabinetLayout';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -153,25 +153,24 @@ export default function Index({ roles = [], channels = [], limit = 50 }) {
     );
 
     return (
-        <>
+        <CabinetLayout
+            title="Контакты"
+            actions={(
+                <HStack gap={2}>
+                    <a href={route('cabinet.contacts.vcf')}>
+                        <Button size="sm" variant="outline"><LuDownload /> В телефон</Button>
+                    </a>
+                    <Button size="sm" onClick={startCreate}><LuUserPlus /> Добавить</Button>
+                </HStack>
+            )}
+        >
             <Head title="Контакты" />
 
             <VStack align="stretch" gap={5}>
-                <HStack justifyContent="space-between" flexWrap="wrap" gap={3}>
-                    <Box>
-                        <Heading size="lg">Контакты</Heading>
-                        <Text fontSize="sm" color="fg.muted">
-                            Люди вашей компании: бухгалтер, закупщик, директор. По ним мы поймём,
-                            кому адресовать документы и письма.
-                        </Text>
-                    </Box>
-                    <HStack gap={2}>
-                        <a href={route('cabinet.contacts.vcf')}>
-                            <Button size="sm" variant="outline"><LuDownload /> В телефон</Button>
-                        </a>
-                        <Button size="sm" onClick={startCreate}><LuUserPlus /> Добавить</Button>
-                    </HStack>
-                </HStack>
+                <Text fontSize="sm" color="fg.muted">
+                    Люди вашей компании: бухгалтер, закупщик, директор. По ним мы поймём,
+                    кому адресовать документы и письма.
+                </Text>
 
                 {open && (
                     <Box borderWidth="1px" borderRadius="lg" p={4}>
@@ -299,8 +298,6 @@ export default function Index({ roles = [], channels = [], limit = 50 }) {
                     вы можете дополнить, но не удалить — за ней могут стоять отправленные письма.
                 </Text>
             </VStack>
-        </>
+        </CabinetLayout>
     );
 }
-
-Index.layout = (page) => <CabinetLayout>{page}</CabinetLayout>;
