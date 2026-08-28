@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { LuEye, LuMail, LuUserX } from 'react-icons/lu';
+import { LuEye, LuMail, LuReceipt, LuUserX } from 'react-icons/lu';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
@@ -31,6 +31,7 @@ import PartnerPurchases from '@/Crm/Components/PartnerPurchases';
 import ClientSummaryBar from './components/ClientSummaryBar';
 import StockBufferPanel from './components/StockBufferPanel';
 import PartnerDebt from '@/Crm/Components/PartnerDebt';
+import PaymentOrderDialog from '@/Crm/Components/PaymentOrderDialog';
 
 function InfoRow({ label, value }) {
     return (
@@ -66,6 +67,7 @@ export default function Show() {
     const canViewContacts = can('crm-contacts.view');
     const canViewTasks = can('crm-tasks.view');
     const [composeOpen, setComposeOpen] = useState(false);
+    const [paymentOrderOpen, setPaymentOrderOpen] = useState(false);
     const [kindOpen, setKindOpen] = useState(false);
     const [impersonateOpen, setImpersonateOpen] = useState(false);
     // Раскрытые спойлеры держим в состоянии: блок закупок ходит за данными
@@ -96,6 +98,11 @@ export default function Show() {
                         {can('crm-emails.create') && (
                             <Button size="sm" variant="outline" onClick={() => setComposeOpen(true)}>
                                 <LuMail /> Написать письмо
+                            </Button>
+                        )}
+                        {can('crm-finance.view') && (
+                            <Button size="sm" variant="outline" onClick={() => setPaymentOrderOpen(true)}>
+                                <LuReceipt /> Платёжка
                             </Button>
                         )}
                         {canManageKind && (
@@ -401,6 +408,12 @@ export default function Show() {
                 entity={{ type: 'client', id: client.id }}
                 defaultTo={client.email}
                 onClose={() => setComposeOpen(false)}
+            />
+
+            <PaymentOrderDialog
+                open={paymentOrderOpen}
+                client={{ id: client.id, name: client.name }}
+                onClose={() => setPaymentOrderOpen(false)}
             />
 
             <ClientKindDialog
