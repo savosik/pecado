@@ -550,6 +550,7 @@ jobs:
             "MAIL_STREAM_FINANCE=true" \
             "MAIL_STREAM_AUTOSEND=true" \
             "MAIL_NOTIFICATIONS_LIVE=true" \
+            "DEBT_CONTROL_LIVE_ACTIONS=gate,tasks,cabinet" \
             "MAIL_FEATURE_ORDER_CREATED=false" \
             "MAIL_FEATURE_ORDER_STATUS=false" \
             "MAIL_FEATURE_RETURN_CREATED=false" \
@@ -646,6 +647,9 @@ jobs:
           sg docker -c "$DC exec -T app php artisan db:seed --class=RolesAndPermissionsSeeder --force"
 
           echo "==> [5.2/9] Лестница долга: ступени по регистру..."
+          # Письма (mail) в первый релиз не включены: сначала менеджеры видят
+          # /crm/debt и ставят разблокировки договорившимся, потом письма
+          # включаются отдельным релизом — уйдут только оставшимся на ступенях.
           # debt-00 v2: ступень ставится сразу по замеру, пересчёт идемпотентен.
           # При деплое — чтобы состояние появилось сразу, а не в 07:10 следующего дня.
           # Ошибка пересчёта релиз не роняет: ночной запуск повторит.
