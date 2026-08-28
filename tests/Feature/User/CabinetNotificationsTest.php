@@ -2,9 +2,7 @@
 
 namespace Tests\Feature\User;
 
-use App\Models\EntitySubscription;
 use App\Models\NotificationPreference;
-use App\Models\NotificationSuppression;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -127,27 +125,5 @@ class CabinetNotificationsTest extends TestCase
     public function гость_в_настройки_не_попадает(): void
     {
         $this->getJson(route('cabinet.notifications.data'))->assertUnauthorized();
-    }
-
-    #[Test]
-    public function отписка_по_ссылке_гасит_один_раздел_а_не_всю_почту(): void
-    {
-        // Клиент, отказавшийся от статусов заказов, не отказывается от актов
-        // сверки. Раньше здесь стоял SCOPE_ALL и глушил всё разом.
-        $subscription = EntitySubscription::query()->create([
-            'user_id' => $this->client->id,
-            'section' => 'orders',
-            'channel' => 'email',
-            'destination' => 'client@example.com',
-            'is_active' => true,
-        ]);
-
-        $this->get(route('subscriptions.unsubscribe', $subscription->unsubscribe_token))
-            ->assertOk();
-
-        $this->assertFalse($subscription->refresh()->is_active);
-
-        $this->assertTrue(NotificationSuppression::blocks('client@example.com', 'orders.status_changed'));
-        $this->assertFalse(NotificationSuppression::blocks('client@example.com', 'documents.published'));
     }
 }

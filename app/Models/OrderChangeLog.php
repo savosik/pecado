@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use App\Events\EntityChanged;
 use App\Services\Crm\Mail\MailStream;
-use App\Subscriptions\EntityChangeNotice;
 use App\Support\Notifications\Occasion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -65,9 +63,9 @@ class OrderChangeLog extends Model
 
     protected static function booted(): void
     {
-        // Единая точка триггера уведомлений подписчикам раздела «Заказы»:
-        // сюда попадают изменения из всех источников (ERP / админка / API),
-        // т.к. все они создают OrderChangeLog через OrderChangeLogger.
+        // Единая точка уведомлений об изменении заказа: сюда попадают правки
+        // из всех источников (ERP / админка / API), т.к. все они создают
+        // OrderChangeLog через OrderChangeLogger.
         static::created(function (self $log): void {
             $order = $log->order;
 
@@ -75,29 +73,15 @@ class OrderChangeLog extends Model
                 return;
             }
 
-            $number = $order->erp_number ?: $order->number;
-
-            EntityChanged::dispatch(new EntityChangeNotice(
-                section: 'orders',
-                ownerUserId: (int) $order->user_id,
-                title: sprintf('Изменение по заказу %s — Pecado.ru', $number),
-                body: (string) $log->summary,
-                url: url(route('cabinet.orders.show', $order, false)),
-                entityLabel: "Заказ {$number}",
-                rows: self::buildNoticeRows($log),
-                event: (string) $log->type,
-            ));
-
-            self::composeLetter($log, $order, $number);
+            self::composeLetter($log, $order, $order->erp_number ?: $order->number);
         });
     }
 
     /**
-     * Письмо в поток о том же изменении.
+     * Сообщить матрице уведомлений об изменении.
      *
-     * Живёт рядом с EntityChanged: подписка кабинета шлёт письмо владельцу
-     * заказа, а поток собирает письмо, которое правила-фильтры могут отправить
-     * кому угодно ещё — бухгалтеру, закупщику, директору.
+     * Кому уйдёт письмо — настройка партнёра (`orders.items_updated`,
+     * `orders.attributes_updated`, `orders.shortfall`).
      */
     private static function composeLetter(self $log, Order $order, string $number): void
     {
@@ -184,8 +168,8 @@ class OrderChangeLog extends Model
     }
 
     /**
-     * Структурированные блоки изменения для вёрстки письма подписки —
-     * строятся из type + changes лога. Формат см. в EntityChangeNotice::$rows.
+     * Структурированные блоки изменения для вёрстки письма — строятся из
+     * type + changes лога и уезжают в `view.rows` уведомления.
      *
      * @return array<int, array<string, mixed>>
      */

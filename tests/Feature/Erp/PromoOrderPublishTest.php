@@ -436,57 +436,6 @@ class PromoOrderPublishTest extends TestCase
         $this->assertSame('accountable', $after[$manual->id]->promo_kind);
     }
 
-    #[Test]
-    public function расщеплённое_оформление_даёт_одно_письмо_клиенту(): void
-    {
-        config()->set('notifications.mail.features.order_created', true);
-
-        Queue::fake([PublishOrderToErpJob::class]);
-        \Illuminate\Support\Facades\Notification::fake();
-
-        $trigger = $this->product(10);
-        $gift = $this->product(10, 500);
-        $this->issuingRule($trigger, $gift);
-
-        // Оформление даёт два документа: обычный заказ и промо
-        $this->assertCount(2, $this->checkout($trigger));
-
-        // Но письмо — одно, со списком документов
-        \Illuminate\Support\Facades\Notification::assertSentToTimes(
-            $this->user,
-            \App\Notifications\Orders\OrdersPlacedNotification::class,
-            1,
-        );
-
-        \Illuminate\Support\Facades\Notification::assertNotSentTo(
-            $this->user,
-            \App\Notifications\Orders\OrderCreatedNotification::class,
-        );
-    }
-
-    #[Test]
-    public function рекламные_образцы_в_письмо_клиенту_не_попадают(): void
-    {
-        config()->set('notifications.mail.features.order_created', true);
-
-        Queue::fake([PublishOrderToErpJob::class]);
-        \Illuminate\Support\Facades\Notification::fake();
-
-        $trigger = $this->product(10);
-        $sample = $this->product(10, 300);
-        $this->issuingRule($trigger, $sample, ['promo_kind' => PromoKind::SAMPLE->value]);
-
-        $this->checkout($trigger);
-
-        // Документа два, но образцы клиенту не выписываются — значит письмо
-        // про один документ, обычной формой
-        \Illuminate\Support\Facades\Notification::assertSentToTimes(
-            $this->user,
-            \App\Notifications\Orders\OrderCreatedNotification::class,
-            1,
-        );
-    }
-
     /**
      * Инвариант, на котором держится «одно оформление — одно письмо»: событие
      * покупки выпускается один раз, сколько бы документов она ни породила.

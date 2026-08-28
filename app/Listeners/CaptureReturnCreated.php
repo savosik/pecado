@@ -3,35 +3,22 @@
 namespace App\Listeners;
 
 use App\Events\ReturnCreated;
-use App\Models\ProductReturn;
-use App\Notifications\Returns\ReturnCreatedNotification;
 use App\Services\Crm\Mail\MailStream;
 use App\Support\Notifications\Occasion;
 
-class SendReturnCreatedEmail
+/**
+ * Заявка на возврат создана → уведомление «Заявка на возврат принята».
+ *
+ * Адресатов выбирает матрица (`system.return_created`); прямой отправки
+ * клиенту здесь нет с note-10.
+ */
+class CaptureReturnCreated
 {
-    /** Ключ события пульта, которым это письмо заменяется при переходе. */
     private const OCCASION = 'system.return_created';
 
     public function handle(ReturnCreated $event): void
     {
-        $this->composeLetter($event->productReturn);
-
-        if (! config('notifications.mail.features.return_created')) {
-            return;
-        }
-
-        $user = $event->productReturn->user;
-
-        if (blank($user->email)) {
-            return;
-        }
-
-        $user->notify(new ReturnCreatedNotification($event->productReturn));
-    }
-
-    private function composeLetter(ProductReturn $return): void
-    {
+        $return = $event->productReturn;
         $number = $return->erp_number ?: $return->number ?: (string) $return->id;
 
         app(MailStream::class)->captureQuietly(new Occasion(

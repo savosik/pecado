@@ -16,7 +16,6 @@ import SelectedFilters from '@/components/cabinet/SelectedFilters';
 import StatusQuickFilters from '@/components/cabinet/StatusQuickFilters';
 import ExportMenu from '@/components/cabinet/ExportMenu';
 import SavedSearches from '@/components/cabinet/SavedSearches';
-import SubscriptionPanel from '@/components/cabinet/SubscriptionPanel';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 
 const SORT_OPTIONS = [
@@ -46,7 +45,6 @@ export default function DocumentsIndex({
     organizationsEnabled = false,
     presetsEnabled = false,
     exportEnabled = false,
-    subscriptionsEnabled = false,
 }) {
     const { documents } = usePage().props;
 
@@ -510,14 +508,6 @@ export default function DocumentsIndex({
                         </Flex>
                     )}
                 </>
-            )}
-
-            {subscriptionsEnabled && (
-                <SubscriptionPanel
-                    section="documents"
-                    title="Подписка на новые документы"
-                    description="Письмо, когда бухгалтерия сформирует для вас новый документ"
-                />
             )}
         </CabinetLayout>
     );

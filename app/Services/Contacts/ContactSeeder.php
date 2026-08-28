@@ -8,7 +8,6 @@ use App\Models\Company;
 use App\Models\Contact;
 use App\Models\ContactLink;
 use App\Models\CrmEmail;
-use App\Models\EntitySubscription;
 use App\Models\SentEmail;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -45,7 +44,6 @@ class ContactSeeder
         return collect()
             ->concat($this->fromPartners($clientId))
             ->concat($this->fromCompanies($clientId))
-            ->concat($this->fromSubscriptions($clientId))
             ->concat($this->fromLetters($clientId))
             ->reject(fn (array $row): bool => isset($known[mb_strtolower((string) $row['email'])]))
             ->unique(fn (array $row): string => mb_strtolower((string) $row['email']))
@@ -197,28 +195,6 @@ class ContactSeeder
                 'source_label' => 'Почта контрагента',
                 'impersonal' => $this->looksImpersonal((string) $company->email),
                 'hint' => (string) ($company->name ?: $company->legal_name),
-            ]);
-    }
-
-    /**
-     * @return Collection<int, array<string, mixed>>
-     */
-    private function fromSubscriptions(?int $clientId): Collection
-    {
-        return EntitySubscription::query()
-            ->where('channel', 'email')
-            ->whereNotNull('destination')
-            ->when($clientId, fn ($query) => $query->where('user_id', $clientId))
-            ->get(['user_id', 'destination'])
-            ->map(fn ($subscription): array => [
-                'email' => mb_strtolower(trim((string) $subscription->destination)),
-                'phone' => null,
-                'full_name' => null,
-                'client_id' => (int) $subscription->user_id,
-                'company_id' => null,
-                'source_label' => 'Подписка из кабинета',
-                'impersonal' => $this->looksImpersonal((string) $subscription->destination),
-                'hint' => 'Клиент сам указал этот адрес',
             ]);
     }
 

@@ -80,7 +80,6 @@ class CrmRopHandover extends Command
             ['Открытых задач к переносу', (string) (clone $openTasks)->count()],
             ['Шаблонов задач к переносу', (string) (clone $recurrences)->count()],
             ['Токенов агента к отзыву', (string) $oldRop->hasMany(\App\Models\CrmAgentToken::class)->where('is_active', true)->count()],
-            ['Подписок к удалению', (string) DB::table('entity_subscriptions')->where('user_id', $oldRop->id)->count()],
         ]);
 
         if (! $this->option('apply')) {
@@ -112,11 +111,10 @@ class CrmRopHandover extends Command
 
             // 4. Уволенный: блокировка, снятие ролей (fallback недоборов берёт
             // первого sales-head — уволенный не должен в него попадать),
-            // отзыв токенов агента, удаление подписок на рассылки.
+            // отзыв токенов агента.
             $oldRop->syncRoles([]);
             $oldRop->forceFill(['status' => UserStatus::BLOCKED->value])->save();
             $oldRop->hasMany(\App\Models\CrmAgentToken::class)->update(['is_active' => false]);
-            DB::table('entity_subscriptions')->where('user_id', $oldRop->id)->delete();
         });
 
         $this->info(sprintf(

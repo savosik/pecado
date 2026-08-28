@@ -12,7 +12,6 @@ use App\Models\PersonalManager;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -91,15 +90,6 @@ class CrmRopHandoverTest extends TestCase
             'token' => str_repeat('a', 64),
             'is_active' => true,
         ]);
-        DB::table('entity_subscriptions')->insert([
-            'user_id' => $this->oldRop->id,
-            'section' => 'orders',
-            'channel' => 'email',
-            'destination' => 'salesdir@andrey-company.ru',
-            'unsubscribe_token' => str_repeat('b', 64),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
 
         $this->artisan('crm:rop-handover', ['--apply' => true])->assertSuccessful();
 
@@ -126,7 +116,6 @@ class CrmRopHandoverTest extends TestCase
         $this->assertSame(UserStatus::BLOCKED, $oldRop->status);
         $this->assertFalse($oldRop->hasRole('sales-head'));
         $this->assertFalse((bool) $token->fresh()->is_active);
-        $this->assertSame(0, DB::table('entity_subscriptions')->where('user_id', $oldRop->id)->count());
     }
 
     public function test_apply_is_idempotent(): void

@@ -6,9 +6,10 @@ use App\Events\OrdersPlaced;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\PersonalManager;
 use App\Models\Product;
 use App\Models\User;
-use App\Notifications\Orders\OrderCreatedNotification;
+use App\Notifications\Orders\NewOrderForManagerNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
@@ -68,13 +69,12 @@ class NoDuplicateListenersTest extends TestCase
      * Сквозная проверка: одно событие — одно письмо, а не два.
      */
     #[Test]
-    public function одно_событие_даёт_одно_письмо_клиенту(): void
+    public function одно_событие_даёт_одно_письмо_менеджеру(): void
     {
-        config()->set('notifications.mail.features.order_created', true);
-
         Notification::fake();
 
-        $user = User::factory()->create();
+        $manager = PersonalManager::factory()->create(['email' => 'anna@pecado.ru']);
+        $user = User::factory()->create(['personal_manager_id' => $manager->id]);
         $company = Company::factory()->create(['user_id' => $user->id]);
         $product = Product::factory()->create();
 
@@ -86,6 +86,6 @@ class NoDuplicateListenersTest extends TestCase
 
         OrdersPlaced::dispatch(collect([$order]));
 
-        Notification::assertSentToTimes($user, OrderCreatedNotification::class, 1);
+        Notification::assertSentOnDemandTimes(NewOrderForManagerNotification::class, 1);
     }
 }

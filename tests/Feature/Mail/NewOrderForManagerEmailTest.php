@@ -21,8 +21,6 @@ class NewOrderForManagerEmailTest extends TestCase
         parent::setUp();
 
         $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
-
-        config(['notifications.mail.features.manager_new_order' => true]);
     }
 
     public function test_goes_only_to_personal_manager_of_the_client(): void
@@ -98,20 +96,6 @@ class NewOrderForManagerEmailTest extends TestCase
         config(['notifications.mail.order_fallback_recipients' => []]);
 
         $client = User::factory()->create(['personal_manager_id' => null]);
-        $order = Order::factory()->create(['user_id' => $client->id]);
-
-        OrdersPlaced::dispatch(collect([$order]));
-
-        Notification::assertNothingSent();
-    }
-
-    public function test_disabled_feature_flag_skips_email(): void
-    {
-        Notification::fake();
-        config(['notifications.mail.features.manager_new_order' => false]);
-
-        $pm = PersonalManager::create(['name' => 'Анна', 'email' => 'anna.personal@pecado.ru']);
-        $client = User::factory()->create(['personal_manager_id' => $pm->id]);
         $order = Order::factory()->create(['user_id' => $client->id]);
 
         OrdersPlaced::dispatch(collect([$order]));

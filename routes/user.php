@@ -27,7 +27,6 @@ use App\Http\Controllers\User\PromotionController;
 use App\Http\Controllers\User\ReturnController;
 use App\Http\Controllers\User\SearchController;
 use App\Http\Controllers\User\ShipmentController;
-use App\Http\Controllers\User\SubscriptionController;
 use App\Http\Controllers\User\UserQuestionController;
 use Illuminate\Support\Facades\Route;
 
@@ -139,8 +138,10 @@ Route::prefix('api')->middleware('auth')->group(function () {
 // ──────────────────────────────────────────────
 // User Cabinet Routes (authenticated)
 // ──────────────────────────────────────────────
-// Публичная отписка по токену из письма (без авторизации).
-Route::get('/subscriptions/unsubscribe/{token}', [SubscriptionController::class, 'unsubscribe'])
+// Ссылка отписки из старых писем подписок кабинета (механизм снят в note-10,
+// но письма с этой ссылкой ещё лежат в почте клиентов). Показываем, где теперь
+// настраиваются уведомления, вместо 404.
+Route::get('/subscriptions/unsubscribe/{token}', fn () => response()->view('subscriptions.unsubscribed'))
     ->name('subscriptions.unsubscribe');
 
 Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function () {
@@ -311,12 +312,6 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
         ->name('notifications.update');
     Route::patch('/notifications/marketing', [NotificationPreferenceController::class, 'marketing'])
         ->name('notifications.marketing');
-
-    // Подписки на изменения сущностей раздела (email; универсальный CRUD).
-    Route::get('/subscriptions/{section}', [SubscriptionController::class, 'index'])->name('subscriptions.index');
-    Route::post('/subscriptions/{section}', [SubscriptionController::class, 'store'])->name('subscriptions.store');
-    Route::patch('/subscriptions/{subscription}', [SubscriptionController::class, 'update'])->name('subscriptions.update');
-    Route::delete('/subscriptions/{subscription}', [SubscriptionController::class, 'destroy'])->name('subscriptions.destroy');
 
     // Сохранённые поиски (PR 5.1, за флагом `search-cabinet.presets`).
     // Внутри контроллера выключенный флаг даёт 404 — маршруты остаются

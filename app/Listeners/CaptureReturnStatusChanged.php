@@ -3,36 +3,20 @@
 namespace App\Listeners;
 
 use App\Events\ReturnStatusChanged;
-use App\Notifications\Returns\ReturnStatusChangedNotification;
 use App\Services\Crm\Mail\MailStream;
 use App\Support\Notifications\Occasion;
 
-class SendReturnStatusChangedEmail
+/**
+ * Статус заявки на возврат изменился → уведомление «Статус возврата».
+ *
+ * Адресатов выбирает матрица (`system.return_status_changed`); прямой
+ * отправки клиенту здесь нет с note-10.
+ */
+class CaptureReturnStatusChanged
 {
-    /** Ключ события пульта, которым это письмо заменяется при переходе. */
     private const OCCASION = 'system.return_status_changed';
 
     public function handle(ReturnStatusChanged $event): void
-    {
-        $this->composeLetter($event);
-
-        if (! config('notifications.mail.features.return_status_changes')) {
-            return;
-        }
-
-        $user = $event->productReturn->user;
-
-        if (blank($user->email)) {
-            return;
-        }
-
-        $user->notify(new ReturnStatusChangedNotification(
-            $event->productReturn,
-            $event->previousStatus,
-        ));
-    }
-
-    private function composeLetter(ReturnStatusChanged $event): void
     {
         $return = $event->productReturn;
         $number = $return->erp_number ?: $return->number ?: (string) $return->id;

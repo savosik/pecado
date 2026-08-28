@@ -32,11 +32,7 @@ class SentEmailJournalTest extends TestCase
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
 
-        config([
-            'notifications.mail.journal_enabled' => true,
-            'notifications.mail.features.manager_new_order' => true,
-            'notifications.mail.features.order_created' => false,
-        ]);
+        config(['notifications.mail.journal_enabled' => true]);
     }
 
     #[Test]

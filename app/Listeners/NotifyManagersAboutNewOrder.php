@@ -12,16 +12,20 @@ use App\Support\Notifications\OrderManagerRouting;
 use Illuminate\Support\Facades\Notification;
 
 /**
- * Уведомление менеджерам о новом оформлении.
+ * Новое оформление: служебное письмо менеджеру + уведомление партнёру.
  *
  * Слушает покупку, а не документ: расщепление корзины по типам даёт до пяти
  * заказов, и пять писем об одной покупке — шум, в котором теряется само событие.
  * Письмо уходит по основному документу; остальные менеджер видит в 1С и в CRM,
  * они связаны одной корзиной.
+ *
+ * Письмо менеджеру — служебное и зашитое: адресат известен из данных (персональный
+ * менеджер клиента или фолбэк отдела), отключается только самим сотрудником
+ * в «Моих уведомлениях» (`staff.order_created`). Клиенту пишет матрица.
  */
 class NotifyManagersAboutNewOrder
 {
-    /** Ключ события пульта, которым это письмо заменяется при переходе. */
+    /** Тип уведомления партнёру в матрице. */
     private const OCCASION = 'orders.created';
 
     public function handle(OrdersPlaced $event): void
@@ -32,13 +36,9 @@ class NotifyManagersAboutNewOrder
             return;
         }
 
-        // Письмо в поток собирается всегда: уйдёт ли оно и кому — решают
-        // правила-фильтры, а не это место.
+        // Уведомление партнёру собирается всегда: уйдёт ли оно и кому —
+        // настройка партнёра, а не это место.
         $this->composeLetter($primary, $event->orders);
-
-        if (! config('notifications.mail.features.manager_new_order')) {
-            return;
-        }
 
         $recipients = OrderManagerRouting::recipients($primary);
 
@@ -70,7 +70,7 @@ class NotifyManagersAboutNewOrder
      * @param  \Illuminate\Support\Collection<int, Order>  $orders
      */
     /**
-     * Сообщить пульту об оформлении покупки.
+     * Сообщить матрице об оформлении покупки.
      *
      * Сигнал один на покупку, а не на документ — по той же причине, по которой
      * листенер слушает OrdersPlaced: пять писем об одной покупке это шум.

@@ -68,14 +68,4 @@ class MailLayoutSmokeTest extends TestCase
             $this->assertIsBool($value, "Feature flag `{$name}` должен быть boolean");
         }
     }
-
-    public function test_order_statuses_whitelist_is_set(): void
-    {
-        $whitelist = config('notifications.mail.order_statuses_to_notify_client');
-
-        $this->assertIsArray($whitelist);
-        $this->assertContains('shipping', $whitelist);
-        $this->assertContains('closed', $whitelist);
-        $this->assertNotContains('pending_approval', $whitelist);
-    }
 }

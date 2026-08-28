@@ -4,8 +4,8 @@ namespace App\Services\Notifications;
 
 use App\Enums\Crm\EmailStatus;
 use App\Models\CrmEmail;
+use App\Models\PersonalManager;
 use App\Services\Crm\CrmEmailService;
-use App\Services\Crm\Mail\LegacySenders;
 use App\Support\Notifications\Occasion;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -19,10 +19,12 @@ use RuntimeException;
  */
 class NotificationDispatcher
 {
+    /** Тип уведомления, по которому менеджеру уже пишет служебный листенер. */
+    private const STAFF_COVERED_OCCASION = 'orders.created';
+
     public function __construct(
         private readonly NotificationRouter $router,
         private readonly CrmEmailService $emails,
-        private readonly LegacySenders $legacy,
     ) {}
 
     /**
@@ -37,12 +39,18 @@ class NotificationDispatcher
     {
         $occasion = $this->occasionOf($letter);
         $addresses = $this->router->addressesFor($occasion);
+        $skipReason = 'Партнёр не подписан на это уведомление';
+
+        if ($addresses !== [] && $occasion->key === self::STAFF_COVERED_OCCASION) {
+            $addresses = $this->withoutManager($letter, $addresses);
+            $skipReason = 'Менеджеру о новом заказе уходит служебное письмо, дубль по настройке партнёра не нужен';
+        }
 
         if ($addresses === []) {
             $letter->forceFill([
                 'to' => [],
                 'status' => EmailStatus::UNMATCHED->value,
-                'skip_reason' => 'Партнёр не подписан на это уведомление',
+                'skip_reason' => $skipReason,
             ])->save();
 
             return [];
@@ -113,14 +121,33 @@ class NotificationDispatcher
             return 'Автоотправка выключена администратором';
         }
 
-        // Пока по этому поводу пишет зашитый листенер, уведомление молчит:
-        // порядок переключения можно перепутать, а письмо клиенту не отозвать.
-        $legacy = $this->legacy->conflictFor($letter);
+        return null;
+    }
 
-        if ($legacy !== null) {
-            return 'По этому поводу пока пишет старый механизм ('.$legacy.')';
+    /**
+     * Убрать из адресатов персонального менеджера клиента.
+     *
+     * О новом заказе менеджеру пишет служебный листенер (`NotifyManagersAboutNewOrder`,
+     * настройка `staff.order_created`). Если партнёру дополнительно поставили
+     * адресата «менеджер», письмо задвоилось бы — то же событие, два письма.
+     *
+     * @param  list<string>  $addresses
+     * @return list<string>
+     */
+    private function withoutManager(CrmEmail $letter, array $addresses): array
+    {
+        $managerId = $letter->client?->personal_manager_id;
+        $managerEmail = $managerId === null
+            ? null
+            : PersonalManager::query()->whereKey($managerId)->value('email');
+
+        if (blank($managerEmail)) {
+            return $addresses;
         }
 
-        return null;
+        return array_values(array_filter(
+            $addresses,
+            fn (string $address): bool => mb_strtolower($address) !== mb_strtolower((string) $managerEmail),
+        ));
     }
 }

@@ -213,12 +213,12 @@ class AppServiceProvider extends ServiceProvider
 
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\ReturnCreated::class,
-            \App\Listeners\SendReturnCreatedEmail::class,
+            \App\Listeners\CaptureReturnCreated::class,
         );
 
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\ReturnStatusChanged::class,
-            \App\Listeners\SendReturnStatusChangedEmail::class,
+            \App\Listeners\CaptureReturnStatusChanged::class,
         );
 
         \Illuminate\Support\Facades\Event::listen(
@@ -231,12 +231,8 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\SendPasswordChangedEmail::class,
         );
 
-        // Письмо клиенту — на покупку, а не на документ (см. SendOrdersPlacedEmail)
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\OrdersPlaced::class,
-            \App\Listeners\SendOrdersPlacedEmail::class,
-        );
-
+        // Письмо менеджеру и уведомление партнёру — на покупку, а не на документ:
+        // расщеплённая корзина даёт до пяти заказов, а оформление одно
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\OrdersPlaced::class,
             \App\Listeners\NotifyManagersAboutNewOrder::class,
@@ -244,13 +240,7 @@ class AppServiceProvider extends ServiceProvider
 
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\OrderUpdated::class,
-            \App\Listeners\SendOrderStatusChangedEmail::class,
-        );
-
-        // Универсальные подписки на изменения сущностей разделов кабинета
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\EntityChanged::class,
-            \App\Listeners\SendEntitySubscriptionNotifications::class,
+            \App\Listeners\CaptureOrderStatusChanged::class,
         );
 
         // Журнал исходящих писем — на фактическую отправку, поэтому ловит и
