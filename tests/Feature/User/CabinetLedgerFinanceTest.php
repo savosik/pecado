@@ -33,6 +33,11 @@ class CabinetLedgerFinanceTest extends TestCase
     {
         parent::setUp();
 
+        // Календарь показывает текущий месяц, а тесты ставят сроки «сегодня + N дней»:
+        // в последние дни месяца срок уезжал в следующий, и тест падал по календарю.
+        // Дата закреплена в середине месяца.
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::now()->startOfMonth()->addDays(9)->setTime(12, 0));
+
         Currency::factory()->create(['code' => 'RUB', 'is_base' => true, 'exchange_rate' => 1]);
 
         $this->client = User::factory()->create();
@@ -40,6 +45,12 @@ class CabinetLedgerFinanceTest extends TestCase
         Company::factory()->create(['user_id' => $this->client->id]);
 
         config(['cabinet.finance_enabled' => true]);
+    }
+
+    protected function tearDown(): void
+    {
+        \Illuminate\Support\Carbon::setTestNow();
+        parent::tearDown();
     }
 
     /**
