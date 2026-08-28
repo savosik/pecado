@@ -35,11 +35,24 @@ class DebtOverview
             ->partners()
             ->whereIn('user_id', (clone $clients)->select('users.id'))
             ->where('level', '<>', DebtLevel::CLEAN->value)
-            ->when($level !== null && $level !== '', fn ($query) => $query->where('level', $level))
             ->when($managerId !== null, fn ($query) => $query->whereHas('user', fn ($users) => $users->where('personal_manager_id', $managerId)))
             ->get();
 
-        $userIds = $partners->pluck('user_id')->map(fn ($id): int => (int) $id)->all();
+        // Счётчики ступеней и итоги — по всему списку: отбор по ступени сужает
+        // только строки, иначе на кнопках у остальных ступеней нули.
+        $byLevel = array_fill_keys(array_map(fn (DebtLevel $item): string => $item->value, DebtLevel::cases()), 0);
+
+        foreach ($partners as $state) {
+            $byLevel[$state->level->value]++;
+        }
+
+        $allPartners = $partners;
+
+        if ($level !== null && $level !== '') {
+            $partners = $partners->filter(fn (DebtState $state): bool => $state->level->value === $level)->values();
+        }
+
+        $userIds = $allPartners->pluck('user_id')->map(fn ($id): int => (int) $id)->all();
 
         $contractors = DebtState::query()
             ->with('company:id,name')
@@ -58,7 +71,7 @@ class DebtOverview
             ->get()
             ->groupBy('user_id');
 
-        $erpOrders = $this->erpOrdersForRestricted($partners, $today);
+        $erpOrders = $this->erpOrdersForRestricted($allPartners, $today);
 
         $rows = $partners
             ->map(function (DebtState $state) use ($contractors, $pauses, $erpOrders): array {
@@ -91,19 +104,15 @@ class DebtOverview
             ])
             ->values();
 
-        $byLevel = array_fill_keys(array_map(fn (DebtLevel $item): string => $item->value, DebtLevel::cases()), 0);
-
-        foreach ($rows as $row) {
-            $byLevel[$row['level']]++;
-        }
+        $pausedAll = $allPartners->filter(fn (DebtState $state): bool => $pauses->has($state->user_id))->count();
 
         return [
             'rows' => $rows->all(),
             'totals' => [
-                'partners' => $rows->count(),
-                'overdue' => round((float) $rows->sum('overdue_amount'), 2),
+                'partners' => $allPartners->count(),
+                'overdue' => round((float) $allPartners->sum(fn (DebtState $state): float => (float) $state->overdue_amount), 2),
                 'by_level' => $byLevel,
-                'paused' => $rows->filter(fn (array $row): bool => $row['pause'] !== null)->count(),
+                'paused' => $pausedAll,
                 'erp_orders' => count($erpOrders),
             ],
             'shadow' => DebtControl::shadow(),

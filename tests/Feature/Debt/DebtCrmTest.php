@@ -70,6 +70,10 @@ class DebtCrmTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->has('rows', 1)
                 ->where('rows.0.level', 'hold')
+                // Счётчики кнопок — по всему списку, отбор сужает только строки.
+                ->where('totals.by_level.no_orders', 1)
+                ->where('totals.by_level.hold', 1)
+                ->where('totals.partners', 2)
                 ->where('seesAll', true)
                 ->where('pauseMaxDays', 30));
     }
