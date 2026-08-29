@@ -129,7 +129,8 @@ class PaymentOrderTest extends TestCase
             'organization_id' => $this->organization->id,
             'user_id' => $this->client->id,
             'company_id' => $this->company->id,
-            'number' => 'П-17/2026',
+            // Как в реестре после импорта: номер уже со знаком номера.
+            'number' => '№ П-17/2026',
             'date' => '2026-02-10',
             'valid_until' => null,
             'status' => \App\Enums\Crm\ContractStatus::SIGNED->value,
@@ -221,6 +222,28 @@ class PaymentOrderTest extends TestCase
         config(['debt.mode' => 'shadow', 'cabinet.finance_enabled' => false]);
 
         $this->actingAs($this->client)->get('/cabinet/payment-orders')->assertNotFound();
+        $this->actingAs($this->client)->getJson('/cabinet/payment-orders/options')->assertNotFound();
+    }
+
+    /**
+     * Диалог платёжки из календаря оплат грузит те же пары и документы JSON-ом,
+     * а строку календаря находит по id записи регистра — это ключ сценария «документ».
+     */
+    #[Test]
+    public function options_are_served_as_json_for_the_calendar_dialog(): void
+    {
+        $overdue = SettlementEntry::query()->where('document_number', '29УТ-000001')->firstOrFail();
+
+        $this->actingAs($this->client)
+            ->getJson('/cabinet/payment-orders/options')
+            ->assertOk()
+            ->assertJsonPath('pairs.0.key', $this->company->id.':'.$this->organization->id)
+            ->assertJsonPath('pairs.0.company_name', 'ООО Ромашка')
+            ->assertJsonPath('pairs.0.organization_name', 'Пекадо')
+            ->assertJsonPath('pairs.0.documents.0.id', $overdue->id)
+            ->assertJsonPath('pairs.0.documents.0.overdue', true)
+            ->assertJsonPath('scenarios.2.value', 'document')
+            ->assertJsonCount(2, 'pairs.0.documents');
     }
 
     private function plan(float $amount, string $due, string $number, string $date): void

@@ -235,12 +235,15 @@ class PaymentOrderService
         }
 
         $date = $contract->date ?? $contract->signed_at;
+        // В реестре номер почти всегда уже со знаком номера («№ 3-Т/2024»):
+        // без нормализации в назначение платежа уходило «договору № № 3-Т/2024».
+        $number = trim((string) preg_replace('/^\s*№\s*/u', '', (string) $contract->number));
 
         return [
             'id' => (int) $contract->getKey(),
-            'number' => (string) $contract->number,
+            'number' => $number,
             'date' => $date?->format('d.m.Y'),
-            'label' => 'Договор № '.$contract->number.($date ? ' от '.$date->format('d.m.Y') : ''),
+            'label' => 'Договор № '.$number.($date ? ' от '.$date->format('d.m.Y') : ''),
         ];
     }
 

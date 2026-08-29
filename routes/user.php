@@ -284,6 +284,8 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     // Платёжка «бери и плати» (pay-01): открыта там же, где клиент видит долг —
     // гейт внутри контроллера (раздел «Оплаты» или боевая лестница долга).
     Route::get('/payment-orders', [\App\Http\Controllers\User\PaymentOrderController::class, 'index'])->name('payment-orders.index');
+    // JSON для диалога платёжки из календаря оплат.
+    Route::get('/payment-orders/options', [\App\Http\Controllers\User\PaymentOrderController::class, 'options'])->name('payment-orders.options');
     Route::get('/payment-orders/preview', [\App\Http\Controllers\User\PaymentOrderController::class, 'preview'])->name('payment-orders.preview');
     Route::get('/payment-orders/download', [\App\Http\Controllers\User\PaymentOrderController::class, 'download'])->name('payment-orders.download');
     Route::post('/payment-orders/send', [\App\Http\Controllers\User\PaymentOrderController::class, 'send'])->name('payment-orders.send');

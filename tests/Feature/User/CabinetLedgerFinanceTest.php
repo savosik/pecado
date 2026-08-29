@@ -481,4 +481,54 @@ class CabinetLedgerFinanceTest extends TestCase
             ->get('/cabinet/payments/reconciliation')
             ->assertNotFound();
     }
+
+    /**
+     * У строки графика — пара «контрагент → наше юрлицо» и ключи для платёжки:
+     * бухгалтер клиента с двумя компаниями иначе не понимает, от кого платить,
+     * а кнопка «Платёжка» открывает диалог именно по этой строке регистра.
+     */
+    #[Test]
+    public function строка_календаря_знает_контрагента_и_наше_юрлицо(): void
+    {
+        $company = Company::factory()->create(['user_id' => $this->client->id, 'name' => 'ООО «Ромашка»']);
+        $this->organization->update(['name' => 'ООО «Пекадо»']);
+        $stub = Organization::factory()->create(['is_stub' => true, 'name' => 'Заглушка']);
+
+        $due = CarbonImmutable::today()->addDays(3)->toDateString();
+        $line = $this->entry([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'amount' => 12000,
+            'settled_amount' => 0,
+            'date' => $due,
+            'document_kind' => 'shipment',
+            'document_number' => '29УТ-000001',
+            'company_id' => $company->id,
+        ]);
+        $this->entry([
+            'nature' => SettlementEntry::NATURE_PLAN,
+            'type' => SettlementEntry::TYPE_PAYMENT_DUE,
+            'amount' => 500,
+            'settled_amount' => 0,
+            'date' => $due,
+            'document_kind' => 'shipment',
+            'document_number' => '29УТ-000002',
+            'company_id' => $company->id,
+            'organization_id' => $stub->id,
+        ]);
+
+        $this->actingAs($this->client)
+            ->get('/cabinet/payments/calendar')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('entries', 2)
+                ->where('entries.0.id', $line->id)
+                ->where('entries.0.company_id', $company->id)
+                ->where('entries.0.organization_id', $this->organization->id)
+                ->where('entries.0.company', 'ООО «Ромашка»')
+                ->where('entries.0.organization', 'ООО «Пекадо»')
+                // Заглушка организации клиенту не показывается — как в документах.
+                ->where('entries.1.organization', null)
+                ->where('paymentOrdersEnabled', true));
+    }
 }

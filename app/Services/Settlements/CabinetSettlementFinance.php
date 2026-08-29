@@ -224,7 +224,10 @@ class CabinetSettlementFinance
     {
         $today = CarbonImmutable::today();
 
+        // Контрагент и наше юрлицо нужны каждой строке: клиент с несколькими
+        // компаниями иначе не понимает, от кого и кому платёж.
         $plans = fn () => $this->outstandingPlans($user)
+            ->with(['company:id,name', 'organization:id,name,is_stub'])
             ->when($companyId !== null, fn ($query) => $query->where('company_id', $companyId));
 
         $monthly = $plans()
@@ -278,6 +281,15 @@ class CabinetSettlementFinance
             'is_paid' => $unpaid <= SettlementEntry::EPSILON,
             'is_overdue' => $line->is_overdue,
             'stage_name' => $line->meta['stage_name'] ?? null,
+            // Пара «контрагент × наше юрлицо» — подпись строки и ключ платёжки
+            // (PaymentOrderService::options группирует по той же паре).
+            'company_id' => $line->company_id,
+            'organization_id' => $line->organization_id,
+            'company' => $line->company?->name,
+            // Заглушку организации клиенту не показываем — как в документах.
+            'organization' => $line->organization !== null && ! $line->organization->is_stub
+                ? $line->organization->name
+                : null,
             'shipment' => [
                 'id' => $line->document_id,
                 'number' => $line->document_number ?? '—',

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { Box, Flex, HStack, Image, Input, NativeSelect, Stack, Text, Badge } from '@chakra-ui/react';
 import { LuDownload, LuFileCode2, LuSend } from 'react-icons/lu';
@@ -24,16 +24,23 @@ const toQuery = (params) => new URLSearchParams(
  * @param {(params: object, format: 'pdf'|'txt') => string} downloadUrl
  * @param {(payload: object) => Promise<void>} onSend — payload: {...params, email, save_contact}
  * @param {boolean} compact — без внешних карточек (для диалога)
+ * @param {{pairKey: string, scenario?: string, entryId?: number|string}|null} preset —
+ *   предустановка из календаря: пара и документ выбраны заранее, форма их не сбрасывает.
+ *   Если пары или документа среди непогашенных нет — форма открывается как обычно.
  */
-export default function PaymentOrderForm({ options, previewUrl, downloadUrl, onSend, compact = false }) {
+export default function PaymentOrderForm({ options, previewUrl, downloadUrl, onSend, compact = false, preset = null }) {
     const pairs = options?.pairs || [];
     const scenarios = options?.scenarios || [];
     const contacts = options?.contacts || [];
 
-    const [pairKey, setPairKey] = useState(pairs[0]?.key || '');
+    // Предустановка применяется один раз при первом рендере пары; дальше
+    // пользователь волен переключать пару и сценарий, как обычно.
+    const presetRef = useRef(preset && pairs.some((p) => p.key === preset.pairKey) ? preset : null);
+
+    const [pairKey, setPairKey] = useState(presetRef.current?.pairKey || pairs[0]?.key || '');
     const pair = useMemo(() => pairs.find((p) => p.key === pairKey) || null, [pairs, pairKey]);
-    const [scenario, setScenario] = useState(pair?.overdue > 0 ? 'overdue' : 'all');
-    const [entryId, setEntryId] = useState('');
+    const [scenario, setScenario] = useState(presetRef.current?.scenario || (pair?.overdue > 0 ? 'overdue' : 'all'));
+    const [entryId, setEntryId] = useState(presetRef.current?.entryId ? String(presetRef.current.entryId) : '');
     const [amount, setAmount] = useState('');
     const [preview, setPreview] = useState(null);
     const [error, setError] = useState(null);
@@ -47,8 +54,18 @@ export default function PaymentOrderForm({ options, previewUrl, downloadUrl, onS
 
     useEffect(() => {
         if (!pair) return;
-        setScenario(pair.overdue > 0 ? 'overdue' : 'all');
-        setEntryId(pair.documents?.[0]?.id ? String(pair.documents[0].id) : '');
+        const fixed = presetRef.current;
+        presetRef.current = null;
+        const presetDocument = fixed?.entryId
+            && (pair.documents || []).some((d) => String(d.id) === String(fixed.entryId));
+
+        if (fixed && presetDocument) {
+            setScenario(fixed.scenario || 'document');
+            setEntryId(String(fixed.entryId));
+        } else {
+            setScenario(pair.overdue > 0 ? 'overdue' : 'all');
+            setEntryId(pair.documents?.[0]?.id ? String(pair.documents[0].id) : '');
+        }
         setSent(null);
         // Бухгалтер этого юрлица — первым.
         const accountant = contacts.find((c) => c.is_accountant && (c.company_id === pair.company_id || c.company_id === null))

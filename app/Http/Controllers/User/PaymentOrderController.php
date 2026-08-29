@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\Payments\PaymentOrder;
 use App\Services\Payments\PaymentOrderService;
 use App\Support\Cabinet\CabinetFinance;
@@ -32,6 +33,27 @@ class PaymentOrderController extends Controller
         return Inertia::render('User/Cabinet/PaymentOrders/Index', [
             'options' => $this->orders->options($request->user()),
         ]);
+    }
+
+    /**
+     * Пары, сценарии и адресная книга для диалога платёжки — тот же набор, что
+     * у страницы раздела, но JSON: диалог из календаря грузит его по факту открытия,
+     * чтобы не считать регистр при каждом показе календаря.
+     */
+    public function options(Request $request): JsonResponse
+    {
+        $this->gate($request);
+
+        return response()->json($this->orders->options($request->user()));
+    }
+
+    /**
+     * Платёжка открыта там же, где клиент видит долг: при включённом разделе
+     * «Оплаты» или боевой лестнице долга — иначе показывать суммы нечего.
+     */
+    public static function availableFor(User $user): bool
+    {
+        return CabinetFinance::enabledFor($user) || DebtControl::live(DebtControl::ACTION_CABINET);
     }
 
     public function download(Request $request): Response
@@ -91,10 +113,7 @@ class PaymentOrderController extends Controller
 
     private function gate(Request $request): void
     {
-        abort_unless(
-            CabinetFinance::enabledFor($request->user()) || DebtControl::live(DebtControl::ACTION_CABINET),
-            404,
-        );
+        abort_unless(self::availableFor($request->user()), 404);
     }
 
     private function buildFromRequest(Request $request): PaymentOrder

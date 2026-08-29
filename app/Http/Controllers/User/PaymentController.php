@@ -170,6 +170,8 @@ class PaymentController extends Controller
             'companies' => $finance->companiesOf($user),
             'companyId' => $companyId,
             'currencyCode' => $currency?->code ?? 'RUB',
+            // Кнопка «Платёжка» у строки графика — только если платёжка открыта клиенту.
+            'paymentOrdersEnabled' => PaymentOrderController::availableFor($user),
         ]);
     }
 
