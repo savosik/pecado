@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
-import { Box, Flex, HStack, Image, Input, NativeSelect, Stack, Text, Badge } from '@chakra-ui/react';
-import { LuDownload, LuFileCode2, LuSend } from 'react-icons/lu';
+import { Box, Flex, HStack, Image, Input, NativeSelect, SimpleGrid, Stack, Text, Badge } from '@chakra-ui/react';
+import { LuArrowRight, LuDownload, LuFileCode2, LuSend } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -139,17 +139,47 @@ export default function PaymentOrderForm({ options, previewUrl, downloadUrl, onS
             <Box {...card}>
                 <Stack gap="4">
                     <Field label="Кто платит и кому">
-                        <NativeSelect.Root size="sm">
-                            <NativeSelect.Field value={pairKey} onChange={(e) => setPairKey(e.target.value)}>
-                                {pairs.map((p) => (
-                                    <option key={p.key} value={p.key}>
-                                        {p.company_name} → {p.organization_name}
-                                        {p.overdue > 0 ? ` · просрочено ${rub(p.overdue)}` : ` · долг ${rub(p.debt)}`}
-                                    </option>
-                                ))}
-                            </NativeSelect.Field>
-                            <NativeSelect.Indicator />
-                        </NativeSelect.Root>
+                        {/* Плитки, а не выпадающий список: клиент должен видеть сразу
+                            все пары с просрочкой, а не только выбранную. */}
+                        <SimpleGrid columns={{ base: 1, md: pairs.length > 1 ? 2 : 1 }} gap="2" w="100%">
+                            {pairs.map((p) => {
+                                const active = p.key === pairKey;
+
+                                return (
+                                    <Box
+                                        key={p.key}
+                                        as="button"
+                                        type="button"
+                                        textAlign="left"
+                                        onClick={() => setPairKey(p.key)}
+                                        p="3"
+                                        borderRadius="lg"
+                                        border="2px solid"
+                                        borderColor={active ? 'red.500' : 'border.muted'}
+                                        bg="bg"
+                                        _dark={{ borderColor: active ? 'red.400' : 'border.muted' }}
+                                        _hover={{ borderColor: active ? 'red.500' : 'border.emphasized' }}
+                                        transition="all 0.15s"
+                                        cursor="pointer"
+                                    >
+                                        <Text fontWeight="600" fontSize="sm" color="fg" lineHeight="short">
+                                            {p.company_name}
+                                        </Text>
+                                        <HStack gap="1" fontSize="xs" color="fg.muted" mt="0.5">
+                                            <LuArrowRight size={12} />
+                                            <Text>{p.organization_name}</Text>
+                                        </HStack>
+                                        <HStack gap="3" mt="2" wrap="wrap" fontSize="xs">
+                                            {p.overdue > 0
+                                                ? <Text color="red.fg" fontWeight="600">Просрочено {rub(p.overdue)}</Text>
+                                                : <Text color="green.fg">Просрочки нет</Text>}
+                                            {p.debt > 0 && <Text color="fg.muted">Долг {rub(p.debt)}</Text>}
+                                            {!p.requisites_ok && <Badge colorPalette="orange" size="sm">нет реквизитов</Badge>}
+                                        </HStack>
+                                    </Box>
+                                );
+                            })}
+                        </SimpleGrid>
                     </Field>
 
                     {pair && !pair.requisites_ok && (
@@ -166,12 +196,21 @@ export default function PaymentOrderForm({ options, previewUrl, downloadUrl, onS
                                     || (s.value === 'document' && !(pair?.documents?.length));
                                 const suffix = s.value === 'overdue' && pair?.overdue > 0 ? ` · ${rub(pair.overdue)}`
                                     : s.value === 'all' && pair?.debt > 0 ? ` · ${rub(pair.debt)}` : '';
+                                const active = scenario === s.value;
+
+                                // Выбор — красной рамкой, как у плиток пары: заливка
+                                // читалась как «кнопка действия», а не как выбранный вариант.
                                 return (
                                     <Button
                                         key={s.value}
                                         size="sm"
-                                        variant={scenario === s.value ? 'solid' : 'outline'}
-                                        colorPalette={scenario === s.value ? 'red' : 'gray'}
+                                        variant="outline"
+                                        colorPalette={active ? 'red' : 'gray'}
+                                        borderWidth="2px"
+                                        borderColor={active ? 'red.500' : 'border.muted'}
+                                        color={active ? 'red.fg' : 'fg'}
+                                        fontWeight={active ? '600' : '500'}
+                                        _dark={{ borderColor: active ? 'red.400' : 'border.muted' }}
                                         disabled={disabled}
                                         onClick={() => setScenario(s.value)}
                                     >
