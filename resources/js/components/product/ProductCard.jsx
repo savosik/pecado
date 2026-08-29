@@ -294,9 +294,11 @@ function ProductCard({ product, loading = false }) {
                 {user && (
                     <Box mt="auto" spaceY="2" pt="2">
                         {/* Статус + Цена */}
-                        <Flex align="end" justify="space-between" gap="2" minW="0" flexWrap="wrap">
+                        {/* Строка не переносится: статус и цена всегда на одной высоте,
+                            иначе соседние плитки в ряду «скачут». Длинное — в title. */}
+                        <Flex align="end" justify="space-between" gap="2" minW="0" flexWrap="nowrap">
                             {/* Статус наличия */}
-                            <Flex align="center" gap="1" fontSize="xs" fontWeight="500">
+                            <Flex align="center" gap="1" fontSize="xs" fontWeight="500" minW="0" flexShrink={1}>
                                 {isInStock ? (
                                     <>
                                         <Box display={{ base: 'inline-flex', md: 'none' }} aria-label="В наличии" title="В наличии">
@@ -325,7 +327,7 @@ function ProductCard({ product, loading = false }) {
                                             display={{ base: 'none', md: 'block' }}
                                             title={leadLabel ? `Нет на складе — закажем у поставщика, поставка ${leadLabel}` : undefined}
                                         >
-                                            Предзаказ{leadLabel ? ` · ${leadLabel}` : ''}
+                                            Предзаказ
                                         </Text>
                                     </>
                                 ) : (
@@ -343,7 +345,7 @@ function ProductCard({ product, loading = false }) {
 
                             {/* Цена */}
                             {price != null && (
-                                <Flex direction="column" alignItems="flex-end" minW="0">
+                                <Flex direction="column" alignItems="flex-end" flexShrink={0}>
                                     {hasSale && (
                                         <Text fontSize="xs" color="gray.400" textDecoration="line-through" lineHeight="1">
                                             {formatPrice(price)}
