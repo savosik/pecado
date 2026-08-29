@@ -416,6 +416,8 @@ jobs:
           # состояние сразу, не дожидаясь ночного 07:10.
           sg docker -c "docker compose exec -T app php artisan debt:pause 675 --days=30 --if-never --reason='Решение руководства 28.08.2026: работаем по договорённости менеджера'" || true
           sg docker -c 'docker compose exec -T app php artisan debt:recalculate' || true
+          # Доливка связи строк регистра с документами сайта (см. deploy-prod.yml).
+          sg docker -c 'docker compose exec -T app php artisan settlements:relink-documents' || true
           sg docker -c 'docker compose exec -T app php artisan optimize'
 
           echo "==> [2.5/7] Запуск prices DB контейнера..."

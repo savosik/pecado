@@ -219,6 +219,15 @@ class SettlementProjector
     }
 
     /**
+     * Есть ли на сайте документ с таким UUID — для прогона «без записи»
+     * в `settlements:relink-documents`.
+     */
+    public function hasDocument(string $documentUuid): bool
+    {
+        return $this->findDocument($documentUuid) !== null;
+    }
+
+    /**
      * Доклейка со стороны документа: он приехал позже своих движений.
      */
     public function linkToDocument(Model $document): int

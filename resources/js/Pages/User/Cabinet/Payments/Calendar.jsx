@@ -354,8 +354,7 @@ function EntryRow({ entry, symbol, showDate = false, onPaymentOrder = null }) {
                     {onPaymentOrder && (
                         <Button
                             size="xs"
-                            colorPalette="pecado"
-                            variant={entry.is_overdue ? 'solid' : 'outline'}
+                            variant="outline"
                             onClick={() => onPaymentOrder(entry)}
                         >
                             <LuReceipt size={14} /> Платёжка
