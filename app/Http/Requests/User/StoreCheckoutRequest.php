@@ -66,6 +66,9 @@ class StoreCheckoutRequest extends FormRequest
             'comment' => ['nullable', 'string', 'max:5000'],
             'manager_comment' => ['nullable', 'string'],
             'warehouse_comment' => ['nullable', 'string'],
+            // Кнопка «Только со склада»: предзаказные строки корзины не оформляются
+            // и удаляются — клиент решил не ждать поставку.
+            'instock_only' => ['sometimes', 'boolean'],
         ];
     }
 

@@ -251,6 +251,10 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::put('/partners/{client}/stock-buffer', [ClientProfileController::class, 'stockBuffer'])
             ->name('clients.stock-buffer.update')
             ->whereNumber('client');
+        // Предзаказы: та же карточка партнёра, то же право.
+        Route::put('/partners/{client}/preorders', [ClientProfileController::class, 'preorders'])
+            ->name('clients.preorders.update')
+            ->whereNumber('client');
     });
 
     // Тип аккаунта — состав базы партнёров отдела, а не работа с партнёром,

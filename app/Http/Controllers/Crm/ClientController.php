@@ -202,6 +202,12 @@ class ClientController extends CrmController
                     'enabled' => (bool) $user->stock_buffer_enabled,
                     'recommended' => $canSeeProfile && $this->stockBufferRecommended($profiles->forClient($user)),
                 ],
+                // Предзаказы: выключают тем, кто оформляет их «на автомате», а потом
+                // просит удалить. Срок поставки — для текста подсказки менеджеру.
+                'preorders' => [
+                    'enabled' => $user->preordersEnabled(),
+                    'lead_label' => \App\Support\Preorder\PreorderTerms::leadLabel(),
+                ],
             ],
             // Наши юрлица — для колонки и фильтра во вкладках «Заказы» и «Реализации».
             // Заглушки в список фильтра не идут: выбирать «юрлицо-UUID» менеджеру

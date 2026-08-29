@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState, useCallback } from 'react';
 import { Box, Flex, Text, Image, Badge, IconButton } from '@chakra-ui/react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { LuTrash2, LuWarehouse, LuTruck, LuImageOff } from 'react-icons/lu';
 import QuantityControl from '@/components/common/QuantityControl';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -30,6 +30,8 @@ function CartMobileCard({
     onRemove,
     onToggle,
 }) {
+    // Срок поставки предзаказа — в подсказку к счётчику и к оранжевому чипу.
+    const leadLabel = usePage().props.preorder?.lead_label ?? '';
     const [totalQty, handleChange] = useLocalQuantity(pid, onSetQty);
     const serverSplit = useCartStore((s) => s.productSplits[pid]);
 
@@ -65,7 +67,7 @@ function CartMobileCard({
         serverSplit && (serverSplit.instock + serverSplit.preorder) === totalQty
             ? serverSplit
             : splitQty(totalQty, stockOnly);
-    const tip = cartFrameTooltip(instockQty, preorderQty);
+    const tip = cartFrameTooltip(instockQty, preorderQty, leadLabel);
     const tintState = cartFrameState(instockQty, preorderQty);
 
     const TINT_HOVER = {
@@ -251,9 +253,18 @@ function CartMobileCard({
                                             <Text>{instockQty}</Text>
                                         </Flex>
                                     )}
-                                    <Flex align="center" gap="1" color="yellow.600" aria-label={`Предзаказ: ${preorderQty}`} title={`Предзаказ: ${preorderQty}`}>
+                                    <Flex
+                                        align="center"
+                                        gap="1"
+                                        color="orange.600"
+                                        aria-label={`Предзаказ: ${preorderQty}${leadLabel ? `, поставка ${leadLabel}` : ''}`}
+                                        title={`Предзаказ: ${preorderQty}${leadLabel ? `, поставка ${leadLabel}` : ''}`}
+                                    >
                                         <LuTruck size={16} />
                                         <Text>{preorderQty}</Text>
+                                        {leadLabel && (
+                                            <Text fontSize="xs" fontWeight="500" color="orange.600">· {leadLabel}</Text>
+                                        )}
                                     </Flex>
                                 </Flex>
                             )}

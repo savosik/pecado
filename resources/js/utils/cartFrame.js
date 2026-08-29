@@ -102,13 +102,21 @@ export function cartBadgeProps(instockQty, preorderQty) {
     }
 }
 
-export function cartFrameTooltip(instockQty, preorderQty) {
+/**
+ * Подсказка к счётчику: как объём раскладывается на склад и предзаказ.
+ *
+ * `leadLabel` — срок поставки из shared-пропа `preorder.lead_label`
+ * («7–9 дней»): клиент должен видеть, чего ему ждать, уже в момент,
+ * когда рамка стала оранжевой, а не после оформления.
+ */
+export function cartFrameTooltip(instockQty, preorderQty, leadLabel = '') {
     const inS = Math.max(0, Number(instockQty || 0));
     const pre = Math.max(0, Number(preorderQty || 0));
     if (inS + pre <= 0) return null;
     if (pre <= 0) return `${inS} шт. со склада`;
-    if (inS <= 0) return `${pre} шт. в предзаказе`;
-    return `${inS} со склада + ${pre} в предзаказе`;
+    const lead = leadLabel ? ` · поставка ${leadLabel}` : '';
+    if (inS <= 0) return `${pre} шт. в предзаказе — нет на складе${lead}`;
+    return `${inS} со склада + ${pre} в предзаказе${lead}`;
 }
 
 export function splitQty(totalQty, stockQuantity) {

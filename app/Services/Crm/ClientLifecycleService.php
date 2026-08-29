@@ -2,6 +2,7 @@
 
 namespace App\Services\Crm;
 
+use App\Contracts\Cart\CartServiceInterface;
 use App\Enums\Crm\ClientLifecycleStatus;
 use App\Enums\UserKind;
 use App\Models\CrmClientProfile;
@@ -130,6 +131,49 @@ class ClientLifecycleService
 
             // Адресный сброс кеша выгрузок (buf-05): только этого клиента —
             // его витрина должна увидеть новые остатки, чужие кеши не трогаем.
+            ProductExport::query()
+                ->where('client_user_id', $client->getKey())
+                ->whereNotNull('cached_at')
+                ->update(['cached_at' => null]);
+
+            return $client;
+        });
+    }
+
+    /**
+     * Предзаказы: предлагать ли клиенту заказ товара без остатка у поставщика.
+     *
+     * Единая точка для кабинета (актор — сам клиент) и CRM (актор — менеджер).
+     * При выключении из корзин клиента уходят предзаказные строки: иначе
+     * чекаут показал бы «остатки изменились» на товар, который клиент
+     * только что попросил не предлагать.
+     */
+    public function changePreorders(User $client, bool $enabled, User $actor): User
+    {
+        return DB::transaction(function () use ($client, $enabled, $actor): User {
+            $from = $client->preordersEnabled();
+
+            if ($from === $enabled) {
+                return $client;
+            }
+
+            $client->preorders_enabled = $enabled;
+            $client->save();
+
+            CrmClientStatusChange::create([
+                'client_user_id' => $client->getKey(),
+                'field' => CrmClientStatusChange::FIELD_PREORDERS,
+                'from_value' => $from ? '1' : '0',
+                'to_value' => $enabled ? '1' : '0',
+                'user_id' => $actor->getKey(),
+            ]);
+
+            if (! $enabled) {
+                app(CartServiceInterface::class)->removePreorderItems($client);
+            }
+
+            // Выгрузки клиента (остатки/прайс) считались с предзаказным складом —
+            // сбрасываем кеш адресно, как и для страхового запаса.
             ProductExport::query()
                 ->where('client_user_id', $client->getKey())
                 ->whereNotNull('cached_at')

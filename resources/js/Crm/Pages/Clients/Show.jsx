@@ -30,6 +30,7 @@ import PartnerContracts from '@/Crm/Components/PartnerContracts';
 import PartnerPurchases from '@/Crm/Components/PartnerPurchases';
 import ClientSummaryBar from './components/ClientSummaryBar';
 import StockBufferPanel from './components/StockBufferPanel';
+import PreordersPanel from './components/PreordersPanel';
 import PartnerDebt from '@/Crm/Components/PartnerDebt';
 import PaymentOrderDialog from '@/Crm/Components/PaymentOrderDialog';
 
@@ -202,6 +203,12 @@ export default function Show() {
                             <StockBufferPanel
                                 clientId={client.id}
                                 stockBuffer={client.stock_buffer}
+                                canEdit={can('crm-profile.edit')}
+                            />
+
+                            <PreordersPanel
+                                clientId={client.id}
+                                preorders={client.preorders}
                                 canEdit={can('crm-profile.edit')}
                             />
                         </AccordionItemContent>

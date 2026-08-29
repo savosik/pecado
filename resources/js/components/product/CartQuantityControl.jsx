@@ -37,8 +37,9 @@ function CartQuantityControl({
     fullWidth = false,
     variant = 'full',
 }) {
-    const { auth } = usePage().props;
+    const { auth, preorder: preorderTerms } = usePage().props;
     const user = auth?.user && (auth.user.status === 'active' || auth.user.is_staff) ? auth.user : null;
+    const leadLabel = preorderTerms?.lead_label ?? '';
 
     const [qty, setQty] = useState(0);
     const [syncing, setSyncing] = useState(false);
@@ -127,7 +128,7 @@ function CartQuantityControl({
     const glowColor = state === 'preorder' ? 'rgba(251, 146, 60, 0.45)' : 'rgba(34, 197, 94, 0.45)';
     const outerGlow = glowing ? `0 0 0 6px ${glowColor}` : null;
     const frameBoxShadow = outerGlow || frame.boxShadow;
-    const tooltipText = cartFrameTooltip(instock, preorder);
+    const tooltipText = cartFrameTooltip(instock, preorder, leadLabel);
 
     const frameBox = (
         <Box

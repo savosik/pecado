@@ -1,4 +1,5 @@
 import { Box, Flex, Text } from '@chakra-ui/react';
+import { usePage } from '@inertiajs/react';
 
 const STOCK_OPTIONS = [
     { value: '', label: 'Все' },
@@ -17,9 +18,15 @@ const STOCK_OPTIONS = [
  * }} props
  */
 export default function StockFilter({ value = '', onChange }) {
+    // Клиент выключил предзаказы — пункта «Предзаказ» для него не существует:
+    // остаток предзаказных складов у него нулевой, фильтр вернул бы пустоту.
+    const { auth } = usePage().props;
+    const preordersEnabled = auth?.user?.preorders_enabled !== false;
+    const options = preordersEnabled ? STOCK_OPTIONS : STOCK_OPTIONS.filter((o) => o.value !== 'preorder');
+
     return (
         <Flex direction="column" gap="1">
-            {STOCK_OPTIONS.map((opt) => {
+            {options.map((opt) => {
                 const isActive = value === opt.value;
 
                 return (

@@ -257,8 +257,27 @@ class StockService implements StockServiceInterface
      */
     public function regionWarehouseIds(?User $user = null): array
     {
-        $regionId = $this->resolveRegionId($user);
+        $warehouses = $this->regionWarehousesFor($this->resolveRegionId($user));
 
+        // Клиент выключил предзаказы (сам в кабинете или менеджер в CRM):
+        // предзаказных складов для него не существует. Одна точка — и карточка
+        // товара, и корзина, и чекаут, и клиентское API видят только наличие,
+        // ни одному из них не нужно знать о флаге. Мемо выше — по региону,
+        // поэтому фильтр применяется после него и на соседей не влияет.
+        if ($user !== null && ! $user->preordersEnabled()) {
+            return ['primary' => $warehouses['primary'], 'preorder' => []];
+        }
+
+        return $warehouses;
+    }
+
+    /**
+     * Склады региона с мемоизацией на время запроса.
+     *
+     * @return array{primary: list<int>, preorder: list<int>}
+     */
+    private function regionWarehousesFor(?int $regionId): array
+    {
         if ($regionId === null) {
             return ['primary' => [], 'preorder' => []];
         }

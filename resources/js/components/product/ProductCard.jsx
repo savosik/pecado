@@ -1,6 +1,6 @@
 import { memo, useCallback, useState } from 'react';
 import { Box, Flex, Text, Badge, IconButton, Skeleton } from '@chakra-ui/react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { LuHeart, LuCheck, LuCircleX, LuClock3, LuWarehouse, LuTruck, LuPackageX, LuCopy, LuTag, LuBadgePercent, LuGift } from 'react-icons/lu';
 import ProductMiniGallery from './ProductMiniGallery';
 import TagList from './TagList';
@@ -20,6 +20,10 @@ function ProductCard({ product, loading = false }) {
         hasSale, isInStock, isPreorder, brandName,
         price, salePrice, discountPct,
     } = useProductHelpers(product);
+
+    // Срок поставки предзаказа («7–9 дней») — рядом со статусом, чтобы клиент
+    // видел, чего ждать, до того как рамка счётчика станет оранжевой.
+    const leadLabel = usePage().props.preorder?.lead_label ?? '';
 
     // product может быть undefined в режиме скелетона (loading) — optional chaining
     // обязателен, иначе падаем ещё до раннего return скелетона.
@@ -305,13 +309,24 @@ function ProductCard({ product, loading = false }) {
                                     </>
                                 ) : isPreorder ? (
                                     <>
-                                        <Box display={{ base: 'inline-flex', md: 'none' }} aria-label="Предзаказ" title="Предзаказ">
-                                            <LuTruck size={16} color="var(--chakra-colors-yellow-500)" />
+                                        <Box
+                                            display={{ base: 'inline-flex', md: 'none' }}
+                                            aria-label={leadLabel ? `Предзаказ, поставка ${leadLabel}` : 'Предзаказ'}
+                                            title={leadLabel ? `Предзаказ, поставка ${leadLabel}` : 'Предзаказ'}
+                                        >
+                                            <LuTruck size={16} color="var(--chakra-colors-orange-500)" />
                                         </Box>
                                         <Box display={{ base: 'none', md: 'inline-flex' }}>
                                             <LuClock3 size={14} color="var(--chakra-colors-orange-500)" />
                                         </Box>
-                                        <Text color="orange.500" lineClamp="1" display={{ base: 'none', md: 'block' }}>Предзаказ</Text>
+                                        <Text
+                                            color="orange.500"
+                                            lineClamp="1"
+                                            display={{ base: 'none', md: 'block' }}
+                                            title={leadLabel ? `Нет на складе — закажем у поставщика, поставка ${leadLabel}` : undefined}
+                                        >
+                                            Предзаказ{leadLabel ? ` · ${leadLabel}` : ''}
+                                        </Text>
                                     </>
                                 ) : (
                                     <>

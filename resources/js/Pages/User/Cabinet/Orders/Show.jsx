@@ -8,7 +8,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import {
     LuArrowLeft, LuPackage, LuWarehouse, LuBadgePercent,
-    LuClock, LuUser, LuMessageSquare, LuBuilding2, LuLandmark, LuMapPin, LuTruck, LuShoppingBag,
+    LuClock, LuClock3, LuUser, LuMessageSquare, LuBuilding2, LuLandmark, LuMapPin, LuTruck, LuShoppingBag,
     LuPencilLine, LuArrowRightLeft, LuChevronDown, LuChevronUp,
     LuPlus, LuMinus, LuTrendingDown, LuTrendingUp, LuCalendar, LuFileSpreadsheet,
     LuSearch, LuStore, LuRepeat, LuShoppingCart, LuTrash2, LuTriangleAlert, LuBan, LuGift, LuSprout, LuFileText,
@@ -32,8 +32,9 @@ const SHIPMENT_STATUS_COLORS = {
 };
 
 export default function OrderShow({ order }) {
-    const { currency, config } = usePage().props;
+    const { currency, config, preorder: preorderTerms } = usePage().props;
     const documentsEnabled = !!config?.documents_enabled;
+    const leadLabel = preorderTerms?.lead_label ?? '';
     const currencySymbol = currency?.symbol ?? '₽';
     const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -187,6 +188,28 @@ export default function OrderShow({ order }) {
                         Заказ {order.number} от {createdAt.split(' ')[0]}
                     </Text>
                 </Flex>
+
+                {/* Предзаказ: клиент должен видеть, что это ожидание поставки, а не задержка отгрузки */}
+                {isPreorder && (
+                    <Flex
+                        align="flex-start"
+                        gap="2"
+                        bg="orange.subtle"
+                        borderWidth="1px"
+                        borderColor="orange.muted"
+                        rounded="lg"
+                        px="4"
+                        py="3"
+                        color="orange.fg"
+                    >
+                        <Box pt="0.5" flexShrink={0}><LuClock3 size={16} /></Box>
+                        <Text fontSize="sm">
+                            Товары этого заказа заказаны у поставщика — на складе их не было.
+                            {leadLabel ? ` Ориентировочная поставка — ${leadLabel} с даты заказа.` : ''}
+                            {' '}Отгрузим отдельно, как только товар поступит.
+                        </Text>
+                    </Flex>
+                )}
 
                 {/* ═══ Информация о заказе ═══ */}
                 <SimpleGrid columns={{ base: 1, lg: 2 }} gap="4">

@@ -76,6 +76,31 @@ class ClientProfileController extends CrmController
     }
 
     /**
+     * Предзаказы: предлагать ли партнёру заказ товара без остатка у поставщика.
+     *
+     * Выключают тем, кто оформляет предзаказы «на автомате», а потом просит
+     * удалить: партнёр видит только наличие, корзина не переливает в предзаказ.
+     * Партнёр может переключить то же самое сам в кабинете.
+     */
+    public function preorders(
+        Request $request,
+        int $client,
+        ClientLifecycleService $lifecycle,
+    ): RedirectResponse {
+        $user = User::query()
+            ->visibleInCrm($this->crmActor($request))
+            ->findOrFail($client);
+
+        $enabled = (bool) $request->validate(['enabled' => ['required', 'boolean']])['enabled'];
+
+        $lifecycle->changePreorders($user, $enabled, $this->crmActor($request));
+
+        return back()->with('success', $enabled
+            ? 'Предзаказы включены: товар без остатка партнёр может заказать у поставщика'
+            : 'Предзаказы выключены: партнёр видит и заказывает только то, что есть на складе');
+    }
+
+    /**
      * Тип аккаунта: убрать из базы партнёров отдела или вернуть обратно.
      *
      * Скоуп поиска — не `visibleInCrm()`, а вся закреплённая за отделом база:

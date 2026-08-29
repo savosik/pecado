@@ -1,6 +1,7 @@
 import { Box, Flex, Icon, Text } from '@chakra-ui/react';
 import { LuArrowDownUp, LuGrid2X2, LuLayoutList, LuList, LuChevronDown, LuPackage, LuSlidersHorizontal } from 'react-icons/lu';
 import { useRef } from 'react';
+import { usePage } from '@inertiajs/react';
 import { FilterBadge } from './ProductFiltersSheet';
 
 const PER_PAGE_OPTIONS = [10, 20, 40, 60, 100];
@@ -190,9 +191,17 @@ export default function CatalogControls({
         ?? SORT_LABELS[sort]
         ?? sort;
 
+    // Клиент выключил предзаказы — пунктов с предзаказом для него нет:
+    // остаток предзаказных складов у него нулевой, фильтр вернул бы пустоту.
+    const { auth } = usePage().props;
+    const preordersEnabled = auth?.user?.preorders_enabled !== false;
+    const visibleStockOptions = preordersEnabled
+        ? stockOptions
+        : stockOptions.filter((o) => o.value !== 'preorder' && o.value !== 'available');
+
     const currentStockLabel =
-        stockOptions.find((o) => o.value === (inStockMode || ''))?.label
-        ?? stockOptions[0].label;
+        visibleStockOptions.find((o) => o.value === (inStockMode || ''))?.label
+        ?? visibleStockOptions[0].label;
 
     return (
         <Flex
@@ -254,7 +263,7 @@ export default function CatalogControls({
                                     value={inStockMode || ''}
                                     onChange={(e) => onStockChange?.(e.target.value)}
                                 >
-                                    {stockOptions.map((opt) => (
+                                    {visibleStockOptions.map((opt) => (
                                         <option key={opt.value || 'all'} value={opt.value}>
                                             {opt.label}
                                         </option>

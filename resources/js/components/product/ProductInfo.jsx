@@ -37,8 +37,9 @@ export default function ProductInfo({
     promotionsSlot = null,
     headingAs = 'h1',
 }) {
-    const { auth } = usePage().props;
+    const { auth, preorder: preorderTerms } = usePage().props;
     const user = auth?.user && (auth.user.status === 'active' || auth.user.is_staff) ? auth.user : null;
+    const leadLabel = preorderTerms?.lead_label ?? '';
     const [isFav, setIsFav] = useState(false);
     const [copiedField, setCopiedField] = useState(null);
     const [barcodesExpanded, setBarcodesExpanded] = useState(false);
@@ -322,7 +323,7 @@ export default function ProductInfo({
                         ) : isPreorder ? (
                             <>
                                 <LuClock3 size={14} color="var(--chakra-colors-orange-500)" />
-                                <Text color="orange.500">Предзаказ</Text>
+                                <Text color="orange.500">Предзаказ{leadLabel ? ` · поставка ${leadLabel}` : ''}</Text>
                             </>
                         ) : (
                             <>
@@ -331,6 +332,20 @@ export default function ProductInfo({
                             </>
                         )}
                     </Flex>
+
+                    {/* Что такое предзаказ — здесь, а не в объяснении менеджера после оформления */}
+                    {isPreorder && (
+                        <Text fontSize="sm" color="fg.muted" mt="2">
+                            Товара сейчас нет на складе. Закажем его у поставщика
+                            {leadLabel ? ` — ориентировочно ${leadLabel}` : ''}. Оформляется отдельным заказом.
+                        </Text>
+                    )}
+                    {inStock && Number(preorderQuantity) > 0 && (
+                        <Text fontSize="sm" color="fg.muted" mt="2">
+                            На складе {stockQuantity} шт. Больше — под предзаказ у поставщика
+                            {leadLabel ? `, поставка ${leadLabel}` : ''}.
+                        </Text>
+                    )}
 
                     {!inStock && !isPreorder && (
                         <Text fontSize="sm" color="gray.500" mt="2">

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\Crm\ClientLifecycleService;
 use App\Services\Settlements\CabinetSettlementFinance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -123,6 +124,26 @@ class CabinetController extends Controller
         $user->update($validated);
 
         return back()->with('success', 'Профиль успешно обновлён.');
+    }
+
+    /**
+     * Переключатель «предлагать предзаказ» в «Моих данных».
+     *
+     * Клиент решает сам, видеть ли товар без остатка как предзаказ. Та же
+     * точка, что у менеджера в CRM: смена журналируется с автором-клиентом.
+     * PUT /cabinet/profile/preorders
+     */
+    public function updatePreorders(Request $request, ClientLifecycleService $lifecycle)
+    {
+        $user = $request->user();
+
+        $enabled = (bool) $request->validate(['enabled' => ['required', 'boolean']])['enabled'];
+
+        $lifecycle->changePreorders($user, $enabled, $user);
+
+        return back()->with('success', $enabled
+            ? 'Предзаказы включены: товар, которого нет на складе, можно заказать у поставщика.'
+            : 'Предзаказы выключены: в каталоге и корзине — только то, что есть на складе.');
     }
 
     public function changePassword()

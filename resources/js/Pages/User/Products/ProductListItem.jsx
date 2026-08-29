@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Box, Flex, Text, IconButton, Skeleton } from '@chakra-ui/react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { LuHeart, LuCheck, LuCircleX, LuClock3, LuBadgePercent, LuTag, LuGift } from 'react-icons/lu';
 import ProductMiniGallery from '@/components/product/ProductMiniGallery';
 import TagList from '@/components/product/TagList';
@@ -21,6 +21,8 @@ export default function ProductListItem({ product, loading = false }) {
     } = useProductHelpers(product);
 
     const [isImageHovered, setIsImageHovered] = useState(false);
+    // Срок поставки предзаказа — рядом со статусом, до оранжевой рамки счётчика.
+    const leadLabel = usePage().props.preorder?.lead_label ?? '';
 
     // Скелетон — горизонтальная заглушка
     if (loading) {
@@ -66,7 +68,13 @@ export default function ProductListItem({ product, loading = false }) {
             ) : isPreorder ? (
                 <>
                     <LuClock3 size={14} color="var(--chakra-colors-orange-500)" />
-                    <Text color="orange.500" lineClamp="1">Предзаказ</Text>
+                    <Text
+                        color="orange.500"
+                        lineClamp="1"
+                        title={leadLabel ? `Нет на складе — закажем у поставщика, поставка ${leadLabel}` : undefined}
+                    >
+                        Предзаказ{leadLabel ? ` · ${leadLabel}` : ''}
+                    </Text>
                 </>
             ) : (
                 <>

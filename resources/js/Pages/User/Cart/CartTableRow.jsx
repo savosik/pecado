@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState, useCallback } from 'react';
 import { Box, Flex, Text, Table, Image, Badge, IconButton } from '@chakra-ui/react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { LuTrash2 } from 'react-icons/lu';
 import QuantityControl from '@/components/common/QuantityControl';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -28,6 +28,9 @@ function CartTableRow({
     onRemove,
     onToggle,
 }) {
+    // Срок поставки предзаказа — в подсказку к счётчику.
+    const leadLabel = usePage().props.preorder?.lead_label ?? '';
+
     // Локальный qty с debounced пушем в store (220 мс) — счётчик летает,
     // итоги/футер обновляются только в конце серии.
     const [totalQty, handleChange] = useLocalQuantity(pid, onSetQty);
@@ -72,7 +75,7 @@ function CartTableRow({
         serverSplit && (serverSplit.instock + serverSplit.preorder) === totalQty
             ? serverSplit
             : splitQty(totalQty, stockOnly);
-    const tip = cartFrameTooltip(instockQty, preorderQty);
+    const tip = cartFrameTooltip(instockQty, preorderQty, leadLabel);
 
     const sumDiscounted = priceDiscounted * totalQty;
     const discountPercent = priceRegular > 0 && priceRegular !== priceDiscounted

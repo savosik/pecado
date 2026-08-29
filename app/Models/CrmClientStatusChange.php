@@ -43,6 +43,16 @@ class CrmClientStatusChange extends Model
      */
     public const FIELD_STOCK_BUFFER = 'stock_buffer';
 
+    /**
+     * Предзаказы (users.preorders_enabled): предлагать ли клиенту заказ
+     * товара без остатка у поставщика.
+     *
+     * Выключить может и сам клиент в кабинете, и менеджер в CRM — в журнале
+     * это различимо по автору (user_id), и вопрос «почему у него пропал
+     * предзаказ» решается одной строкой.
+     */
+    public const FIELD_PREORDERS = 'preorders';
+
     protected $fillable = [
         'client_user_id',
         'field',

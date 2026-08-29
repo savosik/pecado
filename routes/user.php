@@ -148,6 +148,7 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/dashboard', [CabinetController::class, 'dashboard'])->name('dashboard');
     Route::get('/profile', [CabinetController::class, 'profile'])->name('profile');
     Route::put('/profile', [CabinetController::class, 'updateProfile'])->name('profile.update');
+    Route::put('/profile/preorders', [CabinetController::class, 'updatePreorders'])->name('profile.preorders');
     Route::get('/change-password', [CabinetController::class, 'changePassword'])->name('password.change');
     Route::put('/change-password', [CabinetController::class, 'updatePassword'])->name('password.update');
 

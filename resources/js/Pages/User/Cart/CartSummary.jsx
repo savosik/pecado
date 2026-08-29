@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Box, Flex, Text, Button } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
-import { LuShoppingBag, LuCreditCard } from 'react-icons/lu';
+import { LuShoppingBag, LuCreditCard, LuClock3 } from 'react-icons/lu';
 import { useCartStore } from '@/stores/useCartStore';
 
 /**
@@ -11,8 +11,9 @@ import { useCartStore } from '@/stores/useCartStore';
  * (цены не меняются между reload, qty актуальный — мгновенный апдейт).
  */
 export default function CartSummary({ cartDetails, hasItems, defectTotals = { qty: 0, amount: 0 }, promoAmount = 0 }) {
-    const { currency } = usePage().props;
+    const { currency, preorder: preorderTerms } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
+    const leadLabel = preorderTerms?.lead_label ?? '';
 
     const quantities = useCartStore((s) => s.quantities);
 
@@ -20,6 +21,9 @@ export default function CartSummary({ cartDetails, hasItems, defectTotals = { qt
         const items = cartDetails?.items ?? [];
         // Свернём цены товара в одну запись по pid
         const priceByPid = new Map();
+        // Складской максимум по товару — чтобы посчитать, сколько штук
+        // уедет в предзаказ (та же раскладка, что в строках таблицы).
+        const stockByPid = new Map();
         for (const it of items) {
             const pid = Number(it.product?.id);
             if (!pid) continue;
@@ -30,16 +34,32 @@ export default function CartSummary({ cartDetails, hasItems, defectTotals = { qt
             if (!cur || it.item_type === 'instock') {
                 priceByPid.set(pid, { priceR, priceD });
             }
+            if (it.item_type !== 'defect') {
+                const s = stockByPid.get(pid) ?? { maxTotal: 0, preorderShare: 0 };
+                s.maxTotal = Math.max(s.maxTotal, Number(it.max_total || 0));
+                if (it.item_type === 'preorder') s.preorderShare = Number(it.quantity || 0);
+                stockByPid.set(pid, s);
+            }
         }
 
         let totalRegular = 0;
         let totalDiscounted = 0;
+        let preorderQty = 0;
+        let preorderAmount = 0;
         for (const [pidStr, qty] of Object.entries(quantities)) {
             if (qty <= 0) continue;
             const p = priceByPid.get(Number(pidStr));
             if (!p) continue; // pid отсутствует в текущем cartDetails
             totalRegular += p.priceR * qty;
             totalDiscounted += p.priceD * qty;
+
+            const s = stockByPid.get(Number(pidStr));
+            if (s) {
+                const stockOnly = Math.max(0, s.maxTotal - s.preorderShare);
+                const pre = Math.max(0, qty - stockOnly);
+                preorderQty += pre;
+                preorderAmount += p.priceD * pre;
+            }
         }
 
         // Уценка (партии) не живёт в store-агрегации — добавляем её сумму
@@ -47,7 +67,7 @@ export default function CartSummary({ cartDetails, hasItems, defectTotals = { qt
         totalRegular += defectTotals.amount;
         totalDiscounted += defectTotals.amount;
 
-        return { totalRegular, totalDiscounted };
+        return { totalRegular, totalDiscounted, preorderQty, preorderAmount };
     }, [cartDetails?.items, quantities, defectTotals]);
 
     if (!hasItems) return null;
@@ -97,6 +117,17 @@ export default function CartSummary({ cartDetails, hasItems, defectTotals = { qt
                         <Text fontSize="2xs" color="green.600" lineHeight="1.2" mt="0.5">
                             Экономия {savings.toLocaleString('ru-RU')} {currencySymbol}
                         </Text>
+                    )}
+                    {/* Предзаказ — тоже отдельный заказ и ожидание поставки. Клиент
+                        должен увидеть это здесь, у кнопки, а не узнать от менеджера. */}
+                    {totals.preorderQty > 0 && (
+                        <Flex align="center" gap="1" mt="1" color="orange.600" _dark={{ color: 'orange.400' }}>
+                            <LuClock3 size={12} />
+                            <Text fontSize="2xs" lineHeight="1.2" fontWeight="500">
+                                В том числе предзаказ: {totals.preorderQty} шт. на {totals.preorderAmount.toLocaleString('ru-RU')} {currencySymbol}
+                                {leadLabel ? ` — нет на складе, поставка ${leadLabel}` : ' — нет на складе'}
+                            </Text>
+                        </Flex>
                     )}
                     {/* Промо уезжает отдельным заказом, поэтому и в итоге стоит
                         отдельной строкой: смешанная сумма ввела бы в заблуждение */}

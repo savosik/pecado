@@ -68,8 +68,14 @@ class HandleInertiaRequests extends Middleware
                     'must_change_password' => ! $impersonating && (bool) $user->must_change_password,
                     'client_status_color' => $user->clientStatus?->color,
                     'client_status_name' => $user->clientStatus?->name,
+                    // Предлагать ли предзаказ: фронт прячет пункт фильтра «Предзаказ»
+                    // и показывает переключатель в «Моих данных».
+                    'preorders_enabled' => $user->preordersEnabled(),
                 ] : null,
             ],
+            // Условия предзаказа для всех поверхностей: срок «7–9 дней» живёт
+            // в конфиге, а не в вёрстке карточки, корзины и чекаута порознь.
+            'preorder' => \App\Support\Preorder\PreorderTerms::payload(),
             // Плашка «просмотр от имени клиента». null — обычная сессия.
             'impersonation' => $impersonating && $user ? [
                 'client_name' => $user->display_name,

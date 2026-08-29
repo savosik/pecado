@@ -865,4 +865,26 @@ class CartService implements CartServiceInterface
             'total_amount_discounted' => $agg['total_amount_discounted'],
         ];
     }
+
+    /**
+     * Убрать предзаказные строки из корзин клиента (всех или одной).
+     *
+     * Вызывается при выключении предзаказов и при оформлении «только со
+     * склада». Строки в наличии не трогаем: клиент отказался ждать поставку,
+     * а не от заказа.
+     */
+    public function removePreorderItems(User $user, ?Cart $cart = null): int
+    {
+        $query = CartItem::query()
+            ->where('item_type', 'preorder')
+            ->whereHas('cart', function ($q) use ($user, $cart) {
+                $q->where('user_id', $user->id);
+
+                if ($cart !== null) {
+                    $q->where('id', $cart->id);
+                }
+            });
+
+        return $query->delete();
+    }
 }

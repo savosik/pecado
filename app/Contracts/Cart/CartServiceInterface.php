@@ -141,4 +141,15 @@ interface CartServiceInterface
      * Get detailed cart data for Inertia page.
      */
     public function getCartDetails(Cart $cart, User $user): array;
+
+    /**
+     * Убрать предзаказные строки из всех корзин клиента.
+     *
+     * Нужно при выключении предзаказов (кабинет/CRM) и при оформлении
+     * «только со склада»: строка предзаказа не должна пережить решение
+     * клиента не ждать поставку.
+     *
+     * @return int сколько строк удалено
+     */
+    public function removePreorderItems(User $user, ?Cart $cart = null): int;
 }

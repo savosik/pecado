@@ -9,13 +9,17 @@ use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Enums\Country;
 use App\Enums\DeliveryMethod;
+use App\Enums\OrderType;
 use App\Enums\PromoKind;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreCheckoutRequest;
 use App\Models\DeliveryAddress;
+use App\Models\Order;
 use App\Models\User;
+use App\Support\Preorder\PreorderTerms;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -37,6 +41,13 @@ class CheckoutController extends Controller
     {
         $user = $request->user();
         $cart = $this->cartService->getOrCreateActiveCart($user);
+
+        // Клиент выключил предзаказы уже после того, как строки легли в корзину
+        // (другая вкладка, менеджер в CRM): убираем их молча, а не показываем
+        // «остатки изменились» на товар, который он просил не предлагать.
+        if (! $user->preordersEnabled()) {
+            $this->cartService->removePreorderItems($user, $cart);
+        }
 
         // Если корзина пуста — перенаправляем в корзину
         if ($cart->items()->count() === 0) {
@@ -154,6 +165,20 @@ class CheckoutController extends Controller
 
         $deliveryMethod = DeliveryMethod::from($request->validated('delivery_method'));
 
+        // «Только со склада»: клиент не хочет ждать поставку — предзаказные
+        // строки уходят из корзины до оформления. Если кроме них ничего нет,
+        // оформлять нечего: возвращаем на чекаут с объяснением, а не пустой заказ.
+        if ($request->boolean('instock_only') || ! $user->preordersEnabled()) {
+            if ($cart->items()->where('item_type', '!=', 'preorder')->doesntExist()) {
+                return back()->withErrors([
+                    'stock' => 'В корзине только товары под предзаказ — со склада оформлять нечего.',
+                ]);
+            }
+
+            $this->cartService->removePreorderItems($user, $cart);
+            $cart->load('items');
+        }
+
         try {
             $orders = $this->checkoutService->checkout(
                 $cart,
@@ -181,13 +206,13 @@ class CheckoutController extends Controller
             if ($orders->count() > 1) {
                 return redirect()
                     ->route('cabinet.orders.index')
-                    ->with('success', 'Заказы успешно оформлены!');
+                    ->with('success', $this->successMessage($orders));
             }
 
             // Один заказ — редиректим на его страницу
             return redirect()
                 ->route('cabinet.orders.show', $orders->first())
-                ->with('success', 'Заказ успешно оформлен!');
+                ->with('success', $this->successMessage($orders));
         } catch (\App\Exceptions\InsufficientStockException $e) {
             return back()
                 ->withErrors([
@@ -200,6 +225,30 @@ class CheckoutController extends Controller
                 ->withErrors(['debt' => $e->getMessage()])
                 ->with('debt_restriction', $e->toPayload());
         }
+    }
+
+    /**
+     * Сообщение после оформления: клиент должен сразу увидеть, что предзаказ
+     * ушёл отдельным документом и сколько его ждать — а не узнать об этом
+     * от менеджера через день.
+     *
+     * @param  \Illuminate\Support\Collection<int, \App\Models\Order>  $orders
+     */
+    private function successMessage(Collection $orders): string
+    {
+        $preorder = $orders->first(fn (Order $o) => $o->type === OrderType::PREORDER);
+
+        if ($preorder === null) {
+            return $orders->count() > 1 ? 'Заказы успешно оформлены!' : 'Заказ успешно оформлен!';
+        }
+
+        $lead = PreorderTerms::leadLabel();
+
+        if ($orders->count() === 1) {
+            return "Предзаказ {$preorder->number} оформлен. Товар заказываем у поставщика, ориентировочная поставка — {$lead}.";
+        }
+
+        return "Оформлено документов: {$orders->count()}. Предзаказ {$preorder->number} — отдельно, ориентировочная поставка {$lead}.";
     }
 
     /**

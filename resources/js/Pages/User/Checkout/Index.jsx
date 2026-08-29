@@ -4,7 +4,7 @@ import {
     Box, Flex, Text, Heading, Button, Table, Badge, Separator,
     Textarea, NativeSelect, RadioCard, Stack, Dialog, Portal, Input, SimpleGrid, HStack,
 } from '@chakra-ui/react';
-import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch, LuStore, LuTriangleAlert, LuTruck, LuWand, LuBadgePercent, LuGift, LuSprout } from 'react-icons/lu';
+import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch, LuStore, LuTriangleAlert, LuTruck, LuWand, LuBadgePercent, LuGift, LuSprout, LuClock3 } from 'react-icons/lu';
 import axios from 'axios';
 import UserLayout from '../UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
@@ -45,9 +45,19 @@ export default function CheckoutIndex({
     countries = [],
     defaultDeliveryMethod = 'delivery',
 }) {
-    const { currency, errors: serverErrors, flash, debt } = usePage().props;
+    const { currency, errors: serverErrors, flash, debt, preorder: preorderTerms } = usePage().props;
     const debtRestriction = flash?.debt_restriction || null;
     const currencySymbol = currency?.symbol ?? '₽';
+
+    // Предзаказ в корзине: клиент должен решить, ждёт ли он поставку, прямо на
+    // кнопке — а не узнать о ней от менеджера через день. Оба пути в один клик.
+    const leadLabel = preorderTerms?.lead_label ?? '';
+    const preorderQty = Number(preorderTotals?.quantity ?? preorderItems.reduce((s, it) => s + Number(it.quantity || 0), 0));
+    const hasPreorder = preorderItems.length > 0 && preorderQty > 0;
+    // «Только со склада» имеет смысл, когда кроме предзаказа есть строки корзины
+    // (промо и образцы — производные, сами по себе заказ не образуют).
+    const instockOnlyQty = Number(instockTotals?.quantity ?? 0) + Number(defectTotals?.quantity ?? 0);
+    const canInstockOnly = hasPreorder && instockOnlyQty > 0;
 
     const breadcrumbs = [
         { label: 'Главная', url: '/' },
@@ -61,7 +71,7 @@ export default function CheckoutIndex({
     const defaultAddress = addresses.find((a) => a.is_default) ?? addresses[0] ?? null;
 
     // Form state
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         company_id: (initialCompanies.find(c => c.is_default) ?? initialCompanies[0])?.id ?? '',
         delivery_method: defaultDeliveryMethod,
         delivery_address: defaultDeliveryMethod === 'delivery' && defaultAddress ? defaultAddress.address : '',
@@ -148,11 +158,18 @@ export default function CheckoutIndex({
         });
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    // instockOnly — кнопка «Только со склада»: предзаказные строки не оформляются
+    // и удаляются из корзины, обычный заказ уходит как есть.
+    const submit = (instockOnly = false) => {
+        transform((form) => ({ ...form, instock_only: instockOnly }));
         post('/checkout', {
             preserveScroll: true,
         });
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        submit(false);
     };
 
     const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -193,16 +210,31 @@ export default function CheckoutIndex({
                             />
                         )}
 
-                        {/* ═══ Таблица: Товары по предзаказу ═══ */}
+                        {/* ═══ Таблица: Предзаказ — товаров сейчас нет на складе ═══ */}
                         {preorderItems.length > 0 && (
                             <ItemTable
-                                title="Товары по предзаказу"
-                                icon={<LuPackage size={20} />}
+                                title="Предзаказ — сейчас нет на складе"
+                                icon={<LuClock3 size={20} color="var(--chakra-colors-orange-500)" />}
                                 items={preorderItems}
                                 totals={preorderTotals}
                                 currencySymbol={currencySymbol}
                                 colorPalette="orange"
                                 fmt={fmt}
+                                headerExtra={leadLabel ? (
+                                    <Badge colorPalette="orange" variant="outline" gap="1">
+                                        <LuTruck size={12} />
+                                        поставка {leadLabel}
+                                    </Badge>
+                                ) : null}
+                                intro={(
+                                    <>
+                                        Этих товаров нет на складе. Мы закажем их у поставщика и отгрузим
+                                        отдельным заказом{leadLabel ? ` — ориентировочно через ${leadLabel}` : ''}.
+                                        {canInstockOnly && ' Остальное отгрузим сразу, ждать его не нужно.'}
+                                        {canInstockOnly && ' Не хотите ждать — внизу есть кнопка «Только со склада».'}
+                                    </>
+                                )}
+                                note="Будет оформлено отдельным заказом"
                             />
                         )}
 
@@ -631,31 +663,78 @@ export default function CheckoutIndex({
                             </Stack>
                         </Box>
 
-                        {/* ═══ Кнопки ═══ */}
-                        <Flex
-                            gap="3"
-                            justify="space-between"
-                            direction={{ base: 'column-reverse', md: 'row' }}
-                        >
-                            <Button asChild variant="outline" size="lg">
-                                <Link href="/cart">
-                                    <LuArrowLeft size={16} />
-                                    Вернуться в корзину
-                                </Link>
-                            </Button>
+                        {/* ═══ Кнопки ═══
+                            С предзаказом в корзине — два равноправных пути в один клик:
+                            «Только со склада» (предзаказ убираем) и «Заказ + предзаказ».
+                            Кнопка называет цифры сама — читать таблицы выше не обязательно. */}
+                        {(() => {
+                            const submitDisabled = processing || companies.length === 0 || hasConflicts || !!debtRestriction?.blocks_all_orders;
+                            const submitTitle = hasConflicts
+                                ? 'Сначала уточните корзину — есть позиции с изменившимся остатком'
+                                : (debtRestriction?.blocks_all_orders ? 'Оформление приостановлено до погашения задолженности' : undefined);
 
-                            <Button
-                                type="submit"
-                                colorPalette="pecado"
-                                size="lg"
-                                loading={processing}
-                                disabled={processing || companies.length === 0 || hasConflicts || !!debtRestriction?.blocks_all_orders}
-                                title={hasConflicts ? 'Сначала уточните корзину — есть позиции с изменившимся остатком' : (debtRestriction?.blocks_all_orders ? 'Оформление приостановлено до погашения задолженности' : undefined)}
-                            >
-                                <LuSend size={16} />
-                                Оформить заказ
-                            </Button>
-                        </Flex>
+                            let submitLabel = 'Оформить заказ';
+                            if (hasPreorder && canInstockOnly) {
+                                submitLabel = `Заказ ${instockOnlyQty} шт. + предзаказ ${preorderQty} шт.`;
+                            } else if (hasPreorder) {
+                                submitLabel = `Оформить предзаказ (${preorderQty} шт.)`;
+                            }
+
+                            return (
+                                <Flex
+                                    gap="3"
+                                    justify="space-between"
+                                    align={{ base: 'stretch', md: 'flex-start' }}
+                                    direction={{ base: 'column-reverse', md: 'row' }}
+                                >
+                                    <Button asChild variant="outline" size="lg">
+                                        <Link href="/cart">
+                                            <LuArrowLeft size={16} />
+                                            Вернуться в корзину
+                                        </Link>
+                                    </Button>
+
+                                    <Stack gap="2" align={{ base: 'stretch', md: 'flex-end' }}>
+                                        <Flex gap="3" direction={{ base: 'column-reverse', sm: 'row' }} justify="flex-end">
+                                            {canInstockOnly && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    colorPalette="green"
+                                                    size="lg"
+                                                    disabled={submitDisabled}
+                                                    title={submitTitle ?? `Оформить только ${instockOnlyQty} шт. со склада, предзаказ (${preorderQty} шт.) убрать из корзины`}
+                                                    onClick={() => submit(true)}
+                                                >
+                                                    <LuWarehouse size={16} />
+                                                    Только со склада ({instockOnlyQty} шт.)
+                                                </Button>
+                                            )}
+                                            <Button
+                                                type="submit"
+                                                colorPalette="pecado"
+                                                size="lg"
+                                                loading={processing}
+                                                disabled={submitDisabled}
+                                                title={submitTitle}
+                                            >
+                                                <LuSend size={16} />
+                                                {submitLabel}
+                                            </Button>
+                                        </Flex>
+                                        {hasPreorder && (
+                                            <Flex align="center" gap="1.5" fontSize="xs" color="orange.600" _dark={{ color: 'orange.400' }} justify={{ base: 'flex-start', md: 'flex-end' }}>
+                                                <LuClock3 size={13} />
+                                                <Text>
+                                                    Предзаказ — отдельный заказ{leadLabel ? `, поставка ${leadLabel}` : ''}
+                                                    {canInstockOnly ? '; товары со склада отгрузим сразу' : ''}
+                                                </Text>
+                                            </Flex>
+                                        )}
+                                    </Stack>
+                                </Flex>
+                            );
+                        })()}
                     </Stack>
                 </form>
             </Box>
@@ -968,7 +1047,7 @@ function AddCompanyDialog({ open, countries, onClose, onCreated }) {
 /**
  * Компонент таблицы товаров (instock / preorder).
  */
-function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, fmt, note = null }) {
+function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, fmt, note = null, intro = null, headerExtra = null }) {
     const totalQty = totals?.quantity ?? items.reduce((s, it) => s + Number(it.quantity || 0), 0);
     const totalRegular = Number(totals?.amount_regular ?? 0);
     const totalDiscounted = Number(totals?.amount_discounted ?? 0);
@@ -978,11 +1057,11 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
         <Box
             bg="bg"
             borderWidth="1px"
-            borderColor="border"
+            borderColor={colorPalette === 'orange' ? 'orange.muted' : 'border'}
             rounded="lg"
             p={{ base: '3', md: '5' }}
         >
-            <Flex align="center" gap="2" mb="3">
+            <Flex align="center" gap="2" mb={intro ? '1' : '3'} flexWrap="wrap">
                 {icon}
                 <Text fontWeight="600" fontSize="lg">
                     {title}
@@ -990,7 +1069,14 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                 <Badge colorPalette={colorPalette} variant="subtle" ml="1">
                     {totalQty} шт.
                 </Badge>
+                {headerExtra}
             </Flex>
+            {/* Объяснение группы до таблицы: клиент должен понять, что это, ещё до цифр */}
+            {intro && (
+                <Text fontSize="sm" color="fg.muted" mb="3">
+                    {intro}
+                </Text>
+            )}
 
             {/* Мобильная раскладка — карточки товаров вместо таблицы */}
             <Stack gap="3" display={{ base: 'flex', md: 'none' }}>

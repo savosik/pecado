@@ -25,6 +25,7 @@ use Spatie\Tags\HasTags;
  * @property \Illuminate\Support\Carbon|null $email_verified_at
  * @property \Illuminate\Support\Carbon|null $last_seen_at
  * @property bool $stock_buffer_enabled Страховой запас: показывать заниженные остатки по рисковым товарам (buf-02)
+ * @property bool $preorders_enabled Предлагать предзаказ товара без остатка (выключил клиент или менеджер)
  * @property string $password
  * @property bool $must_change_password
  * @property string|null $remember_token
@@ -304,6 +305,17 @@ class User extends Authenticatable implements HasMedia
     ];
 
     /**
+     * Предлагать ли клиенту предзаказ товара, которого нет на складе.
+     *
+     * Умолчание — да (как было всегда); выключенный флаг убирает предзаказ
+     * со всех поверхностей разом через StockService::regionWarehouseIds().
+     */
+    public function preordersEnabled(): bool
+    {
+        return $this->preorders_enabled ?? true;
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -320,6 +332,9 @@ class User extends Authenticatable implements HasMedia
             // Не в $fillable намеренно: меняется только CRM-экшеном
             // (ClientLifecycleService::changeStockBuffer), не массовым заполнением.
             'stock_buffer_enabled' => 'boolean',
+            // Тоже не в $fillable: меняется через ClientLifecycleService::changePreorders
+            // (кабинет клиента и CRM), чтобы каждое переключение попало в журнал.
+            'preorders_enabled' => 'boolean',
             'country' => Country::class,
             'default_delivery_method' => \App\Enums\DeliveryMethod::class,
             'status' => UserStatus::class,
