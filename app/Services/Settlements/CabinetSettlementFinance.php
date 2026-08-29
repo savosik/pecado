@@ -158,6 +158,8 @@ class CabinetSettlementFinance
 
                 $contractors = collect($byCompany)
                     ->map(static fn (array $sums, int $companyId): array => [
+                        // Ключ пары для платёжки: диалог открывается по «контрагент × юрлицо».
+                        'company_id' => $companyId !== 0 ? $companyId : null,
                         'name' => $companyId !== 0
                             ? ($companies->get($companyId) ?? 'Контрагент не указан')
                             : 'Контрагент не указан',
@@ -196,6 +198,10 @@ class CabinetSettlementFinance
         $balances = $contractors->pluck('current_balance');
 
         return [
+            'organization_id' => (int) $organization->getKey(),
+            // Без разреза по юрлицам контрагент один — его id нужен кнопке «Платёжка»
+            // у итога организации. При разрезе кнопка стоит у каждой строки юрлица.
+            'company_id' => $splitByCompany ? null : ($contractors->first()['company_id'] ?? null),
             'organization_name' => $organization->name,
             'current_balance' => round((float) $balances->sum(), 2),
             'overdue_debt' => round((float) $contractors->sum('overdue_debt'), 2),

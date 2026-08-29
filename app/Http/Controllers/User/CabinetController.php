@@ -55,6 +55,8 @@ class CabinetController extends Controller
             'favoritesCount' => $favoritesCount,
             'cartsCount' => $cartsCount,
             'balance' => $ledger,
+            // Кнопка «Платёжка» у строк долга — только если платёжка открыта клиенту.
+            'paymentOrdersEnabled' => PaymentOrderController::availableFor($user),
             'recentOrders' => $recentOrders,
             'questionnaireCompleted' => $questionnaire && $questionnaire->isCompleted(),
             'clientStatus' => $user->clientStatus ? [

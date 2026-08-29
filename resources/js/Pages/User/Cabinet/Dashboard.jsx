@@ -2,15 +2,43 @@ import {
     Box, Flex, Grid, GridItem, Text, Card, HStack, VStack,
     Badge, Image,
 } from '@chakra-ui/react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { useState } from 'react';
+import axios from 'axios';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import CabinetLayout from './CabinetLayout';
-import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuPhone, LuMail, LuUserRound, LuInfo, LuBuilding2 } from 'react-icons/lu';
+import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuPhone, LuMail, LuUserRound, LuInfo, LuBuilding2, LuReceipt } from 'react-icons/lu';
 import { Tooltip } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
+import PaymentOrderDialog from '@/shared/PaymentOrderDialog';
 import PwaInstallBanner from '@/components/PwaInstallBanner';
 import { DebtStatusCard, DueSoonCard } from './components/DebtNotices';
 import { getOrderTypeShortLabel, getOrderTypeColor } from '@/constants/orderType';
 
-export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [], questionnaireCompleted = true, clientStatus = null, personalManager = null }) {
+const toQuery = (params) => new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== null && v !== undefined && v !== ''),
+).toString();
+
+export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [], questionnaireCompleted = true, clientStatus = null, personalManager = null, paymentOrdersEnabled = false }) {
+    // Пара «контрагент × наше юрлицо», по которой открыт диалог платёжки; null — закрыт.
+    const [paymentPair, setPaymentPair] = useState(null);
+
+    const openPaymentOrder = (row, contractor) => setPaymentPair({
+        company_id: contractor.company_id,
+        organization_id: row.organization_id,
+        company_name: contractor.name,
+        organization_name: row.organization_name,
+        overdue: parseFloat(contractor.overdue_debt || 0) > 0,
+    });
+
+    const onSendPaymentOrder = (payload) => new Promise((resolve, reject) => {
+        router.post('/cabinet/payment-orders/send', payload, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => resolve(),
+            onError: (errors) => reject(new Error(Object.values(errors || {})[0] || 'Не удалось отправить')),
+        });
+    });
+
     // Регистр отдаёт «к оплате сейчас», старая модель — сальдо. Различаем
     // по наличию поля: подмешивать сюда ещё один пропс ради флага незачем.
     const ledgerBalance = balance !== null && balance.due_now !== undefined;
@@ -545,6 +573,22 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                                         Просрочено: {parseFloat(row.overdue_debt).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
                                                     </Text>
                                                 )}
+                                                {/* Один контрагент — кнопка у итога организации;
+                                                    при разрезе она стоит у каждого юрлица ниже. */}
+                                                {paymentOrdersEnabled && parseFloat(row.current_balance) < 0 && row.company_id && row.organization_id && (
+                                                    <Button
+                                                        size="xs"
+                                                        variant="outline"
+                                                        mt="2"
+                                                        onClick={() => openPaymentOrder(row, {
+                                                            company_id: row.company_id,
+                                                            name: null,
+                                                            overdue_debt: row.overdue_debt,
+                                                        })}
+                                                    >
+                                                        <LuReceipt size={14} /> Платёжка
+                                                    </Button>
+                                                )}
                                             </Box>
                                         )}
                                     </Flex>
@@ -593,29 +637,44 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                                                 </Box>
                                                                 <Text fontSize="sm" fontWeight="500">{contractor.name}</Text>
                                                             </HStack>
-                                                            <Box textAlign="right">
-                                                                <HStack gap="2" justify="flex-end">
-                                                                    {hasOverdue && (
-                                                                        <Badge colorPalette="red" size="sm">
-                                                                            Просрочено {money(contractor.overdue_debt)}&nbsp;₽
-                                                                        </Badge>
+                                                            <HStack gap="3" align="center">
+                                                                <Box textAlign="right">
+                                                                    <HStack gap="2" justify="flex-end">
+                                                                        {hasOverdue && (
+                                                                            <Badge colorPalette="red" size="sm">
+                                                                                Просрочено {money(contractor.overdue_debt)}&nbsp;₽
+                                                                            </Badge>
+                                                                        )}
+                                                                        <Text
+                                                                            fontSize="sm"
+                                                                            fontWeight="700"
+                                                                            whiteSpace="nowrap"
+                                                                            color={isDebt ? 'red.600' : 'green.600'}
+                                                                            _dark={{ color: isDebt ? 'red.400' : 'green.400' }}
+                                                                        >
+                                                                            {money(contractor.current_balance)}&nbsp;₽
+                                                                        </Text>
+                                                                    </HStack>
+                                                                    {contractorBalance !== 0 && (
+                                                                        <Text fontSize="xs" color="fg.muted">
+                                                                            {isDebt ? 'к оплате' : 'аванс'}
+                                                                        </Text>
                                                                     )}
-                                                                    <Text
-                                                                        fontSize="sm"
-                                                                        fontWeight="700"
-                                                                        whiteSpace="nowrap"
-                                                                        color={isDebt ? 'red.600' : 'green.600'}
-                                                                        _dark={{ color: isDebt ? 'red.400' : 'green.400' }}
+                                                                </Box>
+                                                                {/* Платёжка — только там, где есть что платить:
+                                                                    по авансу собирать нечего. */}
+                                                                {paymentOrdersEnabled && (isDebt || hasOverdue) && contractor.company_id && row.organization_id && (
+                                                                    <Button
+                                                                        size="xs"
+                                                                        variant="outline"
+                                                                        bg="bg"
+                                                                        flexShrink="0"
+                                                                        onClick={() => openPaymentOrder(row, contractor)}
                                                                     >
-                                                                        {money(contractor.current_balance)}&nbsp;₽
-                                                                    </Text>
-                                                                </HStack>
-                                                                {contractorBalance !== 0 && (
-                                                                    <Text fontSize="xs" color="fg.muted">
-                                                                        {isDebt ? 'к оплате' : 'аванс'}
-                                                                    </Text>
+                                                                        <LuReceipt size={14} /> Платёжка
+                                                                    </Button>
                                                                 )}
-                                                            </Box>
+                                                            </HStack>
                                                         </Flex>
                                                     );
                                                 })}
@@ -661,6 +720,25 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                     </Card.Body>
                 </Card.Root>
             )}
+
+            <PaymentOrderDialog
+                open={paymentPair !== null}
+                onClose={() => setPaymentPair(null)}
+                title="Платёжное поручение"
+                description={paymentPair
+                    ? [paymentPair.company_name, paymentPair.organization_name].filter(Boolean).join(' → ')
+                    : null}
+                loadOptions={() => axios.get('/cabinet/payment-orders/options').then(({ data }) => data)}
+                previewUrl={(params) => `/cabinet/payment-orders/preview?${toQuery(params)}`}
+                downloadUrl={(params, format) => `/cabinet/payment-orders/download?${toQuery({ ...params, format })}`}
+                onSend={onSendPaymentOrder}
+                preset={paymentPair
+                    ? {
+                        pairKey: `${paymentPair.company_id}:${paymentPair.organization_id}`,
+                        scenario: paymentPair.overdue ? 'overdue' : 'all',
+                    }
+                    : null}
+            />
 
             {/* Recent Orders */}
             <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">

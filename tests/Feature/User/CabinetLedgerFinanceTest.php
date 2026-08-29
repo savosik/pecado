@@ -404,11 +404,16 @@ class CabinetLedgerFinanceTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 // Карточка организации одна, юрлица клиента — списком внутри неё.
                 ->has('balance.organizations', 1)
+                ->where('balance.organizations.0.organization_id', $this->organization->id)
                 ->where('balance.organizations.0.current_balance', -70000)
                 ->where('balance.organizations.0.due_total', 70000)
                 ->where('balance.organizations.0.advance_total', 0)
                 ->where('balance.organizations.0.overdue_debt', 10000)
                 ->has('balance.organizations.0.contractors', 2)
+                // Ключ пары для кнопки «Платёжка» — у каждого юрлица свой.
+                ->where('balance.organizations.0.contractors.0.company_id', $second->id)
+                ->where('balance.organizations.0.contractors.1.company_id', $first->id)
+                ->where('paymentOrdersEnabled', true)
                 // Сортировка по имени контрагента: «И» < «О».
                 ->where('balance.organizations.0.contractors.0.name', 'ИП Иванов')
                 ->where('balance.organizations.0.contractors.0.current_balance', -20000)

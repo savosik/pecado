@@ -62,6 +62,10 @@ export default function PaymentOrderForm({ options, previewUrl, downloadUrl, onS
         if (fixed && presetDocument) {
             setScenario(fixed.scenario || 'document');
             setEntryId(String(fixed.entryId));
+        } else if (fixed && fixed.scenario && fixed.scenario !== 'document') {
+            // Предустановка сценария без документа (с дашборда: просрочка / весь долг).
+            setScenario(fixed.scenario);
+            setEntryId(pair.documents?.[0]?.id ? String(pair.documents[0].id) : '');
         } else {
             setScenario(pair.overdue > 0 ? 'overdue' : 'all');
             setEntryId(pair.documents?.[0]?.id ? String(pair.documents[0].id) : '');

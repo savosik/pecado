@@ -47,8 +47,9 @@ function DebtActions({ debt, size = 'sm' }) {
 
     return (
         <HStack gap="2" wrap="wrap">
+            {/* Все кнопки контурные: красная заливка перетягивала внимание с суммы. */}
             {links.payments && (
-                <Button as={Link} href={links.payments} size={size} colorPalette="red" variant="solid">
+                <Button as={Link} href={links.payments} size={size} variant="outline">
                     <LuReceipt /> К оплатам
                 </Button>
             )}
@@ -57,7 +58,7 @@ function DebtActions({ debt, size = 'sm' }) {
                     <LuFileText /> Акт сверки
                 </Button>
             )}
-            <Button as={Link} href="/cabinet/payment-orders" size={size} variant={links.payments ? 'outline' : 'solid'} colorPalette={links.payments ? undefined : 'red'}>
+            <Button as={Link} href="/cabinet/payment-orders" size={size} variant="outline">
                 <LuFileText /> Платёжное поручение
             </Button>
             {!links.payments && links.documents && (
