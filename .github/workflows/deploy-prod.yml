@@ -658,6 +658,9 @@ jobs:
           # дальше продлевает менеджер в CRM, как всем.
           sg docker -c "$DC exec -T app php artisan debt:pause 675 --days=30 --if-never --reason='Решение руководства 28.08.2026: работаем по договорённости менеджера, лестница долга не применяется до продления'" || echo "::warning::debt:pause для Гевеи не выполнился — поставьте разблокировку в CRM вручную"
           sg docker -c "$DC exec -T app php artisan debt:recalculate" || echo "::warning::debt:recalculate завершился с ошибкой — проверьте после релиза"
+          # Кто уже на ступени, но письма о ней не получал (ступень посчитана до
+          # включения писем) — дослать один раз; повторные запуски ничего не шлют.
+          sg docker -c "$DC exec -T app php artisan debt:notify-current" || echo "::warning::debt:notify-current завершился с ошибкой"
 
           echo "==> [5.1/9] Юридические страницы и пункты меню (идемпотентно)..."
           sg docker -c "$DC exec -T app php artisan db:seed --class=LegalPagesSeeder --force"

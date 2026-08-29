@@ -139,6 +139,26 @@ class DebtNotificationTest extends TestCase
     }
 
     #[Test]
+    public function notify_current_sends_once_for_states_without_a_letter(): void
+    {
+        $state = $this->state(DebtLevel::NO_ORDERS);
+
+        $this->artisan('debt:notify-current')->expectsOutputToContain('Писем: 1')->assertSuccessful();
+        $this->artisan('debt:notify-current')->expectsOutputToContain('Писем: 0')->assertSuccessful();
+
+        $this->assertSame(1, CrmEmail::query()->where('origin_event', 'finance.debt_no_orders')->count());
+
+        \App\Models\DebtPause::create([
+            'user_id' => $this->partner->id,
+            'until' => now()->addDays(3)->toDateString(),
+            'reason' => 'Договорённость',
+            'created_by' => User::factory()->create()->id,
+        ]);
+        $this->state(DebtLevel::HOLD, $state);
+        $this->artisan('debt:notify-current')->expectsOutputToContain('Писем: 0')->assertSuccessful();
+    }
+
+    #[Test]
     public function shadow_or_disabled_mail_action_sends_nothing(): void
     {
         config(['debt.live_actions' => 'gate']);
