@@ -3,15 +3,6 @@ import { LuChevronDown } from 'react-icons/lu';
 import MetricHint from '@/Crm/Components/MetricHint';
 import { fmtDay, fmtRub0, plural } from './format';
 
-const daysUntil = (iso) => {
-    if (!iso) return null;
-    const due = new Date(`${iso}T00:00:00`);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    return Math.round((due - today) / 86400000);
-};
-
 /**
  * Накладные, по которым выручка уменьшена за опоздание оплаты, и те, что под риском.
  *
@@ -34,8 +25,10 @@ export default function PenaltyInvoices({ calculation }) {
         .find((c) => c.key === 'kpi_bonus')?.children?.find((c) => c.key === 'discipline_penalty');
     const penalized = factor?.evidence ?? [];
     const onTime = Number(factor?.meta?.on_time_count ?? 0);
-    const atRisk = calculation.inputs?.at_risk_invoices ?? [];
     const groups = groupByPartner(penalized);
+    const buckets = calculation.forecast?.risk_buckets ?? [];
+    const riskCount = buckets.reduce((acc, b) => acc + b.count, 0);
+    const riskAmount = buckets.reduce((acc, b) => acc + Number(b.amount ?? 0), 0);
     const totalPenalty = groups.reduce((acc, g) => acc + g.penalty, 0);
 
     return (
@@ -67,40 +60,21 @@ export default function PenaltyInvoices({ calculation }) {
                 </VStack>
             )}
 
-            {atRisk.length > 0 && (
-                <VStack align="stretch" gap={2} mt={4}>
+            {buckets.length > 0 && (
+                <VStack align="stretch" gap={3} mt={5}>
                     <HStack justify="space-between" flexWrap="wrap" gap={2}>
-                        <Text fontSize="xs" color="fg.muted" fontWeight="500">
-                            Под риском — не оплачены, срок в этом месяце
-                        </Text>
-                        <Text fontSize="xs" color="fg.muted">
-                            {calculation.inputs?.at_risk_count ?? atRisk.length} на {fmtRub0(calculation.inputs?.at_risk_amount ?? 0)}
-                            {(calculation.inputs?.at_risk_count ?? 0) > atRisk.length ? ` · показаны ${atRisk.length} крупнейших` : ''}
+                        <HStack gap={2}>
+                            <Text fontSize="xs" color="fg.muted" fontWeight="500">Ещё не оплачены</Text>
+                            <MetricHint text="Пока деньги не пришли, из выручки не вычтено ничего: вычет появляется в момент оплаты, а его размер задаёт задержка. Поэтому накладные сгруппированы не по сумме, а по тому, что с ними можно успеть сделать." />
+                        </HStack>
+                        <Text fontSize="xs" color="fg.muted" fontVariantNumeric="tabular-nums">
+                            {riskCount} на {fmtRub0(riskAmount)}
                         </Text>
                     </HStack>
-                    {atRisk.map((r) => {
-                        const left = daysUntil(r.due_on);
-                        const overdue = left !== null && left < 0;
 
-                        return (
-                            <HStack key={r.shipment_id} justify="space-between" fontSize="sm" gap={3} flexWrap="wrap">
-                                <HStack gap={2} minW={0}>
-                                    <Text whiteSpace="nowrap">{r.erp_number ?? '—'}</Text>
-                                    <Text color="fg.muted" lineClamp={1}>{r.partner_name}</Text>
-                                </HStack>
-                                <HStack gap={3} whiteSpace="nowrap">
-                                    <Text fontVariantNumeric="tabular-nums">{fmtRub0(r.amount)}</Text>
-                                    <Badge colorPalette={overdue ? 'red' : left <= 3 ? 'orange' : 'gray'} variant="subtle" size="sm">
-                                        {left === null
-                                            ? 'срок не задан'
-                                            : overdue
-                                                ? `просрочено ${-left} дн.`
-                                                : left === 0 ? 'срок сегодня' : `срок через ${left} дн.`}
-                                    </Badge>
-                                </HStack>
-                            </HStack>
-                        );
-                    })}
+                    {buckets.map((bucket) => (
+                        <RiskBucket key={bucket.key} bucket={bucket} />
+                    ))}
                 </VStack>
             )}
         </Box>
@@ -228,4 +202,116 @@ function PartnerGroup({ group, rank, total }) {
             </Collapsible.Content>
         </Collapsible.Root>
     );
+}
+
+const TONE = {
+    safe: { palette: 'green', color: 'var(--chakra-colors-green-solid)' },
+    rising: { palette: 'orange', color: 'var(--chakra-colors-orange-solid)' },
+    worst: { palette: 'red', color: 'var(--chakra-colors-red-solid)' },
+    stale: { palette: 'gray', color: 'var(--chakra-colors-border-emphasized)' },
+};
+
+/**
+ * Группа неоплаченных накладных: что здесь на кону и сколько осталось времени.
+ *
+ * Заголовок называет исход, а не состояние: «успеть без вычета» вместо «срок
+ * сегодня». Цена вопроса — разница между «оплатят сейчас» и «дотянут до худшей
+ * ступени»: у растущей группы она вдвое, и это единственное место, где промедление
+ * менеджера ещё что-то решает.
+ */
+function RiskBucket({ bucket }) {
+    const tone = TONE[bucket.key] ?? TONE.stale;
+    const growth = Number(bucket.penalty_worst ?? 0) - Number(bucket.penalty_now ?? 0);
+    const left = bucket.deadline ? daysLeft(bucket.deadline) : null;
+
+    return (
+        <Collapsible.Root borderWidth="1px" borderColor="border" borderRadius="lg" overflow="hidden">
+            <Collapsible.Trigger asChild>
+                <Box as="button" type="button" w="100%" px={3} py={2.5} textAlign="left" cursor="pointer" _hover={{ bg: 'bg.subtle' }} transition="background 0.15s">
+                    <HStack gap={3} align="center">
+                        <Box w="4px" alignSelf="stretch" minH="34px" borderRadius="full" bg={tone.color} flexShrink={0} />
+
+                        <Box flex="1" minW={0}>
+                            <HStack gap={2} flexWrap="wrap">
+                                <Text fontSize="sm" fontWeight="600">{bucket.title}</Text>
+                                <Badge size="xs" variant="subtle" colorPalette={tone.palette} fontVariantNumeric="tabular-nums">
+                                    {bucket.count} {plural(bucket.count, 'накладная', 'накладные', 'накладных')} на {fmtRub0(bucket.amount)}
+                                </Badge>
+                                {left !== null && (
+                                    <Badge size="xs" variant="subtle" colorPalette={left <= 0 ? 'red' : left <= 2 ? 'orange' : 'gray'}>
+                                        {left <= 0 ? 'крайний срок сегодня' : `осталось ${left} ${plural(left, 'день', 'дня', 'дней')} — до ${fmtDay(bucket.deadline)}`}
+                                    </Badge>
+                                )}
+                            </HStack>
+                            <Text fontSize="xs" color="fg.subtle" mt={0.5}>{bucket.note}</Text>
+                        </Box>
+
+                        <VStack gap={0} align="end" flexShrink={0}>
+                            <Text fontSize="sm" fontWeight="700" fontVariantNumeric="tabular-nums" whiteSpace="nowrap" color={bucket.penalty_now > 0 ? 'red.fg' : 'green.fg'}>
+                                {bucket.penalty_now > 0 ? `−${fmtRub0(bucket.penalty_now)}` : 'вычета нет'}
+                            </Text>
+                            {growth > 1 && (
+                                <Text fontSize="10px" color="fg.subtle" fontVariantNumeric="tabular-nums" whiteSpace="nowrap">
+                                    промедлят — {fmtRub0(bucket.penalty_worst)}
+                                </Text>
+                            )}
+                        </VStack>
+
+                        <Box color="fg.muted" flexShrink={0} transition="transform 0.2s" css={{ '[data-state=open] &': { transform: 'rotate(180deg)' } }}>
+                            <LuChevronDown size={16} />
+                        </Box>
+                    </HStack>
+                </Box>
+            </Collapsible.Trigger>
+
+            <Collapsible.Content>
+                <Box borderTopWidth="1px" borderColor="border" maxH="300px" overflowY="auto">
+                    <Table.Root size="sm" variant="line">
+                        <Table.Header>
+                            <Table.Row>
+                                <Table.ColumnHeader>Накладная</Table.ColumnHeader>
+                                <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
+                                <Table.ColumnHeader textAlign="right">Сумма</Table.ColumnHeader>
+                                <Table.ColumnHeader>Срок оплаты</Table.ColumnHeader>
+                                <Table.ColumnHeader textAlign="right">
+                                    {bucket.key === 'safe' ? 'Будет вычет, если опоздают' : 'Вычет при оплате сейчас'}
+                                </Table.ColumnHeader>
+                            </Table.Row>
+                        </Table.Header>
+                        <Table.Body>
+                            {bucket.rows.map((r) => (
+                                <Table.Row key={r.shipment_id}>
+                                    <Table.Cell whiteSpace="nowrap">{r.erp_number ?? '—'}</Table.Cell>
+                                    <Table.Cell><Text lineClamp={1}>{r.partner_name}</Text></Table.Cell>
+                                    <Table.Cell textAlign="right" fontVariantNumeric="tabular-nums">{fmtRub0(r.amount)}</Table.Cell>
+                                    <Table.Cell whiteSpace="nowrap" color="fg.muted">
+                                        {fmtDay(r.due_on)}
+                                        {r.overdue_days > 0 ? ` · ${r.overdue_days} ${plural(r.overdue_days, 'день', 'дня', 'дней')} назад` : ''}
+                                    </Table.Cell>
+                                    <Table.Cell textAlign="right" color="red.fg" fontWeight="600" fontVariantNumeric="tabular-nums" whiteSpace="nowrap">
+                                        −{fmtRub0(bucket.key === 'safe' ? r.penalty_worst : r.penalty_now)}
+                                    </Table.Cell>
+                                </Table.Row>
+                            ))}
+                            {bucket.count > bucket.rows.length && (
+                                <Table.Row>
+                                    <Table.Cell colSpan={5} color="fg.muted" fontSize="xs">
+                                        Показаны {bucket.rows.length} крупнейших из {bucket.count}.
+                                    </Table.Cell>
+                                </Table.Row>
+                            )}
+                        </Table.Body>
+                    </Table.Root>
+                </Box>
+            </Collapsible.Content>
+        </Collapsible.Root>
+    );
+}
+
+function daysLeft(iso) {
+    const target = new Date(`${iso}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return Math.round((target - today) / 86400000);
 }

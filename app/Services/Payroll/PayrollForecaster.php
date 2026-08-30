@@ -132,6 +132,7 @@ class PayrollForecaster
             'scenarios' => $scenarios,
             'current_total' => $current->total,
             'curve' => $this->curve($month, $today, $current, $scenarios),
+            'risk_buckets' => $this->riskBuckets($params, $inputs, $today),
             'basis' => [
                 'working_days' => ['total' => $total, 'passed' => $passed, 'left' => $left],
                 'revenue_per_day' => $passed > 0 ? round($inputs->revenue / $passed, 2) : null,
@@ -199,6 +200,151 @@ class PayrollForecaster
             'perfect' => 'предел месяца: к тому же ни одна оплата не пришла с опозданием',
             default => '',
         };
+    }
+
+    /**
+     * Неоплаченные накладные — по срочности действия, а не по величине суммы.
+     *
+     * Вычет появляется только в момент оплаты, а его размер задаёт ступень
+     * задержки. Значит список отвечает на разные вопросы: по одной накладной
+     * ещё можно успеть без вычета, по другой — не дать ему вырасти вдвое, а по
+     * третьей звонить уже поздно, хуже не станет. В плоском списке, отсортированном
+     * по деньгам, эти три случая лежали вперемешку.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function riskBuckets(EffectiveParams $params, PayrollInputs $inputs, CarbonImmutable $today): array
+    {
+        $tiers = $this->penaltyFactor->tiers($params->for('kpi_bonus')['discipline_penalty'] ?? []);
+
+        if ($tiers === [] || $inputs->atRiskInvoices === []) {
+            return [];
+        }
+
+        $first = $tiers[0];
+        $worst = $tiers[count($tiers) - 1];
+        $horizon = max(0, (int) config('payroll.forecast.risk_overdue_days', 30));
+        $rows = ['safe' => [], 'rising' => [], 'worst' => [], 'stale' => []];
+
+        foreach ($inputs->atRiskInvoices as $invoice) {
+            if ($invoice->dueOn === null) {
+                continue;
+            }
+
+            $due = CarbonImmutable::parse($invoice->dueOn)->startOfDay();
+            $delay = $due->lessThan($today) ? $this->calendar->workingDaysBetween($due, $today) : 0;
+            $age = $due->lessThan($today) ? (int) $due->diffInDays($today) : 0;
+            $coefficient = $this->coefficientFor($tiers, $delay);
+
+            $key = match (true) {
+                $age > $horizon => 'stale',
+                $coefficient <= 0.0 => 'safe',
+                $coefficient >= (float) $worst['coefficient'] => 'worst',
+                default => 'rising',
+            };
+
+            // Докуда платёж ещё не удорожает вычет: для «безопасных» — до первой
+            // ступени, для растущих — до худшей.
+            $deadlineDays = $key === 'safe' ? (int) $first['from_days'] - 1 : (int) $worst['from_days'] - 1;
+            $deadline = $key === 'safe' || $key === 'rising' ? $this->deadline($due, $deadlineDays) : null;
+
+            $rows[$key][] = [
+                'shipment_id' => $invoice->shipmentId,
+                'erp_number' => $invoice->erpNumber,
+                'partner_id' => $invoice->partnerId,
+                'partner_name' => $invoice->partnerName,
+                'amount' => round($invoice->amount, 2),
+                'due_on' => $due->toDateString(),
+                'delay_working_days' => $delay,
+                'overdue_days' => $age,
+                'coefficient' => $coefficient,
+                'penalty_now' => round($invoice->amount * $coefficient, 2),
+                'penalty_worst' => round($invoice->amount * (float) $worst['coefficient'], 2),
+                'deadline' => $deadline?->toDateString(),
+                'days_left' => $deadline === null ? null : (int) $today->diffInDays($deadline, false),
+            ];
+        }
+
+        $labels = [
+            'safe' => ['Успеть без вычета', 'платёж в срок — из выручки не вычтется ничего'],
+            'rising' => [sprintf('Вычет ×%s, вырастет до ×%s', $this->num($first['coefficient']), $this->num($worst['coefficient'])), 'здесь дороже всего медлить'],
+            'worst' => [sprintf('Уже ×%s', $this->num($worst['coefficient'])), 'больше не вырастет — вопрос денег, не срока'],
+            'stale' => ['Зависшие долги', sprintf('просрочены больше %d дней, в прогноз не входят', $horizon)],
+        ];
+
+        $buckets = [];
+
+        foreach ($labels as $key => [$title, $note]) {
+            $list = $rows[$key];
+
+            if ($list === []) {
+                continue;
+            }
+
+            usort($list, fn (array $a, array $b): int => $b['amount'] <=> $a['amount']);
+            // Ближайший срок, но не раньше сегодня: дата в прошлом читается как
+            // «поздно», хотя накладная ещё в льготе — так бывает, когда после
+            // срока прошли только выходные.
+            $deadlines = array_values(array_filter(array_column($list, 'deadline')));
+            sort($deadlines);
+            $nearest = $deadlines[0] ?? null;
+
+            if ($nearest !== null && $nearest < $today->toDateString()) {
+                $nearest = $today->toDateString();
+            }
+
+            $buckets[] = [
+                'key' => $key,
+                'title' => $title,
+                'note' => $note,
+                'count' => count($list),
+                'amount' => round(array_sum(array_column($list, 'amount')), 2),
+                'penalty_now' => round(array_sum(array_column($list, 'penalty_now')), 2),
+                'penalty_worst' => round(array_sum(array_column($list, 'penalty_worst')), 2),
+                'deadline' => $nearest,
+                'rows' => array_slice($list, 0, 25),
+            ];
+        }
+
+        return $buckets;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $tiers
+     */
+    private function coefficientFor(array $tiers, int $delayWorkingDays): float
+    {
+        foreach ($tiers as $tier) {
+            $to = $tier['to_days'] ?? null;
+
+            if ($delayWorkingDays >= (int) $tier['from_days'] && ($to === null || $delayWorkingDays <= (int) $to)) {
+                return (float) $tier['coefficient'];
+            }
+        }
+
+        return 0.0;
+    }
+
+    /** Дата, до которой включительно платёж ещё не поднимает ступень. */
+    private function deadline(CarbonImmutable $due, int $workingDays): CarbonImmutable
+    {
+        $day = $due;
+        $counted = 0;
+
+        while ($counted < $workingDays) {
+            $day = $day->addDay();
+
+            if ($this->calendar->isWorkingDay($day)) {
+                $counted++;
+            }
+        }
+
+        return $day;
+    }
+
+    private function num(float|int|string $value): string
+    {
+        return rtrim(rtrim(number_format((float) $value, 2, ',', ' '), '0'), ',');
     }
 
     /**

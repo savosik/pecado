@@ -140,6 +140,68 @@ class PayrollForecastTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('Неоплаченные разложены по срочности: успеть, не дать вырасти, поздно, зависло')]
+    public function risk_is_grouped_by_urgency(): void
+    {
+        $params = $this->params();
+        $today = CarbonImmutable::parse('2026-07-15');
+
+        $inputs = $this->inputs()->with(['at_risk_invoices' => array_map(fn (array $r): array => $r, [
+            // Срок сегодня — вычета ещё нет.
+            (new InvoiceInput(11, '29УТ-000011', 1, 'Успеем', 100_000.0, '2026-07-01', '2026-07-15', null, null, null, null, 'unpaid'))->toArray(),
+            // Четыре рабочих дня задержки — первая ступень, ещё не худшая.
+            (new InvoiceInput(12, '29УТ-000012', 2, 'Растёт', 200_000.0, '2026-06-25', '2026-07-09', null, null, null, null, 'unpaid'))->toArray(),
+            // Три недели — уже худшая ступень, но в горизонте.
+            (new InvoiceInput(13, '29УТ-000013', 3, 'Поздно', 300_000.0, '2026-06-10', '2026-06-25', null, null, null, null, 'unpaid'))->toArray(),
+            // Полтора месяца — зависший долг.
+            (new InvoiceInput(14, '29УТ-000014', 4, 'Зависло', 400_000.0, '2026-04-20', '2026-05-01', null, null, null, null, 'unpaid'))->toArray(),
+        ])]);
+
+        $current = app(PayrollCalculator::class)->calculate($params, $inputs);
+        $buckets = collect(app(PayrollForecaster::class)->forecast($params, $inputs, $current, $today)['risk_buckets'])
+            ->keyBy('key');
+
+        $this->assertSame(['safe', 'rising', 'worst', 'stale'], $buckets->keys()->all());
+
+        // Пока не оплачено — из выручки не вычтено ничего; цена опоздания ×3.
+        $this->assertSame(0.0, $buckets['safe']['penalty_now']);
+        $this->assertSame(300_000.0, $buckets['safe']['penalty_worst']);
+
+        // Растущая группа — единственная, где промедление ещё меняет сумму.
+        $this->assertSame(300_000.0, $buckets['rising']['penalty_now']);
+        $this->assertSame(600_000.0, $buckets['rising']['penalty_worst']);
+        $this->assertNotNull($buckets['rising']['deadline']);
+
+        // В худшей ступени и в зависших торопиться уже некуда.
+        $this->assertSame($buckets['worst']['penalty_now'], $buckets['worst']['penalty_worst']);
+        $this->assertNull($buckets['stale']['deadline']);
+        $this->assertSame(400_000.0, $buckets['stale']['amount']);
+    }
+
+    #[Test]
+    #[TestDox('Крайний срок не показывается прошедшей датой')]
+    public function deadline_is_never_in_the_past(): void
+    {
+        $params = $this->params();
+        $today = CarbonImmutable::parse('2026-07-15');
+
+        // Срок прошёл, но после него были только выходные — накладная ещё в льготе,
+        // а её дедлайн выпал на вчера.
+        $inputs = $this->inputs()->with(['at_risk_invoices' => [
+            (new InvoiceInput(21, '29УТ-000021', 1, 'В льготе', 50_000.0, '2026-07-05', '2026-07-10', null, null, null, null, 'unpaid'))->toArray(),
+        ]]);
+
+        $current = app(PayrollCalculator::class)->calculate($params, $inputs);
+        $buckets = app(PayrollForecaster::class)->forecast($params, $inputs, $current, $today)['risk_buckets'];
+
+        foreach ($buckets as $bucket) {
+            if ($bucket['deadline'] !== null) {
+                $this->assertGreaterThanOrEqual($today->toDateString(), $bucket['deadline']);
+            }
+        }
+    }
+
+    #[Test]
     #[TestDox('Закрытый месяц: сценарии совпадают с фактом, советов нет')]
     public function closed_month_has_flat_forecast(): void
     {
