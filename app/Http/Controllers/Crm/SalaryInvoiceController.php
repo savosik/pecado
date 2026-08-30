@@ -61,12 +61,19 @@ class SalaryInvoiceController extends CrmController
                 ->whereDate($column, '<=', $month->endOfMonth()->toDateString());
         }
 
+        // Спорные показываем от самых дорогих: если разбирать, то там, где цена вопроса.
+        if ($mode === 'review') {
+            $query->reorder()->orderByDesc('total_amount')->orderByDesc('id');
+        }
+
         $total = (clone $query)->count();
+        $amount = (float) (clone $query)->sum('total_amount');
         $rows = $query->limit(self::PAGE)->get()->map(fn (PayrollInvoiceSettlement $row): array => $this->row($row))->all();
 
         return response()->json([
             'rows' => $rows,
             'total' => $total,
+            'amount' => round($amount, 2),
             'truncated' => $total > count($rows),
             'managers' => PersonalManager::query()->active()->orderBy('name')->get(['id', 'name'])->map(fn (PersonalManager $m): array => ['id' => (int) $m->getKey(), 'name' => (string) $m->name])->all(),
         ]);

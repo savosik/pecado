@@ -24,7 +24,8 @@ use Illuminate\Support\Facades\DB;
  *
  * Строка на реализацию одна; ручная дата РОПа (`manual_*`) проектором не трогается
  * и всегда приоритетнее сопоставленной. Реализация, оплаченная по 1С, но без
- * восстановленной даты, помечается `needs_review` — очередь на ручную разметку.
+ * восстановленной даты и с прошедшим сроком, помечается `needs_review`: только там
+ * незнание даты может скрывать штраф.
  */
 class PayrollInvoiceSettlementProjector
 {
@@ -184,9 +185,7 @@ class PayrollInvoiceSettlementProjector
 
             [$calendarDays, $workingDays] = $this->delays($dueOn, $settledOn);
 
-            $needsReview = $shipment->payment_status === Shipment::PAYMENT_PAID
-                && $settledOn === null
-                && $total > SettlementEntry::EPSILON;
+            $needsReview = $this->needsReview($shipment->payment_status, $settledOn, $dueOn, $total);
 
             $managerId = $shipment->user_id === null ? null : ($managerByUser[(int) $shipment->user_id] ?? null);
 
@@ -235,6 +234,24 @@ class PayrollInvoiceSettlementProjector
         $stats['managers'] = array_values(array_unique($stats['managers']));
 
         return $stats;
+    }
+
+    /**
+     * Нужен ли человек, чтобы понять судьбу накладной.
+     *
+     * Только когда незнание даты может скрывать штраф: накладная оплачена по
+     * данным 1С, дату платежа восстановить не удалось, и срок оплаты уже прошёл.
+     * Если срок ещё не наступил, платёж заведомо пришёл не позже него — задержки
+     * нет, размечать нечего. Раньше такие накладные попадали в очередь и создавали
+     * впечатление работы, которой не существует.
+     */
+    private function needsReview(?string $paymentStatus, ?string $settledOn, ?string $dueOn, float $total): bool
+    {
+        if ($paymentStatus !== Shipment::PAYMENT_PAID || $settledOn !== null || $total <= SettlementEntry::EPSILON) {
+            return false;
+        }
+
+        return $dueOn !== null && $dueOn < CarbonImmutable::today()->toDateString();
     }
 
     /**
@@ -425,9 +442,12 @@ class PayrollInvoiceSettlementProjector
             : ($matchedOn !== null ? PayrollInvoiceSettlement::SOURCE_MATCHED : null);
         $row->delay_calendar_days = $calendarDays;
         $row->delay_working_days = $workingDays;
-        $row->needs_review = $row->payment_status === Shipment::PAYMENT_PAID
-            && $settledOn === null
-            && (float) $row->total_amount > SettlementEntry::EPSILON;
+        $row->needs_review = $this->needsReview(
+            $row->payment_status,
+            $settledOn,
+            $row->due_on?->toDateString(),
+            (float) $row->total_amount,
+        );
         $row->computed_at = now();
         $row->save();
 

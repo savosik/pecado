@@ -22,22 +22,28 @@ const selectStyle = {
 };
 
 const MODES = [
-    { value: 'review', label: 'На разметку' },
+    { value: 'review', label: 'Спорные' },
     { value: 'manual', label: 'Размечены вручную' },
     { value: 'penalized', label: 'Со штрафом' },
 ];
 
 /**
- * Накладные для зарплаты: очередь «оплачено по 1С, дата закрытия не восстановлена».
+ * Спорные накладные: 1С считает их оплаченными, а какого числа пришли деньги — неизвестно.
  *
- * Без даты штрафа нет — но и правды нет. РОП проставляет дату закрытия с
- * основанием, как размечал просрочку в Excel; ребилд ручную дату не трогает.
+ * Это не очередь дел, а страховка. Дата платежа восстанавливается сопоставлением
+ * с движениями регистра, и почти всегда это удаётся; остаётся хвост из зачётов
+ * и платежей без ссылки на реализацию. Штраф по ним не начисляется — расчёт
+ * трактует незнание в пользу менеджера. Разметка нужна только если руководитель
+ * хочет учесть конкретную задержку; не размечать — рабочий вариант по умолчанию.
+ *
+ * В список попадают только накладные с прошедшим сроком: пока срок не наступил,
+ * опоздать было невозможно, и разбирать нечего.
  */
 export default function InvoicesPanel({ month, managers }) {
     const [mode, setMode] = useState('review');
     const [managerId, setManagerId] = useState('');
     const [filterMonth, setFilterMonth] = useState(mode === 'review' ? '' : month);
-    const [data, setData] = useState({ rows: [], total: 0, truncated: false });
+    const [data, setData] = useState({ rows: [], total: 0, amount: 0, truncated: false });
     const [loading, setLoading] = useState(false);
     const [editing, setEditing] = useState(null);
 
@@ -91,21 +97,37 @@ export default function InvoicesPanel({ month, managers }) {
                 <Input type="month" size="sm" maxW="170px" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} aria-label="Месяц" />
                 {loading && <Spinner size="sm" />}
                 <Text fontSize="xs" color="fg.muted" ml="auto">
-                    {data.total} накл.{data.truncated ? ` · показаны первые ${data.rows.length}` : ''}
+                    {data.total} накл. на {fmtRub0(data.amount ?? 0)}
+                    {data.truncated ? ` · показаны ${data.rows.length} крупнейших` : ''}
                 </Text>
             </HStack>
 
-            <Text fontSize="xs" color="fg.muted">
-                {mode === 'review'
-                    ? 'Оплачены по данным 1С, но платёж не сопоставлен с накладной (взаимозачёт, аванс на другой заказ, платёж без номера). Штрафа по ним нет, пока не проставлена дата.'
-                    : mode === 'manual'
-                        ? 'Дата закрытия проставлена руководителем; ребилд её не трогает.'
+            {mode === 'review' && (
+                <Box borderWidth="1px" borderColor="border" borderRadius="lg" p={3} bg="bg.subtle">
+                    <Text fontSize="sm">
+                        1С считает эти накладные оплаченными, но какого числа пришли деньги — не сообщает
+                        (зачёт, платёж без ссылки на реализацию). <Text as="span" fontWeight="600">Штраф по ним не начисляется</Text> — расчёт
+                        толкует незнание в пользу менеджера.
+                    </Text>
+                    <Text fontSize="xs" color="fg.muted" mt={1}>
+                        Разбирать не обязательно: заходите сюда, только если хотите учесть конкретную задержку.
+                        Накладные со сроком в будущем сюда не попадают — опоздать по ним было нельзя.
+                    </Text>
+                </Box>
+            )}
+            {mode !== 'review' && (
+                <Text fontSize="xs" color="fg.muted">
+                    {mode === 'manual'
+                        ? 'Дата закрытия проставлена руководителем; ночная пересборка её не трогает.'
                         : 'Накладные, закрытые с задержкой выше льготной — по ним начислен штраф.'}
-            </Text>
+                </Text>
+            )}
 
             <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
                 {data.rows.length === 0 ? (
-                    <Text p={4} fontSize="sm" color="fg.muted">{loading ? 'Загрузка…' : 'Пусто.'}</Text>
+                    <Text p={4} fontSize="sm" color="fg.muted">
+                        {loading ? 'Загрузка…' : mode === 'review' ? 'Спорных накладных нет — по всем оплатам дата известна.' : 'Пусто.'}
+                    </Text>
                 ) : (
                     <Table.Root size="sm" variant="line">
                         <Table.Header>

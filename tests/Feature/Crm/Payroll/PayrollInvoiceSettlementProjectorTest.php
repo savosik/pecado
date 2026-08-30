@@ -212,6 +212,26 @@ class PayrollInvoiceSettlementProjectorTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('Оплачена, платёж не найден, но срок ещё не наступил — разметка не нужна')]
+    public function paid_before_due_date_needs_no_review(): void
+    {
+        $future = CarbonImmutable::now()->addWeeks(2);
+        $shipment = $this->shipment('29УТ-000950', 5000, CarbonImmutable::now()->subDays(3)->toDateString());
+        $this->schedule($shipment, $future->toDateString(), 5000, 5000);
+
+        $row = $this->projector->projectShipment($shipment);
+
+        $this->assertNull($row->settled_on);
+        $this->assertFalse($row->needs_review, 'оплата не могла опоздать: срок ещё впереди');
+
+        // Тот же случай, но срок прошёл — вот тут человек нужен.
+        $past = $this->shipment('29УТ-000951', 5000, CarbonImmutable::now()->subMonth()->toDateString());
+        $this->schedule($past, CarbonImmutable::now()->subDays(5)->toDateString(), 5000, 5000);
+
+        $this->assertTrue($this->projector->projectShipment($past)->needs_review);
+    }
+
+    #[Test]
     #[TestDox('Неоплаченная накладная не просится на разметку и не имеет задержки')]
     public function unpaid_is_not_flagged(): void
     {
