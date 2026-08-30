@@ -324,7 +324,9 @@ class PayrollInvoiceSettlementProjectorTest extends TestCase
         $stats = $this->projector->rebuild(CarbonImmutable::parse('2026-01-01'));
         $this->assertSame(2, $stats['shipments']);
         $this->assertSame(1, $stats['matched']);
-        $this->assertSame(1, $stats['needs_review']);
+        // Чужая накладная оплачена, но срока оплаты у неё нет вовсе — задержку
+        // не от чего считать, поэтому спорной она не становится.
+        $this->assertSame(0, $stats['needs_review']);
         $this->assertCount(2, $stats['managers']);
     }
 
