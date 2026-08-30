@@ -222,7 +222,6 @@ class SalaryController extends CrmController
             'can_see_all' => $this->scopes->seesAll($actor),
             'can_edit' => $actor->can('crm-salary.edit'),
             'calculation' => null,
-            'timeline' => null,
             'explanations' => $this->catalog->explanations(),
             'poll_seconds' => max(15, (int) config('payroll.poll_seconds', 60)),
             'server_time' => now()->toIso8601String(),
@@ -236,7 +235,6 @@ class SalaryController extends CrmController
 
         $calculation = $this->calculations->ensureDraft((int) $manager->getKey(), $month);
         $payload['calculation'] = $this->presenter->present($calculation);
-        $payload['timeline'] = $this->collector->shipmentsTimeline((int) $manager->getKey(), $month);
 
         return $payload;
     }

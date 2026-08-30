@@ -8,12 +8,10 @@ import EarningsHero from './components/EarningsHero';
 import ScoreBars from './components/ScoreBars';
 import WhyPanel from './components/WhyPanel';
 import SalaryCalculator from './components/SalaryCalculator';
-import PenaltyScale from './components/PenaltyScale';
 import IncomeWaterfall from './components/IncomeWaterfall';
 import MetricExplainer from './components/MetricExplainer';
 import PenaltyInvoices from './components/PenaltyInvoices';
 import PlannedClients from './components/PlannedClients';
-import ShipmentsTimeline from './components/ShipmentsTimeline';
 import ForecastChart from './components/ForecastChart';
 import LeverCards from './components/LeverCards';
 
@@ -129,10 +127,6 @@ export default function SalaryIndex(props) {
                     {/* Финансовая дисциплина — под клиентами: это разбор случившегося,
                         а клиенты — то, на что ещё можно повлиять до конца месяца. */}
                     <PenaltyInvoices calculation={calc} />
-
-                    <PenaltyScale scale={calc.forecast?.whatif?.penalty} />
-
-                    <ShipmentsTimeline timeline={data.timeline} />
 
                     <Box h={2} />
                 </VStack>
