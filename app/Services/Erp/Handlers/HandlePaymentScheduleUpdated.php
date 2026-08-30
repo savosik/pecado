@@ -96,6 +96,17 @@ class HandlePaymentScheduleUpdated
         // и ретрай перезапишет план идемпотентно вместе с проекцией.
         app(\App\Services\Settlements\SettlementProjector::class)->projectDocument($documentUuid);
 
+        // Срок оплаты изменился — зарплата пересчитывает задержку по накладной
+        // (эпик pay-00). То же событие, что у settlement.posted; протокол не меняется.
+        $partnerIds = array_values(array_unique(array_filter(array_map(
+            static fn (array $row): int => (int) ($row['user_id'] ?? 0),
+            $rows,
+        ))));
+
+        if ($partnerIds !== []) {
+            \App\Events\PartnerSettlementsChanged::dispatch($partnerIds, 'payment_schedule.updated');
+        }
+
         Log::info('payment_schedule.updated: график документа применён', [
             'document_uuid' => $documentUuid,
             'document_kind' => $documentKind,

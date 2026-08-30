@@ -62,3 +62,6 @@ Schedule::command('crm:tasks-weekly-report')->fridays()->at('17:00')->withoutOve
 Schedule::command('crm:leads-remind-stale')->dailyAt('05:50')->withoutOverlapping(); // задачи по залежавшимся лидам; до материализации повторов и утренних напоминаний
 Schedule::command('apiship:sync-statuses')->everyThirtyMinutes()->withoutOverlapping(); // страховка вебхука ORDER_STATUS: догоняет статусы, потерянные при недоступности сайта
 Schedule::command('crm:plans-warm')->everyTenMinutes()->between('7:00', '21:00')->withoutOverlapping(); // прогрев тяжёлых агрегатов /crm/plans: первый утренний заход не ждёт пересчёт синхронно
+// Зарплата (pay-00): мост «накладная → дата закрытия» целиком, до финансового
+// обхода 07:00 — чтобы утренние черновики считались по свежей просрочке.
+Schedule::command('payroll:rebuild-invoices')->dailyAt('06:30')->withoutOverlapping();
