@@ -30,6 +30,7 @@ import {
     LuMegaphone,
     LuBan,
     LuBanknote,
+    LuSlidersHorizontal,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -190,6 +191,8 @@ export const menuConfig: MenuGroup[] = [
             // Отсутствия видит весь отдел: кто кого замещает — рабочая информация.
             { label: "Отсутствия", icon: LuCalendarOff, path: "/crm/absences", permission: "crm-absences.view" },
             { label: "Табель", icon: LuCalendarCheck, path: "/crm/timesheet", permission: "crm-timesheet.view" },
+            // Константы зарплаты на менеджера × месяц и ручные строки дохода — только РОП.
+            { label: "Настройки зарплаты", icon: LuSlidersHorizontal, path: "/crm/salary/settings", permission: "crm-salary.edit" },
         ],
     },
     {

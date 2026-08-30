@@ -28,7 +28,9 @@ use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PaymentOrderController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
+use App\Http\Controllers\Crm\SalaryAdjustmentController;
 use App\Http\Controllers\Crm\SalaryController;
+use App\Http\Controllers\Crm\SalarySettingsController;
 use App\Http\Controllers\Crm\ShortageController;
 use App\Http\Controllers\Crm\StaffNotificationController;
 use App\Http\Controllers\Crm\TaskChecklistController;
@@ -622,6 +624,20 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     Route::middleware('permission:crm-salary.view')->group(function () {
         Route::get('/salary', [SalaryController::class, 'index'])->name('salary.index');
         Route::get('/salary/data', [SalaryController::class, 'data'])->name('salary.data');
+    });
+
+    // Настройки зарплаты — только РОП: константы менеджер × месяц, ручные строки.
+    // Замороженный (утверждённый) месяц контроллеры не правят — сначала «переоткрыть».
+    Route::middleware('permission:crm-salary.edit')->group(function () {
+        Route::get('/salary/settings', [SalarySettingsController::class, 'index'])->name('salary.settings');
+        Route::get('/salary/settings/data', [SalarySettingsController::class, 'data'])->name('salary.settings.data');
+        Route::post('/salary/settings/params', [SalarySettingsController::class, 'storeParams'])->name('salary.settings.params');
+        Route::delete('/salary/settings/params', [SalarySettingsController::class, 'resetParams'])->name('salary.settings.params.reset');
+        Route::post('/salary/settings/copy-month', [SalarySettingsController::class, 'copyMonth'])->name('salary.settings.copy-month');
+        Route::post('/salary/adjustments', [SalaryAdjustmentController::class, 'store'])->name('salary.adjustments.store');
+        Route::delete('/salary/adjustments/{adjustment}', [SalaryAdjustmentController::class, 'destroy'])
+            ->name('salary.adjustments.destroy')
+            ->whereNumber('adjustment');
     });
 
     Route::middleware('permission:crm-team.view')->group(function () {

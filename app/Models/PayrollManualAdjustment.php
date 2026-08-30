@@ -22,6 +22,8 @@ use Illuminate\Support\Carbon;
  * @property string $amount
  * @property string|null $comment
  * @property int|null $author_id
+ * @property-read PersonalManager|null $manager
+ * @property-read User|null $author
  */
 class PayrollManualAdjustment extends Model
 {
@@ -60,11 +62,17 @@ class PayrollManualAdjustment extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<PersonalManager, $this>
+     */
     public function manager(): BelongsTo
     {
         return $this->belongsTo(PersonalManager::class, 'personal_manager_id');
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_id');
