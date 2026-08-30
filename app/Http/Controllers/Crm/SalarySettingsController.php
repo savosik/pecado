@@ -209,15 +209,18 @@ class SalarySettingsController extends CrmController
         return CarbonImmutable::createFromFormat('Y-m-d', $raw.'-01')?->startOfMonth();
     }
 
+    /**
+     * Статус последней версии — без выборки json-колонок снимка.
+     */
     private function isFrozen(int $managerId, CarbonImmutable $month): bool
     {
-        $latest = PayrollCalculation::query()
+        $status = PayrollCalculation::query()
             ->forManager($managerId)
             ->forPeriod($month)
             ->orderByDesc('version')
-            ->first();
+            ->value('status');
 
-        return $latest !== null && $latest->isFrozen();
+        return $status !== null && $status !== PayrollCalculation::STATUS_DRAFT;
     }
 
     /**

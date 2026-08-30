@@ -37,9 +37,11 @@ class SalaryInvoiceController extends CrmController
         ]);
 
         $mode = (string) ($data['mode'] ?? 'review');
+        // Сортировка по первичному ключу, а не по shipped_on: у строк есть
+        // json с уликами платежей, и filesort по ним падает на большой очереди.
+        // Порядок id совпадает с хронологией появления реализаций.
         $query = PayrollInvoiceSettlement::query()
             ->with(['user:id,name,erp_name', 'manualBy:id,name'])
-            ->orderByDesc('shipped_on')
             ->orderByDesc('id');
 
         if (! empty($data['manager'])) {

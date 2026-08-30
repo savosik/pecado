@@ -116,6 +116,36 @@ class PayrollCalculation extends Model
         return Carbon::instance($month)->startOfMonth()->startOfDay();
     }
 
+    /**
+     * Последняя версия снимка пары менеджер × месяц.
+     *
+     * Два запроса вместо одного намеренно: `SELECT * ... ORDER BY version DESC`
+     * заставляет MySQL сортировать строки целиком, а строка снимка — это
+     * несколько json-колонок на сотни килобайт (в `inputs` лежат все накладные
+     * месяца). На dev такой запрос падал с «Out of sort memory» на трёх строках.
+     * Сначала находим id по лёгкой выборке, потом читаем строку по ключу.
+     */
+    public static function latestFor(int $managerId, CarbonInterface $month, bool $lock = false): ?self
+    {
+        $id = self::query()
+            ->forManager($managerId)
+            ->forPeriod($month)
+            ->orderByDesc('version')
+            ->value('id');
+
+        if ($id === null) {
+            return null;
+        }
+
+        $query = self::query()->whereKey($id);
+
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        return $query->first();
+    }
+
     public function isDraft(): bool
     {
         return $this->status === self::STATUS_DRAFT;

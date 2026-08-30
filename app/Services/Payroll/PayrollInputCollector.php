@@ -37,6 +37,21 @@ use Carbon\CarbonInterface;
  */
 class PayrollInputCollector
 {
+    /**
+     * Колонки накладной, нужные расчёту.
+     *
+     * Без `payments`: улики сопоставления нужны только экрану разметки, а
+     * json-колонка в сортируемой выборке из сотен накладных валит MySQL
+     * («Out of sort memory» — поймано на dev 30.08.2026).
+     *
+     * @var list<string>
+     */
+    private const INVOICE_COLUMNS = [
+        'id', 'shipment_id', 'erp_number', 'user_id', 'total_amount', 'shipped_on',
+        'due_on', 'settled_on', 'settled_source', 'delay_working_days', 'delay_calendar_days',
+        'payment_status',
+    ];
+
     public function __construct(
         private readonly ShipmentAnalyticsService $analytics,
         private readonly PlanProgressService $progress,
@@ -360,7 +375,7 @@ class PayrollInputCollector
             ->settledIn($period)
             ->orderBy('settled_on')
             ->orderBy('id')
-            ->get()
+            ->get(self::INVOICE_COLUMNS)
             ->map(fn (PayrollInvoiceSettlement $row): InvoiceInput => $this->invoice($row, $names))
             ->all();
     }
@@ -387,7 +402,7 @@ class PayrollInputCollector
             ->where('total_amount', '>', 0.01)
             ->orderBy('due_on')
             ->orderBy('id')
-            ->get()
+            ->get(self::INVOICE_COLUMNS)
             ->map(fn (PayrollInvoiceSettlement $row): InvoiceInput => $this->invoice($row, $names))
             ->all();
     }

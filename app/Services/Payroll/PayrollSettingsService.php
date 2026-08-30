@@ -32,8 +32,15 @@ class PayrollSettingsService
         $scheme = $this->schemes->forMonth($period);
         $schemeParams = $this->params->fromScheme($scheme);
 
+        // Без json-колонок: сетке нужны итог и статус, а строка снимка весит сотни
+        // килобайт и в сортировке роняет MySQL («Out of sort memory»).
         $calculations = [];
-        foreach (PayrollCalculation::query()->forPeriod($period)->orderBy('version')->get() as $calculation) {
+        $rows = PayrollCalculation::query()
+            ->forPeriod($period)
+            ->orderBy('version')
+            ->get(['id', 'personal_manager_id', 'period_month', 'version', 'status', 'total', 'computed_at']);
+
+        foreach ($rows as $calculation) {
             $calculations[(int) $calculation->personal_manager_id] = $calculation;   // последняя версия побеждает
         }
 
@@ -92,11 +99,7 @@ class PayrollSettingsService
         $managerId = (int) $manager->getKey();
         $effective = $this->params->effective($managerId, $period);
 
-        $calculation ??= PayrollCalculation::query()
-            ->forManager($managerId)
-            ->forPeriod($period)
-            ->orderByDesc('version')
-            ->first();
+        $calculation ??= PayrollCalculation::latestFor($managerId, $period);
 
         return [
             'id' => $managerId,

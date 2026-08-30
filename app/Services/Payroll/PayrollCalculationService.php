@@ -35,11 +35,7 @@ class PayrollCalculationService
      */
     public function current(int $managerId, CarbonInterface $month): ?PayrollCalculation
     {
-        return PayrollCalculation::query()
-            ->forManager($managerId)
-            ->forPeriod($month)
-            ->orderByDesc('version')
-            ->first();
+        return PayrollCalculation::latestFor($managerId, $month);
     }
 
     /**
@@ -60,12 +56,7 @@ class PayrollCalculationService
         $period = PayrollCalculation::normalizeMonth($month);
 
         return DB::transaction(function () use ($managerId, $period, $source): ?PayrollCalculation {
-            $latest = PayrollCalculation::query()
-                ->forManager($managerId)
-                ->forPeriod($period)
-                ->orderByDesc('version')
-                ->lockForUpdate()
-                ->first();
+            $latest = PayrollCalculation::latestFor($managerId, $period, lock: true);
 
             if ($latest !== null && $latest->isFrozen()) {
                 return null;
@@ -138,6 +129,7 @@ class PayrollCalculationService
         $period = PayrollCalculation::normalizeMonth($calculation->period_month);
 
         return DB::transaction(function () use ($managerId, $period, $comment, $actor): PayrollCalculation {
+            /** @var int $maxVersion */
             $maxVersion = (int) PayrollCalculation::query()
                 ->forManager($managerId)
                 ->forPeriod($period)
@@ -238,6 +230,7 @@ class PayrollCalculationService
      */
     public function staleDrafts(CarbonInterface $month, int $olderThanMinutes): Collection
     {
+        // Только ключи: у снимка тяжёлые json-колонки, а вызывающему нужен id менеджера.
         return PayrollCalculation::query()
             ->forPeriod($month)
             ->drafts()
@@ -245,7 +238,7 @@ class PayrollCalculationService
                 $query->whereNull('computed_at')
                     ->orWhere('computed_at', '<', now()->subMinutes($olderThanMinutes));
             })
-            ->get();
+            ->get(['id', 'personal_manager_id', 'period_month', 'version', 'status', 'computed_at']);
     }
 
     /**
