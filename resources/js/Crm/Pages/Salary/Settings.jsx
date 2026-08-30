@@ -11,6 +11,7 @@ import { toastError, toastSuccess } from '@/utils/toast';
 import ParamsGrid from './components/settings/ParamsGrid';
 import ParamsDrawer from './components/settings/ParamsDrawer';
 import AdjustmentsPanel from './components/settings/AdjustmentsPanel';
+import InvoicesPanel from './components/settings/InvoicesPanel';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -97,6 +98,7 @@ export default function SalarySettings(props) {
                         items={[
                             { value: 'params', label: 'Параметры' },
                             { value: 'adjustments', label: `Доп. доход и корректировки${data.adjustments?.length ? ` (${data.adjustments.length})` : ''}` },
+                            { value: 'invoices', label: 'Накладные' },
                         ]}
                     />
                     <Text fontSize="xs" color="fg.muted">
@@ -121,6 +123,10 @@ export default function SalarySettings(props) {
                         adjustments={data.adjustments ?? []}
                         onChanged={(rows) => setData({ ...data, adjustments: rows })}
                     />
+                )}
+
+                {tab === 'invoices' && (
+                    <InvoicesPanel month={data.month} managers={data.managers ?? []} />
                 )}
             </VStack>
 

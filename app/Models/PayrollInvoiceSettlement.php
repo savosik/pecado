@@ -39,6 +39,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $delay_working_days
  * @property bool $needs_review
  * @property \Illuminate\Support\Carbon|null $computed_at
+ * @property-read User|null $user
+ * @property-read User|null $manualBy
+ * @property-read PersonalManager|null $manager
  */
 class PayrollInvoiceSettlement extends Model
 {
@@ -105,21 +108,25 @@ class PayrollInvoiceSettlement extends Model
         return $this->belongsTo(Shipment::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<Company, $this> */
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
     }
 
+    /** @return BelongsTo<PersonalManager, $this> */
     public function manager(): BelongsTo
     {
         return $this->belongsTo(PersonalManager::class, 'personal_manager_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function manualBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'manual_by_user_id');

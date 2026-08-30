@@ -30,6 +30,7 @@ use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
 use App\Http\Controllers\Crm\SalaryAdjustmentController;
 use App\Http\Controllers\Crm\SalaryController;
+use App\Http\Controllers\Crm\SalaryInvoiceController;
 use App\Http\Controllers\Crm\SalarySettingsController;
 use App\Http\Controllers\Crm\ShortageController;
 use App\Http\Controllers\Crm\StaffNotificationController;
@@ -638,6 +639,14 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::delete('/salary/adjustments/{adjustment}', [SalaryAdjustmentController::class, 'destroy'])
             ->name('salary.adjustments.destroy')
             ->whereNumber('adjustment');
+        // Ручная разметка накладных: очередь «оплачено по 1С, дата не восстановлена».
+        Route::get('/salary/invoices', [SalaryInvoiceController::class, 'index'])->name('salary.invoices');
+        Route::patch('/salary/invoices/{invoice}', [SalaryInvoiceController::class, 'mark'])
+            ->name('salary.invoices.mark')
+            ->whereNumber('invoice');
+        Route::delete('/salary/invoices/{invoice}/mark', [SalaryInvoiceController::class, 'unmark'])
+            ->name('salary.invoices.unmark')
+            ->whereNumber('invoice');
     });
 
     Route::middleware('permission:crm-team.view')->group(function () {
