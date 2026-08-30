@@ -97,7 +97,7 @@ class HandlePaymentScheduleUpdated
         app(\App\Services\Settlements\SettlementProjector::class)->projectDocument($documentUuid);
 
         // Срок оплаты изменился — зарплата пересчитывает задержку по накладной
-        // (эпик pay-00). То же событие, что у settlement.posted; протокол не меняется.
+        // (эпик sal-00). То же событие, что у settlement.posted; протокол не меняется.
         $partnerIds = array_values(array_unique(array_filter(array_map(
             static fn (array $row): int => (int) ($row['user_id'] ?? 0),
             $rows,

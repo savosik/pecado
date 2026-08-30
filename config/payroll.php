@@ -10,7 +10,7 @@ use App\Services\Payroll\Components\NewClientsBonusComponent;
 use App\Services\Payroll\Components\SalaryComponent;
 
 /*
- * Зарплата менеджеров отдела продаж (эпик pay-00).
+ * Зарплата менеджеров отдела продаж (эпик sal-00).
  *
  * Каталог компонентов дохода и умолчания схемы. Правило домена: всё, что в
  * Excel РОПа было числом в ячейке, — данные (схема в БД, отклонения по

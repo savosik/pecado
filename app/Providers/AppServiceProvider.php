@@ -178,7 +178,7 @@ class AppServiceProvider extends ServiceProvider
             \App\Events\PartnerSettlementsChanged::class,
             \App\Listeners\RefreshDebtLevel::class,
         );
-        // Зарплата (pay-00): те же движения регистра пересобирают мост
+        // Зарплата (sal-00): те же движения регистра пересобирают мост
         // «накладная → дата закрытия» и пересчитывают черновик менеджера.
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\PartnerSettlementsChanged::class,
