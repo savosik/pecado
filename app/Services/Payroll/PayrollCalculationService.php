@@ -25,6 +25,8 @@ class PayrollCalculationService
         private readonly PayrollParamsResolver $params,
         private readonly PayrollInputCollector $collector,
         private readonly PayrollCalculator $calculator,
+        private readonly PayrollForecaster $forecaster,
+        private readonly PayrollAdvisor $advisor,
     ) {}
 
     /**
@@ -182,6 +184,20 @@ class PayrollCalculationService
     }
 
     /**
+     * Прогноз и советы — только у живого месяца; для чужого времени они бессмысленны,
+     * но считаются тем же кодом и просто пусты.
+     *
+     * @return array<string, mixed>
+     */
+    private function forecastPayload(EffectiveParams $params, PayrollInputs $inputs, PayrollBreakdown $breakdown): array
+    {
+        $forecast = $this->forecaster->forecast($params, $inputs, $breakdown);
+        $forecast['advice'] = $this->advisor->advise($params, $inputs, $breakdown);
+
+        return $forecast;
+    }
+
+    /**
      * Собрать, посчитать и сохранить черновик (создать или обновить строку).
      */
     private function store(int $managerId, CarbonImmutable|\Illuminate\Support\Carbon $period, ?PayrollCalculation $draft, int $version, string $source): PayrollCalculation
@@ -193,8 +209,13 @@ class PayrollCalculationService
         $hash = $inputs->hash();
         $paramsArray = $params->toArray();
 
+        // Прогноз зависит ещё и от сегодняшней даты (прошло дней, просрочка), поэтому
+        // при неизменных входах обновляется только он — разбор остаётся прежним.
         if ($draft !== null && $draft->inputs_hash === $hash && $draft->params_effective == $paramsArray) {
-            $draft->forceFill(['computed_at' => now()])->save();
+            $draft->forceFill([
+                'computed_at' => now(),
+                'forecast' => $this->forecastPayload($params, $inputs, $breakdown),
+            ])->save();
 
             return $draft;
         }
@@ -205,6 +226,7 @@ class PayrollCalculationService
             'inputs' => $inputs->toArray(),
             'breakdown' => $breakdown->toArray(),
             'total' => $breakdown->total,
+            'forecast' => $this->forecastPayload($params, $inputs, $breakdown),
             'inputs_hash' => $hash,
             'computed_at' => now(),
         ];

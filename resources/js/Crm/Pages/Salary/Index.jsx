@@ -11,6 +11,8 @@ import MetricExplainer from './components/MetricExplainer';
 import PenaltyInvoices from './components/PenaltyInvoices';
 import PlannedClients from './components/PlannedClients';
 import ShipmentsTimeline from './components/ShipmentsTimeline';
+import ForecastChart from './components/ForecastChart';
+import LeverCards from './components/LeverCards';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -92,6 +94,10 @@ export default function SalaryIndex(props) {
                         <PlanProgress calculation={calc} explanations={data.explanations} />
                         <IncomeWaterfall calculation={calc} />
                     </SimpleGrid>
+
+                    {!calc.is_frozen && <LeverCards advice={calc.forecast?.advice} />}
+
+                    {!calc.is_frozen && <ForecastChart forecast={calc.forecast} current={calc} />}
 
                     <MetricExplainer calculation={calc} explanations={data.explanations} />
 
