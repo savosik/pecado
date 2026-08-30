@@ -114,7 +114,7 @@ class PayrollWhatIfService
 
             $points[] = [
                 'active' => $n,
-                'share' => $planned > 0 ? round($n / $planned, 4) : null,
+                'share' => round($n / $planned, 4),
                 'multiplier' => (float) ($factor['multiplier'] ?? 1.0),
                 'total' => $breakdown->total,
                 'kpi' => $breakdown->amountOf('kpi_bonus'),
@@ -218,7 +218,9 @@ class PayrollWhatIfService
      */
     private function factorMeta(PayrollBreakdown $breakdown): array
     {
-        foreach ($breakdown->component('kpi_bonus')?->children ?? [] as $child) {
+        $kpi = $breakdown->component('kpi_bonus');
+
+        foreach ($kpi === null ? [] : $kpi->children as $child) {
             if ($child->key === 'active_clients') {
                 return $child->meta;
             }
