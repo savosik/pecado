@@ -9,8 +9,16 @@ const SCENARIO_TONE = {
     pessimistic: 'red',
     base: 'blue',
     optimistic: 'green',
+    stretch: 'green',
     perfect: 'purple',
 };
+
+/**
+ * Дальние ориентиры показываем приглушённо: они достижимы не действиями этой
+ * недели, а хорошим месяцем целиком, и не должны спорить за внимание
+ * с ближними сценариями.
+ */
+const DIMMED = ['stretch', 'perfect'];
 
 /**
  * Прогноз на конец месяца: три плитки-сценария и кривая с коридором.
@@ -24,7 +32,9 @@ export default function ForecastChart({ forecast, current }) {
         return null;
     }
 
-    const scenarios = ['pessimistic', 'base', 'optimistic', 'perfect'].map((k) => forecast.scenarios[k]).filter(Boolean);
+    const scenarios = ['pessimistic', 'base', 'optimistic', 'stretch', 'perfect']
+        .map((k) => forecast.scenarios[k])
+        .filter(Boolean);
     const curve = (forecast.curve ?? []).map((p) => ({
         ...p,
         bandWidth: p.low !== null && p.high !== null ? p.high - p.low : null,
@@ -49,9 +59,10 @@ export default function ForecastChart({ forecast, current }) {
             )}
 
             {!closed && (
-                <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} gap={4} mb={4}>
+                <SimpleGrid columns={{ base: 1, md: 2, xl: 5 }} gap={4} mb={4}>
                     {scenarios.map((s) => {
                         const delta = forecast.current_total === undefined ? null : s.total - forecast.current_total;
+                        const dimmed = DIMMED.includes(s.key);
 
                         return (
                             <Box
@@ -60,8 +71,13 @@ export default function ForecastChart({ forecast, current }) {
                                 borderColor="border"
                                 borderTopWidth="3px"
                                 borderTopColor={`${SCENARIO_TONE[s.key]}.solid`}
+                                borderTopStyle={dimmed ? 'dashed' : 'solid'}
                                 borderRadius="lg"
                                 p={3}
+                                opacity={dimmed ? 0.62 : 1}
+                                bg={dimmed ? 'bg.subtle' : undefined}
+                                transition="opacity 0.15s"
+                                _hover={dimmed ? { opacity: 1 } : undefined}
                             >
                                 <Text fontSize="sm" fontWeight="600">{s.label}</Text>
 

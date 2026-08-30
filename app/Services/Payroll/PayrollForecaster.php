@@ -35,6 +35,7 @@ class PayrollForecaster
         'pessimistic' => 'Если долги не соберу',
         'base' => 'Если пойдёт как идёт',
         'optimistic' => 'Если закрою план и верну клиентов',
+        'stretch' => 'Если перевыполню план на четверть',
         'perfect' => 'То же самое плюс ни одной просрочки',
     ];
 
@@ -70,6 +71,7 @@ class PayrollForecaster
                 'pessimistic' => $snapshot + ['key' => 'pessimistic', 'label' => self::SCENARIO_LABELS['pessimistic']],
                 'base' => $snapshot,
                 'optimistic' => $snapshot + ['key' => 'optimistic', 'label' => self::SCENARIO_LABELS['optimistic']],
+                'stretch' => $snapshot + ['key' => 'stretch', 'label' => self::SCENARIO_LABELS['stretch']],
                 'perfect' => $snapshot + ['key' => 'perfect', 'label' => self::SCENARIO_LABELS['perfect']],
             ];
         } else {
@@ -96,12 +98,17 @@ class PayrollForecaster
             // Предел месяца: к оптимистичному добавляем отсутствие уже случившихся
             // задержек. Недостижимо задним числом — но именно эта разница и есть
             // цена просрочек, и без неё потолок выглядел бы как «135 тысяч и всё».
-            $perfect = $optimistic->with(['invoices' => []]);
+            // «А если перевыполню?» — тот же оптимистичный расклад, но выручка выше
+            // плана. Уже начисленный штраф остаётся: перевыполнение его не отменяет.
+            $stretch = $optimistic->with(['revenue' => round((float) ($inputs->plan ?? 0) * self::STRETCH_SHARE, 2)]);
+
+            $perfect = $stretch->with(['invoices' => []]);
 
             $scenarios = [
                 'pessimistic' => $this->scenario('pessimistic', $pessimistic, $this->calculator->calculate($params, $pessimistic), $inputs),
                 'base' => $this->scenario('base', $base, $this->calculator->calculate($params, $base), $inputs),
                 'optimistic' => $this->scenario('optimistic', $optimistic, $this->calculator->calculate($params, $optimistic), $inputs),
+                'stretch' => $this->scenario('stretch', $stretch, $this->calculator->calculate($params, $stretch), $inputs),
                 'perfect' => $this->scenario('perfect', $perfect, $this->calculator->calculate($params, $perfect), $inputs),
             ];
         }
@@ -168,6 +175,10 @@ class PayrollForecaster
             ),
             // Задним числом недостижимо: деньги уже пришли поздно. Но это предел
             // месяца, и разница с предыдущим сценарием — цена случившихся задержек.
+            'stretch' => sprintf(
+                'выручка на четверть выше плана (%s), клиенты на месте, новых просрочек нет',
+                Money::rub(($inputs->plan ?? 0) * self::STRETCH_SHARE),
+            ),
             'perfect' => 'предел месяца: к тому же ни одна оплата не пришла с опозданием',
             default => '',
         };

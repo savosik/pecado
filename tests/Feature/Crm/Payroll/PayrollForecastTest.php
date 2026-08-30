@@ -66,8 +66,9 @@ class PayrollForecastTest extends TestCase
 
         $this->assertLessThanOrEqual($s['base']['total'], $s['pessimistic']['total']);
         $this->assertLessThanOrEqual($s['optimistic']['total'], $s['base']['total']);
-        // Предел месяца — выше оптимистичного ровно на цену уже случившихся задержек.
-        $this->assertGreaterThanOrEqual($s['optimistic']['total'], $s['perfect']['total']);
+        // Перевыполнение выше плана, предел — выше перевыполнения на цену задержек.
+        $this->assertGreaterThanOrEqual($s['optimistic']['total'], $s['stretch']['total']);
+        $this->assertGreaterThanOrEqual($s['stretch']['total'], $s['perfect']['total']);
 
         // Пессимистично: выручка не растёт, обе накладные оплачены в последний рабочий день.
         $this->assertSame(1_000_000.0, $s['pessimistic']['revenue']);
@@ -82,6 +83,7 @@ class PayrollForecastTest extends TestCase
         $this->assertStringContainsString('2 неоплаченных накладных', $s['pessimistic']['hint']);
         $this->assertStringContainsString('все 10 плановых клиентов', $s['optimistic']['hint']);
         $this->assertStringContainsString('предел месяца', $s['perfect']['hint']);
+        $this->assertStringContainsString('на четверть выше плана', $s['stretch']['hint']);
 
         $this->assertCount(31, $forecast['curve']);
         $today = array_values(array_filter($forecast['curve'], fn (array $p): bool => $p['is_today']))[0];
