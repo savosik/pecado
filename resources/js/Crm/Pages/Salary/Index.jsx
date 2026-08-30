@@ -124,10 +124,11 @@ export default function SalaryIndex(props) {
 
                     {!calc.is_frozen && <ForecastChart forecast={calc.forecast} current={calc} />}
 
-                    <SimpleGrid columns={{ base: 1, xl: 2 }} gap={5} alignItems="start">
-                        <PenaltyInvoices calculation={calc} />
-                        <PlannedClients calculation={calc} />
-                    </SimpleGrid>
+                    <PlannedClients calculation={calc} />
+
+                    {/* Финансовая дисциплина — под клиентами: это разбор случившегося,
+                        а клиенты — то, на что ещё можно повлиять до конца месяца. */}
+                    <PenaltyInvoices calculation={calc} />
 
                     <PenaltyScale scale={calc.forecast?.whatif?.penalty} />
 
