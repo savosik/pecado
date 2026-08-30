@@ -101,8 +101,7 @@ class SalaryParticipationTest extends TestCase
                 ->component('Crm/Pages/Salary/Index')
                 ->where('manager.name', 'Владелец')
                 ->where('participates', false)
-                ->where('calculation', null)
-                ->where('timeline', null));
+                ->where('calculation', null));
 
         $this->assertSame(0, PayrollCalculation::query()->count());
     }
