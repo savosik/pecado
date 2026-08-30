@@ -1,4 +1,5 @@
-import { Box, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
+import { Box, Collapsible, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
+import { LuChevronDown, LuTrendingUp } from 'react-icons/lu';
 import {
     Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
@@ -42,12 +43,49 @@ export default function ForecastChart({ forecast, current }) {
     const today = curve.find((p) => p.is_today)?.label;
     const closed = forecast.basis?.closed;
 
+    const baseTotal = forecast.scenarios?.base?.total;
+
     return (
-        <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4}>
+        <Collapsible.Root bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflow="hidden">
+            <Collapsible.Trigger asChild>
+                <HStack
+                    as="button"
+                    type="button"
+                    w="100%"
+                    gap={3}
+                    p={{ base: 4, md: 5 }}
+                    textAlign="left"
+                    cursor="pointer"
+                    _hover={{ bg: 'bg.subtle' }}
+                    transition="background 0.15s"
+                >
+                    <Box p={2.5} borderRadius="lg" bg="green.subtle" color="green.fg" display="flex" flexShrink={0}>
+                        <LuTrendingUp size={22} />
+                    </Box>
+
+                    <Box flex="1" minW={0}>
+                        <Text fontWeight="700" fontSize={{ base: 'sm', md: 'md' }}>
+                            {closed ? 'Чем закончился месяц' : 'Сколько выйдет к концу месяца'}
+                        </Text>
+                        <Text fontSize="xs" color="fg.muted">
+                            {closed
+                                ? 'Итог зафиксирован'
+                                : baseTotal !== undefined
+                                    ? `При текущем темпе — ${fmtRub0(baseTotal)}. Пять сценариев: от несобранных долгов до предела месяца.`
+                                    : 'Пять сценариев: от несобранных долгов до предела месяца.'}
+                        </Text>
+                    </Box>
+
+                    <Box color="fg.muted" flexShrink={0} transition="transform 0.2s" css={{ '[data-state=open] &': { transform: 'rotate(180deg)' } }}>
+                        <LuChevronDown size={20} />
+                    </Box>
+                </HStack>
+            </Collapsible.Trigger>
+
+            <Collapsible.Content>
+                <Box px={{ base: 4, md: 5 }} pb={{ base: 4, md: 5 }} pt={4} borderTopWidth="1px" borderColor="border">
             <HStack gap={2} mb={1} flexWrap="wrap">
-                <Text fontSize="xs" color="fg.muted" fontWeight="500">
-                    {closed ? 'Месяц закрыт' : 'Сколько выйдет к концу месяца'}
-                </Text>
+                <Text fontSize="xs" color="fg.muted" fontWeight="500">Как считаются сценарии</Text>
                 <MetricHint text="Каждый сценарий посчитан той же формулой, что и текущая цифра: меняются только исходные данные — сколько отгружено, сколько клиентов купило и как заплатили по неоплаченным накладным." />
             </HStack>
 
@@ -134,15 +172,17 @@ export default function ForecastChart({ forecast, current }) {
                 <Legend color="var(--chakra-colors-blue-muted)" text="коридор сценариев" />
             </HStack>
 
-            {current && forecast.basis?.revenue_per_day && !closed && (
-                <VStack align="start" gap={0} mt={3}>
-                    <Text fontSize="xs" color="fg.muted">
-                        Темп: {fmtCompact(forecast.basis.revenue_per_day)} реализаций в рабочий день,
-                        осталось {forecast.basis.working_days?.left ?? 0} из {forecast.basis.working_days?.total ?? 0}.
-                    </Text>
-                </VStack>
-            )}
-        </Box>
+                    {current && forecast.basis?.revenue_per_day && !closed && (
+                        <VStack align="start" gap={0} mt={3}>
+                            <Text fontSize="xs" color="fg.muted">
+                                Темп: {fmtCompact(forecast.basis.revenue_per_day)} реализаций в рабочий день,
+                                осталось {forecast.basis.working_days?.left ?? 0} из {forecast.basis.working_days?.total ?? 0}.
+                            </Text>
+                        </VStack>
+                    )}
+                </Box>
+            </Collapsible.Content>
+        </Collapsible.Root>
     );
 }
 
