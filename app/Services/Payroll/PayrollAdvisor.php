@@ -116,7 +116,14 @@ class PayrollAdvisor
             return [];
         }
 
-        $rows = $inputs->atRiskInvoices;
+        // Тот же горизонт, что и в прогнозе: советовать «поторопите оплату»
+        // по долгу с весны бессмысленно — там уже работа с дебиторкой, а не
+        // напоминание, и обещанная прибавка недостижима в этом месяце.
+        $horizon = $today->subDays(max(0, (int) config('payroll.forecast.risk_overdue_days', 30)));
+        $rows = array_values(array_filter(
+            $inputs->atRiskInvoices,
+            fn (InvoiceInput $i): bool => $i->dueOn !== null && CarbonImmutable::parse($i->dueOn)->greaterThanOrEqualTo($horizon),
+        ));
         usort($rows, fn (InvoiceInput $a, InvoiceInput $b): int => $b->amount <=> $a->amount);
 
         $advice = [];

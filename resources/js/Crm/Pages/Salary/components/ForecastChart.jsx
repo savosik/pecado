@@ -83,7 +83,7 @@ export default function ForecastChart({ forecast, current }) {
                                     {fmtRub0(bestTotal)}
                                 </Text>
                                 <Text fontSize="xs" color="fg.muted">
-                                    · разница в том, соберёте ли долги и закроете ли план
+                                    · разница в том, сколько ещё отгрузите и придут ли просроченные оплаты
                                 </Text>
                             </HStack>
                         ) : (
@@ -107,7 +107,8 @@ export default function ForecastChart({ forecast, current }) {
             {!closed && forecast.current_total !== undefined && (
                 <Text fontSize="xs" color="fg.subtle" mb={3}>
                     Если бы месяц закончился сегодня — {fmtRub0(forecast.current_total)}. Дальше зависит от того,
-                    соберёте ли долги и сколько продадите за оставшиеся дни:
+                    сколько успеете отгрузить и придут ли просроченные оплаты (штраф считается в месяц,
+                    когда деньги дошли, — поэтому оплата с опозданием бьёт по премии, а невыплаченный долг нет):
                 </Text>
             )}
 
@@ -186,6 +187,14 @@ export default function ForecastChart({ forecast, current }) {
                 <Legend color="var(--chakra-colors-blue-solid)" text="при текущем темпе" />
                 <Legend color="var(--chakra-colors-blue-muted)" text="коридор сценариев" />
             </HStack>
+
+                    {forecast.basis?.deferred_count > 0 && !closed && (
+                        <Text fontSize="xs" color="fg.subtle" mt={3}>
+                            В сценарии не учтены {forecast.basis.deferred_count} накл. на {fmtRub0(forecast.basis.deferred_amount)} со сроком
+                            старше {forecast.basis.risk_overdue_days} дней: когда их оплатят — неизвестно, и предполагать
+                            их приход в этом месяце значит пугать штрафом, которого не будет. Они видны в списке просрочек.
+                        </Text>
+                    )}
 
                     {current && forecast.basis?.revenue_per_day && !closed && (
                         <VStack align="start" gap={0} mt={3}>

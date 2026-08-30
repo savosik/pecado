@@ -79,8 +79,8 @@ class PayrollForecastTest extends TestCase
         $this->assertSame(10, $s['optimistic']['active_clients']);
         $this->assertSame(0.0, $s['optimistic']['penalty']);
         $this->assertSame('Если пойдёт как идёт', $s['base']['label']);
-        $this->assertStringContainsString('темпе месяца', $s['base']['hint']);
-        $this->assertStringContainsString('2 неоплаченных накладных', $s['pessimistic']['hint']);
+        $this->assertStringContainsString('том же темпе', $s['base']['hint']);
+        $this->assertStringContainsString('2 свежих долгов', $s['pessimistic']['hint']);
         $this->assertStringContainsString('все 10 плановых клиентов', $s['optimistic']['hint']);
         $this->assertStringContainsString('предел месяца', $s['perfect']['hint']);
         $this->assertStringContainsString('на четверть выше плана', $s['stretch']['hint']);
@@ -91,6 +91,52 @@ class PayrollForecastTest extends TestCase
         $this->assertNotNull($forecast['curve'][0]['earned']);
         $this->assertNull($forecast['curve'][30]['earned']);
         $this->assertSame($s['optimistic']['total'], $forecast['curve'][30]['high']);
+    }
+
+    #[Test]
+    #[TestDox('Зависший долг в прогноз не идёт: пугать штрафом, которого не будет, нельзя')]
+    public function stale_debt_is_out_of_the_forecast(): void
+    {
+        $params = $this->params();
+        $base = $this->inputs();
+
+        // Долг с марта — вчетверо крупнее свежих. Раньше сценарий предполагал,
+        // что он придёт в последний день месяца, и штраф ×3 обнулял премию.
+        $stale = new InvoiceInput(3, '29УТ-000003', 3, 'Партнёр 3', 1_000_000.0, '2026-03-01', '2026-03-20', null, null, null, null, 'unpaid');
+        $inputs = $base->with([
+            'at_risk_invoices' => array_map(
+                fn (InvoiceInput $i): array => $i->toArray(),
+                array_merge($base->atRiskInvoices, [$stale]),
+            ),
+        ]);
+
+        $current = app(PayrollCalculator::class)->calculate($params, $inputs);
+        $forecast = app(PayrollForecaster::class)->forecast($params, $inputs, $current, CarbonImmutable::parse('2026-07-15'));
+
+        // Пессимистичный сценарий не изменился от появления зависшего долга.
+        $without = app(PayrollForecaster::class)->forecast($params, $base, $current, CarbonImmutable::parse('2026-07-15'));
+        $this->assertSame($without['scenarios']['pessimistic']['total'], $forecast['scenarios']['pessimistic']['total']);
+
+        // Но и не спрятан: показан отдельной строкой.
+        $this->assertSame(2, $forecast['basis']['at_risk_count']);
+        $this->assertSame(1, $forecast['basis']['deferred_count']);
+        $this->assertSame(1_000_000.0, $forecast['basis']['deferred_amount']);
+        $this->assertStringContainsString('2 свежих долгов', $forecast['scenarios']['pessimistic']['hint']);
+    }
+
+    #[Test]
+    #[TestDox('Базовый сценарий не занижает: несобранные долги премию не трогают')]
+    public function base_scenario_does_not_charge_unpaid_debt(): void
+    {
+        $params = $this->params();
+        $inputs = $this->inputs();
+        $current = app(PayrollCalculator::class)->calculate($params, $inputs);
+
+        $forecast = app(PayrollForecaster::class)->forecast($params, $inputs, $current, CarbonImmutable::parse('2026-07-15'));
+
+        // Выручка по темпу выше факта, штрафа нет — значит и итог не ниже текущего.
+        $this->assertSame(0.0, $forecast['scenarios']['base']['penalty']);
+        $this->assertGreaterThanOrEqual($current->total, $forecast['scenarios']['base']['total']);
     }
 
     #[Test]

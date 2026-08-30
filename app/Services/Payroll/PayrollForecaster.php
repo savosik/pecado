@@ -32,10 +32,15 @@ class PayrollForecaster
      * стояло «ни один долг не собран». Формулировка должна называть причину,
      * иначе цифра ниже текущей выглядит ошибкой расчёта.
      *
+     * «Если долги не соберу» было прямой инверсией смысла: штраф начисляется в
+     * месяц прихода денег, поэтому несобранный долг премию не трогает вовсе —
+     * бьёт как раз собранный с опозданием. Название обязано совпадать с тем,
+     * что подставлено в расчёт.
+     *
      * @var array<string, string>
      */
     public const SCENARIO_LABELS = [
-        'pessimistic' => 'Если долги не соберу',
+        'pessimistic' => 'Если просроченные оплаты придут разом',
         'base' => 'Если пойдёт как идёт',
         'optimistic' => 'Если закрою план и верну клиентов',
         'stretch' => 'Если перевыполню план на четверть',
@@ -69,7 +74,7 @@ class PayrollForecaster
         $lastWorkingDay = $this->lastWorkingDay($month);
 
         if ($closed || $passed === 0) {
-            $snapshot = $this->scenario('base', $inputs, $current, $inputs);
+            $snapshot = $this->scenario('base', $inputs, $current, $inputs, $today);
             $scenarios = [
                 'pessimistic' => $snapshot + ['key' => 'pessimistic', 'label' => self::SCENARIO_LABELS['pessimistic']],
                 'base' => $snapshot,
@@ -80,15 +85,22 @@ class PayrollForecaster
         } else {
             $rate = $inputs->revenue / $passed;
 
+            // В сценарии участвуют только долги ближнего горизонта: те, что
+            // могут прийти в этом месяце. Зависшая дебиторка сюда не попадает —
+            // см. $this->risky() и config('payroll.forecast.risk_overdue_days').
+            $risky = $this->risky($inputs, $today);
+
             $pessimistic = $inputs->with([
-                'invoices' => $this->serialize(array_merge($inputs->invoices, $this->atRiskPaidOn($inputs, $lastWorkingDay))),
+                'invoices' => $this->serialize(array_merge($inputs->invoices, $this->paidOnAll($risky, $lastWorkingDay))),
                 'at_risk_invoices' => [],
             ]);
 
+            // «Как идёт» — это и про долги тоже: висели и висят. Раньше базовый
+            // сценарий подставлял их оплаченными сегодня, и прогноз оказывался
+            // ниже уже заработанного при выполненном плане.
             $base = $inputs->with([
                 'revenue' => round($rate * $total, 2),
                 'planned_clients' => $this->serializeClients($this->grownClients($inputs, $passed, $total)),
-                'invoices' => $this->serialize(array_merge($inputs->invoices, $this->overdueAtRiskPaidOn($inputs, $today))),
                 'at_risk_invoices' => [],
             ]);
 
@@ -108,11 +120,11 @@ class PayrollForecaster
             $perfect = $stretch->with(['invoices' => []]);
 
             $scenarios = [
-                'pessimistic' => $this->scenario('pessimistic', $pessimistic, $this->calculator->calculate($params, $pessimistic), $inputs),
-                'base' => $this->scenario('base', $base, $this->calculator->calculate($params, $base), $inputs),
-                'optimistic' => $this->scenario('optimistic', $optimistic, $this->calculator->calculate($params, $optimistic), $inputs),
-                'stretch' => $this->scenario('stretch', $stretch, $this->calculator->calculate($params, $stretch), $inputs),
-                'perfect' => $this->scenario('perfect', $perfect, $this->calculator->calculate($params, $perfect), $inputs),
+                'pessimistic' => $this->scenario('pessimistic', $pessimistic, $this->calculator->calculate($params, $pessimistic), $inputs, $today),
+                'base' => $this->scenario('base', $base, $this->calculator->calculate($params, $base), $inputs, $today),
+                'optimistic' => $this->scenario('optimistic', $optimistic, $this->calculator->calculate($params, $optimistic), $inputs, $today),
+                'stretch' => $this->scenario('stretch', $stretch, $this->calculator->calculate($params, $stretch), $inputs, $today),
+                'perfect' => $this->scenario('perfect', $perfect, $this->calculator->calculate($params, $perfect), $inputs, $today),
             ];
         }
 
@@ -124,8 +136,11 @@ class PayrollForecaster
                 'working_days' => ['total' => $total, 'passed' => $passed, 'left' => $left],
                 'revenue_per_day' => $passed > 0 ? round($inputs->revenue / $passed, 2) : null,
                 'closed' => $closed,
-                'at_risk_count' => count($inputs->atRiskInvoices),
-                'at_risk_amount' => round(array_sum(array_map(fn (InvoiceInput $i): float => $i->amount, $inputs->atRiskInvoices)), 2),
+                'at_risk_count' => count($this->risky($inputs, $today)),
+                'at_risk_amount' => round(array_sum(array_map(fn (InvoiceInput $i): float => $i->amount, $this->risky($inputs, $today))), 2),
+                'deferred_count' => count($this->deferred($inputs, $today)),
+                'deferred_amount' => round(array_sum(array_map(fn (InvoiceInput $i): float => $i->amount, $this->deferred($inputs, $today))), 2),
+                'risk_overdue_days' => (int) config('payroll.forecast.risk_overdue_days', 30),
                 'tiers' => $tiers,
                 'computed_for' => $today->toDateString(),
             ],
@@ -135,14 +150,14 @@ class PayrollForecaster
     /**
      * @return array<string, mixed>
      */
-    private function scenario(string $key, PayrollInputs $inputs, PayrollBreakdown $breakdown, ?PayrollInputs $actual = null): array
+    private function scenario(string $key, PayrollInputs $inputs, PayrollBreakdown $breakdown, ?PayrollInputs $actual = null, ?CarbonImmutable $today = null): array
     {
         $kpi = $breakdown->component('kpi_bonus');
 
         return [
             'key' => $key,
             'label' => self::SCENARIO_LABELS[$key],
-            'hint' => $this->hint($key, $actual ?? $inputs),
+            'hint' => $this->hint($key, $actual ?? $inputs, $today),
             'total' => $breakdown->total,
             'kpi' => $breakdown->amountOf('kpi_bonus'),
             'revenue' => $inputs->revenue,
@@ -157,20 +172,19 @@ class PayrollForecaster
     /**
      * Что именно предполагает сценарий — словами, которые менеджер может проверить.
      */
-    private function hint(string $key, PayrollInputs $inputs): string
+    private function hint(string $key, PayrollInputs $inputs, ?CarbonImmutable $today = null): string
     {
-        $risk = count($inputs->atRiskInvoices);
-        $riskAmount = array_sum(array_map(fn (InvoiceInput $i): float => $i->amount, $inputs->atRiskInvoices));
+        $risky = $this->risky($inputs, $today ?? CarbonImmutable::now()->startOfDay());
+        $risk = count($risky);
+        $riskAmount = array_sum(array_map(fn (InvoiceInput $i): float => $i->amount, $risky));
         $planned = count($inputs->plannedClients);
         $active = count($inputs->activeClients());
 
         return match ($key) {
             'pessimistic' => $risk > 0
-                ? sprintf('%d неоплаченных накладных на %s закроются с просрочкой, новых продаж нет', $risk, Money::rub($riskAmount))
+                ? sprintf('%d свежих долгов на %s приходят до конца месяца — штраф считается в месяц оплаты; новых продаж нет', $risk, Money::rub($riskAmount))
                 : 'новых продаж до конца месяца нет',
-            'base' => $risk > 0
-                ? 'выручка растёт в темпе месяца, а уже просроченные оплаты приходят с опозданием'
-                : 'выручка растёт в том же темпе, что и с начала месяца',
+            'base' => 'выручка растёт в том же темпе, что и с начала месяца, долги остаются как есть',
             'optimistic' => sprintf(
                 'план закрыт, купили все %d плановых клиентов (сейчас %d), новых просрочек нет',
                 $planned,
@@ -188,31 +202,44 @@ class PayrollForecaster
     }
 
     /**
-     * Все неоплаченные накладные месяца оплачены в последний рабочий день — худший разумный исход.
+     * Долги ближнего горизонта — те, чья оплата в этом месяце правдоподобна.
+     *
+     * Отсекаем зависшую дебиторку: накладную, просроченную на полгода, завтра
+     * не оплатят, а её штраф (×3 от суммы) в сценарии съедал всю премию. Она
+     * остаётся во входных данных и на экране просрочек — просто не участвует
+     * в предсказании конца месяца.
      *
      * @return list<InvoiceInput>
      */
-    private function atRiskPaidOn(PayrollInputs $inputs, CarbonImmutable $paidOn): array
+    private function risky(PayrollInputs $inputs, CarbonImmutable $today): array
     {
-        return array_map(fn (InvoiceInput $i): InvoiceInput => $this->paidOn($i, $paidOn), $inputs->atRiskInvoices);
+        $horizon = $today->subDays(max(0, (int) config('payroll.forecast.risk_overdue_days', 30)));
+
+        return array_values(array_filter(
+            $inputs->atRiskInvoices,
+            fn (InvoiceInput $i): bool => $i->dueOn !== null && CarbonImmutable::parse($i->dueOn)->greaterThanOrEqualTo($horizon),
+        ));
     }
 
     /**
-     * Накладные с уже прошедшим сроком оплачены сегодня; остальные — в срок.
+     * Долги вне горизонта — показываем отдельно, чтобы молча их не прятать.
      *
      * @return list<InvoiceInput>
      */
-    private function overdueAtRiskPaidOn(PayrollInputs $inputs, CarbonImmutable $today): array
+    private function deferred(PayrollInputs $inputs, CarbonImmutable $today): array
     {
-        $rows = [];
+        $risky = $this->risky($inputs, $today);
 
-        foreach ($inputs->atRiskInvoices as $invoice) {
-            if ($invoice->dueOn !== null && CarbonImmutable::parse($invoice->dueOn)->lessThan($today)) {
-                $rows[] = $this->paidOn($invoice, $today);
-            }
-        }
+        return array_values(array_filter($inputs->atRiskInvoices, fn (InvoiceInput $i): bool => ! in_array($i, $risky, true)));
+    }
 
-        return $rows;
+    /**
+     * @param  list<InvoiceInput>  $invoices
+     * @return list<InvoiceInput>
+     */
+    private function paidOnAll(array $invoices, CarbonImmutable $paidOn): array
+    {
+        return array_map(fn (InvoiceInput $i): InvoiceInput => $this->paidOn($i, $paidOn), $invoices);
     }
 
     private function paidOn(InvoiceInput $invoice, CarbonImmutable $paidOn): InvoiceInput
