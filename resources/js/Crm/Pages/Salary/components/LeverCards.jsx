@@ -1,6 +1,8 @@
+import { useMemo, useState } from 'react';
 import { Badge, Box, HStack, SimpleGrid, Text } from '@chakra-ui/react';
 import { LuFileWarning, LuShieldCheck, LuTrendingUp, LuUsers, LuZap } from 'react-icons/lu';
-import { fmtSigned } from './format';
+import MetricHint from '@/Crm/Components/MetricHint';
+import { fmtRub0, fmtSigned } from './format';
 
 const KIND = {
     clients: { icon: LuUsers, palette: 'blue' },
@@ -9,10 +11,25 @@ const KIND = {
 };
 
 const AFFECTS = {
-    revenue: 'выручка',
+    revenue: 'план',
     clients: 'охват',
     penalty: 'дисциплина',
 };
+
+/**
+ * Фильтры: цена вопроса по каждому направлению.
+ *
+ * Суммы намеренно пересекаются — совет с двойным эффектом входит и в «план»,
+ * и в «охват», и в свою группу. Это не разбиение денег на доли, а ответ на
+ * вопрос «сколько всего стоит заняться этим направлением».
+ */
+const FILTERS = [
+    { key: 'all', label: 'Все', match: () => true, palette: 'gray' },
+    { key: 'revenue', label: 'План', match: (r) => (r.affects ?? []).includes('revenue'), palette: 'green' },
+    { key: 'clients', label: 'Охват', match: (r) => (r.affects ?? []).includes('clients'), palette: 'blue' },
+    { key: 'penalty', label: 'Дисциплина', match: (r) => (r.affects ?? []).includes('penalty'), palette: 'orange' },
+    { key: 'synergy', label: 'Двойной эффект', match: (r) => (r.affects ?? []).length > 1, palette: 'purple' },
+];
 
 /**
  * Рычаги: что сделать и сколько это даст — сверху то, что успеть реально.
@@ -27,19 +44,57 @@ const AFFECTS = {
  */
 export default function LeverCards({ advice }) {
     const rows = advice ?? [];
+    const [filter, setFilter] = useState('all');
+
+    const chips = useMemo(() => FILTERS.map((f) => {
+        const list = rows.filter(f.match);
+
+        return { ...f, count: list.length, sum: list.reduce((acc, r) => acc + Number(r.gain ?? 0), 0) };
+    }).filter((f) => f.count > 0), [rows]);
 
     if (rows.length === 0) {
         return null;
     }
 
-    const feasible = rows.filter((r) => r.feasible !== false);
-    const later = rows.filter((r) => r.feasible === false);
+    const active = chips.some((c) => c.key === filter) ? filter : 'all';
+    const shown = rows.filter(FILTERS.find((f) => f.key === active).match);
+    const feasible = shown.filter((r) => r.feasible !== false);
+    const later = shown.filter((r) => r.feasible === false);
 
     return (
         <Box>
-            <Text fontSize="xs" color="fg.muted" fontWeight="500" mb={2}>
-                Что можно поднять{feasible.length > 0 ? ' — сначала то, что реально успеть' : ''}
-            </Text>
+            <HStack gap={2} mb={2} flexWrap="wrap">
+                <Text fontSize="xs" color="fg.muted" fontWeight="500">
+                    Что можно поднять{feasible.length > 0 ? ' — сначала то, что реально успеть' : ''}
+                </Text>
+                <MetricHint text="Суммы на кнопках пересекаются: совет с двойным эффектом входит сразу в два направления. Это цена вопроса по направлению, а не доли одной суммы — сложить их и получить прибавку к премии нельзя, показатели перемножаются." />
+            </HStack>
+
+            <HStack gap={2} mb={3} flexWrap="wrap">
+                {chips.map((chip) => {
+                    const on = chip.key === active;
+
+                    return (
+                        <Badge
+                            key={chip.key}
+                            as="button"
+                            type="button"
+                            size="lg"
+                            variant={on ? 'solid' : 'subtle'}
+                            colorPalette={chip.palette}
+                            cursor="pointer"
+                            onClick={() => setFilter(on && chip.key !== 'all' ? 'all' : chip.key)}
+                            opacity={on || active === 'all' ? 1 : 0.6}
+                        >
+                            {chip.label}
+                            <Text as="span" fontVariantNumeric="tabular-nums" fontWeight="700" ml={1}>
+                                {fmtRub0(chip.sum)}
+                            </Text>
+                            <Text as="span" fontSize="10px" opacity={0.75} ml={1}>· {chip.count}</Text>
+                        </Badge>
+                    );
+                })}
+            </HStack>
 
             {feasible.length > 0 && <Cards rows={feasible} />}
 
