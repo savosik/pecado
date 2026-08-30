@@ -57,9 +57,9 @@ function buildSteps(calculation) {
     components.forEach((c) => {
         if (c.key === 'kpi_bonus' && kpi) {
             const withoutPenalty = kpi.without_penalty ?? c.amount;
-            rows.push({ key: 'kpi_gross', label: 'KPI без штрафа', delta: withoutPenalty, kind: 'plus' });
+            rows.push({ key: 'kpi_gross', label: 'KPI без просрочек', delta: withoutPenalty, kind: 'plus' });
             if (kpi.penalty > 0 && withoutPenalty - c.amount > 0.005) {
-                rows.push({ key: 'penalty', label: 'Штраф', delta: c.amount - withoutPenalty, kind: 'minus' });
+                rows.push({ key: 'penalty', label: 'Цена просрочек', delta: c.amount - withoutPenalty, kind: 'minus' });
             }
             return;
         }

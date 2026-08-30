@@ -161,7 +161,7 @@ export default function SalaryCalculator({ calculation, month, managerId, canSee
                     />
 
                     <Control
-                        label="Штраф за просрочки"
+                        label="Вычет за просрочки"
                         value={fmtRub0(penalty)}
                         hint={penalty <= 0 ? 'все платят в срок' : 'вычитается из выручки'}
                         sliderValue={[penalty]}

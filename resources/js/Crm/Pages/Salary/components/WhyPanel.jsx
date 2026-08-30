@@ -70,10 +70,10 @@ export default function WhyPanel({ calculation }) {
             value: penaltyLoss,
             sign: '−',
             tone: 'red',
-            fact: `${penalizedCount} ${plural(penalizedCount, 'накладная закрыта', 'накладные закрыты', 'накладных закрыто')} позже срока · штраф ${fmtCompact(kpi.penalty)} вычтен из выручки`,
+            fact: `${penalizedCount} ${plural(penalizedCount, 'накладная закрыта', 'накладные закрыты', 'накладных закрыто')} позже срока · ${fmtCompact(kpi.penalty)} вычтено из выручки`,
             action: stepGain
                 ? `каждые 100 000 ₽ просрочки — это −${fmtRub0(stepGain)} премии`
-                : 'штраф уменьшает выручку до сравнения с планом',
+                : 'вычет уменьшает выручку до сравнения с планом',
         });
     }
 

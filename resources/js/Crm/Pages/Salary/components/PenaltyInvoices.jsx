@@ -1,4 +1,5 @@
 import { Badge, Box, HStack, Table, Text, VStack } from '@chakra-ui/react';
+import MetricHint from '@/Crm/Components/MetricHint';
 import { fmtDay, fmtRub0, plural } from './format';
 
 const daysUntil = (iso) => {
@@ -11,10 +12,15 @@ const daysUntil = (iso) => {
 };
 
 /**
- * Накладные, за которые уже начислен штраф, и те, что под риском.
+ * Накладные, по которым выручка уменьшена за опоздание оплаты, и те, что под риском.
+ *
+ * Колонка называется «вычет», а не «штраф»: рубли не удерживают из зарплаты —
+ * они уходят из реализаций, зачтённых в план. Из-за коэффициента ступени вычет
+ * бывает втрое больше накладной, и слово «штраф» рядом с такой цифрой читалось
+ * как удержание из кармана.
  *
  * Под риском — неоплаченные накладные со сроком в этом месяце: если платёж
- * придёт позже срока на три и более рабочих дня, штраф ляжет в этот же расчёт.
+ * придёт позже срока на три и более рабочих дня, вычет ляжет в этот же расчёт.
  * Список — материал для звонка клиенту сегодня, а не для разбора в конце месяца.
  */
 export default function PenaltyInvoices({ calculation }) {
@@ -36,7 +42,7 @@ export default function PenaltyInvoices({ calculation }) {
             </HStack>
 
             {penalized.length === 0 ? (
-                <Text fontSize="sm" color="fg.muted">Оплат с задержкой в этом месяце нет — штрафа нет.</Text>
+                <Text fontSize="sm" color="fg.muted">Оплат с задержкой в этом месяце нет — из выручки ничего не вычтено.</Text>
             ) : (
                 <Table.Root size="sm" variant="line">
                     <Table.Header>
@@ -46,7 +52,12 @@ export default function PenaltyInvoices({ calculation }) {
                             <Table.ColumnHeader textAlign="right">Сумма</Table.ColumnHeader>
                             <Table.ColumnHeader>Срок → оплата</Table.ColumnHeader>
                             <Table.ColumnHeader textAlign="right">Задержка</Table.ColumnHeader>
-                            <Table.ColumnHeader textAlign="right">Штраф</Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="right">
+                                <HStack gap={1} justify="flex-end">
+                                    <Text as="span">Вычет из выручки</Text>
+                                    <MetricHint text="Из зарплаты эти рубли не удерживают. Сумма накладной, умноженная на коэффициент ступени, вычитается из реализаций, которые засчитываются в план: премия падает через процент выполнения, а не прямым удержанием. Поэтому вычет и бывает больше самой накладной." />
+                                </HStack>
+                            </Table.ColumnHeader>
                         </Table.Row>
                     </Table.Header>
                     <Table.Body>
