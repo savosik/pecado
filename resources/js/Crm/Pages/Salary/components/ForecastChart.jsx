@@ -43,7 +43,11 @@ export default function ForecastChart({ forecast, current }) {
     const today = curve.find((p) => p.is_today)?.label;
     const closed = forecast.basis?.closed;
 
-    const baseTotal = forecast.scenarios?.base?.total;
+    // В свёрнутой шапке — вилка, а не один сценарий: базовый показатель ниже
+    // текущего (просроченные оплаты доедут с опозданием), и в одиночку он читался
+    // как «всё плохо», хотя половина исхода зависит от действий менеджера.
+    const worstTotal = forecast.scenarios?.pessimistic?.total;
+    const bestTotal = forecast.scenarios?.optimistic?.total;
 
     return (
         <Collapsible.Root bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflow="hidden">
@@ -67,13 +71,24 @@ export default function ForecastChart({ forecast, current }) {
                         <Text fontWeight="700" fontSize={{ base: 'sm', md: 'md' }}>
                             {closed ? 'Чем закончился месяц' : 'Сколько выйдет к концу месяца'}
                         </Text>
-                        <Text fontSize="xs" color="fg.muted">
-                            {closed
-                                ? 'Итог зафиксирован'
-                                : baseTotal !== undefined
-                                    ? `При текущем темпе — ${fmtRub0(baseTotal)}. Пять сценариев: от несобранных долгов до предела месяца.`
-                                    : 'Пять сценариев: от несобранных долгов до предела месяца.'}
-                        </Text>
+                        {closed ? (
+                            <Text fontSize="xs" color="fg.muted">Итог зафиксирован</Text>
+                        ) : worstTotal !== undefined && bestTotal !== undefined ? (
+                            <HStack gap={1.5} flexWrap="wrap" mt="2px">
+                                <Text fontSize="sm" fontWeight="700" color="red.fg" fontVariantNumeric="tabular-nums">
+                                    {fmtRub0(worstTotal)}
+                                </Text>
+                                <Text fontSize="sm" color="fg.subtle">—</Text>
+                                <Text fontSize="sm" fontWeight="700" color="green.fg" fontVariantNumeric="tabular-nums">
+                                    {fmtRub0(bestTotal)}
+                                </Text>
+                                <Text fontSize="xs" color="fg.muted">
+                                    · разница в том, соберёте ли долги и закроете ли план
+                                </Text>
+                            </HStack>
+                        ) : (
+                            <Text fontSize="xs" color="fg.muted">Пять сценариев: от несобранных долгов до предела месяца.</Text>
+                        )}
                     </Box>
 
                     <Box color="fg.muted" flexShrink={0} transition="transform 0.2s" css={{ '[data-state=open] &': { transform: 'rotate(180deg)' } }}>
