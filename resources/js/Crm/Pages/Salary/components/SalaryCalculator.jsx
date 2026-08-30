@@ -18,6 +18,23 @@ import { fmtCompact, fmtRub0, fmtSigned, plural } from './format';
  * Считает сервер тем же калькулятором, что и настоящий расчёт: своей формулы
  * на странице нет, иначе калькулятор и зарплата однажды разошлись бы.
  */
+/**
+ * Золотая рамка: граница красится градиентом, которого border-color не умеет.
+ *
+ * Два фоновых слоя — заливка панели по padding-box и золото по border-box;
+ * верхний слой закрывает золото везде, кроме двух пикселей границы. Обычный
+ * bg на этом же элементе задавать нельзя: background-color обрезается по
+ * последнему clip (border-box) и закрашивает рамку целиком — именно так она
+ * и пропала с экрана в первый раз.
+ */
+const GOLD_FRAME = {
+    backgroundImage:
+        'linear-gradient(var(--chakra-colors-bg-panel), var(--chakra-colors-bg-panel)),'
+        + ' linear-gradient(135deg, #F7CB45 0%, #EDA92B 55%, #DE8A20 100%)',
+    backgroundOrigin: 'border-box',
+    backgroundClip: 'padding-box, border-box',
+};
+
 export default function SalaryCalculator({ calculation, month, managerId, canSeeAll }) {
     const inputs = calculation.inputs;
     const kpi = calculation.kpi;
@@ -82,25 +99,12 @@ export default function SalaryCalculator({ calculation, month, managerId, canSee
 
     return (
         <Collapsible.Root
-            bg="bg.panel"
             borderWidth="2px"
             borderColor="transparent"
             borderRadius="xl"
             overflow="hidden"
             onOpenChange={(e) => { if (!e.open) reset(); }}
-            /*
-             * Золотая рамка градиентом: два фоновых слоя — панель по padding-box,
-             * золото по border-box. Так граница получает переход, которого
-             * border-color дать не может, а внутренняя заливка остаётся токеном
-             * темы и не ломается в тёмной.
-             */
-            css={{
-                backgroundImage:
-                    'linear-gradient(var(--chakra-colors-bg-panel), var(--chakra-colors-bg-panel)),'
-                    + ' linear-gradient(135deg, #F7CB45 0%, #EDA92B 55%, #DE8A20 100%)',
-                backgroundOrigin: 'border-box',
-                backgroundClip: 'padding-box, border-box',
-            }}
+            css={GOLD_FRAME}
         >
             <Collapsible.Trigger asChild>
                 <HStack
