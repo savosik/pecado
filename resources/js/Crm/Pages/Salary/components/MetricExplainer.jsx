@@ -16,7 +16,7 @@ export default function MetricExplainer({ calculation, explanations }) {
 
     return (
         <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={{ base: 3, md: 4 }}>
-            <Text fontSize="xs" color="fg.muted" fontWeight="500" mb={2}>Что означает каждый показатель</Text>
+            <Text fontSize="xs" color="fg.muted" fontWeight="500" mb={2}>Подробности расчёта</Text>
             <AccordionRoot collapsible multiple variant="plain">
                 {components.map((c) => (
                     <AccordionItem key={c.key} value={c.key}>
@@ -69,13 +69,16 @@ export default function MetricExplainer({ calculation, explanations }) {
 
 function Explanation({ entry, explanation, compact = false }) {
     return (
-        <VStack align="stretch" gap={1} fontSize={compact ? 'xs' : 'sm'}>
+        <VStack align="stretch" gap={2} fontSize={compact ? 'xs' : 'sm'}>
             {entry?.description && <Text color="fg.muted">{entry.description}</Text>}
-            {entry?.how_computed && (
-                <Text color="fg.muted"><Text as="span" fontWeight="600">Как считается:</Text> {entry.how_computed}</Text>
-            )}
             {explanation && (
-                <Text><Text as="span" fontWeight="600">В этом месяце:</Text> {explanation}</Text>
+                <Box borderLeftWidth="2px" borderColor="border" pl={2}>
+                    <Text fontSize="10px" color="fg.subtle" textTransform="uppercase" letterSpacing="0.03em">в этом месяце</Text>
+                    <Text>{explanation}</Text>
+                </Box>
+            )}
+            {entry?.how_computed && (
+                <Text fontSize="xs" color="fg.subtle">{entry.how_computed}</Text>
             )}
         </VStack>
     );

@@ -18,10 +18,10 @@ const daysUntil = (iso) => {
  * Список — материал для звонка клиенту сегодня, а не для разбора в конце месяца.
  */
 export default function PenaltyInvoices({ calculation }) {
-    const penaltyRows = (calculation.breakdown?.components ?? [])
-        .find((c) => c.key === 'kpi_bonus')?.children?.find((c) => c.key === 'discipline_penalty')?.evidence ?? [];
-    const penalized = penaltyRows.filter((r) => r.penalty > 0);
-    const onTime = penaltyRows.length - penalized.length;
+    const factor = (calculation.breakdown?.components ?? [])
+        .find((c) => c.key === 'kpi_bonus')?.children?.find((c) => c.key === 'discipline_penalty');
+    const penalized = factor?.evidence ?? [];
+    const onTime = Number(factor?.meta?.on_time_count ?? 0);
     const atRisk = calculation.inputs?.at_risk_invoices ?? [];
 
     return (
@@ -73,9 +73,15 @@ export default function PenaltyInvoices({ calculation }) {
 
             {atRisk.length > 0 && (
                 <VStack align="stretch" gap={2} mt={4}>
-                    <Text fontSize="xs" color="fg.muted" fontWeight="500">
-                        Под риском — не оплачены, срок в этом месяце
-                    </Text>
+                    <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                        <Text fontSize="xs" color="fg.muted" fontWeight="500">
+                            Под риском — не оплачены, срок в этом месяце
+                        </Text>
+                        <Text fontSize="xs" color="fg.muted">
+                            {calculation.inputs?.at_risk_count ?? atRisk.length} на {fmtRub0(calculation.inputs?.at_risk_amount ?? 0)}
+                            {(calculation.inputs?.at_risk_count ?? 0) > atRisk.length ? ` · показаны ${atRisk.length} крупнейших` : ''}
+                        </Text>
+                    </HStack>
                     {atRisk.map((r) => {
                         const left = daysUntil(r.due_on);
                         const overdue = left !== null && left < 0;

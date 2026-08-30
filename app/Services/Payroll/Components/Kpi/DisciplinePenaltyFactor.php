@@ -29,12 +29,12 @@ class DisciplinePenaltyFactor extends AbstractComponent
 
     public function description(): string
     {
-        return 'Накладные, оплата по которым пришла с задержкой от срока. Штраф считается от всей суммы накладной и уменьшает факт выручки в том месяце, когда пришёл закрывающий платёж. Неоплаченные накладные не штрафуются — только оплаченные с опозданием.';
+        return 'Клиент заплатил позже срока — из выручки вычитается сумма накладной с коэффициентом. Пока накладная не оплачена, штрафа нет.';
     }
 
     public function howComputed(): string
     {
-        return 'Задержка = рабочие дни от срока оплаты до закрывающего платежа. По ступени задержки берётся коэффициент, сумма накладной × коэффициент вычитается из реализаций.';
+        return 'Задержка в рабочих днях → ступень → коэффициент. Сумма накладной × коэффициент вычитается из реализаций.';
     }
 
     public function kind(): ComponentKind
@@ -110,22 +110,27 @@ class DisciplinePenaltyFactor extends AbstractComponent
             $penalty = $tier === null ? 0.0 : Money::round($invoice->amount * $tier['coefficient']);
             $total += $penalty;
 
-            $evidence[] = array_merge($invoice->toArray(), [
-                'tier' => $tier === null ? null : $this->tierLabel($tier),
-                'coefficient' => $tier['coefficient'] ?? null,
-                'penalty' => $penalty,
-            ]);
+            // В улики попадают только оштрафованные: остальные раздували бы снимок,
+            // а на экране всё равно показываются числом «закрыто в срок».
+            if ($penalty > 0) {
+                $evidence[] = array_merge($invoice->toArray(), [
+                    'tier' => $tier === null ? null : $this->tierLabel($tier),
+                    'coefficient' => $tier['coefficient'] ?? null,
+                    'penalty' => $penalty,
+                ]);
+            }
         }
 
         $total = Money::round($total);
-        $penalized = array_values(array_filter($evidence, fn (array $row): bool => $row['penalty'] > 0));
+        $penalized = $evidence;
+        $settledCount = count($context->inputs->invoices) + $context->inputs->settledOnTimeCount;
 
         $explanation = $penalized === []
             ? sprintf(
                 'Оплат с задержкой в этом месяце нет — штрафа нет%s',
-                $evidence === [] ? '' : sprintf(' (закрыто в срок: %d накл.)', count($evidence)),
+                $settledCount === 0 ? '' : sprintf(' (закрыто накладных: %d)', $settledCount),
             )
-            : $this->summarize($penalized, $total, count($evidence));
+            : $this->summarize($penalized, $total, $settledCount);
 
         return new ComponentResult(
             key: $this->key(),
@@ -135,7 +140,8 @@ class DisciplinePenaltyFactor extends AbstractComponent
             explanation: $explanation,
             evidence: $evidence,
             meta: [
-                'invoices_count' => count($context->inputs->invoices),
+                'invoices_count' => $settledCount,
+                'on_time_count' => max(0, $settledCount - count($penalized)),
                 'penalized_count' => count($penalized),
                 'penalty' => $total,
                 'tiers' => $tiers,

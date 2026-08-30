@@ -29,12 +29,12 @@ class ExtraIncomeComponent extends AbstractComponent
 
     public function description(): string
     {
-        return 'Оплата за задачи сверх продаж: ведение телеграм-каналов, рассылки клиентам и другой лёгкий маркетинг.';
+        return 'Оплата за задачи сверх продаж: телеграм-каналы, рассылки, лёгкий маркетинг.';
     }
 
     public function howComputed(): string
     {
-        return 'Сумма позиций за месяц: количество × цена по каждой. Позиции заводит руководитель отдела.';
+        return 'Сумма позиций месяца (количество × цена). Позиции заводит руководитель.';
     }
 
     public function kind(): ComponentKind

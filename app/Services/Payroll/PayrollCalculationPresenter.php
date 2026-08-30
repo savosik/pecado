@@ -12,6 +12,15 @@ use App\Models\PayrollCalculation;
 class PayrollCalculationPresenter
 {
     /**
+     * Сколько накладных под риском показывать построчно.
+     *
+     * Их бывают сотни; странице нужны самые дорогие, а полный список живёт
+     * в разделе просрочки. Ответ опрашивается раз в минуту — лишние сотни
+     * килобайт в нём не нужны никому.
+     */
+    private const AT_RISK_LIMIT = 25;
+
+    /**
      * @return array<string, mixed>
      */
     public function present(PayrollCalculation $calculation): array
@@ -27,6 +36,10 @@ class PayrollCalculationPresenter
 
         $kpi = $this->component($breakdown, 'kpi_bonus');
         $byComponent = (array) ($params['by_component'] ?? []);
+
+        $atRisk = array_values((array) ($inputs['at_risk_invoices'] ?? []));
+        usort($atRisk, fn (array $a, array $b): int => ($b['amount'] ?? 0) <=> ($a['amount'] ?? 0));
+        $atRiskTotal = array_sum(array_map(fn (array $r): float => (float) ($r['amount'] ?? 0), $atRisk));
 
         return [
             'id' => (int) $calculation->getKey(),
@@ -65,7 +78,10 @@ class PayrollCalculationPresenter
                 'active_count' => count($active),
                 'active_share' => count($planned) > 0 ? count($active) / count($planned) : null,
                 'invoices' => array_values((array) ($inputs['invoices'] ?? [])),
-                'at_risk_invoices' => array_values((array) ($inputs['at_risk_invoices'] ?? [])),
+                'at_risk_invoices' => array_slice($atRisk, 0, self::AT_RISK_LIMIT),
+                'at_risk_count' => count($atRisk),
+                'at_risk_amount' => round($atRiskTotal, 2),
+                'settled_on_time_count' => (int) ($inputs['settled_on_time_count'] ?? 0),
                 'extra_items' => array_values((array) ($inputs['extra_items'] ?? [])),
                 'corrections' => array_values((array) ($inputs['corrections'] ?? [])),
                 'new_clients' => array_values((array) ($inputs['new_clients'] ?? [])),

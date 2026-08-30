@@ -15,7 +15,8 @@ final class PayrollInputs
     /**
      * @param  string  $month  первое число месяца, Y-m-d
      * @param  list<PlannedClientInput>  $plannedClients  партнёры с планом на месяц и их факт
-     * @param  list<InvoiceInput>  $invoices  накладные, закрытые в месяце с известной задержкой
+     * @param  list<InvoiceInput>  $invoices  накладные месяца с задержкой хотя бы в день
+     *                                        (закрытые день в день не хранятся — их только считают)
      * @param  list<InvoiceInput>  $atRiskInvoices  неоплаченные накладные со сроком не позже конца месяца
      * @param  list<AdjustmentInput>  $extraItems  позиции доп. дохода
      * @param  list<AdjustmentInput>  $corrections  корректировки РОПа
@@ -30,6 +31,7 @@ final class PayrollInputs
         public readonly array $plannedClients = [],
         public readonly array $invoices = [],
         public readonly array $atRiskInvoices = [],
+        public readonly int $settledOnTimeCount = 0,
         public readonly array $extraItems = [],
         public readonly array $corrections = [],
         public readonly array $newClients = [],
@@ -73,6 +75,7 @@ final class PayrollInputs
             'planned_clients' => array_map(fn (PlannedClientInput $c): array => $c->toArray(), $this->plannedClients),
             'invoices' => array_map(fn (InvoiceInput $i): array => $i->toArray(), $this->invoices),
             'at_risk_invoices' => array_map(fn (InvoiceInput $i): array => $i->toArray(), $this->atRiskInvoices),
+            'settled_on_time_count' => $this->settledOnTimeCount,
             'extra_items' => array_map(fn (AdjustmentInput $a): array => $a->toArray(), $this->extraItems),
             'corrections' => array_map(fn (AdjustmentInput $a): array => $a->toArray(), $this->corrections),
             'new_clients' => $this->newClients,
@@ -101,6 +104,7 @@ final class PayrollInputs
             plannedClients: $list($data['planned_clients'] ?? [], fn (array $row) => PlannedClientInput::fromArray($row)),
             invoices: $list($data['invoices'] ?? [], fn (array $row) => InvoiceInput::fromArray($row)),
             atRiskInvoices: $list($data['at_risk_invoices'] ?? [], fn (array $row) => InvoiceInput::fromArray($row)),
+            settledOnTimeCount: (int) ($data['settled_on_time_count'] ?? 0),
             extraItems: $list($data['extra_items'] ?? [], fn (array $row) => AdjustmentInput::fromArray($row)),
             corrections: $list($data['corrections'] ?? [], fn (array $row) => AdjustmentInput::fromArray($row)),
             newClients: $list($data['new_clients'] ?? [], fn (array $row) => $row),

@@ -28,6 +28,7 @@ class PayrollCalculationService
         private readonly PayrollCalculator $calculator,
         private readonly PayrollForecaster $forecaster,
         private readonly PayrollAdvisor $advisor,
+        private readonly PayrollWhatIfService $whatIf,
     ) {}
 
     /**
@@ -270,6 +271,7 @@ class PayrollCalculationService
     {
         $forecast = $this->forecaster->forecast($params, $inputs, $breakdown);
         $forecast['advice'] = $this->advisor->advise($params, $inputs, $breakdown);
+        $forecast['whatif'] = $this->whatIf->curves($params, $inputs, $breakdown);
 
         return $forecast;
     }

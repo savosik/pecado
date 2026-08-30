@@ -24,12 +24,12 @@ class SalaryComponent extends AbstractComponent
 
     public function description(): string
     {
-        return 'Фиксированная часть дохода за месяц. Не зависит от выручки, клиентов и просрочек.';
+        return 'Фиксированная часть. Не зависит от выручки, клиентов и просрочек.';
     }
 
     public function howComputed(): string
     {
-        return 'Сумма из настроек менеджера на месяц; если на месяц не задана — постоянная, иначе — из схемы отдела.';
+        return 'Берётся из настроек: на месяц, иначе личная, иначе по схеме отдела.';
     }
 
     public function kind(): ComponentKind

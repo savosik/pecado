@@ -26,7 +26,7 @@ class ManualCorrectionComponent extends ExtraIncomeComponent
 
     public function description(): string
     {
-        return 'Ручная поправка руководителя отдела: доплата или удержание, которые формула не предусматривает. Всегда с основанием.';
+        return 'Доплата или удержание от руководителя — то, что формула не предусматривает. Всегда с основанием.';
     }
 
     public function howComputed(): string

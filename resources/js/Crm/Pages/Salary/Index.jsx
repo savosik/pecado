@@ -5,7 +5,10 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Alert } from '@/components/ui/alert';
 import { useSalaryPolling } from './components/useSalaryPolling';
 import EarningsHero from './components/EarningsHero';
-import PlanProgress from './components/PlanProgress';
+import GaugeRow from './components/GaugeRow';
+import WhyPanel from './components/WhyPanel';
+import PayCurve from './components/PayCurve';
+import PenaltyScale from './components/PenaltyScale';
 import IncomeWaterfall from './components/IncomeWaterfall';
 import MetricExplainer from './components/MetricExplainer';
 import PenaltyInvoices from './components/PenaltyInvoices';
@@ -98,20 +101,27 @@ export default function SalaryIndex(props) {
                         <Alert key={w} status="warning" title={w} />
                     ))}
 
+                    <GaugeRow calculation={calc} />
+
                     <SimpleGrid columns={{ base: 1, xl: 2 }} gap={5} alignItems="stretch">
-                        <PlanProgress calculation={calc} explanations={data.explanations} />
-                        <IncomeWaterfall calculation={calc} />
+                        <WhyPanel calculation={calc} />
+                        {!calc.is_frozen && <PayCurve whatif={calc.forecast?.whatif} />}
                     </SimpleGrid>
+
+                    <PenaltyScale scale={calc.forecast?.whatif?.penalty} />
 
                     {!calc.is_frozen && <LeverCards advice={calc.forecast?.advice} />}
 
                     {!calc.is_frozen && <ForecastChart forecast={calc.forecast} current={calc} />}
 
-                    <MetricExplainer calculation={calc} explanations={data.explanations} />
-
                     <SimpleGrid columns={{ base: 1, xl: 2 }} gap={5} alignItems="start">
                         <PenaltyInvoices calculation={calc} />
                         <PlannedClients calculation={calc} />
+                    </SimpleGrid>
+
+                    <SimpleGrid columns={{ base: 1, xl: 2 }} gap={5} alignItems="start">
+                        <IncomeWaterfall calculation={calc} />
+                        <MetricExplainer calculation={calc} explanations={data.explanations} />
                     </SimpleGrid>
 
                     <ShipmentsTimeline timeline={data.timeline} />

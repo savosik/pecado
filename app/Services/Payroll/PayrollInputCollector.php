@@ -90,6 +90,7 @@ class PayrollInputCollector
             plannedClients: $this->plannedClients($clientIds, $names, $period),
             invoices: $this->settledInvoices($clientIds, $names, $period),
             atRiskInvoices: $this->atRiskInvoices($clientIds, $names, $period),
+            settledOnTimeCount: $this->settledOnTimeCount($clientIds, $period),
             extraItems: $this->adjustments($managerId, $period, PayrollManualAdjustment::COMPONENT_EXTRA_INCOME),
             corrections: $this->adjustments($managerId, $period, PayrollManualAdjustment::COMPONENT_MANUAL_CORRECTION),
             newClients: $this->newClients($clientIds, $names, $period, $newClientsParams),
@@ -358,7 +359,28 @@ class PayrollInputCollector
     }
 
     /**
-     * Накладные партнёров, закрытые в месяце с известной задержкой.
+     * Сколько накладных месяца закрыто без задержки — числом, а не строками.
+     *
+     * У менеджера их сотни, а расчёту от них нужен только счётчик: строка
+     * снимка иначе разрастается до полумегабайта и грузит и базу, и опрос страницы.
+     *
+     * @param  list<int>  $clientIds
+     */
+    private function settledOnTimeCount(array $clientIds, CarbonImmutable $period): int
+    {
+        if ($clientIds === []) {
+            return 0;
+        }
+
+        return PayrollInvoiceSettlement::query()
+            ->whereIn('user_id', $clientIds)
+            ->settledIn($period)
+            ->where('delay_working_days', '<=', 0)
+            ->count();
+    }
+
+    /**
+     * Накладные партнёров, закрытые в месяце с задержкой хотя бы в один рабочий день.
      *
      * @param  list<int>  $clientIds
      * @param  array<int, string>  $names
@@ -373,6 +395,7 @@ class PayrollInputCollector
         return PayrollInvoiceSettlement::query()
             ->whereIn('user_id', $clientIds)
             ->settledIn($period)
+            ->where('delay_working_days', '>', 0)
             ->orderBy('settled_on')
             ->orderBy('id')
             ->get(self::INVOICE_COLUMNS)
