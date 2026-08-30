@@ -5,9 +5,9 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Alert } from '@/components/ui/alert';
 import { useSalaryPolling } from './components/useSalaryPolling';
 import EarningsHero from './components/EarningsHero';
-import GaugeRow from './components/GaugeRow';
+import ScoreBars from './components/ScoreBars';
 import WhyPanel from './components/WhyPanel';
-import PayCurve from './components/PayCurve';
+import SalaryCalculator from './components/SalaryCalculator';
 import PenaltyScale from './components/PenaltyScale';
 import IncomeWaterfall from './components/IncomeWaterfall';
 import MetricExplainer from './components/MetricExplainer';
@@ -101,14 +101,21 @@ export default function SalaryIndex(props) {
                         <Alert key={w} status="warning" title={w} />
                     ))}
 
-                    <GaugeRow calculation={calc} />
+                    <ScoreBars calculation={calc} />
+
+                    {!calc.is_frozen && (
+                        <SalaryCalculator
+                            calculation={calc}
+                            month={data.month}
+                            managerId={data.manager?.id}
+                            canSeeAll={data.can_see_all}
+                        />
+                    )}
 
                     <SimpleGrid columns={{ base: 1, xl: 2 }} gap={5} alignItems="stretch">
                         <WhyPanel calculation={calc} />
-                        {!calc.is_frozen && <PayCurve whatif={calc.forecast?.whatif} />}
+                        <PenaltyScale scale={calc.forecast?.whatif?.penalty} />
                     </SimpleGrid>
-
-                    <PenaltyScale scale={calc.forecast?.whatif?.penalty} />
 
                     {!calc.is_frozen && <LeverCards advice={calc.forecast?.advice} />}
 

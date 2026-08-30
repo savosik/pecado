@@ -7,6 +7,7 @@ use App\Services\Payroll\PayrollCalculationService;
 use App\Services\Payroll\PayrollCatalog;
 use App\Services\Payroll\PayrollInputCollector;
 use App\Services\Payroll\PayrollScopeResolver;
+use App\Services\Payroll\PayrollWhatIfService;
 use App\Services\Payroll\Support\MonthLabel;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -31,6 +32,9 @@ class SalaryController extends CrmController
         private readonly PayrollCalculationPresenter $presenter,
         private readonly PayrollCatalog $catalog,
         private readonly PayrollInputCollector $collector,
+        private readonly \App\Services\Payroll\PayrollCalculator $calculator,
+        private readonly \App\Services\Payroll\PayrollParamsResolver $paramsResolver,
+        private readonly PayrollWhatIfService $whatIf,
     ) {}
 
     public function index(Request $request): Response
@@ -41,6 +45,81 @@ class SalaryController extends CrmController
     public function data(Request $request): JsonResponse
     {
         return response()->json($this->payload($request));
+    }
+
+    /**
+     * Калькулятор «что если»: ползунки менеджера считаются тем же калькулятором.
+     *
+     * Формулы на фронте нет намеренно — иначе ползунок и настоящий расчёт
+     * рано или поздно разойдутся. Страница присылает три числа, сервер
+     * возвращает готовый разбор.
+     */
+    public function simulate(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'manager' => ['nullable', 'integer', 'min:1'],
+            'month' => ['nullable', 'string', 'regex:/^\d{4}-\d{2}$/'],
+            'revenue' => ['required', 'numeric', 'min:0', 'max:999999999999'],
+            'active_clients' => ['required', 'integer', 'min:0'],
+            'penalty' => ['required', 'numeric', 'min:0', 'max:999999999999'],
+        ], [
+            'revenue.required' => 'Не передана выручка.',
+            'active_clients.required' => 'Не передано число активных клиентов.',
+            'penalty.required' => 'Не передан штраф.',
+        ]);
+
+        $actor = $this->crmActor($request);
+        $month = $this->month($request);
+        $manager = $this->scopes->manager($actor, $request->integer('manager') ?: null);
+
+        if ($manager === null || ! $manager->payroll_enabled) {
+            return response()->json(['message' => 'Расчёт для этого менеджера не ведётся.'], 422);
+        }
+
+        $managerId = (int) $manager->getKey();
+        $snapshot = $this->calculations->ensureDraft($managerId, $month);
+        $inputs = \App\Services\Payroll\Dto\PayrollInputs::fromArray((array) $snapshot->inputs);
+        $params = $this->paramsResolver->effective($managerId, $month);
+
+        // Штраф задаётся суммой: подменяем накладные одной синтетической строкой
+        // с той задержкой, которая даёт ровно этот штраф по действующей ступени.
+        $penalty = (float) $data['penalty'];
+        $tiers = (array) ($params->for('kpi_bonus')['discipline_penalty']['tiers'] ?? []);
+        $coefficient = (float) ($tiers[0]['coefficient'] ?? 1.0);
+        $days = (int) ($tiers[0]['from_days'] ?? 3);
+
+        $simulated = $inputs->with([
+            'revenue' => (float) $data['revenue'],
+            'planned_clients' => $this->whatIf->withActive($inputs, (int) $data['active_clients']),
+            'invoices' => $penalty <= 0.009 ? [] : [[
+                'shipment_id' => 0,
+                'erp_number' => null,
+                'partner_id' => null,
+                'partner_name' => '',
+                'amount' => round($penalty / max(0.01, $coefficient), 2),
+                'due_on' => null,
+                'settled_on' => $inputs->month,
+                'delay_working_days' => $days,
+                'delay_calendar_days' => $days,
+                'source' => 'simulation',
+                'payment_status' => 'paid',
+            ]],
+        ]);
+
+        $breakdown = $this->calculator->calculate($params, $simulated);
+        $kpi = $breakdown->component('kpi_bonus');
+
+        return response()->json([
+            'total' => $breakdown->total,
+            'components' => array_map(fn ($c): array => [
+                'key' => $c->key,
+                'label' => $c->label,
+                'amount' => $c->amount,
+            ], $breakdown->components),
+            'performance' => $kpi?->meta['performance'] ?? null,
+            'multiplier' => $kpi?->meta['multiplier'] ?? null,
+            'capped' => (bool) ($kpi?->meta['capped'] ?? false),
+        ]);
     }
 
     /**

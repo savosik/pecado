@@ -193,9 +193,11 @@ class PayrollWhatIfService
     }
 
     /**
+     * Пометить N плановых клиентов купившими — крупные по плану первыми.
+     *
      * @return list<array<string, mixed>>
      */
-    private function withActive(PayrollInputs $inputs, int $count): array
+    public function withActive(PayrollInputs $inputs, int $count): array
     {
         $rows = $inputs->plannedClients;
         usort($rows, fn (PlannedClientInput $a, PlannedClientInput $b): int => ($b->plan ?? 0) <=> ($a->plan ?? 0));

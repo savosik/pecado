@@ -626,6 +626,8 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     Route::middleware('permission:crm-salary.view')->group(function () {
         Route::get('/salary', [SalaryController::class, 'index'])->name('salary.index');
         Route::get('/salary/data', [SalaryController::class, 'data'])->name('salary.data');
+        // Калькулятор с ползунками: считает тот же калькулятор, что и снимок.
+        Route::post('/salary/simulate', [SalaryController::class, 'simulate'])->name('salary.simulate');
         // Сводка по отделу — второе право: «вижу чужие деньги», как разрезы планов.
         Route::get('/salary/team', [SalaryController::class, 'team'])
             ->middleware('permission:crm-clients-all.view')
