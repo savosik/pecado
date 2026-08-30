@@ -146,7 +146,8 @@ class PayrollCalculationService
      * Сводка по отделу за месяц: снимок каждого активного менеджера с учётной записью.
      *
      * Менеджер без снимка получает черновик здесь же — сводка обязана показывать
-     * всех, а не только тех, кто уже открывал свою страницу.
+     * всех, а не только тех, кто уже открывал свою страницу. Исключённые из
+     * расчёта (`payroll_enabled = 0`) в сводку не попадают вовсе.
      *
      * @return list<array<string, mixed>>
      */
@@ -156,6 +157,7 @@ class PayrollCalculationService
 
         $managers = PersonalManager::query()
             ->active()
+            ->inPayroll()
             ->whereNotNull('user_id')
             ->orderBy('name')
             ->get(['id', 'name']);

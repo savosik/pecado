@@ -138,6 +138,7 @@ class SalaryController extends CrmController
             'month_label' => MonthLabel::ru($month),
             'months' => $this->months(),
             'manager' => $manager === null ? null : ['id' => (int) $manager->getKey(), 'name' => (string) $manager->name],
+            'participates' => $manager === null ? null : (bool) $manager->payroll_enabled,
             'scope_options' => $this->scopes->options($actor),
             'can_see_all' => $this->scopes->seesAll($actor),
             'can_edit' => $actor->can('crm-salary.edit'),
@@ -148,7 +149,9 @@ class SalaryController extends CrmController
             'server_time' => now()->toIso8601String(),
         ];
 
-        if ($manager === null) {
+        // Исключённому из расчёта черновик не заводим: пустая страница с объяснением
+        // честнее, чем нули, которые выглядят как «премия не начислена».
+        if ($manager === null || ! $manager->payroll_enabled) {
             return $payload;
         }
 

@@ -48,12 +48,14 @@ class PersonalManager extends Model implements HasMedia
         'phone',
         'email',
         'is_active',
+        'payroll_enabled',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'payroll_enabled' => 'boolean',
         ];
     }
 
@@ -71,6 +73,21 @@ class PersonalManager extends Model implements HasMedia
     public function scopeActive(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
     {
         return $query->where('personal_managers.is_active', true);
+    }
+
+    /**
+     * Карточки, которые участвуют в расчёте зарплаты (эпик sal-00).
+     *
+     * Отдельно от {@see scopeActive()}: карточка бывает рабочей в CRM (на ней
+     * клиенты, планы, отгрузки), но зарплату по схеме отдела человек не получает —
+     * владелец, руководитель, «общая» карточка ничейных партнёров.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<self>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<self>
+     */
+    public function scopeInPayroll(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->where('personal_managers.payroll_enabled', true);
     }
 
     /**

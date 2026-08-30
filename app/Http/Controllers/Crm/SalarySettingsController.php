@@ -154,6 +154,35 @@ class SalarySettingsController extends CrmController
         ]);
     }
 
+    /**
+     * Включить или исключить менеджера из расчёта зарплаты.
+     *
+     * Карточку менеджера деактивировать нельзя: на ней висят клиенты, планы и
+     * отгрузки, она нужна остальной CRM. Участие в зарплате — отдельное свойство.
+     */
+    public function toggleParticipation(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'manager_id' => ['required', 'integer', 'min:1'],
+            'enabled' => ['required', 'boolean'],
+        ], [
+            'manager_id.required' => 'Не указан менеджер.',
+            'enabled.required' => 'Не указано, включать или исключать.',
+        ]);
+
+        $manager = PersonalManager::query()->findOrFail((int) $data['manager_id']);
+        $manager->forceFill(['payroll_enabled' => (bool) $data['enabled']])->save();
+
+        if ($data['enabled']) {
+            PayrollInputsChanged::dispatch([(int) $manager->getKey()], 'participation');
+        }
+
+        return response()->json([
+            'saved' => true,
+            'manager' => $this->settings->managerRow($manager, $this->month($request)),
+        ]);
+    }
+
     public function copyMonth(Request $request): JsonResponse
     {
         $data = $request->validate([

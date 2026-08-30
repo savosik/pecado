@@ -1,5 +1,6 @@
 import { Badge, Box, HStack, Table, Text } from '@chakra-ui/react';
 import RowActions from '@/shared/Panel/RowActions';
+import { Switch } from '@/components/ui/switch';
 import { fmtFactor, fmtPercent, fmtRub0 } from '../format';
 
 const SOURCE = {
@@ -28,13 +29,14 @@ const STATUS_PALETTE = { draft: 'blue', approved: 'green', paid: 'gray' };
  * Сетка «менеджер × параметры» за месяц. Бейдж у значения — откуда оно:
  * без бейджа — по схеме, «постоянно» — личное, «на месяц» — отклонение месяца.
  */
-export default function ParamsGrid({ managers, onEdit }) {
+export default function ParamsGrid({ managers, onEdit, onToggleParticipation }) {
     return (
         <Box overflowX="auto" bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl">
             <Table.Root size="sm" variant="line">
                 <Table.Header>
                     <Table.Row>
                         <Table.ColumnHeader>Менеджер</Table.ColumnHeader>
+                        <Table.ColumnHeader>В расчёте</Table.ColumnHeader>
                         <Table.ColumnHeader textAlign="right">Оклад</Table.ColumnHeader>
                         <Table.ColumnHeader textAlign="right">База KPI</Table.ColumnHeader>
                         <Table.ColumnHeader textAlign="right">Потолок</Table.ColumnHeader>
@@ -50,10 +52,18 @@ export default function ParamsGrid({ managers, onEdit }) {
                         const src = m.sources ?? {};
 
                         return (
-                            <Table.Row key={m.id}>
+                            <Table.Row key={m.id} opacity={m.payroll_enabled === false ? 0.5 : 1}>
                                 <Table.Cell>
                                     <Text fontWeight="600">{m.name}</Text>
                                     {!m.has_account && <Text fontSize="xs" color="fg.muted">без учётной записи CRM</Text>}
+                                </Table.Cell>
+                                <Table.Cell>
+                                    <Switch
+                                        size="sm"
+                                        checked={m.payroll_enabled !== false}
+                                        onCheckedChange={(e) => onToggleParticipation?.(m, e.checked)}
+                                        disabled={m.calculation?.is_frozen}
+                                    />
                                 </Table.Cell>
                                 <Table.Cell textAlign="right"><Cell value={fmtRub0(m.params?.salary?.amount)} source={src.salary?.amount} /></Table.Cell>
                                 <Table.Cell textAlign="right"><Cell value={fmtRub0(kpi.base)} source={src.kpi_bonus?.base} /></Table.Cell>

@@ -49,6 +49,18 @@ export default function SalarySettings(props) {
         managers: data.managers.map((m) => (m.id === row.id ? row : m)),
     });
 
+    const toggleParticipation = async (manager, enabled) => {
+        try {
+            const res = await axios.post('/crm/salary/settings/participation', { manager_id: manager.id, enabled });
+            replaceManager(res.data.manager);
+            toastSuccess(enabled
+                ? `${manager.name} снова участвует в расчёте зарплаты`
+                : `${manager.name} исключён из расчёта — карточка менеджера в остальной CRM не меняется`);
+        } catch (e) {
+            toastError(e.response?.data?.message ?? 'Не удалось изменить участие');
+        }
+    };
+
     const copyPrevious = async () => {
         const [y, m] = data.month.split('-').map(Number);
         const prev = new Date(y, m - 2, 1);
@@ -110,10 +122,15 @@ export default function SalarySettings(props) {
 
                 {tab === 'params' && (
                     <Box>
-                        <ParamsGrid managers={data.managers ?? []} onEdit={setEditing} />
+                        <ParamsGrid managers={data.managers ?? []} onEdit={setEditing} onToggleParticipation={toggleParticipation} />
                         <Text fontSize="xs" color="fg.muted" mt={2}>
                             Без бейджа — значение по схеме отдела. «Постоянно» — личное значение менеджера,
                             «на месяц» — отклонение только для {data.month_label?.toLowerCase()}.
+                        </Text>
+                        <Text fontSize="xs" color="fg.muted" mt={1}>
+                            Тумблер «В расчёте» убирает менеджера из зарплаты отдела, не трогая его карточку
+                            в остальной CRM: клиенты, планы и отчёты остаются на месте. Для утверждённого
+                            месяца тумблер заблокирован — сначала переоткройте расчёт.
                         </Text>
                     </Box>
                 )}

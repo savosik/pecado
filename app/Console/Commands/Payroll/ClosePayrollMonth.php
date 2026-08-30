@@ -31,7 +31,7 @@ class ClosePayrollMonth extends Command
         $rows = [];
         $sum = 0.0;
 
-        $managers = PersonalManager::query()->active()->whereNotNull('user_id')->orderBy('name')->get(['id', 'name']);
+        $managers = PersonalManager::query()->active()->inPayroll()->whereNotNull('user_id')->orderBy('name')->get(['id', 'name']);
 
         foreach ($managers as $manager) {
             $calculation = $service->recalculateDraft((int) $manager->getKey(), $month, 'close-month')

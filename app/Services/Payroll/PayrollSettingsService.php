@@ -44,10 +44,11 @@ class PayrollSettingsService
             $calculations[(int) $calculation->personal_manager_id] = $calculation;   // последняя версия побеждает
         }
 
+        // Исключённые из расчёта тоже в списке: иначе вернуть их обратно было бы нечем.
         $managers = PersonalManager::query()
             ->active()
             ->orderBy('name')
-            ->get(['id', 'name', 'user_id'])
+            ->get(['id', 'name', 'user_id', 'payroll_enabled'])
             ->map(fn (PersonalManager $manager): array => $this->managerRow($manager, $period, $calculations[(int) $manager->getKey()] ?? null))
             ->all();
 
@@ -105,6 +106,7 @@ class PayrollSettingsService
             'id' => $managerId,
             'name' => (string) $manager->name,
             'has_account' => $manager->user_id !== null,
+            'payroll_enabled' => (bool) $manager->payroll_enabled,
             'params' => $effective->byComponent,
             'sources' => $effective->sources,
             'permanent' => $this->params->layer($managerId, null),

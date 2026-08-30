@@ -68,6 +68,7 @@ class RecalculatePayroll extends Command
 
         $active = PersonalManager::query()
             ->active()
+            ->inPayroll()
             ->whereNotNull('user_id')
             ->pluck('id')
             ->map('intval')

@@ -74,6 +74,14 @@ export default function SalaryIndex(props) {
                 )}
             />
 
+            {data.manager && data.participates === false && (
+                <Alert status="info" title={`${data.manager.name}: расчёт зарплаты не ведётся`}>
+                    Эта карточка менеджера исключена из зарплаты отдела — например, за ней числится общая
+                    база партнёров, а доход считается вне схемы отдела продаж. Включить обратно можно
+                    в «Настройках зарплаты», тумблер «В расчёте».
+                </Alert>
+            )}
+
             {!data.manager && (
                 <Alert status="info" title="Карточка менеджера не привязана">
                     {data.can_see_all

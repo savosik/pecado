@@ -647,6 +647,8 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::delete('/salary/settings/params', [SalarySettingsController::class, 'resetParams'])->name('salary.settings.params.reset');
         Route::post('/salary/settings/copy-month', [SalarySettingsController::class, 'copyMonth'])->name('salary.settings.copy-month');
         Route::post('/salary/settings/scheme', [SalarySettingsController::class, 'storeScheme'])->name('salary.settings.scheme');
+        // Участие менеджера в расчёте: у карточки может быть база отдела, а зарплаты по схеме — нет.
+        Route::post('/salary/settings/participation', [SalarySettingsController::class, 'toggleParticipation'])->name('salary.settings.participation');
         Route::post('/salary/adjustments', [SalaryAdjustmentController::class, 'store'])->name('salary.adjustments.store');
         Route::delete('/salary/adjustments/{adjustment}', [SalaryAdjustmentController::class, 'destroy'])
             ->name('salary.adjustments.destroy')
