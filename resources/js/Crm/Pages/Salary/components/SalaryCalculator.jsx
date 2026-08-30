@@ -83,11 +83,24 @@ export default function SalaryCalculator({ calculation, month, managerId, canSee
     return (
         <Collapsible.Root
             bg="bg.panel"
-            borderWidth="1px"
-            borderColor="border"
+            borderWidth="2px"
+            borderColor="transparent"
             borderRadius="xl"
             overflow="hidden"
             onOpenChange={(e) => { if (!e.open) reset(); }}
+            /*
+             * Золотая рамка градиентом: два фоновых слоя — панель по padding-box,
+             * золото по border-box. Так граница получает переход, которого
+             * border-color дать не может, а внутренняя заливка остаётся токеном
+             * темы и не ломается в тёмной.
+             */
+            css={{
+                backgroundImage:
+                    'linear-gradient(var(--chakra-colors-bg-panel), var(--chakra-colors-bg-panel)),'
+                    + ' linear-gradient(135deg, #F7CB45 0%, #EDA92B 55%, #DE8A20 100%)',
+                backgroundOrigin: 'border-box',
+                backgroundClip: 'padding-box, border-box',
+            }}
         >
             <Collapsible.Trigger asChild>
                 <HStack
@@ -104,8 +117,8 @@ export default function SalaryCalculator({ calculation, month, managerId, canSee
                     <Box
                         p={2.5}
                         borderRadius="lg"
-                        bg="blue.subtle"
-                        color="blue.fg"
+                        bg="yellow.subtle"
+                        color="yellow.fg"
                         display="flex"
                         flexShrink={0}
                     >
