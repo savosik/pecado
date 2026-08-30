@@ -82,6 +82,17 @@ class DebtUnfreezeIntegrationTest extends TestCase
     public function balance_update_from_bus_lifts_the_level_once_debt_is_settled(): void
     {
         $line = $this->overduePlan(50000, 40);
+        // Свежая отгрузка: просрочка — не весь долг, значит стоп-отгрузка
+        // не положена и ступень остаётся «заказы закрыты».
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'user_id' => $this->user->id,
+            'company_id' => $this->company->id,
+            'date' => $this->today->subDays(2)->toDateString(),
+            'amount' => -300000,
+            'amount_rub' => -300000,
+        ]);
         app(DebtStateService::class)->recalculate($this->today);
         $this->assertSame(DebtLevel::NO_ORDERS, $this->partnerLevel());
 

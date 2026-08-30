@@ -23,26 +23,30 @@ class DebtLadderTest extends TestCase
 
         $this->assertSame(5000.0, $ladder->minOverdue());
         $this->assertSame(5, $ladder->graceBankDays());
-        // Блокировка заказов — 14 дней (указание руководства 30.08.2026).
+        // Указание руководства 30.08.2026: предзаказы 10, заказы 14, стоп 32.
+        $this->assertSame(10, $ladder->daysFor(DebtLevel::NO_PREORDERS));
         $this->assertSame(14, $ladder->daysFor(DebtLevel::NO_ORDERS));
-        // Предзаказы режутся тем же порогом: раньше некуда, льготный период
-        // заканчивается на 8-й день.
-        $this->assertSame(14, $ladder->daysFor(DebtLevel::NO_PREORDERS));
-        $this->assertSame(60, $ladder->daysFor(DebtLevel::HOLD));
+        $this->assertSame(32, $ladder->daysFor(DebtLevel::HOLD));
         $this->assertSame(0.9, $ladder->holdShare());
         $this->assertSame(3, $ladder->staleAfterDays());
     }
 
     #[Test]
-    public function equal_thresholds_give_no_orders_not_no_preorders(): void
+    public function steps_follow_the_agreed_days(): void
     {
         $ladder = DebtLadder::fromConfig();
 
+        // 8–9-й день — только письмо и плашка, ограничений нет.
         $this->assertSame(DebtLevel::OVERDUE, $ladder->levelFor(50000, 8));
-        $this->assertSame(DebtLevel::OVERDUE, $ladder->levelFor(50000, 13));
-        // На 14-й день закрываются и предзаказы, и заказы контрагента.
+        $this->assertSame(DebtLevel::OVERDUE, $ladder->levelFor(50000, 9));
+        $this->assertSame(DebtLevel::NO_PREORDERS, $ladder->levelFor(50000, 10));
+        $this->assertSame(DebtLevel::NO_PREORDERS, $ladder->levelFor(50000, 13));
         $this->assertSame(DebtLevel::NO_ORDERS, $ladder->levelFor(50000, 14));
-        $this->assertTrue($ladder->levelFor(50000, 14)->blocksPreorders());
+        // Полный стоп — только когда просрочка почти весь долг партнёра.
+        $this->assertSame(DebtLevel::NO_ORDERS, $ladder->levelFor(50000, 32));
+        $this->assertSame(DebtLevel::HOLD, $ladder->levelFor(50000, 32, partnerHold: true));
+        $this->assertTrue($ladder->holdQualifies(50000, 50000, 32, 50000));
+        $this->assertFalse($ladder->holdQualifies(50000, 50000, 31, 50000));
         // Ниже отсечки ступени нет вовсе.
         $this->assertSame(DebtLevel::CLEAN, $ladder->levelFor(4999, 400));
     }
