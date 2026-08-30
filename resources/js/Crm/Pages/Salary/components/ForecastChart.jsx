@@ -9,6 +9,7 @@ const SCENARIO_TONE = {
     pessimistic: 'red',
     base: 'blue',
     optimistic: 'green',
+    perfect: 'purple',
 };
 
 /**
@@ -23,7 +24,7 @@ export default function ForecastChart({ forecast, current }) {
         return null;
     }
 
-    const scenarios = ['pessimistic', 'base', 'optimistic'].map((k) => forecast.scenarios[k]).filter(Boolean);
+    const scenarios = ['pessimistic', 'base', 'optimistic', 'perfect'].map((k) => forecast.scenarios[k]).filter(Boolean);
     const curve = (forecast.curve ?? []).map((p) => ({
         ...p,
         bandWidth: p.low !== null && p.high !== null ? p.high - p.low : null,
@@ -48,7 +49,7 @@ export default function ForecastChart({ forecast, current }) {
             )}
 
             {!closed && (
-                <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} mb={4}>
+                <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} gap={4} mb={4}>
                     {scenarios.map((s) => {
                         const delta = forecast.current_total === undefined ? null : s.total - forecast.current_total;
 

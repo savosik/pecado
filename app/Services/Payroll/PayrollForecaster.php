@@ -35,6 +35,7 @@ class PayrollForecaster
         'pessimistic' => 'Если долги не соберу',
         'base' => 'Если пойдёт как идёт',
         'optimistic' => 'Если закрою план и верну клиентов',
+        'perfect' => 'То же самое плюс ни одной просрочки',
     ];
 
     public function __construct(
@@ -69,6 +70,7 @@ class PayrollForecaster
                 'pessimistic' => $snapshot + ['key' => 'pessimistic', 'label' => self::SCENARIO_LABELS['pessimistic']],
                 'base' => $snapshot,
                 'optimistic' => $snapshot + ['key' => 'optimistic', 'label' => self::SCENARIO_LABELS['optimistic']],
+                'perfect' => $snapshot + ['key' => 'perfect', 'label' => self::SCENARIO_LABELS['perfect']],
             ];
         } else {
             $rate = $inputs->revenue / $passed;
@@ -91,10 +93,16 @@ class PayrollForecaster
                 'at_risk_invoices' => [],
             ]);
 
+            // Предел месяца: к оптимистичному добавляем отсутствие уже случившихся
+            // задержек. Недостижимо задним числом — но именно эта разница и есть
+            // цена просрочек, и без неё потолок выглядел бы как «135 тысяч и всё».
+            $perfect = $optimistic->with(['invoices' => []]);
+
             $scenarios = [
                 'pessimistic' => $this->scenario('pessimistic', $pessimistic, $this->calculator->calculate($params, $pessimistic), $inputs),
                 'base' => $this->scenario('base', $base, $this->calculator->calculate($params, $base), $inputs),
                 'optimistic' => $this->scenario('optimistic', $optimistic, $this->calculator->calculate($params, $optimistic), $inputs),
+                'perfect' => $this->scenario('perfect', $perfect, $this->calculator->calculate($params, $perfect), $inputs),
             ];
         }
 
@@ -158,6 +166,9 @@ class PayrollForecaster
                 $planned,
                 $active,
             ),
+            // Задним числом недостижимо: деньги уже пришли поздно. Но это предел
+            // месяца, и разница с предыдущим сценарием — цена случившихся задержек.
+            'perfect' => 'предел месяца: к тому же ни одна оплата не пришла с опозданием',
             default => '',
         };
     }
