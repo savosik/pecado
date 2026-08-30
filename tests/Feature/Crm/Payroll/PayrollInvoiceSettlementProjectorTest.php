@@ -162,6 +162,56 @@ class PayrollInvoiceSettlementProjectorTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('Аванс по заказу закрывает реализацию датой отгрузки — задержки нет и разметка не нужна')]
+    public function order_prepayment_closes_shipment_without_delay(): void
+    {
+        $order = \App\Models\Order::factory()->create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'erp_number' => '29УТ-013411',
+            'user_id' => $this->client->id,
+        ]);
+        $shipment = $this->shipment('29УТ-000900', 5000, '2026-07-10');
+        \App\Models\ShipmentItem::create([
+            'shipment_id' => $shipment->id,
+            'product_id' => \App\Models\Product::factory()->create()->id,
+            'order_uuid' => $order->uuid,
+            'quantity' => 1,
+            'price' => 5000,
+            'total' => 5000,
+            'subtotal' => 5000,
+        ]);
+        $this->schedule($shipment, '2026-07-20', 5000, 5000);
+        $this->payment('Заказ клиента 29УТ-013411 от 01.07.2026 12:00:00', '2026-07-03', 5000);
+
+        $row = $this->projector->projectShipment($shipment);
+
+        $this->assertSame('2026-07-10', $row->settled_on->toDateString());   // не раньше отгрузки
+        $this->assertSame(PayrollInvoiceSettlement::SOURCE_MATCHED, $row->settled_source);
+        $this->assertSame(0, $row->delay_working_days);
+        $this->assertFalse($row->needs_review);
+        $this->assertSame('order', $row->payments[0]['kind']);
+
+        // Частичный аванс + доплата по накладной с задержкой: закрывает доплата.
+        $late = $this->shipment('29УТ-000901', 8000, '2026-07-10');
+        \App\Models\ShipmentItem::create([
+            'shipment_id' => $late->id,
+            'product_id' => \App\Models\Product::factory()->create()->id,
+            'order_uuid' => $order->uuid,
+            'quantity' => 1,
+            'price' => 8000,
+            'total' => 8000,
+            'subtotal' => 8000,
+        ]);
+        $this->schedule($late, '2026-07-20', 8000, 8000);
+        $this->payment('Реализация товаров и услуг 29УТ-000901 от 10.07.2026 10:00:00', '2026-07-24', 3000);
+
+        $row = $this->projector->projectShipment($late);
+
+        $this->assertSame('2026-07-24', $row->settled_on->toDateString());
+        $this->assertSame(4, $row->delay_working_days);   // 21, 22, 23, 24 июля
+    }
+
+    #[Test]
     #[TestDox('Неоплаченная накладная не просится на разметку и не имеет задержки')]
     public function unpaid_is_not_flagged(): void
     {

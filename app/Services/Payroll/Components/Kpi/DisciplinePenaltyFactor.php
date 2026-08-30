@@ -121,23 +121,11 @@ class DisciplinePenaltyFactor extends AbstractComponent
         $penalized = array_values(array_filter($evidence, fn (array $row): bool => $row['penalty'] > 0));
 
         $explanation = $penalized === []
-            ? 'Оплат с задержкой в этом месяце нет — штрафа нет'
-            : sprintf(
-                'Штраф %s: %s',
-                Money::rub($total),
-                implode('; ', array_map(
-                    fn (array $row): string => sprintf(
-                        '%s на %s — задержка %d раб. дн. (%s) × %s = %s',
-                        $row['erp_number'] ?? '№ —',
-                        Money::rub($row['amount']),
-                        $row['delay_working_days'],
-                        $row['tier'],
-                        Money::factor($row['coefficient']),
-                        Money::rub($row['penalty']),
-                    ),
-                    $penalized,
-                )),
-            );
+            ? sprintf(
+                'Оплат с задержкой в этом месяце нет — штрафа нет%s',
+                $evidence === [] ? '' : sprintf(' (закрыто в срок: %d накл.)', count($evidence)),
+            )
+            : $this->summarize($penalized, $total, count($evidence));
 
         return new ComponentResult(
             key: $this->key(),
@@ -199,6 +187,58 @@ class DisciplinePenaltyFactor extends AbstractComponent
         usort($tiers, fn (array $a, array $b): int => $a['from_days'] <=> $b['from_days']);
 
         return $tiers;
+    }
+
+    /**
+     * Сводка по ступеням и три самых дорогих накладных — вместо списка на сотню строк.
+     *
+     * @param  list<array<string, mixed>>  $penalized
+     */
+    private function summarize(array $penalized, float $total, int $settledCount): string
+    {
+        $byTier = [];
+        foreach ($penalized as $row) {
+            $key = (string) $row['tier'];
+            $byTier[$key] ??= ['count' => 0, 'amount' => 0.0, 'penalty' => 0.0, 'coefficient' => $row['coefficient']];
+            $byTier[$key]['count']++;
+            $byTier[$key]['amount'] += (float) $row['amount'];
+            $byTier[$key]['penalty'] += (float) $row['penalty'];
+        }
+
+        $tiers = [];
+        foreach ($byTier as $label => $sum) {
+            $tiers[] = sprintf(
+                '%s — %d накл. на %s × %s = %s',
+                $label,
+                $sum['count'],
+                Money::rub($sum['amount']),
+                Money::factor($sum['coefficient']),
+                Money::rub($sum['penalty']),
+            );
+        }
+
+        usort($penalized, fn (array $a, array $b): int => $b['penalty'] <=> $a['penalty']);
+        $top = array_slice($penalized, 0, 3);
+        $topText = implode('; ', array_map(
+            fn (array $row): string => sprintf(
+                '%s на %s (задержка %d раб. дн. → %s)',
+                $row['erp_number'] ?? '№ —',
+                Money::rub($row['amount']),
+                $row['delay_working_days'],
+                Money::rub($row['penalty']),
+            ),
+            $top,
+        ));
+
+        return sprintf(
+            'Штраф %s по %d из %d закрытых накладных: %s. Самые дорогие: %s%s',
+            Money::rub($total),
+            count($penalized),
+            $settledCount,
+            implode('; ', $tiers),
+            $topText,
+            count($penalized) > 3 ? sprintf(' — и ещё %d', count($penalized) - 3) : '',
+        );
     }
 
     /**

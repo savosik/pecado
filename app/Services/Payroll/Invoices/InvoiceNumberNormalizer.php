@@ -40,13 +40,32 @@ final class InvoiceNumberNormalizer
         return $m[1].'-'.$m[2];
     }
 
+    /** Имя объекта расчётов аванса: платёж на заказ до отгрузки. */
+    private const ORDER_PREFIX = 'заказ клиента';
+
     /**
      * Ключ реализации из имени объекта расчётов платежа.
      *
-     * Только для объектов «Реализация …»: платёж на «Заказ клиента» — аванс,
-     * задержки у него не бывает, и его номер ни с какой накладной сравнивать нельзя.
+     * Только для объектов «Реализация …»: номер заказа с номером накладной
+     * сравнивать нельзя — это разные нумерации.
      */
     public function fromObjectName(?string $objectName): ?string
+    {
+        return $this->keyFromObjectName($objectName, self::OBJECT_PREFIX);
+    }
+
+    /**
+     * Ключ заказа из имени объекта расчётов аванса («Заказ клиента 29УТ-006085 от …»).
+     *
+     * Аванс по заказу закрывает реализации этого заказа: деньги пришли раньше
+     * отгрузки, задержки нет. Сопоставляется с `orders.erp_number` через тот же ключ.
+     */
+    public function orderKeyFromObjectName(?string $objectName): ?string
+    {
+        return $this->keyFromObjectName($objectName, self::ORDER_PREFIX);
+    }
+
+    private function keyFromObjectName(?string $objectName, string $prefix): ?string
     {
         if ($objectName === null) {
             return null;
@@ -54,7 +73,7 @@ final class InvoiceNumberNormalizer
 
         $name = trim($objectName);
 
-        if (mb_strtolower(mb_substr($name, 0, mb_strlen(self::OBJECT_PREFIX))) !== self::OBJECT_PREFIX) {
+        if (mb_strtolower(mb_substr($name, 0, mb_strlen($prefix))) !== $prefix) {
             return null;
         }
 

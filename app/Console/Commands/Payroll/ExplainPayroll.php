@@ -38,7 +38,7 @@ class ExplainPayroll extends Command
 
         $this->line(sprintf('%s — %s', $manager->name, MonthLabel::ru($month)));
         $this->line(sprintf(
-            'План %s, реализации %s, плановых клиентов %d (активных %d), накладных со штрафом %d, рабочих дней %d/%d',
+            'План %s, реализации %s, плановых клиентов %d (активных %d), накладных закрыто %d, рабочих дней %d/%d',
             $inputs->plan === null ? '—' : Money::rub($inputs->plan),
             Money::rub($inputs->revenue),
             count($inputs->plannedClients),

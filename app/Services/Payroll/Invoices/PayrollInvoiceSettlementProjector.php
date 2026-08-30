@@ -136,7 +136,9 @@ class PayrollInvoiceSettlementProjector
         $companyIds = $shipments->pluck('company_id')->filter()->unique()->map('intval')->values()->all();
 
         $dueByUuid = $this->dueDates($uuids);
-        $paymentsByKey = $this->payments($userIds, $companyIds);
+        $paymentsByKey = $this->payments($userIds, $companyIds, 'Реализация%', fn (?string $name): ?string => $this->numbers->fromObjectName($name), 'invoice');
+        $orderPaymentsByKey = $this->payments($userIds, $companyIds, 'Заказ клиента%', fn (?string $name): ?string => $this->numbers->orderKeyFromObjectName($name), 'order');
+        $orderKeysByShipment = $this->orderKeys($shipments->modelKeys());
         $managerByUser = $userIds === []
             ? []
             : User::query()->whereIn('id', $userIds)->pluck('personal_manager_id', 'id')->all();
@@ -156,7 +158,23 @@ class PayrollInvoiceSettlementProjector
             $total = (float) $shipment->total_amount;
 
             [$dueOn, $dueSource] = $this->dueFor($shipment, $dueByUuid);
-            [$matchedOn, $paid, $payments] = $this->matchPayments($key === null ? [] : ($paymentsByKey[$key] ?? []), $total);
+            $shippedOn = $shipment->erp_created_at?->toDateString() ?? $shipment->date?->toDateString();
+
+            // Платежи по самой накладной плюс авансы по её заказу — одним потоком
+            // по дате: закрывает тот платёж, на котором накопленная сумма покрыла накладную.
+            $candidates = $key === null ? [] : ($paymentsByKey[$key] ?? []);
+            foreach ($orderKeysByShipment[(int) $shipment->getKey()] ?? [] as $orderKey) {
+                $candidates = array_merge($candidates, $orderPaymentsByKey[$orderKey] ?? []);
+            }
+            usort($candidates, fn (array $a, array $b): int => strcmp($a['date'], $b['date']) ?: strcmp($a['entry_uuid'], $b['entry_uuid']));
+
+            [$matchedOn, $paid, $payments] = $this->matchPayments($candidates, $total);
+
+            // Накладная не может закрыться раньше, чем появилась: аванс по заказу
+            // закрывает её датой отгрузки.
+            if ($matchedOn !== null && $shippedOn !== null && $matchedOn < $shippedOn) {
+                $matchedOn = $shippedOn;
+            }
 
             $manualOn = $current?->manual_settled_on?->toDateString();
             $settledOn = $manualOn ?? $matchedOn;
@@ -180,7 +198,7 @@ class PayrollInvoiceSettlementProjector
                 'user_id' => $shipment->user_id,
                 'company_id' => $shipment->company_id,
                 'personal_manager_id' => $managerId === null ? null : (int) $managerId,
-                'shipped_on' => $shipment->erp_created_at?->toDateString() ?? $shipment->date?->toDateString(),
+                'shipped_on' => $shippedOn,
                 'total_amount' => round($total, 2),
                 'due_on' => $dueOn,
                 'due_source' => $dueSource,
@@ -261,13 +279,14 @@ class PayrollInvoiceSettlementProjector
     }
 
     /**
-     * Платежи партнёров по реализациям, сгруппированные по ключу номера.
+     * Входящие платежи партнёров по объекту расчётов, сгруппированные по ключу номера.
      *
      * @param  list<int>  $userIds
      * @param  list<int>  $companyIds
-     * @return array<string, list<array{entry_uuid: string, date: string, amount: float, document_number: string|null}>>
+     * @param  \Closure(?string): ?string  $keyOf  ключ из имени объекта расчётов
+     * @return array<string, list<array{entry_uuid: string, date: string, amount: float, document_number: string|null, kind: string}>>
      */
-    private function payments(array $userIds, array $companyIds): array
+    private function payments(array $userIds, array $companyIds, string $objectPrefix, \Closure $keyOf, string $kind): array
     {
         if ($userIds === [] && $companyIds === []) {
             return [];
@@ -284,7 +303,7 @@ class PayrollInvoiceSettlementProjector
                     $query->orWhereIn('company_id', $companyIds);
                 }
             })
-            ->where('settlement_object_name', 'like', 'Реализация%')
+            ->where('settlement_object_name', 'like', $objectPrefix)
             ->orderBy('date')
             ->orderBy('id')
             ->get(['uuid', 'date', 'amount', 'settlement_object_name', 'document_number']);
@@ -292,7 +311,7 @@ class PayrollInvoiceSettlementProjector
         $byKey = [];
 
         foreach ($rows as $row) {
-            $key = $this->numbers->fromObjectName($row->settlement_object_name);
+            $key = $keyOf($row->settlement_object_name);
             if ($key === null) {
                 continue;
             }
@@ -302,6 +321,7 @@ class PayrollInvoiceSettlementProjector
                 'date' => $row->date?->toDateString() ?? '',
                 'amount' => abs((float) $row->amount),
                 'document_number' => $row->document_number,
+                'kind' => $kind,
             ];
         }
 
@@ -309,9 +329,45 @@ class PayrollInvoiceSettlementProjector
     }
 
     /**
+     * Заказы, из которых собраны реализации: shipment_id → ключи номеров заказов.
+     *
+     * Связь мягкая — shipment_items.order_uuid, без FK; заказ может быть отгружен
+     * частями, и его аванс засчитывается каждой реализации. Это осознанно: аванс
+     * означает «деньги пришли до отгрузки», а не «ровно за эту накладную».
+     *
+     * @param  list<int|string>  $shipmentIds
+     * @return array<int, list<string>>
+     */
+    private function orderKeys(array $shipmentIds): array
+    {
+        if ($shipmentIds === []) {
+            return [];
+        }
+
+        $rows = DB::table('shipment_items')
+            ->join('orders', 'orders.uuid', '=', 'shipment_items.order_uuid')
+            ->whereIn('shipment_items.shipment_id', $shipmentIds)
+            ->whereNotNull('shipment_items.order_uuid')
+            ->whereNull('orders.deleted_at')
+            ->distinct()
+            ->get(['shipment_items.shipment_id', 'orders.erp_number']);
+
+        $byShipment = [];
+
+        foreach ($rows as $row) {
+            $key = $this->numbers->key($row->erp_number);
+            if ($key !== null) {
+                $byShipment[(int) $row->shipment_id][] = $key;
+            }
+        }
+
+        return $byShipment;
+    }
+
+    /**
      * Закрывающий платёж: первый день, когда накопленные платежи покрыли накладную.
      *
-     * @param  list<array{entry_uuid: string, date: string, amount: float, document_number: string|null}>  $payments
+     * @param  list<array{entry_uuid: string, date: string, amount: float, document_number: string|null, kind: string}>  $payments
      * @return array{0: string|null, 1: float, 2: list<array<string, mixed>>}
      */
     private function matchPayments(array $payments, float $total): array
