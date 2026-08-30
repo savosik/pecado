@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { Badge, Box, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
-import { LuRotateCcw } from 'react-icons/lu';
+import { Badge, Box, Collapsible, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
+import { LuCalculator, LuChevronDown, LuRotateCcw } from 'react-icons/lu';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { fmtCompact, fmtRub0, fmtSigned, plural } from './format';
@@ -9,8 +9,12 @@ import { fmtCompact, fmtRub0, fmtSigned, plural } from './format';
 /**
  * Калькулятор зарплаты: три ползунка — выручка, клиенты, просрочка.
  *
- * Ползунки стоят на факте месяца, поэтому первое, что видит менеджер, — своя
- * настоящая цифра; дальше он двигает ручки и смотрит, как меняется доход.
+ * Свёрнут по умолчанию: страница отвечает на вопрос «сколько я заработал»,
+ * а калькулятор — на «сколько мог бы»; второй вопрос возникает не всегда,
+ * и разворачивать его должен сам менеджер.
+ *
+ * Ползунки стоят на факте месяца, поэтому первое, что он видит, развернув, —
+ * своя настоящая цифра; дальше двигает ручки и смотрит, как меняется доход.
  * Считает сервер тем же калькулятором, что и настоящий расчёт: своей формулы
  * на странице нет, иначе калькулятор и зарплата однажды разошлись бы.
  */
@@ -77,18 +81,61 @@ export default function SalaryCalculator({ calculation, month, managerId, canSee
     const delta = Number(result.total ?? 0) - Number(calculation.total ?? 0);
 
     return (
-        <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={{ base: 4, md: 5 }}>
-            <HStack justify="space-between" align="start" mb={4} flexWrap="wrap" gap={2}>
-                <Box>
-                    <Text fontSize="xs" color="fg.muted" fontWeight="500">Калькулятор зарплаты</Text>
-                    <Text fontSize="xs" color="fg.subtle">Подвигайте ручки — увидите, как меняется доход</Text>
-                </Box>
-                {touched && (
-                    <Button size="xs" variant="ghost" onClick={reset}><LuRotateCcw /> Как есть сейчас</Button>
-                )}
-            </HStack>
+        <Collapsible.Root
+            bg="bg.panel"
+            borderWidth="1px"
+            borderColor="border"
+            borderRadius="xl"
+            overflow="hidden"
+            onOpenChange={(e) => { if (!e.open) reset(); }}
+        >
+            <Collapsible.Trigger asChild>
+                <HStack
+                    as="button"
+                    type="button"
+                    w="100%"
+                    gap={3}
+                    p={{ base: 4, md: 5 }}
+                    textAlign="left"
+                    cursor="pointer"
+                    _hover={{ bg: 'bg.subtle' }}
+                    transition="background 0.15s"
+                >
+                    <Box
+                        p={2.5}
+                        borderRadius="lg"
+                        bg="blue.subtle"
+                        color="blue.fg"
+                        display="flex"
+                        flexShrink={0}
+                    >
+                        <LuCalculator size={22} />
+                    </Box>
 
-            <SimpleGrid columns={{ base: 1, lg: 2 }} gap={{ base: 5, lg: 8 }} alignItems="start">
+                    <Box flex="1" minW={0}>
+                        <Text fontWeight="700" fontSize={{ base: 'sm', md: 'md' }}>
+                            Посчитайте, какой может быть зарплата
+                        </Text>
+                        <Text fontSize="xs" color="fg.muted">
+                            Три ползунка: выручка, клиенты, просрочки. Сразу видно, сколько выйдет.
+                        </Text>
+                    </Box>
+
+                    <Box color="fg.muted" flexShrink={0} transition="transform 0.2s" css={{ '[data-state=open] &': { transform: 'rotate(180deg)' } }}>
+                        <LuChevronDown size={20} />
+                    </Box>
+                </HStack>
+            </Collapsible.Trigger>
+
+            <Collapsible.Content>
+                <Box px={{ base: 4, md: 5 }} pb={{ base: 4, md: 5 }} pt={1} borderTopWidth="1px" borderColor="border">
+                    <HStack justify="flex-end" mb={2} minH="28px">
+                        {touched && (
+                            <Button size="xs" variant="ghost" onClick={reset}><LuRotateCcw /> Как есть сейчас</Button>
+                        )}
+                    </HStack>
+
+                    <SimpleGrid columns={{ base: 1, lg: 2 }} gap={{ base: 5, lg: 8 }} alignItems="start">
                 <VStack align="stretch" gap={6}>
                     <Control
                         label="Реализации за месяц"
@@ -153,9 +200,11 @@ export default function SalaryCalculator({ calculation, month, managerId, canSee
                             Упёрлись в потолок премии — дальше доход не растёт.
                         </Text>
                     )}
+                        </Box>
+                    </SimpleGrid>
                 </Box>
-            </SimpleGrid>
-        </Box>
+            </Collapsible.Content>
+        </Collapsible.Root>
     );
 }
 
