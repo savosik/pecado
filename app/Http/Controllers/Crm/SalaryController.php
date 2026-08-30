@@ -12,6 +12,7 @@ use App\Services\Payroll\Support\MonthLabel;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -206,6 +207,38 @@ class SalaryController extends CrmController
     /**
      * @return array<string, mixed>
      */
+    /**
+     * Сводка для сайдбара: своя цифра менеджеру, весь отдел — руководителю.
+     *
+     * Отдельный лёгкий ответ, а не общий payload: сниппет грузится на каждой
+     * странице CRM, и ему нужны четыре числа, а не снимок целиком. Кеш на минуту
+     * гасит повторные запросы при быстрых переходах между разделами.
+     */
+    public function snippet(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        $month = CarbonImmutable::now()->startOfMonth();
+        $seesAll = $this->scopes->seesAll($actor);
+        $own = $this->scopes->manager($actor, null);
+
+        $rows = Cache::remember(
+            sprintf('payroll:snippet:%d:%s', $actor->getKey(), $month->format('Y-m')),
+            now()->addMinute(),
+            fn (): array => $this->calculations->snippet(
+                $month,
+                $seesAll ? null : ($own === null ? [] : [(int) $own->getKey()]),
+            ),
+        );
+
+        return response()->json([
+            'mode' => $seesAll ? 'team' : 'own',
+            'month' => $month->format('Y-m'),
+            'month_label' => MonthLabel::ru($month),
+            'own_id' => $own === null ? null : (int) $own->getKey(),
+            'rows' => $rows,
+        ]);
+    }
+
     private function payload(Request $request): array
     {
         $actor = $this->crmActor($request);

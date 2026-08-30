@@ -629,6 +629,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/salary/data', [SalaryController::class, 'data'])->name('salary.data');
         // Калькулятор с ползунками: считает тот же калькулятор, что и снимок.
         Route::post('/salary/simulate', [SalaryController::class, 'simulate'])->name('salary.simulate');
+        Route::get('/salary/snippet', [SalaryController::class, 'snippet'])->name('salary.snippet');
         Route::get('/salary/payslip', [SalaryPdfController::class, 'payslip'])->name('salary.payslip');
         Route::get('/salary/explained', [SalaryPdfController::class, 'explained'])->name('salary.explained');
         // Сводка по отделу — второе право: «вижу чужие деньги», как разрезы планов.

@@ -107,6 +107,34 @@ class SalaryAccessTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('Сниппет в меню: менеджеру своя строка, руководителю — весь отдел')]
+    public function snippet_scope_follows_the_role(): void
+    {
+        $this->actingAs($this->manager)
+            ->getJson('/crm/salary/snippet')
+            ->assertOk()
+            ->assertJsonPath('mode', 'own')
+            ->assertJsonCount(1, 'rows')
+            ->assertJsonPath('rows.0.id', $this->managerProfile->id);
+
+        $this->actingAs($this->head)
+            ->getJson('/crm/salary/snippet')
+            ->assertOk()
+            ->assertJsonPath('mode', 'team')
+            ->assertJsonCount(2, 'rows');
+    }
+
+    #[Test]
+    #[TestDox('Сниппет не считает зарплату — только читает готовые снимки')]
+    public function snippet_never_computes(): void
+    {
+        $this->actingAs($this->manager)->getJson('/crm/salary/snippet')->assertOk();
+
+        // Виджет в меню грузится на каждой странице: расчёт ради него был бы дорог.
+        $this->assertDatabaseCount('payroll_calculations', 0);
+    }
+
+    #[Test]
     #[TestDox('Будущий месяц в адресе сводится к текущему')]
     public function future_month_falls_back_to_current(): void
     {

@@ -151,6 +151,75 @@ class PayrollCalculationService
      *
      * @return list<array<string, mixed>>
      */
+    /**
+     * Лёгкая сводка для сайдбара: только готовые снимки, без пересчёта.
+     *
+     * Сниппет висит на каждой странице CRM, поэтому здесь нельзя ни считать
+     * зарплату, ни поднимать json снимка (полтора мегабайта на менеджера) —
+     * берутся четыре колонки последней версии месяца. Нет снимка — нет и цифры:
+     * заводить черновик ради виджета в меню было бы дорого и неожиданно.
+     *
+     * @param  list<int>|null  $managerIds  null — все, кто в расчёте
+     * @return list<array<string, mixed>>
+     */
+    public function snippet(CarbonInterface $month, ?array $managerIds = null): array
+    {
+        $period = PayrollCalculation::normalizeMonth($month);
+        $previous = $period->copy()->subMonthNoOverflow()->startOfMonth();
+
+        $managers = PersonalManager::query()
+            ->active()
+            ->inPayroll()
+            ->whereNotNull('user_id')
+            ->when($managerIds !== null, fn ($q) => $q->whereIn('id', $managerIds))
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $totals = $this->latestTotals($managers->pluck('id')->all(), $period);
+        $before = $this->latestTotals($managers->pluck('id')->all(), $previous);
+
+        return $managers->map(fn (PersonalManager $manager): array => [
+            'id' => (int) $manager->getKey(),
+            'name' => (string) $manager->name,
+            'total' => $totals[$manager->getKey()]['total'] ?? null,
+            'status' => $totals[$manager->getKey()]['status'] ?? null,
+            'computed_at' => $totals[$manager->getKey()]['computed_at'] ?? null,
+            'previous_total' => $before[$manager->getKey()]['total'] ?? null,
+        ])->all();
+    }
+
+    /**
+     * Итоги последних версий за месяц: id снимка выбираем подзапросом, чтобы не
+     * тянуть все версии и не сортировать json-строки.
+     *
+     * @param  list<int>  $managerIds
+     * @return array<int, array<string, mixed>>
+     */
+    private function latestTotals(array $managerIds, CarbonInterface $month): array
+    {
+        if ($managerIds === []) {
+            return [];
+        }
+
+        $ids = PayrollCalculation::query()
+            ->forPeriod($month)
+            ->whereIn('personal_manager_id', $managerIds)
+            ->selectRaw('MAX(id) as id')
+            ->groupBy('personal_manager_id')
+            ->pluck('id');
+
+        return PayrollCalculation::query()
+            ->whereIn('id', $ids)
+            ->get(['id', 'personal_manager_id', 'status', 'total', 'computed_at'])
+            ->keyBy('personal_manager_id')
+            ->map(fn (PayrollCalculation $row): array => [
+                'total' => (float) $row->total,
+                'status' => (string) $row->status,
+                'computed_at' => $row->computed_at?->toIso8601String(),
+            ])
+            ->all();
+    }
+
     public function teamSummary(CarbonInterface $month): array
     {
         $period = PayrollCalculation::normalizeMonth($month);

@@ -3,7 +3,7 @@ import { usePanel } from './PanelContext';
 import { NavigationMenu } from './NavigationMenu';
 
 export const Sidebar = ({ isCollapsed = false }) => {
-    const { logoAlt, badge, logoHeight = 'full' } = usePanel();
+    const { logoAlt, badge, logoHeight = 'full', footer = null } = usePanel();
 
     return (
         <Box
@@ -34,6 +34,10 @@ export const Sidebar = ({ isCollapsed = false }) => {
             </Box>
 
             <NavigationMenu isCollapsed={isCollapsed} />
+
+            {/* Подвал меню — слот панели: в CRM здесь зарплата, у склада и
+                админки его нет, поэтому виджет не встроен в каркас. */}
+            {footer && !isCollapsed && <Box px={3} pt={4} pb={6}>{footer}</Box>}
         </Box>
     );
 };

@@ -1,5 +1,6 @@
 import { PanelLayout } from '@/shared/Panel/PanelLayout';
 import PresenceBar from '@/Crm/Components/PresenceBar';
+import SalarySnippet from '@/Crm/Components/SalarySnippet';
 import TaskReminderToaster from '@/Crm/Components/TaskReminderToaster';
 import { menuConfig } from '../config/menuConfig';
 
@@ -11,6 +12,7 @@ const panel = {
     logoAlt: 'Pecado CRM',
     badge: 'CRM',
     logoHeight: '8',
+    footer: <SalarySnippet />,
 };
 
 /**
