@@ -293,6 +293,21 @@ final class CrmEntityMap
         ];
     }
 
+    /**
+     * Описать сущность, если она есть в карте, иначе NULL.
+     *
+     * Для «связанной» модели письма, задачи или звонка: письмо о ступени
+     * просрочки ссылается на DebtState, вопрос с сайта — на UserQuestion, и такой
+     * модели в CRM нет своей страницы. Это норма данных, а не ошибка, поэтому
+     * лента и списки должны показывать запись без ссылки, а не падать целиком.
+     *
+     * @return array{type: string, id: int, label: string, title: string, url: string|null}|null
+     */
+    public static function tryDescribe(Model $entity, ?User $viewer = null): ?array
+    {
+        return self::typeOf($entity) === null ? null : self::describe($entity, $viewer);
+    }
+
     private static function titleFor(Model $entity, string $type): string
     {
         return match ($type) {

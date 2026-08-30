@@ -160,7 +160,7 @@ class CrmCallService
             'client_id' => $call->client_user_id === null ? null : (int) $call->client_user_id,
             'follow_up_task_id' => $call->follow_up_task_id === null ? null : (int) $call->follow_up_task_id,
             'entity' => $related instanceof Model
-                ? CrmEntityMap::describe($related, $viewer)
+                ? CrmEntityMap::tryDescribe($related, $viewer)
                 : null,
             'attachments_count' => (int) ($call->attachments_count
                 ?? $call->media()->where('collection_name', CrmAttachments::COLLECTION)->count()),

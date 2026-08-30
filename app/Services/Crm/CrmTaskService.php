@@ -547,7 +547,7 @@ class CrmTaskService
                 : null,
             'client_id' => $task->client_user_id === null ? null : (int) $task->client_user_id,
             'entity' => $related instanceof Model
-                ? CrmEntityMap::describe($related, $viewer)
+                ? CrmEntityMap::tryDescribe($related, $viewer)
                 : null,
             // В списках счётчик приходит из withCount(); на одиночных путях его нет —
             // там дешевле досчитать, чем показать 0 и потерять скрепку у задачи с файлами.

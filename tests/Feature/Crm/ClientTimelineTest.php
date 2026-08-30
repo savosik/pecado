@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Crm;
 
+use App\Enums\DebtLevel;
 use App\Models\CrmComment;
+use App\Models\CrmEmail;
+use App\Models\DebtState;
 use App\Models\Order;
 use App\Models\PersonalManager;
 use App\Models\Shipment;
@@ -307,5 +310,46 @@ class ClientTimelineTest extends TestCase
 
         $this->assertCount(10, $all);
         $this->assertSame($all, array_unique($all), 'Записи повторяются между страницами');
+    }
+
+    #[Test]
+    public function letter_about_debt_level_shows_up_without_a_link_instead_of_breaking_the_feed(): void
+    {
+        // Письмо о ступени просрочки ссылается на состояние долга — модель без
+        // карточки в CRM. До фикса лента падала на ней целиком (500 на проде
+        // у каждого партнёра со «Стоп-отгрузкой»), а журнал писем ту же ссылку
+        // молча пропускал.
+        $state = DebtState::create([
+            'user_id' => $this->client->id,
+            'level' => DebtLevel::HOLD,
+            'since' => now()->toDateString(),
+            'overdue_amount' => 50000,
+            'overdue_total' => 50000,
+            'age_days' => 40,
+        ]);
+
+        $letter = new CrmEmail([
+            'client_user_id' => $this->client->id,
+            'origin' => CrmEmail::ORIGIN_SYSTEM,
+            'origin_event' => 'finance.debt_hold',
+            'to' => [$this->manager->email],
+            'subject' => 'Просрочка: стоп-отгрузка',
+            'body_html' => '<p>Долг 50 000 ₽</p>',
+            'status' => 'sent',
+        ]);
+        $letter->related()->associate($state);
+        $letter->user_id = $this->manager->id;
+        $letter->save();
+
+        $entry = $this->actingAs($this->manager)
+            ->getJson(route('crm.clients.timeline', [$this->client, 'types' => ['email']]))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->json('data.0');
+
+        $this->assertSame('email', $entry['type']);
+        $this->assertSame('Просрочка: стоп-отгрузка', $entry['title']);
+        $this->assertNull($entry['entity']);
+        $this->assertNull($entry['email']['entity']);
     }
 }

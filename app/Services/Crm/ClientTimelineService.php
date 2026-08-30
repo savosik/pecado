@@ -364,7 +364,7 @@ class ClientTimelineService
             'title' => $call->direction->label().': '.$call->result->label(),
             'excerpt' => $call->summary === null ? null : Str::limit($call->summary, 300),
             'entity' => $call->related instanceof Model
-                ? CrmEntityMap::describe($call->related, $viewer)
+                ? CrmEntityMap::tryDescribe($call->related, $viewer)
                 : null,
             'call' => $this->calls->payload($call, $viewer),
             'attachments_count' => (int) ($call->attachments_count ?? 0),
@@ -549,7 +549,7 @@ class ClientTimelineService
             'title' => $email->subject,
             'excerpt' => 'Кому: '.implode(', ', $email->to),
             'entity' => $email->related instanceof Model
-                ? CrmEntityMap::describe($email->related, $viewer)
+                ? CrmEntityMap::tryDescribe($email->related, $viewer)
                 : null,
             'email' => $this->emails->payload($email, $viewer),
             'can' => [
@@ -609,7 +609,7 @@ class ClientTimelineService
             'title' => $task->title,
             'excerpt' => $task->description === null ? null : Str::limit($task->description, 300),
             'entity' => $task->related instanceof Model
-                ? CrmEntityMap::describe($task->related, $viewer)
+                ? CrmEntityMap::tryDescribe($task->related, $viewer)
                 : null,
             'task' => $this->tasks->payload($task, $viewer),
             'can' => [

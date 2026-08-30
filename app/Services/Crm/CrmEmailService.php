@@ -14,7 +14,6 @@ use App\Support\Crm\CrmAttachments;
 use App\Support\Crm\CrmEntityMap;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -233,16 +232,9 @@ class CrmEmailService
             return null;
         }
 
-        try {
-            return CrmEntityMap::describe($related, $viewer);
-        } catch (\Throwable $exception) {
-            Log::warning('Письмо ссылается на сущность вне карты CRM', [
-                'entity' => $related::class,
-                'id' => $related->getKey(),
-            ]);
-
-            return null;
-        }
+        // Письмо о просрочке ссылается на DebtState, вопрос с сайта — на UserQuestion:
+        // у таких моделей нет карточки в CRM, и это норма, а не повод для предупреждения.
+        return CrmEntityMap::tryDescribe($related, $viewer);
     }
 
     /**
