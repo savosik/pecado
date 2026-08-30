@@ -57,7 +57,9 @@ class PayrollRecalculationTriggerTest extends TestCase
         $next = Carbon::now()->startOfMonth()->addMonth()->toDateString();
 
         PayrollCalculation::factory()->forMonth($previous)->create(['personal_manager_id' => $this->manager->id]);
-        PayrollCalculation::factory()->forMonth(Carbon::now()->subMonths(2))->approved()->create(['personal_manager_id' => $this->manager->id]);
+        // startOfMonth до вычитания: 31 августа минус два месяца Carbon переносит
+        // на 1 июля, и утверждённый снимок сталкивался с черновиком прошлого месяца.
+        PayrollCalculation::factory()->forMonth(Carbon::now()->startOfMonth()->subMonths(2))->approved()->create(['personal_manager_id' => $this->manager->id]);
 
         PayrollInputsChanged::dispatch([$this->manager->id], 'test', [$next]);
 

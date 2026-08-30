@@ -17,13 +17,28 @@ use Carbon\CarbonImmutable;
  * Советы «как поднять»: каждый — пересчёт тем же калькулятором с одной правкой входов.
  *
  * Выигрыш в рублях считается, а не оценивается: совет без цифры — не совет.
- * Сортировка по выигрышу, нулевые отбрасываются.
+ *
+ * Порядок — по деньгам, но сначала то, что реально успеть: «добить план» с
+ * прибавкой в 31 000 ₽ бесполезен, если для этого за один оставшийся день нужно
+ * отгрузить два миллиона. Внутри достижимых наверх всплывает то, что двигает
+ * сразу два показателя: отгрузка молчащему плановому клиенту прибавляет выручку
+ * и тянет охват к следующей ступени, а ступень умножает всю премию целиком.
  */
 class PayrollAdvisor
 {
     private const MAX_INVOICE_ADVICE = 5;
 
     private const REVENUE_STEP = 100_000.0;
+
+    /** Сколько молчащих клиентов просчитываем и сколько показываем. */
+    private const MAX_CLIENT_ADVICE = 12;
+
+    private const MAX_CLIENT_CARDS = 4;
+
+    private const MAX_TOPUP_CARDS = 2;
+
+    /** Во сколько раз менеджер способен ускориться против своего темпа. */
+    private const SPRINT = 1.5;
 
     public function __construct(
         private readonly PayrollCalculator $calculator,
@@ -45,16 +60,168 @@ class PayrollAdvisor
         }
 
         $advice = array_merge(
+            $this->clientSaleAdvice($params, $inputs, $current),
             $this->activeClientsAdvice($params, $inputs, $current),
+            $this->clientTopUpAdvice($params, $inputs, $current),
             $this->invoiceAdvice($params, $inputs, $current, $today),
             $this->planGapAdvice($params, $inputs, $current),
             $this->revenueStepAdvice($params, $inputs, $current),
         );
 
         $advice = array_values(array_filter($advice, fn (array $row): bool => abs($row['gain']) >= 1.0));
+
+        return $this->rank($advice, $inputs, $today);
+    }
+
+    /**
+     * Порядок: сначала выполнимое, потом по деньгам, при равных — по числу
+     * показателей, которые двигает совет.
+     *
+     * Выполнимость грубая намеренно: сравниваем требуемую выручку с тем, что
+     * менеджер успевает при полуторном темпе за оставшиеся дни. Точность здесь
+     * не нужна — нужно лишь не ставить первым то, чего не сделать до конца месяца.
+     *
+     * @param  list<array<string, mixed>>  $advice
+     * @return list<array<string, mixed>>
+     */
+    private function rank(array $advice, PayrollInputs $inputs, CarbonImmutable $today): array
+    {
+        $passed = max(1, (int) ($inputs->workingDays['passed'] ?? 1));
+        $left = max(0, (int) ($inputs->workingDays['left'] ?? 0));
+        // Сегодняшний день в workingDays уже пройден, но отгрузить в него ещё
+        // можно — иначе в последний день месяца достижимым не остаётся ничего.
+        $ahead = max($left, $this->calendar->isWorkingDay($today) ? 1 : 0);
+        $reachable = ($inputs->revenue / $passed) * $ahead * self::SPRINT;
+
+        foreach ($advice as $index => $row) {
+            $required = (float) ($row['required_revenue'] ?? 0.0);
+            $advice[$index]['feasible'] = $required <= 0.01 || $required <= $reachable;
+            $advice[$index]['affects'] = (array) ($row['affects'] ?? []);
+        }
+
+        usort($advice, function (array $a, array $b): int {
+            return [$b['feasible'], $b['gain'], count($b['affects'])] <=> [$a['feasible'], $a['gain'], count($a['affects'])];
+        });
+
+        return array_values($advice);
+    }
+
+    /**
+     * Отгрузка молчащему плановому клиенту — единственный ход, который бьёт дважды.
+     *
+     * Выручка растёт, и клиент попадает в охват; если он замыкает ступень
+     * множителя, прибавка кратно больше своей суммы. Поэтому в подсказке
+     * разделено, сколько дала сама отгрузка, а сколько — попадание в охват.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function clientSaleAdvice(EffectiveParams $params, PayrollInputs $inputs, PayrollBreakdown $current): array
+    {
+        $inactive = array_values(array_filter(
+            $inputs->plannedClients,
+            fn (PlannedClientInput $c): bool => ! $c->isActive() && ($c->plan ?? 0) > 0,
+        ));
+
+        if ($inactive === []) {
+            return [];
+        }
+
+        usort($inactive, fn (PlannedClientInput $a, PlannedClientInput $b): int => ($b->plan ?? 0) <=> ($a->plan ?? 0));
+        $advice = [];
+
+        foreach (array_slice($inactive, 0, self::MAX_CLIENT_ADVICE) as $client) {
+            $amount = (float) $client->plan;
+
+            $withSale = $inputs->with([
+                'revenue' => $inputs->revenue + $amount,
+                'planned_clients' => $this->activated($inputs, $client->id, $amount),
+            ]);
+            $revenueOnly = $inputs->with(['revenue' => $inputs->revenue + $amount]);
+
+            $gain = $this->calculator->calculate($params, $withSale)->total - $current->total;
+            $fromRevenue = $this->calculator->calculate($params, $revenueOnly)->total - $current->total;
+            $fromCoverage = $gain - $fromRevenue;
+
+            $advice[] = [
+                'key' => 'client_sale:'.$client->id,
+                'kind' => 'clients',
+                'title' => sprintf('%s: отгрузить на %s', $client->name, Money::rub($amount)),
+                'detail' => $fromCoverage >= 1.0
+                    ? sprintf(
+                        'План клиента на месяц, отгрузок пока нет. %s даст сама выручка, ещё %s — попадание клиента в охват.',
+                        Money::rub($fromRevenue),
+                        Money::rub($fromCoverage),
+                    )
+                    : 'План клиента на месяц, отгрузок пока нет. Он же добавится к охвату — ближе к следующей ступени множителя.',
+                'gain' => round($gain, 2),
+                'affects' => $fromCoverage >= 1.0 ? ['revenue', 'clients'] : ['revenue', 'clients'],
+                'required_revenue' => $amount,
+                'target' => ['type' => 'client', 'id' => $client->id],
+            ];
+        }
+
         usort($advice, fn (array $a, array $b): int => $b['gain'] <=> $a['gain']);
 
+        return array_slice($advice, 0, self::MAX_CLIENT_CARDS);
+    }
+
+    /**
+     * Клиент купил, но меньше плана: добрать остаток — чистая выручка, охват уже есть.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function clientTopUpAdvice(EffectiveParams $params, PayrollInputs $inputs, PayrollBreakdown $current): array
+    {
+        $under = array_values(array_filter(
+            $inputs->plannedClients,
+            fn (PlannedClientInput $c): bool => $c->isActive() && ($c->plan ?? 0) > 0 && $c->fact < (float) $c->plan,
+        ));
+
+        if ($under === []) {
+            return [];
+        }
+
+        usort($under, fn (PlannedClientInput $a, PlannedClientInput $b): int => (($b->plan ?? 0) - $b->fact) <=> (($a->plan ?? 0) - $a->fact));
+        $advice = [];
+
+        foreach (array_slice($under, 0, self::MAX_TOPUP_CARDS) as $client) {
+            $gap = (float) $client->plan - $client->fact;
+            $simulated = $inputs->with(['revenue' => $inputs->revenue + $gap]);
+            $gain = $this->calculator->calculate($params, $simulated)->total - $current->total;
+
+            $advice[] = [
+                'key' => 'client_topup:'.$client->id,
+                'kind' => 'revenue',
+                'title' => sprintf('%s: добрать %s до плана', $client->name, Money::rub($gap)),
+                'detail' => sprintf(
+                    'Отгружено %s из %s — %s плана. Клиент уже в охвате, прибавка идёт только выручкой.',
+                    Money::rub($client->fact),
+                    Money::rub((float) $client->plan),
+                    Money::percent($client->fact / (float) $client->plan, 0),
+                ),
+                'gain' => round($gain, 2),
+                'affects' => ['revenue'],
+                'required_revenue' => $gap,
+                'target' => ['type' => 'client', 'id' => $client->id],
+            ];
+        }
+
         return $advice;
+    }
+
+    /**
+     * Копия списка плановых клиентов, где один помечен купившим.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function activated(PayrollInputs $inputs, int $clientId, float $amount): array
+    {
+        return array_map(
+            fn (PlannedClientInput $c): array => $c->id === $clientId
+                ? (new PlannedClientInput($c->id, $c->name, $c->plan, max($amount, 1.0)))->toArray()
+                : $c->toArray(),
+            $inputs->plannedClients,
+        );
     }
 
     /**
@@ -97,6 +264,9 @@ class PayrollAdvisor
                 implode(', ', array_map(fn (PlannedClientInput $c): string => $c->name, array_slice($inactive, 0, 5))).(count($inactive) > 5 ? sprintf(' и ещё %d', count($inactive) - 5) : ''),
             ),
             'gain' => round($gain, 2),
+            'affects' => ['clients'],
+            // Ступень берут продажами: требуемая выручка — планы тех, кого не хватает.
+            'required_revenue' => array_sum(array_map(fn (PlannedClientInput $c): float => (float) ($c->plan ?? 0), array_slice($inactive, 0, $needed))),
             'target' => ['type' => 'clients', 'ids' => array_map(fn (PlannedClientInput $c): int => $c->id, array_slice($inactive, 0, $needed))],
         ]];
     }
@@ -171,6 +341,10 @@ class PayrollAdvisor
                     Money::rub($loss),
                 ),
                 'gain' => round($loss, 2),
+                'affects' => ['penalty'],
+                // Здесь ничего продавать не нужно — только добиться оплаты в срок.
+                'required_revenue' => 0.0,
+                'protective' => true,
                 'target' => ['type' => 'invoice', 'shipment_id' => $invoice->shipmentId, 'partner_id' => $invoice->partnerId],
             ];
         }
@@ -204,6 +378,8 @@ class PayrollAdvisor
                 ? sprintf('Это %s в рабочий день на оставшиеся %d %s.', Money::rub($gap / $left), $left, $this->plural($left, 'день', 'дня', 'дней'))
                 : 'Рабочих дней в месяце не осталось.',
             'gain' => round($gain, 2),
+            'affects' => ['revenue'],
+            'required_revenue' => $gap,
             'target' => null,
         ]];
     }
@@ -235,6 +411,8 @@ class PayrollAdvisor
                 Money::rub((float) ($kpi->meta['max_amount'] ?? 0.0)),
             ),
             'gain' => round($gain, 2),
+            'affects' => ['revenue'],
+            'required_revenue' => self::REVENUE_STEP,
             'target' => null,
         ]];
     }
