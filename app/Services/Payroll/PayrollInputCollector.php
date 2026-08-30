@@ -80,6 +80,64 @@ class PayrollInputCollector
     }
 
     /**
+     * Лента отгрузок месяца для экрана: документы, а не суммы — итог считает движок.
+     *
+     * @return array{rows: list<array<string, mixed>>, total_count: int, truncated: bool}
+     */
+    public function shipmentsTimeline(int $managerId, CarbonInterface $month, int $limit = 80): array
+    {
+        $period = CarbonImmutable::instance($month)->startOfMonth();
+
+        $clients = User::query()
+            ->clients()
+            ->where('personal_manager_id', $managerId)
+            ->get(['id', 'name', 'erp_name']);
+
+        if ($clients->isEmpty()) {
+            return ['rows' => [], 'total_count' => 0, 'truncated' => false];
+        }
+
+        $names = [];
+        foreach ($clients as $client) {
+            $names[(int) $client->getKey()] = (string) $client->display_name;
+        }
+
+        $planned = CrmSalesPlan::query()
+            ->forPeriod($period)
+            ->where('target_type', PlanTarget::CLIENT->value)
+            ->whereIn('target_id', array_keys($names))
+            ->pluck('target_id')
+            ->map('intval')
+            ->all();
+
+        $query = Shipment::query()
+            ->withoutInternalOrganizations()
+            ->whereIn('user_id', array_keys($names))
+            ->whereBetween('erp_created_at', [$period->startOfDay(), $period->endOfMonth()->endOfDay()]);
+
+        $total = (clone $query)->count();
+
+        $rows = $query
+            ->orderByDesc('erp_created_at')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get(['id', 'erp_number', 'user_id', 'erp_created_at', 'total_amount', 'payment_status'])
+            ->map(fn (Shipment $shipment): array => [
+                'id' => (int) $shipment->getKey(),
+                'number' => $shipment->erp_number,
+                'date' => $shipment->erp_created_at?->toDateString(),
+                'partner_id' => $shipment->user_id === null ? null : (int) $shipment->user_id,
+                'partner_name' => $names[(int) $shipment->user_id] ?? '',
+                'amount' => (float) $shipment->total_amount,
+                'payment_status' => $shipment->payment_status,
+                'is_planned' => in_array((int) $shipment->user_id, $planned, true),
+            ])
+            ->all();
+
+        return ['rows' => $rows, 'total_count' => $total, 'truncated' => $total > count($rows)];
+    }
+
+    /**
      * Реализации партнёров за месяц в рублях по бизнес-дате 1С.
      *
      * @param  list<int>  $clientIds

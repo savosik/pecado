@@ -103,7 +103,8 @@ class SalaryAccessTest extends TestCase
             ->assertJsonPath('manager.id', $this->managerProfile->id)
             ->assertJsonPath('calculation.status', 'draft')
             ->assertJsonPath('poll_seconds', (int) config('payroll.poll_seconds'))
-            ->assertJsonStructure(['server_time', 'calculation' => ['breakdown', 'inputs', 'params']]);
+            ->assertJsonPath('timeline.total_count', 0)
+            ->assertJsonStructure(['server_time', 'calculation' => ['breakdown', 'inputs', 'params'], 'timeline' => ['rows']]);
     }
 
     #[Test]

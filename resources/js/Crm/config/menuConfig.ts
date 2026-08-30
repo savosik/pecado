@@ -29,6 +29,7 @@ import {
     LuHistory,
     LuMegaphone,
     LuBan,
+    LuBanknote,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -83,6 +84,9 @@ export const menuConfig: MenuGroup[] = [
             // каждый день рядом с задачами и планом, а не в архиве первички.
             { label: "Заказы", icon: LuFileText, path: "/crm/orders", permission: "crm-clients.view" },
             { label: "Планы продаж", icon: LuTarget, path: "/crm/plans", permission: "crm-plans.view" },
+            // Зарплата рядом с планом: это ответ на вопрос «сколько я заработал
+            // на этом плане прямо сейчас» — менеджер смотрит их вместе.
+            { label: "Моя зарплата", icon: LuBanknote, path: "/crm/salary", permission: "crm-salary.view" },
             // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
             // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
             { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", counter: "shortages" },

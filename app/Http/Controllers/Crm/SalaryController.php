@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Crm;
 use App\Services\Payroll\PayrollCalculationPresenter;
 use App\Services\Payroll\PayrollCalculationService;
 use App\Services\Payroll\PayrollCatalog;
+use App\Services\Payroll\PayrollInputCollector;
 use App\Services\Payroll\PayrollScopeResolver;
 use App\Services\Payroll\Support\MonthLabel;
 use Carbon\CarbonImmutable;
@@ -29,6 +30,7 @@ class SalaryController extends CrmController
         private readonly PayrollCalculationService $calculations,
         private readonly PayrollCalculationPresenter $presenter,
         private readonly PayrollCatalog $catalog,
+        private readonly PayrollInputCollector $collector,
     ) {}
 
     public function index(Request $request): Response
@@ -59,6 +61,7 @@ class SalaryController extends CrmController
             'can_see_all' => $this->scopes->seesAll($actor),
             'can_edit' => $actor->can('crm-salary.edit'),
             'calculation' => null,
+            'timeline' => null,
             'explanations' => $this->catalog->explanations(),
             'poll_seconds' => max(15, (int) config('payroll.poll_seconds', 60)),
             'server_time' => now()->toIso8601String(),
@@ -70,6 +73,7 @@ class SalaryController extends CrmController
 
         $calculation = $this->calculations->ensureDraft((int) $manager->getKey(), $month);
         $payload['calculation'] = $this->presenter->present($calculation);
+        $payload['timeline'] = $this->collector->shipmentsTimeline((int) $manager->getKey(), $month);
 
         return $payload;
     }
