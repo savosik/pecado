@@ -22,6 +22,9 @@ use Carbon\CarbonImmutable;
  */
 class PayrollForecaster
 {
+    /** Насколько «перевыполнить план» в сценарии-ориентире. */
+    private const STRETCH_SHARE = 1.25;
+
     /**
      * Названия сценариев — от действия менеджера, а не от статистики.
      *
