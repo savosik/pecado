@@ -93,6 +93,15 @@ class BiSyncGrants extends Command
         'telescope_monitoring',
     ];
 
+    /**
+     * Коммерческая тайна на уровне таблиц: зарплата менеджеров (эпик pay-00).
+     * BI-агентом пользуются сами менеджеры, а чужой доход — не их дело. Префикс,
+     * а не список: будущие payroll_* не должны утечь по забывчивости.
+     */
+    private const CONFIDENTIAL_TABLE_PREFIXES = [
+        'payroll_',
+    ];
+
     public function handle(): int
     {
         $connectionName = $this->option('connection');
@@ -183,6 +192,11 @@ class BiSyncGrants extends Command
         }
         if (in_array($table, self::OPERATIONAL_TABLES, true)) {
             return 'инфраструктура фреймворка, не бизнес-данные';
+        }
+        foreach (self::CONFIDENTIAL_TABLE_PREFIXES as $prefix) {
+            if (str_starts_with($table, $prefix)) {
+                return 'зарплата — не для BI-агента';
+            }
         }
 
         return null;
