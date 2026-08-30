@@ -108,6 +108,52 @@ class SalarySettingsController extends CrmController
         ]);
     }
 
+    /**
+     * Новая версия схемы отдела с месяца. Старые версии не правятся — утверждённые
+     * месяцы должны перечитываться по той схеме, по которой считались.
+     */
+    public function storeScheme(\App\Http\Requests\Crm\StorePayrollSchemeRequest $request, \App\Services\Payroll\PayrollSchemeRepository $schemes, \App\Services\Payroll\PayrollParamsValidator $validator, \App\Services\Payroll\PayrollCatalog $catalog): JsonResponse
+    {
+        $components = [];
+        $errors = [];
+
+        foreach ((array) $request->input('components', []) as $index => $entry) {
+            $key = (string) $entry['key'];
+            $defaults = is_array($entry['defaults'] ?? null) ? $entry['defaults'] : [];
+            $full = array_replace($catalog->component($key)->defaults(), $defaults);
+
+            foreach ($validator->validate($key, $full) as $error) {
+                $errors[] = $catalog->component($key)->label().': '.$error;
+            }
+
+            $components[] = ['key' => $key, 'enabled' => (bool) ($entry['enabled'] ?? true), 'defaults' => $full];
+        }
+
+        if ($errors !== []) {
+            return response()->json(['message' => 'Умолчания схемы не прошли проверку.', 'errors' => ['components' => $errors]], 422);
+        }
+
+        $effectiveFrom = CarbonImmutable::createFromFormat('Y-m-d', $request->input('effective_from').'-01')->startOfMonth();
+        $scheme = $schemes->createVersion(
+            $components,
+            $effectiveFrom,
+            $this->crmActor($request),
+            $request->input('comment') !== null ? (string) $request->input('comment') : null,
+            $request->input('title') !== null ? (string) $request->input('title') : null,
+        );
+
+        $managerIds = PersonalManager::query()->active()->pluck('id')->map('intval')->all();
+        if ($managerIds !== []) {
+            PayrollInputsChanged::dispatch($managerIds, 'scheme', [$effectiveFrom->toDateString()]);
+        }
+
+        return response()->json([
+            'saved' => true,
+            'scheme' => ['id' => (int) $scheme->getKey(), 'version' => (int) $scheme->version, 'title' => (string) $scheme->title, 'effective_from' => $scheme->effective_from->toDateString()],
+            'versions' => $this->settings->schemeVersions(),
+        ]);
+    }
+
     public function copyMonth(Request $request): JsonResponse
     {
         $data = $request->validate([

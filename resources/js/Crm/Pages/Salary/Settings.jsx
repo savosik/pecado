@@ -12,6 +12,7 @@ import ParamsGrid from './components/settings/ParamsGrid';
 import ParamsDrawer from './components/settings/ParamsDrawer';
 import AdjustmentsPanel from './components/settings/AdjustmentsPanel';
 import InvoicesPanel from './components/settings/InvoicesPanel';
+import SchemePanel from './components/settings/SchemePanel';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -99,6 +100,7 @@ export default function SalarySettings(props) {
                             { value: 'params', label: 'Параметры' },
                             { value: 'adjustments', label: `Доп. доход и корректировки${data.adjustments?.length ? ` (${data.adjustments.length})` : ''}` },
                             { value: 'invoices', label: 'Накладные' },
+                            { value: 'scheme', label: 'Схема отдела' },
                         ]}
                     />
                     <Text fontSize="xs" color="fg.muted">
@@ -127,6 +129,15 @@ export default function SalarySettings(props) {
 
                 {tab === 'invoices' && (
                     <InvoicesPanel month={data.month} managers={data.managers ?? []} />
+                )}
+
+                {tab === 'scheme' && (
+                    <SchemePanel
+                        versions={data.scheme_versions ?? []}
+                        components={data.components}
+                        currentMonth={data.current_month ?? data.month}
+                        onSaved={reload}
+                    />
                 )}
             </VStack>
 

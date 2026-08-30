@@ -82,6 +82,9 @@ class PayrollSchemeRepository
         ?string $title = null,
         string $code = PayrollScheme::CODE_SALES,
     ): PayrollScheme {
+        // Первая версия — всегда из конфига: новая версия не должна занять её номер.
+        $this->ensureDefault($code);
+
         $latest = PayrollScheme::query()->where('code', $code)->max('version');
         $version = ((int) $latest) + 1;
 

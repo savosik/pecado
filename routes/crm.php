@@ -646,6 +646,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/salary/settings/params', [SalarySettingsController::class, 'storeParams'])->name('salary.settings.params');
         Route::delete('/salary/settings/params', [SalarySettingsController::class, 'resetParams'])->name('salary.settings.params.reset');
         Route::post('/salary/settings/copy-month', [SalarySettingsController::class, 'copyMonth'])->name('salary.settings.copy-month');
+        Route::post('/salary/settings/scheme', [SalarySettingsController::class, 'storeScheme'])->name('salary.settings.scheme');
         Route::post('/salary/adjustments', [SalaryAdjustmentController::class, 'store'])->name('salary.adjustments.store');
         Route::delete('/salary/adjustments/{adjustment}', [SalaryAdjustmentController::class, 'destroy'])
             ->name('salary.adjustments.destroy')

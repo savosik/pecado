@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property array<int, mixed> $components как хранится: [{key, enabled, defaults}]; нормализованную форму даёт orderedComponents()
  * @property int|null $author_id
  * @property string|null $comment
+ * @property-read User|null $author
  */
 class PayrollScheme extends Model
 {
@@ -44,6 +45,7 @@ class PayrollScheme extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_id');

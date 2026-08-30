@@ -67,3 +67,5 @@ Schedule::command('crm:plans-warm')->everyTenMinutes()->between('7:00', '21:00')
 Schedule::command('payroll:rebuild-invoices')->dailyAt('06:30')->withoutOverlapping();
 // Страховка событийного пересчёта черновиков зарплаты: залежавшиеся и отсутствующие.
 Schedule::command('payroll:recalculate --stale')->everyTenMinutes()->between('7:00', '21:00')->withoutOverlapping();
+// Первого числа — финальный пересчёт черновиков прошлого месяца; утверждает РОП руками.
+Schedule::command('payroll:close-month')->monthlyOn(1, '06:50')->withoutOverlapping();

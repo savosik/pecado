@@ -57,7 +57,28 @@ class PayrollSettingsService
             ],
             'components' => $this->components(),
             'managers' => $managers,
+            'scheme_versions' => $this->schemeVersions(),
         ];
+    }
+
+    /**
+     * Все версии схемы отдела — новые сверху.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function schemeVersions(): array
+    {
+        return array_map(fn (\App\Models\PayrollScheme $scheme): array => [
+            'id' => (int) $scheme->getKey(),
+            'version' => (int) $scheme->version,
+            'title' => (string) $scheme->title,
+            'effective_from' => $scheme->effective_from->toDateString(),
+            'effective_label' => MonthLabel::ru($scheme->effective_from),
+            'comment' => $scheme->comment,
+            'author' => $scheme->author?->name,
+            'components' => $scheme->orderedComponents(),
+            'created_at' => $scheme->created_at?->toIso8601String(),
+        ], $this->schemes->versions());
     }
 
     /**
