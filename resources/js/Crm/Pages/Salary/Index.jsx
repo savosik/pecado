@@ -114,7 +114,7 @@ export default function SalaryIndex(props) {
 
                     <SimpleGrid columns={{ base: 1, xl: 2 }} gap={5} alignItems="stretch">
                         <WhyPanel calculation={calc} />
-                        <PenaltyScale scale={calc.forecast?.whatif?.penalty} />
+                        <IncomeWaterfall calculation={calc} />
                     </SimpleGrid>
 
                     {!calc.is_frozen && <LeverCards advice={calc.forecast?.advice} />}
@@ -127,7 +127,7 @@ export default function SalaryIndex(props) {
                     </SimpleGrid>
 
                     <SimpleGrid columns={{ base: 1, xl: 2 }} gap={5} alignItems="start">
-                        <IncomeWaterfall calculation={calc} />
+                        <PenaltyScale scale={calc.forecast?.whatif?.penalty} />
                         <MetricExplainer calculation={calc} explanations={data.explanations} />
                     </SimpleGrid>
 
