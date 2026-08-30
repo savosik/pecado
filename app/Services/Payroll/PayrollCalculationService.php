@@ -3,6 +3,7 @@
 namespace App\Services\Payroll;
 
 use App\Models\PayrollCalculation;
+use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Payroll\Dto\EffectiveParams;
 use App\Services\Payroll\Dto\PayrollBreakdown;
@@ -147,6 +148,87 @@ class PayrollCalculationService
 
             return $draft;
         });
+    }
+
+    /**
+     * Сводка по отделу за месяц: снимок каждого активного менеджера с учётной записью.
+     *
+     * Менеджер без снимка получает черновик здесь же — сводка обязана показывать
+     * всех, а не только тех, кто уже открывал свою страницу.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function teamSummary(CarbonInterface $month): array
+    {
+        $period = PayrollCalculation::normalizeMonth($month);
+
+        $managers = PersonalManager::query()
+            ->active()
+            ->whereNotNull('user_id')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $rows = [];
+
+        foreach ($managers as $manager) {
+            $calculation = $this->ensureDraft((int) $manager->getKey(), $period);
+            $breakdown = (array) $calculation->breakdown;
+            $inputs = (array) $calculation->inputs;
+            $forecast = (array) ($calculation->forecast ?? []);
+
+            $amounts = [];
+            $kpiMeta = [];
+            foreach ((array) ($breakdown['components'] ?? []) as $component) {
+                if (! is_array($component)) {
+                    continue;
+                }
+                $amounts[(string) $component['key']] = (float) ($component['amount'] ?? 0);
+                if (($component['key'] ?? null) === 'kpi_bonus') {
+                    $kpiMeta = (array) ($component['meta'] ?? []);
+                }
+            }
+
+            $planned = array_values((array) ($inputs['planned_clients'] ?? []));
+            $active = array_filter($planned, fn ($c): bool => is_array($c) && (float) ($c['fact'] ?? 0) > 0);
+            $plan = isset($inputs['plan']) ? (float) $inputs['plan'] : null;
+            $revenue = (float) ($inputs['revenue'] ?? 0);
+
+            $rows[] = [
+                'manager' => ['id' => (int) $manager->getKey(), 'name' => (string) $manager->name],
+                'calculation' => [
+                    'id' => (int) $calculation->getKey(),
+                    'status' => $calculation->status,
+                    'status_label' => $calculation->statusLabel(),
+                    'is_frozen' => $calculation->isFrozen(),
+                    'version' => (int) $calculation->version,
+                    'total' => (float) $calculation->total,
+                    'computed_at' => $calculation->computed_at?->toIso8601String(),
+                    'approved_at' => $calculation->approved_at?->toIso8601String(),
+                    'paid_at' => $calculation->paid_at?->toIso8601String(),
+                    'comment' => $calculation->comment,
+                ],
+                'amounts' => $amounts,
+                'kpi' => [
+                    'performance' => $kpiMeta['performance'] ?? null,
+                    'multiplier' => $kpiMeta['multiplier'] ?? null,
+                    'penalty' => (float) ($kpiMeta['penalty'] ?? 0),
+                    'capped' => (bool) ($kpiMeta['capped'] ?? false),
+                ],
+                'inputs' => [
+                    'plan' => $plan,
+                    'revenue' => $revenue,
+                    'percent' => $plan !== null && $plan > 0 ? $revenue / $plan : null,
+                    'planned_count' => count($planned),
+                    'active_count' => count($active),
+                    'invoices_count' => count((array) ($inputs['invoices'] ?? [])),
+                    'at_risk_count' => count((array) ($inputs['at_risk_invoices'] ?? [])),
+                ],
+                'forecast_total' => isset($forecast['scenarios']['base']['total']) ? (float) $forecast['scenarios']['base']['total'] : null,
+                'warnings' => array_values((array) ($breakdown['warnings'] ?? [])),
+            ];
+        }
+
+        return $rows;
     }
 
     /**

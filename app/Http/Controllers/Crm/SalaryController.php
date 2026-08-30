@@ -44,6 +44,87 @@ class SalaryController extends CrmController
     }
 
     /**
+     * Сводка по отделу — только тем, кто видит чужие деньги (crm-clients-all.view).
+     */
+    public function team(Request $request): Response
+    {
+        return Inertia::render('Crm/Pages/Salary/Team', $this->teamPayload($request));
+    }
+
+    public function teamData(Request $request): JsonResponse
+    {
+        return response()->json($this->teamPayload($request));
+    }
+
+    /**
+     * XLSX для бухгалтерии: строка на менеджера, колонки — компоненты дохода.
+     */
+    public function teamExport(Request $request, \App\Services\SimpleXlsxExporter $exporter): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $payload = $this->teamPayload($request);
+
+        $rows = array_map(fn (array $row): array => [
+            $row['manager']['name'],
+            $row['calculation']['status_label'].($row['calculation']['version'] > 1 ? ' v'.$row['calculation']['version'] : ''),
+            (float) ($row['amounts']['salary'] ?? 0),
+            (float) ($row['amounts']['kpi_bonus'] ?? 0),
+            $row['kpi']['penalty'],
+            (float) ($row['amounts']['extra_income'] ?? 0),
+            (float) ($row['amounts']['new_clients_bonus'] ?? 0),
+            (float) ($row['amounts']['manual_correction'] ?? 0),
+            $row['calculation']['total'],
+            $row['inputs']['plan'],
+            $row['inputs']['revenue'],
+            $row['inputs']['percent'] === null ? null : round($row['inputs']['percent'] * 100, 1),
+            $row['inputs']['active_count'].' из '.$row['inputs']['planned_count'],
+            $row['kpi']['multiplier'],
+            $row['calculation']['approved_at'] ? substr((string) $row['calculation']['approved_at'], 0, 10) : null,
+            $row['calculation']['comment'],
+        ], $payload['rows']);
+
+        return $exporter->stream(
+            sprintf('zarplata-%s.xlsx', $payload['month']),
+            ['Менеджер', 'Статус', 'Оклад', 'KPI-премия', 'Штраф за дисциплину', 'Доп. доход', 'Новые клиенты', 'Корректировка', 'Итого', 'План', 'Реализации', 'Выполнение, %', 'Активные клиенты', 'Множитель', 'Утверждено', 'Комментарий'],
+            $rows,
+            'Зарплата '.$payload['month_label'],
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function teamPayload(Request $request): array
+    {
+        $month = $this->month($request);
+        $rows = $this->calculations->teamSummary($month);
+
+        $totals = ['total' => 0.0, 'salary' => 0.0, 'kpi_bonus' => 0.0, 'extra_income' => 0.0, 'new_clients_bonus' => 0.0, 'manual_correction' => 0.0, 'penalty' => 0.0, 'revenue' => 0.0, 'plan' => 0.0];
+        $statuses = ['draft' => 0, 'approved' => 0, 'paid' => 0];
+
+        foreach ($rows as $row) {
+            $totals['total'] += $row['calculation']['total'];
+            foreach (['salary', 'kpi_bonus', 'extra_income', 'new_clients_bonus', 'manual_correction'] as $key) {
+                $totals[$key] += (float) ($row['amounts'][$key] ?? 0);
+            }
+            $totals['penalty'] += $row['kpi']['penalty'];
+            $totals['revenue'] += $row['inputs']['revenue'];
+            $totals['plan'] += (float) ($row['inputs']['plan'] ?? 0);
+            $statuses[$row['calculation']['status']] = ($statuses[$row['calculation']['status']] ?? 0) + 1;
+        }
+
+        return [
+            'month' => $month->format('Y-m'),
+            'month_label' => MonthLabel::ru($month),
+            'months' => $this->months(),
+            'rows' => $rows,
+            'totals' => array_map(fn (float $v): float => round($v, 2), $totals),
+            'statuses' => $statuses,
+            'can_edit' => $this->crmActor($request)->can('crm-salary.edit'),
+            'poll_seconds' => max(15, (int) config('payroll.poll_seconds', 60)),
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function payload(Request $request): array

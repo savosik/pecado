@@ -29,6 +29,7 @@ use App\Http\Controllers\Crm\PaymentOrderController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
 use App\Http\Controllers\Crm\SalaryAdjustmentController;
+use App\Http\Controllers\Crm\SalaryApprovalController;
 use App\Http\Controllers\Crm\SalaryController;
 use App\Http\Controllers\Crm\SalaryInvoiceController;
 use App\Http\Controllers\Crm\SalarySettingsController;
@@ -625,6 +626,16 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     Route::middleware('permission:crm-salary.view')->group(function () {
         Route::get('/salary', [SalaryController::class, 'index'])->name('salary.index');
         Route::get('/salary/data', [SalaryController::class, 'data'])->name('salary.data');
+        // Сводка по отделу — второе право: «вижу чужие деньги», как разрезы планов.
+        Route::get('/salary/team', [SalaryController::class, 'team'])
+            ->middleware('permission:crm-clients-all.view')
+            ->name('salary.team');
+        Route::get('/salary/team/data', [SalaryController::class, 'teamData'])
+            ->middleware('permission:crm-clients-all.view')
+            ->name('salary.team.data');
+        Route::get('/salary/team/export', [SalaryController::class, 'teamExport'])
+            ->middleware('permission:crm-clients-all.view')
+            ->name('salary.team.export');
     });
 
     // Настройки зарплаты — только РОП: константы менеджер × месяц, ручные строки.
@@ -647,6 +658,19 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::delete('/salary/invoices/{invoice}/mark', [SalaryInvoiceController::class, 'unmark'])
             ->name('salary.invoices.unmark')
             ->whereNumber('invoice');
+        // Жизненный цикл снимка: пересчитать → утвердить → выплачено; переоткрыть.
+        Route::post('/salary/calculations/{calculation}/recalculate', [SalaryApprovalController::class, 'recalculate'])
+            ->name('salary.recalculate')
+            ->whereNumber('calculation');
+        Route::post('/salary/calculations/{calculation}/approve', [SalaryApprovalController::class, 'approve'])
+            ->name('salary.approve')
+            ->whereNumber('calculation');
+        Route::post('/salary/calculations/{calculation}/reopen', [SalaryApprovalController::class, 'reopen'])
+            ->name('salary.reopen')
+            ->whereNumber('calculation');
+        Route::post('/salary/calculations/{calculation}/paid', [SalaryApprovalController::class, 'markPaid'])
+            ->name('salary.paid')
+            ->whereNumber('calculation');
     });
 
     Route::middleware('permission:crm-team.view')->group(function () {
