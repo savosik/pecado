@@ -37,10 +37,18 @@ export default function WhyPanel({ calculation }) {
     const rows = [];
 
     if (ratio < 1) {
+        /*
+         * Цена незакрытого плана — из того же what-if, что и совет ниже, а не
+         * доля базовой премии: недостающая выручка тоже проходит через множитель
+         * охвата, поэтому при множителе 0,8 «потеряно» и «дожать» расходились
+         * ровно на 20 % и выглядели как ошибка расчёта.
+         */
+        const planLoss = byKey.plan_gap?.gain ?? base * (1 - ratio) * Number(kpi.multiplier ?? 1);
+
         rows.push({
             key: 'plan',
             label: 'план не закрыт',
-            value: base * (1 - ratio),
+            value: planLoss,
             sign: '−',
             tone: 'blue',
             fact: `${Math.round(ratio * 100)} % плана · не хватает ${fmtCompact(inputs.remaining)}`,
@@ -54,7 +62,7 @@ export default function WhyPanel({ calculation }) {
         rows.push({
             key: 'over',
             label: 'сверх плана',
-            value: base * (ratio - 1),
+            value: base * (ratio - 1) * Number(kpi.multiplier ?? 1),
             sign: '+',
             tone: 'green',
             fact: `${Math.round(ratio * 100)} % плана`,
@@ -130,6 +138,11 @@ export default function WhyPanel({ calculation }) {
                         : diff > 0
                             ? <>Премия <Text as="span" fontWeight="700" color="green.fg">выше базовой на {fmtRub0(diff)}</Text> — вот что на неё повлияло:</>
                             : <>Премия <Text as="span" fontWeight="700" color="red.fg">ниже базовой на {fmtRub0(-diff)}</Text> — вот что её уменьшило:</>}
+                </Text>
+
+                <Text fontSize="xs" color="fg.subtle" mt={2}>
+                    Цена каждого показателя — сколько премия прибавит, если поправить только его.
+                    В общую разницу они не складываются: показатели перемножаются, а не суммируются.
                 </Text>
 
                 <VStack align="stretch" gap={4} mt={4}>
