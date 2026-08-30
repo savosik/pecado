@@ -65,3 +65,5 @@ Schedule::command('crm:plans-warm')->everyTenMinutes()->between('7:00', '21:00')
 // Зарплата (pay-00): мост «накладная → дата закрытия» целиком, до финансового
 // обхода 07:00 — чтобы утренние черновики считались по свежей просрочке.
 Schedule::command('payroll:rebuild-invoices')->dailyAt('06:30')->withoutOverlapping();
+// Страховка событийного пересчёта черновиков зарплаты: залежавшиеся и отсутствующие.
+Schedule::command('payroll:recalculate --stale')->everyTenMinutes()->between('7:00', '21:00')->withoutOverlapping();

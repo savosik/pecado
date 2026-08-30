@@ -144,9 +144,12 @@ class PayrollInvoiceSettlement extends Model
     {
         $start = \Carbon\CarbonImmutable::instance($month)->startOfMonth();
 
+        // whereDate, а не whereBetween по строкам: SQLite хранит date-каст с временем,
+        // и «2026-07-31 00:00:00» строкой больше «2026-07-31».
         return $query
             ->whereNotNull('settled_on')
             ->whereNotNull('delay_working_days')
-            ->whereBetween('settled_on', [$start->toDateString(), $start->endOfMonth()->toDateString()]);
+            ->whereDate('settled_on', '>=', $start->toDateString())
+            ->whereDate('settled_on', '<=', $start->endOfMonth()->toDateString());
     }
 }

@@ -184,6 +184,13 @@ class AppServiceProvider extends ServiceProvider
             \App\Events\PartnerSettlementsChanged::class,
             \App\Listeners\Payroll\ReactToSettlementChanges::class,
         );
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\Payroll\PayrollInputsChanged::class,
+            \App\Listeners\Payroll\ScheduleDraftRecalculation::class,
+        );
+        // Отгрузки и планы будят черновик зарплаты; проекция оплаты пишет quietly и сюда не попадает.
+        \App\Models\Shipment::observe(\App\Observers\PayrollShipmentObserver::class);
+        \App\Models\CrmSalesPlan::observe(\App\Observers\PayrollSalesPlanObserver::class);
 
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\CompanyUpdated::class,

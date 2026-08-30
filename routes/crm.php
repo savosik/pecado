@@ -28,6 +28,7 @@ use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PaymentOrderController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
+use App\Http\Controllers\Crm\SalaryController;
 use App\Http\Controllers\Crm\ShortageController;
 use App\Http\Controllers\Crm\StaffNotificationController;
 use App\Http\Controllers\Crm\TaskChecklistController;
@@ -613,6 +614,14 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::delete('/plans/{plan}', [PlanController::class, 'destroy'])
             ->name('plans.destroy')
             ->whereNumber('plan');
+    });
+
+    // Зарплата (эпик pay-00). view — своя; чужой `manager` в адресе открывается
+    // только с crm-clients-all.view, иначе игнорируется (PayrollScopeResolver).
+    // `/salary/data` — тот же payload для опроса раз в минуту.
+    Route::middleware('permission:crm-salary.view')->group(function () {
+        Route::get('/salary', [SalaryController::class, 'index'])->name('salary.index');
+        Route::get('/salary/data', [SalaryController::class, 'data'])->name('salary.data');
     });
 
     Route::middleware('permission:crm-team.view')->group(function () {
