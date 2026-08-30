@@ -130,8 +130,10 @@ export default function RowActions({
 
     return (
         <HStack gap={1} justify={justify}>
-            {items.map((item, index) => (
-                <RowActionButton key={item.key ?? index} size={size} stopPropagation={stopPropagation} {...item} />
+            {/* key вынимаем из объекта: в spread он попадает как обычный проп,
+                и React ругается в консоль на каждой странице со списками. */}
+            {items.map(({ key, ...item }, index) => (
+                <RowActionButton key={key ?? index} size={size} stopPropagation={stopPropagation} {...item} />
             ))}
             {extraNode}
             {deleteItem && (

@@ -33,7 +33,7 @@ export default function AdjustmentsPanel({ month, managers, adjustments, onChang
 
     const del = useConfirmDelete({
         title: 'Удалить строку?',
-        description: (row) => `«${row.label}» на ${fmtRub(row.amount)} будет удалена, расчёт пересчитается.`,
+        description: (row) => (row ? `«${row.label}» на ${fmtRub(row.amount)} будет удалена, расчёт пересчитается.` : ''),
         onConfirm: async (row) => {
             try {
                 const res = await axios.delete(`/crm/salary/adjustments/${row.id}`);

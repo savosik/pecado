@@ -39,9 +39,18 @@ export function useConfirmDelete({
         }
     }, [onConfirm, target]);
 
-    const resolve = (value) => (typeof value === 'function'
-        ? value(target === true ? undefined : target)
-        : value);
+    /*
+     * Пока диалог закрыт, строки нет — и звать функцию не с чем: `title(null)`
+     * ронял всю страницу настроек зарплаты, где описание читает поля строки.
+     * Закрытому диалогу текст всё равно не нужен.
+     */
+    const resolve = (value) => {
+        if (typeof value !== 'function') {
+            return value;
+        }
+
+        return target === null ? undefined : value(target === true ? undefined : target);
+    };
 
     return {
         target: target === true ? undefined : target,
