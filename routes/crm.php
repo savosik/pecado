@@ -32,6 +32,7 @@ use App\Http\Controllers\Crm\SalaryAdjustmentController;
 use App\Http\Controllers\Crm\SalaryApprovalController;
 use App\Http\Controllers\Crm\SalaryController;
 use App\Http\Controllers\Crm\SalaryInvoiceController;
+use App\Http\Controllers\Crm\SalaryPdfController;
 use App\Http\Controllers\Crm\SalarySettingsController;
 use App\Http\Controllers\Crm\ShortageController;
 use App\Http\Controllers\Crm\StaffNotificationController;
@@ -628,6 +629,8 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/salary/data', [SalaryController::class, 'data'])->name('salary.data');
         // Калькулятор с ползунками: считает тот же калькулятор, что и снимок.
         Route::post('/salary/simulate', [SalaryController::class, 'simulate'])->name('salary.simulate');
+        Route::get('/salary/payslip', [SalaryPdfController::class, 'payslip'])->name('salary.payslip');
+        Route::get('/salary/explained', [SalaryPdfController::class, 'explained'])->name('salary.explained');
         // Сводка по отделу — второе право: «вижу чужие деньги», как разрезы планов.
         Route::get('/salary/team', [SalaryController::class, 'team'])
             ->middleware('permission:crm-clients-all.view')

@@ -9,7 +9,7 @@ use App\Services\Payroll\PayrollCatalog;
 use App\Services\Payroll\Support\Money;
 
 /**
- * KPI-премия: база × выполнение, где выполнение = множитель × (выручка − штраф) / план.
+ * KPI-премия: база × выполнение, где выполнение = множитель × (выручка − вычет) / план.
  *
  * Владеет тремя факторами и порядком их применения. Именно здесь, а не в общем
  * интерпретаторе «куда применить корректировку», живёт семантика формулы —
@@ -39,7 +39,7 @@ class KpiBonusComponent extends AbstractComponent
 
     public function howComputed(): string
     {
-        return 'База премии × выполнение. Выполнение = (реализации − штраф) ÷ план × множитель по клиентам. Выше потолка не растёт, ниже нуля не опускается.';
+        return 'База премии × выполнение. Выполнение = (реализации − вычет) ÷ план × множитель по клиентам. Выше потолка не растёт, ниже нуля не опускается.';
     }
 
     public function kind(): ComponentKind
@@ -154,7 +154,7 @@ class KpiBonusComponent extends AbstractComponent
         ];
 
         $explanation = sprintf(
-            'Реализации %s − штраф %s = %s; ÷ план %s = %s; × множитель %s = %s%s; премия %s × %s = %s',
+            'Реализации %s − вычет %s = %s; ÷ план %s = %s; × множитель %s = %s%s; премия %s × %s = %s',
             Money::rub($revenue),
             Money::rub($penalty),
             Money::rub($adjusted),

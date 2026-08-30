@@ -2,6 +2,8 @@ import { Head, router } from '@inertiajs/react';
 import { Box, HStack, SimpleGrid, VStack } from '@chakra-ui/react';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
+import { Button } from '@/components/ui/button';
+import { LuFileSearch, LuFileText } from 'react-icons/lu';
 import { Alert } from '@/components/ui/alert';
 import { useSalaryPolling } from './components/useSalaryPolling';
 import EarningsHero from './components/EarningsHero';
@@ -32,6 +34,16 @@ const selectStyle = {
 export default function SalaryIndex(props) {
     const { data, refreshing } = useSalaryPolling(props);
     const calc = data.calculation;
+
+    const pdfUrl = (path) => {
+        const params = new URLSearchParams({ month: data.month });
+
+        if (data.can_see_all && data.manager?.id) {
+            params.set('manager', String(data.manager.id));
+        }
+
+        return `${path}?${params.toString()}`;
+    };
 
     const navigate = (changes) => {
         const params = { month: data.month, ...changes };
@@ -70,6 +82,19 @@ export default function SalaryIndex(props) {
                                     <option key={m.id} value={m.id}>{m.name}</option>
                                 ))}
                             </select>
+                        )}
+
+                        {calc && (
+                            <>
+                                {/* Ссылки, а не кнопки с fetch: PDF отдаёт сервер, браузеру
+                                    нужно просто открыть адрес и сохранить файл. */}
+                                <Button asChild size="sm" variant="outline">
+                                    <a href={pdfUrl('/crm/salary/payslip')}><LuFileText /> Расчётный лист</a>
+                                </Button>
+                                <Button asChild size="sm" variant="outline">
+                                    <a href={pdfUrl('/crm/salary/explained')}><LuFileSearch /> Расчёт с пояснениями</a>
+                                </Button>
+                            </>
                         )}
                     </HStack>
                 )}

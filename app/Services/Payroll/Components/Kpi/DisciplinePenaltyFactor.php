@@ -29,7 +29,7 @@ class DisciplinePenaltyFactor extends AbstractComponent
 
     public function description(): string
     {
-        return 'Клиент заплатил позже срока — из выручки вычитается сумма накладной с коэффициентом. Пока накладная не оплачена, штрафа нет.';
+        return 'Клиент заплатил позже срока — из выручки вычитается сумма накладной с коэффициентом. Пока накладная не оплачена, вычета нет.';
     }
 
     public function howComputed(): string
@@ -127,7 +127,7 @@ class DisciplinePenaltyFactor extends AbstractComponent
 
         $explanation = $penalized === []
             ? sprintf(
-                'Оплат с задержкой в этом месяце нет — штрафа нет%s',
+                'Оплат с задержкой в этом месяце нет — вычета нет%s',
                 $settledCount === 0 ? '' : sprintf(' (закрыто накладных: %d)', $settledCount),
             )
             : $this->summarize($penalized, $total, $settledCount);
