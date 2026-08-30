@@ -6,6 +6,7 @@ use App\Services\Payroll\Components\Kpi\DisciplinePenaltyFactor;
 use App\Services\Payroll\Components\Kpi\RevenueFactor;
 use App\Services\Payroll\Components\KpiBonusComponent;
 use App\Services\Payroll\Components\ManualCorrectionComponent;
+use App\Services\Payroll\Components\NewClientsBonusComponent;
 use App\Services\Payroll\Components\SalaryComponent;
 
 /*
@@ -25,6 +26,7 @@ return [
         'salary' => SalaryComponent::class,
         'kpi_bonus' => KpiBonusComponent::class,
         'extra_income' => ExtraIncomeComponent::class,
+        'new_clients_bonus' => NewClientsBonusComponent::class,
         'manual_correction' => ManualCorrectionComponent::class,
     ],
 
@@ -64,6 +66,15 @@ return [
                 ]],
             ]],
             ['key' => 'extra_income', 'enabled' => true, 'defaults' => []],
+            // Выключен: цифр заказчик не назвал, включает РОП новой версией схемы.
+            ['key' => 'new_clients_bonus', 'enabled' => false, 'defaults' => [
+                'bonus' => 2000,
+                'min_first_amount' => 10000,
+                'repeat_within_days' => 60,
+                'monthly_cap' => 20000,
+                'returned_weight' => 0.5,
+                'returned_after_days' => 90,
+            ]],
             ['key' => 'manual_correction', 'enabled' => true, 'defaults' => []],
         ],
     ],

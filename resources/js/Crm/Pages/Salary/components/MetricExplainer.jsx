@@ -30,6 +30,18 @@ export default function MetricExplainer({ calculation, explanations }) {
                         </AccordionItemTrigger>
                         <AccordionItemContent pb={4}>
                             <Explanation entry={explanations?.[c.key]} explanation={c.explanation} />
+                            {c.key === 'new_clients_bonus' && Array.isArray(c.evidence) && c.evidence.length > 0 && (
+                                <VStack align="stretch" gap={1} mt={3} fontSize="xs">
+                                    {c.evidence.map((row) => (
+                                        <HStack key={`${row.id}-${row.stage}`} justify="space-between" gap={3}>
+                                            <Text lineClamp={1}>
+                                                {row.name} <Text as="span" color="fg.muted">— {row.reason}</Text>
+                                            </Text>
+                                            <Text fontVariantNumeric="tabular-nums" whiteSpace="nowrap" color={row.amount > 0 ? undefined : 'fg.muted'}>{fmtRub0(row.amount)}</Text>
+                                        </HStack>
+                                    ))}
+                                </VStack>
+                            )}
                             {(c.children ?? []).length > 0 && (
                                 <VStack align="stretch" gap={3} mt={4} pl={3} borderLeftWidth="2px" borderColor="border">
                                     {c.children.map((child) => (

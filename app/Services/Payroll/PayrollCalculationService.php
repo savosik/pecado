@@ -82,7 +82,7 @@ class PayrollCalculationService
     public function preview(int $managerId, CarbonInterface $month): array
     {
         $params = $this->params->effective($managerId, $month);
-        $inputs = $this->collector->collect($managerId, $month);
+        $inputs = $this->collector->collect($managerId, $month, $params->for('new_clients_bonus'));
 
         return [
             'params' => $params,
@@ -203,7 +203,7 @@ class PayrollCalculationService
     private function store(int $managerId, CarbonImmutable|\Illuminate\Support\Carbon $period, ?PayrollCalculation $draft, int $version, string $source): PayrollCalculation
     {
         $params = $this->params->effective($managerId, $period);
-        $inputs = $this->collector->collect($managerId, $period);
+        $inputs = $this->collector->collect($managerId, $period, $params->for('new_clients_bonus'));
         $breakdown = $this->calculator->calculate($params, $inputs);
 
         $hash = $inputs->hash();

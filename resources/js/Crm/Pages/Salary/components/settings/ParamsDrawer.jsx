@@ -31,10 +31,11 @@ const clone = (value) => JSON.parse(JSON.stringify(value ?? {}));
  * «постоянно» — для всех месяцев без своего отклонения. Отправляется полный
  * набор параметров компонента, разницу с нижним слоем считает сервер.
  */
-export default function ParamsDrawer({ manager, month, monthLabel, components, open, onClose, onSaved }) {
+export default function ParamsDrawer({ manager, month, monthLabel, components, schemeEnabled, open, onClose, onSaved }) {
     const [scope, setScope] = useState('month');
     const [salary, setSalary] = useState({});
     const [kpi, setKpi] = useState({});
+    const [newClients, setNewClients] = useState({});
     const [comment, setComment] = useState('');
     const [saving, setSaving] = useState(false);
     const [errors, setErrors] = useState([]);
@@ -43,6 +44,7 @@ export default function ParamsDrawer({ manager, month, monthLabel, components, o
         if (!manager) return;
         setSalary(clone(manager.params?.salary));
         setKpi(clone(manager.params?.kpi_bonus));
+        setNewClients(clone(manager.params?.new_clients_bonus));
         setComment('');
         setErrors([]);
         setScope('month');
@@ -53,6 +55,10 @@ export default function ParamsDrawer({ manager, month, monthLabel, components, o
     const sources = manager.sources ?? {};
     const ladder = kpi.active_clients?.ladder ?? [];
     const tiers = kpi.discipline_penalty?.tiers ?? [];
+    const hasNewClients = Boolean(manager.params?.new_clients_bonus);
+    const newClientsEnabled = (schemeEnabled ?? []).includes('new_clients_bonus');
+    const nc = (key, fallback = '') => (newClients[key] ?? fallback);
+    const setNc = (key, value) => setNewClients({ ...newClients, [key]: value });
 
     const payload = (component, params) => ({
         manager_id: manager.id,
@@ -67,13 +73,23 @@ export default function ParamsDrawer({ manager, month, monthLabel, components, o
         setErrors([]);
         try {
             await axios.post('/crm/salary/settings/params', payload('salary', { amount: Number(salary.amount ?? 0) }));
-            const res = await axios.post('/crm/salary/settings/params', payload('kpi_bonus', {
+            let res = await axios.post('/crm/salary/settings/params', payload('kpi_bonus', {
                 ...kpi,
                 base: Number(kpi.base ?? 0),
                 cap: Number(kpi.cap ?? 2),
                 active_clients: { ladder },
                 discipline_penalty: { tiers },
             }));
+            if (hasNewClients) {
+                res = await axios.post('/crm/salary/settings/params', payload('new_clients_bonus', {
+                    bonus: Number(newClients.bonus ?? 0),
+                    min_first_amount: Number(newClients.min_first_amount ?? 0),
+                    repeat_within_days: Number(newClients.repeat_within_days ?? 60),
+                    monthly_cap: Number(newClients.monthly_cap ?? 0),
+                    returned_weight: Number(newClients.returned_weight ?? 0.5),
+                    returned_after_days: Number(newClients.returned_after_days ?? 90),
+                }));
+            }
             toastSuccess('Параметры сохранены');
             onSaved?.(res.data.manager);
             onClose();
@@ -161,6 +177,37 @@ export default function ParamsDrawer({ manager, month, monthLabel, components, o
                                 <TiersEditor tiers={tiers} onChange={(rows) => setKpi({ ...kpi, discipline_penalty: { tiers: rows } })} />
                             </Box>
                         </Section>
+
+                        {hasNewClients && (
+                            <Section
+                                title={components?.new_clients_bonus?.label ?? 'Новые клиенты'}
+                                hint={`${components?.new_clients_bonus?.how_computed ?? ''}${newClientsEnabled ? '' : ' Компонент выключен в схеме отдела — параметры сохранятся, но в расчёт не войдут, пока РОП не включит его новой версией схемы.'}`}
+                                onReset={() => reset('new_clients_bonus')}
+                            >
+                                <HStack gap={4} align="start" flexWrap="wrap">
+                                    <Field label={<HStack gap={2}>Бонус за клиента, ₽ <SourceBadge source={sources.new_clients_bonus?.bonus} /></HStack>} flex="1" minW="160px">
+                                        <Input type="number" min="0" step="500" value={nc('bonus')} onChange={(e) => setNc('bonus', e.target.value)} />
+                                    </Field>
+                                    <Field label={<HStack gap={2}>Мин. первая отгрузка, ₽ <SourceBadge source={sources.new_clients_bonus?.min_first_amount} /></HStack>} flex="1" minW="160px">
+                                        <Input type="number" min="0" step="1000" value={nc('min_first_amount')} onChange={(e) => setNc('min_first_amount', e.target.value)} />
+                                    </Field>
+                                    <Field label={<HStack gap={2}>Потолок за месяц, ₽ <SourceBadge source={sources.new_clients_bonus?.monthly_cap} /></HStack>} helperText="0 — без потолка" flex="1" minW="160px">
+                                        <Input type="number" min="0" step="1000" value={nc('monthly_cap')} onChange={(e) => setNc('monthly_cap', e.target.value)} />
+                                    </Field>
+                                </HStack>
+                                <HStack gap={4} align="start" flexWrap="wrap" mt={3}>
+                                    <Field label={<HStack gap={2}>Повтор в течение, дней <SourceBadge source={sources.new_clients_bonus?.repeat_within_days} /></HStack>} flex="1" minW="160px">
+                                        <Input type="number" min="1" max="365" step="1" value={nc('repeat_within_days')} onChange={(e) => setNc('repeat_within_days', e.target.value)} />
+                                    </Field>
+                                    <Field label={<HStack gap={2}>Вес вернувшегося (0–1) <SourceBadge source={sources.new_clients_bonus?.returned_weight} /></HStack>} flex="1" minW="160px">
+                                        <Input type="number" min="0" max="1" step="0.1" value={nc('returned_weight')} onChange={(e) => setNc('returned_weight', e.target.value)} />
+                                    </Field>
+                                    <Field label={<HStack gap={2}>Вернувшийся — пауза дольше, дней <SourceBadge source={sources.new_clients_bonus?.returned_after_days} /></HStack>} flex="1" minW="160px">
+                                        <Input type="number" min="1" max="1000" step="1" value={nc('returned_after_days')} onChange={(e) => setNc('returned_after_days', e.target.value)} />
+                                    </Field>
+                                </HStack>
+                            </Section>
+                        )}
 
                         <Field label="Пояснение" optionalText="необязательно">
                             <Input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Например: испытательный срок, сезонная база" maxLength={255} />

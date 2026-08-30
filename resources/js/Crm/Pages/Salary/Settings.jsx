@@ -135,6 +135,7 @@ export default function SalarySettings(props) {
                 month={data.month}
                 monthLabel={data.month_label ?? ''}
                 components={data.components}
+                schemeEnabled={scheme.enabled ?? []}
                 open={Boolean(editing)}
                 onClose={() => setEditing(null)}
                 onSaved={replaceManager}

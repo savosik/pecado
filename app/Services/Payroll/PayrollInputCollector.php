@@ -44,7 +44,11 @@ class PayrollInputCollector
         private readonly WorkingCalendar $calendar,
     ) {}
 
-    public function collect(int $managerId, CarbonInterface $month): PayrollInputs
+    /**
+     * @param  array<string, mixed>  $newClientsParams  параметры компонента «Новые клиенты»
+     *                                                  (сроки повтора и паузы); пусто — умолчания
+     */
+    public function collect(int $managerId, CarbonInterface $month, array $newClientsParams = []): PayrollInputs
     {
         $period = CarbonImmutable::instance($month)->startOfMonth();
         $managerName = (string) (PersonalManager::query()->whereKey($managerId)->value('name') ?? '');
@@ -73,7 +77,7 @@ class PayrollInputCollector
             atRiskInvoices: $this->atRiskInvoices($clientIds, $names, $period),
             extraItems: $this->adjustments($managerId, $period, PayrollManualAdjustment::COMPONENT_EXTRA_INCOME),
             corrections: $this->adjustments($managerId, $period, PayrollManualAdjustment::COMPONENT_MANUAL_CORRECTION),
-            newClients: [],
+            newClients: $this->newClients($clientIds, $names, $period, $newClientsParams),
             workingDays: $this->calendar->monthDays($period),
             collectedAt: now()->toIso8601String(),
         );
@@ -135,6 +139,130 @@ class PayrollInputCollector
             ->all();
 
         return ['rows' => $rows, 'total_count' => $total, 'truncated' => $total > count($rows)];
+    }
+
+    /**
+     * Новые, повторившие и вернувшиеся партнёры месяца — по датам отгрузок за всю историю.
+     *
+     * Новый — первая в истории отгрузка в этом месяце (сумма первого дня — порог
+     * отсекает тестовые заказы). Повтор — первая отгрузка была раньше, вторая
+     * в этом месяце и не позже отведённого срока. Вернувшийся — пауза перед
+     * отгрузкой месяца дольше порога спящего.
+     *
+     * @param  list<int>  $clientIds
+     * @param  array<int, string>  $names
+     * @param  array<string, mixed>  $params
+     * @return list<array<string, mixed>>
+     */
+    private function newClients(array $clientIds, array $names, CarbonImmutable $period, array $params): array
+    {
+        if ($clientIds === []) {
+            return [];
+        }
+
+        $repeatWithin = max(1, (int) ($params['repeat_within_days'] ?? 60));
+        $returnedAfter = max(1, (int) ($params['returned_after_days'] ?? config('crm.lifecycle.sleeping_after_days', 90)));
+        $start = $period->toDateString();
+        $end = $period->endOfMonth()->toDateString();
+
+        /** @var array<int, list<string>> $datesByUser */
+        $datesByUser = [];
+        $rows = Shipment::query()
+            ->withoutInternalOrganizations()
+            ->whereIn('user_id', $clientIds)
+            ->whereNotNull('erp_created_at')
+            ->where('total_amount', '>', 0)
+            ->selectRaw('user_id, DATE(erp_created_at) as day')
+            ->distinct()
+            ->orderBy('day')
+            ->get();
+
+        foreach ($rows as $row) {
+            $datesByUser[(int) $row->user_id][] = (string) $row->getAttribute('day');
+        }
+
+        $result = [];
+
+        foreach ($datesByUser as $userId => $days) {
+            $first = $days[0];
+            $inMonth = array_values(array_filter($days, fn (string $d): bool => $d >= $start && $d <= $end));
+
+            if ($inMonth === []) {
+                continue;
+            }
+
+            if ($first >= $start) {
+                $result[] = [
+                    'id' => $userId,
+                    'name' => $names[$userId] ?? ('#'.$userId),
+                    'kind' => 'new',
+                    'stage' => 'first',
+                    'first_shipment_on' => $first,
+                    'first_amount' => $this->dayTotal($userId, $first),
+                    'shipment_on' => $first,
+                ];
+
+                continue;
+            }
+
+            $second = $days[1] ?? null;
+            if ($second !== null && $second >= $start && $second <= $end) {
+                $gap = (int) CarbonImmutable::parse($first)->diffInDays(CarbonImmutable::parse($second));
+
+                if ($gap <= $repeatWithin) {
+                    $result[] = [
+                        'id' => $userId,
+                        'name' => $names[$userId] ?? ('#'.$userId),
+                        'kind' => 'new',
+                        'stage' => 'repeat',
+                        'first_shipment_on' => $first,
+                        'first_amount' => $this->dayTotal($userId, $first),
+                        'shipment_on' => $second,
+                        'repeat_after_days' => $gap,
+                    ];
+
+                    continue;
+                }
+            }
+
+            $before = array_values(array_filter($days, fn (string $d): bool => $d < $start));
+            if ($before === []) {
+                continue;
+            }
+
+            $lastBefore = $before[count($before) - 1];
+            $gap = (int) CarbonImmutable::parse($lastBefore)->diffInDays(CarbonImmutable::parse($inMonth[0]));
+
+            if ($gap > $returnedAfter) {
+                $result[] = [
+                    'id' => $userId,
+                    'name' => $names[$userId] ?? ('#'.$userId),
+                    'kind' => 'returned',
+                    'stage' => 'first',
+                    'first_shipment_on' => $first,
+                    'first_amount' => $this->dayTotal($userId, $inMonth[0]),
+                    'shipment_on' => $inMonth[0],
+                    'gap_days' => $gap,
+                    'last_before' => $lastBefore,
+                ];
+            }
+        }
+
+        usort($result, fn (array $a, array $b): int => strcmp($a['shipment_on'], $b['shipment_on']));
+
+        return $result;
+    }
+
+    /**
+     * Сумма отгрузок партнёра за день — атрибут документов, не аналитика.
+     */
+    private function dayTotal(int $userId, string $day): float
+    {
+        return round((float) Shipment::query()
+            ->withoutInternalOrganizations()
+            ->where('user_id', $userId)
+            ->whereDate('erp_created_at', $day)
+            ->sum('total_amount'), 2);
     }
 
     /**
