@@ -142,12 +142,19 @@ class PayrollInputCollector
     }
 
     /**
-     * Новые, повторившие и вернувшиеся партнёры месяца — по датам отгрузок за всю историю.
+     * Новые, повторившие и вернувшиеся партнёры месяца.
      *
-     * Новый — первая в истории отгрузка в этом месяце (сумма первого дня — порог
+     * Новый — первая в истории отгрузка в этом месяце (сумма первого дня; порог
      * отсекает тестовые заказы). Повтор — первая отгрузка была раньше, вторая
      * в этом месяце и не позже отведённого срока. Вернувшийся — пауза перед
      * отгрузкой месяца дольше порога спящего.
+     *
+     * Четыре агрегата одним GROUP BY по индексу `(user_id, erp_created_at)`,
+     * а не выборка всех дат: у менеджера сотни партнёров и десятки тысяч
+     * отгрузок за историю, и `DISTINCT ... ORDER BY DATE(...)` по ним валил
+     * запрос в MySQL «Out of sort memory» (поймано на dev 30.08.2026).
+     * «Вторая отгрузка в истории» выводится без выборки: до месяца была ровно
+     * одна дата отгрузки — значит первая дата месяца и есть вторая в истории.
      *
      * @param  list<int>  $clientIds
      * @param  array<int, string>  $names
@@ -162,39 +169,41 @@ class PayrollInputCollector
 
         $repeatWithin = max(1, (int) ($params['repeat_within_days'] ?? 60));
         $returnedAfter = max(1, (int) ($params['returned_after_days'] ?? config('crm.lifecycle.sleeping_after_days', 90)));
-        $start = $period->toDateString();
-        $end = $period->endOfMonth()->toDateString();
+        $startAt = $period->startOfDay()->toDateTimeString();
+        $endAt = $period->endOfMonth()->endOfDay()->toDateTimeString();
 
-        /** @var array<int, list<string>> $datesByUser */
-        $datesByUser = [];
         $rows = Shipment::query()
             ->withoutInternalOrganizations()
             ->whereIn('user_id', $clientIds)
             ->whereNotNull('erp_created_at')
+            ->where('erp_created_at', '<=', $endAt)
             ->where('total_amount', '>', 0)
-            ->selectRaw('user_id, DATE(erp_created_at) as day')
-            ->distinct()
-            ->orderBy('day')
+            ->groupBy('user_id')
+            ->selectRaw('user_id')
+            ->selectRaw('MIN(DATE(erp_created_at)) as first_day')
+            ->selectRaw('MIN(CASE WHEN erp_created_at >= ? THEN DATE(erp_created_at) END) as first_in_month', [$startAt])
+            ->selectRaw('MAX(CASE WHEN erp_created_at < ? THEN DATE(erp_created_at) END) as last_before', [$startAt])
+            ->selectRaw('COUNT(DISTINCT CASE WHEN erp_created_at < ? THEN DATE(erp_created_at) END) as days_before', [$startAt])
             ->get();
-
-        foreach ($rows as $row) {
-            $datesByUser[(int) $row->user_id][] = (string) $row->getAttribute('day');
-        }
 
         $result = [];
 
-        foreach ($datesByUser as $userId => $days) {
-            $first = $days[0];
-            $inMonth = array_values(array_filter($days, fn (string $d): bool => $d >= $start && $d <= $end));
+        foreach ($rows as $row) {
+            $userId = (int) $row->getAttribute('user_id');
+            $first = (string) $row->getAttribute('first_day');
+            $inMonth = $row->getAttribute('first_in_month');
 
-            if ($inMonth === []) {
-                continue;
+            if ($inMonth === null) {
+                continue;   // в этом месяце партнёр не отгружался
             }
 
-            if ($first >= $start) {
+            $inMonth = (string) $inMonth;
+            $name = $names[$userId] ?? ('#'.$userId);
+
+            if ((int) $row->getAttribute('days_before') === 0) {
                 $result[] = [
                     'id' => $userId,
-                    'name' => $names[$userId] ?? ('#'.$userId),
+                    'name' => $name,
                     'kind' => 'new',
                     'stage' => 'first',
                     'first_shipment_on' => $first,
@@ -205,19 +214,21 @@ class PayrollInputCollector
                 continue;
             }
 
-            $second = $days[1] ?? null;
-            if ($second !== null && $second >= $start && $second <= $end) {
-                $gap = (int) CarbonImmutable::parse($first)->diffInDays(CarbonImmutable::parse($second));
+            $lastBefore = (string) $row->getAttribute('last_before');
+
+            // Вторая отгрузка в истории пришлась на этот месяц.
+            if ((int) $row->getAttribute('days_before') === 1) {
+                $gap = (int) CarbonImmutable::parse($first)->diffInDays(CarbonImmutable::parse($inMonth));
 
                 if ($gap <= $repeatWithin) {
                     $result[] = [
                         'id' => $userId,
-                        'name' => $names[$userId] ?? ('#'.$userId),
+                        'name' => $name,
                         'kind' => 'new',
                         'stage' => 'repeat',
                         'first_shipment_on' => $first,
                         'first_amount' => $this->dayTotal($userId, $first),
-                        'shipment_on' => $second,
+                        'shipment_on' => $inMonth,
                         'repeat_after_days' => $gap,
                     ];
 
@@ -225,23 +236,17 @@ class PayrollInputCollector
                 }
             }
 
-            $before = array_values(array_filter($days, fn (string $d): bool => $d < $start));
-            if ($before === []) {
-                continue;
-            }
-
-            $lastBefore = $before[count($before) - 1];
-            $gap = (int) CarbonImmutable::parse($lastBefore)->diffInDays(CarbonImmutable::parse($inMonth[0]));
+            $gap = (int) CarbonImmutable::parse($lastBefore)->diffInDays(CarbonImmutable::parse($inMonth));
 
             if ($gap > $returnedAfter) {
                 $result[] = [
                     'id' => $userId,
-                    'name' => $names[$userId] ?? ('#'.$userId),
+                    'name' => $name,
                     'kind' => 'returned',
                     'stage' => 'first',
                     'first_shipment_on' => $first,
-                    'first_amount' => $this->dayTotal($userId, $inMonth[0]),
-                    'shipment_on' => $inMonth[0],
+                    'first_amount' => $this->dayTotal($userId, $inMonth),
+                    'shipment_on' => $inMonth,
                     'gap_days' => $gap,
                     'last_before' => $lastBefore,
                 ];
@@ -255,13 +260,18 @@ class PayrollInputCollector
 
     /**
      * Сумма отгрузок партнёра за день — атрибут документов, не аналитика.
+     *
+     * Диапазоном, а не `whereDate`: функция над колонкой отключила бы индекс
+     * `(user_id, erp_created_at)`.
      */
     private function dayTotal(int $userId, string $day): float
     {
+        $from = CarbonImmutable::parse($day)->startOfDay();
+
         return round((float) Shipment::query()
             ->withoutInternalOrganizations()
             ->where('user_id', $userId)
-            ->whereDate('erp_created_at', $day)
+            ->whereBetween('erp_created_at', [$from->toDateTimeString(), $from->endOfDay()->toDateTimeString()])
             ->sum('total_amount'), 2);
     }
 
