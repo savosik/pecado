@@ -8,6 +8,7 @@ use App\Services\Payroll\Dto\InvoiceInput;
 use App\Services\Payroll\Dto\PayrollBreakdown;
 use App\Services\Payroll\Dto\PayrollInputs;
 use App\Services\Payroll\Dto\PlannedClientInput;
+use App\Services\Payroll\Support\Money;
 use App\Services\Payroll\Support\WorkingCalendar;
 use Carbon\CarbonImmutable;
 
@@ -21,11 +22,19 @@ use Carbon\CarbonImmutable;
  */
 class PayrollForecaster
 {
-    /** @var array<string, string> */
+    /**
+     * Названия сценариев — от действия менеджера, а не от статистики.
+     *
+     * «Если ничего не изменится» читалось как «оставить как есть», хотя за этим
+     * стояло «ни один долг не собран». Формулировка должна называть причину,
+     * иначе цифра ниже текущей выглядит ошибкой расчёта.
+     *
+     * @var array<string, string>
+     */
     public const SCENARIO_LABELS = [
-        'pessimistic' => 'Если ничего не изменится',
-        'base' => 'При текущем темпе',
-        'optimistic' => 'Если добить план и всех клиентов',
+        'pessimistic' => 'Если долги не соберу',
+        'base' => 'Если пойдёт как идёт',
+        'optimistic' => 'Если закрою план и верну клиентов',
     ];
 
     public function __construct(
@@ -55,7 +64,7 @@ class PayrollForecaster
         $lastWorkingDay = $this->lastWorkingDay($month);
 
         if ($closed || $passed === 0) {
-            $snapshot = $this->scenario('base', $inputs, $current);
+            $snapshot = $this->scenario('base', $inputs, $current, $inputs);
             $scenarios = [
                 'pessimistic' => $snapshot + ['key' => 'pessimistic', 'label' => self::SCENARIO_LABELS['pessimistic']],
                 'base' => $snapshot,
@@ -83,14 +92,15 @@ class PayrollForecaster
             ]);
 
             $scenarios = [
-                'pessimistic' => $this->scenario('pessimistic', $pessimistic, $this->calculator->calculate($params, $pessimistic)),
-                'base' => $this->scenario('base', $base, $this->calculator->calculate($params, $base)),
-                'optimistic' => $this->scenario('optimistic', $optimistic, $this->calculator->calculate($params, $optimistic)),
+                'pessimistic' => $this->scenario('pessimistic', $pessimistic, $this->calculator->calculate($params, $pessimistic), $inputs),
+                'base' => $this->scenario('base', $base, $this->calculator->calculate($params, $base), $inputs),
+                'optimistic' => $this->scenario('optimistic', $optimistic, $this->calculator->calculate($params, $optimistic), $inputs),
             ];
         }
 
         return [
             'scenarios' => $scenarios,
+            'current_total' => $current->total,
             'curve' => $this->curve($month, $today, $current, $scenarios),
             'basis' => [
                 'working_days' => ['total' => $total, 'passed' => $passed, 'left' => $left],
@@ -107,13 +117,14 @@ class PayrollForecaster
     /**
      * @return array<string, mixed>
      */
-    private function scenario(string $key, PayrollInputs $inputs, PayrollBreakdown $breakdown): array
+    private function scenario(string $key, PayrollInputs $inputs, PayrollBreakdown $breakdown, ?PayrollInputs $actual = null): array
     {
         $kpi = $breakdown->component('kpi_bonus');
 
         return [
             'key' => $key,
             'label' => self::SCENARIO_LABELS[$key],
+            'hint' => $this->hint($key, $actual ?? $inputs),
             'total' => $breakdown->total,
             'kpi' => $breakdown->amountOf('kpi_bonus'),
             'revenue' => $inputs->revenue,
@@ -123,6 +134,32 @@ class PayrollForecaster
             'performance' => $kpi->meta['performance'] ?? null,
             'multiplier' => $kpi->meta['multiplier'] ?? null,
         ];
+    }
+
+    /**
+     * Что именно предполагает сценарий — словами, которые менеджер может проверить.
+     */
+    private function hint(string $key, PayrollInputs $inputs): string
+    {
+        $risk = count($inputs->atRiskInvoices);
+        $riskAmount = array_sum(array_map(fn (InvoiceInput $i): float => $i->amount, $inputs->atRiskInvoices));
+        $planned = count($inputs->plannedClients);
+        $active = count($inputs->activeClients());
+
+        return match ($key) {
+            'pessimistic' => $risk > 0
+                ? sprintf('%d неоплаченных накладных на %s закроются с просрочкой, новых продаж нет', $risk, Money::rub($riskAmount))
+                : 'новых продаж до конца месяца нет',
+            'base' => $risk > 0
+                ? 'выручка растёт в темпе месяца, а уже просроченные оплаты приходят с опозданием'
+                : 'выручка растёт в том же темпе, что и с начала месяца',
+            'optimistic' => sprintf(
+                'план закрыт, купили все %d плановых клиентов (сейчас %d), новых просрочек нет',
+                $planned,
+                $active,
+            ),
+            default => '',
+        };
     }
 
     /**

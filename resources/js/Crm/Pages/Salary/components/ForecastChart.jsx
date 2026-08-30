@@ -3,7 +3,7 @@ import {
     Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import MetricHint from '@/Crm/Components/MetricHint';
-import { fmtCompact, fmtRub0 } from './format';
+import { fmtCompact, fmtRub0, fmtSigned } from './format';
 
 const SCENARIO_TONE = {
     pessimistic: 'red',
@@ -33,25 +33,50 @@ export default function ForecastChart({ forecast, current }) {
 
     return (
         <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4}>
-            <HStack gap={1} mb={3}>
+            <HStack gap={2} mb={1} flexWrap="wrap">
                 <Text fontSize="xs" color="fg.muted" fontWeight="500">
-                    {closed ? 'Месяц закрыт' : 'Прогноз на конец месяца'}
+                    {closed ? 'Месяц закрыт' : 'Сколько выйдет к концу месяца'}
                 </Text>
-                <MetricHint text="Три сценария считаются той же формулой, что и текущая цифра: пессимистичный — выручка не растёт, все неоплаченные накладные закрываются в последний день; базовый — выручка и активные клиенты растут в темпе прошедших рабочих дней; оптимистичный — план выполнен, все плановые клиенты купили, новых просрочек нет." />
+                <MetricHint text="Каждый сценарий посчитан той же формулой, что и текущая цифра: меняются только исходные данные — сколько отгружено, сколько клиентов купило и как заплатили по неоплаченным накладным." />
             </HStack>
 
+            {!closed && forecast.current_total !== undefined && (
+                <Text fontSize="xs" color="fg.subtle" mb={3}>
+                    Если бы месяц закончился сегодня — {fmtRub0(forecast.current_total)}. Дальше зависит от того,
+                    соберёте ли долги и сколько продадите за оставшиеся дни:
+                </Text>
+            )}
+
             {!closed && (
-                <SimpleGrid columns={{ base: 1, sm: 3 }} gap={3} mb={4}>
-                    {scenarios.map((s) => (
-                        <Box key={s.key} borderLeftWidth="3px" borderColor={`${SCENARIO_TONE[s.key]}.solid`} pl={3}>
-                            <Text fontSize="xs" color="fg.muted">{s.label}</Text>
-                            <Text fontSize="xl" fontWeight="700" fontVariantNumeric="tabular-nums">{fmtRub0(s.total)}</Text>
-                            <Text fontSize="10px" color="fg.subtle">
-                                выручка {fmtCompact(s.revenue)} · активных {s.active_clients} из {s.planned_clients}
-                                {s.penalty > 0 ? ` · штраф ${fmtCompact(s.penalty)}` : ''}
-                            </Text>
-                        </Box>
-                    ))}
+                <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} mb={4}>
+                    {scenarios.map((s) => {
+                        const delta = forecast.current_total === undefined ? null : s.total - forecast.current_total;
+
+                        return (
+                            <Box
+                                key={s.key}
+                                borderWidth="1px"
+                                borderColor="border"
+                                borderTopWidth="3px"
+                                borderTopColor={`${SCENARIO_TONE[s.key]}.solid`}
+                                borderRadius="lg"
+                                p={3}
+                            >
+                                <Text fontSize="sm" fontWeight="600">{s.label}</Text>
+
+                                <HStack align="baseline" gap={2} mt={1} flexWrap="wrap">
+                                    <Text fontSize="xl" fontWeight="800" fontVariantNumeric="tabular-nums">{fmtRub0(s.total)}</Text>
+                                    {delta !== null && Math.abs(delta) >= 1 && (
+                                        <Text fontSize="sm" fontWeight="700" color={delta > 0 ? 'green.fg' : 'red.fg'} whiteSpace="nowrap">
+                                            {fmtSigned(delta)}
+                                        </Text>
+                                    )}
+                                </HStack>
+
+                                {s.hint && <Text fontSize="xs" color="fg.muted" mt={1}>{s.hint}</Text>}
+                            </Box>
+                        );
+                    })}
                 </SimpleGrid>
             )}
 

@@ -75,7 +75,10 @@ class PayrollForecastTest extends TestCase
         // Оптимистично: все плановые активны, штраф только известный (нет).
         $this->assertSame(10, $s['optimistic']['active_clients']);
         $this->assertSame(0.0, $s['optimistic']['penalty']);
-        $this->assertSame('При текущем темпе', $s['base']['label']);
+        $this->assertSame('Если пойдёт как идёт', $s['base']['label']);
+        $this->assertStringContainsString('темпе месяца', $s['base']['hint']);
+        $this->assertStringContainsString('2 неоплаченных накладных', $s['pessimistic']['hint']);
+        $this->assertStringContainsString('все 10 плановых клиентов', $s['optimistic']['hint']);
 
         $this->assertCount(31, $forecast['curve']);
         $today = array_values(array_filter($forecast['curve'], fn (array $p): bool => $p['is_today']))[0];
