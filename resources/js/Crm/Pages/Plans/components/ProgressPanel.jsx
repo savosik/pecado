@@ -6,7 +6,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { ProgressBar, ProgressRoot } from '@/components/ui/progress';
-import { LuChartLine, LuDownload, LuMessageSquarePlus, LuX } from 'react-icons/lu';
+import { LuChartLine, LuDownload, LuMessageSquarePlus, LuUser, LuX } from 'react-icons/lu';
 import LastOrderCell from '@/Crm/Components/LastOrderCell';
 import LastVisitHint from '@/Crm/Components/LastVisitHint';
 import TasksCell from '@/Crm/Pages/Clients/components/TasksCell';
@@ -71,6 +71,23 @@ function PlanFactCell({ plan, fact, percent }) {
                 </Text>
             </HStack>
         </VStack>
+    );
+}
+
+/**
+ * Чей это партнёр — мелкой строкой под названием.
+ *
+ * Отдельной колонки не заводим: она нужна только в отделе целиком, а таблица
+ * и без неё на восьми колонках упирается в ширину экрана.
+ */
+function ManagerHint({ manager }) {
+    if (!manager) return null;
+
+    return (
+        <HStack gap={1} color="fg.muted">
+            <LuUser size={11} style={{ flexShrink: 0 }} />
+            <Text fontSize="11px" lineClamp={1}>{manager.name}</Text>
+        </HStack>
     );
 }
 
@@ -231,6 +248,9 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
     // Долг и платежи приходят только тем, у кого есть право на финансы CRM:
     // без него finance = null во всех строках, и колонки не рисуются вовсе.
     const showFinance = clients.some((row) => row.finance);
+    // Менеджера подписываем, только когда в списке их больше одного: в срезе
+    // по конкретному менеджеру одинаковая подпись в каждой строке — шум.
+    const showManager = new Set(clients.map((row) => row.manager?.id).filter(Boolean)).size > 1;
 
     // Пока сводка по выбранному партнёру не приехала, показываем скоуп — иначе
     // плитки на мгновение опустели бы.
@@ -441,6 +461,7 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                                     >
                                         <Table.Cell>
                                             <Text fontSize="sm" fontWeight="500">{row.name}</Text>
+                                            {showManager && <ManagerHint manager={row.manager} />}
                                             <LastVisitHint visit={row.last_visit} />
                                         </Table.Cell>
                                         <Table.Cell>

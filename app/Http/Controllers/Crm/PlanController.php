@@ -164,13 +164,14 @@ class PlanController extends CrmController
 
         $summary = $this->progress->progress($month, $scope);
         $headers = [
-            'Раздел', 'Объект', 'План, ₽', 'Факт, ₽', 'Выполнение, %', 'Отставание, ₽',
+            'Раздел', 'Объект', 'Менеджер', 'План, ₽', 'Факт, ₽', 'Выполнение, %', 'Отставание, ₽',
             'Прогноз при текущем темпе, ₽', 'Долг, ₽', 'Просрочка, ₽', 'Последний платёж',
         ];
 
         $rows = [[
             'Сводка',
             $scope->label,
+            '',
             $summary['plan'] ?? 0,
             $summary['fact'],
             $summary['percent'] ?? '',
@@ -183,6 +184,7 @@ class PlanController extends CrmController
             $rows[] = [
                 'Менеджеры',
                 $row['name'],
+                '',
                 $row['plan'] ?? 0,
                 $row['fact'],
                 $row['percent'] ?? '',
@@ -198,6 +200,7 @@ class PlanController extends CrmController
             $rows[] = [
                 'Партнёры',
                 $row['name'],
+                $row['manager']['name'] ?? '',
                 $row['plan'] ?? 0,
                 $row['fact'],
                 $row['percent'] ?? '',

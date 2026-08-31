@@ -228,9 +228,13 @@ class PlanProgressService
             return [];
         }
 
-        $names = $query
-            ->select('users.id', 'users.email', DB::raw("COALESCE(NULLIF(users.erp_name, ''), users.name) as name"))
-            ->pluck('name', 'id');
+        // Вместе с именем тянем и владельца карточки: в отделе целиком по одному
+        // названию юрлица не понять, чей это партнёр, а строка «кого догонять»
+        // адресована конкретному менеджеру.
+        $profiles = $query
+            ->select('users.id', 'users.email', 'users.personal_manager_id', DB::raw("COALESCE(NULLIF(users.erp_name, ''), users.name) as name"))
+            ->get()
+            ->keyBy('id');
 
         $rows = [];
 
@@ -244,9 +248,12 @@ class PlanProgressService
                 continue;
             }
 
+            $profile = $profiles[$id] ?? null;
+
             $rows[] = [
                 'id' => (int) $id,
-                'name' => (string) ($names[$id] ?? ('Партнёр #'.$id)),
+                'name' => (string) ($profile->name ?? ('Партнёр #'.$id)),
+                'manager_id' => $profile?->personal_manager_id === null ? null : (int) $profile->personal_manager_id,
                 'plan' => $plan,
                 'fact' => round($fact, 2),
                 'percent' => $cell['percent'],
@@ -295,6 +302,17 @@ class PlanProgressService
         $ids = array_map(static fn (array $row): int => (int) $row['id'], $rows);
 
         $canSeeTasks = $actor->can('crm-tasks.view');
+
+        // Имя владельца карточки — одним запросом на страницу: у двух сотен строк
+        // менеджеров от силы десяток.
+        $managerIds = array_values(array_unique(array_filter(array_map(
+            static fn (array $row): ?int => $row['manager_id'] ?? null,
+            $rows,
+        ))));
+        $managerNames = $managerIds === []
+            ? collect()
+            : PersonalManager::query()->whereIn('id', $managerIds)->pluck('name', 'id');
+
         $nextTasks = $canSeeTasks ? $this->enricher->nextTasks($ids, $actor) : [];
         $taskCounts = $canSeeTasks ? $this->enricher->activeTaskCounts($ids, $actor) : [];
         $lastOrders = $this->enricher->lastOrders($ids);
@@ -304,11 +322,17 @@ class PlanProgressService
         // `crm-finance.view` колонка не приходит вовсе, а не приходит нулями.
         $finance = $actor->can('crm-finance.view') ? $this->enricher->finance($ids) : null;
 
-        return array_map(function (array $row) use ($canSeeTasks, $nextTasks, $taskCounts, $lastOrders, $lastSeen, $finance): array {
+        return array_map(function (array $row) use ($canSeeTasks, $nextTasks, $taskCounts, $lastOrders, $lastSeen, $finance, $managerNames): array {
             $id = (int) $row['id'];
+            $managerId = $row['manager_id'] ?? null;
+            unset($row['manager_id']);
 
             return [
                 ...$row,
+                // Та же форма, что в списке партнёров: {id, name} или null.
+                'manager' => $managerId !== null && $managerNames->has($managerId)
+                    ? ['id' => $managerId, 'name' => (string) $managerNames->get($managerId)]
+                    : null,
                 // Та же форма, что в списке партнёров: ячейка задач общая,
                 // и «нет задач» обязано одинаково предлагать её поставить.
                 'tasks' => $canSeeTasks

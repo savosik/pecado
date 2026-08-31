@@ -432,6 +432,26 @@ class PlanProgressTest extends TestCase
     }
 
     /**
+     * Кто ведёт партнёра — прямо в строке: в отделе целиком по названию юрлица
+     * не понять, чей это партнёр, а список отстающих адресуется менеджеру.
+     */
+    #[Test]
+    public function clients_rows_carry_owning_manager(): void
+    {
+        $own = $this->client();
+        $this->shipment($own, 100000);
+
+        $foreign = $this->client($this->foreignProfile);
+        $this->shipment($foreign, 50000);
+
+        $rows = collect($this->progress($this->head)['clients'])->keyBy('id');
+
+        $this->assertSame($this->managerProfile->id, $rows[$own->id]['manager']['id']);
+        $this->assertSame($this->managerProfile->name, $rows[$own->id]['manager']['name']);
+        $this->assertSame($this->foreignProfile->name, $rows[$foreign->id]['manager']['name']);
+    }
+
+    /**
      * Долг, просрочка и последний платёж в строке партнёра — те же источники,
      * что в /crm/finance: суммы `contractor_balances` и свежайшее входящее
      * поступление из `payments`. Возврат клиенту платежом не считается.
