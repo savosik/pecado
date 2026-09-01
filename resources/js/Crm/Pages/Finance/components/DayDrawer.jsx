@@ -20,9 +20,12 @@ import { formatRub } from './format';
  * строк от десятка партнёров. Вопрос «кто платит» важнее вопроса «по какой
  * строке», поэтому сначала партнёр, а документы — под ним.
  */
-export default function DayDrawer({ date, plan = [], facts = [], snapshots = {}, onClose }) {
+export default function DayDrawer({ date, plan = [], facts = [], snapshots = {}, totals = null, isPast = false, onClose }) {
     const planTotal = plan.reduce((sum, group) => sum + group.amount, 0);
     const factTotal = facts.reduce((sum, group) => sum + group.amount, 0);
+    const scheduled = totals?.scheduled ?? 0;
+    const settled = totals?.settled ?? 0;
+    const executed = scheduled > 0 ? Math.round((settled / scheduled) * 100) : null;
 
     return (
         <DrawerRoot open={Boolean(date)} onOpenChange={(event) => { if (!event.open) onClose(); }} size="lg">
@@ -32,20 +35,35 @@ export default function DayDrawer({ date, plan = [], facts = [], snapshots = {},
                     <DrawerTitle>{date ? date.split('-').reverse().join('.') : ''}</DrawerTitle>
                     <HStack gap={4} mt={1} wrap="wrap">
                         <Text fontSize="xs" color="fg.muted">
-                            ожидается <b>{formatRub(planTotal)}</b>
+                            {isPast ? 'осталось' : 'ожидается'} <b>{formatRub(planTotal)}</b>
                         </Text>
                         <Text fontSize="xs" color="fg.muted">
                             поступило <b>{formatRub(factTotal)}</b>
                         </Text>
                     </HStack>
+
+                    {/* Исполнение — только на прошедших днях: у будущего срок ещё
+                        не наступил, и «закрыто 0 %» читалось бы как тревога. */}
+                    {isPast && scheduled > 0 && (
+                        <HStack gap={4} mt={1} wrap="wrap">
+                            <Text fontSize="xs" color="fg.muted">
+                                по графику было <b>{formatRub(scheduled)}</b>
+                            </Text>
+                            <Text fontSize="xs" color={executed >= 80 ? 'green.fg' : 'orange.fg'}>
+                                закрыто <b>{formatRub(settled)}</b> ({executed}%)
+                            </Text>
+                        </HStack>
+                    )}
                 </DrawerHeader>
 
                 <DrawerBody>
                     <Section
-                        title="Ожидается по графику"
+                        title={isPast ? 'Осталось незакрытым' : 'Ожидается по графику'}
                         groups={plan}
                         snapshots={snapshots}
-                        empty="В этот день платежей по графику не назначено"
+                        empty={isPast
+                            ? 'Всё, что ждали в этот день, уже закрыто'
+                            : 'В этот день платежей по графику не назначено'}
                     />
 
                     <Box mt={6}>

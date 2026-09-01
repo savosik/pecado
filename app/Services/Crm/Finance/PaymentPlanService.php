@@ -152,6 +152,13 @@ class PaymentPlanService
     /**
      * План и факт по дням: числа клеток календаря.
      *
+     * Отдаёт три величины плана, а не одну. `plan` — остаток, то есть сколько
+     * ещё должны; `scheduled` — сколько всего стояло в графике этого дня;
+     * `settled` — сколько из этого 1С уже засчитала оплаченным. Для будущего
+     * дня осмыслен только остаток, но на прошедшем дне без первых двух чисел
+     * экран показывал бы хвост вместо картины: 27.08.2026 по графику стояло
+     * 603 124 ₽, половину заплатили, и «ждём 300 тыс» читалось как весь день.
+     *
      * @param  EloquentBuilder<\App\Models\User>  $clients
      * @return array<string, array<string, float|int>>
      */
@@ -163,18 +170,20 @@ class PaymentPlanService
     ): array {
         $days = [];
 
-        $plan = $this->forecast->dueBetween(
-            $this->planQuery($clients, $filters),
-            $from->toDateString(),
-            $to->toDateString(),
-        )
-            ->reorder()
+        // Закрытые строки тоже нужны: без них не сказать, сколько в этот день
+        // назначили к оплате. Поэтому запрос идёт мимо planQuery() — та по
+        // определению отдаёт только непогашенное.
+        $plan = $this->scheduleQuery($clients, $filters)
+            ->whereBetween(DB::raw('DATE(sch.date)'), [$from->toDateString(), $to->toDateString()])
             ->select([
                 DB::raw('DATE(sch.date) as day'),
                 DB::raw('sch.currency_code as currency_code'),
             ])
+            ->selectRaw('SUM(sch.amount) as scheduled')
+            ->selectRaw('SUM(sch.settled_amount) as settled')
             ->selectRaw('SUM(sch.amount - sch.settled_amount) as unpaid')
             ->selectRaw('COUNT(*) as lines_count')
+            ->selectRaw('SUM(CASE WHEN sch.amount - sch.settled_amount > '.SettlementEntry::EPSILON.' THEN 1 ELSE 0 END) as open_lines')
             ->groupBy(DB::raw('DATE(sch.date)'), 'sch.currency_code')
             ->get();
 
@@ -182,8 +191,13 @@ class PaymentPlanService
             $day = (string) $row->day;
             $days[$day] ??= $this->emptyDay();
 
-            $days[$day]['plan'] += $this->toRub((float) $row->unpaid, $row->currency_code);
-            $days[$day]['plan_lines'] += (int) $row->lines_count;
+            $days[$day]['scheduled'] += $this->toRub((float) $row->scheduled, $row->currency_code);
+            $days[$day]['settled'] += $this->toRub((float) $row->settled, $row->currency_code);
+            // Остаток не может быть отрицательным: переплата по одной строке
+            // не гасит долг по другой — это разные документы.
+            $days[$day]['plan'] += max(0.0, $this->toRub((float) $row->unpaid, $row->currency_code));
+            $days[$day]['scheduled_lines'] += (int) $row->lines_count;
+            $days[$day]['plan_lines'] += (int) $row->open_lines;
         }
 
         $facts = $this->factQuery($clients, $filters)
@@ -206,6 +220,8 @@ class PaymentPlanService
 
         foreach ($days as $day => $numbers) {
             $days[$day]['plan'] = round($numbers['plan'], 2);
+            $days[$day]['scheduled'] = round($numbers['scheduled'], 2);
+            $days[$day]['settled'] = round($numbers['settled'], 2);
             $days[$day]['fact'] = round($numbers['fact'], 2);
         }
 
@@ -219,7 +235,10 @@ class PaymentPlanService
     {
         return [
             'plan' => 0.0,
+            'scheduled' => 0.0,
+            'settled' => 0.0,
             'plan_lines' => 0,
+            'scheduled_lines' => 0,
             'fact' => 0.0,
             'fact_count' => 0,
         ];
@@ -574,6 +593,33 @@ class PaymentPlanService
                 $query->whereNull('sch.document_kind')
                     ->orWhere('sch.document_kind', '<>', self::KIND_ORDER);
             });
+    }
+
+    /**
+     * Весь график, включая закрытые строки: база чисел исполнения.
+     *
+     * Без джойнов на документы — здесь считаются только суммы, а реквизиты
+     * реализации нужны построчному списку, не агрегату.
+     *
+     * @param  EloquentBuilder<\App\Models\User>  $clients
+     */
+    private function scheduleQuery(EloquentBuilder $clients, FinanceFilters $filters): QueryBuilder
+    {
+        return DB::table('settlement_entries as sch')
+            ->where('sch.nature', SettlementEntry::NATURE_PLAN)
+            ->whereIn('sch.user_id', (clone $clients))
+            ->where(static function (QueryBuilder $query): void {
+                $query->whereNull('sch.document_kind')
+                    ->orWhere('sch.document_kind', '<>', self::KIND_ORDER);
+            })
+            ->when(
+                $filters->clientIds !== [],
+                fn (QueryBuilder $query) => $query->whereIn('sch.user_id', $filters->clientIds),
+            )
+            ->when(
+                $filters->organizationIds !== [],
+                fn (QueryBuilder $query) => $query->whereIn('sch.organization_id', $filters->organizationIds),
+            );
     }
 
     /**

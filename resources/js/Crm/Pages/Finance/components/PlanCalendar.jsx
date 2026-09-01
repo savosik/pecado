@@ -51,9 +51,11 @@ export default function PlanCalendar({
             />
 
             <Text fontSize="xs" color="fg.muted" mt={3}>
-                В клетке: <b>ждём</b> — сколько должны заплатить по графику в этот день,
-                <b>пришло</b> — сколько денег поступило. Нажмите на день, чтобы увидеть,
-                кто и по каким реализациям.
+                В клетке: <b>ждём</b> — сколько ещё должны заплатить по графику этого дня,
+                <b> пришло</b> — сколько денег поступило. На прошедших днях сверху видно,
+                сколько всего стояло <b>по графику</b> и какая часть закрыта, а «ждём»
+                называется «осталось». Нажмите на день, чтобы увидеть, кто и по каким
+                реализациям.
             </Text>
         </Box>
     );
@@ -73,13 +75,26 @@ function DayCell({ day, peak, isPast, beyondHorizon }) {
     const planWidth = peak > 0 ? Math.max(2, (day.plan / peak) * 100) : 0;
     const factWidth = peak > 0 ? Math.max(2, (day.fact / peak) * 100) : 0;
     const missed = isPast && day.plan > 0 && day.fact <= 0;
+    const scheduled = day.scheduled ?? 0;
+    // Исполнение показывается только на прошедших днях: у будущего дня срок
+    // ещё не наступил, и «закрыто 0 %» там читалось бы как тревога.
+    const executed = isPast && scheduled > 0 ? Math.round((day.settled / scheduled) * 100) : null;
 
     return (
         <VStack align="stretch" gap="2px">
+            {isPast && scheduled > 0 && (
+                <HStack gap={1} justify="space-between">
+                    <Text fontSize="9px" color="fg.muted">по графику</Text>
+                    <Text fontSize="9px" color="fg.muted">
+                        {formatCompact(scheduled)} · {executed}%
+                    </Text>
+                </HStack>
+            )}
+
             {day.plan > 0 && (
                 <Box>
                     <HStack gap={1} justify="space-between">
-                        <Text fontSize="9px" color="fg.muted">ждём</Text>
+                        <Text fontSize="9px" color="fg.muted">{isPast ? 'осталось' : 'ждём'}</Text>
                         <Text fontSize="10px" fontWeight="600">{formatCompact(day.plan)}</Text>
                     </HStack>
                     <Box bg="bg.muted" borderRadius="full" height="3px" overflow="hidden">

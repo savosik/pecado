@@ -189,6 +189,8 @@ export default function FinancePlan({
                 plan={dayPlan}
                 facts={dayFacts}
                 snapshots={snapshots}
+                totals={day ? calendar?.days?.[day] ?? null : null}
+                isPast={Boolean(day) && day < today}
                 onClose={() => go({ day: null })}
             />
         </CrmLayout>
