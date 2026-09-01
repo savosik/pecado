@@ -32,7 +32,7 @@ class ShortagesArchive extends Command
 
         $query = OrderItem::query()
             ->where('cancelled', true)
-            ->whereNull('cancel_source')
+            ->whereNull('cancel_reason_id')
             ->whereNull('cancel_archived_at');
 
         if ($before !== null) {

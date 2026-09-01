@@ -45,7 +45,7 @@ class DailyShortageDigest
 
         $items = OrderItem::query()
             ->where('order_items.cancelled', true)
-            ->whereNull('order_items.cancel_source')
+            ->whereNull('order_items.cancel_reason_id')
             ->whereNull('order_items.cancel_archived_at')
             ->whereBetween('order_items.cancelled_at', [$day->copy()->startOfDay(), $day->copy()->endOfDay()])
             ->whereHas('order', fn ($q) => $q->whereNull('orders.deleted_at'))

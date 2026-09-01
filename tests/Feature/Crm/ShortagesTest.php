@@ -2,13 +2,14 @@
 
 namespace Tests\Feature\Crm;
 
-use App\Enums\Order\CancelSource;
+use App\Enums\OrderStatus;
 use App\Models\GoodsIssue;
 use App\Models\GoodsIssueItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PersonalManager;
 use App\Models\Product;
+use App\Models\ShortageReason;
 use App\Models\User;
 use App\Services\Shortage\CancellationHintResolver;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -85,6 +86,14 @@ class ShortagesTest extends TestCase
     }
 
     /**
+     * Заводская причина из справочника — их заводит миграция, а не сидер тестов.
+     */
+    private function reason(string $name): ShortageReason
+    {
+        return ShortageReason::query()->where('name', $name)->firstOrFail();
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function props($response): array
@@ -150,14 +159,14 @@ class ShortagesTest extends TestCase
         $this->makeCancelledLine();
 
         $response = $this->actingAs($this->manager)->get(
-            '/crm/shortages?from=2026-01-01&to=2026-12-31&source=none&search=Ромашка&tab=products'
+            '/crm/shortages?from=2026-01-01&to=2026-12-31&category=none&search=Ромашка&tab=products'
         );
 
         $filters = $this->props($response)['filters'];
 
         $this->assertSame('2026-01-01', $filters['from']);
         $this->assertSame('2026-12-31', $filters['to']);
-        $this->assertSame('none', $filters['source']);
+        $this->assertSame('none', $filters['category']);
         $this->assertSame('Ромашка', $filters['search']);
         $this->assertSame('products', $filters['tab']);
     }
@@ -185,7 +194,7 @@ class ShortagesTest extends TestCase
         ['line' => $second] = $this->makeCancelledLine(quantity: 2, subtotal: 300.0, product: $product);
 
         $second->forceFill([
-            'cancel_source' => CancelSource::WAREHOUSE,
+            'cancel_reason_id' => $this->reason('Отменил склад по причине недостачи')->id,
             'cancel_source_user_id' => $this->manager->id,
             'cancel_source_at' => now(),
         ])->save();
@@ -196,7 +205,6 @@ class ShortagesTest extends TestCase
         $this->assertSame(2, $props['totals']['lines_count']);
         $this->assertSame(7, $props['totals']['quantity']);
         $this->assertSame(800.0, $props['totals']['amount']);
-        $this->assertSame(1, $props['totals']['warehouse_count']);
         $this->assertSame(1, $props['totals']['unmarked_count']);
 
         $this->assertCount(1, $props['products']);
@@ -213,45 +221,59 @@ class ShortagesTest extends TestCase
     }
 
     #[Test]
-    public function manager_marks_who_cancelled_the_line(): void
+    public function manager_picks_the_reason_from_the_directory(): void
     {
         ['line' => $line] = $this->makeCancelledLine();
+        $reason = $this->reason('Отменил склад по причине дефектов');
 
         $this->actingAs($this->manager)
-            ->post("/crm/shortages/{$line->id}/source", [
-                'source' => 'warehouse',
+            ->post("/crm/shortages/{$line->id}/reason", [
+                'reason_id' => $reason->id,
                 'note' => 'мятая упаковка',
             ])
             ->assertRedirect();
 
         $line->refresh();
 
-        $this->assertSame(CancelSource::WAREHOUSE, $line->cancel_source);
+        $this->assertSame($reason->id, $line->cancel_reason_id);
         $this->assertSame('мятая упаковка', $line->cancel_note);
         $this->assertSame($this->manager->id, $line->cancel_source_user_id);
         $this->assertNotNull($line->cancel_source_at);
     }
 
     #[Test]
-    public function mark_can_be_removed(): void
+    public function reason_can_be_removed(): void
     {
         ['line' => $line] = $this->makeCancelledLine();
 
         $line->forceFill([
-            'cancel_source' => CancelSource::CLIENT,
+            'cancel_reason_id' => $this->reason('Отменил клиент после сборки заказа')->id,
             'cancel_source_user_id' => $this->manager->id,
             'cancel_source_at' => now(),
         ])->save();
 
         $this->actingAs($this->manager)
-            ->post("/crm/shortages/{$line->id}/source", ['source' => null, 'note' => null])
+            ->post("/crm/shortages/{$line->id}/reason", ['reason_id' => null, 'note' => null])
             ->assertRedirect();
 
         $line->refresh();
 
-        $this->assertNull($line->cancel_source);
+        $this->assertNull($line->cancel_reason_id);
         $this->assertNull($line->cancel_source_user_id);
         $this->assertNull($line->cancel_source_at);
+    }
+
+    #[Test]
+    public function disabled_reason_cannot_be_chosen(): void
+    {
+        ['line' => $line] = $this->makeCancelledLine();
+        $reason = ShortageReason::factory()->disabled()->create();
+
+        $this->actingAs($this->manager)
+            ->post("/crm/shortages/{$line->id}/reason", ['reason_id' => $reason->id])
+            ->assertSessionHasErrors('reason_id');
+
+        $this->assertNull($line->fresh()->cancel_reason_id);
     }
 
     #[Test]
@@ -262,10 +284,61 @@ class ShortagesTest extends TestCase
         ['line' => $foreign] = $this->makeCancelledLine($otherClient);
 
         $this->actingAs($this->manager)
-            ->post("/crm/shortages/{$foreign->id}/source", ['source' => 'client'])
+            ->post("/crm/shortages/{$foreign->id}/reason", [
+                'reason_id' => $this->reason('Ошибка учёта в 1С')->id,
+            ])
             ->assertNotFound();
 
-        $this->assertNull($foreign->fresh()->cancel_source);
+        $this->assertNull($foreign->fresh()->cancel_reason_id);
+    }
+
+    #[Test]
+    public function chips_count_categories_and_keep_their_numbers_under_a_chosen_chip(): void
+    {
+        ['line' => $warehouse] = $this->makeCancelledLine(quantity: 3, subtotal: 300.0);
+        $this->makeCancelledLine(quantity: 1, subtotal: 100.0);
+
+        $warehouse->forceFill([
+            'cancel_reason_id' => $this->reason('Отменил склад по причине недостачи')->id,
+        ])->save();
+
+        $chips = collect($this->props($this->actingAs($this->manager)->get('/crm/shortages'))['chips'])
+            ->keyBy('value');
+
+        $this->assertSame(1, $chips['warehouse']['lines_count']);
+        $this->assertSame(300.0, $chips['warehouse']['amount']);
+        $this->assertSame(3, $chips['warehouse']['quantity']);
+        $this->assertSame(1, $chips['none']['lines_count']);
+
+        // Выбранный чип сужает журнал, но соседние цифры остаются на месте —
+        // иначе из отбора не выбраться: все прочие категории показали бы ноль.
+        $filtered = $this->actingAs($this->manager)->get('/crm/shortages?category=warehouse');
+        $props = $this->props($filtered);
+
+        $this->assertCount(1, $props['rows']['data']);
+        $this->assertSame($warehouse->id, $props['rows']['data'][0]['id']);
+        $this->assertSame(1, collect($props['chips'])->firstWhere('value', 'none')['lines_count']);
+    }
+
+    #[Test]
+    public function reason_filter_narrows_the_journal_to_a_single_directory_row(): void
+    {
+        ['line' => $defects] = $this->makeCancelledLine();
+        ['line' => $shortfall] = $this->makeCancelledLine();
+
+        $defects->forceFill(['cancel_reason_id' => $this->reason('Отменил склад по причине дефектов')->id])->save();
+        $shortfall->forceFill(['cancel_reason_id' => $this->reason('Отменил склад по причине недостачи')->id])->save();
+
+        $response = $this->actingAs($this->manager)->get(
+            '/crm/shortages?reason_id='.$this->reason('Отменил склад по причине дефектов')->id
+        );
+
+        $rows = $this->props($response)['rows']['data'];
+
+        $this->assertCount(1, $rows);
+        $this->assertSame($defects->id, $rows[0]['id']);
+        $this->assertSame('Отменил склад по причине дефектов', $rows[0]['reason']);
+        $this->assertSame('Склад', $rows[0]['reason_category_label']);
     }
 
     #[Test]
@@ -302,6 +375,83 @@ class ShortagesTest extends TestCase
 
         $this->assertSame(CancellationHintResolver::HINT_NONE, $row['hint']['kind']);
         $this->assertSame([], $row['hint']['issues']);
+    }
+
+    #[Test]
+    public function fulfillment_rate_is_counted_over_settled_orders_of_the_period(): void
+    {
+        // Заказ с недобором: одна строка из двух, 300 ₽ из 1000 ₽.
+        $partial = Order::factory()->create([
+            'user_id' => $this->client->id,
+            'status' => OrderStatus::READY_FOR_CLOSURE,
+            'erp_created_at' => now()->subDays(3),
+        ]);
+        OrderItem::factory()->create([
+            'order_id' => $partial->id,
+            'cancelled' => false,
+            'quantity' => 7,
+            'subtotal' => 700.0,
+        ]);
+        OrderItem::factory()->create([
+            'order_id' => $partial->id,
+            'cancelled' => true,
+            'cancelled_at' => now()->subDays(3),
+            'quantity' => 3,
+            'subtotal' => 300.0,
+        ]);
+
+        // Заказ, уехавший целиком.
+        $whole = Order::factory()->create([
+            'user_id' => $this->client->id,
+            'status' => OrderStatus::CLOSED,
+            'erp_created_at' => now()->subDays(2),
+        ]);
+        OrderItem::factory()->create([
+            'order_id' => $whole->id,
+            'cancelled' => false,
+            'quantity' => 10,
+            'subtotal' => 1000.0,
+        ]);
+
+        $fulfillment = $this->props($this->actingAs($this->manager)->get('/crm/shortages'))['fulfillment'];
+
+        $this->assertSame('settled', $fulfillment['basis']);
+        $this->assertSame(2, $fulfillment['orders_count']);
+        $this->assertSame(1, $fulfillment['complete_orders']);
+        $this->assertSame(85.0, $fulfillment['amount_rate']);
+        $this->assertSame(50.0, $fulfillment['orders_rate']);
+        $this->assertSame(66.7, $fulfillment['lines_rate']);
+    }
+
+    #[Test]
+    public function orders_still_in_work_are_left_out_of_the_rate_until_asked_for(): void
+    {
+        // Заказ ещё собирают: склад снимает позиции именно на этом шаге,
+        // и его состав в проценте удовлетворения учитывать рано.
+        $inWork = Order::factory()->create([
+            'user_id' => $this->client->id,
+            'status' => OrderStatus::READY_FOR_SHIPMENT,
+            'erp_created_at' => now()->subDay(),
+        ]);
+        OrderItem::factory()->create([
+            'order_id' => $inWork->id,
+            'cancelled' => true,
+            'cancelled_at' => now()->subDay(),
+            'quantity' => 1,
+            'subtotal' => 500.0,
+        ]);
+
+        // По умолчанию база — отгруженные заказы: у заказа в сборке состав ещё изменится.
+        $closedOnly = $this->props($this->actingAs($this->manager)->get('/crm/shortages'))['fulfillment'];
+
+        $this->assertSame(0, $closedOnly['orders_count']);
+        $this->assertNull($closedOnly['amount_rate']);
+
+        $all = $this->props($this->actingAs($this->manager)->get('/crm/shortages?fulfillment=all'))['fulfillment'];
+
+        $this->assertSame('all', $all['basis']);
+        $this->assertSame(1, $all['orders_count']);
+        $this->assertSame(0.0, $all['amount_rate']);
     }
 
     #[Test]

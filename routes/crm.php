@@ -35,6 +35,7 @@ use App\Http\Controllers\Crm\SalaryInvoiceController;
 use App\Http\Controllers\Crm\SalaryPdfController;
 use App\Http\Controllers\Crm\SalarySettingsController;
 use App\Http\Controllers\Crm\ShortageController;
+use App\Http\Controllers\Crm\ShortageReasonController;
 use App\Http\Controllers\Crm\StaffNotificationController;
 use App\Http\Controllers\Crm\TaskChecklistController;
 use App\Http\Controllers\Crm\TaskController;
@@ -775,15 +776,32 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/partners/{client}/payment-orders/send', [PaymentOrderController::class, 'send'])->name('clients.payment-orders.send')->whereNumber('client');
     });
 
-    // Недоборы: журнал отменённых строк заказов. view — журнал и сводки,
-    // edit — метка «кто отменил» и комментарий к строке. Замен сайт не предлагает:
-    // отмену делает и склад при сборке, и сам клиент через менеджера.
+    // Недоборы: журнал отменённых строк заказов. view — журнал, сводки и
+    // степень удовлетворения, edit — причина недобора и комментарий к строке.
+    // Замен сайт не предлагает: отмену делает и склад при сборке, и клиент.
     Route::middleware('permission:crm-shortages.view')->group(function () {
         Route::get('/shortages', [ShortageController::class, 'index'])->name('shortages.index');
     });
     Route::middleware('permission:crm-shortages.edit')->group(function () {
-        Route::post('/shortages/{item}/source', [ShortageController::class, 'setSource'])
-            ->name('shortages.source')
+        Route::post('/shortages/{item}/reason', [ShortageController::class, 'setReason'])
+            ->name('shortages.reason')
             ->whereNumber('item');
+    });
+
+    // Справочник причин недоборов ведёт руководитель: менеджер выбирает причину
+    // из списка, но не дописывает сам список — иначе в сводке разведутся синонимы.
+    Route::middleware('permission:crm-shortage-reasons.create')->group(function () {
+        Route::post('/shortage-reasons', [ShortageReasonController::class, 'store'])
+            ->name('shortage-reasons.store');
+    });
+    Route::middleware('permission:crm-shortage-reasons.edit')->group(function () {
+        Route::patch('/shortage-reasons/{reason}', [ShortageReasonController::class, 'update'])
+            ->name('shortage-reasons.update')
+            ->whereNumber('reason');
+    });
+    Route::middleware('permission:crm-shortage-reasons.delete')->group(function () {
+        Route::delete('/shortage-reasons/{reason}', [ShortageReasonController::class, 'destroy'])
+            ->name('shortage-reasons.destroy')
+            ->whereNumber('reason');
     });
 });

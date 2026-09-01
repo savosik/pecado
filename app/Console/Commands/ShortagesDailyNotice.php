@@ -104,14 +104,14 @@ class ShortagesDailyNotice extends Command
     }
 
     /**
-     * Ссылка сразу в нужный отбор: день сводки, только неразмеченные строки.
+     * Ссылка сразу в нужный отбор: день сводки, только неразобранные строки.
      */
     private function journalUrl(Carbon $day): string
     {
         return url(route('crm.shortages.index', [
             'from' => $day->format('Y-m-d'),
             'to' => $day->format('Y-m-d'),
-            'source' => 'none',
+            'category' => 'none',
         ], false));
     }
 }

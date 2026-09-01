@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\Erp;
 
-use App\Enums\Order\CancelSource;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PersonalManager;
 use App\Models\Product;
+use App\Models\ShortageReason;
 use App\Models\User;
 use App\Queue\Jobs\ErpIncomingJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -127,7 +127,7 @@ class CancelledOrderLineJournalTest extends TestCase
 
         $this->assertTrue($cancelled->cancelled_at->is('2026-08-14 10:00:00'));
         // Причины 1С не передаёт: метку ставит менеджер, автоматика её не выдумывает.
-        $this->assertNull($cancelled->cancel_source);
+        $this->assertNull($cancelled->cancel_reason_id);
         $this->assertNull($cancelled->cancel_source_user_id);
 
         // Отменённая строка не входит в сумму заказа — считаем только живую.
@@ -171,7 +171,7 @@ class CancelledOrderLineJournalTest extends TestCase
 
         $item = OrderItem::where('order_id', $order->id)->sole();
         $item->forceFill([
-            'cancel_source' => CancelSource::WAREHOUSE,
+            'cancel_reason_id' => ShortageReason::query()->where('name', 'Отменил склад по причине недостачи')->value('id'),
             'cancel_source_user_id' => $marker->id,
             'cancel_source_at' => now(),
             'cancel_note' => 'мятая упаковка',
@@ -186,7 +186,7 @@ class CancelledOrderLineJournalTest extends TestCase
 
         $this->assertFalse($item->cancelled);
         $this->assertNull($item->cancelled_at);
-        $this->assertNull($item->cancel_source);
+        $this->assertNull($item->cancel_reason_id);
         $this->assertNull($item->cancel_source_user_id);
         $this->assertNull($item->cancel_source_at);
         $this->assertNull($item->cancel_note);

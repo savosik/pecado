@@ -105,7 +105,7 @@ class OrderItemsSynchronizer
                 $fields['cancelled_at'] = now();
             } elseif ($match !== null && $match->cancelled && ! $row['cancelled']) {
                 $fields['cancelled_at'] = null;
-                $fields['cancel_source'] = null;
+                $fields['cancel_reason_id'] = null;
                 $fields['cancel_source_user_id'] = null;
                 $fields['cancel_source_at'] = null;
                 $fields['cancel_note'] = null;

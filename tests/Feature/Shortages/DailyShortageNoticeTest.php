@@ -2,12 +2,12 @@
 
 namespace Tests\Feature\Shortages;
 
-use App\Enums\Order\CancelSource;
 use App\Models\ManagerAbsence;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PersonalManager;
 use App\Models\Product;
+use App\Models\ShortageReason;
 use App\Models\User;
 use App\Notifications\Shortages\DailyShortageNoticeNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -107,7 +107,7 @@ class DailyShortageNoticeTest extends TestCase
 
         $line = $this->cancelledLine();
         $line->forceFill([
-            'cancel_source' => CancelSource::WAREHOUSE,
+            'cancel_reason_id' => ShortageReason::query()->where('name', 'Отменил склад по причине недостачи')->value('id'),
             'cancel_source_user_id' => $this->managerAccount->id,
             'cancel_source_at' => now(),
         ])->save();
@@ -208,7 +208,7 @@ class DailyShortageNoticeTest extends TestCase
         $unmarked = $this->cancelledLine();
         $marked = $this->cancelledLine();
         $marked->forceFill([
-            'cancel_source' => CancelSource::CLIENT,
+            'cancel_reason_id' => ShortageReason::query()->where('name', 'Отменил клиент после сборки заказа')->value('id'),
             'cancel_source_user_id' => $this->managerAccount->id,
             'cancel_source_at' => now(),
         ])->save();

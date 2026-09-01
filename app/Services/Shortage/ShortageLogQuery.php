@@ -3,8 +3,9 @@
 namespace App\Services\Shortage;
 
 use App\Enums\Crm\CrmScope;
-use App\Enums\Order\CancelSource;
+use App\Enums\Shortage\ShortageReasonCategory;
 use App\Models\OrderItem;
+use App\Models\ShortageReason;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -17,6 +18,10 @@ use Illuminate\Support\Facades\DB;
  * Источник — сами строки заказа (`order_items.cancelled`), отдельной таблицы-лога
  * нет: 1С присылает состав документа целиком, и копия строки разъезжалась бы
  * с оригиналом при первой же правке количества.
+ *
+ * Причину отмены протокол 1С не передаёт — её ставит человек, выбирая строку
+ * справочника (см. {@see ShortageReason}). Категория причины
+ * ({@see ShortageReasonCategory}) держит сводную часть: чипы, цвета, легенду.
  *
  * Сводки считаются тем же фильтром, что и журнал: цифра во вкладке «По товарам»
  * обязана сходиться со списком строк — иначе менеджер не поверит ни той, ни другой.
@@ -54,8 +59,9 @@ class ShortageLogQuery
             [$from, $to] = [$to, $from];
         }
 
-        $source = (string) ($input['source'] ?? '');
+        $category = (string) ($input['category'] ?? '');
         $state = (string) ($input['state'] ?? '');
+        $fulfillment = (string) ($input['fulfillment'] ?? '');
 
         return [
             'scope' => $scope->value,
@@ -64,15 +70,20 @@ class ShortageLogQuery
             'state' => in_array($state, ['archived', 'all'], true) ? $state : 'active',
             'from' => $from->format('Y-m-d'),
             'to' => $to->format('Y-m-d'),
-            'source' => in_array($source, ['warehouse', 'client', 'none'], true) ? $source : '',
+            // Категория причины — быстрый фильтр чипов; 'none' — неразобранные отмены.
+            'category' => $category === 'none' || in_array($category, ShortageReasonCategory::values(), true) ? $category : '',
+            'reason_id' => $this->intOrNull($input['reason_id'] ?? null),
             'manager_id' => $this->intOrNull($input['manager_id'] ?? null),
             'user_id' => $this->intOrNull($input['user_id'] ?? null),
             'company_id' => $this->intOrNull($input['company_id'] ?? null),
             'product_id' => $this->intOrNull($input['product_id'] ?? null),
             'search' => trim((string) ($input['search'] ?? '')),
-            'tab' => in_array($input['tab'] ?? '', ['partners', 'products'], true)
+            'tab' => in_array($input['tab'] ?? '', ['partners', 'products', 'reasons'], true)
                 ? (string) $input['tab']
                 : 'log',
+            // База расчёта удовлетворения: по умолчанию только отгруженные заказы —
+            // у заказа в сборке состав ещё изменится, и процент был бы завышен.
+            'fulfillment' => $fulfillment === 'all' ? 'all' : 'settled',
         ];
     }
 
@@ -102,10 +113,14 @@ class ShortageLogQuery
             $query->whereNull('order_items.cancel_archived_at');
         }
 
-        if ($filters['source'] === 'none') {
-            $query->whereNull('order_items.cancel_source');
-        } elseif ($filters['source'] !== '') {
-            $query->where('order_items.cancel_source', $filters['source']);
+        if ($filters['category'] === 'none') {
+            $query->whereNull('order_items.cancel_reason_id');
+        } elseif ($filters['category'] !== '') {
+            $query->whereHas('cancelReason', fn (Builder $r) => $r->where('shortage_reasons.category', $filters['category']));
+        }
+
+        if ($filters['reason_id'] !== null) {
+            $query->where('order_items.cancel_reason_id', $filters['reason_id']);
         }
 
         if ($filters['user_id'] !== null) {
@@ -147,12 +162,13 @@ class ShortageLogQuery
     {
         return $query
             ->with([
-                'order:id,number,erp_number,user_id,company_id,erp_created_at,created_at',
+                'order:id,number,erp_number,user_id,company_id,status,erp_created_at,created_at',
                 'order.user:id,name,erp_name,personal_manager_id',
                 'order.user.personalManager:id,name',
                 'order.company:id,name',
                 'product:id,name,sku,slug',
                 'cancelSourceUser:id,name',
+                'cancelReason',
             ])
             ->orderByDesc(DB::raw(self::EVENT_DATE))
             ->orderByDesc('order_items.id')
@@ -161,7 +177,7 @@ class ShortageLogQuery
     }
 
     /**
-     * Итоги шапки: сколько строк, штук и денег и как они размечены.
+     * Итоги шапки: сколько строк, штук и денег и сколько из них разобрано.
      *
      * @param  Builder<OrderItem>  $query
      * @return array<string, float|int>
@@ -173,9 +189,7 @@ class ShortageLogQuery
             ->select(DB::raw('COUNT(*) as lines_count'))
             ->selectRaw('COALESCE(SUM(order_items.quantity), 0) as quantity')
             ->selectRaw('COALESCE(SUM(order_items.subtotal), 0) as amount')
-            ->selectRaw("SUM(CASE WHEN order_items.cancel_source = 'warehouse' THEN 1 ELSE 0 END) as warehouse_count")
-            ->selectRaw("SUM(CASE WHEN order_items.cancel_source = 'client' THEN 1 ELSE 0 END) as client_count")
-            ->selectRaw('SUM(CASE WHEN order_items.cancel_source IS NULL THEN 1 ELSE 0 END) as unmarked_count')
+            ->selectRaw('SUM(CASE WHEN order_items.cancel_reason_id IS NULL THEN 1 ELSE 0 END) as unmarked_count')
             ->reorder()
             ->first();
 
@@ -183,10 +197,71 @@ class ShortageLogQuery
             'lines_count' => (int) ($row->lines_count ?? 0),
             'quantity' => (int) ($row->quantity ?? 0),
             'amount' => (float) ($row->amount ?? 0),
-            'warehouse_count' => (int) ($row->warehouse_count ?? 0),
-            'client_count' => (int) ($row->client_count ?? 0),
             'unmarked_count' => (int) ($row->unmarked_count ?? 0),
         ];
+    }
+
+    /**
+     * Чипы быстрых фильтров: количество, штуки и деньги по категориям причин.
+     *
+     * Считаются по тому же отбору, что и журнал, но БЕЗ фильтра категории —
+     * иначе выбранный чип обнулил бы соседние, и вернуться к общей картине
+     * одним кликом стало бы невозможно.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<array<string, mixed>>
+     */
+    public function chips(array $filters, User $actor, bool $seesDepartment): array
+    {
+        $base = $this->query(
+            array_merge($filters, ['category' => '', 'reason_id' => null]),
+            $actor,
+            $seesDepartment,
+        );
+
+        $rows = $base
+            ->toBase()
+            ->leftJoin('shortage_reasons', 'shortage_reasons.id', '=', 'order_items.cancel_reason_id')
+            ->groupBy('shortage_reasons.category')
+            ->select('shortage_reasons.category as reason_category')
+            ->selectRaw('COUNT(*) as lines_count')
+            ->selectRaw('COALESCE(SUM(order_items.quantity), 0) as quantity')
+            ->selectRaw('COALESCE(SUM(order_items.subtotal), 0) as amount')
+            ->reorder()
+            ->get()
+            ->keyBy(fn ($row) => $row->reason_category ?? 'none');
+
+        $chips = [];
+
+        foreach (ShortageReasonCategory::ordered() as $category) {
+            $row = $rows->get($category->value);
+
+            $chips[] = [
+                'value' => $category->value,
+                'label' => $category->label(),
+                'description' => $category->description(),
+                'color' => $category->color(),
+                'lines_count' => (int) ($row->lines_count ?? 0),
+                'quantity' => (int) ($row->quantity ?? 0),
+                'amount' => (float) ($row->amount ?? 0),
+            ];
+        }
+
+        $none = $rows->get('none');
+
+        // Неразобранные — такой же чип: это рабочая очередь менеджера,
+        // и она должна быть в одном ряду с остальными, а не в отдельном углу.
+        $chips[] = [
+            'value' => 'none',
+            'label' => 'Без причины',
+            'description' => 'Отмена ещё не разобрана: причину должен выбрать менеджер.',
+            'color' => 'gray',
+            'lines_count' => (int) ($none->lines_count ?? 0),
+            'quantity' => (int) ($none->quantity ?? 0),
+            'amount' => (float) ($none->amount ?? 0),
+        ];
+
+        return $chips;
     }
 
     /**
@@ -201,6 +276,7 @@ class ShortageLogQuery
             ->toBase()
             ->leftJoin('users', 'users.id', '=', 'orders.user_id')
             ->leftJoin('personal_managers', 'personal_managers.id', '=', 'users.personal_manager_id')
+            ->leftJoin('shortage_reasons', 'shortage_reasons.id', '=', 'order_items.cancel_reason_id')
             // Группируем по одному ключу, подписи берём агрегатом: у MySQL
             // с ONLY_FULL_GROUP_BY имя партнёра иначе пришлось бы тащить
             // в GROUP BY, и переименование в 1С разбило бы группу надвое.
@@ -213,8 +289,8 @@ class ShortageLogQuery
             ->selectRaw('COUNT(DISTINCT order_items.order_id) as orders_count')
             ->selectRaw('COALESCE(SUM(order_items.quantity), 0) as quantity')
             ->selectRaw('COALESCE(SUM(order_items.subtotal), 0) as amount')
-            ->selectRaw("SUM(CASE WHEN order_items.cancel_source = 'warehouse' THEN 1 ELSE 0 END) as warehouse_count")
-            ->selectRaw("SUM(CASE WHEN order_items.cancel_source = 'client' THEN 1 ELSE 0 END) as client_count")
+            ->selectRaw($this->categoryBreakdownSelect())
+            ->selectRaw('SUM(CASE WHEN order_items.cancel_reason_id IS NULL THEN 1 ELSE 0 END) as unmarked_count')
             ->selectRaw('MAX('.self::EVENT_DATE.') as last_cancelled_at')
             ->reorder()
             ->orderByDesc('lines_count')
@@ -228,8 +304,8 @@ class ShortageLogQuery
                 'orders_count' => (int) $row->orders_count,
                 'quantity' => (int) $row->quantity,
                 'amount' => (float) $row->amount,
-                'warehouse_count' => (int) $row->warehouse_count,
-                'client_count' => (int) $row->client_count,
+                'categories' => $this->categoryBreakdown($row),
+                'unmarked_count' => (int) $row->unmarked_count,
                 'last_cancelled_at' => $row->last_cancelled_at
                     ? Carbon::parse($row->last_cancelled_at)->format('d.m.Y')
                     : null,
@@ -248,6 +324,7 @@ class ShortageLogQuery
         return (clone $query)
             ->toBase()
             ->leftJoin('products', 'products.id', '=', 'order_items.product_id')
+            ->leftJoin('shortage_reasons', 'shortage_reasons.id', '=', 'order_items.cancel_reason_id')
             // Ключ группировки — товар; строки с неизвестным сайту товаром
             // (product_id = NULL) собираются по снимку названия. Подписи берём
             // агрегатом: снимок имени в строке заказа мог устареть, и с ним
@@ -262,8 +339,8 @@ class ShortageLogQuery
             ->selectRaw('COUNT(DISTINCT orders.user_id) as partners_count')
             ->selectRaw('COALESCE(SUM(order_items.quantity), 0) as quantity')
             ->selectRaw('COALESCE(SUM(order_items.subtotal), 0) as amount')
-            ->selectRaw("SUM(CASE WHEN order_items.cancel_source = 'warehouse' THEN 1 ELSE 0 END) as warehouse_count")
-            ->selectRaw("SUM(CASE WHEN order_items.cancel_source = 'client' THEN 1 ELSE 0 END) as client_count")
+            ->selectRaw($this->categoryBreakdownSelect())
+            ->selectRaw('SUM(CASE WHEN order_items.cancel_reason_id IS NULL THEN 1 ELSE 0 END) as unmarked_count')
             ->selectRaw('MAX('.self::EVENT_DATE.') as last_cancelled_at')
             ->reorder()
             ->orderByDesc('lines_count')
@@ -278,8 +355,8 @@ class ShortageLogQuery
                 'partners_count' => (int) $row->partners_count,
                 'quantity' => (int) $row->quantity,
                 'amount' => (float) $row->amount,
-                'warehouse_count' => (int) $row->warehouse_count,
-                'client_count' => (int) $row->client_count,
+                'categories' => $this->categoryBreakdown($row),
+                'unmarked_count' => (int) $row->unmarked_count,
                 'last_cancelled_at' => $row->last_cancelled_at
                     ? Carbon::parse($row->last_cancelled_at)->format('d.m.Y')
                     : null,
@@ -288,7 +365,7 @@ class ShortageLogQuery
     }
 
     /**
-     * Счётчик бокового меню: неразмеченные отмены за рабочий период.
+     * Счётчик бокового меню: неразобранные отмены за рабочий период.
      *
      * Считается по видимости сотрудника — менеджер видит цифру по своим
      * партнёрам, руководитель по отделу.
@@ -296,20 +373,38 @@ class ShortageLogQuery
     public function unmarkedCount(User $actor): int
     {
         return $this->visible($actor, $actor->can('crm-department.view'))
-            ->whereNull('order_items.cancel_source')
+            ->whereNull('order_items.cancel_reason_id')
             ->whereNull('order_items.cancel_archived_at')
             ->where(DB::raw(self::EVENT_DATE), '>=', Carbon::today()->subDays(self::DEFAULT_PERIOD_DAYS))
             ->count();
     }
 
     /**
-     * Метки источника для фильтра и кнопок разметки.
+     * Справочник причин для выпадающего списка и легенды.
      *
-     * @return list<array{value: string, label: string, short_label: string, color: string}>
+     * Отключённые причины отдаются тоже: строка, размеченная год назад, обязана
+     * показывать свою причину, даже если РОП убрал её из списка. Выбрать такую
+     * заново нельзя — это решает фронт по флагу `is_active`.
+     *
+     * @return list<array<string, mixed>>
      */
-    public function sourceOptions(): array
+    public function reasonOptions(): array
     {
-        return CancelSource::options();
+        return ShortageReason::query()
+            ->ordered()
+            ->get()
+            ->map(fn (ShortageReason $reason) => $reason->toOption())
+            ->all();
+    }
+
+    /**
+     * Легенда: категории причин с пояснениями.
+     *
+     * @return list<array{value: string, label: string, description: string, color: string}>
+     */
+    public function categoryOptions(): array
+    {
+        return ShortageReasonCategory::options();
     }
 
     /**
@@ -319,7 +414,7 @@ class ShortageLogQuery
      * сужает уже разрешённое (см. {@see CrmScope}). Фильтр по конкретному
      * менеджеру доступен тем, кто видит отдел, — иначе это обход скоупа.
      *
-     * Разметку строки проверяем этим же запросом, но без периода: метку ставят
+     * Разметку строки проверяем этим же запросом, но без периода: причину ставят
      * и на давнюю отмену, найденную фильтром за прошлый квартал.
      *
      * @return Builder<OrderItem>
@@ -338,17 +433,10 @@ class ShortageLogQuery
             ->whereNull('orders.deleted_at')
             ->where('order_items.cancelled', true);
 
-        $scope ??= $seesDepartment ? CrmScope::DEPARTMENT : CrmScope::MINE;
+        $managerId = $this->scopedManagerId($actor, $seesDepartment, $scope, $managerId);
 
-        if ($managerId === null && (! $seesDepartment || $scope->isMine())) {
-            $managerId = $actor->managerProfile?->id;
-
-            // Сотрудник без карточки менеджера в разрезе «мои» не видит ничего:
-            // за ним не закреплён ни один партнёр. CrmScope такому сотруднику
-            // отдаёт DEPARTMENT, сюда попадаем только при отсутствии права.
-            if ($managerId === null && ! $seesDepartment) {
-                return $query->whereRaw('1 = 0');
-            }
+        if ($managerId === false) {
+            return $query->whereRaw('1 = 0');
         }
 
         if ($managerId !== null) {
@@ -356,6 +444,79 @@ class ShortageLogQuery
         }
 
         return $query;
+    }
+
+    /**
+     * Чьи партнёры попадают в выборку.
+     *
+     * `null` — весь отдел, `false` — никто (сотрудник без карточки менеджера
+     * в разрезе «мои»: за ним не закреплён ни один партнёр).
+     */
+    public function scopedManagerId(
+        User $actor,
+        bool $seesDepartment,
+        ?CrmScope $scope = null,
+        ?int $managerId = null,
+    ): int|false|null {
+        $scope ??= $seesDepartment ? CrmScope::DEPARTMENT : CrmScope::MINE;
+
+        if ($managerId === null && (! $seesDepartment || $scope->isMine())) {
+            $managerId = $actor->managerProfile?->id;
+
+            // CrmScope такому сотруднику отдаёт DEPARTMENT, сюда попадаем
+            // только при отсутствии права видеть отдел.
+            if ($managerId === null && ! $seesDepartment) {
+                return false;
+            }
+        }
+
+        return $managerId;
+    }
+
+    /**
+     * Разбивка по категориям причин — шесть колонок агрегата вместо подзапроса.
+     *
+     * Значения категорий приходят из перечисления, а не из запроса, поэтому
+     * подстановка в SQL безопасна: чужой строке взяться неоткуда.
+     */
+    private function categoryBreakdownSelect(): string
+    {
+        $parts = array_map(
+            fn (ShortageReasonCategory $category) => sprintf(
+                "SUM(CASE WHEN shortage_reasons.category = '%s' THEN 1 ELSE 0 END) as category_%s",
+                $category->value,
+                $category->value,
+            ),
+            ShortageReasonCategory::ordered(),
+        );
+
+        return implode(', ', $parts);
+    }
+
+    /**
+     * @return list<array{value: string, label: string, color: string, lines_count: int}>
+     */
+    private function categoryBreakdown(object $row): array
+    {
+        $breakdown = [];
+
+        foreach (ShortageReasonCategory::ordered() as $category) {
+            $key = 'category_'.$category->value;
+            $count = (int) ($row->{$key} ?? 0);
+
+            if ($count === 0) {
+                continue;
+            }
+
+            $breakdown[] = [
+                'value' => $category->value,
+                'label' => $category->label(),
+                'color' => $category->color(),
+                'lines_count' => $count,
+            ];
+        }
+
+        return $breakdown;
     }
 
     private function parseDate(mixed $value): ?Carbon
