@@ -82,6 +82,98 @@ class SalarySimulateTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('Ретроспектива прошлого месяца считается по данным того месяца, а не текущего')]
+    public function simulation_of_a_past_month_uses_that_month(): void
+    {
+        // Прошлый месяц прожит иначе: другой план и другая отгрузка. Если запрос
+        // калькулятора потеряет месяц, ползунки применятся к текущему месяцу, и
+        // разбор ретроспективы будет чужим — молча, без единой ошибки.
+        $past = Carbon::now()->subMonthNoOverflow()->startOfMonth();
+        CrmSalesPlan::factory()->forMonth($past)->forManager($this->profile)->create(['amount' => 2_000_000]);
+
+        $client = User::factory()->create(['personal_manager_id' => $this->profile->id, 'name' => 'Гамма']);
+        CrmSalesPlan::factory()->forMonth($past)->forClient($client)->create(['amount' => 900_000]);
+        $shipment = Shipment::create([
+            'uuid' => (string) Str::uuid(), 'user_id' => $client->id,
+            'date' => $past->copy()->addDay()->toDateString(), 'erp_created_at' => $past->copy()->addDay(),
+            'status' => 'completed', 'currency_code' => 'RUB', 'total_amount' => 800_000,
+        ]);
+        ShipmentItem::create([
+            'shipment_id' => $shipment->id, 'product_id' => Product::factory()->create()->id,
+            'quantity' => 1, 'price' => 800_000, 'total' => 800_000, 'subtotal' => 800_000,
+        ]);
+
+        $pastMonth = $past->format('Y-m');
+        $page = $this->actingAs($this->manager)
+            ->getJson('/crm/salary/data?month='.$pastMonth)
+            ->assertOk()
+            ->json();
+
+        $this->assertSame($pastMonth, $page['month']);
+        $inputs = $page['calculation']['inputs'];
+        $this->assertEqualsWithDelta(800_000.0, (float) $inputs['revenue'], 0.01);
+
+        $response = $this->actingAs($this->manager)
+            ->postJson('/crm/salary/simulate', [
+                'month' => $pastMonth,
+                'revenue' => (float) $inputs['revenue'],
+                'active_clients' => (int) $inputs['active_count'],
+                'penalty' => (float) ($page['calculation']['kpi']['penalty'] ?? 0),
+            ])
+            ->assertOk();
+
+        $this->assertEqualsWithDelta((float) $page['calculation']['total'], (float) $response->json('total'), 0.01);
+        $this->assertEqualsWithDelta((float) $page['calculation']['total'], (float) $response->json('baseline_total'), 0.01);
+    }
+
+    #[Test]
+    #[TestDox('Параметры, изменённые после расчёта, не сдвигают точку отсчёта калькулятора')]
+    public function calculator_stays_on_the_parameters_of_the_snapshot(): void
+    {
+        $page = $this->actingAs($this->manager)->getJson('/crm/salary/data')->assertOk()->json();
+        $snapshotTotal = (float) $page['calculation']['total'];
+        $revenue = (float) $page['calculation']['inputs']['revenue'];
+        $clients = (int) $page['calculation']['inputs']['active_count'];
+        $penalty = (float) ($page['calculation']['kpi']['penalty'] ?? 0);
+
+        // РОП урезал базу премии уже после того, как черновик посчитан (или месяц
+        // утверждён и заморожен). Снимок на экране остаётся прежним — калькулятор
+        // обязан считать теми же параметрами, иначе любое движение ползунка
+        // показывало бы падение зарплаты, которого в сценарии нет.
+        \App\Models\PayrollParamOverride::create([
+            'personal_manager_id' => $this->profile->id,
+            'period_month' => \App\Models\PayrollParamOverride::periodKey(null),
+            'component_key' => 'kpi_bonus',
+            'params' => ['base' => 10000],
+        ]);
+
+        $atFact = $this->actingAs($this->manager)
+            ->postJson('/crm/salary/simulate', [
+                'month' => $this->month,
+                'revenue' => $revenue,
+                'active_clients' => $clients,
+                'penalty' => $penalty,
+            ])
+            ->assertOk();
+
+        $this->assertEqualsWithDelta($snapshotTotal, (float) $atFact->json('total'), 0.01);
+        $this->assertEqualsWithDelta($snapshotTotal, (float) $atFact->json('baseline_total'), 0.01);
+
+        // И сценарий «продали бы больше» обязан остаться плюсом к этой точке отсчёта.
+        $better = $this->actingAs($this->manager)
+            ->postJson('/crm/salary/simulate', [
+                'month' => $this->month,
+                'revenue' => $revenue + 200_000,
+                'active_clients' => $clients,
+                'penalty' => $penalty,
+            ])
+            ->assertOk();
+
+        $this->assertGreaterThan((float) $better->json('baseline_total'), (float) $better->json('total'));
+        $this->assertEqualsWithDelta($snapshotTotal, (float) $better->json('baseline_total'), 0.01);
+    }
+
+    #[Test]
     #[TestDox('Больше выручки и клиентов — больше доход; больше штраф — меньше')]
     public function sliders_change_the_result(): void
     {

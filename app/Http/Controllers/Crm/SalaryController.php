@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Crm;
 use App\Services\Payroll\PayrollCalculationPresenter;
 use App\Services\Payroll\PayrollCalculationService;
 use App\Services\Payroll\PayrollCatalog;
-use App\Services\Payroll\PayrollInputCollector;
 use App\Services\Payroll\PayrollScopeResolver;
 use App\Services\Payroll\PayrollWhatIfService;
 use App\Services\Payroll\Support\MonthLabel;
@@ -32,7 +31,6 @@ class SalaryController extends CrmController
         private readonly PayrollCalculationService $calculations,
         private readonly PayrollCalculationPresenter $presenter,
         private readonly PayrollCatalog $catalog,
-        private readonly PayrollInputCollector $collector,
         private readonly \App\Services\Payroll\PayrollCalculator $calculator,
         private readonly \App\Services\Payroll\PayrollParamsResolver $paramsResolver,
         private readonly PayrollWhatIfService $whatIf,
@@ -80,18 +78,74 @@ class SalaryController extends CrmController
         $managerId = (int) $manager->getKey();
         $snapshot = $this->calculations->ensureDraft($managerId, $month);
         $inputs = \App\Services\Payroll\Dto\PayrollInputs::fromArray((array) $snapshot->inputs);
-        $params = $this->paramsResolver->effective($managerId, $month);
 
-        // Штраф задаётся суммой: подменяем накладные одной синтетической строкой
-        // с той задержкой, которая даёт ровно этот штраф по действующей ступени.
-        $penalty = (float) $data['penalty'];
+        // Параметры берём из снимка, а не текущие действующие: ползунки сравниваются
+        // с цифрой, которая уже стоит на экране, а её посчитали именно этими. Если РОП
+        // после расчёта поменял базу премии или лестницу (а у утверждённого месяца
+        // параметры заморожены навсегда), свежие параметры дали бы другую точку
+        // отсчёта — и любое движение ползунка читалось бы как «зарплата только падает».
+        $stored = (array) ($snapshot->params_effective ?? []);
+        $params = $stored === []
+            ? $this->paramsResolver->effective($managerId, $month)
+            : \App\Services\Payroll\Dto\EffectiveParams::fromArray($stored);
+
+        $breakdown = $this->calculator->calculate($params, $this->simulatedInputs(
+            $inputs,
+            $params,
+            (float) $data['revenue'],
+            (int) $data['active_clients'],
+            (float) $data['penalty'],
+        ));
+
+        // Точка отсчёта — тот же путь расчёта на фактических значениях ползунков.
+        // Дельту фронт считает от неё, а не от снимка: сравнивать разбор, где штраф
+        // свёрнут в одну синтетическую накладную, с разбором по сотне настоящих —
+        // значит показывать сдачу от округлений как результат сценария.
+        $baseline = $this->calculator->calculate($params, $this->simulatedInputs(
+            $inputs,
+            $params,
+            $inputs->revenue,
+            count($inputs->activeClients()),
+            $this->snapshotPenalty($snapshot),
+        ));
+
+        $kpi = $breakdown->component('kpi_bonus');
+
+        return response()->json([
+            'total' => $breakdown->total,
+            'baseline_total' => $baseline->total,
+            'components' => array_map(fn ($c): array => [
+                'key' => $c->key,
+                'label' => $c->label,
+                'amount' => $c->amount,
+            ], $breakdown->components),
+            'performance' => $kpi?->meta['performance'] ?? null,
+            'multiplier' => $kpi?->meta['multiplier'] ?? null,
+            'capped' => (bool) ($kpi?->meta['capped'] ?? false),
+        ]);
+    }
+
+    /**
+     * Входы под ползунки: выручка, число купивших плановых клиентов и сумма вычета.
+     *
+     * Вычет задаётся суммой, а не накладными, поэтому накладные подменяются одной
+     * синтетической строкой с такой задержкой и суммой, которые дают ровно этот
+     * вычет по ступеням переданных параметров.
+     */
+    private function simulatedInputs(
+        \App\Services\Payroll\Dto\PayrollInputs $inputs,
+        \App\Services\Payroll\Dto\EffectiveParams $params,
+        float $revenue,
+        int $activeClients,
+        float $penalty,
+    ): \App\Services\Payroll\Dto\PayrollInputs {
         $tiers = (array) ($params->for('kpi_bonus')['discipline_penalty']['tiers'] ?? []);
         $coefficient = (float) ($tiers[0]['coefficient'] ?? 1.0);
         $days = (int) ($tiers[0]['from_days'] ?? 3);
 
-        $simulated = $inputs->with([
-            'revenue' => (float) $data['revenue'],
-            'planned_clients' => $this->whatIf->withActive($inputs, (int) $data['active_clients']),
+        return $inputs->with([
+            'revenue' => $revenue,
+            'planned_clients' => $this->whatIf->withActive($inputs, $activeClients),
             'invoices' => $penalty <= 0.009 ? [] : [[
                 'shipment_id' => 0,
                 'erp_number' => null,
@@ -106,21 +160,20 @@ class SalaryController extends CrmController
                 'payment_status' => 'paid',
             ]],
         ]);
+    }
 
-        $breakdown = $this->calculator->calculate($params, $simulated);
-        $kpi = $breakdown->component('kpi_bonus');
+    /**
+     * Вычет за просрочки из снимка — то же число, что стоит на ползунке при загрузке.
+     */
+    private function snapshotPenalty(\App\Models\PayrollCalculation $snapshot): float
+    {
+        foreach ((array) data_get($snapshot->breakdown, 'components', []) as $component) {
+            if (($component['key'] ?? null) === 'kpi_bonus') {
+                return (float) ($component['meta']['penalty'] ?? 0);
+            }
+        }
 
-        return response()->json([
-            'total' => $breakdown->total,
-            'components' => array_map(fn ($c): array => [
-                'key' => $c->key,
-                'label' => $c->label,
-                'amount' => $c->amount,
-            ], $breakdown->components),
-            'performance' => $kpi?->meta['performance'] ?? null,
-            'multiplier' => $kpi?->meta['multiplier'] ?? null,
-            'capped' => (bool) ($kpi?->meta['capped'] ?? false),
-        ]);
+        return 0.0;
     }
 
     /**
@@ -157,6 +210,7 @@ class SalaryController extends CrmController
             $row['inputs']['revenue'],
             $row['inputs']['percent'] === null ? null : round($row['inputs']['percent'] * 100, 1),
             $row['inputs']['active_count'].' из '.$row['inputs']['planned_count'],
+            $row['inputs']['unplanned_active_count'],
             $row['kpi']['multiplier'],
             $row['calculation']['approved_at'] ? substr((string) $row['calculation']['approved_at'], 0, 10) : null,
             $row['calculation']['comment'],
@@ -164,7 +218,7 @@ class SalaryController extends CrmController
 
         return $exporter->stream(
             sprintf('zarplata-%s.xlsx', $payload['month']),
-            ['Менеджер', 'Статус', 'Оклад', 'KPI-премия', 'Штраф за дисциплину', 'Доп. доход', 'Новые клиенты', 'Корректировка', 'Итого', 'План', 'Реализации', 'Выполнение, %', 'Активные клиенты', 'Множитель', 'Утверждено', 'Комментарий'],
+            ['Менеджер', 'Статус', 'Оклад', 'KPI-премия', 'Штраф за дисциплину', 'Доп. доход', 'Новые клиенты', 'Корректировка', 'Итого', 'План', 'Реализации', 'Выполнение, %', 'Активные плановые клиенты', 'Купили без плана', 'Множитель', 'Утверждено', 'Комментарий'],
             $rows,
             'Зарплата '.$payload['month_label'],
         );
@@ -274,7 +328,11 @@ class SalaryController extends CrmController
 
     private function month(Request $request): CarbonImmutable
     {
-        $raw = (string) $request->query('month', '');
+        // input(), а не query(): калькулятор ползунков приходит POST-ом и передаёт
+        // месяц в теле. С query() месяц молча подменялся текущим, и ретроспектива
+        // прошлого месяца считалась по входам и плану нынешнего — на экране это
+        // выглядело как «зарплата падает от любого движения ползунка».
+        $raw = (string) $request->input('month', '');
 
         if (preg_match('/^\d{4}-\d{2}$/', $raw)) {
             $month = CarbonImmutable::createFromFormat('Y-m-d', $raw.'-01');

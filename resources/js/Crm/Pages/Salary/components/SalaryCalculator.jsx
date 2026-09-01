@@ -95,7 +95,12 @@ export default function SalaryCalculator({ calculation, month, managerId, canSee
         setPenalty(factPenalty);
     };
 
-    const delta = Number(result.total ?? 0) - Number(calculation.total ?? 0);
+    // Сравниваем с точкой отсчёта того же расчёта (сервер считает её на фактических
+    // значениях ползунков), а не со снимком: у снимка могут быть другие параметры
+    // или сотня настоящих накладных вместо одной свёрнутой, и тогда «плюс сценария»
+    // показывался бы минусом. Старый ответ без поля — падаем на снимок.
+    const baseline = Number(result.baseline_total ?? calculation.total ?? 0);
+    const delta = Number(result.total ?? 0) - baseline;
 
     return (
         <Collapsible.Root
@@ -167,7 +172,7 @@ export default function SalaryCalculator({ calculation, month, managerId, canSee
                     />
 
                     <Control
-                        label="Активных клиентов"
+                        label="Активных плановых клиентов"
                         value={`${clients} из ${planned}`}
                         hint={planned > 0 ? `${Math.round((clients / planned) * 100)} % плановых` : 'плановых нет'}
                         sliderValue={[clients]}
