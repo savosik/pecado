@@ -185,11 +185,6 @@ class PaymentJournalTest extends TestCase
                 ->where('filters.scope', 'department')
                 ->has('payments.data', 2));
 
-        $this->actingAs($head)
-            ->get(route('crm.payments.calendar'))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('filters.scope', 'mine'));
-
         // Рядовому менеджеру расфокус недоступен: параметр гасится молча,
         // и экран показывает тот разрез, который сервер действительно применил.
         $this->actingAs($this->manager)
@@ -364,94 +359,6 @@ class PaymentJournalTest extends TestCase
             'settled_amount' => $paid,
             'currency_code' => 'RUB',
         ]);
-    }
-
-    #[Test]
-    public function calendar_is_limited_to_manager_client_scope_v15_12(): void
-    {
-        $inMonth = now()->startOfMonth()->addDays(10)->toDateString();
-        $this->scheduleFor($this->client, $inMonth, 3000.00);
-        $this->scheduleFor($this->foreignClient(), $inMonth, 9999.00);
-
-        $this->actingAs($this->manager)
-            ->get(route('crm.payments.calendar'))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('Crm/Pages/Finance/PaymentCalendar')
-                ->where('summary.plan', 3000)
-                ->where('days.'.$inMonth.'.plan', 3000));
-    }
-
-    #[Test]
-    public function calendar_counts_plan_and_fact_separately_v15_12(): void
-    {
-        $day = now()->startOfMonth()->addDays(10);
-        $this->scheduleFor($this->client, $day->toDateString(), 3000.00);
-        $this->factFor($this->client, 1000.00, $day->toDateString());
-
-        $this->actingAs($this->manager)
-            ->get(route('crm.payments.calendar'))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                // План идёт по графику, факт — по проведённым платежам:
-                // одно не подменяет другое даже в один и тот же день.
-                ->where('summary.plan', 3000)
-                ->where('summary.fact', 1000)
-                ->where('days.'.$day->toDateString().'.fact', 1000));
-    }
-
-    #[Test]
-    public function refund_reduces_the_fact_of_the_day_v15_12(): void
-    {
-        $day = now()->startOfMonth()->addDays(10);
-
-        $this->factFor($this->client, 1000.00, $day->toDateString());
-        $this->factFor($this->client, 400.00, $day->toDateString(), SettlementEntry::TYPE_PAYMENT_OUT);
-
-        $this->actingAs($this->manager)
-            ->get(route('crm.payments.calendar'))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('summary.fact', 600));
-    }
-
-    /**
-     * Закрытая строка остаётся в графике месяца, но деньгами её больше не ждут.
-     *
-     * Календарь показывает документ: если строку оплатили, месяц не должен
-     * выглядеть пустым — иначе исполненный график читался бы как отсутствие
-     * обязательств.
-     */
-    #[Test]
-    public function closed_schedule_lines_are_not_expected_money_v15_12(): void
-    {
-        $inMonth = now()->startOfMonth()->addDays(10)->toDateString();
-        $this->scheduleFor($this->client, $inMonth, 3000.00, paid: 3000.00);
-
-        $this->actingAs($this->manager)
-            ->get(route('crm.payments.calendar'))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('summary.plan', 3000)
-                ->where('summary.settled', 3000)
-                // Просрочки нет: строка закрыта, требовать нечего.
-                ->where('overdueThread.total', 0));
-    }
-
-    #[Test]
-    public function overdue_is_shown_regardless_of_displayed_month_v15_12(): void
-    {
-        $this->scheduleFor($this->client, now()->subMonth()->startOfMonth()->toDateString(), 1500.00);
-
-        $this->actingAs($this->manager)
-            ->get(route('crm.payments.calendar'))
-            ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                // В месяце обязательств нет — срок был в прошлом…
-                ->where('summary.plan', 0)
-                // …но долг виден навесом, в каком бы месяце ни находился менеджер.
-                ->where('overdueThread.total', 1500)
-                ->where('overdueThread.lines', 1));
     }
 
     #[Test]

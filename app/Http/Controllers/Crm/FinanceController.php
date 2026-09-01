@@ -7,9 +7,10 @@ use App\Models\Organization;
 use App\Models\PersonalManager;
 use App\Models\SettlementEntry;
 use App\Models\User;
-use App\Services\Crm\Finance\CollectionForecastService;
 use App\Services\Crm\Finance\FinanceFilters;
+use App\Services\Crm\Finance\PartnerFinanceSnapshot;
 use App\Services\Crm\Finance\PaymentForecast;
+use App\Services\Crm\Finance\PaymentPlanService;
 use App\Services\Crm\Finance\ReconciliationService;
 use App\Services\SimpleXlsxExporter;
 use Carbon\CarbonImmutable;
@@ -50,83 +51,198 @@ class FinanceController extends CrmController
     /**
      * Пульт платежей. GET /crm/finance
      */
-    public function index(Request $request, CollectionForecastService $forecast): InertiaResponse
+    public function index(Request $request): InertiaResponse
     {
-        return Inertia::render('Crm/Pages/Finance/Index', $this->dashboardPayload($request, $forecast));
+        return Inertia::render('Crm/Pages/Finance/Index', $this->dashboardPayload($request));
     }
 
     /**
      * JSON для XHR-обновления пульта при смене фильтров. GET /crm/finance/data
      */
-    public function data(Request $request, CollectionForecastService $forecast): JsonResponse
+    public function data(Request $request): JsonResponse
     {
-        return response()->json($this->dashboardPayload($request, $forecast));
+        return response()->json($this->dashboardPayload($request));
     }
 
     /**
      * План поступлений — построчно. GET /crm/finance/plan
      */
-    public function plan(Request $request, CollectionForecastService $forecast): InertiaResponse
-    {
-        $filters = FinanceFilters::fromRequest($request);
-        $clients = $this->visibleClients($request, $filters);
+    public function plan(
+        Request $request,
+        PaymentPlanService $plan,
+        PartnerFinanceSnapshot $snapshot,
+    ): InertiaResponse {
         $today = CarbonImmutable::today();
-        $target = $this->forecastTarget($request, $today);
+        $view = $request->input('view') === 'calendar' ? 'calendar' : 'period';
+        $month = $this->planMonth($request, $today);
 
-        // Построчный список — вторичный слой: сперва бюджетный ответ «сколько
-        // денег к дате», и только по явному запросу — из каких строк он сложен.
+        // У календаря период задаёт сам месяц, у списка — фильтры. Умолчание
+        // раздела «90 дней вперёд» здесь врёт: график 1С кончается примерно
+        // через месяц, и две трети окна были бы пустыми не потому, что денег
+        // не ждут, а потому, что строк ещё нет.
+        $filters = $view === 'calendar'
+            ? FinanceFilters::fromRequest($request)->withRange($month, $month->endOfMonth())
+            : $this->planPeriod($request, $today);
+
+        $clients = $this->visibleClients($request, $filters);
+
+        // Просрочка считается на начало периода, а не на сегодня: листая назад,
+        // финансист должен видеть картину того времени, иначе прошлый месяц
+        // задним числом выглядел бы хуже, чем был.
+        $asOf = $filters->dateFrom->greaterThan($today) ? $today : $filters->dateFrom;
+
+        $summary = $plan->summary($clients, $filters);
+        $partners = $view === 'period' ? $plan->byPartner($clients, $filters) : [];
+        $day = $this->planDay($request, $filters);
+        $dayPlan = $day !== null ? $plan->dayPlan($clients, $filters, $day) : [];
+        $dayFacts = $day !== null ? $plan->dayFacts($clients, $filters, $day) : [];
+
         $showLines = $request->input('group') === 'none';
+        $rows = $showLines ? $this->planLines($clients, $filters, $today) : null;
 
         return Inertia::render('Crm/Pages/Finance/Plan', [
-            'forecast' => $forecast->forecast($clients, $filters, $target, $today),
-            'partners' => $forecast->forecastByPartner($clients, $filters, $target, $today),
+            'view' => $view,
+            'today' => $today->toDateString(),
+            'summary' => $summary,
+            'overdue' => $plan->overdueBefore($clients, $filters, $asOf),
+            'partners' => $partners,
+            'snapshots' => $snapshot->for(
+                $this->planPartnerIds($partners, $dayPlan, $dayFacts),
+                $today,
+            ),
             'showLines' => $showLines,
-            'rows' => $showLines ? $this->planLines($clients, $filters, $today) : null,
-            ...$this->planShared($request, $filters, $target),
+            'rows' => $rows,
+            'calendar' => $view === 'calendar'
+                ? $this->planCalendar($plan, $clients, $filters, $month, $today)
+                : null,
+            'day' => $day?->toDateString(),
+            'dayPlan' => $dayPlan,
+            'dayFacts' => $dayFacts,
+            ...$this->planShared($request, $filters, $view, $month),
         ]);
     }
 
     /**
-     * Дата, на которую верстается бюджет. По умолчанию — конец текущего месяца:
-     * самый частый вопрос финансиста задаётся именно про закрытие месяца.
+     * Период списка: по умолчанию от сегодня до конца месяца.
+     *
+     * Столько же берёт плитка пульта, и при первом открытии числа на двух
+     * экранах обязаны совпадать — иначе раздел снова начнут сверять руками.
      */
-    private function forecastTarget(Request $request, CarbonImmutable $today): CarbonImmutable
+    private function planPeriod(Request $request, CarbonImmutable $today): FinanceFilters
     {
-        $raw = (string) $request->input('target', '');
+        $filters = FinanceFilters::fromRequest($request);
 
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw) === 1) {
+        if ($request->input('date_from') === null && $request->input('date_to') === null) {
+            return $filters->withRange($today, $today->endOfMonth());
+        }
+
+        return $filters;
+    }
+
+    /** Месяц календаря; мусор в адресе возвращает к текущему. */
+    private function planMonth(Request $request, CarbonImmutable $today): CarbonImmutable
+    {
+        $raw = (string) $request->input('month', '');
+
+        if (preg_match('/^\d{4}-\d{2}$/', $raw) === 1) {
             try {
-                $parsed = CarbonImmutable::createFromFormat('Y-m-d', $raw)->startOfDay();
-
-                // Прошедшая дата в прогнозе бессмысленна, а горизонт дальше
-                // года — гадание: в обоих случаях возвращаем к умолчанию.
-                if ($parsed->greaterThanOrEqualTo($today) && $parsed->lessThanOrEqualTo($today->addYear())) {
-                    return $parsed;
-                }
+                return CarbonImmutable::createFromFormat('Y-m-d', $raw.'-01')->startOfMonth();
             } catch (\Throwable) {
-                // Мусор в адресе прогноз не роняет.
+                // Мусор календарь не роняет.
             }
         }
 
-        return $today->endOfMonth()->startOfDay();
+        return $today->startOfMonth();
+    }
+
+    /** Выбранный день детализации — только внутри показываемого периода. */
+    private function planDay(Request $request, FinanceFilters $filters): ?CarbonImmutable
+    {
+        $raw = (string) $request->input('day', '');
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw) !== 1) {
+            return null;
+        }
+
+        try {
+            $day = CarbonImmutable::createFromFormat('Y-m-d', $raw)->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $day->betweenIncluded($filters->dateFrom, $filters->dateTo) ? $day : null;
     }
 
     /**
-     * Общие пропсы прогноза: отбор плюс выбранная дата и признак списка.
+     * Числа календаря: план и факт по дням месяца.
+     *
+     * @param  Builder<User>  $clients
+     * @return array<string, mixed>
+     */
+    private function planCalendar(
+        PaymentPlanService $plan,
+        Builder $clients,
+        FinanceFilters $filters,
+        CarbonImmutable $month,
+        CarbonImmutable $today,
+    ): array {
+        return [
+            'month' => $month->format('Y-m'),
+            'month_label' => $this->planMonthLabel($month),
+            'prev_month' => $month->subMonth()->format('Y-m'),
+            'next_month' => $month->addMonth()->format('Y-m'),
+            'days' => $plan->days($clients, $filters, $month, $month->endOfMonth()),
+        ];
+    }
+
+    /** «сентябрь 2026» — заголовок сетки месяца. */
+    private function planMonthLabel(CarbonImmutable $month): string
+    {
+        return self::MONTHS_FULL[(int) $month->format('n') - 1].' '.$month->format('Y');
+    }
+
+    /**
+     * Партнёры, для которых нужен финансовый снимок: таблица плюс открытый день.
+     *
+     * Список собирается только из строк, прошедших скоуп менеджера: снимок
+     * принимает готовые id и сам изоляцию не проверяет.
+     *
+     * @param  list<array<string, mixed>>  $partners
+     * @param  list<array<string, mixed>>  $dayPlan
+     * @param  list<array<string, mixed>>  $dayFacts
+     * @return list<int>
+     */
+    private function planPartnerIds(array $partners, array $dayPlan, array $dayFacts): array
+    {
+        return array_values(array_unique([
+            ...array_column($partners, 'user_id'),
+            ...array_column($dayPlan, 'user_id'),
+            ...array_column($dayFacts, 'user_id'),
+        ]));
+    }
+
+    /**
+     * Общие пропсы раздела: отбор плюс вид и месяц.
      *
      * @return array<string, mixed>
      */
-    private function planShared(Request $request, FinanceFilters $filters, CarbonImmutable $target): array
-    {
+    private function planShared(
+        Request $request,
+        FinanceFilters $filters,
+        string $view,
+        CarbonImmutable $month,
+    ): array {
         $shared = $this->sharedOptions($request, $filters);
-        $shared['filters']['target'] = $target->toDateString();
+        $shared['filters']['view'] = $view;
+        $shared['filters']['month'] = $month->format('Y-m');
+        $shared['filters']['day'] = $request->input('day');
         $shared['filters']['group'] = $request->input('group') === 'none' ? 'none' : null;
 
         return $shared;
     }
 
     /**
-     * Построчный список ожидаемых поступлений — от сегодня до выбранной даты.
+     * Построчный список плана за выбранный период.
      *
      * @param  Builder<User>  $clients
      * @return LengthAwarePaginator<int, array<string, mixed>>
@@ -147,6 +263,68 @@ class FinanceController extends CrmController
         $rows->through(fn (object $row): array => $this->forecast->row($row, $today));
 
         return $rows;
+    }
+
+    /**
+     * Выгрузка плана: итоги, ожидания по партнёрам и строки графика.
+     *
+     * Отдельно от общей выгрузки раздела: у той свои фильтры и свой вопрос
+     * («сколько денег ждём по отделу»), а здесь — юридический план выбранного
+     * периода с разделением на отгруженное и счета. Смешав их, мы получили бы
+     * лист, который меняется от фильтров, к нему не относящихся.
+     *
+     * GET /crm/finance/plan/export
+     */
+    public function planExport(
+        Request $request,
+        PaymentPlanService $plan,
+        SimpleXlsxExporter $exporter,
+    ): StreamedResponse {
+        $today = CarbonImmutable::today();
+        $filters = $this->planPeriod($request, $today);
+        $clients = $this->visibleClients($request, $filters);
+        $asOf = $filters->dateFrom->greaterThan($today) ? $today : $filters->dateFrom;
+
+        $summary = $plan->summary($clients, $filters);
+        $overdue = $plan->overdueBefore($clients, $filters, $asOf);
+        $partners = $plan->byPartner($clients, $filters);
+
+        return $exporter->streamSheets('crm-plan-'.$today->format('Y-m-d'), [
+            [
+                'title' => 'Итоги',
+                'headers' => ['Показатель', 'Значение, ₽', 'Комментарий'],
+                'rows' => [
+                    ['Период', null, $filters->dateFrom->format('d.m.Y').' — '.$filters->dateTo->format('d.m.Y')],
+                    ['Ожидается по отгруженному', $summary['shipments']['amount'], $summary['shipments']['documents'].' документов'],
+                    ['Счета на предоплату', $summary['advances']['amount'], 'оплату заказов 1С не публикует'],
+                    ['Всего ожидается', $summary['total'], 'без просроченного'],
+                    ['Просрочено на начало периода', $overdue['total'], $overdue['lines'].' строк, старейшая '.$overdue['oldest_days'].' дн.'],
+                    ['График 1С заканчивается', null, $summary['horizon_label'] ?? 'плановых строк нет'],
+                ],
+            ],
+            [
+                'title' => 'От кого ждём',
+                'headers' => ['Партнёр', 'Менеджер', 'Всего ждём, ₽', 'По отгруженному, ₽', 'Счета на предоплату, ₽', 'Документов'],
+                'rows' => array_map(static fn (array $row): array => [
+                    $row['title'],
+                    $row['manager_name'],
+                    $row['total'],
+                    $row['shipments'],
+                    $row['advances'],
+                    $row['documents'],
+                ], $partners),
+            ],
+            [
+                'title' => 'Строки графика',
+                'headers' => [
+                    'Плановая дата', 'Дней до срока', 'Дней просрочки', 'Партнёр', 'Менеджер',
+                    'Организация', 'Реализация', 'Дата реализации', 'Счёт-фактура',
+                    'Сумма документа', 'Сумма платежа', 'Оплачено', 'Остаток, ₽',
+                    'Валюта', 'Остаток в валюте', 'Этап оплаты',
+                ],
+                'rows' => $this->detailSheet($clients, $filters, $today),
+            ],
+        ]);
     }
 
     /**
@@ -824,12 +1002,11 @@ class FinanceController extends CrmController
      *
      * @return array<string, mixed>
      */
-    private function dashboardPayload(Request $request, CollectionForecastService $forecast): array
+    private function dashboardPayload(Request $request): array
     {
         $filters = FinanceFilters::fromRequest($request);
         $clients = $this->visibleClients($request, $filters);
         $today = CarbonImmutable::today();
-        $monthEnd = $today->endOfMonth()->startOfDay();
 
         $summary = $this->forecast->summary($clients, $filters);
         $debt = $this->forecast->debtTotal($clients, $filters->organizationIds);
@@ -842,7 +1019,10 @@ class FinanceController extends CrmController
                 'overdue' => $overdue,
                 'overdue_share' => $debt > 0 ? (int) round($overdue / $debt * 100) : 0,
                 'overdue_clients' => (int) ($summary['overdue_clients'] ?? 0),
-                'forecast' => $forecast->forecast($clients, $filters, $monthEnd, $today),
+                // Ожидание по графику 1С, а не оценка сбора: то же число, что
+                // на экране «План поступлений», иначе пульт и раздел начнут
+                // расходиться и их снова примутся сверять руками.
+                'expected_30' => round((float) ($summary['expected_30'] ?? 0), 2),
                 'month' => $this->monthFact($clients, $filters, $today),
             ],
             'history' => $this->monthlyHistory($clients, $filters, $today),
@@ -926,6 +1106,12 @@ class FinanceController extends CrmController
     }
 
     /** @var list<string> */
+    /** Месяцы для заголовка сетки календаря. */
+    private const MONTHS_FULL = [
+        'январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
+        'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь',
+    ];
+
     private const MONTHS_SHORT = [
         'январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
         'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь',

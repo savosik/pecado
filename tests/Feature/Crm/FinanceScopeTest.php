@@ -215,9 +215,9 @@ class FinanceScopeTest extends TestCase
 
         $props = $this->actingAs($actor)->get('/crm/finance')->viewData('page')['props'];
 
-        // Реализация без графика — не просрочка и не прогноз: срок неизвестен.
+        // Реализация без графика — не просрочка и не ожидание: срок неизвестен.
         $this->assertSame(0.0, $props['money']['overdue']);
-        $this->assertSame(0.0, $props['money']['forecast']['promised']);
+        $this->assertSame(0.0, $props['money']['expected_30']);
     }
 
     #[Test]
@@ -247,8 +247,8 @@ class FinanceScopeTest extends TestCase
 
         $props = $this->actingAs($actor)->get('/crm/finance')->viewData('page')['props'];
 
-        // Строка закрыта: ни в прогноз, ни в просрочку она не идёт.
-        $this->assertSame(0.0, $props['money']['forecast']['promised']);
+        // Строка закрыта: ни в ожидания, ни в просрочку она не идёт.
+        $this->assertSame(0.0, $props['money']['expected_30']);
         $this->assertSame(0.0, $props['money']['overdue']);
     }
 

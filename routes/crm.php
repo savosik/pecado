@@ -164,9 +164,11 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
             ->whereNumber('order');
         Route::get('/payments', [DocumentController::class, 'payments'])->name('payments.index');
         Route::get('/payments/export', [DocumentController::class, 'paymentsExport'])->name('payments.export');
-        // Календарь поступления денег (v15.12.0): план по графику 1С + факт
-        // по проведённым платежам. Объявлен до /payments/{payment}.
-        Route::get('/payments/calendar', [DocumentController::class, 'paymentsCalendar'])->name('payments.calendar');
+        // Календарь переехал в «План поступлений»: раздел показывал график 1С
+        // без заказов, а план — с ними, и два экрана расходились на 3,1 млн ₽,
+        // оба называя себя графиком из 1С. Адрес сохранён ради закладок.
+        Route::get('/payments/calendar', fn () => redirect()->route('crm.finance.plan', ['view' => 'calendar']))
+            ->name('payments.calendar');
         Route::get('/payments/{payment}', [DocumentController::class, 'payment'])
             ->name('payments.show')
             ->whereNumber('payment');
@@ -755,6 +757,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // Выгрузка объявлена до остальных подстраниц не ради биндинга (его тут нет),
         // а чтобы не потеряться среди них при чтении файла.
         Route::get('/finance/export', [FinanceController::class, 'export'])->name('finance.export');
+        // Выгрузка объявлена до самой страницы: у плана свой набор листов,
+        // отличный от общей выгрузки раздела.
+        Route::get('/finance/plan/export', [FinanceController::class, 'planExport'])->name('finance.plan.export');
         Route::get('/finance/plan', [FinanceController::class, 'plan'])->name('finance.plan');
         Route::get('/finance/overdue', [FinanceController::class, 'overdue'])->name('finance.overdue');
         Route::get('/finance/balances', [FinanceController::class, 'balances'])->name('finance.balances');

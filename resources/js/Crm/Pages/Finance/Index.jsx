@@ -78,9 +78,9 @@ export default function FinanceDashboard({
 
             <SimpleGrid columns={{ base: 1, md: 3 }} gap={3} mb={3}>
                 <Card
-                    question="Сколько придёт до конца месяца"
-                    value={formatRub(money.forecast?.total)}
-                    note={`от ${formatCompact(money.forecast?.low)} до ${formatCompact(money.forecast?.high)} — по тому, как платили раньше`}
+                    question="Сколько ждём в ближайшие 30 дней"
+                    value={formatRub(money.expected_30)}
+                    note="по графику платежей из 1С, без просроченного"
                 />
 
                 <Card

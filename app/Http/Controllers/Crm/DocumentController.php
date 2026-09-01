@@ -18,17 +18,13 @@ use App\Models\ShipmentItem;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Crm\CrmEntityResolver;
-use App\Services\Crm\Finance\FinanceFilters;
-use App\Services\Crm\Finance\PaymentCalendarService;
 use App\Services\Crm\Finance\PaymentForecast;
 use App\Services\SimpleXlsxExporter;
 use App\Support\Crm\CrmEntityMap;
 use App\Support\Payments\PaymentSchedulePresenter;
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -404,141 +400,6 @@ class DocumentController extends CrmController
                 'amount_label' => $this->money((float) $row->total, $row->currency_code),
             ])->all(),
         ];
-    }
-
-    /**
-     * Календарь поступления денег. GET /crm/payments/calendar?month=YYYY-MM
-     *
-     * План и факт вместе: план — остатки по графику оплаты реализаций
-     * («Правила оплаты» 1С), факт — проведённые платежи по их бизнес-дате `date`.
-     * Разрез по менеджерам работает через тот же скоуп партнёров, что и журналы,
-     * поэтому отдельного фильтра здесь нет.
-     *
-     * Расчёт берётся из реализации PaymentForecast — той же, на которой стоит раздел
-     * «Финансы»: календарь и пульт обязаны показывать одно число, а два
-     * независимых запроса неизбежно разъедутся. Оттуда же приходит сведение
-     * валют в рубли — без него месяц с валютным документом складывал бы Br с ₽.
-     */
-    public function paymentsCalendar(
-        Request $request,
-        PaymentForecast $forecast,
-        PaymentCalendarService $calendar,
-    ): Response {
-        $actor = $this->crmActor($request);
-        $clients = $this->visibleClients($request, $actor);
-
-        $month = $this->resolveMonth($request->input('month'));
-        $monthStart = CarbonImmutable::parse($month->toDateString());
-        $monthEnd = $monthStart->endOfMonth()->startOfDay();
-        $todayImmutable = CarbonImmutable::today();
-
-        // Отбор общий с остальными финансовыми разделами: тот же снимок
-        // фильтров, те же справочники, тот же скоуп.
-        $filters = FinanceFilters::fromRequest($request)->withRange($monthStart, $monthEnd);
-
-        $axis = (string) $request->input('axis', 'partner');
-        $axis = isset(PaymentCalendarService::AXES[$axis]) ? $axis : 'partner';
-
-        $days = $calendar->days($clients, $filters, $monthStart, $monthEnd);
-
-        // Навес считается на начало месяца: листая назад, менеджер должен
-        // видеть картину того времени, а не сегодняшнюю.
-        $threadDate = $monthStart->greaterThan($todayImmutable) ? $todayImmutable : $monthStart;
-
-        $plan = array_sum(array_column($days, 'plan'));
-        $settled = array_sum(array_column($days, 'settled'));
-        $fact = array_sum(array_column($days, 'fact'));
-
-        return Inertia::render('Crm/Pages/Finance/PaymentCalendar', [
-            'month' => $month->format('Y-m'),
-            'monthLabel' => $this->monthLabel($month),
-            'prevMonth' => $month->copy()->subMonth()->format('Y-m'),
-            'nextMonth' => $month->copy()->addMonth()->format('Y-m'),
-            'today' => $todayImmutable->toDateString(),
-            'days' => $days,
-            'overdueThread' => $calendar->overdueThread($clients, $filters, $threadDate),
-            'axis' => $axis,
-            'axes' => array_map(
-                static fn (string $label, string $key): array => ['value' => $key, 'label' => $label],
-                array_values(PaymentCalendarService::AXES),
-                array_keys(PaymentCalendarService::AXES),
-            ),
-            'breakdown' => $calendar->breakdown($clients, $filters, $monthStart, $monthEnd, $axis),
-            'summary' => [
-                'plan' => round($plan, 2),
-                // Сколько из графика месяца 1С уже закрыла. Отдельно от факта
-                // платежей: платежом может гаситься долг прошлых месяцев, а
-                // строка этого месяца — закрываться зачётом аванса.
-                'settled' => round($settled, 2),
-                'fact' => round($fact, 2),
-                // Исполнение считается только для прошедших дней месяца:
-                // в середине месяца сравнивать факт с планом всего месяца
-                // значило бы каждый раз показывать провал.
-                'plan_to_date' => round($this->planToDate($days, $todayImmutable), 2),
-                'days_passed' => $monthStart->greaterThan($todayImmutable)
-                    ? 0
-                    : min((int) $monthStart->diffInDays($todayImmutable) + 1, $monthEnd->day),
-            ],
-            'filters' => [
-                ...$filters->toArray(),
-                'scope' => CrmScope::fromRequest($request, $actor)->value,
-                'month' => $month->format('Y-m'),
-                'axis' => $axis,
-                'manager_ids' => $this->seesDepartment($request) ? $filters->managerIds : [],
-            ],
-            'managers' => $this->seesDepartment($request) ? $this->managerOptions() : [],
-            'organizations' => $this->organizationOptions(),
-            'seesAll' => $this->seesDepartment($request),
-        ]);
-    }
-
-    /**
-     * Сколько по графику должно было прийти к сегодняшнему дню.
-     *
-     * @param  array<string, array{plan: float, fact: float}>  $days
-     */
-    private function planToDate(array $days, CarbonImmutable $today): float
-    {
-        $sum = 0.0;
-
-        foreach ($days as $date => $day) {
-            if ($date <= $today->toDateString()) {
-                $sum += $day['plan'];
-            }
-        }
-
-        return $sum;
-    }
-
-    /**
-     * Месяц из строки YYYY-MM. Мусор в параметре — текущий месяц, а не 500.
-     */
-    private function resolveMonth(mixed $value): Carbon
-    {
-        if (is_string($value) && preg_match('/^\d{4}-\d{2}$/', $value) === 1) {
-            try {
-                return Carbon::createFromFormat('Y-m-d', $value.'-01')->startOfMonth();
-            } catch (\Throwable) {
-                // Падаем в текущий месяц ниже.
-            }
-        }
-
-        return Carbon::today()->startOfMonth();
-    }
-
-    /**
-     * «Август 2026». Carbon::translatedFormat зависит от локали приложения,
-     * а месяцы нужны по-русски в любом окружении.
-     */
-    private function monthLabel(Carbon $month): string
-    {
-        $names = [
-            1 => 'Январь', 2 => 'Февраль', 3 => 'Март', 4 => 'Апрель',
-            5 => 'Май', 6 => 'Июнь', 7 => 'Июль', 8 => 'Август',
-            9 => 'Сентябрь', 10 => 'Октябрь', 11 => 'Ноябрь', 12 => 'Декабрь',
-        ];
-
-        return $names[$month->month].' '.$month->year;
     }
 
     /**

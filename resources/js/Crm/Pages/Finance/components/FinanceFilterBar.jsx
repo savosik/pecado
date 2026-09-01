@@ -63,6 +63,7 @@ export default function FinanceFilterBar({
     showOverdueToggle = false,
     asOfMode = false,
     hidePeriod = false,
+    exportRoute = 'crm.finance.export',
     extraControls = null,
     extraChips = [],
     passthrough = [],
@@ -143,7 +144,7 @@ export default function FinanceFilterBar({
             else query.append(key, value);
         });
 
-        window.location.href = `${route('crm.finance.export')}?${query.toString()}`;
+        window.location.href = `${route(exportRoute)}?${query.toString()}`;
     };
 
     const chipsFor = (key, options, label) => (filters[key] || []).map((value) => ({

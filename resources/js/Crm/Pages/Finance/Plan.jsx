@@ -1,73 +1,67 @@
 import { Head, router } from '@inertiajs/react';
-import { Badge, Box, Flex, HStack, Table, Text, VStack } from '@chakra-ui/react';
+import { Box, Flex, HStack, Table, Text, VStack } from '@chakra-ui/react';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
-import { Button } from '@/components/ui/button';
-import { Input } from '@chakra-ui/react';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import MetricHint from '@/Crm/Components/MetricHint';
+import ShareBar from '@/Crm/Components/ShareBar';
 import FinanceFilterBar from './components/FinanceFilterBar';
 import FinanceRowsTable from './components/FinanceRowsTable';
-import ForecastChart from './components/ForecastChart';
-import LastPayment from './components/LastPayment';
+import PartnerFinanceCell from './components/PartnerFinanceCell';
+import PlanCalendar from './components/PlanCalendar';
+import DayDrawer from './components/DayDrawer';
 import { formatCompact, formatRub } from './components/format';
-import { localDate } from '@/shared/localDate';
 
 /**
- * План поступлений — ответ на вопрос финансового директора: «я верстаю
- * бюджет, сколько денег будет к такому-то числу».
+ * План поступлений — график платежей из 1С и фактические оплаты.
  *
- * Раздел устроен слоями. Первый — сумма к выбранной дате с коридором
- * консервативного и оптимистичного сценария: это то, что переносят в бюджет.
- * Второй — кривая накопления, чтобы видеть, как деньги приходят внутри
- * периода. И только третий отвечает «от кого», потому что этот вопрос
- * возникает уже после того, как сумма не устроила.
+ * Раздел ничего не предсказывает. Прежняя версия взвешивала тот же график на
+ * «платёжную дисциплину» партнёра и достраивала регрессией то, чего в графике
+ * нет; финансисту это мешало, потому что бюджет верстают по обязательствам, а
+ * не по матожиданию. Теперь на экране только то, что есть в учётной системе:
+ * отгрузили — срок назначен — вот и план.
  *
- * Прежняя версия раздела показывала плоский список плановых строк. Он
- * отвечал на вопрос «какие строки», которого никто не задавал: сумма графика
- * не равна деньгам, а без вероятностей и ритма отгрузок бюджет по нему было
- * не сверстать.
+ * Реализации и счета на предоплату стоят рядом, но не складываются в одно
+ * число: по реализации долг уже есть, а заказ — намерение, по которому 1С даже
+ * не публикует оплату. Просрочка вынесена отдельно и в ожидания периода не
+ * входит: её срок прошёл, и приписать её будущему дню значило бы выдумать срок.
  */
 export default function FinancePlan({
-    forecast = {},
+    view = 'period',
+    today,
+    summary = {},
+    overdue = {},
     partners = [],
+    snapshots = {},
     rows = null,
     showLines = false,
+    calendar = null,
+    day = null,
+    dayPlan = [],
+    dayFacts = [],
     filters = {},
     managers = [],
     organizations = [],
     seesAll = false,
 }) {
-    const setTarget = (date) => {
+    const go = (patch, options = {}) => {
         const query = new URLSearchParams(window.location.search);
 
-        if (date) query.set('target', date);
-        else query.delete('target');
+        Object.entries(patch).forEach(([key, value]) => {
+            if (value === undefined || value === null || value === '') query.delete(key);
+            else query.set(key, value);
+        });
 
         query.delete('page');
         router.get(`/crm/finance/plan?${query.toString()}`, {}, {
             preserveState: true,
             preserveScroll: true,
             replace: true,
+            ...options,
         });
     };
 
-    const toggleLines = () => {
-        const query = new URLSearchParams(window.location.search);
-
-        if (showLines) query.delete('group');
-        else query.set('group', 'none');
-
-        router.get(`/crm/finance/plan?${query.toString()}`, {}, { preserveState: true, preserveScroll: true, replace: true });
-    };
-
-    // Коридор рисуется разностью: recharts не умеет интервал одной серией.
-    const curve = (forecast.curve ?? []).map((point) => ({
-        ...point,
-        bandWidth: Math.max(0, point.high - point.low),
-    }));
-
-    const targetPoint = curve.find((point) => point.date === forecast.target);
-    const confirmedShare = forecast.total > 0 ? Math.round((forecast.by_discipline / forecast.total) * 100) : 0;
+    const isPast = filters.date_to && filters.date_to < today;
 
     return (
         <CrmLayout breadcrumbs={[{ label: 'Финансы' }, { label: 'План поступлений' }]}>
@@ -75,347 +69,276 @@ export default function FinancePlan({
 
             <PageHeader
                 title="План поступлений"
-                description="Сколько денег придёт к выбранной дате и насколько этому можно верить"
+                description="График платежей из 1С и фактические оплаты. Без прогнозов — только то, что в учётной системе"
             />
 
             <FinanceFilterBar
                 routeName="crm.finance.plan"
+                exportRoute="crm.finance.plan.export"
                 filters={filters}
                 managers={managers}
                 organizations={organizations}
                 seesAll={seesAll}
-                hidePeriod
-                passthrough={['target', 'group']}
+                hidePeriod={view === 'calendar'}
+                passthrough={['view', 'month', 'day', 'group']}
+                extraControls={(
+                    <SegmentedControl
+                        size="sm"
+                        value={view}
+                        items={[
+                            { value: 'period', label: 'Период' },
+                            { value: 'calendar', label: 'Календарь' },
+                        ]}
+                        onValueChange={(event) => go({ view: event.value, day: null })}
+                    />
+                )}
             />
 
+            {summary.beyond_horizon && (
+                <Box borderWidth="1px" borderColor="orange.muted" borderRadius="lg" px={4} py={3} mb={3} bg="orange.subtle">
+                    <HStack gap={2} wrap="wrap">
+                        <Text fontSize="sm" fontWeight="600">
+                            График 1С заканчивается {summary.horizon_label}
+                        </Text>
+                        <Text fontSize="xs" color="fg.muted">
+                            Дальше плановых строк нет — это отсутствие данных, а не ноль поступлений.
+                            1С присылает график примерно на месяц вперёд.
+                        </Text>
+                    </HStack>
+                </Box>
+            )}
+
+            {overdue.total > 0 && (
+                <OverdueBlock overdue={overdue} asOfLabel={filters.date_from} />
+            )}
+
             <Box borderWidth="1px" borderRadius="lg" p={4} mb={3} bg="bg.panel">
-                <HStack gap={2} wrap="wrap" mb={3}>
-                    <Text fontSize="xs" color="fg.muted">Деньги к дате</Text>
-
-                    {/* Активен только первый совпавший пресет: в последнюю
-                        неделю месяца «конец недели» и «конец месяца» могут
-                        указывать на один день, и подсвечивать оба — значит
-                        показывать выбор, которого пользователь не делал. */}
-                    {TARGET_PRESETS.map((preset) => {
-                        const date = preset.date();
-                        const active = forecast.target === date
-                            && TARGET_PRESETS.find((item) => item.date() === forecast.target)?.key === preset.key;
-
-                        return (
-                            <Button
-                                key={preset.key}
-                                size="xs"
-                                variant={active ? 'solid' : 'outline'}
-                                colorPalette={active ? 'pecado' : 'gray'}
-                                onClick={() => setTarget(date)}
-                            >
-                                {preset.label}
-                            </Button>
-                        );
-                    })}
-
-                    <Input
-                        type="date"
-                        size="sm"
-                        width="160px"
-                        aria-label="Прогноз на дату"
-                        value={forecast.target ?? ''}
-                        onChange={(event) => setTarget(event.target.value)}
-                    />
-                </HStack>
-
                 <Flex gap={{ base: 4, md: 8 }} wrap="wrap" align="flex-end">
                     <VStack align="start" gap={0}>
                         <HStack gap={1}>
                             <Text fontSize="xs" color="fg.muted">
-                                Ожидаем к {forecast.target_label}
+                                {isPast ? 'Ожидалось в периоде' : 'Всего ожидается'}
                             </Text>
-                            <MetricHint text="Сумма, которую реально ждём на счетах к этой дате. Модель снята с собственной истории: приход за период складывается из потока, не зависящего от графика (внеплановые платежи, погашение долгов, оплата будущих отгрузок), и доли того, что график обещает. Просроченные строки в обещанное не входят — их возврат уже сидит в первой части. Проверено прогоном по истории." />
+                            <MetricHint text="Сумма непогашенных строк графика оплаты из 1С, чей срок попадает в выбранный период. Это обязательства и счета, а не оценка: сколько учётная система назначила к оплате, столько и показано. Просроченное сюда не входит — оно отдельным блоком выше." />
                         </HStack>
                         <Text fontSize="3xl" fontWeight="700" lineHeight="1.1">
-                            {formatRub(forecast.total)}
+                            {formatRub(summary.total)}
                         </Text>
-                        <Text fontSize="xs" color="fg.muted">
-                            через {forecast.days_ahead} дн. · коридор {formatCompact(forecast.low)} — {formatCompact(forecast.high)}
-                        </Text>
-                        {forecast.overdue > 0 && (
-                            <HStack gap={1}>
-                                <Text fontSize="10px" color="fg.muted">
-                                    сверх этого просрочено {formatCompact(forecast.overdue)}
-                                </Text>
-                                <MetricHint text="Просроченные строки в прогноз отдельной суммой не входят: срок по ним уже нарушен, и приписывать их к конкретному дню значило бы обещать деньги, которых может не быть. Их возврат учтён в потоке, не зависящем от графика, — он и посчитан по истории, где такие погашения происходили. Работа с самим долгом — в разделе «Просрочка»." />
-                            </HStack>
+                        {isPast && (
+                            <Text fontSize="10px" color="fg.muted">
+                                период в прошлом — это осталось незакрытым
+                            </Text>
                         )}
                     </VStack>
 
                     <VStack align="start" gap={0}>
                         <HStack gap={1}>
-                            <Text fontSize="10px" color="fg.muted" textTransform="uppercase">Из графика ждём</Text>
-                            <MetricHint text="Сколько из обещанного графиком реально ждём: сумма плановых строк, взвешенная на платёжную дисциплину каждого партнёра. Это ровно итог таблицы «от кого ждём» ниже — числа на экране обязаны сходиться." />
+                            <Text fontSize="10px" color="fg.muted" textTransform="uppercase">По отгруженному</Text>
+                            <MetricHint text="Реализации и первичные документы: товар отгружен, накладная подписана, обязательство возникло. Это та часть плана, которую можно переносить в бюджет как долг клиента." />
                         </HStack>
-                        <Text fontSize="lg" fontWeight="600" color="green.fg">{formatRub(forecast.by_discipline)}</Text>
+                        <Text fontSize="lg" fontWeight="600">{formatRub(summary.shipments?.amount)}</Text>
                         <Text fontSize="10px" color="fg.muted">
-                            из {formatCompact(forecast.promised)} обещанных · график до {forecast.horizon_label ?? '—'}
+                            {summary.shipments?.documents ?? 0} документов · {summary.shipments?.lines ?? 0} строк
                         </Text>
                     </VStack>
 
                     <VStack align="start" gap={0}>
                         <HStack gap={1}>
-                            <Text fontSize="10px" color="fg.muted" textTransform="uppercase">Сверх графика</Text>
-                            <MetricHint text="Оплата документов, которых ещё нет, погашение просроченного и внеплановые платежи. График из 1С короткий, и чем дальше дата, тем большую часть прихода даёт эта часть. Величина не выдумана: она снята с истории регрессией «приход за такой же срок ≈ постоянный поток плюс доля обещанного»." />
+                            <Text fontSize="10px" color="fg.muted" textTransform="uppercase">Счета на предоплату</Text>
+                            <MetricHint text="Плановые платежи по заказам: товар ещё не отгружен, юридического долга нет. Считаются отдельно и по двум причинам. Во-первых, это намерение, а не обязательство. Во-вторых, 1С не публикует оплату заказов вовсе — регистр расчётов по срокам их не ведёт, поэтому оплаченный счёт так и остаётся в графике до отгрузки." />
                         </HStack>
-                        <Text fontSize="lg" fontWeight="600">{formatRub(forecast.beyond_plan)}</Text>
+                        <Text fontSize="lg" fontWeight="600" color="fg.muted">{formatRub(summary.advances?.amount)}</Text>
                         <Text fontSize="10px" color="fg.muted">
-                            не зависит от графика {formatCompact(forecast.model?.base)}
-                            {forecast.model?.extrapolated ? ' · экстраполяция' : ''}
-                        </Text>
-                    </VStack>
-
-                    <VStack align="start" gap={0}>
-                        <HStack gap={1}>
-                            <Text fontSize="10px" color="fg.muted" textTransform="uppercase">Консервативно</Text>
-                            <MetricHint text={`Нижняя граница: так выглядел бы приход, повтори он худший из наблюдавшихся периодов. Границы сняты с собственной истории — модель проверена на ${forecast.calibration?.observations ?? 0} периодах, и коридор построен так, чтобы накрывать факт примерно в девяти случаях из десяти. Именно это число стоит закладывать в бюджет, если кассовый разрыв недопустим.`} />
-                        </HStack>
-                        <Text fontSize="lg" fontWeight="600" color="orange.fg">{formatRub(forecast.low)}</Text>
-                        <Text fontSize="10px" color="fg.muted">
-                            проверено на {forecast.calibration?.observations ?? 0} периодах
+                            {summary.advances?.documents ?? 0} счетов · оплата 1С не публикуется
                         </Text>
                     </VStack>
                 </Flex>
             </Box>
 
-            <Box borderWidth="1px" borderRadius="lg" p={4} mb={3}>
-                <HStack gap={2} mb={2}>
-                    <Text fontWeight="600" fontSize="sm">Как деньги приходят внутри периода</Text>
-                    <MetricHint text="Накопительная сумма: каждая точка — сколько всего будет собрано к этому дню. Зелёная линия — часть, подтверждённая графиком 1С; синяя — весь прогноз; полоса между ними — коридор сценариев. Пунктир отмечает конец графика: правее прогноз держится только на ритме отгрузок." />
-                </HStack>
+            {view === 'calendar' && calendar && (
+                <PlanCalendar
+                    calendar={calendar}
+                    today={today}
+                    horizon={summary.horizon}
+                    selectedDay={day}
+                    onSelectDay={(date) => go({ day: date === day ? null : date })}
+                    onChangeMonth={(month) => go({ month, day: null })}
+                />
+            )}
 
-                <ForecastChart curve={curve} target={forecast.target} horizon={forecast.horizon} />
-
-                {targetPoint && (
-                    <Text fontSize="xs" color="fg.muted" mt={1}>
-                        Красная черта — выбранная дата. График 1С заканчивается {forecast.horizon_label ?? '—'}:
-                        дальше плановых строк из учётной системы нет, и прогноз опирается на ритм отгрузок.
-                    </Text>
-                )}
-            </Box>
-
-            <Flex justify="space-between" align="baseline" mb={2} gap={3} wrap="wrap">
-                <HStack gap={2}>
-                    <Text fontWeight="600">От кого ждём</Text>
-                    <MetricHint text="Второй слой ответа: кто именно должен принести эти деньги к выбранной дате. «Ожидаем» — сумма партнёра, взвешенная на его дисциплину; «обещано» — та же сумма по графику без поправок. Разрыв между ними и есть риск: у надёжного партнёра он мал, у молчащего — почти вся сумма." />
-                </HStack>
-
-                <Button size="xs" variant={showLines ? 'solid' : 'outline'} colorPalette={showLines ? 'pecado' : 'gray'} onClick={toggleLines}>
-                    {showLines ? 'Скрыть строки' : 'Показать строки графика'}
-                </Button>
-            </Flex>
-
-            <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" overflow="hidden" mb={showLines ? 6 : 0}>
-                <Box overflowX="auto">
-                    <Table.Root size="sm" variant="line">
-                        <Table.Header>
-                            <Table.Row>
-                                <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="end">
-                                    <ColumnLabel
-                                        label="Ожидаем"
-                                        hint="Сколько денег от этого партнёра реально придёт к выбранной дате. Это «обещано», уменьшенное на то, как партнёр платит на самом деле: тот, кто платит вовремя, отдаёт почти всё обещанное, а тот, кто молчит месяцами, — малую часть. Именно эти суммы складываются в прогноз наверху страницы."
-                                    />
-                                </Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="end">
-                                    <ColumnLabel
-                                        label="Обещано"
-                                        hint="Сколько партнёр должен заплатить к этой дате по графику из 1С — сумма его плановых строк со сроком не позже выбранного дня. Это обязательство на бумаге, а не деньги: в бюджет его переносить нельзя, потому что часть партнёров платит позже срока, а часть не платит вовсе."
-                                    />
-                                </Table.ColumnHeader>
-                                <Table.ColumnHeader width="130px">
-                                    <ColumnLabel
-                                        label="Вероятность"
-                                        hint="Какая доля обещанного дойдёт до счёта: «ожидаем», делённое на «обещано». Складывается из двух вещей — как партнёр платит вообще (колонка «Дисциплина») и не нарушен ли срок уже сейчас: просроченное обещание стоит дешевле нового, и чем дольше оно висит, тем дешевле. Наведите на само число, чтобы увидеть расчёт по этому партнёру."
-                                    />
-                                </Table.ColumnHeader>
-                                <Table.ColumnHeader>
-                                    <ColumnLabel
-                                        label="Дисциплина"
-                                        hint="Как партнёр платит в последнее время — по фактам из 1С, без ручных оценок. «Платит вовремя» — деньги приходили в последний месяц и просрочки нет; «платит с задержкой» — платит, но какие-то сроки уже нарушил; «платежи затухают» — последний платёж был больше месяца назад; «не платит» — тишина дольше трёх месяцев или платежей не было вовсе."
-                                    />
-                                </Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="end">Просрочено</Table.ColumnHeader>
-                                <Table.ColumnHeader>Последний платёж</Table.ColumnHeader>
-                            </Table.Row>
-                        </Table.Header>
-
-                        <Table.Body>
-                            {partners.length === 0 && (
-                                <Table.Row>
-                                    <Table.Cell colSpan={7}>
-                                        <Text py={8} textAlign="center" color="fg.muted">
-                                            К этой дате поступлений по графику не ожидается
-                                        </Text>
-                                    </Table.Cell>
-                                </Table.Row>
-                            )}
-
-                            {partners.map((partner) => (
-                                <Table.Row key={partner.key} _hover={{ bg: 'bg.muted' }}>
-                                    <Table.Cell>
-                                        <VStack align="start" gap={0}>
-                                            <Box
-                                                as="a"
-                                                href={partner.url}
-                                                fontSize="sm"
-                                                fontWeight="600"
-                                                _hover={{ color: 'blue.fg', textDecoration: 'underline' }}
-                                            >
-                                                {partner.title}
-                                            </Box>
-                                            {partner.subtitle && (
-                                                <Text fontSize="10px" color="fg.muted">{partner.subtitle}</Text>
-                                            )}
-                                        </VStack>
-                                    </Table.Cell>
-
-                                    <Table.Cell textAlign="end">
-                                        <Text fontSize="sm" fontWeight="600" whiteSpace="nowrap">
-                                            {formatRub(partner.expected)}
-                                        </Text>
-                                    </Table.Cell>
-
-                                    <Table.Cell textAlign="end">
-                                        <Text fontSize="sm" color="fg.muted" whiteSpace="nowrap">
-                                            {formatRub(partner.promised)}
-                                        </Text>
-                                    </Table.Cell>
-
-                                    <Table.Cell>
-                                        <HStack gap={2}>
-                                            <Box bg="bg.muted" borderRadius="full" height="6px" flex="1" minW="40px" overflow="hidden">
-                                                <Box
-                                                    bg={partner.probability >= 0.7 ? 'green.solid' : partner.probability >= 0.4 ? 'orange.solid' : 'red.solid'}
-                                                    height="6px"
-                                                    width={`${Math.round(partner.probability * 100)}%`}
-                                                />
-                                            </Box>
-                                            <HStack gap={1}>
-                                                <Text fontSize="10px" color="fg.muted">
-                                                    {Math.round(partner.probability * 100)}%
-                                                </Text>
-                                                <MetricHint text={probabilityBreakdown(partner)} label="Как получилось это число" />
-                                            </HStack>
-                                        </HStack>
-                                    </Table.Cell>
-
-                                    <Table.Cell>
-                                        <Badge size="xs" colorPalette={partner.discipline?.palette ?? 'gray'} variant="subtle">
-                                            {partner.discipline?.label ?? '—'}
-                                        </Badge>
-                                    </Table.Cell>
-
-                                    <Table.Cell textAlign="end">
-                                        <Text fontSize="sm" color={partner.overdue > 0 ? 'red.fg' : 'fg.muted'} whiteSpace="nowrap">
-                                            {partner.overdue > 0 ? formatRub(partner.overdue) : '—'}
-                                        </Text>
-                                    </Table.Cell>
-
-                                    <Table.Cell>
-                                        <LastPayment
-                                            date={partner.discipline?.last_payment_date}
-                                            days={partner.discipline?.days_since_payment}
-                                        />
-                                    </Table.Cell>
-                                </Table.Row>
-                            ))}
-                        </Table.Body>
-                    </Table.Root>
-                </Box>
-            </Box>
-
-            {showLines && rows && (
+            {view === 'period' && (
                 <>
-                    <Text fontWeight="600" mb={2}>Строки графика</Text>
-                    <FinanceRowsTable rows={rows} emptyMessage="В выбранном периоде поступлений не ожидается" />
+                    <Flex justify="space-between" align="baseline" mb={2} gap={3} wrap="wrap">
+                        <HStack gap={2}>
+                            <Text fontWeight="600">От кого ждём</Text>
+                            <MetricHint text="Кто должен заплатить в выбранном периоде по графику 1С. Рядом с каждым партнёром — его текущий долг, доля просрочки в нём и последний платёж: сумма к сроку читается иначе, когда видно, платит ли он вообще." />
+                        </HStack>
+
+                        <Text
+                            as="button"
+                            type="button"
+                            fontSize="xs"
+                            color="blue.fg"
+                            textDecoration="underline"
+                            onClick={() => go({ group: showLines ? null : 'none' })}
+                        >
+                            {showLines ? 'Скрыть строки графика' : 'Показать строки графика'}
+                        </Text>
+                    </Flex>
+
+                    <PartnersTable partners={partners} snapshots={snapshots} />
+
+                    {showLines && rows && (
+                        <Box mt={6}>
+                            <Text fontWeight="600" mb={2}>Строки графика</Text>
+                            <FinanceRowsTable rows={rows} emptyMessage="В выбранном периоде плановых строк нет" />
+                        </Box>
+                    )}
                 </>
             )}
+
+            <DayDrawer
+                date={day}
+                plan={dayPlan}
+                facts={dayFacts}
+                snapshots={snapshots}
+                onClose={() => go({ day: null })}
+            />
         </CrmLayout>
     );
 }
 
-/** Заголовок колонки с пояснением: без него цифры выглядят взятыми с потолка. */
-const ColumnLabel = ({ label, hint }) => (
-    <HStack gap={1} justify="inherit">
-        <Text fontSize="xs">{label}</Text>
-        <MetricHint text={hint} />
-    </HStack>
-);
-
 /**
- * Расчёт вероятности для конкретного партнёра — словами и числами.
+ * Просрочка на начало периода.
  *
- * Общее объяснение в заголовке колонки отвечает «как считается вообще»,
- * а этот текст — «почему у него именно столько», и без второго первое
- * обычно не помогает.
+ * Отдельным блоком и над периодом, потому что в дни её ставить нельзя: срок
+ * прошёл, и любая дата, которую мы ей припишем, будет выдуманной.
  */
-const probabilityBreakdown = (partner) => {
-    const parts = [`Партнёр ${partner.discipline?.label ?? 'без истории платежей'}.`];
+function OverdueBlock({ overdue, asOfLabel }) {
+    const total = overdue.total ?? 0;
 
-    if (partner.upcoming_promised > 0) {
-        parts.push(
-            `Со сроком впереди — ${formatCompact(partner.upcoming_promised)}, из них ждём ${formatCompact(partner.upcoming_expected)}.`,
-        );
-    }
+    return (
+        <Box borderWidth="1px" borderColor="red.muted" borderRadius="lg" px={4} py={3} mb={3} bg="red.subtle">
+            <HStack gap={2} mb={2} wrap="wrap">
+                <Text fontSize="sm" fontWeight="600">
+                    Просрочено на {asOfLabel ? asOfLabel.split('-').reverse().join('.') : 'начало периода'}
+                </Text>
+                <Text fontSize="sm" fontWeight="700" color="red.fg">{formatRub(total)}</Text>
+                <Text fontSize="xs" color="fg.muted">
+                    {overdue.lines} строк · самая давняя ждёт {overdue.oldest_days} дн.
+                </Text>
+                <MetricHint text="Строки графика, чей срок прошёл, а деньги не пришли. В сумму «ожидается в периоде» они не входят и по дням календаря не раскладываются: их срок уже был. Счёт строгий — всё просроченное хоть на день, без льготы и без отсечки по сумме, поэтому число сходится с разделом «Просрочка», но может быть больше, чем показывает «Дебиторка»." />
+            </HStack>
 
-    if (partner.overdue > 0) {
-        parts.push(
-            `Уже просрочено ${formatCompact(partner.overdue)} — из просроченного ждём только ${formatCompact(partner.overdue_expected)}: чем дольше висит долг, тем меньше шансов, что его закроют сейчас.`,
-        );
-    }
+            <Flex height="10px" borderRadius="full" overflow="hidden" bg="bg.muted" mb={2}>
+                {(overdue.buckets ?? []).map((bucket, index) => {
+                    const share = total > 0 ? (bucket.amount / total) * 100 : 0;
 
-    parts.push(
-        `Итого ${formatCompact(partner.expected)} из ${formatCompact(partner.promised)} — это ${Math.round(partner.probability * 100)}%.`,
+                    return share > 0 ? (
+                        <Box
+                            key={bucket.key}
+                            width={`${share}%`}
+                            bg={BUCKET_COLORS[index] ?? 'red.solid'}
+                            title={`${bucket.label}: ${formatRub(bucket.amount)}`}
+                        />
+                    ) : null;
+                })}
+            </Flex>
+
+            <HStack gap={4} wrap="wrap">
+                {(overdue.buckets ?? []).filter((bucket) => bucket.amount > 0).map((bucket, index) => (
+                    <HStack key={bucket.key} gap={1}>
+                        <Box width="8px" height="8px" borderRadius="full" bg={BUCKET_COLORS[index] ?? 'red.solid'} />
+                        <Text fontSize="10px" color="fg.muted">
+                            {bucket.label} — {formatCompact(bucket.amount)} ({bucket.lines})
+                        </Text>
+                    </HStack>
+                ))}
+            </HStack>
+        </Box>
     );
+}
 
-    return parts.join(' ');
-};
+/** Кто и сколько должен заплатить в периоде. */
+function PartnersTable({ partners, snapshots }) {
+    return (
+        <Box borderWidth="1px" borderColor="border.muted" borderRadius="md" overflow="hidden">
+            <Box overflowX="auto">
+                <Table.Root size="sm" variant="line">
+                    <Table.Header>
+                        <Table.Row>
+                            <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
+                            <Table.ColumnHeader>Состояние партнёра</Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="end">Всего ждём</Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="end">По отгруженному</Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="end">Счета на предоплату</Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="end">Документов</Table.ColumnHeader>
+                        </Table.Row>
+                    </Table.Header>
 
-/** Даты, о которых спрашивают чаще всего: закрытие недели, месяца и квартала. */
-const TARGET_PRESETS = [
-    {
-        key: 'week',
-        label: 'конец недели',
-        date: () => {
-            const date = new Date();
-            date.setDate(date.getDate() + ((7 - date.getDay()) % 7));
+                    <Table.Body>
+                        {partners.length === 0 && (
+                            <Table.Row>
+                                <Table.Cell colSpan={6}>
+                                    <Text py={8} textAlign="center" color="fg.muted">
+                                        В выбранном периоде поступлений по графику не ожидается
+                                    </Text>
+                                </Table.Cell>
+                            </Table.Row>
+                        )}
 
-            return localDate(date);
-        },
-    },
-    {
-        key: 'month',
-        label: 'конец месяца',
-        date: () => {
-            const date = new Date();
+                        {partners.map((partner) => (
+                            <Table.Row key={partner.user_id} _hover={{ bg: 'bg.muted' }}>
+                                <Table.Cell>
+                                    <VStack align="start" gap={0}>
+                                        <Box
+                                            as="a"
+                                            href={partner.url}
+                                            fontSize="sm"
+                                            fontWeight="600"
+                                            _hover={{ color: 'blue.fg', textDecoration: 'underline' }}
+                                        >
+                                            {partner.title}
+                                        </Box>
+                                        {partner.manager_name && (
+                                            <Text fontSize="10px" color="fg.muted">{partner.manager_name}</Text>
+                                        )}
+                                    </VStack>
+                                </Table.Cell>
 
-            return localDate(new Date(date.getFullYear(), date.getMonth() + 1, 0));
-        },
-    },
-    {
-        key: 'next_month',
-        label: 'конец следующего',
-        date: () => {
-            const date = new Date();
+                                <Table.Cell>
+                                    <PartnerFinanceCell finance={snapshots[partner.user_id]} />
+                                </Table.Cell>
 
-            return localDate(new Date(date.getFullYear(), date.getMonth() + 2, 0));
-        },
-    },
-    {
-        key: 'quarter',
-        label: 'конец квартала',
-        date: () => {
-            const date = new Date();
-            const quarterEnd = (Math.floor(date.getMonth() / 3) + 1) * 3;
+                                <Table.Cell textAlign="end">
+                                    <Text fontSize="sm" fontWeight="600" whiteSpace="nowrap">
+                                        {formatRub(partner.total)}
+                                    </Text>
+                                </Table.Cell>
 
-            return localDate(new Date(date.getFullYear(), quarterEnd, 0));
-        },
-    },
-];
+                                <Table.Cell textAlign="end">
+                                    <Text fontSize="sm" whiteSpace="nowrap">
+                                        {partner.shipments > 0 ? formatRub(partner.shipments) : '—'}
+                                    </Text>
+                                </Table.Cell>
+
+                                <Table.Cell textAlign="end">
+                                    <Text fontSize="sm" color="fg.muted" whiteSpace="nowrap">
+                                        {partner.advances > 0 ? formatRub(partner.advances) : '—'}
+                                    </Text>
+                                </Table.Cell>
+
+                                <Table.Cell textAlign="end">
+                                    <Text fontSize="xs" color="fg.muted">{partner.documents}</Text>
+                                </Table.Cell>
+                            </Table.Row>
+                        ))}
+                    </Table.Body>
+                </Table.Root>
+            </Box>
+        </Box>
+    );
+}
+
+/** Цвета возрастных корзин: от свежей задержки к застарелому долгу. */
+const BUCKET_COLORS = ['orange.solid', 'orange.emphasized', 'red.muted', 'red.solid', 'red.emphasized'];

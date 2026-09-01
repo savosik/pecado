@@ -7,6 +7,7 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
 import AmountFilterInput from '@/Crm/Components/AmountFilterInput';
 import MetricHint from '@/Crm/Components/MetricHint';
+import ShareBar from '@/Crm/Components/ShareBar';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import { usePermission } from '@/shared/Panel/usePermission';
 import RowActions from '@/shared/Panel/RowActions';
@@ -573,27 +574,6 @@ function GroupRows({ row, depth, total, onDrill, onTask, expanded, onToggle }) {
                 />
             ))}
         </Fragment>
-    );
-}
-
-/**
- * Доля полосой: длина читается быстрее числа, а число нужно для точности —
- * поэтому рядом и то и другое.
- */
-function ShareBar({ value, tone = 'red', caption, width }) {
-    return (
-        <HStack gap={2} width={width}>
-            <Box bg="bg.muted" borderRadius="full" height="6px" flex="1" minW="40px" overflow="hidden">
-                <Box
-                    bg={tone === 'red' ? 'red.solid' : 'orange.solid'}
-                    height="6px"
-                    width={`${Math.min(100, Math.max(value > 0 ? 2 : 0, value))}%`}
-                />
-            </Box>
-            {caption !== undefined && (
-                <Text fontSize="10px" color="fg.muted" whiteSpace="nowrap">{caption}</Text>
-            )}
-        </HStack>
     );
 }
 
