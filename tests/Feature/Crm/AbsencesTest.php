@@ -59,7 +59,11 @@ class AbsencesTest extends TestCase
             'substitute_manager_id' => $this->suhov->id,
             'type' => 'vacation',
             'starts_on' => today()->toDateString(),
-            'ends_on' => '2026-08-31',
+            // Относительная дата: с календарной отсутствие однажды оказывается
+            // в прошлом, и форма справедливо отвечает «последний день не может
+            // быть раньше первого» — тест падает не из-за кода (так и случилось
+            // 01.09.2026, когда зашитое 2026-08-31 стало вчерашним днём).
+            'ends_on' => today()->addDays(5)->toDateString(),
             'comment' => null,
             ...$overrides,
         ];

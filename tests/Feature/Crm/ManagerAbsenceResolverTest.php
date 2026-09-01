@@ -7,7 +7,6 @@ use App\Models\ManagerAbsence;
 use App\Models\PersonalManager;
 use App\Services\Crm\ManagerAbsenceResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class ManagerAbsenceResolverTest extends TestCase
@@ -101,11 +100,15 @@ class ManagerAbsenceResolverTest extends TestCase
 
     public function test_resolution_carries_absent_manager_and_until_date(): void
     {
+        // Дата окончания относительная: с календарной отсутствие однажды
+        // заканчивается само, замещения не остаётся и тест падает не из-за кода.
+        $endsOn = today()->addDays(4);
+
         ManagerAbsence::factory()->create([
             'personal_manager_id' => $this->manager->id,
             'substitute_manager_id' => $this->substitute->id,
             'starts_on' => today()->subDays(2),
-            'ends_on' => Carbon::parse('2026-08-31'),
+            'ends_on' => $endsOn,
         ]);
 
         $resolution = $this->resolver->resolve($this->manager);
@@ -113,6 +116,6 @@ class ManagerAbsenceResolverTest extends TestCase
         $this->assertTrue($resolution->isSubstitution());
         $this->assertSame($this->substitute->id, $resolution->manager->id);
         $this->assertSame($this->manager->id, $resolution->absentManager->id);
-        $this->assertSame('31.08.2026', $resolution->until->format('d.m.Y'));
+        $this->assertSame($endsOn->format('d.m.Y'), $resolution->until->format('d.m.Y'));
     }
 }
