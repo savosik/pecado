@@ -80,6 +80,79 @@ class DefectCoverageService
     }
 
     /**
+     * Остаток 1С и объём открытых партий по конкретным парам товар + склад.
+     *
+     * Нужен спискам партий: рядом с «заведено складом» показываем, сколько по
+     * этому товару вообще числится на складе некондиции в 1С и сколько из
+     * остатка уже разобрано партиями. По типу склада здесь не фильтруем —
+     * партия живёт на том складе, на котором её завели, и показать её остаток
+     * нужно в любом случае.
+     *
+     * @param  iterable<array{0: int, 1: int}>  $pairs  [[product_id, warehouse_id], …]
+     * @return array<string, array{stock: int, covered: int}> ключ — pairKey()
+     */
+    public function pairTotals(iterable $pairs): array
+    {
+        $totals = [];
+        $productIds = [];
+        $warehouseIds = [];
+
+        foreach ($pairs as [$productId, $warehouseId]) {
+            $productId = (int) $productId;
+            $warehouseId = (int) $warehouseId;
+
+            $totals[self::pairKey($productId, $warehouseId)] = ['stock' => 0, 'covered' => 0];
+            $productIds[$productId] = true;
+            $warehouseIds[$warehouseId] = true;
+        }
+
+        if ($totals === []) {
+            return [];
+        }
+
+        $productIds = array_keys($productIds);
+        $warehouseIds = array_keys($warehouseIds);
+
+        $stock = DB::table('product_warehouse')
+            ->whereIn('product_id', $productIds)
+            ->whereIn('warehouse_id', $warehouseIds)
+            ->get(['product_id', 'warehouse_id', 'quantity']);
+
+        foreach ($stock as $row) {
+            $key = self::pairKey((int) $row->product_id, (int) $row->warehouse_id);
+
+            if (isset($totals[$key])) {
+                $totals[$key]['stock'] = (int) $row->quantity;
+            }
+        }
+
+        $covered = DB::table('product_defects')
+            ->selectRaw('product_id, warehouse_id, SUM(quantity) as covered')
+            ->whereIn('product_id', $productIds)
+            ->whereIn('warehouse_id', $warehouseIds)
+            ->whereNull('deleted_at')
+            ->whereNull('closed_at')
+            ->groupBy('product_id', 'warehouse_id')
+            ->get();
+
+        foreach ($covered as $row) {
+            $key = self::pairKey((int) $row->product_id, (int) $row->warehouse_id);
+
+            if (isset($totals[$key])) {
+                $totals[$key]['covered'] = (int) $row->covered;
+            }
+        }
+
+        return $totals;
+    }
+
+    /** Ключ пары товар + склад для карт остатка и покрытия. */
+    public static function pairKey(int $productId, int $warehouseId): string
+    {
+        return $productId.':'.$warehouseId;
+    }
+
+    /**
      * Склады некондиции для фильтра.
      *
      * @return array<int, array{id: int, name: string}>

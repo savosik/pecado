@@ -426,6 +426,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // =====================================================================
     Route::middleware('permission:defects.view')->group(function () {
         Route::get('/defects', [\App\Http\Controllers\Admin\DefectController::class, 'index'])->name('defects.index');
+        Route::get('/defects/export', [\App\Http\Controllers\Admin\DefectController::class, 'export'])->name('defects.export');
     });
     Route::put('/defects/{defect}/price', [\App\Http\Controllers\Admin\DefectController::class, 'updatePrice'])
         ->name('defects.price')->middleware('permission:defects.price');

@@ -12,7 +12,7 @@ import {
     Text,
     VStack,
 } from '@chakra-ui/react';
-import { LuImageOff, LuPackageX } from 'react-icons/lu';
+import { LuDownload, LuImageOff, LuPackageX } from 'react-icons/lu';
 import RowActions from '@/shared/Panel/RowActions';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
@@ -85,6 +85,89 @@ function DefectPhoto({ defect }) {
             borderRadius="md"
             flexShrink={0}
         />
+    );
+}
+
+/**
+ * Остаток товара на складе некондиции по данным 1С.
+ *
+ * Это остаток всей позиции, а не партии: на один остаток кладовщик может
+ * завести несколько партий, поэтому рядом с числом показываем, сколько уже
+ * разобрано. Партий больше, чем числится в 1С, — расхождение, подсвечиваем.
+ */
+function ErpStock({ defect }) {
+    const stock = defect.erp_stock_quantity ?? 0;
+    const covered = defect.covered_quantity ?? 0;
+    const uncovered = defect.uncovered_quantity ?? 0;
+    const over = uncovered < 0;
+
+    const hint = (
+        <VStack align="stretch" gap={2} minW="240px">
+            <Text fontSize="xs">
+                По этому артикулу на складе «{defect.warehouse.name}» в 1С лежит {stock} шт. брака.
+                Это остаток на весь артикул, а не на эту партию.
+            </Text>
+            <Text fontSize="xs">
+                Кладовщик разбирает этот остаток на партии: одну и ту же 1С-строку он может
+                расписать на несколько партий с разными дефектами — поэтому у всех партий
+                одного артикула здесь одно и то же число.
+            </Text>
+            <VStack align="stretch" gap={1}>
+                <HStack justify="space-between" gap={3}>
+                    <Text fontSize="xs">Лежит в 1С</Text>
+                    <Text fontSize="xs">{stock} шт.</Text>
+                </HStack>
+                <HStack justify="space-between" gap={3}>
+                    <Text fontSize="xs">Уже разложено по партиям</Text>
+                    <Text fontSize="xs">{covered} шт.</Text>
+                </HStack>
+                <HStack justify="space-between" gap={3}>
+                    <Text fontSize="xs">{over ? 'Партий больше, чем в 1С, на' : 'Ещё не разложено'}</Text>
+                    <Text fontSize="xs">{Math.abs(uncovered)} шт.</Text>
+                </HStack>
+            </VStack>
+            <Text fontSize="xs" opacity={0.8}>
+                {over
+                    ? 'Партий заведено больше, чем брака числится в 1С. Это расхождение: '
+                      + 'либо остаток уже списали в 1С, либо партию завели с лишним количеством.'
+                    : uncovered > 0
+                        ? 'Остаток есть, а партии на него нет — этот брак нигде не продаётся, '
+                          + 'пока кладовщик не заведёт на него партию.'
+                        : 'Весь остаток разложен по партиям — расхождений нет.'}
+            </Text>
+        </VStack>
+    );
+
+    return (
+        <Tooltip content={hint} showArrow openDelay={150} contentProps={{ css: { maxW: '320px' } }}>
+            <VStack align="end" gap={0} cursor="help">
+                <Text fontSize="sm" fontWeight="medium" color={over ? 'red.fg' : undefined}>
+                    {stock}
+                </Text>
+                {covered > 0 && (
+                    <Text fontSize="xs" color="fg.muted">
+                        в партиях {covered}
+                    </Text>
+                )}
+            </VStack>
+        </Tooltip>
+    );
+}
+
+/**
+ * Что кладовщик оформил в этой партии. Резерв (позиции в заказах уценки)
+ * показываем отдельной строкой — из этого числа видно, сколько ещё продаётся.
+ */
+function WarehouseQuantity({ defect }) {
+    return (
+        <VStack align="end" gap={0}>
+            <Text fontSize="sm" fontWeight="medium">{defect.quantity}</Text>
+            {defect.reserved_quantity > 0 && (
+                <Text fontSize="xs" color="fg.muted">
+                    в резерве {defect.reserved_quantity} · свободно {defect.available_quantity}
+                </Text>
+            )}
+        </VStack>
     );
 }
 
@@ -288,12 +371,26 @@ export default function DefectsIndex() {
     const allSelected = selectableIds.length > 0 && selectedIds.length === selectableIds.length;
     const headerChecked = allSelected ? true : (selectedIds.length > 0 ? 'indeterminate' : false);
 
+    // Выгрузка идёт по тому же отбору, что и таблица, — иначе файл не сверить
+    // с экраном.
+    const exportHref = `/admin/defects/export?${new URLSearchParams({
+        filter: filters.filter || 'open',
+        ...(filters.search ? { search: filters.search } : {}),
+    }).toString()}`;
+
     return (
         <>
             <Head title="Уценка" />
             <PageHeader
                 title="Уценка"
                 description="Партии некондиции от склада. Назначьте цену и включите видимость на сайте."
+                actions={
+                    <Button asChild size="sm" variant="outline">
+                        <a href={exportHref}>
+                            <LuDownload /> Скачать Excel
+                        </a>
+                    </Button>
+                }
             />
 
             <VStack gap={4} align="stretch">
@@ -312,7 +409,7 @@ export default function DefectsIndex() {
                                     <SearchInput
                                         value={filters.search || ''}
                                         onChange={(value) => applyFilters({ search: value, page: 1 })}
-                                        placeholder="Поиск по товару, артикулу или описанию дефекта..."
+                                        placeholder="Поиск по товару, артикулу, коду 1С или описанию дефекта..."
                                     />
                                 </Box>
                                 <HStack gap={1} flexWrap="wrap">
@@ -399,7 +496,24 @@ export default function DefectsIndex() {
                                                 )}
                                                 <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                                 <Table.ColumnHeader>Дефект</Table.ColumnHeader>
-                                                <Table.ColumnHeader textAlign="end">Свободно</Table.ColumnHeader>
+                                                <Table.ColumnHeader textAlign="end">
+                                                    <Tooltip
+                                                        content="Сколько штук этого артикула лежит на складе брака по данным 1С. Число одно на весь артикул: один и тот же остаток кладовщик может расписать на несколько партий с разными дефектами — тогда у всех этих партий здесь будет одинаковая цифра."
+                                                        showArrow
+                                                        contentProps={{ css: { maxW: '340px' } }}
+                                                    >
+                                                        <Text as="span" cursor="help">Свободно 1С</Text>
+                                                    </Tooltip>
+                                                </Table.ColumnHeader>
+                                                <Table.ColumnHeader textAlign="end">
+                                                    <Tooltip
+                                                        content="Сколько штук кладовщик положил именно в эту партию — её кусок от общего остатка 1С. Если по партии уже есть заказы, ниже показано, сколько в резерве и сколько ещё продаётся."
+                                                        showArrow
+                                                        contentProps={{ css: { maxW: '340px' } }}
+                                                    >
+                                                        <Text as="span" cursor="help">Заведено складом</Text>
+                                                    </Tooltip>
+                                                </Table.ColumnHeader>
                                                 <Table.ColumnHeader>
                                                     <Tooltip
                                                         content="Самая низкая цена товара среди статусов клиентов и статус, к которому она относится. Справочно — партия продаётся по цене уценки."
@@ -445,7 +559,9 @@ export default function DefectsIndex() {
                                                                         {defect.product.name}
                                                                     </Text>
                                                                     <Text fontSize="xs" color="fg.muted">
-                                                                        Партия #{defect.id} · {defect.product.sku || '—'} · заведено{' '}
+                                                                        Партия #{defect.id} · арт. {defect.product.sku || '—'}
+                                                                        {defect.product.code ? ` · код ${defect.product.code}` : ''}
+                                                                        {' · заведено '}
                                                                         {defect.created_by_name || '—'}
                                                                     </Text>
                                                                 </VStack>
@@ -457,12 +573,10 @@ export default function DefectsIndex() {
                                                             </Text>
                                                         </Table.Cell>
                                                         <Table.Cell textAlign="end">
-                                                            {defect.available_quantity}
-                                                            {defect.reserved_quantity > 0 && (
-                                                                <Text as="span" fontSize="xs" color="fg.muted">
-                                                                    {' '}/ {defect.quantity}
-                                                                </Text>
-                                                            )}
+                                                            <ErpStock defect={defect} />
+                                                        </Table.Cell>
+                                                        <Table.Cell textAlign="end">
+                                                            <WarehouseQuantity defect={defect} />
                                                         </Table.Cell>
                                                         <Table.Cell>
                                                             <ReferencePrice

@@ -7,11 +7,16 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BulkDefectPriceRequest;
 use App\Http\Requests\Admin\UpdateDefectPriceRequest;
 use App\Models\ProductDefect;
+use App\Services\Defect\DefectCoverageService;
 use App\Services\Defect\DefectReferencePriceService;
+use App\Services\SimpleXlsxExporter;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Уценка глазами закупщика.
@@ -24,15 +29,85 @@ class DefectController extends Controller
 {
     public function __construct(
         private readonly DefectStockServiceInterface $defectStock,
-        private readonly DefectReferencePriceService $referencePrices
+        private readonly DefectReferencePriceService $referencePrices,
+        private readonly DefectCoverageService $defectCoverage
     ) {}
 
     public function index(Request $request): Response
     {
         $filter = $request->string('filter')->toString();
 
-        $defects = ProductDefect::query()
-            ->with(['product:id,name,sku', 'warehouse:id,name', 'media', 'creator:id,name', 'pricer:id,name'])
+        $defects = $this->defectsQuery($request, $filter)
+            ->paginate(20)
+            ->withQueryString();
+
+        $page = $defects->getCollection();
+        $available = $this->defectStock->availableMap($page);
+        $reference = $this->referencePrices->forProducts($page->pluck('product_id')->all());
+        $stock = $this->stockTotals($page);
+
+        return Inertia::render('Admin/Pages/Defects/Index', [
+            'defects' => $defects->through(
+                fn (ProductDefect $defect) => $this->presentDefect($defect, $available, $reference, $stock)
+            ),
+            'filters' => [
+                'search' => $request->string('search')->toString(),
+                'filter' => $filter ?: 'open',
+            ],
+            'stats' => $this->stats(),
+        ]);
+    }
+
+    /**
+     * Выгрузка списка уценки в XLSX по текущему фильтру и поиску.
+     *
+     * Выгружаются все строки отбора, а не видимая страница: файл нужен для
+     * сверки с 1С, и обрезанный по пагинации он бессмысленен. Идём чанками —
+     * справочные цены и остатки считаются на каждый чанк отдельно, чтобы
+     * память не зависела от размера выборки.
+     */
+    public function export(Request $request, SimpleXlsxExporter $exporter): StreamedResponse
+    {
+        $filter = $request->string('filter')->toString();
+
+        $rows = [];
+
+        $this->defectsQuery($request, $filter)
+            ->chunk(300, function (Collection $chunk) use (&$rows) {
+                $available = $this->defectStock->availableMap($chunk);
+                $reference = $this->referencePrices->forProducts($chunk->pluck('product_id')->all());
+                $stock = $this->stockTotals($chunk);
+
+                foreach ($chunk as $defect) {
+                    $rows[] = $this->exportRow($defect, $available, $reference, $stock);
+                }
+            });
+
+        return $exporter->stream(
+            'defects-'.($filter ?: 'open').'-'.now()->format('Y-m-d'),
+            [
+                'Партия №', 'Код 1С', 'Артикул', 'Товар', 'Склад', 'Дефект',
+                'Свободно 1С', 'Разобрано партиями', 'Не разобрано',
+                'Заведено складом', 'В резерве', 'Доступно к продаже',
+                'Цена клиента, ₽', 'Статус цены клиента', 'Цена уценки, ₽', 'Скидка от цены клиента, %',
+                'На сайте', 'Состояние партии', 'Заведено кем', 'Заведено когда',
+                'Цену назначил', 'Закрыта когда', 'Причина закрытия',
+            ],
+            $rows,
+            'Уценка',
+        );
+    }
+
+    /**
+     * Общий отбор для списка и выгрузки: фильтры экрана должны совпадать с
+     * тем, что уходит в файл, — иначе выгрузка перестаёт быть сверкой.
+     *
+     * @return Builder<ProductDefect>
+     */
+    private function defectsQuery(Request $request, string $filter): Builder
+    {
+        return ProductDefect::query()
+            ->with(['product:id,name,sku,code', 'warehouse:id,name', 'media', 'creator:id,name', 'pricer:id,name'])
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = trim($request->string('search')->toString());
 
@@ -41,6 +116,7 @@ class DefectController extends Controller
                         ->orWhereHas('product', fn ($p) => $p
                             ->where('name', 'like', "%{$search}%")
                             ->orWhere('sku', 'like', "%{$search}%")
+                            ->orWhere('code', 'like', "%{$search}%")
                         );
                 });
             })
@@ -49,25 +125,23 @@ class DefectController extends Controller
             ->when($filter === 'published', fn ($q) => $q->whereNull('closed_at')->where('is_published', true))
             ->when($filter === 'closed', fn ($q) => $q->whereNotNull('closed_at'))
             ->when($filter === '' || $filter === 'open', fn ($q) => $q->whereNull('closed_at'))
-            ->latest('id')
-            ->paginate(20)
-            ->withQueryString();
+            ->latest('id');
+    }
 
-        $available = $this->defectStock->availableMap($defects->getCollection());
-        $reference = $this->referencePrices->forProducts(
-            $defects->getCollection()->pluck('product_id')->all()
+    /**
+     * Остаток 1С и объём открытых партий по товарам выборки.
+     *
+     * @param  Collection<int, ProductDefect>  $defects
+     * @return array<string, array{stock: int, covered: int}>
+     */
+    private function stockTotals(Collection $defects): array
+    {
+        return $this->defectCoverage->pairTotals(
+            $defects->map(fn (ProductDefect $defect) => [
+                (int) $defect->product_id,
+                (int) $defect->warehouse_id,
+            ])->all()
         );
-
-        return Inertia::render('Admin/Pages/Defects/Index', [
-            'defects' => $defects->through(
-                fn (ProductDefect $defect) => $this->presentDefect($defect, $available, $reference)
-            ),
-            'filters' => [
-                'search' => $request->string('search')->toString(),
-                'filter' => $filter ?: 'open',
-            ],
-            'stats' => $this->stats(),
-        ]);
     }
 
     /**
@@ -252,16 +326,24 @@ class DefectController extends Controller
     /**
      * @param  array<int, int>  $availableMap
      * @param  array<int, array<string, mixed>>  $referenceMap
+     * @param  array<string, array{stock: int, covered: int}>  $stockMap
      * @return array<string, mixed>
      */
-    private function presentDefect(ProductDefect $defect, array $availableMap, array $referenceMap = []): array
+    private function presentDefect(ProductDefect $defect, array $availableMap, array $referenceMap = [], array $stockMap = []): array
     {
+        $stock = $this->defectStockRow($defect, $stockMap);
+
         return [
             'id' => $defect->id,
             'defect_description' => $defect->defect_description,
             'quantity' => $defect->quantity,
             'available_quantity' => $availableMap[$defect->id] ?? 0,
             'reserved_quantity' => $defect->quantity - ($availableMap[$defect->id] ?? 0),
+            // Что числится по товару на складе некондиции в 1С: остаток целиком,
+            // сколько из него разобрано открытыми партиями и сколько осталось.
+            'erp_stock_quantity' => $stock['stock'],
+            'covered_quantity' => $stock['covered'],
+            'uncovered_quantity' => $stock['stock'] - $stock['covered'],
             'price' => $defect->price !== null ? (float) $defect->price : null,
             'is_published' => $defect->is_published,
             'closed_at' => $defect->closed_at?->toIso8601String(),
@@ -274,6 +356,7 @@ class DefectController extends Controller
                 'id' => $defect->product->id,
                 'name' => $defect->product->name,
                 'sku' => $defect->product->sku,
+                'code' => $defect->product->code,
             ],
             'warehouse' => [
                 'id' => $defect->warehouse->id,
@@ -285,5 +368,66 @@ class DefectController extends Controller
                 'thumb_url' => $media->hasGeneratedConversion('thumb') ? $media->getUrl('thumb') : $media->getUrl(),
             ])->values(),
         ];
+    }
+
+    /**
+     * Строка выгрузки: те же величины, что на экране, плюс реквизиты товара,
+     * по которым сверяются с 1С (код и артикул).
+     *
+     * @param  array<int, int>  $availableMap
+     * @param  array<int, array<string, mixed>>  $referenceMap
+     * @param  array<string, array{stock: int, covered: int}>  $stockMap
+     * @return array<int, string|int|float|null>
+     */
+    private function exportRow(ProductDefect $defect, array $availableMap, array $referenceMap, array $stockMap): array
+    {
+        $stock = $this->defectStockRow($defect, $stockMap);
+        $available = $availableMap[$defect->id] ?? 0;
+        $price = $defect->price !== null ? (float) $defect->price : null;
+        $reference = $referenceMap[$defect->product_id] ?? null;
+        $referencePrice = $reference['price'] ?? null;
+
+        return [
+            $defect->id,
+            $defect->product->code,
+            $defect->product->sku,
+            $defect->product->name,
+            $defect->warehouse->name,
+            $defect->defect_description,
+            $stock['stock'],
+            $stock['covered'],
+            $stock['stock'] - $stock['covered'],
+            (int) $defect->quantity,
+            (int) $defect->quantity - $available,
+            $available,
+            $referencePrice,
+            $reference['status']['name'] ?? null,
+            $price,
+            // Насколько уценка ниже цены клиента — главный вопрос к строке
+            // при разборе выгрузки, считать его в Excel вручную незачем.
+            $referencePrice > 0 && $price !== null
+                ? round((1 - $price / $referencePrice) * 100, 1)
+                : null,
+            $defect->is_published ? 'да' : 'нет',
+            $defect->isClosed() ? 'закрыта' : 'открыта',
+            $defect->creator?->name,
+            $defect->created_at?->format('d.m.Y H:i'),
+            $defect->pricer?->name,
+            $defect->closed_at?->format('d.m.Y H:i'),
+            $defect->closed_reason?->label(),
+        ];
+    }
+
+    /**
+     * Остаток 1С и покрытие партиями для пары товар + склад этой партии.
+     *
+     * @param  array<string, array{stock: int, covered: int}>  $stockMap
+     * @return array{stock: int, covered: int}
+     */
+    private function defectStockRow(ProductDefect $defect, array $stockMap): array
+    {
+        $key = DefectCoverageService::pairKey((int) $defect->product_id, (int) $defect->warehouse_id);
+
+        return $stockMap[$key] ?? ['stock' => 0, 'covered' => 0];
     }
 }
