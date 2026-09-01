@@ -1,6 +1,22 @@
 import { Badge, Box, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
 import { ProgressBar, ProgressRoot } from '@/components/ui/progress';
+import MetricHint from '@/Crm/Components/MetricHint';
 import { fmtCompact, fmtFactor, fmtPercent, plural } from './format';
+
+/**
+ * Плановый партнёр — тот, кому поставлен план на месяц. Это же слово различает
+ * показатель от колонки «покупали в месяце» на «Планах продаж», где считаются
+ * все партнёры с отгрузкой: два числа стоят рядом на соседних экранах, и без
+ * подписи их разница читается как ошибка.
+ */
+const ACTIVE_CLIENTS_HINT = 'Плановые — партнёры, которым поставлен план на этот месяц. '
+    + 'Активный — тот из них, у кого в месяце была отгрузка. Покупатели без плана в множитель '
+    + 'не входят: показатель про удержание базы. На «Планах продаж» колонка «Покупали в месяце» '
+    + 'шире — там все партнёры с отгрузкой, и с планом, и без.';
+
+const UNPLANNED_HINT = 'Партнёры, которые купили в этом месяце, но плана на него не получили. '
+    + 'Их выручка в план по выручке входит, а на множитель по активным клиентам не влияет. '
+    + 'Чтобы они его поднимали, поставьте им план на месяц в разделе «Планы продаж».';
 
 /**
  * Два показателя месяца обычными прогресс-барами.
@@ -20,6 +36,8 @@ export default function ScoreBars({ calculation }) {
 
     const ladder = meta.ladder ?? [];
     const share = inputs.active_share ?? 0;
+    // Снимки, собранные до появления счётчика, поля не знают — строку не рисуем.
+    const unplanned = Number(inputs.unplanned_active_count ?? 0);
     const current = meta.step?.from_share;
     const next = meta.next_step;
 
@@ -49,7 +67,10 @@ export default function ScoreBars({ calculation }) {
 
             <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4}>
                 <HStack justify="space-between" align="baseline" mb={1}>
-                    <Text fontSize="xs" color="fg.muted" fontWeight="500">Активные клиенты</Text>
+                    <HStack gap={1} align="center">
+                        <Text fontSize="xs" color="fg.muted" fontWeight="500">Активные плановые клиенты</Text>
+                        <MetricHint text={ACTIVE_CLIENTS_HINT} />
+                    </HStack>
                     <HStack gap={2} align="baseline">
                         <Text fontSize="2xl" fontWeight="800" fontVariantNumeric="tabular-nums">
                             {inputs.active_count} / {inputs.planned_count}
@@ -61,6 +82,18 @@ export default function ScoreBars({ calculation }) {
                 <ProgressRoot value={Math.min(100, share * 100)} size="lg" colorPalette="purple" mt={2}>
                     <ProgressBar />
                 </ProgressRoot>
+
+                <HStack justify="space-between" mt={2} fontSize="sm" flexWrap="wrap" gap={2}>
+                    <Text color="fg.muted">
+                        купили {inputs.active_count} из {inputs.planned_count} {plural(inputs.planned_count, 'партнёра', 'партнёров', 'партнёров')} с планом
+                    </Text>
+                    {unplanned > 0 && (
+                        <HStack gap={1} align="center">
+                            <Text color="fg.muted">ещё {unplanned} купили без плана</Text>
+                            <MetricHint text={UNPLANNED_HINT} />
+                        </HStack>
+                    )}
+                </HStack>
 
                 {ladder.length > 0 && (
                     <HStack gap={1} mt={3} flexWrap="wrap">

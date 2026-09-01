@@ -1,4 +1,5 @@
 import { Badge, Box, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
+import MetricHint from '@/Crm/Components/MetricHint';
 import { fmtCompact, fmtRub0, plural } from './format';
 
 /**
@@ -108,7 +109,10 @@ function Coverage({ groups, total, active, planTotal, factTotal }) {
     return (
         <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={{ base: 4, md: 5 }}>
             <HStack justify="space-between" mb={3} flexWrap="wrap" gap={2}>
-                <Text fontSize="xs" color="fg.muted" fontWeight="500">Охват плановых клиентов</Text>
+                <HStack gap={1} align="center">
+                    <Text fontSize="xs" color="fg.muted" fontWeight="500">Охват плановых клиентов</Text>
+                    <MetricHint text="В списке только партнёры, которым поставлен план на этот месяц. Купившие без плана здесь не показаны и на множитель не влияют — их число указано на карточке «Активные плановые клиенты» выше." />
+                </HStack>
                 <Text fontSize="xs" color="fg.muted">
                     в множитель премии идёт доля тех, кто купил
                 </Text>

@@ -82,12 +82,18 @@ class PayrollInputCollector
 
         $scope = PlanScope::manager($managerId, $clientIds, $managerName);
 
+        // План и факт сразу по всем партнёрам менеджера, а не только по плановым:
+        // из этой же выборки видно внеплановых покупателей, которых множитель
+        // не считает, — иначе цифра рядом с «покупали в месяце» на /crm/plans
+        // выглядит ошибкой.
+        $planFacts = $clientIds === [] ? [] : $this->clientPlanFact->forClients($clientIds, $period);
+
         return new PayrollInputs(
             managerId: $managerId,
             month: $period->toDateString(),
             plan: $this->progress->planAmount($period, $scope),
             revenue: $this->revenue($clientIds, $period),
-            plannedClients: $this->plannedClients($clientIds, $names, $period),
+            plannedClients: $this->plannedClients($planFacts, $names),
             invoices: $this->settledInvoices($clientIds, $names, $period),
             atRiskInvoices: $this->atRiskInvoices($clientIds, $names, $period),
             settledOnTimeCount: $this->settledOnTimeCount($clientIds, $period),
@@ -96,6 +102,7 @@ class PayrollInputCollector
             newClients: $this->newClients($clientIds, $names, $period, $newClientsParams),
             workingDays: $this->calendar->monthDays($period),
             collectedAt: now()->toIso8601String(),
+            unplannedActiveCount: $this->unplannedActiveCount($planFacts),
         );
     }
 
@@ -319,43 +326,55 @@ class PayrollInputCollector
     /**
      * Партнёры с планом на месяц и их факт — основа множителя по активным клиентам.
      *
-     * @param  list<int>  $clientIds
+     * Плановый — тот, кому план на месяц назначен: в выборке плана и факта это
+     * ненулевой `plan`, отдельный запрос за списком плановых не нужен.
+     *
+     * @param  array<int, array{plan: float|null, fact: float, percent: int|null}>  $planFacts
      * @param  array<int, string>  $names
      * @return list<PlannedClientInput>
      */
-    private function plannedClients(array $clientIds, array $names, CarbonImmutable $period): array
+    private function plannedClients(array $planFacts, array $names): array
     {
-        if ($clientIds === []) {
-            return [];
-        }
-
-        $plannedIds = CrmSalesPlan::query()
-            ->forPeriod($period)
-            ->where('target_type', PlanTarget::CLIENT->value)
-            ->whereIn('target_id', $clientIds)
-            ->pluck('target_id')
-            ->map('intval')
-            ->all();
-
-        if ($plannedIds === []) {
-            return [];
-        }
-
-        $rows = $this->clientPlanFact->forClients($plannedIds, $period);
-
         $result = [];
-        foreach ($plannedIds as $id) {
+
+        foreach ($planFacts as $id => $row) {
+            if ($row['plan'] === null) {
+                continue;
+            }
+
             $result[] = new PlannedClientInput(
-                id: $id,
-                name: $names[$id] ?? ('#'.$id),
-                plan: isset($rows[$id]) ? $rows[$id]['plan'] : null,
-                fact: isset($rows[$id]) ? (float) $rows[$id]['fact'] : 0.0,
+                id: (int) $id,
+                name: $names[(int) $id] ?? ('#'.$id),
+                plan: (float) $row['plan'],
+                fact: (float) $row['fact'],
             );
         }
 
         usort($result, fn (PlannedClientInput $a, PlannedClientInput $b): int => $b->fact <=> $a->fact ?: strcmp($a->name, $b->name));
 
         return $result;
+    }
+
+    /**
+     * Партнёры менеджера, которые отгружались в месяце, но плана на него не получили.
+     *
+     * В множитель они не входят намеренно — показатель про удержание базы, а не
+     * про везение. Но на `/crm/plans` те же партнёры попадают в «покупали в месяце»,
+     * и без этой цифры два экрана расходятся без объяснения.
+     *
+     * @param  array<int, array{plan: float|null, fact: float, percent: int|null}>  $planFacts
+     */
+    private function unplannedActiveCount(array $planFacts): int
+    {
+        $count = 0;
+
+        foreach ($planFacts as $row) {
+            if ($row['plan'] === null && $row['fact'] > 0) {
+                $count++;
+            }
+        }
+
+        return $count;
     }
 
     /**

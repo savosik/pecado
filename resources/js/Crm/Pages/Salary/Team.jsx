@@ -6,6 +6,7 @@ import { LuBanknote, LuCheck, LuFileDown, LuRefreshCw, LuUndo2 } from 'react-ico
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
+import MetricHint from '@/Crm/Components/MetricHint';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import RowActions from '@/shared/Panel/RowActions';
 import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
@@ -118,7 +119,12 @@ export default function SalaryTeam(props) {
                                 <Table.ColumnHeader textAlign="right">Доп. / корр.</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="right">Итого</Table.ColumnHeader>
                                 <Table.ColumnHeader>План / факт</Table.ColumnHeader>
-                                <Table.ColumnHeader>Активные</Table.ColumnHeader>
+                                <Table.ColumnHeader>
+                                    <HStack gap={1} align="center">
+                                        <Text as="span">Активные плановые</Text>
+                                        <MetricHint text="Партнёры с планом на месяц, у которых была отгрузка. Покупатели без плана в множитель не входят — они показаны отдельной подписью. На «Планах продаж» колонка «Покупали в месяце» считает всех партнёров с отгрузкой, поэтому её число больше." />
+                                    </HStack>
+                                </Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="right">Прогноз</Table.ColumnHeader>
                                 <Table.ColumnHeader>Статус</Table.ColumnHeader>
                                 <Table.ColumnHeader w="160px" />
@@ -163,7 +169,12 @@ export default function SalaryTeam(props) {
                                             {fmtCompact(row.inputs.revenue)}
                                             <Text as="span" fontSize="xs" color="fg.muted"> {row.inputs.plan ? `из ${fmtCompact(row.inputs.plan)} · ${fmtPercent(row.inputs.percent, 0)}` : '· без плана'}</Text>
                                         </Table.Cell>
-                                        <Table.Cell whiteSpace="nowrap">{row.inputs.active_count} из {row.inputs.planned_count}</Table.Cell>
+                                        <Table.Cell whiteSpace="nowrap">
+                                            {row.inputs.active_count} из {row.inputs.planned_count}
+                                            {row.inputs.unplanned_active_count > 0 && (
+                                                <Text as="span" fontSize="xs" color="fg.muted"> · ещё {row.inputs.unplanned_active_count} без плана</Text>
+                                            )}
+                                        </Table.Cell>
                                         <Table.Cell textAlign="right" fontVariantNumeric="tabular-nums" color="fg.muted">{row.forecast_total ? fmtRub0(row.forecast_total) : '—'}</Table.Cell>
                                         <Table.Cell>
                                             <Badge size="sm" variant="subtle" colorPalette={STATUS_PALETTE[c.status] ?? 'gray'}>

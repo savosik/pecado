@@ -283,6 +283,9 @@ class PayrollCalculationService
                     'percent' => $plan !== null && $plan > 0 ? $revenue / $plan : null,
                     'planned_count' => count($planned),
                     'active_count' => count($active),
+                    'unplanned_active_count' => isset($inputs['unplanned_active_count'])
+                        ? (int) $inputs['unplanned_active_count']
+                        : null,
                     'invoices_count' => count((array) ($inputs['invoices'] ?? [])),
                     'at_risk_count' => count((array) ($inputs['at_risk_invoices'] ?? [])),
                 ],

@@ -77,6 +77,11 @@ class PayrollCalculationPresenter
                 'planned_count' => count($planned),
                 'active_count' => count($active),
                 'active_share' => count($planned) > 0 ? count($active) / count($planned) : null,
+                // Покупатели без плана: в множитель не входят, но объясняют разницу
+                // с колонкой «покупали в месяце» на /crm/plans. null — старый снимок.
+                'unplanned_active_count' => isset($inputs['unplanned_active_count'])
+                    ? (int) $inputs['unplanned_active_count']
+                    : null,
                 'invoices' => array_values((array) ($inputs['invoices'] ?? [])),
                 'at_risk_invoices' => array_slice($atRisk, 0, self::AT_RISK_LIMIT),
                 'at_risk_count' => count($atRisk),

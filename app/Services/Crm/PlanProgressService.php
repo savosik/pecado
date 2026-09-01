@@ -139,7 +139,11 @@ class PlanProgressService
     }
 
     /**
-     * Разрез по менеджерам: план, факт, процент, прогноз и число активных партнёров.
+     * Разрез по менеджерам: план, факт, процент, прогноз и число покупавших партнёров.
+     *
+     * Покупавшие раскладываются на «с планом» и «без плана»: множитель премии
+     * в `/crm/salary` считает только первых, и без разложения два экрана дают
+     * разные числа под одним словом «активные» — это читается как ошибка.
      *
      * Гейт — `crm-clients-all.view`: чужая цифра выручки не дело соседнего менеджера.
      * Без права метод отдаёт пустой список, а не бросает исключение: вызывающий
@@ -157,6 +161,7 @@ class PlanProgressService
         $timeline = $this->timeline($month);
 
         $facts = $this->managerFacts($month, $clientIds);
+        $unplanned = $this->unplannedBuyersByManager($month, $clientIds);
         $plans = CrmSalesPlan::query()
             ->forPeriod($month)
             ->where('target_type', PlanTarget::MANAGER->value)
@@ -177,6 +182,8 @@ class PlanProgressService
             $id = (int) $manager->getKey();
             $plan = $plans->has($id) ? (float) $plans->get($id) : null;
             $fact = (float) ($facts[$id]['amount'] ?? 0.0);
+            $buyers = (int) ($facts[$id]['clients_count'] ?? 0);
+            $withoutPlan = min($buyers, (int) ($unplanned[$id] ?? 0));
 
             $rows[] = [
                 'manager_id' => $id,
@@ -188,7 +195,9 @@ class PlanProgressService
                 'forecast' => $timeline['days_passed'] > 0
                     ? round($fact / $timeline['days_passed'] * $timeline['days_total'], 2)
                     : null,
-                'clients_count' => (int) ($facts[$id]['clients_count'] ?? 0),
+                'clients_count' => $buyers,
+                'planned_clients_count' => $buyers - $withoutPlan,
+                'unplanned_clients_count' => $withoutPlan,
                 'pace' => $this->pace($plan, $fact, $timeline['days_passed'], $timeline['days_total']),
             ];
         }
@@ -508,6 +517,49 @@ class PlanProgressService
 
             return $result;
         });
+    }
+
+    /**
+     * Сколько партнёров каждого менеджера купили в месяце, не имея плана на него.
+     *
+     * Считается по той же выборке плана и факта, что и таблица «По партнёрам»
+     * ({@see ClientPlanFactService::forScope()} с общим кэшем), а не вторым
+     * агрегатом по отгрузкам: два источника одного числа рано или поздно
+     * разъедутся, и разложение перестанет сходиться с самим `clients_count`.
+     *
+     * @param  list<int>  $clientIds
+     * @return array<int, int> менеджер => сколько его партнёров купили без плана
+     */
+    private function unplannedBuyersByManager(CarbonInterface $month, array $clientIds): array
+    {
+        if ($clientIds === []) {
+            return [];
+        }
+
+        $planFact = $this->clientPlanFact->forScope(
+            User::query()->whereIn('users.id', $clientIds),
+            $month,
+        );
+
+        $owners = User::query()->whereIn('id', $clientIds)->pluck('personal_manager_id', 'id');
+
+        $rows = [];
+
+        foreach ($planFact as $id => $cell) {
+            if ($cell['plan'] !== null || (float) $cell['fact'] <= 0) {
+                continue;
+            }
+
+            $manager = $owners[(int) $id] ?? null;
+
+            if ($manager === null) {
+                continue;   // партнёр без менеджера в разрезе не показывается
+            }
+
+            $rows[(int) $manager] = ($rows[(int) $manager] ?? 0) + 1;
+        }
+
+        return $rows;
     }
 
     /**

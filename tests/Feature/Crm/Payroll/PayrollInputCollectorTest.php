@@ -10,6 +10,9 @@ use App\Models\Product;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
 use App\Models\User;
+use App\Services\Analytics\AnalyticsContext;
+use App\Services\Analytics\AnalyticsFilters;
+use App\Services\Analytics\ShipmentAnalyticsService;
 use App\Services\Crm\PlanProgressService;
 use App\Services\Crm\PlanScope;
 use App\Services\Payroll\PayrollInputCollector;
@@ -123,6 +126,7 @@ class PayrollInputCollectorTest extends TestCase
         $this->assertCount(1, $inputs->activeClients());
         $this->assertSame('Альфа', $inputs->activeClients()[0]->name);
         $this->assertSame(300_000.0, $inputs->activeClients()[0]->fact);
+        $this->assertSame(1, $inputs->unplannedActiveCount);   // Гамма купила без плана
 
         $this->assertCount(1, $inputs->invoices);
         $this->assertSame(5, $inputs->invoices[0]->delayWorkingDays);
@@ -153,5 +157,43 @@ class PayrollInputCollectorTest extends TestCase
         $this->assertSame(0.0, $inputs->revenue);
         $this->assertSame([], $inputs->plannedClients);
         $this->assertSame([], $inputs->invoices);
+        $this->assertSame(0, $inputs->unplannedActiveCount);
+    }
+
+    #[Test]
+    #[TestDox('Купившие без плана считаются отдельно и вместе с активными дают «покупали в месяце» из /crm/plans')]
+    public function unplanned_buyers_explain_the_gap_with_plans_screen(): void
+    {
+        CrmSalesPlan::factory()->forMonth($this->month)->forClient($this->clientA)->create(['amount' => 300_000]);
+        CrmSalesPlan::factory()->forMonth($this->month)->forClient($this->clientB)->create(['amount' => 200_000]);
+
+        $this->shipment($this->clientA, 300_000);   // план есть и купил — активный плановый
+        $this->shipment($this->clientC, 100_000);   // купил, но плана на месяц ему не поставили
+        $this->shipment($this->foreign, 500_000);   // чужой партнёр — ни в ту, ни в другую цифру
+        // Бета: план есть, отгрузок нет — в плановых числится, в активных нет.
+
+        $inputs = app(PayrollInputCollector::class)->collect($this->manager->id, $this->month);
+
+        $this->assertCount(2, $inputs->plannedClients);
+        $this->assertCount(1, $inputs->activeClients());
+        $this->assertSame(1, $inputs->unplannedActiveCount);
+
+        // Разрез по менеджерам на /crm/plans считает всех партнёров с отгрузкой —
+        // именно из-за этого его цифра больше, и разница обязана быть ровно
+        // числом внеплановых покупателей, иначе объяснение на экране врёт.
+        $row = app(ShipmentAnalyticsService::class)->byManager(
+            AnalyticsContext::forScope(
+                [$this->clientA->id, $this->clientB->id, $this->clientC->id, $this->foreign->id],
+                AnalyticsContext::DATE_ERP,
+                null,
+            ),
+            new AnalyticsFilters(
+                dateFrom: $this->month->copy()->startOfDay()->toImmutable(),
+                dateTo: $this->month->copy()->endOfMonth()->endOfDay()->toImmutable(),
+            ),
+        )->firstWhere('manager_id', $this->manager->id);
+
+        $this->assertSame(2, $row['clients_count']);
+        $this->assertSame($row['clients_count'], count($inputs->activeClients()) + $inputs->unplannedActiveCount);
     }
 }

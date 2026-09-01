@@ -359,6 +359,33 @@ class PlanProgressTest extends TestCase
     }
 
     #[Test]
+    public function manager_cut_splits_buyers_into_planned_and_unplanned(): void
+    {
+        $withPlan = $this->client();
+        $this->shipment($withPlan, 200000);
+        $this->plan(PlanTarget::CLIENT, $withPlan->id, 300000);
+
+        $withoutPlan = $this->client();
+        $this->shipment($withoutPlan, 50000);
+
+        // План есть, отгрузок нет — в покупателей не попадает вовсе.
+        $silent = $this->client();
+        $this->plan(PlanTarget::CLIENT, $silent->id, 100000);
+
+        $row = collect($this->actingAs($this->head)
+            ->getJson(route('crm.plans.by-manager', ['month' => $this->month]))
+            ->json('rows'))
+            ->firstWhere('manager_id', $this->managerProfile->id);
+
+        // Разложение обязано сходиться с самим числом покупателей: именно этим
+        // объясняется разница с множителем премии на /crm/salary.
+        $this->assertSame(2, $row['clients_count']);
+        $this->assertSame(1, $row['planned_clients_count']);
+        $this->assertSame(1, $row['unplanned_clients_count']);
+        $this->assertSame($row['clients_count'], $row['planned_clients_count'] + $row['unplanned_clients_count']);
+    }
+
+    #[Test]
     public function client_scope_shows_plan_and_burndown_of_one_client(): void
     {
         $target = $this->client();

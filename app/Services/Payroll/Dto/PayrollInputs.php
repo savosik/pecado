@@ -22,6 +22,10 @@ final class PayrollInputs
      * @param  list<AdjustmentInput>  $corrections  корректировки РОПа
      * @param  list<array<string, mixed>>  $newClients  новые клиенты (волна 2)
      * @param  array{total: int, passed: int, left: int}  $workingDays
+     * @param  int|null  $unplannedActiveCount  партнёры с отгрузкой, но без плана на месяц:
+     *                                          в множитель не входят, показываются рядом
+     *                                          как объяснение разницы с `/crm/plans`.
+     *                                          null — снимок собран до появления счётчика
      */
     public function __construct(
         public readonly int $managerId,
@@ -37,6 +41,7 @@ final class PayrollInputs
         public readonly array $newClients = [],
         public readonly array $workingDays = ['total' => 0, 'passed' => 0, 'left' => 0],
         public readonly ?string $collectedAt = null,
+        public readonly ?int $unplannedActiveCount = null,
     ) {}
 
     /**
@@ -81,6 +86,7 @@ final class PayrollInputs
             'new_clients' => $this->newClients,
             'working_days' => $this->workingDays,
             'collected_at' => $this->collectedAt,
+            'unplanned_active_count' => $this->unplannedActiveCount,
         ];
     }
 
@@ -114,6 +120,7 @@ final class PayrollInputs
                 'left' => (int) ($workingDays['left'] ?? 0),
             ],
             collectedAt: isset($data['collected_at']) ? (string) $data['collected_at'] : null,
+            unplannedActiveCount: isset($data['unplanned_active_count']) ? (int) $data['unplanned_active_count'] : null,
         );
     }
 

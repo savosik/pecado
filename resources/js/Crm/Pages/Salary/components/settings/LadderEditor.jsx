@@ -32,7 +32,7 @@ export function LadderEditor({ ladder, onChange }) {
             <Table.Root size="sm" variant="outline">
                 <Table.Header>
                     <Table.Row>
-                        <Table.ColumnHeader>Активных клиентов от, %</Table.ColumnHeader>
+                        <Table.ColumnHeader>Активных плановых клиентов от, %</Table.ColumnHeader>
                         <Table.ColumnHeader>Множитель</Table.ColumnHeader>
                         <Table.ColumnHeader w="48px" />
                     </Table.Row>

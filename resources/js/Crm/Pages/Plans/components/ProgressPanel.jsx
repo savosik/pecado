@@ -9,6 +9,7 @@ import { ProgressBar, ProgressRoot } from '@/components/ui/progress';
 import { LuChartLine, LuDownload, LuMessageSquarePlus, LuUser, LuX } from 'react-icons/lu';
 import LastOrderCell from '@/Crm/Components/LastOrderCell';
 import LastVisitHint from '@/Crm/Components/LastVisitHint';
+import MetricHint from '@/Crm/Components/MetricHint';
 import TasksCell from '@/Crm/Pages/Clients/components/TasksCell';
 import RowActions from '@/shared/Panel/RowActions';
 import BurndownChart from './BurndownChart';
@@ -391,7 +392,12 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                                     <Table.ColumnHeader>Менеджер</Table.ColumnHeader>
                                     <Table.ColumnHeader minW="180px">Факт / план</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Прогноз при текущем темпе</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Активных партнёров</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">
+                                        <HStack gap={1} align="center" justify="flex-end">
+                                            <Text as="span">Покупали в месяце</Text>
+                                            <MetricHint text="Партнёры менеджера, у которых в этом месяце была хотя бы одна отгрузка. Ниже разложено, скольким из них поставлен план на месяц: в «Моей зарплате» множитель премии считает только их, поэтому там число меньше — на тех, кто купил без плана." />
+                                        </HStack>
+                                    </Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
@@ -408,7 +414,14 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                                             <PlanFactCell plan={row.plan} fact={row.fact} percent={row.percent} />
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">{money(row.forecast)}</Table.Cell>
-                                        <Table.Cell textAlign="right">{row.clients_count}</Table.Cell>
+                                        <Table.Cell textAlign="right">
+                                            <Text fontSize="sm" fontWeight="500">{row.clients_count}</Text>
+                                            {row.unplanned_clients_count > 0 && (
+                                                <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">
+                                                    {row.planned_clients_count} с планом · {row.unplanned_clients_count} без
+                                                </Text>
+                                            )}
+                                        </Table.Cell>
                                         <Table.Cell>
                                             <RowActions
                                                 size="xs"

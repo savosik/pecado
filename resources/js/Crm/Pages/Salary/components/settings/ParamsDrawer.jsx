@@ -163,7 +163,7 @@ export default function ParamsDrawer({ manager, month, monthLabel, components, s
 
                             <Box mt={4}>
                                 <HStack gap={2} mb={2}>
-                                    <Text fontSize="sm" fontWeight="600">{components?.active_clients?.label ?? 'Активные клиенты'}</Text>
+                                    <Text fontSize="sm" fontWeight="600">{components?.active_clients?.label ?? 'Активные плановые клиенты'}</Text>
                                     <SourceBadge source={sources.kpi_bonus?.active_clients} />
                                 </HStack>
                                 <LadderEditor ladder={ladder} onChange={(rows) => setKpi({ ...kpi, active_clients: { ladder: rows } })} />
