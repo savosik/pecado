@@ -205,6 +205,44 @@ class FinancePlanTest extends TestCase
                 ->where('calendar.days.'.$day->toDateString().'.fact', 1000));
     }
 
+    /**
+     * На прошедшем дне видно не только остаток, но и что было по графику.
+     *
+     * Иначе экран показывает хвост вместо картины: день, где половину
+     * заплатили, выглядит так же, как день, где не платили вовсе.
+     */
+    #[Test]
+    public function прошедший_день_показывает_исполнение_графика(): void
+    {
+        $past = now()->startOfMonth()->subMonth()->addDays(10);
+        $this->scheduleFor($this->client, $past->toDateString(), 3000.00, paid: 1200.00);
+        $this->scheduleFor($this->client, $past->toDateString(), 1000.00, paid: 1000.00);
+
+        $this->planPage(['view' => 'calendar', 'month' => $past->format('Y-m')])
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                // Весь график дня, включая полностью закрытую строку.
+                ->where('calendar.days.'.$past->toDateString().'.scheduled', 4000)
+                ->where('calendar.days.'.$past->toDateString().'.settled', 2200)
+                // «Ждём» — только непогашенный остаток.
+                ->where('calendar.days.'.$past->toDateString().'.plan', 1800)
+                ->where('calendar.days.'.$past->toDateString().'.scheduled_lines', 2)
+                ->where('calendar.days.'.$past->toDateString().'.plan_lines', 1));
+    }
+
+    #[Test]
+    public function закрытые_строки_в_список_дня_не_попадают(): void
+    {
+        $day = now()->startOfMonth()->addDays(10);
+        $this->scheduleFor($this->client, $day->toDateString(), 3000.00);
+        $this->scheduleFor($this->client, $day->toDateString(), 500.00, paid: 500.00);
+
+        $this->planPage(['view' => 'calendar', 'day' => $day->toDateString()])
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                // Оплаченную строку в «ждём» показывать нечего.
+                ->has('dayPlan.0.documents', 1)
+                ->where('dayPlan.0.amount', 3000));
+    }
+
     #[Test]
     public function возврат_уменьшает_факт_дня(): void
     {
