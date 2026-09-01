@@ -93,7 +93,7 @@ class DailyShortageNoticeTest extends TestCase
             function (DailyShortageNoticeNotification $notification) {
                 $this->assertSame(2, $notification->items->count());
                 $this->assertSame(1000.0, $notification->amount);
-                $this->assertStringContainsString('source=none', $notification->journalUrl);
+                $this->assertStringContainsString('category=none', $notification->journalUrl);
 
                 return true;
             },
