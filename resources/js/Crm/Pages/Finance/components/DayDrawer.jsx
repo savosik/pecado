@@ -9,6 +9,7 @@ import {
     DrawerTitle,
 } from '@/components/ui/drawer';
 import { Tooltip } from '@/components/ui/tooltip';
+import MetricHint from '@/Crm/Components/MetricHint';
 import PartnerFinanceCell from './PartnerFinanceCell';
 import { formatRub } from './format';
 
@@ -33,32 +34,62 @@ export default function DayDrawer({ date, plan = [], facts = [], snapshots = {},
             <DrawerContent>
                 <DrawerHeader>
                     <DrawerTitle>{date ? date.split('-').reverse().join('.') : ''}</DrawerTitle>
+
                     <HStack gap={4} mt={1} wrap="wrap">
-                        <Text fontSize="xs" color="fg.muted">
-                            {isPast ? 'осталось' : 'ожидается'} <b>{formatRub(planTotal)}</b>
-                        </Text>
-                        <Text fontSize="xs" color="fg.muted">
-                            поступило <b>{formatRub(factTotal)}</b>
-                        </Text>
+                        <Figure
+                            label={isPast ? 'осталось' : 'ожидается'}
+                            value={formatRub(planTotal)}
+                            hint={isPast
+                                ? 'Сколько из назначенного на этот день так и не закрыли. Строки, которые оплатили, отсюда убраны — требовать по ним нечего.'
+                                : 'Сколько партнёры должны заплатить в этот день по графику из 1С. Уже оплаченные строки сюда не входят: это то, что ещё ждём.'}
+                        />
+                        <Figure
+                            label="поступило"
+                            value={formatRub(factTotal)}
+                            hint="Сколько денег реально пришло в этот день. С суммой слева совпадать не обязано: платят и по старым долгам, и по документам с другими сроками. Это два разных числа, а не проверка одного другим."
+                        />
                     </HStack>
 
                     {/* Исполнение — только на прошедших днях: у будущего срок ещё
                         не наступил, и «закрыто 0 %» читалось бы как тревога. */}
                     {isPast && scheduled > 0 && (
                         <HStack gap={4} mt={1} wrap="wrap">
-                            <Text fontSize="xs" color="fg.muted">
-                                по графику было <b>{formatRub(scheduled)}</b>
-                            </Text>
-                            <Text fontSize="xs" color={executed >= 80 ? 'green.fg' : 'orange.fg'}>
-                                закрыто <b>{formatRub(settled)}</b> ({executed}%)
-                            </Text>
+                            <Figure
+                                label="по графику было"
+                                value={formatRub(scheduled)}
+                                hint="Сколько всего 1С назначила к оплате на этот день — вместе с тем, что уже заплатили. Число не меняется со временем: это сам график."
+                            />
+                            <Figure
+                                label="закрыто"
+                                value={`${formatRub(settled)} (${executed}%)`}
+                                tone={executed >= 80 ? 'green.fg' : 'orange.fg'}
+                                hint="Какую часть графика этого дня 1С отметила оплаченной. Закрыть строку может не только платёж, но и зачёт аванса, — поэтому число не обязано совпадать с «поступило»."
+                            />
                         </HStack>
                     )}
                 </DrawerHeader>
 
                 <DrawerBody>
+                    {/* Пояснение внутри панели, а не в подсказках: тут рядом стоят
+                        три величины разного смысла, и без пары фраз они читаются
+                        как три варианта одного числа, которые почему-то не сошлись. */}
+                    <Box borderWidth="1px" borderRadius="md" px={3} py={2} mb={4} bg="bg.subtle">
+                        <Text fontSize="11px" color="fg.muted" lineHeight="1.5">
+                            Ниже два списка. <b>Сверху</b> — кто и по каким реализациям должен
+                            заплатить {isPast ? 'был в этот день, но ещё не заплатил' : 'в этот день'};
+                            это график из 1С, а не наша оценка. <b>Снизу</b> — какие деньги в этот
+                            день пришли и за какие документы. Списки не связаны: партнёр может
+                            заплатить сегодня по документу с другим сроком, и наоборот.
+                            Рядом с каждым партнёром — его общий долг, доля просрочки в нём
+                            и последний платёж; наведите, чтобы увидеть расшифровку.
+                        </Text>
+                    </Box>
+
                     <Section
                         title={isPast ? 'Осталось незакрытым' : 'Ожидается по графику'}
+                        hint={isPast
+                            ? 'Строки графика с этой датой, по которым деньги так и не пришли. Оплаченные не показываем: по ним вопрос закрыт. Суммы — остаток по строке, а не вся её сумма.'
+                            : 'Строки графика оплаты из 1С с этой датой. Суммы — непогашенный остаток по каждой реализации. Заказы сюда не попадают: обязательство создаёт отгрузка, и у реализации будет свой график.'}
                         groups={plan}
                         snapshots={snapshots}
                         empty={isPast
@@ -69,6 +100,7 @@ export default function DayDrawer({ date, plan = [], facts = [], snapshots = {},
                     <Box mt={6}>
                         <Section
                             title="Поступило"
+                            hint="Платежи с этой датой. Под каждым — за какие документы 1С их разнесла: один платёж часто закрывает десяток реализаций сразу. Возврат денег показан со знаком минус."
                             groups={facts}
                             snapshots={snapshots}
                             empty="В этот день денег не поступало"
@@ -82,10 +114,37 @@ export default function DayDrawer({ date, plan = [], facts = [], snapshots = {},
     );
 }
 
-function Section({ title, groups, snapshots, empty }) {
+/**
+ * «по 7 документам» — из чего сложилась сумма партнёра.
+ *
+ * Отдельная форма нужна только единице («по 1 документу»); 11 и 21 ведут себя
+ * по-разному, поэтому проверка идёт по остатку от сотни, а не от десятки.
+ */
+const documentsLabel = (count) => {
+    const single = count % 100 < 11 || count % 100 > 19 ? count % 10 === 1 : false;
+
+    return `по ${count} ${single ? 'документу' : 'документам'}`;
+};
+
+/** Число в шапке дня с подписью и подсказкой «что это». */
+function Figure({ label, value, hint, tone }) {
+    return (
+        <HStack gap={1}>
+            <Text fontSize="xs" color={tone ?? 'fg.muted'}>
+                {label} <b>{value}</b>
+            </Text>
+            <MetricHint text={hint} label="Что это за число" />
+        </HStack>
+    );
+}
+
+function Section({ title, hint, groups, snapshots, empty }) {
     return (
         <>
-            <Text fontWeight="600" fontSize="sm" mb={2}>{title}</Text>
+            <HStack gap={1} mb={2}>
+                <Text fontWeight="600" fontSize="sm">{title}</Text>
+                {hint && <MetricHint text={hint} />}
+            </HStack>
 
             {groups.length === 0 && (
                 <Text fontSize="sm" color="fg.muted" py={4}>{empty}</Text>
@@ -112,9 +171,14 @@ function Section({ title, groups, snapshots, empty }) {
 
                             <HStack gap={3} align="start">
                                 <PartnerFinanceCell finance={snapshots[group.user_id]} compact />
-                                <Text fontSize="sm" fontWeight="700" whiteSpace="nowrap">
-                                    {formatRub(group.amount)}
-                                </Text>
+                                <VStack align="end" gap={0}>
+                                    <Text fontSize="sm" fontWeight="700" whiteSpace="nowrap">
+                                        {formatRub(group.amount)}
+                                    </Text>
+                                    <Text fontSize="10px" color="fg.muted" whiteSpace="nowrap">
+                                        {documentsLabel(group.documents.length)}
+                                    </Text>
+                                </VStack>
                             </HStack>
                         </HStack>
 
