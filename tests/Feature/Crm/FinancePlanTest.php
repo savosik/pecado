@@ -56,12 +56,20 @@ class FinancePlanTest extends TestCase
                 ->component('Crm/Pages/Finance/Plan')
                 // Ждём ровно остаток: ни поправки на дисциплину, ни коридора
                 // сценариев в юридическом плане быть не может.
-                ->where('summary.total', 1800)
-                ->where('summary.shipments.amount', 1800));
+                ->where('summary.total', 1800));
     }
 
+    /**
+     * Заказ в план не попадает ни при каких условиях.
+     *
+     * Клиент может отменить заказ, и не случится ничего; обязательство создаёт
+     * отгрузка, вместе с которой приходит её собственный график. Хуже того,
+     * после отгрузки план заказа дублирует план реализации: на 01.09.2026 из
+     * 3,1 млн ₽ по заказам 2,04 млн приходились на уже отгруженные — они
+     * считались дважды.
+     */
     #[Test]
-    public function счета_на_предоплату_считаются_отдельно_от_реализаций(): void
+    public function заказ_в_план_не_попадает(): void
     {
         $due = now()->addDays(3)->toDateString();
         $this->scheduleFor($this->client, $due, 3000.00);
@@ -69,9 +77,22 @@ class FinancePlanTest extends TestCase
 
         $this->planPage()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('summary.shipments.amount', 3000)
-                ->where('summary.advances.amount', 500)
-                ->where('summary.total', 3500));
+                ->where('summary.total', 3000)
+                ->where('partners.0.total', 3000));
+    }
+
+    #[Test]
+    public function заказ_не_попадает_ни_в_календарь_ни_в_детали_дня(): void
+    {
+        $day = now()->startOfMonth()->addDays(10);
+        $this->scheduleFor($this->client, $day->toDateString(), 3000.00);
+        $this->orderScheduleFor($this->client, $day->toDateString(), 500.00);
+
+        $this->planPage(['view' => 'calendar', 'day' => $day->toDateString()])
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('calendar.days.'.$day->toDateString().'.plan', 3000)
+                ->where('dayPlan.0.amount', 3000)
+                ->has('dayPlan.0.documents', 1));
     }
 
     #[Test]

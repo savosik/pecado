@@ -21,10 +21,11 @@ import { formatCompact, formatRub } from './components/format';
  * не по матожиданию. Теперь на экране только то, что есть в учётной системе:
  * отгрузили — срок назначен — вот и план.
  *
- * Реализации и счета на предоплату стоят рядом, но не складываются в одно
- * число: по реализации долг уже есть, а заказ — намерение, по которому 1С даже
- * не публикует оплату. Просрочка вынесена отдельно и в ожидания периода не
- * входит: её срок прошёл, и приписать её будущему дню значило бы выдумать срок.
+ * Заказы в план не входят: клиент может отменить заказ, и не случится ничего.
+ * Обязательство создаёт отгрузка, и вместе с реализацией приходит её
+ * собственный график — по нему и ждём деньги. Просрочка вынесена отдельно и
+ * в ожидания периода не входит: её срок прошёл, и приписать её будущему дню
+ * значило бы выдумать срок.
  */
 export default function FinancePlan({
     view = 'period',
@@ -117,9 +118,9 @@ export default function FinancePlan({
                     <VStack align="start" gap={0}>
                         <HStack gap={1}>
                             <Text fontSize="xs" color="fg.muted">
-                                {isPast ? 'Ожидалось в периоде' : 'Всего ожидается'}
+                                {isPast ? 'Ожидалось в периоде' : 'Ожидается по графику'}
                             </Text>
-                            <MetricHint text="Сумма непогашенных строк графика оплаты из 1С, чей срок попадает в выбранный период. Это обязательства и счета, а не оценка: сколько учётная система назначила к оплате, столько и показано. Просроченное сюда не входит — оно отдельным блоком выше." />
+                            <MetricHint text="Сумма непогашенных строк графика оплаты из 1С по отгруженным документам, чей срок попадает в выбранный период. Это обязательства, а не оценка: сколько учётная система назначила к оплате, столько и показано. Заказы в план не входят — обязательство создаёт отгрузка, и вместе с реализацией приходит её собственный график. Просроченное показано отдельным блоком выше и в эту сумму не включено." />
                         </HStack>
                         <Text fontSize="3xl" fontWeight="700" lineHeight="1.1">
                             {formatRub(summary.total)}
@@ -132,24 +133,10 @@ export default function FinancePlan({
                     </VStack>
 
                     <VStack align="start" gap={0}>
-                        <HStack gap={1}>
-                            <Text fontSize="10px" color="fg.muted" textTransform="uppercase">По отгруженному</Text>
-                            <MetricHint text="Реализации и первичные документы: товар отгружен, накладная подписана, обязательство возникло. Это та часть плана, которую можно переносить в бюджет как долг клиента." />
-                        </HStack>
-                        <Text fontSize="lg" fontWeight="600">{formatRub(summary.shipments?.amount)}</Text>
+                        <Text fontSize="10px" color="fg.muted" textTransform="uppercase">Документов</Text>
+                        <Text fontSize="lg" fontWeight="600">{summary.documents ?? 0}</Text>
                         <Text fontSize="10px" color="fg.muted">
-                            {summary.shipments?.documents ?? 0} документов · {summary.shipments?.lines ?? 0} строк
-                        </Text>
-                    </VStack>
-
-                    <VStack align="start" gap={0}>
-                        <HStack gap={1}>
-                            <Text fontSize="10px" color="fg.muted" textTransform="uppercase">Счета на предоплату</Text>
-                            <MetricHint text="Плановые платежи по заказам: товар ещё не отгружен, юридического долга нет. Считаются отдельно и по двум причинам. Во-первых, это намерение, а не обязательство. Во-вторых, 1С не публикует оплату заказов вовсе — регистр расчётов по срокам их не ведёт, поэтому оплаченный счёт так и остаётся в графике до отгрузки." />
-                        </HStack>
-                        <Text fontSize="lg" fontWeight="600" color="fg.muted">{formatRub(summary.advances?.amount)}</Text>
-                        <Text fontSize="10px" color="fg.muted">
-                            {summary.advances?.documents ?? 0} счетов · оплата 1С не публикуется
+                            {summary.lines ?? 0} строк графика
                         </Text>
                     </VStack>
                 </Flex>
@@ -269,9 +256,7 @@ function PartnersTable({ partners, snapshots }) {
                         <Table.Row>
                             <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
                             <Table.ColumnHeader>Состояние партнёра</Table.ColumnHeader>
-                            <Table.ColumnHeader textAlign="end">Всего ждём</Table.ColumnHeader>
-                            <Table.ColumnHeader textAlign="end">По отгруженному</Table.ColumnHeader>
-                            <Table.ColumnHeader textAlign="end">Счета на предоплату</Table.ColumnHeader>
+                            <Table.ColumnHeader textAlign="end">Ждём в периоде</Table.ColumnHeader>
                             <Table.ColumnHeader textAlign="end">Документов</Table.ColumnHeader>
                         </Table.Row>
                     </Table.Header>
@@ -279,7 +264,7 @@ function PartnersTable({ partners, snapshots }) {
                     <Table.Body>
                         {partners.length === 0 && (
                             <Table.Row>
-                                <Table.Cell colSpan={6}>
+                                <Table.Cell colSpan={4}>
                                     <Text py={8} textAlign="center" color="fg.muted">
                                         В выбранном периоде поступлений по графику не ожидается
                                     </Text>
@@ -313,18 +298,6 @@ function PartnersTable({ partners, snapshots }) {
                                 <Table.Cell textAlign="end">
                                     <Text fontSize="sm" fontWeight="600" whiteSpace="nowrap">
                                         {formatRub(partner.total)}
-                                    </Text>
-                                </Table.Cell>
-
-                                <Table.Cell textAlign="end">
-                                    <Text fontSize="sm" whiteSpace="nowrap">
-                                        {partner.shipments > 0 ? formatRub(partner.shipments) : '—'}
-                                    </Text>
-                                </Table.Cell>
-
-                                <Table.Cell textAlign="end">
-                                    <Text fontSize="sm" color="fg.muted" whiteSpace="nowrap">
-                                        {partner.advances > 0 ? formatRub(partner.advances) : '—'}
                                     </Text>
                                 </Table.Cell>
 

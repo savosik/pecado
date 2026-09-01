@@ -20,19 +20,23 @@ use Illuminate\Support\Facades\DB;
  * и достраивала регрессией то, чего в графике нет. Для бюджета такое число
  * бесполезно: перенести в него можно обязательство, а не матожидание.
  *
- * Реализации и счета на предоплату считаются раздельно и никогда не
- * складываются молча. По реализации долг уже возник и подтверждён накладной,
- * а заказ — намерение, по которому 1С даже не публикует оплату: регистр
- * «РасчетыСКлиентамиПоСрокам» заказы не ведёт (круг 12 сверки), поэтому
- * `settled_amount` у них ноль навсегда. Показать их одной суммой значило бы
- * выдать намерение за обязательство, а вечно неоплаченный счёт — за долг.
+ * **Заказы в план не входят вовсе.** Заказ — намерение: клиент может его
+ * отменить, и не случится ничего. Обязательство создаёт отгрузка, и вместе
+ * с реализацией приходит её собственный график — тот, по которому и надо
+ * ждать деньги. Пока отгрузки нет, ждать нечего; когда она есть, план заказа
+ * дублирует план реализации: на 01.09.2026 из 3,1 млн ₽ по заказам 2,04 млн
+ * (66 %) приходились на уже отгруженные, то есть считались дважды.
+ *
+ * Вдобавок 1С по заказам об оплате не отчитывается — регистр
+ * «РасчетыСКлиентамиПоСрокам» их не ведёт (круг 12 сверки), `settled_amount`
+ * у них ноль навсегда. Такую строку невозможно ни погасить, ни проверить.
  */
 class PaymentPlanService
 {
     use FormatsForecastRows;
 
-    /** Счёт на предоплату: обязательство ещё не возникло. */
-    public const KIND_ADVANCE = 'order';
+    /** Заказ клиента: намерение, а не обязательство. В план не берётся. */
+    public const KIND_ORDER = 'order';
 
     /** Потолок строк детализации дня: защита от дня-выброса. */
     public const DAY_LIMIT = 500;
@@ -52,7 +56,7 @@ class PaymentPlanService
     ) {}
 
     /**
-     * Итоги периода: сколько ждём по отгруженному и сколько по счетам.
+     * Итоги периода: сколько ждём по отгруженному.
      *
      * @param  EloquentBuilder<\App\Models\User>  $clients
      * @return array<string, mixed>
@@ -61,33 +65,22 @@ class PaymentPlanService
     {
         $rows = $this->totalsQuery($this->periodQuery($clients, $filters))->get();
 
-        $shipments = ['amount' => 0.0, 'lines' => 0, 'documents' => 0];
-        $advances = ['amount' => 0.0, 'lines' => 0, 'documents' => 0];
+        $total = 0.0;
+        $lines = 0;
+        $documents = 0;
 
         foreach ($rows as $row) {
-            $target = $this->isAdvance($row->document_kind) ? 'advances' : 'shipments';
-            $bucket = $target === 'advances' ? $advances : $shipments;
-
-            $bucket['amount'] += $this->toRub((float) $row->unpaid, $row->currency_code);
-            $bucket['lines'] += (int) $row->lines_count;
-            $bucket['documents'] += (int) $row->documents;
-
-            if ($target === 'advances') {
-                $advances = $bucket;
-            } else {
-                $shipments = $bucket;
-            }
+            $total += $this->toRub((float) $row->unpaid, $row->currency_code);
+            $lines += (int) $row->lines_count;
+            $documents += (int) $row->documents;
         }
-
-        $shipments['amount'] = round($shipments['amount'], 2);
-        $advances['amount'] = round($advances['amount'], 2);
 
         $horizon = $this->horizon($clients, $filters);
 
         return [
-            'shipments' => $shipments,
-            'advances' => $advances,
-            'total' => round($shipments['amount'] + $advances['amount'], 2),
+            'total' => round($total, 2),
+            'lines' => $lines,
+            'documents' => $documents,
             'horizon' => $horizon,
             'horizon_label' => $horizon !== null ? CarbonImmutable::parse($horizon)->format('d.m.Y') : null,
             // Конец периода правее последней плановой строки: дальше не «ноль
@@ -111,7 +104,6 @@ class PaymentPlanService
                 DB::raw('u.name as client_name'),
                 DB::raw('u.erp_name as client_erp_name'),
                 DB::raw('pm.name as manager_name'),
-                DB::raw('sch.document_kind as document_kind'),
                 DB::raw('sch.currency_code as currency_code'),
             ])
             ->selectRaw('SUM(sch.amount - sch.settled_amount) as unpaid')
@@ -122,7 +114,6 @@ class PaymentPlanService
                 'u.name',
                 'u.erp_name',
                 'pm.name',
-                'sch.document_kind',
                 'sch.currency_code',
             )
             ->get();
@@ -136,18 +127,12 @@ class PaymentPlanService
                 'title' => $row->client_erp_name ?: $row->client_name,
                 'manager_name' => $row->manager_name,
                 'url' => route('crm.clients.show', $id),
-                'shipments' => 0.0,
-                'advances' => 0.0,
                 'total' => 0.0,
                 'lines' => 0,
                 'documents' => 0,
             ];
 
-            $amount = $this->toRub((float) $row->unpaid, $row->currency_code);
-            $key = $this->isAdvance($row->document_kind) ? 'advances' : 'shipments';
-
-            $partners[$id][$key] += $amount;
-            $partners[$id]['total'] += $amount;
+            $partners[$id]['total'] += $this->toRub((float) $row->unpaid, $row->currency_code);
             $partners[$id]['lines'] += (int) $row->lines_count;
             $partners[$id]['documents'] += (int) $row->documents;
         }
@@ -156,8 +141,6 @@ class PaymentPlanService
         $result = array_values($partners);
 
         foreach ($result as $index => $partner) {
-            $result[$index]['shipments'] = round((float) $partner['shipments'], 2);
-            $result[$index]['advances'] = round((float) $partner['advances'], 2);
             $result[$index]['total'] = round((float) $partner['total'], 2);
         }
 
@@ -168,10 +151,6 @@ class PaymentPlanService
 
     /**
      * План и факт по дням: числа клеток календаря.
-     *
-     * Реализации и счета на предоплату разведены и здесь: в клетке они стоят
-     * разными строками, потому что складывать обязательство с намерением
-     * нельзя даже в одном дне.
      *
      * @param  EloquentBuilder<\App\Models\User>  $clients
      * @return array<string, array<string, float|int>>
@@ -185,27 +164,25 @@ class PaymentPlanService
         $days = [];
 
         $plan = $this->forecast->dueBetween(
-            $this->forecast->plannedQuery($clients, $filters),
+            $this->planQuery($clients, $filters),
             $from->toDateString(),
             $to->toDateString(),
         )
             ->reorder()
             ->select([
                 DB::raw('DATE(sch.date) as day'),
-                DB::raw('sch.document_kind as document_kind'),
                 DB::raw('sch.currency_code as currency_code'),
             ])
             ->selectRaw('SUM(sch.amount - sch.settled_amount) as unpaid')
             ->selectRaw('COUNT(*) as lines_count')
-            ->groupBy(DB::raw('DATE(sch.date)'), 'sch.document_kind', 'sch.currency_code')
+            ->groupBy(DB::raw('DATE(sch.date)'), 'sch.currency_code')
             ->get();
 
         foreach ($plan as $row) {
             $day = (string) $row->day;
             $days[$day] ??= $this->emptyDay();
-            $amount = $this->toRub((float) $row->unpaid, $row->currency_code);
 
-            $days[$day][$this->isAdvance($row->document_kind) ? 'advances' : 'shipments'] += $amount;
+            $days[$day]['plan'] += $this->toRub((float) $row->unpaid, $row->currency_code);
             $days[$day]['plan_lines'] += (int) $row->lines_count;
         }
 
@@ -228,9 +205,7 @@ class PaymentPlanService
         }
 
         foreach ($days as $day => $numbers) {
-            $days[$day]['shipments'] = round($numbers['shipments'], 2);
-            $days[$day]['advances'] = round($numbers['advances'], 2);
-            $days[$day]['plan'] = round($numbers['shipments'] + $numbers['advances'], 2);
+            $days[$day]['plan'] = round($numbers['plan'], 2);
             $days[$day]['fact'] = round($numbers['fact'], 2);
         }
 
@@ -243,8 +218,6 @@ class PaymentPlanService
     private function emptyDay(): array
     {
         return [
-            'shipments' => 0.0,
-            'advances' => 0.0,
             'plan' => 0.0,
             'plan_lines' => 0,
             'fact' => 0.0,
@@ -327,7 +300,7 @@ class PaymentPlanService
      */
     public function horizon(EloquentBuilder $clients, FinanceFilters $filters): ?string
     {
-        $value = $this->forecast->plannedQuery($clients, $filters)
+        $value = $this->planQuery($clients, $filters)
             ->reorder()
             ->max('sch.date');
 
@@ -346,24 +319,16 @@ class PaymentPlanService
         CarbonImmutable $date,
     ): array {
         $rows = $this->forecast->dueBetween(
-            $this->forecast->plannedQuery($clients, $filters),
+            $this->planQuery($clients, $filters),
             $date->toDateString(),
             $date->toDateString(),
         )
             ->reorder()
-            // plannedQuery отдаёт реквизиты документа, но не его uuid: он нужен
-            // только здесь, ради ссылки на карточку заказа.
-            ->addSelect('sch.document_uuid')
             ->orderByDesc('sch.amount')
             ->limit(self::DAY_LIMIT)
             ->get();
 
-        // Заказы plannedQuery не джойнит — она соединяется только с реализациями.
-        // Ссылку на счёт достаём отдельно: document_uuid у плановых строк заказа
-        // указывает на заказ всегда, связь стопроцентная.
-        $orders = $this->orderLinks($rows);
-
-        return $this->groupByPartner($rows, function (object $row) use ($orders): array {
+        return $this->groupByPartner($rows, function (object $row): array {
             $unpaid = $this->toRub($this->unpaidOf($row), $row->currency_code);
 
             return [
@@ -376,8 +341,7 @@ class PaymentPlanService
                 'stage_name' => $row->stage_name,
                 'url' => $row->shipment_id !== null
                     ? route('crm.shipments.show', $row->shipment_id)
-                    : ($orders[$row->document_uuid] ?? null),
-                'is_advance' => $this->isAdvance($row->document_kind),
+                    : null,
             ];
         });
     }
@@ -468,33 +432,6 @@ class PaymentPlanService
         }
 
         return 'Документ на сайте не найден';
-    }
-
-    /**
-     * Ссылки на карточки заказов по uuid документа.
-     *
-     * @param  \Illuminate\Support\Collection<int, \stdClass>  $rows
-     * @return array<string, string>
-     */
-    private function orderLinks(\Illuminate\Support\Collection $rows): array
-    {
-        $uuids = [];
-
-        foreach ($rows as $row) {
-            if ($this->isAdvance($row->document_kind) && $row->document_uuid !== null) {
-                $uuids[$row->document_uuid] = true;
-            }
-        }
-
-        if ($uuids === []) {
-            return [];
-        }
-
-        return DB::table('orders')
-            ->whereIn('uuid', array_keys($uuids))
-            ->pluck('id', 'uuid')
-            ->map(static fn ($id): string => route('crm.orders.show', (int) $id))
-            ->all();
     }
 
     /**
@@ -619,6 +556,27 @@ class PaymentPlanService
     }
 
     /**
+     * Плановые строки, годные для плана поступлений: всё, кроме заказов.
+     *
+     * Единственная точка, где ставится это условие, — иначе оно неминуемо
+     * разъедется между итогом, календарём и деталями дня, а разошедшиеся
+     * числа на одном экране читаются как ошибка расчёта.
+     *
+     * NULL-ветка выписана явно: голое `<> 'order'` в SQL молча выбрасывает
+     * строки без вида документа — та же ловушка описана в `overdueOnly()`.
+     *
+     * @param  EloquentBuilder<\App\Models\User>  $clients
+     */
+    private function planQuery(EloquentBuilder $clients, FinanceFilters $filters): QueryBuilder
+    {
+        return $this->forecast->plannedQuery($clients, $filters)
+            ->where(static function (QueryBuilder $query): void {
+                $query->whereNull('sch.document_kind')
+                    ->orWhere('sch.document_kind', '<>', self::KIND_ORDER);
+            });
+    }
+
+    /**
      * Плановые строки, чей срок попадает в выбранный период.
      *
      * @param  EloquentBuilder<\App\Models\User>  $clients
@@ -626,13 +584,13 @@ class PaymentPlanService
     private function periodQuery(EloquentBuilder $clients, FinanceFilters $filters): QueryBuilder
     {
         return $this->forecast->dueBetween(
-            $this->forecast->plannedQuery($clients, $filters),
+            $this->planQuery($clients, $filters),
             $filters->dateFrom->toDateString(),
             $filters->dateTo->toDateString(),
         );
     }
 
-    /** Суммы по виду документа и валюте — база всех итогов раздела. */
+    /** Суммы по валюте — база всех итогов раздела. */
     private function totalsQuery(QueryBuilder $query): QueryBuilder
     {
         return (clone $query)
@@ -640,14 +598,11 @@ class PaymentPlanService
             // Свой список колонок вместо унаследованного от plannedQuery:
             // с ним агрегат уронил бы only_full_group_by на MySQL, а SQLite
             // в тестах проглотил бы это молча.
-            ->select([
-                DB::raw('sch.document_kind as document_kind'),
-                DB::raw('sch.currency_code as currency_code'),
-            ])
+            ->select([DB::raw('sch.currency_code as currency_code')])
             ->selectRaw('SUM(sch.amount - sch.settled_amount) as unpaid')
             ->selectRaw('COUNT(*) as lines_count')
             ->selectRaw('COUNT(DISTINCT sch.document_uuid) as documents')
-            ->groupBy('sch.document_kind', 'sch.currency_code');
+            ->groupBy('sch.currency_code');
     }
 
     /**
@@ -672,11 +627,5 @@ class PaymentPlanService
                 $filters->organizationIds !== [],
                 fn (QueryBuilder $query) => $query->whereIn('f.organization_id', $filters->organizationIds),
             );
-    }
-
-    /** Счёт на предоплату по заказу — не обязательство, считается отдельно. */
-    private function isAdvance(?string $documentKind): bool
-    {
-        return $documentKind === self::KIND_ADVANCE;
     }
 }

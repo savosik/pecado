@@ -114,7 +114,7 @@ class PartnerFinanceSnapshot
             ->whereDate('date', '<', $today->toDateString())
             ->where(static function ($query): void {
                 $query->whereNull('document_kind')
-                    ->orWhere('document_kind', '<>', PaymentPlanService::KIND_ADVANCE);
+                    ->orWhere('document_kind', '<>', PaymentPlanService::KIND_ORDER);
             })
             ->select(['user_id', 'date', 'currency_code'])
             ->selectRaw('SUM(amount - settled_amount) as unpaid')
