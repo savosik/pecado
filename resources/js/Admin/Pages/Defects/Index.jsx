@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip } from '@/components/ui/tooltip';
+import ImageLightbox from '@/components/common/ImageLightbox';
 import { usePermission } from '@/Admin/hooks/usePermission';
 import { useFlashToast } from '@/hooks/useFlashToast';
 
@@ -53,7 +54,8 @@ function StatCard({ label, value }) {
     );
 }
 
-function DefectPhoto({ defect }) {
+/** Миниатюра партии: по клику открывает лайтбокс со всеми фото — как в кабинете склада. */
+function DefectPhoto({ defect, onOpen }) {
     const photo = defect.photos?.[0];
 
     if (!photo) {
@@ -76,15 +78,43 @@ function DefectPhoto({ defect }) {
     }
 
     return (
-        <Image
-            src={photo.thumb_url}
-            alt={defect.defect_description}
-            w="44px"
-            h="44px"
-            objectFit="cover"
-            borderRadius="md"
+        <Box
+            as="button"
+            type="button"
+            position="relative"
             flexShrink={0}
-        />
+            cursor="zoom-in"
+            borderRadius="md"
+            overflow="hidden"
+            title="Открыть фотографии"
+            aria-label={`Фотографии партии #${defect.id}`}
+            onClick={onOpen}
+        >
+            <Image
+                src={photo.thumb_url}
+                alt={defect.defect_description}
+                w="44px"
+                h="44px"
+                objectFit="cover"
+                display="block"
+            />
+            {defect.photos.length > 1 && (
+                <Box
+                    position="absolute"
+                    bottom="0"
+                    right="0"
+                    bg="blackAlpha.700"
+                    color="white"
+                    fontSize="10px"
+                    lineHeight="1"
+                    px="1"
+                    py="0.5"
+                    borderTopLeftRadius="sm"
+                >
+                    +{defect.photos.length - 1}
+                </Box>
+            )}
+        </Box>
     );
 }
 
@@ -302,6 +332,7 @@ export default function DefectsIndex() {
     const { defects, filters, stats } = usePage().props;
     const { can } = usePermission();
     const [confirmTarget, setConfirmTarget] = useState(null);
+    const [galleryDefect, setGalleryDefect] = useState(null);
     const [selectedIds, setSelectedIds] = useState([]);
     const [discount, setDiscount] = useState('');
     const [bulkSaving, setBulkSaving] = useState(false);
@@ -553,7 +584,10 @@ export default function DefectsIndex() {
                                                         )}
                                                         <Table.Cell>
                                                             <HStack gap={3}>
-                                                                <DefectPhoto defect={defect} />
+                                                                <DefectPhoto
+                                                                    defect={defect}
+                                                                    onOpen={() => setGalleryDefect(defect)}
+                                                                />
                                                                 <VStack align="start" gap={0}>
                                                                     <Text fontSize="sm" lineClamp={2}>
                                                                         {defect.product.name}
@@ -635,6 +669,16 @@ export default function DefectsIndex() {
                         : ''
                 }
                 confirmLabel="Удалить"
+            />
+
+            <ImageLightbox
+                images={(galleryDefect?.photos ?? []).map((photo) => ({
+                    url: photo.url,
+                    alt: galleryDefect?.defect_description,
+                }))}
+                open={galleryDefect !== null}
+                onClose={() => setGalleryDefect(null)}
+                title={galleryDefect ? `#${galleryDefect.id} · ${galleryDefect.product.name}` : ''}
             />
         </>
     );
