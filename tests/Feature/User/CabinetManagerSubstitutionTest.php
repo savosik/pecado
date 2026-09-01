@@ -41,11 +41,16 @@ class CabinetManagerSubstitutionTest extends TestCase
 
     public function test_dashboard_shows_substitute_contacts_during_absence(): void
     {
+        // Дата окончания — относительная: с календарной отсутствие однажды
+        // заканчивается само собой, и тест падает не из-за кода, а из-за того,
+        // что наступило завтра (так и случилось 01.09.2026).
+        $endsOn = today()->addDays(3);
+
         ManagerAbsence::factory()->create([
             'personal_manager_id' => $this->manager->id,
             'substitute_manager_id' => $this->substitute->id,
             'starts_on' => today(),
-            'ends_on' => '2026-08-31',
+            'ends_on' => $endsOn,
         ]);
 
         $this->actingAs($this->client)
@@ -56,7 +61,7 @@ class CabinetManagerSubstitutionTest extends TestCase
                 ->where('personalManager.phone', '+7 (901) 782-28-35')
                 ->where('personalManager.email', 'opt@pecado.ru')
                 ->where('personalManager.substitution.absent_manager_name', 'Курочкина Елена')
-                ->where('personalManager.substitution.until', '31.08.2026')
+                ->where('personalManager.substitution.until', $endsOn->format('d.m.Y'))
             );
 
         // Привязка клиента не изменилась — подмена только на чтении.
