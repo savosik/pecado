@@ -27,6 +27,8 @@ export function buildProductInfoProps(product, currencySymbol = '₽') {
     const preorderQty = product.preorder_quantity || 0;
     const isInStock = stockQty > 0;
     const isPreorder = !isInStock && preorderQty > 0;
+    // «Уценка»: основного товара нет, но остались продаваемые уценённые партии
+    const isDefectOnly = !isInStock && !isPreorder && !!product.has_defects;
 
     return {
         productId: product.id,
@@ -45,11 +47,13 @@ export function buildProductInfoProps(product, currencySymbol = '₽') {
         shelfLife: formatShelfLife(product.shelf_life),
         inStock: isInStock,
         isPreorder,
+        isDefectOnly,
         stockQuantity: stockQty,
         preorderQuantity: preorderQty,
         tags: product.tags || [],
         discountPct: product.discount_percentage,
         hasDefects: !!product.has_defects,
+        defectMinPrice: product.defect_min_price ?? null,
     };
 }
 

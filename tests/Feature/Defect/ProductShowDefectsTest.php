@@ -56,6 +56,7 @@ class ProductShowDefectsTest extends TestCase
             ->assertOk();
 
         $this->assertTrue($response->json('product.has_defects'));
+        $this->assertEquals(499.0, $response->json('product.defect_min_price'));
         $this->assertCount(1, $response->json('defects'));
         $this->assertEquals(499.0, $response->json('defects.0.price'));
         $this->assertSame(3, $response->json('defects.0.available_quantity'));
@@ -111,7 +112,25 @@ class ProductShowDefectsTest extends TestCase
         $response = $this->getJson("/api/products/{$product->slug}")->assertOk();
 
         $this->assertTrue($response->json('product.has_defects'));
+        $this->assertNull($response->json('product.defect_min_price'), 'Гость не должен видеть минимальную цену уценки');
         $this->assertCount(0, $response->json('defects'), 'Гость не должен получать цены партий');
+    }
+
+    public function test_defect_min_price_takes_cheapest_available_batch(): void
+    {
+        $product = Product::factory()->create();
+        ProductDefect::factory()->for($product)->sellable(500)->create(['quantity' => 2]);
+        ProductDefect::factory()->for($product)->sellable(350)->create(['quantity' => 1]);
+
+        // Самая дешёвая партия полностью выбрана — минимум по ней не считается.
+        $taken = ProductDefect::factory()->for($product)->sellable(100)->create(['quantity' => 1]);
+        $this->reserve($taken, 1);
+
+        $response = $this->actingAs($this->activeUser())
+            ->getJson("/api/products/{$product->slug}")
+            ->assertOk();
+
+        $this->assertEquals(350.0, $response->json('product.defect_min_price'));
     }
 
     public function test_catalog_list_marks_products_with_defects(): void
@@ -128,5 +147,23 @@ class ProductShowDefectsTest extends TestCase
 
         $this->assertTrue($flags[$withDefect->id]);
         $this->assertFalse($flags[$withoutDefect->id]);
+
+        $prices = collect($response->json('data'))->pluck('defect_min_price', 'id');
+
+        $this->assertEquals(200.0, $prices[$withDefect->id]);
+        $this->assertNull($prices[$withoutDefect->id]);
+    }
+
+    public function test_guest_catalog_hides_defect_min_price(): void
+    {
+        $product = Product::factory()->create();
+        ProductDefect::factory()->for($product)->sellable(200)->create(['quantity' => 1]);
+
+        $response = $this->getJson('/api/catalog/products')->assertOk();
+
+        $row = collect($response->json('data'))->firstWhere('id', $product->id);
+
+        $this->assertTrue($row['has_defects']);
+        $this->assertArrayNotHasKey('defect_min_price', $row, 'Гостю ценовое поле вырезается вместе с остальными ценами');
     }
 }

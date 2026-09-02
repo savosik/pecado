@@ -5,8 +5,8 @@ const STOCK_LABELS = {
     instock: 'В наличии',
     available: 'В наличии или предзаказ',
     preorder: 'Предзаказ',
+    defect: 'Уценка',
     notavailable: 'Нет в наличии',
-    defect: 'Некондиция',
 };
 
 /**

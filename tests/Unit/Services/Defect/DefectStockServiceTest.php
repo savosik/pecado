@@ -146,6 +146,36 @@ class DefectStockServiceTest extends TestCase
         $this->assertFalse($map[$without->id]);
     }
 
+    public function test_min_sellable_price_map_returns_min_price_of_available_defects(): void
+    {
+        $product = Product::factory()->create();
+        $reservedProduct = Product::factory()->create();
+        $without = Product::factory()->create();
+
+        // Две доступные партии — в карту попадает минимальная цена.
+        ProductDefect::factory()->for($product)->sellable(500)->create(['quantity' => 2]);
+        ProductDefect::factory()->for($product)->sellable(300)->create(['quantity' => 1]);
+
+        // Дешёвая, но полностью выбранная партия минимум не занижает.
+        $taken = ProductDefect::factory()->for($product)->sellable(100)->create(['quantity' => 1]);
+        $this->orderFor($taken, 1);
+
+        // Товар с единственной полностью зарезервированной партией в карту не попадает.
+        $fullyTaken = ProductDefect::factory()->for($reservedProduct)->sellable(50)->create(['quantity' => 1]);
+        $this->orderFor($fullyTaken, 1);
+
+        $map = $this->service()->minSellablePriceMap([$product->id, $reservedProduct->id, $without->id]);
+
+        $this->assertSame([$product->id => 300.0], $map);
+        $this->assertArrayNotHasKey($reservedProduct->id, $map);
+        $this->assertArrayNotHasKey($without->id, $map);
+    }
+
+    public function test_min_sellable_price_map_returns_empty_for_empty_input(): void
+    {
+        $this->assertSame([], $this->service()->minSellablePriceMap([]));
+    }
+
     public function test_sellable_for_product_exposes_available_quantity(): void
     {
         $product = Product::factory()->create();

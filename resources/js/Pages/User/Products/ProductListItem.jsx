@@ -16,7 +16,7 @@ import { formatShelfLife } from '@/utils/product';
 export default function ProductListItem({ product, loading = false }) {
     const {
         user, isFav, toggleFavorite, formatPrice,
-        hasSale, isInStock, isPreorder, brandName,
+        hasSale, isInStock, isPreorder, isDefectOnly, defectMinPrice, brandName,
         price, salePrice, discountPct,
     } = useProductHelpers(product);
 
@@ -75,6 +75,11 @@ export default function ProductListItem({ product, loading = false }) {
                     >
                         Предзаказ{leadLabel ? ` · ${leadLabel}` : ''}
                     </Text>
+                </>
+            ) : isDefectOnly ? (
+                <>
+                    <LuBadgePercent size={14} color="var(--chakra-colors-purple-500)" />
+                    <Text color="purple.500" lineClamp="1" title="Остались только уценённые экземпляры">Уценка</Text>
                 </>
             ) : (
                 <>
@@ -287,6 +292,13 @@ export default function ProductListItem({ product, loading = false }) {
                                 </Flex>
                             )}
                         </Flex>
+
+                        {/* Уценка — еле заметная подсказка о минимальной цене партий */}
+                        {product.has_defects && defectMinPrice != null && (
+                            <Text fontSize="2xs" color="gray.400" lineClamp="1">
+                                Есть на уценке от {formatPrice(defectMinPrice)}
+                            </Text>
+                        )}
 
                         {/* Строка 2: контролы количества */}
                         {(isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (

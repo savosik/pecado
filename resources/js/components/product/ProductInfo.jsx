@@ -28,11 +28,13 @@ export default function ProductInfo({
     shelfLife = null,
     inStock = true,
     isPreorder = false,
+    isDefectOnly = false,
     stockQuantity = 0,
     preorderQuantity = 0,
     tags = [],
     discountPct = null,
     hasDefects = false,
+    defectMinPrice = null,
     variantsSlot = null,
     promotionsSlot = null,
     headingAs = 'h1',
@@ -325,6 +327,11 @@ export default function ProductInfo({
                                 <LuClock3 size={14} color="var(--chakra-colors-orange-500)" />
                                 <Text color="orange.500">Предзаказ{leadLabel ? ` · поставка ${leadLabel}` : ''}</Text>
                             </>
+                        ) : isDefectOnly ? (
+                            <>
+                                <LuBadgePercent size={14} color="var(--chakra-colors-purple-500)" />
+                                <Text color="purple.500">Уценка</Text>
+                            </>
                         ) : (
                             <>
                                 <LuCircleX size={14} color="var(--chakra-colors-red-600)" />
@@ -332,6 +339,13 @@ export default function ProductInfo({
                             </>
                         )}
                     </Flex>
+
+                    {/* Уценка — еле заметная подсказка о минимальной цене партий */}
+                    {hasDefects && defectMinPrice != null && (
+                        <Text fontSize="xs" color="gray.400" mt="1">
+                            Есть на уценке от {formatPrice(defectMinPrice)} — см. вкладку «Уценка»
+                        </Text>
+                    )}
 
                     {/* Что такое предзаказ — здесь, а не в объяснении менеджера после оформления */}
                     {isPreorder && (
@@ -347,7 +361,7 @@ export default function ProductInfo({
                         </Text>
                     )}
 
-                    {!inStock && !isPreorder && (
+                    {!inStock && !isPreorder && !isDefectOnly && (
                         <Text fontSize="sm" color="gray.500" mt="2">
                             Товар временно недоступен
                         </Text>

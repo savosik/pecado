@@ -1,6 +1,6 @@
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
-import { LuCheck, LuClock3, LuCircleX } from 'react-icons/lu';
+import { LuCheck, LuClock3, LuCircleX, LuBadgePercent } from 'react-icons/lu';
 
 /**
  * ProductVariants — варианты товара из той же ProductModel.
@@ -28,6 +28,7 @@ export default function ProductVariants({ variants = [], currentProductId, model
         const preorderQty = variant.preorder_quantity || 0;
         if (stockQty > 0) return { text: 'В наличии', icon: LuCheck, color: 'green.600', iconColor: '#16a34a' };
         if (preorderQty > 0) return { text: 'Предзаказ', icon: LuClock3, color: 'orange.500', iconColor: '#f97316' };
+        if (variant.has_defects) return { text: 'Уценка', icon: LuBadgePercent, color: 'purple.500', iconColor: '#a855f7' };
         return { text: 'Нет в наличии', icon: LuCircleX, color: 'red.600', iconColor: '#dc2626' };
     };
 

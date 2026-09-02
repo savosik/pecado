@@ -44,6 +44,18 @@ interface DefectStockServiceInterface
     public function hasSellableDefectsMap(array $productIds): array;
 
     /**
+     * Карта «id товара → минимальная цена уценки в продаже» одним запросом.
+     *
+     * Товары без опубликованной партии с ценой и свободным остатком в карте
+     * отсутствуют, поэтому isset() по ключу эквивалентен hasSellableDefectsMap().
+     * Используется витриной для надписи «Есть на уценке от X ₽».
+     *
+     * @param  array<int, int>  $productIds
+     * @return array<int, float>
+     */
+    public function minSellablePriceMap(array $productIds): array;
+
+    /**
      * Партии товара, доступные клиенту к покупке, со свободным остатком.
      *
      * @return \Illuminate\Support\Collection<int, ProductDefect>

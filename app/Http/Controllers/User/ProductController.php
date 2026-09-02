@@ -518,6 +518,8 @@ class ProductController extends Controller
             $variantArrays = ProductQueryService::enrichProductsWithDiscounts($variantArrays);
             $variantArrays = ProductQueryService::convertProductsPrices($variantArrays);
             $variantArrays = ProductQueryService::enrichProductsWithPromotions($variantArrays);
+            // Маркер уценки — чтобы вариант без основного остатка показывал статус «Уценка»
+            $variantArrays = ProductQueryService::enrichProductsWithDefects($variantArrays);
 
             // Собираем diff_attrs для каждого варианта (отладочно) и одновременно строим готовые подписи по атрибутам.
             $attrsLabels = [];
@@ -803,6 +805,12 @@ class ProductController extends Controller
         $sellableDefects = app(\App\Contracts\Defect\DefectStockServiceInterface::class)
             ->sellableForProduct($product);
         $productData['has_defects'] = $sellableDefects->isNotEmpty();
+        // Минимальная цена уценки — надпись «Есть на уценке от X ₽» под статусом.
+        // Партии отсортированы по цене, поэтому минимум — первая. Ценовое поле,
+        // гейтится так же, как массив партий ниже.
+        $productData['defect_min_price'] = $canViewPrices && $sellableDefects->isNotEmpty()
+            ? (float) $sellableDefects->first()->price
+            : null;
         $defects = $canViewPrices
             ? $sellableDefects->map(fn (\App\Models\ProductDefect $defect) => [
                 'id' => $defect->id,

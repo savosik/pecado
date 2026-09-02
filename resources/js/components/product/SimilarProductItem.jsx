@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Flex, Text, IconButton, Badge } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
-import { LuClock3, LuHeart, LuCheck, LuCircleX, LuImageOff } from 'react-icons/lu';
+import { LuClock3, LuHeart, LuCheck, LuCircleX, LuImageOff, LuBadgePercent } from 'react-icons/lu';
 import CartQuantityControl from '@/components/product/CartQuantityControl';
 import { useProductHelpers } from '@/hooks/useProductHelpers';
 
@@ -14,7 +14,7 @@ import { useProductHelpers } from '@/hooks/useProductHelpers';
 export default function SimilarProductItem({ product }) {
     const {
         user, isFav, toggleFavorite, formatPrice,
-        hasSale, isInStock, isPreorder, brandName,
+        hasSale, isInStock, isPreorder, isDefectOnly, brandName,
         price, salePrice, discountPct,
     } = useProductHelpers(product);
 
@@ -178,6 +178,11 @@ export default function SimilarProductItem({ product }) {
                                 <>
                                     <LuClock3 size={12} color="var(--chakra-colors-orange-500)" />
                                     <Text color="orange.500" lineClamp="1">Предзаказ</Text>
+                                </>
+                            ) : isDefectOnly ? (
+                                <>
+                                    <LuBadgePercent size={12} color="var(--chakra-colors-purple-500)" />
+                                    <Text color="purple.500" lineClamp="1">Уценка</Text>
                                 </>
                             ) : (
                                 <>

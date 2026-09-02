@@ -3,7 +3,7 @@ import { Box, Flex, Text, Input, IconButton, Spinner, Badge, Portal } from '@cha
 import { Link, router } from '@inertiajs/react';
 import {
     LuX, LuClock3, LuSearch, LuArrowRight, LuHeart, LuCheck, LuCircleX,
-    LuImageOff, LuScanBarcode,
+    LuImageOff, LuScanBarcode, LuBadgePercent,
 } from 'react-icons/lu';
 import { Checkbox } from '@/components/ui/checkbox';
 import CartQuantityControl from '@/components/product/CartQuantityControl';
@@ -19,7 +19,7 @@ import BarcodeSearchScanner from './BarcodeSearchScanner';
 function ProductItem({ product, onClick }) {
     const {
         user, isFav, toggleFavorite, formatPrice,
-        hasSale, isInStock, isPreorder, brandName,
+        hasSale, isInStock, isPreorder, isDefectOnly, brandName,
         price, salePrice, discountPct,
     } = useProductHelpers(product);
 
@@ -186,6 +186,11 @@ function ProductItem({ product, onClick }) {
                                 <>
                                     <LuClock3 size={12} color="var(--chakra-colors-orange-500)" />
                                     <Text color="orange.500" lineClamp="1">Предзаказ</Text>
+                                </>
+                            ) : isDefectOnly ? (
+                                <>
+                                    <LuBadgePercent size={12} color="var(--chakra-colors-purple-500)" />
+                                    <Text color="purple.500" lineClamp="1">Уценка</Text>
                                 </>
                             ) : (
                                 <>

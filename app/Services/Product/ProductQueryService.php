@@ -124,12 +124,15 @@ class ProductQueryService
     }
 
     /**
-     * Проставить товарам флаг has_defects — есть ли у товара уценка в продаже.
+     * Проставить товарам маркеры уценки в продаже.
      *
-     * Одним запросом на всю пачку (см. DefectStockService::hasSellableDefectsMap):
-     * true только если есть опубликованная партия с ценой и свободным остатком.
-     * Флаг булев, не ценовой, поэтому отдаётся всем — в том числе гостям (значок
-     * «уценка» в списке видят все, покупают только авторизованные).
+     * Одним запросом на всю пачку (см. DefectStockService::minSellablePriceMap):
+     *  - `has_defects` — есть опубликованная партия с ценой и свободным остатком;
+     *  - `defect_min_price` — минимальная цена такой партии (надпись «Есть на
+     *    уценке от X ₽» и статус «Уценка», когда основного товара нет).
+     *
+     * Флаг булев и отдаётся всем, в том числе гостям; `defect_min_price` — ценовое
+     * поле, гостям его вырезает CatalogProductPresenter вместе с остальными ценами.
      */
     public static function enrichProductsWithDefects(array $products): array
     {
@@ -147,14 +150,27 @@ class ProductQueryService
             return $products;
         }
 
-        $map = app(\App\Contracts\Defect\DefectStockServiceInterface::class)
-            ->hasSellableDefectsMap($ids);
+        $priceMap = app(\App\Contracts\Defect\DefectStockServiceInterface::class)
+            ->minSellablePriceMap($ids);
 
-        return array_map(function ($product) use ($map) {
-            $product['has_defects'] = $map[$product['id']] ?? false;
+        return array_map(function ($product) use ($priceMap) {
+            $product['has_defects'] = isset($priceMap[$product['id']]);
+            $product['defect_min_price'] = $priceMap[$product['id']] ?? null;
 
             return $product;
         }, $products);
+    }
+
+    /**
+     * Обогатить подборки маркерами уценки.
+     */
+    public static function enrichSelectionsWithDefects(array $selections): array
+    {
+        return array_map(function ($selection) {
+            $selection['products'] = self::enrichProductsWithDefects($selection['products'] ?? []);
+
+            return $selection;
+        }, $selections);
     }
 
     /**

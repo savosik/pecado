@@ -17,7 +17,7 @@ import { toaster } from '@/components/ui/toaster';
 function ProductCard({ product, loading = false }) {
     const {
         user, isFav, toggleFavorite, formatPrice,
-        hasSale, isInStock, isPreorder, brandName,
+        hasSale, isInStock, isPreorder, isDefectOnly, defectMinPrice, brandName,
         price, salePrice, discountPct,
     } = useProductHelpers(product);
 
@@ -330,6 +330,16 @@ function ProductCard({ product, loading = false }) {
                                             Предзаказ
                                         </Text>
                                     </>
+                                ) : isDefectOnly ? (
+                                    <>
+                                        <Box display={{ base: 'inline-flex', md: 'none' }} aria-label="Только уценка" title="Остались только уценённые экземпляры">
+                                            <LuBadgePercent size={16} color="var(--chakra-colors-purple-500)" />
+                                        </Box>
+                                        <Box display={{ base: 'none', md: 'inline-flex' }}>
+                                            <LuBadgePercent size={14} color="var(--chakra-colors-purple-500)" />
+                                        </Box>
+                                        <Text color="purple.500" lineClamp="1" display={{ base: 'none', md: 'block' }} title="Остались только уценённые экземпляры">Уценка</Text>
+                                    </>
                                 ) : (
                                     <>
                                         <Box display={{ base: 'inline-flex', md: 'none' }} aria-label="Нет в наличии" title="Нет в наличии">
@@ -362,6 +372,13 @@ function ProductCard({ product, loading = false }) {
                                 </Flex>
                             )}
                         </Flex>
+
+                        {/* Уценка — еле заметная подсказка о минимальной цене партий */}
+                        {product.has_defects && defectMinPrice != null && (
+                            <Text fontSize="2xs" color="gray.400" lineClamp="1">
+                                Есть на уценке от {formatPrice(defectMinPrice)}
+                            </Text>
+                        )}
 
                         {/* Корзина — скрываем, если нет в наличии и не предзаказ, или цена 0 */}
                         {(isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (

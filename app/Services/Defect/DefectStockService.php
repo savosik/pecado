@@ -95,6 +95,46 @@ class DefectStockService implements DefectStockServiceInterface
     }
 
     /**
+     * @param  array<int, int>  $productIds
+     * @return array<int, float>
+     */
+    public function minSellablePriceMap(array $productIds): array
+    {
+        $productIds = array_values(array_unique(array_map('intval', $productIds)));
+
+        if ($productIds === []) {
+            return [];
+        }
+
+        $defects = ProductDefect::query()
+            ->sellable()
+            ->whereIn('product_id', $productIds)
+            ->get(['id', 'product_id', 'quantity', 'price']);
+
+        if ($defects->isEmpty()) {
+            return [];
+        }
+
+        $available = $this->availableMap($defects);
+
+        $result = [];
+        foreach ($defects as $defect) {
+            if (($available[(int) $defect->id] ?? 0) <= 0) {
+                continue;
+            }
+
+            $productId = (int) $defect->product_id;
+            $price = (float) $defect->price;
+
+            if (! isset($result[$productId]) || $price < $result[$productId]) {
+                $result[$productId] = $price;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * @return Collection<int, ProductDefect>
      */
     public function sellableForProduct(Product $product): Collection

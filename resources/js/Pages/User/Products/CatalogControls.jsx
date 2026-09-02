@@ -21,8 +21,8 @@ export const STOCK_OPTIONS = [
     { value: '', label: 'Все' },
     { value: 'instock', label: 'В наличии' },
     { value: 'preorder', label: 'Предзаказ' },
+    { value: 'defect', label: 'Уценка' },
     { value: 'notavailable', label: 'Нет в наличии' },
-    { value: 'defect', label: 'Некондиция' },
 ];
 
 /**
@@ -35,8 +35,8 @@ export const SEARCH_STOCK_OPTIONS = [
     { value: 'instock', label: 'В наличии' },
     { value: 'available', label: 'В наличии или предзаказ' },
     { value: 'preorder', label: 'Предзаказ' },
+    { value: 'defect', label: 'Уценка' },
     { value: 'notavailable', label: 'Нет в наличии' },
-    { value: 'defect', label: 'Некондиция' },
 ];
 
 

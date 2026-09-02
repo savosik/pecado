@@ -44,6 +44,11 @@ class HomeController extends Controller
         $newProducts = ProductQueryService::enrichProductsWithPromotions($newProducts);
         $bestsellers = ProductQueryService::enrichProductsWithPromotions($bestsellers);
 
+        // Маркеры уценки — тоже после кеша: остаток партий меняется при каждом заказе
+        $selections = ProductQueryService::enrichSelectionsWithDefects($selections);
+        $newProducts = ProductQueryService::enrichProductsWithDefects($newProducts);
+        $bestsellers = ProductQueryService::enrichProductsWithDefects($bestsellers);
+
         return Inertia::render('User/Home', [
             'banners' => BannerController::getCachedBanners($regionId),
             'stories' => StoryController::getCachedStories($regionId),

@@ -6,7 +6,7 @@ import { useFavoritesStore } from '@/stores/useFavoritesStore';
  * useProductHelpers — общий хук для ProductCard и ProductListItem.
  *
  * Объединяет: подписку на стор избранного, toggleFavorite, formatPrice,
- * вычисление hasSale / isInStock / isPreorder / brandName.
+ * вычисление hasSale / isInStock / isPreorder / isDefectOnly / brandName.
  *
  * @param {Object|null} product
  * @returns {{
@@ -17,6 +17,8 @@ import { useFavoritesStore } from '@/stores/useFavoritesStore';
  *   hasSale: boolean,
  *   isInStock: boolean,
  *   isPreorder: boolean,
+ *   isDefectOnly: boolean,
+ *   defectMinPrice: number|null,
  *   brandName: string|null,
  *   price: number|null,
  *   salePrice: number|null,
@@ -64,6 +66,10 @@ export function useProductHelpers(product) {
     const preorderQty = product?.preorder_quantity || 0;
     const isInStock = stockQty > 0;
     const isPreorder = !isInStock && preorderQty > 0;
+    // Статус «Уценка»: основного товара нет ни в наличии, ни под предзаказ,
+    // но остались продаваемые уценённые партии.
+    const isDefectOnly = !isInStock && !isPreorder && !!product?.has_defects;
+    const defectMinPrice = product?.defect_min_price ?? null;
     const brandName = product?.brand_name || null;
 
     return {
@@ -74,6 +80,8 @@ export function useProductHelpers(product) {
         hasSale,
         isInStock,
         isPreorder,
+        isDefectOnly,
+        defectMinPrice,
         brandName,
         price,
         salePrice,

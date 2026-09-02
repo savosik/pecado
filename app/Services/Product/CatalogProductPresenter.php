@@ -35,8 +35,9 @@ class CatalogProductPresenter
         // бейдж в сетке обязан совпадать с тем, что видно на детальной странице.
         $items = ProductQueryService::enrichProductsWithPromotions($items);
 
-        // Маркер уценки (некондиции) — еле заметный значок в карточке каталога.
-        // Булев флаг, не ценовой: отдаётся и гостям.
+        // Маркеры уценки (некондиции): значок в карточке каталога (has_defects, булев,
+        // отдаётся и гостям) и минимальная цена партии (defect_min_price — ценовое
+        // поле, гостям вырезается ниже вместе с остальными ценами).
         $items = ProductQueryService::enrichProductsWithDefects($items);
 
         $user = Auth::user();
@@ -67,6 +68,7 @@ class CatalogProductPresenter
                 $product['discount_percentage'],
                 $product['stock_quantity'],
                 $product['preorder_quantity'],
+                $product['defect_min_price'],
             );
 
             return $product;

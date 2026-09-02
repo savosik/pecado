@@ -314,6 +314,7 @@ class SearchController extends Controller
                 $exactArray = ProductQueryService::enrichProductsWithDiscounts($exactArray);
                 $exactArray = ProductQueryService::convertProductsPrices($exactArray);
                 $exactArray = ProductQueryService::enrichProductsWithPromotions($exactArray);
+                $exactArray = ProductQueryService::enrichProductsWithDefects($exactArray);
 
                 $count = count($exactArray);
                 $results['products'] = $exactArray;
@@ -384,6 +385,7 @@ class SearchController extends Controller
                 $productArray = ProductQueryService::enrichProductsWithDiscounts($productArray);
                 $productArray = ProductQueryService::convertProductsPrices($productArray);
                 $productArray = ProductQueryService::enrichProductsWithPromotions($productArray);
+                $productArray = ProductQueryService::enrichProductsWithDefects($productArray);
 
                 $results['products'] = $productArray;
 
