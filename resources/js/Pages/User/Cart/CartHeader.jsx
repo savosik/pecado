@@ -14,7 +14,11 @@ export default function CartHeader({ cart, userCarts = [] }) {
 
     const name = cart?.name;
     const showName = name && name !== 'Корзина';
-    const totalQty = useCartStore((s) => Object.values(s.quantities).reduce((a, b) => a + b, 0));
+    // Считаем как бейдж корзины в навигации (обычные + уценка), иначе
+    // клиент видит два разных числа для одной корзины.
+    const totalQty = useCartStore((s) =>
+        Object.values(s.quantities).reduce((a, b) => a + b, 0)
+        + Object.values(s.defectQuantities).reduce((a, b) => a + b, 0));
 
     return (
         <Box mb="2">

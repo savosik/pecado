@@ -242,6 +242,8 @@ export default function CartTable({
                                 <Checkbox
                                     checked={allSelected}
                                     onCheckedChange={(e) => handleToggleAll(!!e.checked)}
+                                    aria-label="Выбрать все товары"
+                                    title="Выбрать все товары"
                                 />
                             </Table.ColumnHeader>
                             <Table.ColumnHeader minW="200px">

@@ -73,8 +73,10 @@ export default function Search() {
                     <LuSearch size={16} />
                 </Box>
 
+                {/* На узком экране длинный плейсхолдер обрезался посреди слова
+                    («Поиск товарс») — на мобильном оставляем короткий */}
                 <Input
-                    placeholder="Поиск товаров, брендов, категорий…"
+                    placeholder={search.isSmall ? 'Поиск товаров…' : 'Поиск товаров, брендов, категорий…'}
                     size="sm"
                     borderRadius="lg"
                     bg="gray.50"

@@ -188,7 +188,7 @@ export default function CheckoutIndex({
             <Breadcrumbs items={breadcrumbs} />
 
             <Box>
-                <Heading as="h1" size={{ base: 'xl', md: '3xl' }} fontWeight="bold" mb="6">
+                <Heading as="h1" size={{ base: 'xl', md: '3xl' }} fontWeight="bold" mb={{ base: '3', md: '6' }}>
                     Оформление заказа
                 </Heading>
 
@@ -204,7 +204,7 @@ export default function CheckoutIndex({
                 )}
 
                 <form onSubmit={handleSubmit}>
-                    <Stack gap="4">
+                    <Stack gap={{ base: '3', md: '4' }}>
                         {/* ═══ Таблица: Товары со склада ═══ */}
                         {instockItems.length > 0 && (
                             <ItemTable
@@ -294,12 +294,12 @@ export default function CheckoutIndex({
                             borderWidth="1px"
                             borderColor="border"
                             rounded="lg"
-                            p={{ base: '4', md: '5' }}
+                            p={{ base: '3', md: '5' }}
                         >
                             <Flex align="center" justify="space-between" mb="3" gap="2" flexWrap="wrap">
                                 <Flex align="center" gap="2">
                                     <LuBuilding2 size={20} />
-                                    <Text fontWeight="600" fontSize="lg">Компания</Text>
+                                    <Text fontWeight="600" fontSize={{ base: 'md', md: 'lg' }}>Компания</Text>
                                 </Flex>
                                 <Button
                                     type="button"
@@ -367,11 +367,11 @@ export default function CheckoutIndex({
                             borderWidth="1px"
                             borderColor="border"
                             rounded="lg"
-                            p={{ base: '4', md: '5' }}
+                            p={{ base: '3', md: '5' }}
                         >
                             <Flex align="center" gap="2" mb="3">
                                 <LuTruck size={20} />
-                                <Text fontWeight="600" fontSize="lg">Способ доставки</Text>
+                                <Text fontWeight="600" fontSize={{ base: 'md', md: 'lg' }}>Способ доставки</Text>
                             </Flex>
 
                             <RadioCard.Root
@@ -442,11 +442,11 @@ export default function CheckoutIndex({
                             borderWidth="1px"
                             borderColor="border"
                             rounded="lg"
-                            p={{ base: '4', md: '5' }}
+                            p={{ base: '3', md: '5' }}
                         >
                             <Flex align="center" gap="2" mb="3">
                                 <LuMapPin size={20} />
-                                <Text fontWeight="600" fontSize="lg">Адрес доставки</Text>
+                                <Text fontWeight="600" fontSize={{ base: 'md', md: 'lg' }}>Адрес доставки</Text>
                             </Flex>
 
                             <RadioCard.Root
@@ -586,7 +586,7 @@ export default function CheckoutIndex({
                                         justify="space-between"
                                         gap="2"
                                         w="full"
-                                        px={{ base: '4', md: '5' }}
+                                        px={{ base: '3', md: '5' }}
                                         py="4"
                                         cursor="pointer"
                                         _hover={{ bg: 'bg.subtle' }}
@@ -594,7 +594,7 @@ export default function CheckoutIndex({
                                     >
                                         <Flex align="center" gap="2" flexWrap="wrap">
                                             <LuMessageSquare size={20} />
-                                            <Text fontWeight="600" fontSize="lg">Комментарии к заказу</Text>
+                                            <Text fontWeight="600" fontSize={{ base: 'md', md: 'lg' }}>Комментарии к заказу</Text>
                                             {filledCount > 0 && (
                                                 <Badge colorPalette="pecado" variant="subtle">
                                                     заполнено: {filledCount}
@@ -607,7 +607,7 @@ export default function CheckoutIndex({
                             })()}
 
                             {commentsOpen && (
-                            <Stack gap="4" px={{ base: '4', md: '5' }} pb={{ base: '4', md: '5' }}>
+                            <Stack gap="4" px={{ base: '3', md: '5' }} pb={{ base: '4', md: '5' }}>
                                 <Box>
                                     <Text fontSize="sm" fontWeight="500" mb="1.5" color="fg.muted">Общий комментарий</Text>
                                     <Textarea
@@ -1040,11 +1040,15 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
             rounded="lg"
             p={{ base: '3', md: '5' }}
         >
+            {/* На мобильном шапка в два этажа: заголовок с бейджами, ниже сумма
+                и пилюля. В одну строку заголовок ломался по слову, а пилюля
+                вылезала за край экрана. */}
             <Flex
                 as="button"
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                align="center"
+                direction={{ base: 'column', md: 'row' }}
+                align={{ base: 'stretch', md: 'center' }}
                 justify="space-between"
                 gap="2"
                 w="full"
@@ -1054,7 +1058,7 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
             >
                 <Flex align="center" gap="2" flexWrap="wrap">
                     {icon}
-                    <Text fontWeight="600" fontSize="lg">
+                    <Text fontWeight="600" fontSize={{ base: 'md', md: 'lg' }}>
                         {title}
                     </Text>
                     <Badge colorPalette={colorPalette} variant="subtle" ml="1">
@@ -1062,7 +1066,7 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                     </Badge>
                     {headerExtra}
                 </Flex>
-                <Flex align="center" gap="3" flexShrink="0">
+                <Flex align="center" gap="3" justify={{ base: 'space-between', md: 'flex-end' }} flexShrink="0">
                     <Text fontWeight="700" fontVariantNumeric="tabular-nums" whiteSpace="nowrap">
                         {fmt(totalDiscounted)} {currencySymbol}
                     </Text>
@@ -1343,7 +1347,7 @@ function OrderSummaryTicket({
     // Главные факты чека — как турагент подчёркивает вылет и номер рейса:
     // крупно, жирно, с золотой чертой под значением.
     const keyValueProps = {
-        fontSize: { base: 'md', md: 'lg' },
+        fontSize: { base: 'sm', md: 'lg' },
         fontWeight: '800',
         lineHeight: '1.3',
         textDecoration: 'underline',
@@ -1383,8 +1387,8 @@ function OrderSummaryTicket({
                 gradientTo="pecado.800"
                 _dark={{ gradientFrom: 'pecado.700', gradientTo: 'pecado.950' }}
                 color="white"
-                px={{ base: '4', md: '6' }}
-                py={{ base: '4', md: '5' }}
+                px={{ base: '3', md: '6' }}
+                py={{ base: '3', md: '5' }}
                 borderBottomWidth="3px"
                 borderBottomColor="champagne.400"
             >
@@ -1407,7 +1411,7 @@ function OrderSummaryTicket({
                 </Flex>
             </Box>
 
-            <Box px={{ base: '4', md: '6' }} py={{ base: '4', md: '5' }}>
+            <Box px={{ base: '3', md: '6' }} py={{ base: '3', md: '5' }}>
                 <Stack gap="3" separator={<Separator borderStyle="dashed" />}>
                     {/* ── Компания ── */}
                     <Flex gap="3" align="center">
@@ -1418,7 +1422,9 @@ function OrderSummaryTicket({
                             <Text {...rowLabelProps}>Компания</Text>
                             {selectedCompany ? (
                                 <>
-                                    <Text {...keyValueProps} lineClamp={1}>{selectedCompany.name}</Text>
+                                    {/* Название компании не обрезаем: клиент должен видеть,
+                                        на какое юрлицо оформляет заказ, целиком */}
+                                    <Text {...keyValueProps} wordBreak="break-word">{selectedCompany.name}</Text>
                                     {selectedCompany.tax_id && (
                                         <Text fontSize="sm" color="fg.muted" mt="1">ИНН {selectedCompany.tax_id}</Text>
                                     )}
@@ -1538,7 +1544,7 @@ function OrderSummaryTicket({
                                         fontWeight="700"
                                         fontVariantNumeric="tabular-nums"
                                     >
-                                        −{fmt(grandRegular - grandDiscounted)} {currencySymbol}
+                                        {fmt(grandRegular - grandDiscounted)} {currencySymbol}
                                     </Badge>
                                 </Flex>
                             </>
@@ -1561,7 +1567,7 @@ function OrderSummaryTicket({
             </Flex>
 
             {/* ── Корешок с кнопками ── */}
-            <Box px={{ base: '4', md: '6' }} py={{ base: '4', md: '5' }}>
+            <Box px={{ base: '3', md: '6' }} py={{ base: '3', md: '5' }}>
                 <Flex
                     gap="3"
                     direction={{ base: 'column', md: 'row' }}
@@ -1727,7 +1733,7 @@ function DebtRestrictionPanel({ restriction, debt }) {
             borderWidth="1px"
             borderColor="red.muted"
             rounded="lg"
-            p={{ base: '4', md: '5' }}
+            p={{ base: '3', md: '5' }}
             mb="4"
             role="status"
         >
@@ -1765,7 +1771,7 @@ function StockConflictsPanel({ items, onNormalize, normalizing }) {
             borderWidth="1px"
             borderColor="orange.muted"
             rounded="lg"
-            p={{ base: '4', md: '5' }}
+            p={{ base: '3', md: '5' }}
             mb="4"
         >
             <Flex align="center" gap="2" mb="2" color="orange.fg">

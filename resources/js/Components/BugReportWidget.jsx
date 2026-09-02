@@ -138,16 +138,22 @@ export default function BugReportWidget() {
 
     return (
         <>
+            {/* На мобильном кнопка прижата к левому краю в середине экрана:
+                внизу живут sticky-итог корзины и чекбокс чекаута, и круглая
+                кнопка в углу перекрывала сумму заказа. */}
             <Box
                 position="fixed"
-                bottom={{ base: 'calc(56px + env(safe-area-inset-bottom) + 12px)', lg: 6 }}
-                left={6}
+                bottom={{ base: 'auto', lg: 6 }}
+                top={{ base: '55%', lg: 'auto' }}
+                left={{ base: 0, lg: 6 }}
                 zIndex={1300}
             >
                 <IconButton
                     colorPalette="red"
                     rounded="full"
-                    size="lg"
+                    roundedLeft={{ base: 'none', lg: 'full' }}
+                    size={{ base: 'sm', lg: 'lg' }}
+                    opacity={{ base: 0.85, lg: 1 }}
                     shadow="lg"
                     onClick={handleOpen}
                     aria-label="Сообщить об ошибке"

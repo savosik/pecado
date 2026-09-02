@@ -128,7 +128,9 @@ export default function UserHeader() {
                             flexShrink="0"
                             aria-label="Открыть каталог"
                         >
-                            <LuMenu />
+                            {/* Сетка, а не гамбургер: на мобильном рядом два одинаковых
+                                гамбургера (каталог и меню) не различить */}
+                            <LuGrid2X2 />
                             <Text display={{ base: 'none', lg: 'inline' }} textTransform="uppercase" fontSize="xs" letterSpacing="0.05em">Каталог</Text>
                         </Button>
 

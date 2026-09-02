@@ -8,6 +8,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { cartFrameProps, cartFrameTooltip, cartRowTint, splitQty } from '@/utils/cartFrame';
 import { useLocalQuantity } from '@/hooks/useLocalQuantity';
 import { useCartStore } from '@/stores/useCartStore';
+import { formatMoney } from '@/utils/formatPrice';
 
 /**
  * Desktop-строка таблицы корзины. Селективная подписка на стор по pid —
@@ -118,6 +119,8 @@ function CartTableRow({
                 <Checkbox
                     checked={selected}
                     onCheckedChange={(e) => onToggle(pid, !!e.checked)}
+                    aria-label="Выбрать товар для действий"
+                    title="Выбрать товар для действий"
                 />
             </Table.Cell>
             <Table.Cell verticalAlign="middle">
@@ -173,16 +176,16 @@ function CartTableRow({
                 </Table.Cell>
             )}
             <Table.Cell textAlign="right" verticalAlign="middle" fontSize="xs">
-                {priceRegular.toLocaleString('ru-RU')}
+                {formatMoney(priceRegular)}
             </Table.Cell>
             <Table.Cell textAlign="right" verticalAlign="middle" fontSize="xs">
                 {discountPercent > 0 ? `${discountPercent}%` : '—'}
             </Table.Cell>
             <Table.Cell textAlign="right" verticalAlign="middle" fontSize="xs">
-                {priceDiscounted.toLocaleString('ru-RU')}
+                {formatMoney(priceDiscounted)}
             </Table.Cell>
             <Table.Cell textAlign="right" verticalAlign="middle" fontWeight="medium" fontSize="xs">
-                {sumDiscounted.toLocaleString('ru-RU')}
+                {formatMoney(sumDiscounted)}
             </Table.Cell>
             <Table.Cell verticalAlign="middle">
                 <IconButton

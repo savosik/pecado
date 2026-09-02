@@ -3,6 +3,7 @@ import { Box, Flex, Text, Button } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
 import { LuShoppingBag, LuCreditCard, LuClock3 } from 'react-icons/lu';
 import { useCartStore } from '@/stores/useCartStore';
+import { formatMoney } from '@/utils/formatPrice';
 
 /**
  * Итоговая карточка корзины.
@@ -106,16 +107,16 @@ export default function CartSummary({ cartDetails, hasItems, defectTotals = { qt
                         </Text>
                         {hasDiscount && (
                             <Text fontSize="xs" color="fg.muted" textDecoration="line-through" lineHeight="1">
-                                {totals.totalRegular.toLocaleString('ru-RU')}
+                                {formatMoney(totals.totalRegular)}
                             </Text>
                         )}
                     </Flex>
                     <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" lineHeight="1.2" mt="0.5">
-                        {totals.totalDiscounted.toLocaleString('ru-RU')} {currencySymbol}
+                        {formatMoney(totals.totalDiscounted)} {currencySymbol}
                     </Text>
                     {hasDiscount && (
                         <Text fontSize="2xs" color="green.600" lineHeight="1.2" mt="0.5">
-                            Экономия {savings.toLocaleString('ru-RU')} {currencySymbol}
+                            Экономия {formatMoney(savings)} {currencySymbol}
                         </Text>
                     )}
                     {/* Предзаказ — тоже отдельный заказ и ожидание поставки. Клиент
@@ -124,7 +125,7 @@ export default function CartSummary({ cartDetails, hasItems, defectTotals = { qt
                         <Flex align="center" gap="1" mt="1" color="orange.600" _dark={{ color: 'orange.400' }}>
                             <LuClock3 size={12} />
                             <Text fontSize="2xs" lineHeight="1.2" fontWeight="500">
-                                В том числе предзаказ: {totals.preorderQty} шт. на {totals.preorderAmount.toLocaleString('ru-RU')} {currencySymbol}
+                                В том числе предзаказ: {totals.preorderQty} шт. на {formatMoney(totals.preorderAmount)} {currencySymbol}
                                 {leadLabel ? ` — нет на складе, поставка ${leadLabel}` : ' — нет на складе'}
                             </Text>
                         </Flex>
@@ -133,7 +134,7 @@ export default function CartSummary({ cartDetails, hasItems, defectTotals = { qt
                         отдельной строкой: смешанная сумма ввела бы в заблуждение */}
                     {promoAmount > 0 && (
                         <Text fontSize="2xs" color="fg.muted" lineHeight="1.2" mt="0.5">
-                            Промо-позиции (отдельный заказ): {promoAmount.toLocaleString('ru-RU')} {currencySymbol}
+                            Промо-позиции (отдельный заказ): {formatMoney(promoAmount)} {currencySymbol}
                         </Text>
                     )}
                 </Box>

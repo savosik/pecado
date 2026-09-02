@@ -22,5 +22,24 @@ export function formatPrice(amount, currency) {
         maximumFractionDigits: 2,
     }).format(num);
 
-    return `${formatted}\u00A0${symbol}`;
+    return `${formatted} ${symbol}`;
+}
+
+/**
+ * Форматирование суммы без знака валюты: целые — без копеек («2 395»),
+ * дробные — всегда с двумя знаками («4 071,50», а не «4 071,5»).
+ *
+ * @param {number|string|null|undefined} amount — сумма
+ * @returns {string}
+ */
+export function formatMoney(amount) {
+    const num = Number(amount);
+    if (Number.isNaN(num)) {
+        return '';
+    }
+
+    return new Intl.NumberFormat('ru-RU', {
+        minimumFractionDigits: Number.isInteger(num) ? 0 : 2,
+        maximumFractionDigits: 2,
+    }).format(num);
 }

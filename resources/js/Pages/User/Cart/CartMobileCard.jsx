@@ -9,6 +9,7 @@ import TagList from '@/components/product/TagList';
 import { cartFrameProps, cartFrameTooltip, cartFrameState, splitQty } from '@/utils/cartFrame';
 import { useLocalQuantity } from '@/hooks/useLocalQuantity';
 import { useCartStore } from '@/stores/useCartStore';
+import { formatMoney } from '@/utils/formatPrice';
 
 /**
  * Mobile-карточка строки корзины. Визуально совпадает с каталоговым ProductListItem
@@ -229,11 +230,11 @@ function CartMobileCard({
                             </Text>
                             {hasDiscount && (
                                 <Text fontSize="xs" color="fg.muted" textDecoration="line-through" lineHeight="1.2">
-                                    {priceRegular.toLocaleString('ru-RU')}
+                                    {formatMoney(priceRegular)}
                                 </Text>
                             )}
                             <Text fontWeight="600" fontSize="md" lineHeight="1.2">
-                                {priceDiscounted.toLocaleString('ru-RU')}
+                                {formatMoney(priceDiscounted)}
                             </Text>
                         </Box>
 
@@ -291,6 +292,8 @@ function CartMobileCard({
                     <Checkbox
                         checked={selected}
                         onCheckedChange={(e) => onToggle(pid, !!e.checked)}
+                        aria-label="Выбрать товар для действий"
+                        title="Выбрать товар для действий"
                     />
                 </Box>
 
@@ -300,11 +303,11 @@ function CartMobileCard({
                         <Text as="span" fontSize="2xs" color="fg.muted" mr="1">Итого:</Text>
                         {hasDiscount && (
                             <Text as="span" fontSize="xs" color="fg.muted" textDecoration="line-through" mr="1">
-                                {sumRegular.toLocaleString('ru-RU')}
+                                {formatMoney(sumRegular)}
                             </Text>
                         )}
                         <Text as="span" fontWeight="700">
-                            {sumDiscounted.toLocaleString('ru-RU')} {currencySymbol}
+                            {formatMoney(sumDiscounted)} {currencySymbol}
                         </Text>
                     </Box>
                     <IconButton
