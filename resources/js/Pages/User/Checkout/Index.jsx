@@ -56,7 +56,12 @@ export default function CheckoutIndex({
     const hasPreorder = preorderItems.length > 0 && preorderQty > 0;
     // «Только со склада» имеет смысл, когда кроме предзаказа есть строки корзины
     // (промо и образцы — производные, сами по себе заказ не образуют).
-    const instockOnlyQty = Number(instockTotals?.quantity ?? 0) + Number(defectTotals?.quantity ?? 0);
+    // Уценка отгружается сразу, поэтому в «складской» цифре она честно участвует;
+    // что она уедет отдельным документом — говорит строка под кнопками.
+    const instockQty = Number(instockTotals?.quantity ?? 0);
+    const defectQty = Number(defectTotals?.quantity ?? 0);
+    const hasDefect = defectQty > 0;
+    const instockOnlyQty = instockQty + defectQty;
     const canInstockOnly = hasPreorder && instockOnlyQty > 0;
 
     const breadcrumbs = [
@@ -673,9 +678,12 @@ export default function CheckoutIndex({
                                 ? 'Сначала уточните корзину — есть позиции с изменившимся остатком'
                                 : (debtRestriction?.blocks_all_orders ? 'Оформление приостановлено до погашения задолженности' : undefined);
 
+                            // «Со склада N шт.» вместо «Заказ N шт.»: документов может быть
+                            // до трёх (склад / уценка / предзаказ), а вот отгрузка — правда
+                            // одна и сразу. Симметрично кнопке «Только со склада».
                             let submitLabel = 'Оформить заказ';
                             if (hasPreorder && canInstockOnly) {
-                                submitLabel = `Заказ ${instockOnlyQty} шт. + предзаказ ${preorderQty} шт.`;
+                                submitLabel = `Со склада ${instockOnlyQty} шт. + предзаказ ${preorderQty} шт.`;
                             } else if (hasPreorder) {
                                 submitLabel = `Оформить предзаказ (${preorderQty} шт.)`;
                             }
@@ -729,6 +737,15 @@ export default function CheckoutIndex({
                                                     Предзаказ — отдельный заказ{leadLabel ? `, поставка ${leadLabel}` : ''}
                                                     {canInstockOnly ? '; товары со склада отгрузим сразу' : ''}
                                                 </Text>
+                                            </Flex>
+                                        )}
+                                        {/* Уценка тоже уходит отдельным документом — клиент должен
+                                            узнать это здесь, а не из списка заказов после оформления.
+                                            Когда в корзине только уценка, документ один и строка не нужна. */}
+                                        {hasDefect && (instockQty > 0 || hasPreorder) && (
+                                            <Flex align="center" gap="1.5" fontSize="xs" color="purple.600" _dark={{ color: 'purple.400' }} justify={{ base: 'flex-start', md: 'flex-end' }}>
+                                                <LuBadgePercent size={13} />
+                                                <Text>Уценка ({defectQty} шт.) оформится отдельным заказом — отгрузим сразу</Text>
                                             </Flex>
                                         )}
                                     </Stack>
