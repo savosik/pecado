@@ -431,7 +431,7 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
 
         $relations = $this->registry->eagerLoadFor($this->fieldKeys);
 
-        $query = $this->buildQuery($export->filters ?? []);
+        $query = $this->buildQuery($export->filters ?? [], $export->client_user_id);
         if (! empty($relations)) {
             // Режем склады по региону клиента: складские поля читают
             // $product->warehouses напрямую и без этого отдали бы остатки
@@ -541,14 +541,14 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
      * Поддерживает иерархический формат фильтров и плоский, как
      * в ProductExportService::buildQuery.
      */
-    protected function buildQuery(array $filters): Builder
+    protected function buildQuery(array $filters, ?int $clientUserId = null): Builder
     {
         // Делегируем существующему ProductExportService — там полная логика
         // вложенных групп AND/OR, привязки к FieldRegistry и т.п.
         /** @var \App\Services\ProductExportService $service */
         $service = app(\App\Services\ProductExportService::class);
 
-        return $service->buildQuery($filters);
+        return $service->buildQuery($filters, $clientUserId);
     }
 
     protected function extractRow(Product $product, ?User $clientUser): array

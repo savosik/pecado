@@ -186,7 +186,7 @@ class ProductExport extends Model
                 // чем заблокировать save.
                 try {
                     $model->estimated_rows = app(\App\Services\ProductExportService::class)
-                        ->buildQuery($model->filters ?? [])
+                        ->buildQuery($model->filters ?? [], $model->client_user_id)
                         ->count();
                 } catch (\Throwable) {
                     // оставляем предыдущее значение

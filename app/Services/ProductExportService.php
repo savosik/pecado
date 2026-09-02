@@ -64,8 +64,11 @@ class ProductExportService
      *
      * Supports both hierarchical format { "logic": "and", "conditions": [...] }
      * and flat format [ { "field": ..., "operator": ..., "value": ... }, ... ]
+     *
+     * $clientUserId — клиент выгрузки: нужен полям, фильтрующим по документам
+     * клиента («содержится в заказах», «когда-либо заказывался»).
      */
-    public function buildQuery(array $filters = []): Builder
+    public function buildQuery(array $filters = [], ?int $clientUserId = null): Builder
     {
         $query = Product::query();
 
@@ -74,7 +77,7 @@ class ProductExportService
         }
 
         if (isset($filters['logic'])) {
-            $this->applyFilterGroup($query, $filters);
+            $this->applyFilterGroup($query, $filters, $clientUserId);
         } else {
             foreach ($filters as $filter) {
                 $field = $filter['field'] ?? null;
@@ -85,7 +88,7 @@ class ProductExportService
                     continue;
                 }
 
-                $this->applyFieldFilter($query, $field, $operator, $value);
+                $this->applyFieldFilter($query, $field, $operator, $value, $clientUserId);
             }
         }
 
@@ -95,7 +98,7 @@ class ProductExportService
     /**
      * Apply a hierarchical filter group recursively.
      */
-    protected function applyFilterGroup(Builder $query, array $group): void
+    protected function applyFilterGroup(Builder $query, array $group, ?int $clientUserId = null): void
     {
         $logic = strtolower($group['logic'] ?? 'and');
         $conditions = $group['conditions'] ?? [];
@@ -104,18 +107,18 @@ class ProductExportService
             return;
         }
 
-        $query->where(function (Builder $q) use ($conditions, $logic) {
+        $query->where(function (Builder $q) use ($conditions, $logic, $clientUserId) {
             foreach ($conditions as $condition) {
                 $type = $condition['type'] ?? 'condition';
 
                 if ($type === 'group') {
                     if ($logic === 'or') {
-                        $q->orWhere(function (Builder $sq) use ($condition) {
-                            $this->applyFilterGroup($sq, $condition);
+                        $q->orWhere(function (Builder $sq) use ($condition, $clientUserId) {
+                            $this->applyFilterGroup($sq, $condition, $clientUserId);
                         });
                     } else {
-                        $q->where(function (Builder $sq) use ($condition) {
-                            $this->applyFilterGroup($sq, $condition);
+                        $q->where(function (Builder $sq) use ($condition, $clientUserId) {
+                            $this->applyFilterGroup($sq, $condition, $clientUserId);
                         });
                     }
                 } else {
@@ -128,12 +131,12 @@ class ProductExportService
                     }
 
                     if ($logic === 'or') {
-                        $q->orWhere(function (Builder $sq) use ($field, $operator, $value) {
-                            $this->applyFieldFilter($sq, $field, $operator, $value);
+                        $q->orWhere(function (Builder $sq) use ($field, $operator, $value, $clientUserId) {
+                            $this->applyFieldFilter($sq, $field, $operator, $value, $clientUserId);
                         });
                     } else {
-                        $q->where(function (Builder $sq) use ($field, $operator, $value) {
-                            $this->applyFieldFilter($sq, $field, $operator, $value);
+                        $q->where(function (Builder $sq) use ($field, $operator, $value, $clientUserId) {
+                            $this->applyFieldFilter($sq, $field, $operator, $value, $clientUserId);
                         });
                     }
                 }
@@ -144,7 +147,7 @@ class ProductExportService
     /**
      * Apply a single filter using the field registry.
      */
-    protected function applyFieldFilter(Builder $query, string $fieldKey, string $operator, mixed $value): void
+    protected function applyFieldFilter(Builder $query, string $fieldKey, string $operator, mixed $value, ?int $clientUserId = null): void
     {
         // Legacy attribute filter with nested value
         if ($fieldKey === 'attribute' && is_array($value) && isset($value['attribute_id'])) {
@@ -154,7 +157,7 @@ class ProductExportService
 
         $field = $this->registry->resolve($fieldKey);
         if ($field) {
-            $field->applyFilter($query, $operator, $value);
+            $field->applyFilter($query, $operator, $value, $clientUserId);
         }
     }
 
@@ -191,7 +194,7 @@ class ProductExportService
      */
     public function fetchData(ProductExport $export, ?int $limit = null): Collection
     {
-        $query = $this->buildQuery($export->filters ?? []);
+        $query = $this->buildQuery($export->filters ?? [], $export->client_user_id);
 
         [$fieldKeys, , $modifiers] = $this->normalizeFields($export->fields ?? []);
 
@@ -223,9 +226,9 @@ class ProductExportService
     /**
      * Get count of matched products.
      */
-    public function getCount(array $filters = []): int
+    public function getCount(array $filters = [], ?int $clientUserId = null): int
     {
-        return $this->buildQuery($filters)->count();
+        return $this->buildQuery($filters, $clientUserId)->count();
     }
 
     /**
@@ -524,7 +527,7 @@ class ProductExportService
      */
     public function preview(array $filters, array $fields, ?int $clientUserId = null, int $limit = 20): array
     {
-        $query = $this->buildQuery($filters);
+        $query = $this->buildQuery($filters, $clientUserId);
         $total = $query->count();
 
         $export = new ProductExport;

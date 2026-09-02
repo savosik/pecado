@@ -9,7 +9,9 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Certificate;
 use App\Models\Currency;
+use App\Models\Order;
 use App\Models\ProductExport;
+use App\Models\Shipment;
 use App\Models\Warehouse;
 use App\Services\ProductExportService;
 use Illuminate\Http\Request;
@@ -221,7 +223,8 @@ class ProductExportController extends Controller
     public function filterOptions(Request $request)
     {
         $type = $request->input('type');
-        $search = $request->input('search', '');
+        // RelationSelect на фронте шлёт параметр `query`, легаси-вызовы — `search`
+        $search = $request->input('search', $request->input('query', ''));
 
         $data = match ($type) {
             'brands' => Brand::query()
@@ -248,6 +251,39 @@ class ProductExportController extends Controller
                 ->orderBy('name')
                 ->limit(50)
                 ->get(),
+            // Для условий «Содержится в заказах / реализациях». Менеджер ищет
+            // по номеру среди всех документов; при генерации выгрузки условие
+            // всё равно сузится до документов client_user_id выгрузки.
+            'orders' => Order::query()
+                ->with(['company:id,name', 'user:id,name'])
+                ->when($search, fn ($q) => $q->where(fn ($w) => $w
+                    ->where('number', 'like', "%{$search}%")
+                    ->orWhere('erp_number', 'like', "%{$search}%")))
+                ->orderByDesc('created_at')
+                ->limit(50)
+                ->get()
+                ->map(fn (Order $order) => [
+                    'id' => $order->id,
+                    'name' => '№ '.($order->number ?: $order->erp_number ?: $order->id)
+                        .' от '.($order->erp_created_at ?? $order->created_at)?->format('d.m.Y')
+                        .(($owner = $order->company->name ?? $order->user->name ?? null) ? " — {$owner}" : ''),
+                ])
+                ->values(),
+            'shipments' => Shipment::query()
+                ->with(['company:id,name', 'user:id,name'])
+                ->when($search, fn ($q) => $q->where(fn ($w) => $w
+                    ->where('number', 'like', "%{$search}%")
+                    ->orWhere('erp_number', 'like', "%{$search}%")))
+                ->orderByDesc('date')
+                ->limit(50)
+                ->get()
+                ->map(fn (Shipment $shipment) => [
+                    'id' => $shipment->id,
+                    'name' => '№ '.($shipment->number ?: $shipment->erp_number ?: $shipment->id)
+                        .' от '.($shipment->date ?? $shipment->erp_created_at ?? $shipment->created_at)?->format('d.m.Y')
+                        .(($owner = $shipment->company->name ?? $shipment->user->name ?? null) ? " — {$owner}" : ''),
+                ])
+                ->values(),
             default => collect(),
         };
 

@@ -146,7 +146,7 @@ class DynamicAttributeField extends ExportField
 
     // ─── Filter Logic ──────────────────────────────
 
-    public function applyFilter(Builder $query, string $operator, mixed $value): void
+    public function applyFilter(Builder $query, string $operator, mixed $value, ?int $clientUserId = null): void
     {
         $attribute = $this->attribute;
 

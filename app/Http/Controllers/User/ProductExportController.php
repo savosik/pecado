@@ -9,7 +9,9 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Certificate;
 use App\Models\Currency;
+use App\Models\Order;
 use App\Models\ProductExport;
+use App\Models\Shipment;
 use App\Models\Warehouse;
 use App\Services\ProductExportService;
 use Illuminate\Http\Request;
@@ -241,6 +243,36 @@ class ProductExportController extends Controller
                 ->orderBy('name')
                 ->limit(50)
                 ->get(),
+            // Для условий «Содержится в заказах / реализациях» — только
+            // собственные документы клиента (как в разделах кабинета).
+            'orders' => Order::query()
+                ->where('user_id', Auth::id())
+                ->when($search, fn ($q) => $q->where(fn ($w) => $w
+                    ->where('number', 'like', "%{$search}%")
+                    ->orWhere('erp_number', 'like', "%{$search}%")))
+                ->orderByDesc('created_at')
+                ->limit(50)
+                ->get()
+                ->map(fn (Order $order) => [
+                    'id' => $order->id,
+                    'name' => '№ '.($order->number ?: $order->erp_number ?: $order->id)
+                        .' от '.($order->erp_created_at ?? $order->created_at)?->format('d.m.Y'),
+                ])
+                ->values(),
+            'shipments' => Shipment::query()
+                ->where('user_id', Auth::id())
+                ->when($search, fn ($q) => $q->where(fn ($w) => $w
+                    ->where('number', 'like', "%{$search}%")
+                    ->orWhere('erp_number', 'like', "%{$search}%")))
+                ->orderByDesc('date')
+                ->limit(50)
+                ->get()
+                ->map(fn (Shipment $shipment) => [
+                    'id' => $shipment->id,
+                    'name' => '№ '.($shipment->number ?: $shipment->erp_number ?: $shipment->id)
+                        .' от '.($shipment->date ?? $shipment->erp_created_at ?? $shipment->created_at)?->format('d.m.Y'),
+                ])
+                ->values(),
             default => collect(),
         };
 
@@ -285,6 +317,8 @@ class ProductExportController extends Controller
             '/admin/warehouses/search' => '/cabinet/product-exports/filter-options?type=warehouses',
             '/admin/certificates/search' => '/cabinet/product-exports/filter-options?type=certificates',
             '/admin/product-models/search' => '/cabinet/product-exports/filter-options?type=models',
+            '/admin/product-exports/filter-options?type=orders' => '/cabinet/product-exports/filter-options?type=orders',
+            '/admin/product-exports/filter-options?type=shipments' => '/cabinet/product-exports/filter-options?type=shipments',
         ];
 
         foreach ($filters as &$group) {

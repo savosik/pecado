@@ -122,8 +122,12 @@ abstract class ExportField
 
     /**
      * Применить фильтр к запросу.
+     *
+     * $clientUserId — клиент выгрузки (product_exports.client_user_id): поля,
+     * фильтрующие по документам клиента («содержится в заказах» и т.п.),
+     * обязаны сужать выборку до его документов.
      */
-    public function applyFilter(Builder $query, string $operator, mixed $value): void
+    public function applyFilter(Builder $query, string $operator, mixed $value, ?int $clientUserId = null): void
     {
         // По умолчанию ничего не делает.
         // Переопределяется в конкретных полях.

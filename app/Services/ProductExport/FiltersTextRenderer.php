@@ -5,7 +5,9 @@ namespace App\Services\ProductExport;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Certificate;
+use App\Models\Order;
 use App\Models\ProductModel;
+use App\Models\Shipment;
 use App\Models\Warehouse;
 
 /**
@@ -30,6 +32,8 @@ class FiltersTextRenderer
             'model_id' => [],
             'warehouse_id' => [],
             'certificate_id' => [],
+            'in_orders' => [],
+            'in_shipments' => [],
         ];
 
         $this->collectIds($filters, $idsByField);
@@ -60,6 +64,16 @@ class FiltersTextRenderer
             $names = array_merge($names, Certificate::query()
                 ->whereIn('id', array_unique($idsByField['certificate_id']))
                 ->pluck('name')->all());
+        }
+        if (! empty($idsByField['in_orders'])) {
+            $names = array_merge($names, Order::query()
+                ->whereIn('id', array_unique($idsByField['in_orders']))
+                ->pluck('number')->all());
+        }
+        if (! empty($idsByField['in_shipments'])) {
+            $names = array_merge($names, Shipment::query()
+                ->whereIn('id', array_unique($idsByField['in_shipments']))
+                ->pluck('number')->all());
         }
 
         return trim(implode(' ', array_filter(array_map('strval', $names), fn ($n) => $n !== '')));

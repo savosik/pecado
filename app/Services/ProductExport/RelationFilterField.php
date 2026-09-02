@@ -63,7 +63,7 @@ abstract class RelationFilterField extends ExportField
         return 'id';
     }
 
-    public function applyFilter(Builder $query, string $operator, mixed $value): void
+    public function applyFilter(Builder $query, string $operator, mixed $value, ?int $clientUserId = null): void
     {
         $ids = is_array($value) ? $value : [$value];
 

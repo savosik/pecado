@@ -148,6 +148,11 @@ class FieldRegistry
             new Fields\Filters\ModelFilterField,
             new Fields\Filters\WarehouseFilterField,
             new Fields\Filters\CertificateFilterField,
+
+            // Фильтры-only (покупки клиента выгрузки)
+            new Fields\Filters\InOrdersFilterField,
+            new Fields\Filters\InShipmentsFilterField,
+            new Fields\Filters\EverOrderedFilterField,
         ];
 
         foreach ($fields as $field) {

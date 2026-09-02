@@ -522,6 +522,14 @@ class Product extends Model implements HasMedia
     }
 
     /**
+     * Get the shipment items for the product.
+     */
+    public function shipmentItems(): HasMany
+    {
+        return $this->hasMany(ShipmentItem::class);
+    }
+
+    /**
      * Get the promotions that belong to the product.
      */
     public function promotions(): BelongsToMany

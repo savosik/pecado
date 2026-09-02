@@ -68,7 +68,7 @@ abstract class ProductColumnField extends ExportField
         };
     }
 
-    public function applyFilter(Builder $query, string $operator, mixed $value): void
+    public function applyFilter(Builder $query, string $operator, mixed $value, ?int $clientUserId = null): void
     {
         $col = $this->column();
 
