@@ -4,13 +4,14 @@ import {
     Box, Flex, Text, Heading, Button, Table, Badge, Separator,
     Textarea, NativeSelect, RadioCard, Stack, Dialog, Portal, Input, SimpleGrid, HStack,
 } from '@chakra-ui/react';
-import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch, LuStore, LuTriangleAlert, LuTruck, LuWand, LuBadgePercent, LuGift, LuSprout, LuClock3 } from 'react-icons/lu';
+import { LuArrowLeft, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch, LuStore, LuTriangleAlert, LuTruck, LuWand, LuBadgePercent, LuGift, LuSprout, LuClock3, LuChevronDown, LuReceiptText } from 'react-icons/lu';
 import axios from 'axios';
 import UserLayout from '../UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toaster } from '@/components/ui/toaster';
 import { Field } from '@/components/ui/field';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip } from '@/components/ui/tooltip';
 import { PhoneInput } from '@/components/common/PhoneInput';
 import { PartySuggest } from '@/components/common/PartySuggest';
 import { EmailSuggest } from '@/components/common/EmailSuggest';
@@ -96,6 +97,8 @@ export default function CheckoutIndex({
     );
     const useNewAddress = addressChoice === 'new';
     const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
+    // Комментарии нужны редко — по умолчанию свёрнуты, чтобы не раздувать страницу.
+    const [commentsOpen, setCommentsOpen] = useState(false);
     const [normalizing, setNormalizing] = useState(false);
     // Локальный блок DaData для центровки карты адреса доставки (на сервер не отправляется).
     const [deliveryAddrData, setDeliveryAddrData] = useState(null);
@@ -284,70 +287,9 @@ export default function CheckoutIndex({
                             />
                         )}
 
-                        {/* ═══ Общий итог — только если непустых групп больше одной ═══ */}
-                        {[instockItems, preorderItems, defectItems, promoItems, sampleItems].filter((g) => g.length > 0).length > 1 && (
-                        <Box
-                            bg="bg"
-                            borderWidth="1px"
-                            borderColor="border"
-                            rounded="lg"
-                            p={{ base: '3', md: '5' }}
-                        >
-                            {(() => {
-                                const grandRegular = Number(grandTotal.amount_regular || 0);
-                                const grandDiscounted = Number(grandTotal.amount_discounted || 0);
-                                const grandHasDiscount = grandRegular > grandDiscounted;
-                                return (
-                                    <Flex
-                                        direction={{ base: 'column', md: 'row' }}
-                                        justify="space-between"
-                                        align={{ base: 'stretch', md: 'center' }}
-                                        gap="3"
-                                    >
-                                        <Text fontWeight="600" fontSize="lg">
-                                            Итого ({grandTotal.quantity ?? 0} шт.)
-                                        </Text>
-                                        <Stack gap="1" minW={{ md: '280px' }}>
-                                            {grandHasDiscount ? (
-                                                <>
-                                                    <Flex justify="space-between">
-                                                        <Text fontSize="sm" color="fg.muted">Сумма без скидки</Text>
-                                                        <Text fontSize="sm" color="fg.muted" textDecoration="line-through">
-                                                            {fmt(grandRegular)} {currencySymbol}
-                                                        </Text>
-                                                    </Flex>
-                                                    <Flex justify="space-between">
-                                                        <Text fontSize="sm" color="green.600" _dark={{ color: 'green.400' }}>
-                                                            Сумма скидки
-                                                        </Text>
-                                                        <Text fontSize="sm" color="green.600" _dark={{ color: 'green.400' }}>
-                                                            −{fmt(grandRegular - grandDiscounted)} {currencySymbol}
-                                                        </Text>
-                                                    </Flex>
-                                                    <Flex justify="space-between" pt="1" borderTopWidth="1px" borderColor="border">
-                                                        <Text fontSize="lg" fontWeight="bold">Итого</Text>
-                                                        <Text fontSize="lg" fontWeight="bold">
-                                                            {fmt(grandDiscounted)} {currencySymbol}
-                                                        </Text>
-                                                    </Flex>
-                                                </>
-                                            ) : (
-                                                <Flex justify="space-between" gap="3">
-                                                    <Text fontSize="lg" fontWeight="bold">Итого</Text>
-                                                    <Text fontSize="lg" fontWeight="bold">
-                                                        {fmt(grandDiscounted)} {currencySymbol}
-                                                    </Text>
-                                                </Flex>
-                                            )}
-                                        </Stack>
-                                    </Flex>
-                                );
-                            })()}
-                        </Box>
-                        )}
-
                         {/* ═══ Компания ═══ */}
                         <Box
+                            id="checkout-company"
                             bg="bg"
                             borderWidth="1px"
                             borderColor="border"
@@ -420,6 +362,7 @@ export default function CheckoutIndex({
 
                         {/* ═══ Способ доставки ═══ */}
                         <Box
+                            id="checkout-delivery"
                             bg="bg"
                             borderWidth="1px"
                             borderColor="border"
@@ -494,6 +437,7 @@ export default function CheckoutIndex({
                         {/* ═══ Адрес доставки (скрыт при самовывозе) ═══ */}
                         {data.delivery_method === 'delivery' && (
                         <Box
+                            id="checkout-address"
                             bg="bg"
                             borderWidth="1px"
                             borderColor="border"
@@ -622,20 +566,48 @@ export default function CheckoutIndex({
                         </Box>
                         )}
 
-                        {/* ═══ Комментарий ═══ */}
+                        {/* ═══ Комментарии — редко используются, по умолчанию свёрнуты ═══ */}
                         <Box
                             bg="bg"
                             borderWidth="1px"
                             borderColor="border"
                             rounded="lg"
-                            p={{ base: '4', md: '5' }}
+                            overflow="hidden"
                         >
-                            <Flex align="center" gap="2" mb="3">
-                                <LuMessageSquare size={20} />
-                                <Text fontWeight="600" fontSize="lg">Комментарии к заказу</Text>
-                            </Flex>
+                            {(() => {
+                                const filledCount = [data.comment, data.manager_comment, data.warehouse_comment]
+                                    .filter((v) => v.trim() !== '').length;
+                                return (
+                                    <Flex
+                                        as="button"
+                                        type="button"
+                                        onClick={() => setCommentsOpen((v) => !v)}
+                                        align="center"
+                                        justify="space-between"
+                                        gap="2"
+                                        w="full"
+                                        px={{ base: '4', md: '5' }}
+                                        py="4"
+                                        cursor="pointer"
+                                        _hover={{ bg: 'bg.subtle' }}
+                                        aria-expanded={commentsOpen}
+                                    >
+                                        <Flex align="center" gap="2" flexWrap="wrap">
+                                            <LuMessageSquare size={20} />
+                                            <Text fontWeight="600" fontSize="lg">Комментарии к заказу</Text>
+                                            {filledCount > 0 && (
+                                                <Badge colorPalette="pecado" variant="subtle">
+                                                    заполнено: {filledCount}
+                                                </Badge>
+                                            )}
+                                        </Flex>
+                                        <DisclosurePill open={commentsOpen} closedLabel="Добавить комментарий" />
+                                    </Flex>
+                                );
+                            })()}
 
-                            <Stack gap="4">
+                            {commentsOpen && (
+                            <Stack gap="4" px={{ base: '4', md: '5' }} pb={{ base: '4', md: '5' }}>
                                 <Box>
                                     <Text fontSize="sm" fontWeight="500" mb="1.5" color="fg.muted">Общий комментарий</Text>
                                     <Textarea
@@ -666,92 +638,46 @@ export default function CheckoutIndex({
                                     />
                                 </Box>
                             </Stack>
+                            )}
                         </Box>
 
-                        {/* ═══ Кнопки ═══
-                            С предзаказом в корзине — два равноправных пути в один клик:
-                            «Только со склада» (предзаказ убираем) и «Заказ + предзаказ».
-                            Кнопка называет цифры сама — читать таблицы выше не обязательно. */}
-                        {(() => {
-                            const submitDisabled = processing || companies.length === 0 || hasConflicts || !!debtRestriction?.blocks_all_orders;
-                            const submitTitle = hasConflicts
-                                ? 'Сначала уточните корзину — есть позиции с изменившимся остатком'
-                                : (debtRestriction?.blocks_all_orders ? 'Оформление приостановлено до погашения задолженности' : undefined);
+                        {/* ═══ Сводка-чек: клиент скроллит сразу сюда, поэтому здесь всё,
+                            что он мог проскочить выше — компания, доставка, состав, итог.
+                            Кнопки оформления живут в «отрывном корешке» чека. ═══ */}
+                        <OrderSummaryTicket
+                            companies={companies}
+                            data={data}
+                            addresses={addresses}
+                            addressChoice={addressChoice}
+                            groups={{
+                                instock: { items: instockItems, totals: instockTotals },
+                                preorder: { items: preorderItems, totals: preorderTotals },
+                                defect: { items: defectItems, totals: defectTotals },
+                                promo: { items: promoItems, totals: promoTotals },
+                                sample: { items: sampleItems, totals: sampleTotals },
+                            }}
+                            grandTotal={grandTotal}
+                            leadLabel={leadLabel}
+                            fmt={fmt}
+                            currencySymbol={currencySymbol}
+                            hasConflicts={hasConflicts}
+                            debtRestriction={debtRestriction}
+                            processing={processing}
+                            canInstockOnly={canInstockOnly}
+                            instockOnlyQty={instockOnlyQty}
+                            preorderQty={preorderQty}
+                            onSubmitInstockOnly={() => submit(true)}
+                            onAddCompany={() => setCompanyDialogOpen(true)}
+                        />
 
-                            // «Со склада N шт.» вместо «Заказ N шт.»: документов может быть
-                            // до трёх (склад / уценка / предзаказ), а вот отгрузка — правда
-                            // одна и сразу. Симметрично кнопке «Только со склада».
-                            let submitLabel = 'Оформить заказ';
-                            if (hasPreorder && canInstockOnly) {
-                                submitLabel = `Со склада ${instockOnlyQty} шт. + предзаказ ${preorderQty} шт.`;
-                            } else if (hasPreorder) {
-                                submitLabel = `Оформить предзаказ (${preorderQty} шт.)`;
-                            }
-
-                            return (
-                                <Flex
-                                    gap="3"
-                                    justify="space-between"
-                                    align={{ base: 'stretch', md: 'flex-start' }}
-                                    direction={{ base: 'column-reverse', md: 'row' }}
-                                >
-                                    <Button asChild variant="outline" size="lg">
-                                        <Link href="/cart">
-                                            <LuArrowLeft size={16} />
-                                            Вернуться в корзину
-                                        </Link>
-                                    </Button>
-
-                                    <Stack gap="2" align={{ base: 'stretch', md: 'flex-end' }}>
-                                        <Flex gap="3" direction={{ base: 'column-reverse', sm: 'row' }} justify="flex-end">
-                                            {canInstockOnly && (
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    colorPalette="green"
-                                                    size="lg"
-                                                    disabled={submitDisabled}
-                                                    title={submitTitle ?? `Оформить только ${instockOnlyQty} шт. со склада, предзаказ (${preorderQty} шт.) убрать из корзины`}
-                                                    onClick={() => submit(true)}
-                                                >
-                                                    <LuWarehouse size={16} />
-                                                    Только со склада ({instockOnlyQty} шт.)
-                                                </Button>
-                                            )}
-                                            <Button
-                                                type="submit"
-                                                colorPalette="pecado"
-                                                size="lg"
-                                                loading={processing}
-                                                disabled={submitDisabled}
-                                                title={submitTitle}
-                                            >
-                                                <LuSend size={16} />
-                                                {submitLabel}
-                                            </Button>
-                                        </Flex>
-                                        {hasPreorder && (
-                                            <Flex align="center" gap="1.5" fontSize="xs" color="orange.600" _dark={{ color: 'orange.400' }} justify={{ base: 'flex-start', md: 'flex-end' }}>
-                                                <LuClock3 size={13} />
-                                                <Text>
-                                                    Предзаказ — отдельный заказ{leadLabel ? `, поставка ${leadLabel}` : ''}
-                                                    {canInstockOnly ? '; товары со склада отгрузим сразу' : ''}
-                                                </Text>
-                                            </Flex>
-                                        )}
-                                        {/* Уценка тоже уходит отдельным документом — клиент должен
-                                            узнать это здесь, а не из списка заказов после оформления.
-                                            Когда в корзине только уценка, документ один и строка не нужна. */}
-                                        {hasDefect && (instockQty > 0 || hasPreorder) && (
-                                            <Flex align="center" gap="1.5" fontSize="xs" color="purple.600" _dark={{ color: 'purple.400' }} justify={{ base: 'flex-start', md: 'flex-end' }}>
-                                                <LuBadgePercent size={13} />
-                                                <Text>Уценка ({defectQty} шт.) оформится отдельным заказом — отгрузим сразу</Text>
-                                            </Flex>
-                                        )}
-                                    </Stack>
-                                </Flex>
-                            );
-                        })()}
+                        <Flex>
+                            <Button asChild variant="outline" size="lg">
+                                <Link href="/cart">
+                                    <LuArrowLeft size={16} />
+                                    Вернуться в корзину
+                                </Link>
+                            </Button>
+                        </Flex>
                     </Stack>
                 </form>
             </Box>
@@ -1062,9 +988,45 @@ function AddCompanyDialog({ open, countries, onClose, onCreated }) {
 }
 
 /**
- * Компонент таблицы товаров (instock / preorder).
+ * Пилюля-индикатор сворачиваемого блока. Аккордеоны закрыты по умолчанию,
+ * поэтому возможность раскрыть должна читаться сразу — брендовая «кнопка»
+ * вместо едва заметного шеврона. Не <button>: живёт внутри кликабельной шапки.
  */
-function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, fmt, note = null, intro = null, headerExtra = null }) {
+function DisclosurePill({ open, closedLabel = 'Показать', openLabel = 'Свернуть' }) {
+    return (
+        <Flex
+            align="center"
+            gap="1"
+            px="3"
+            py="1.5"
+            rounded="full"
+            borderWidth="1px"
+            borderColor="pecado.emphasized"
+            bg="pecado.subtle"
+            color="pecado.fg"
+            fontSize="sm"
+            fontWeight="600"
+            whiteSpace="nowrap"
+            flexShrink="0"
+            transition="background 0.15s"
+        >
+            {open ? openLabel : closedLabel}
+            <Box transition="transform 0.2s" transform={open ? 'rotate(180deg)' : 'none'} display="flex">
+                <LuChevronDown size={15} />
+            </Box>
+        </Flex>
+    );
+}
+
+/**
+ * Компонент таблицы товаров (instock / preorder).
+ *
+ * Состав клиент уже видел в корзине, поэтому все группы свёрнуты: шапка
+ * называет количество и сумму, полная таблица — по пилюле «Показать товары».
+ * Про предзаказ и отдельные документы предупреждает сводка-чек внизу.
+ */
+function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, fmt, note = null, intro = null, headerExtra = null, defaultOpen = false }) {
+    const [open, setOpen] = useState(defaultOpen);
     const totalQty = totals?.quantity ?? items.reduce((s, it) => s + Number(it.quantity || 0), 0);
     const totalRegular = Number(totals?.amount_regular ?? 0);
     const totalDiscounted = Number(totals?.amount_discounted ?? 0);
@@ -1078,16 +1040,38 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
             rounded="lg"
             p={{ base: '3', md: '5' }}
         >
-            <Flex align="center" gap="2" mb={intro ? '1' : '3'} flexWrap="wrap">
-                {icon}
-                <Text fontWeight="600" fontSize="lg">
-                    {title}
-                </Text>
-                <Badge colorPalette={colorPalette} variant="subtle" ml="1">
-                    {totalQty} шт.
-                </Badge>
-                {headerExtra}
+            <Flex
+                as="button"
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                align="center"
+                justify="space-between"
+                gap="2"
+                w="full"
+                cursor="pointer"
+                textAlign="left"
+                aria-expanded={open}
+            >
+                <Flex align="center" gap="2" flexWrap="wrap">
+                    {icon}
+                    <Text fontWeight="600" fontSize="lg">
+                        {title}
+                    </Text>
+                    <Badge colorPalette={colorPalette} variant="subtle" ml="1">
+                        {totalQty} шт.
+                    </Badge>
+                    {headerExtra}
+                </Flex>
+                <Flex align="center" gap="3" flexShrink="0">
+                    <Text fontWeight="700" fontVariantNumeric="tabular-nums" whiteSpace="nowrap">
+                        {fmt(totalDiscounted)} {currencySymbol}
+                    </Text>
+                    <DisclosurePill open={open} closedLabel="Показать товары" />
+                </Flex>
             </Flex>
+
+            {open && (
+            <Box mt={intro ? '1' : '3'}>
             {/* Объяснение группы до таблицы: клиент должен понять, что это, ещё до цифр */}
             {intro && (
                 <Text fontSize="sm" color="fg.muted" mb="3">
@@ -1264,6 +1248,428 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                     {note}
                 </Text>
             )}
+            </Box>
+            )}
+        </Box>
+    );
+}
+
+/**
+ * Сводка-чек перед кнопками оформления.
+ *
+ * Клиент прокручивает страницу сразу вниз, поэтому всё, что он мог не заметить
+ * выше — компания, способ доставки, адрес, предзаказ и уценка — повторяется
+ * здесь, в точке принятия решения. Оформление — как посадочный талон:
+ * фирменная шапка, перфорация, кнопки в «отрывном корешке».
+ */
+function OrderSummaryTicket({
+    companies, data, addresses, addressChoice, groups, grandTotal, leadLabel,
+    fmt, currencySymbol, hasConflicts, debtRestriction, processing,
+    canInstockOnly, instockOnlyQty, preorderQty, onSubmitInstockOnly, onAddCompany,
+}) {
+    const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Чек и придуман, чтобы клиент не жал кнопку на автомате: галочка — последний
+    // осознанный шаг, без неё кнопки оформления неактивны.
+    const [confirmed, setConfirmed] = useState(false);
+
+    const selectedCompany = companies.find((c) => String(c.id) === String(data.company_id)) ?? null;
+    const isPickup = data.delivery_method === 'pickup';
+    const savedAddress = !isPickup && addressChoice !== 'new'
+        ? addresses.find((a) => String(a.id) === addressChoice)
+        : null;
+    const addressText = isPickup ? null : (savedAddress?.address || data.delivery_address || '');
+
+    const grandRegular = Number(grandTotal.amount_regular || 0);
+    const grandDiscounted = Number(grandTotal.amount_discounted || 0);
+    const grandQty = Number(grandTotal.quantity || 0);
+    const grandHasDiscount = grandRegular > grandDiscounted;
+
+    const hasPreorder = groups.preorder.items.length > 0 && preorderQty > 0;
+
+    // Строки состава: каждая группа корзины — с судьбой отгрузки, чтобы про
+    // предзаказ и отдельные документы клиент узнал до кнопки, а не после.
+    const compositionRows = [
+        groups.instock.items.length > 0 && {
+            key: 'instock', icon: <LuWarehouse size={14} />, color: 'green',
+            label: 'Со склада', caption: 'Отгрузим сразу',
+            totals: groups.instock.totals,
+        },
+        groups.defect.items.length > 0 && {
+            key: 'defect', icon: <LuBadgePercent size={14} />, color: 'purple', mark: true,
+            label: 'Уценка', caption: 'Отдельный документ — отгрузим сразу',
+            totals: groups.defect.totals,
+        },
+        groups.preorder.items.length > 0 && {
+            key: 'preorder', icon: <LuClock3 size={14} />, color: 'orange', mark: true,
+            label: 'Предзаказ', caption: `Отдельный заказ${leadLabel ? ` — поставка ${leadLabel}` : ' — под поставку'}`,
+            totals: groups.preorder.totals,
+        },
+        groups.promo.items.length > 0 && {
+            key: 'promo', icon: <LuGift size={14} />, color: 'teal',
+            label: 'Промо-позиции', caption: 'Отдельным заказом',
+            totals: groups.promo.totals,
+        },
+        groups.sample.items.length > 0 && {
+            key: 'sample', icon: <LuSprout size={14} />, color: 'gray',
+            label: 'Рекламные образцы', caption: 'Отдельным заказом, не входит в накладную',
+            totals: groups.sample.totals,
+        },
+    ].filter(Boolean);
+
+    const submitDisabled = processing || companies.length === 0 || hasConflicts || !!debtRestriction?.blocks_all_orders;
+    const submitBlockReason = hasConflicts
+        ? 'Сначала уточните корзину — есть позиции с изменившимся остатком.'
+        : (debtRestriction?.blocks_all_orders ? 'Оформление приостановлено до погашения задолженности.' : null);
+
+    // «Со склада N шт.» вместо «Заказ N шт.»: документов может быть до трёх
+    // (склад / уценка / предзаказ), а вот отгрузка — правда одна и сразу.
+    let submitLabel = 'Оформить заказ';
+    if (hasPreorder && canInstockOnly) {
+        submitLabel = `Со склада ${instockOnlyQty} шт. + предзаказ ${preorderQty} шт.`;
+    } else if (hasPreorder) {
+        submitLabel = `Оформить предзаказ (${preorderQty} шт.)`;
+    }
+
+    // Подпись-«лейбл» строки чека: капс с разрядкой, как на билете.
+    const rowLabelProps = {
+        fontSize: 'xs',
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: '0.12em',
+        color: 'fg.subtle',
+    };
+
+    // Главные факты чека — как турагент подчёркивает вылет и номер рейса:
+    // крупно, жирно, с золотой чертой под значением.
+    const keyValueProps = {
+        fontSize: { base: 'md', md: 'lg' },
+        fontWeight: '800',
+        lineHeight: '1.3',
+        textDecoration: 'underline',
+        textDecorationColor: 'champagne.400',
+        textDecorationThickness: '3px',
+        textUnderlineOffset: '5px',
+    };
+
+    const changeButton = (id) => (
+        <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            colorPalette="pecado"
+            rounded="full"
+            onClick={() => scrollTo(id)}
+            flexShrink="0"
+        >
+            Изменить
+        </Button>
+    );
+
+    return (
+        <Box
+            bg="bg"
+            borderWidth="1px"
+            borderColor="border"
+            rounded="2xl"
+            overflow="hidden"
+            shadow="lg"
+        >
+            {/* ── Шапка: фирменный градиент + золотая кромка ── */}
+            <Box
+                position="relative"
+                bgGradient="to-br"
+                gradientFrom="pecado.600"
+                gradientTo="pecado.800"
+                _dark={{ gradientFrom: 'pecado.700', gradientTo: 'pecado.950' }}
+                color="white"
+                px={{ base: '4', md: '6' }}
+                py={{ base: '4', md: '5' }}
+                borderBottomWidth="3px"
+                borderBottomColor="champagne.400"
+            >
+                <Box position="absolute" right="-3" top="-5" opacity="0.14" transform="rotate(10deg)" pointerEvents="none">
+                    <LuReceiptText size={130} />
+                </Box>
+                <Text fontSize="xs" textTransform="uppercase" letterSpacing="0.25em" color="champagne.200">
+                    Pecado · сводка заказа
+                </Text>
+                <Flex justify="space-between" align="flex-end" gap="3" mt="1" flexWrap="wrap">
+                    <Heading as="p" size={{ base: 'lg', md: 'xl' }} color="white" fontWeight="700">
+                        Ваш заказ
+                    </Heading>
+                    <Box textAlign="right">
+                        <Text fontSize="xs" color="whiteAlpha.800">{grandQty} шт.</Text>
+                        <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="800" lineHeight="1.1" fontVariantNumeric="tabular-nums">
+                            {fmt(grandDiscounted)} {currencySymbol}
+                        </Text>
+                    </Box>
+                </Flex>
+            </Box>
+
+            <Box px={{ base: '4', md: '6' }} py={{ base: '4', md: '5' }}>
+                <Stack gap="3" separator={<Separator borderStyle="dashed" />}>
+                    {/* ── Компания ── */}
+                    <Flex gap="3" align="center">
+                        <Flex boxSize="9" rounded="full" bg="pecado.subtle" color="pecado.fg" align="center" justify="center" flexShrink="0">
+                            <LuBuilding2 size={18} />
+                        </Flex>
+                        <Box flex="1" minW="0">
+                            <Text {...rowLabelProps}>Компания</Text>
+                            {selectedCompany ? (
+                                <>
+                                    <Text {...keyValueProps} lineClamp={1}>{selectedCompany.name}</Text>
+                                    {selectedCompany.tax_id && (
+                                        <Text fontSize="sm" color="fg.muted" mt="1">ИНН {selectedCompany.tax_id}</Text>
+                                    )}
+                                </>
+                            ) : (
+                                <Text fontSize="md" color="red.500" fontWeight="700">
+                                    Компания не выбрана — без неё заказ не оформить
+                                </Text>
+                            )}
+                        </Box>
+                        {companies.length > 0 ? changeButton('checkout-company') : (
+                            <Button type="button" variant="outline" size="xs" colorPalette="pecado" onClick={onAddCompany} flexShrink="0">
+                                <LuPlus size={12} />
+                                Добавить
+                            </Button>
+                        )}
+                    </Flex>
+
+                    {/* ── Доставка ── */}
+                    <Flex gap="3" align="center">
+                        <Flex boxSize="9" rounded="full" bg="pecado.subtle" color="pecado.fg" align="center" justify="center" flexShrink="0">
+                            {isPickup ? <LuStore size={18} /> : <LuTruck size={18} />}
+                        </Flex>
+                        <Box flex="1" minW="0">
+                            <Text {...rowLabelProps}>Получение</Text>
+                            <Text {...keyValueProps}>
+                                {isPickup ? 'Самовывоз со склада' : 'Доставка по адресу'}
+                            </Text>
+                            {!isPickup && (
+                                addressText ? (
+                                    <Text fontSize="sm" fontWeight="600" lineClamp={2} mt="1">
+                                        {savedAddress?.name ? `${savedAddress.name} · ` : ''}{addressText}
+                                    </Text>
+                                ) : (
+                                    <Text fontSize="sm" fontWeight="700" color="orange.600" _dark={{ color: 'orange.400' }} mt="1">
+                                        Адрес пока не указан
+                                    </Text>
+                                )
+                            )}
+                        </Box>
+                        {changeButton(isPickup ? 'checkout-delivery' : 'checkout-address')}
+                    </Flex>
+
+                    {/* ── Состав: судьба каждой группы корзины ── */}
+                    <Box>
+                        <Text {...rowLabelProps} mb="2">Состав заказа</Text>
+                        <Stack gap="2.5">
+                            {compositionRows.map((row) => {
+                                const qty = Number(row.totals?.quantity ?? 0);
+                                const sum = Number(row.totals?.amount_discounted ?? 0);
+                                return (
+                                    <Flex key={row.key} gap="2.5" align="center">
+                                        <Flex
+                                            boxSize="8"
+                                            rounded="full"
+                                            bg={`${row.color}.subtle`}
+                                            color={`${row.color}.fg`}
+                                            align="center"
+                                            justify="center"
+                                            flexShrink="0"
+                                        >
+                                            {row.icon}
+                                        </Flex>
+                                        <Box flex="1" minW="0">
+                                            <Text fontSize="md" fontWeight="700">
+                                                {row.label}
+                                                <Text as="span" fontWeight="800"> · {qty} шт.</Text>
+                                            </Text>
+                                            {/* Условия-«ловушки» (ждать поставку, отдельный документ) —
+                                                маркером в цвет группы, как турагент выделяет время вылета */}
+                                            {row.mark ? (
+                                                <Text
+                                                    as="span"
+                                                    display="inline-block"
+                                                    mt="1"
+                                                    px="2"
+                                                    py="0.5"
+                                                    rounded="sm"
+                                                    bg={`${row.color}.subtle`}
+                                                    color={`${row.color}.fg`}
+                                                    fontSize="sm"
+                                                    fontWeight="700"
+                                                >
+                                                    {row.caption}
+                                                </Text>
+                                            ) : (
+                                                <Text fontSize="sm" color="fg.muted">
+                                                    {row.caption}
+                                                </Text>
+                                            )}
+                                        </Box>
+                                        <Text fontSize="md" fontWeight="700" fontVariantNumeric="tabular-nums" whiteSpace="nowrap">
+                                            {fmt(sum)} {currencySymbol}
+                                        </Text>
+                                    </Flex>
+                                );
+                            })}
+                        </Stack>
+                    </Box>
+
+                    {/* ── Итог с выгодой ── */}
+                    <Box>
+                        {grandHasDiscount && (
+                            <>
+                                <Flex justify="space-between" align="center" mb="1">
+                                    <Text fontSize="sm" color="fg.muted">Сумма без скидки</Text>
+                                    <Text fontSize="sm" color="fg.muted" textDecoration="line-through" fontVariantNumeric="tabular-nums">
+                                        {fmt(grandRegular)} {currencySymbol}
+                                    </Text>
+                                </Flex>
+                                <Flex justify="space-between" align="center" mb="1">
+                                    <Text fontSize="sm" color="fg.muted">Ваша выгода</Text>
+                                    <Badge
+                                        bg="champagne.100"
+                                        color="champagne.900"
+                                        _dark={{ bg: 'champagne.950', color: 'champagne.300' }}
+                                        fontWeight="700"
+                                        fontVariantNumeric="tabular-nums"
+                                    >
+                                        −{fmt(grandRegular - grandDiscounted)} {currencySymbol}
+                                    </Badge>
+                                </Flex>
+                            </>
+                        )}
+                        <Flex justify="space-between" align="baseline" gap="3">
+                            <Text fontSize="md" fontWeight="700">Итого к оформлению</Text>
+                            <Text fontSize="2xl" fontWeight="800" color="pecado.fg" fontVariantNumeric="tabular-nums" whiteSpace="nowrap">
+                                {fmt(grandDiscounted)} {currencySymbol}
+                            </Text>
+                        </Flex>
+                    </Box>
+                </Stack>
+            </Box>
+
+            {/* ── Перфорация: полукруглые вырезы + пунктир, как у отрывного корешка ── */}
+            <Flex align="center">
+                <Box boxSize="7" rounded="full" bg="bg.subtle" borderWidth="1px" borderColor="border" ml="-4" flexShrink="0" />
+                <Box flex="1" borderBottomWidth="2px" borderStyle="dashed" borderColor="border" />
+                <Box boxSize="7" rounded="full" bg="bg.subtle" borderWidth="1px" borderColor="border" mr="-4" flexShrink="0" />
+            </Flex>
+
+            {/* ── Корешок с кнопками ── */}
+            <Box px={{ base: '4', md: '6' }} py={{ base: '4', md: '5' }}>
+                <Flex
+                    gap="3"
+                    direction={{ base: 'column', md: 'row' }}
+                    align={{ base: 'stretch', md: 'center' }}
+                    justify="space-between"
+                >
+                    {/* Галочка — обязательный шаг, поэтому подсвечена: чёрная рамка
+                        и пульсирующие круги (встроенный keyframe ping), пока не отмечена.
+                        Круги позиционируются без transform — ping сам анимирует scale. */}
+                    <Box position="relative" display="inline-flex" alignSelf={{ base: 'flex-start', md: 'center' }}>
+                        {!confirmed && (
+                            <Box
+                                position="absolute"
+                                left="-6px"
+                                top="50%"
+                                mt="-4"
+                                boxSize="8"
+                                pointerEvents="none"
+                                aria-hidden="true"
+                            >
+                                <Box position="absolute" inset="0" rounded="full" bg="pecado.solid" opacity="0.3" animation="ping" />
+                                <Box position="absolute" inset="1" rounded="full" bg="pecado.solid" opacity="0.25" animation="ping" animationDelay="0.5s" />
+                            </Box>
+                        )}
+                        <Checkbox
+                            checked={confirmed}
+                            onCheckedChange={({ checked }) => setConfirmed(!!checked)}
+                            colorPalette="pecado"
+                            size="lg"
+                            fontWeight="600"
+                            css={{
+                                '& [data-scope=checkbox][data-part=control]:not([data-state=checked])': {
+                                    borderWidth: '2px',
+                                    borderColor: 'var(--chakra-colors-fg)',
+                                    background: 'var(--chakra-colors-bg)',
+                                },
+                            }}
+                        >
+                            Данные заказа мною проверены — можно отправлять на сборку
+                        </Checkbox>
+                    </Box>
+
+                    {/* До md — столбиком на всю ширину: две широкие кнопки с длинными
+                        подписями («Со склада N шт. + предзаказ N шт.») в строку не помещаются.
+                        Тултипы висят на Box-обёртках: выключенная кнопка не получает событий
+                        мыши, поэтому pointerEvents у неё гасятся, а наведение ловит обёртка. */}
+                    {(() => {
+                        const buttonsDisabled = submitDisabled || !confirmed;
+                        const disabledHint = submitBlockReason
+                            ?? (!confirmed ? 'Сначала подтвердите галочкой, что проверили данные заказа' : null);
+
+                        return (
+                            <Flex gap="3" direction={{ base: 'column-reverse', md: 'row' }} justify="flex-end" flexShrink="0">
+                                {canInstockOnly && (
+                                    <Tooltip
+                                        showArrow
+                                        openDelay={200}
+                                        content={disabledHint
+                                            ?? `Оформить только ${instockOnlyQty} шт. со склада, предзаказ (${preorderQty} шт.) убрать из корзины`}
+                                    >
+                                        <Box display="inline-flex" w={{ base: 'full', md: 'auto' }}>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                colorPalette="green"
+                                                size="lg"
+                                                w="full"
+                                                disabled={buttonsDisabled}
+                                                pointerEvents={buttonsDisabled ? 'none' : undefined}
+                                                onClick={onSubmitInstockOnly}
+                                            >
+                                                <LuWarehouse size={16} />
+                                                Только со склада ({instockOnlyQty} шт.)
+                                            </Button>
+                                        </Box>
+                                    </Tooltip>
+                                )}
+                                <Tooltip
+                                    showArrow
+                                    openDelay={200}
+                                    disabled={!disabledHint}
+                                    content={disabledHint}
+                                >
+                                    <Box display="inline-flex" w={{ base: 'full', md: 'auto' }}>
+                                        <Button
+                                            type="submit"
+                                            colorPalette="pecado"
+                                            size="lg"
+                                            w="full"
+                                            loading={processing}
+                                            disabled={buttonsDisabled}
+                                            pointerEvents={buttonsDisabled ? 'none' : undefined}
+                                        >
+                                            <LuSend size={16} />
+                                            {submitLabel}
+                                        </Button>
+                                    </Box>
+                                </Tooltip>
+                            </Flex>
+                        );
+                    })()}
+                </Flex>
+                {submitBlockReason && (
+                    <Text fontSize="xs" color="red.500" mt="2" textAlign={{ base: 'left', md: 'right' }}>
+                        {submitBlockReason}
+                    </Text>
+                )}
+            </Box>
         </Box>
     );
 }
