@@ -353,8 +353,20 @@ function ProductCard({ product, loading = false }) {
                                 )}
                             </Flex>
 
-                            {/* Цена */}
-                            {price != null && (
+                            {/* Цена. Осталась только уценка — обычная цена зачёркнута,
+                                вместо неё цена уценки цветом статуса «Уценка» */}
+                            {isDefectOnly && defectMinPrice != null ? (
+                                <Flex direction="column" alignItems="flex-end" flexShrink={0}>
+                                    {price != null && (
+                                        <Text fontSize="xs" color="gray.400" textDecoration="line-through" lineHeight="1">
+                                            {formatPrice(hasSale ? salePrice : price)}
+                                        </Text>
+                                    )}
+                                    <Text fontSize="lg" fontWeight="600" lineHeight="1" color="purple.500">
+                                        от {formatPrice(defectMinPrice)}
+                                    </Text>
+                                </Flex>
+                            ) : price != null && (
                                 <Flex direction="column" alignItems="flex-end" flexShrink={0}>
                                     {hasSale && (
                                         <Text fontSize="xs" color="gray.400" textDecoration="line-through" lineHeight="1">
@@ -373,8 +385,10 @@ function ProductCard({ product, loading = false }) {
                             )}
                         </Flex>
 
-                        {/* Уценка — еле заметная подсказка о минимальной цене партий */}
-                        {product.has_defects && defectMinPrice != null && (
+                        {/* Уценка — еле заметная подсказка о минимальной цене партий.
+                            Когда осталась только уценка, цена уже показана фиолетовым выше —
+                            подсказка была бы дублем */}
+                        {product.has_defects && defectMinPrice != null && !isDefectOnly && (
                             <Text fontSize="2xs" color="gray.400" lineClamp="1">
                                 Есть на уценке от {formatPrice(defectMinPrice)}
                             </Text>
