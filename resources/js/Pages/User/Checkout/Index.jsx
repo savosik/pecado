@@ -577,18 +577,22 @@ export default function CheckoutIndex({
                             {(() => {
                                 const filledCount = [data.comment, data.manager_comment, data.warehouse_comment]
                                     .filter((v) => v.trim() !== '').length;
+                                // На мобильном пилюля уходит на вторую строку, как в шапках
+                                // групп товаров: рядом с ней заголовок ломался на три строки
                                 return (
                                     <Flex
                                         as="button"
                                         type="button"
                                         onClick={() => setCommentsOpen((v) => !v)}
-                                        align="center"
+                                        direction={{ base: 'column', md: 'row' }}
+                                        align={{ base: 'stretch', md: 'center' }}
                                         justify="space-between"
                                         gap="2"
                                         w="full"
                                         px={{ base: '3', md: '5' }}
-                                        py="4"
+                                        py={{ base: '3', md: '4' }}
                                         cursor="pointer"
+                                        textAlign="left"
                                         _hover={{ bg: 'bg.subtle' }}
                                         aria-expanded={commentsOpen}
                                     >
@@ -601,7 +605,9 @@ export default function CheckoutIndex({
                                                 </Badge>
                                             )}
                                         </Flex>
-                                        <DisclosurePill open={commentsOpen} closedLabel="Добавить комментарий" />
+                                        <Flex justify="flex-end" flexShrink="0">
+                                            <DisclosurePill open={commentsOpen} closedLabel="Добавить комментарий" />
+                                        </Flex>
                                     </Flex>
                                 );
                             })()}
