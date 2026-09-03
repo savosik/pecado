@@ -13,10 +13,11 @@ import {
     LuPencilLine, LuArrowRightLeft, LuChevronDown, LuChevronUp,
     LuPlus, LuMinus, LuTrendingDown, LuTrendingUp, LuCalendar, LuFileSpreadsheet,
     LuSearch, LuStore, LuRepeat, LuShoppingCart, LuTrash2, LuTriangleAlert, LuBan, LuGift, LuSprout, LuFileText,
-    LuSend,
+    LuSend, LuPencil, LuUndo2,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import ReserveCountdown from '@/components/cabinet/ReserveCountdown';
+import { NumberInputRoot, NumberInputField } from '@/components/ui/number-input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useCartStore } from '@/stores/useCartStore';
 import { toastSuccess, toastError, toastInfo } from '@/utils/toast';
@@ -110,6 +111,50 @@ export default function OrderShow({ order }) {
     // Кнопка приходит с бэка только пока 1С не начала сборку (или заказ в резерве)
     const [cancelOpen, setCancelOpen] = useState(false);
     const [cancelling, setCancelling] = useState(false);
+
+    // ─── Правка состава резервного заказа (v16.9.0, res-08) ───
+    // editItems: null — просмотр; иначе { [id]: количество | null (строка удалена) }.
+    // V1 — только уменьшение; удаление последней строки превращается в отмену заказа.
+    const [editItems, setEditItems] = useState(null);
+    const [savingItems, setSavingItems] = useState(false);
+    const activeOrderItems = (order.items || []).filter((it) => !it.cancelled);
+
+    const startEditItems = useCallback(() => {
+        setEditItems(Object.fromEntries(activeOrderItems.map((it) => [it.id, Number(it.quantity)])));
+    }, [order.items]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const editItemsChanged = editItems !== null && activeOrderItems.some(
+        (it) => editItems[it.id] === null || Number(editItems[it.id]) !== Number(it.quantity),
+    );
+
+    const removeEditItem = useCallback((id) => {
+        setEditItems((prev) => {
+            const rest = Object.entries(prev).filter(([key, qty]) => Number(key) !== id && qty !== null);
+            if (rest.length === 0) {
+                // Последняя строка: правка превращается в отмену всего заказа
+                setCancelOpen(true);
+                return prev;
+            }
+            return { ...prev, [id]: null };
+        });
+    }, []);
+
+    const doSaveItems = useCallback(async () => {
+        setSavingItems(true);
+        try {
+            const items = Object.entries(editItems)
+                .filter(([, qty]) => qty !== null)
+                .map(([id, qty]) => ({ id: Number(id), quantity: Number(qty) }));
+            const { data } = await axios.post(`/cabinet/orders/${order.id}/reserve-items`, { items });
+            toastSuccess('Состав обновлён', data?.message || 'Изменения применены.');
+            setEditItems(null);
+        } catch (err) {
+            toastError('Не получилось', err?.response?.data?.message || 'Попробуйте ещё раз.');
+        } finally {
+            setSavingItems(false);
+            router.reload();
+        }
+    }, [editItems, order.id]);
 
     // ─── Отправить резервный заказ в отгрузку (v16.9.0, res-07) ───
     const [confirmReserveOpen, setConfirmReserveOpen] = useState(false);
@@ -254,17 +299,133 @@ export default function OrderShow({ order }) {
                                         </Text>
                                     </VStack>
                                 </HStack>
-                                <Button
-                                    colorPalette="green"
-                                    size="md"
-                                    flexShrink="0"
-                                    onClick={() => setConfirmReserveOpen(true)}
-                                    loading={confirmingReserve}
-                                >
-                                    <LuSend size={16} />
-                                    Отправить в отгрузку
-                                </Button>
+                                <Flex gap="2" flexShrink="0" direction={{ base: 'column', sm: 'row' }}>
+                                    {editItems === null && (
+                                        <Button
+                                            variant="outline"
+                                            size="md"
+                                            onClick={startEditItems}
+                                        >
+                                            <LuPencil size={16} />
+                                            Изменить состав
+                                        </Button>
+                                    )}
+                                    <Button
+                                        colorPalette="green"
+                                        size="md"
+                                        onClick={() => setConfirmReserveOpen(true)}
+                                        loading={confirmingReserve}
+                                        disabled={editItems !== null}
+                                    >
+                                        <LuSend size={16} />
+                                        Отправить в отгрузку
+                                    </Button>
+                                </Flex>
                             </Flex>
+
+                            {/* ─── Редактор состава (v16.9.0, res-08): v1 — только уменьшение.
+                                Отдельная панель вместо правки большой таблицы: компактные
+                                строки со степперами удобны и с телефона. ─── */}
+                            {editItems !== null && (
+                                <Box mt="4" pt="4" borderTop="1px solid" borderColor="purple.200" _dark={{ borderColor: 'purple.800' }}>
+                                    <VStack align="stretch" gap="2">
+                                        {activeOrderItems.map((item) => {
+                                            const removed = editItems[item.id] === null;
+                                            const qty = removed ? 0 : Number(editItems[item.id] ?? item.quantity);
+                                            const price = parseFloat(item.final_price || item.price || 0);
+                                            return (
+                                                <Flex
+                                                    key={item.id}
+                                                    gap="3"
+                                                    align="center"
+                                                    justify="space-between"
+                                                    flexWrap="wrap"
+                                                    opacity={removed ? 0.5 : 1}
+                                                >
+                                                    <Text
+                                                        fontSize="sm"
+                                                        flex="1"
+                                                        minW="180px"
+                                                        textDecoration={removed ? 'line-through' : 'none'}
+                                                    >
+                                                        {item.product?.name || item.name}
+                                                    </Text>
+                                                    <HStack gap="2" flexShrink="0">
+                                                        {removed ? (
+                                                            <Button size="xs" variant="outline" onClick={() => setEditItems((prev) => ({ ...prev, [item.id]: Number(item.quantity) }))}>
+                                                                <LuUndo2 size={14} />
+                                                                Вернуть
+                                                            </Button>
+                                                        ) : (
+                                                            <>
+                                                                <NumberInputRoot
+                                                                    size="sm"
+                                                                    maxW="100px"
+                                                                    min={1}
+                                                                    max={Number(item.quantity)}
+                                                                    value={String(qty)}
+                                                                    onValueChange={({ valueAsNumber }) => {
+                                                                        const v = Number.isFinite(valueAsNumber) ? valueAsNumber : 1;
+                                                                        setEditItems((prev) => ({
+                                                                            ...prev,
+                                                                            [item.id]: Math.min(Math.max(1, v), Number(item.quantity)),
+                                                                        }));
+                                                                    }}
+                                                                >
+                                                                    <NumberInputField />
+                                                                </NumberInputRoot>
+                                                                <Text fontSize="xs" color="fg.muted" w="16" textAlign="right" whiteSpace="nowrap">
+                                                                    из {item.quantity}
+                                                                </Text>
+                                                                <Button
+                                                                    size="xs"
+                                                                    variant="ghost"
+                                                                    colorPalette="red"
+                                                                    aria-label="Убрать строку"
+                                                                    onClick={() => removeEditItem(item.id)}
+                                                                >
+                                                                    <LuTrash2 size={14} />
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                        <Text fontSize="sm" fontWeight="600" w="24" textAlign="right" whiteSpace="nowrap">
+                                                            {fmt(qty * price)}&nbsp;{currencySymbol}
+                                                        </Text>
+                                                    </HStack>
+                                                </Flex>
+                                            );
+                                        })}
+                                    </VStack>
+
+                                    <Flex mt="3" gap="3" align="center" justify="space-between" flexWrap="wrap">
+                                        <Text fontSize="sm" fontWeight="700">
+                                            Новый итог:{' '}
+                                            {fmt(activeOrderItems.reduce((acc, it) => {
+                                                const q = editItems[it.id] === null ? 0 : Number(editItems[it.id] ?? it.quantity);
+                                                return acc + q * parseFloat(it.final_price || it.price || 0);
+                                            }, 0))}&nbsp;{currencySymbol}
+                                        </Text>
+                                        <HStack gap="2">
+                                            <Button size="sm" variant="ghost" onClick={() => setEditItems(null)} disabled={savingItems}>
+                                                Отменить правку
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                colorPalette="pecado"
+                                                onClick={doSaveItems}
+                                                loading={savingItems}
+                                                disabled={!editItemsChanged}
+                                            >
+                                                Сохранить изменения
+                                            </Button>
+                                        </HStack>
+                                    </Flex>
+                                    <Text fontSize="xs" color="fg.muted" mt="2">
+                                        В резерве можно только уменьшить количество или убрать строку.
+                                        Нужно больше — оформите отдельный заказ. Убрали всё — заказ отменится целиком.
+                                    </Text>
+                                </Box>
+                            )}
                         </Card.Body>
                     </Card.Root>
                 )}

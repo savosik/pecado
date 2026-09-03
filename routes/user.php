@@ -186,6 +186,8 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     // v16.9.0 (res-07): раздел «Заказы в резерве» + подтверждение отгрузки
     Route::get('/reserves', [\App\Http\Controllers\User\ReserveOrderController::class, 'index'])->name('reserves.index');
     Route::post('/orders/{order}/confirm-reserve', [\App\Http\Controllers\User\ReserveOrderController::class, 'confirm'])->name('orders.confirm-reserve');
+    // v16.9.0 (res-08): правка состава резервного заказа (v1 — только уменьшение)
+    Route::post('/orders/{order}/reserve-items', [\App\Http\Controllers\User\ReserveOrderController::class, 'updateItems'])->name('orders.reserve-items');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
     // Изменения заказов (сводная лента)

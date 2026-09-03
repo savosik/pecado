@@ -50,6 +50,109 @@ class ReserveOrderController extends Controller
     }
 
     /**
+     * Правка состава резервного заказа клиентом (v16.9.0, res-08).
+     * POST /cabinet/orders/{order}/reserve-items
+     *
+     * V1 — только уменьшение: снизить количество, удалить строку. Клиент
+     * присылает ЦЕЛЕВОЙ состав ({id, quantity} по остающимся строкам);
+     * отсутствующие строки удаляются. Пустой состав не принимается —
+     * удаление последней строки на фронте превращается в отмену заказа.
+     *
+     * В 1С уходит order.updated с полным составом и base_items_version
+     * (оптимистичная блокировка: отставшую правку 1С отклонит и вернёт
+     * актуальный состав с conflict — сайт применит его эхом).
+     */
+    public function updateItems(
+        Request $request,
+        Order $order,
+        OrderReservePublisher $publisher,
+        \App\Services\Order\OrderChangeLogger $changeLogger,
+    ): JsonResponse {
+        abort_unless((bool) config('order_reserve.enabled'), 404);
+        abort_unless($order->user_id === $request->user()->id, 403);
+
+        if (! $order->reserve || $order->trashed()) {
+            return response()->json([
+                'message' => 'Заказ уже не в резерве — изменить состав нельзя. Обновите страницу.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.id' => ['required', 'integer'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+        ], [
+            'items.required' => 'Состав пуст — чтобы отказаться от всего заказа, используйте отмену.',
+            'items.min' => 'Состав пуст — чтобы отказаться от всего заказа, используйте отмену.',
+        ]);
+
+        $order->load('items');
+        $current = $order->items->filter(fn ($item) => ! $item->cancelled)->keyBy('id');
+        $target = collect($validated['items'])->keyBy('id');
+
+        // Целевые строки обязаны существовать, количество — только уменьшаться
+        foreach ($target as $id => $row) {
+            $item = $current->get($id);
+
+            if ($item === null) {
+                return response()->json(['message' => 'Строка не найдена в заказе — обновите страницу.'], 422);
+            }
+
+            if ($row['quantity'] > $item->quantity) {
+                return response()->json([
+                    'message' => 'Увеличить количество в резерве нельзя — только уменьшить. Нужно больше — оформите отдельный заказ.',
+                ], 422);
+            }
+        }
+
+        $changed = $current->contains(fn ($item) => ! $target->has($item->id)
+            || (int) $target[$item->id]['quantity'] !== (int) $item->quantity);
+
+        if (! $changed) {
+            return response()->json(['message' => 'Изменений нет.'], 422);
+        }
+
+        $oldSnapshot = $changeLogger->snapshotItems($order);
+        $oldTotal = (float) $order->total_amount;
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($order, $current, $target) {
+            $total = 0.0;
+
+            foreach ($current as $item) {
+                if (! $target->has($item->id)) {
+                    $item->delete();
+
+                    continue;
+                }
+
+                $quantity = (int) $target[$item->id]['quantity'];
+                $price = (float) ($item->final_price ?? $item->price);
+
+                if ($quantity !== (int) $item->quantity) {
+                    $item->update(['quantity' => $quantity, 'subtotal' => $quantity * $price]);
+                }
+
+                $total += $quantity * $price;
+            }
+
+            $order->total_amount = $total;
+            $order->saveQuietly();
+        });
+
+        $order->refresh()->load('items.product');
+
+        $changeLogger->logItemChanges($order, $oldSnapshot, $changeLogger->snapshotItems($order), $oldTotal, (float) $order->total_amount, 'client');
+
+        // base_items_version — последний применённый items_version от 1С;
+        // для заказа, ещё не получившего эха, — 0
+        $publisher->publishUpdated($order, (int) ($order->items_version ?? 0));
+
+        return response()->json([
+            'message' => 'Состав обновлён. Освободившийся товар вернулся в свободный остаток.',
+        ]);
+    }
+
+    /**
      * Подтверждение резервного заказа — «отправить в отгрузку».
      * POST /cabinet/orders/{order}/confirm-reserve
      *
