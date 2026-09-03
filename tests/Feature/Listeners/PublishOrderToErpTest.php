@@ -136,8 +136,13 @@ class PublishOrderToErpTest extends TestCase
         });
     }
 
+    /**
+     * v16.9.0 (режим «Заказы в резерве»): модельный OrderUpdated листенер игнорирует —
+     * исходящий order.updated несёт обязательный base_items_version и публикуется
+     * только явно через Erp\OrderReservePublisher из действий клиента.
+     */
     #[Test]
-    public function order_updated_payload_includes_message_id(): void
+    public function order_updated_model_event_is_ignored(): void
     {
         Queue::fake();
 
@@ -153,15 +158,16 @@ class PublishOrderToErpTest extends TestCase
 
         (new \App\Listeners\PublishOrderToErp)->handle(new \App\Events\OrderUpdated($order));
 
-        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
-            return ($job->payload['event'] ?? null) === 'order.updated'
-                && is_string($job->payload['message_id'] ?? null)
-                && str_starts_with($job->payload['message_id'], 'msg-');
-        });
+        Queue::assertNotPushed(PublishOrderToErpJob::class);
     }
 
+    /**
+     * v16.9.0 (режим «Заказы в резерве»): модельный OrderDeleted листенер игнорирует —
+     * исходящий order.deleted несёт обязательный reason (client_cancelled |
+     * reserve_expired) и публикуется только явно через Erp\OrderReservePublisher.
+     */
     #[Test]
-    public function order_deleted_payload_includes_message_id(): void
+    public function order_deleted_model_event_is_ignored(): void
     {
         Queue::fake();
 
@@ -177,11 +183,7 @@ class PublishOrderToErpTest extends TestCase
 
         (new \App\Listeners\PublishOrderToErp)->handle(new \App\Events\OrderDeleted($order));
 
-        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
-            return ($job->payload['event'] ?? null) === 'order.deleted'
-                && is_string($job->payload['message_id'] ?? null)
-                && str_starts_with($job->payload['message_id'], 'msg-');
-        });
+        Queue::assertNotPushed(PublishOrderToErpJob::class);
     }
 
     #[Test]

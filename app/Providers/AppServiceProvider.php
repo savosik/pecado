@@ -236,15 +236,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\SendPreorderToSupplier::class,
         );
 
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\OrderUpdated::class,
-            \App\Listeners\PublishOrderToErp::class,
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\OrderDeleted::class,
-            \App\Listeners\PublishOrderToErp::class,
-        );
+        // v16.9.0: OrderUpdated/OrderDeleted больше НЕ публикуются в шину из модельных
+        // событий. 1С молча теряла такие order.updated (гейт по проведённым документам),
+        // а order.deleted у неё не было вовсе; по контракту резервов эти события несут
+        // обязательные поля (base_items_version, reason), которых у модельного события
+        // нет, — публикация только явная, через Erp\OrderReservePublisher из действий
+        // клиента (отмена, правка, подтверждение, снятие по таймауту).
 
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\ReturnCreated::class,

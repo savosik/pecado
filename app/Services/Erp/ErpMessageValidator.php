@@ -95,6 +95,11 @@ class ErpMessageValidator
         'contractor.created' => 'contractor.created.to_erp.json',
         'contractor.updated' => 'contractor.updated.to_erp.json',
         'order.created' => 'order.created.to_erp.json',
+        // v16.9.0 (режим «Заказы в резерве»): правка/отмена/подтверждение заказа
+        // клиентом — публикуются только через OrderReservePublisher в окне резерва
+        'order.updated' => 'order.updated.to_erp.json',
+        'order.deleted' => 'order.deleted.to_erp.json',
+        'order.confirmed' => 'order.confirmed.to_erp.json',
         'return.created' => 'return.created.to_erp.json',
     ];
 

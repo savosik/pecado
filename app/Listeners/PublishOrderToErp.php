@@ -12,6 +12,15 @@ class PublishOrderToErp
      */
     public function handle(object $event): void
     {
+        // v16.9.0: листенер публикует ТОЛЬКО создание заказа. OrderUpdated/OrderDeleted
+        // из модельных событий в шину не уходят: 1С молча теряла такие order.updated,
+        // а по контракту резервов у этих событий обязательные поля (base_items_version,
+        // reason), которых у модельного события нет. Правка/отмена/подтверждение
+        // публикуются явно через Erp\OrderReservePublisher.
+        if (! $event instanceof \App\Events\OrderCreated) {
+            return;
+        }
+
         if (! isset($event->order)) {
             return;
         }
@@ -52,12 +61,7 @@ class PublishOrderToErp
             return;
         }
 
-        $eventName = match (class_basename($event)) {
-            'OrderCreated' => 'order.created',
-            'OrderUpdated' => 'order.updated',
-            'OrderDeleted' => 'order.deleted',
-            default => strtolower(class_basename($event)),
-        };
+        $eventName = 'order.created';
 
         $payload = [
             'event' => $eventName,
