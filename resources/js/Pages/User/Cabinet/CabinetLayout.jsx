@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
     Box, Flex, VStack, Text, HStack, Heading,
-    Button, Drawer, Portal, CloseButton,
+    Button, Drawer, Portal, CloseButton, Badge,
 } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
 import UserLayout from '../UserLayout';
@@ -11,7 +11,7 @@ import {
     LuLayoutDashboard, LuShoppingBag, LuShoppingCart,
     LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin, LuContact,
     LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuReceipt, LuLayoutGrid, LuWrench, LuCode,
-    LuChartPie, LuMessageSquare, LuArrowRightLeft, LuFileText, LuBell, LuFilePen,
+    LuChartPie, LuMessageSquare, LuArrowRightLeft, LuFileText, LuBell, LuFilePen, LuClock3,
 } from 'react-icons/lu';
 
 const menuGroups = [
@@ -26,6 +26,9 @@ const menuGroups = [
         title: 'Заказы',
         items: [
             { href: '/cabinet/orders', label: 'Мои заказы', icon: LuShoppingBag },
+            // Режим «Заказы в резерве» (v16.9.0): пункт виден только участнику режима
+            // (config.reserves_enabled), бейдж — количество активных резервов.
+            { href: '/cabinet/reserves', label: 'Заказы в резерве', icon: LuClock3, feature: 'reserves', badge: 'reserve_count' },
             { href: '/cabinet/order-changes', label: 'Изменения заказов', icon: LuArrowRightLeft },
             { href: '/cabinet/shipments', label: 'Отгрузки', icon: LuTruck },
             // Печатные формы из 1С. Скрыт, пока раздел не открыт (config.documents_enabled);
@@ -81,7 +84,7 @@ const menuGroups = [
 
 const allMenuItems = menuGroups.flatMap(g => g.items);
 
-function MenuItemRow({ item, isActive }) {
+function MenuItemRow({ item, isActive, badgeCount = 0 }) {
     return (
         <Link href={item.href}>
             <HStack
@@ -101,6 +104,11 @@ function MenuItemRow({ item, isActive }) {
             >
                 <item.icon size={16} />
                 <Text fontSize="sm" fontWeight={isActive ? '600' : '400'}>{item.label}</Text>
+                {badgeCount > 0 && (
+                    <Badge colorPalette="purple" variant="solid" borderRadius="full" fontSize="xs" ml="auto">
+                        {badgeCount}
+                    </Badge>
+                )}
             </HStack>
         </Link>
     );
@@ -117,6 +125,8 @@ function SidebarContent({ currentPath }) {
         payment_orders: !!config?.cabinet_finance_enabled || !!config?.debt_cabinet_live,
         documents: !!config?.documents_enabled,
         contracts: !!config?.contracts_cabinet_enabled,
+        // Режим «Заказы в резерве»: рубильник ∧ флаг участника из 1С (считает бэк)
+        reserves: !!config?.reserves_enabled,
     };
 
     const visibleGroups = menuGroups
@@ -142,7 +152,14 @@ function SidebarContent({ currentPath }) {
                             {group.items.map((item) => {
                                 const isActive = currentPath === item.href
                                     || (item.href !== '/' && currentPath.startsWith(item.href));
-                                return <MenuItemRow key={item.href} item={item} isActive={isActive} />;
+                                return (
+                                    <MenuItemRow
+                                        key={item.href}
+                                        item={item}
+                                        isActive={isActive}
+                                        badgeCount={item.badge ? Number(config?.[item.badge] ?? 0) : 0}
+                                    />
+                                );
                             })}
                         </VStack>
                     </CollapsibleFilterCard>

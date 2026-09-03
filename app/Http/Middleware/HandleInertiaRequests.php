@@ -120,7 +120,35 @@ class HandleInertiaRequests extends Middleware
                 // Раздел «Договоры» в кабинете партнёра: выключатель на случай,
                 // если реестр ещё не выверен и показывать его клиентам рано.
                 'contracts_cabinet_enabled' => (bool) config('contracts.cabinet_enabled'),
+                // Режим «Заказы в резерве» (v16.9.0): пункт меню и выбор резерва в
+                // чекауте видны только участнику режима (рубильник ∧ флаг 1С ∧ не
+                // отключён точечно); счётчик — бейдж на пункте меню.
+                ...($this->reserveProps($request)),
             ],
+        ];
+    }
+
+    /**
+     * Флаги режима «Заказы в резерве» для фронта (v16.9.0, res-07).
+     *
+     * При выключенном рубильнике или для гостя — по нулям без единого запроса
+     * к БД; счётчик резервов считается только участнику режима.
+     *
+     * @return array{reserves_enabled: bool, reserve_count: int}
+     */
+    private function reserveProps(\Illuminate\Http\Request $request): array
+    {
+        $user = $request->user();
+
+        $enabled = $user !== null
+            && (bool) config('order_reserve.enabled')
+            && app(\App\Services\Order\ReservePolicy::class)->availableFor($user);
+
+        return [
+            'reserves_enabled' => $enabled,
+            'reserve_count' => $enabled
+                ? \App\Models\Order::query()->where('user_id', $user->id)->where('reserve', true)->count()
+                : 0,
         ];
     }
 }

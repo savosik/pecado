@@ -13,8 +13,10 @@ import {
     LuPencilLine, LuArrowRightLeft, LuChevronDown, LuChevronUp,
     LuPlus, LuMinus, LuTrendingDown, LuTrendingUp, LuCalendar, LuFileSpreadsheet,
     LuSearch, LuStore, LuRepeat, LuShoppingCart, LuTrash2, LuTriangleAlert, LuBan, LuGift, LuSprout, LuFileText,
+    LuSend,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
+import ReserveCountdown from '@/components/cabinet/ReserveCountdown';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useCartStore } from '@/stores/useCartStore';
 import { toastSuccess, toastError, toastInfo } from '@/utils/toast';
@@ -109,6 +111,24 @@ export default function OrderShow({ order }) {
     const [cancelOpen, setCancelOpen] = useState(false);
     const [cancelling, setCancelling] = useState(false);
 
+    // ─── Отправить резервный заказ в отгрузку (v16.9.0, res-07) ───
+    const [confirmReserveOpen, setConfirmReserveOpen] = useState(false);
+    const [confirmingReserve, setConfirmingReserve] = useState(false);
+
+    const doConfirmReserve = useCallback(async () => {
+        setConfirmingReserve(true);
+        try {
+            const { data } = await axios.post(`/cabinet/orders/${order.id}/confirm-reserve`);
+            toastSuccess('Заказ в отгрузке', data?.message || 'Заказ отправлен в отгрузку.');
+        } catch (err) {
+            toastError('Не получилось', err?.response?.data?.message || 'Попробуйте ещё раз.');
+        } finally {
+            setConfirmingReserve(false);
+            setConfirmReserveOpen(false);
+            router.reload();
+        }
+    }, [order.id]);
+
     const doCancel = useCallback(async () => {
         setCancelling(true);
         try {
@@ -197,7 +217,58 @@ export default function OrderShow({ order }) {
                 onReplace={() => doRepeat('replace')}
             />
 
+            <ConfirmDialog
+                open={confirmReserveOpen}
+                onClose={() => setConfirmReserveOpen(false)}
+                onConfirm={doConfirmReserve}
+                title="Отправить в отгрузку?"
+                description={`Заказ ${order.number} уйдёт в сборку и отгрузку — изменить или отменить его после подтверждения будет нельзя.`}
+                confirmLabel="В отгрузку"
+                cancelLabel="Ещё подумаю"
+                colorPalette="green"
+                isLoading={confirmingReserve}
+            />
+
             <Stack gap="5">
+                {/* ═══ Плашка резерва: таймер + подтверждение (v16.9.0, res-07) ═══ */}
+                {order.reserve && (
+                    <Card.Root borderColor="purple.300" borderWidth="1px" bg="purple.50" _dark={{ bg: 'purple.900/20', borderColor: 'purple.700' }}>
+                        <Card.Body py="4">
+                            <Flex
+                                gap="3"
+                                align={{ base: 'stretch', md: 'center' }}
+                                justify="space-between"
+                                direction={{ base: 'column', md: 'row' }}
+                            >
+                                <HStack gap="3" align="flex-start">
+                                    <Box color="purple.500" mt="1"><LuClock3 size={22} /></Box>
+                                    <VStack align="flex-start" gap="0">
+                                        <HStack gap="2" flexWrap="wrap">
+                                            <Text fontWeight="700">Заказ в резерве ещё</Text>
+                                            <ReserveCountdown until={order.reserved_until} fontSize="md" fontWeight="700" />
+                                            <Text fontSize="sm" color="fg.muted">до {order.reserved_until_formatted}</Text>
+                                        </HStack>
+                                        <Text fontSize="sm" color="fg.muted">
+                                            Товар удержан на складе. Не подтвердите до истечения срока —
+                                            резерв снимется автоматически. Пока резерв активен, заказ можно отменить.
+                                        </Text>
+                                    </VStack>
+                                </HStack>
+                                <Button
+                                    colorPalette="green"
+                                    size="md"
+                                    flexShrink="0"
+                                    onClick={() => setConfirmReserveOpen(true)}
+                                    loading={confirmingReserve}
+                                >
+                                    <LuSend size={16} />
+                                    Отправить в отгрузку
+                                </Button>
+                            </Flex>
+                        </Card.Body>
+                    </Card.Root>
+                )}
+
                 {/* ═══ Тип заказа + статус ═══ */}
                 <Flex align="center" gap="3" flexWrap="wrap">
                     <Badge
@@ -220,6 +291,13 @@ export default function OrderShow({ order }) {
                     >
                         {STATUS_LABELS[order.status] ?? order.status}
                     </Badge>
+                    {/* Резервный заказ приезжает из 1С как «Готов к отгрузке» — своего
+                        статуса у резерва нет, поэтому режим помечаем отдельным бейджем */}
+                    {order.reserve && (
+                        <Badge colorPalette="purple" variant="subtle" fontSize="sm" px="3" py="1" borderRadius="full">
+                            В резерве
+                        </Badge>
+                    )}
                     <Badge
                         colorPalette="gray"
                         variant="outline"

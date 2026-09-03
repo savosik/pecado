@@ -182,6 +182,10 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::post('/orders/{order}/repeat', [OrderController::class, 'repeat'])->name('orders.repeat');
     // v16.9.0 (res-04): отмена заказа клиентом — за рубильником order_reserve.enabled
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+
+    // v16.9.0 (res-07): раздел «Заказы в резерве» + подтверждение отгрузки
+    Route::get('/reserves', [\App\Http\Controllers\User\ReserveOrderController::class, 'index'])->name('reserves.index');
+    Route::post('/orders/{order}/confirm-reserve', [\App\Http\Controllers\User\ReserveOrderController::class, 'confirm'])->name('orders.confirm-reserve');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
     // Изменения заказов (сводная лента)
