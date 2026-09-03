@@ -64,6 +64,24 @@ return [
         'default_enabled' => false,
         'client_visible' => true,
     ],
+    // Режим «Заказы в резерве» (v16.9.0, res-09). Умолчание выключено по общей
+    // политике клиентских уведомлений; при включении режима владельцем эти два
+    // повода стоит включить участникам — без «резерв истекает» режим молчит
+    // о главном, и клиент теряет удержание молча.
+    'orders.reserve_expiring' => [
+        'label' => 'Резерв скоро истечёт',
+        'subject' => 'Заказ {{order_number}}: резерв истекает — подтвердите отгрузку',
+        'default_destinations' => [['type' => 'login']],
+        'default_enabled' => false,
+        'client_visible' => true,
+    ],
+    'orders.reserve_released' => [
+        'label' => 'Резерв снят по истечении срока',
+        'subject' => 'Заказ {{order_number}}: резерв снят',
+        'default_destinations' => [['type' => 'login']],
+        'default_enabled' => false,
+        'client_visible' => true,
+    ],
     'orders.shortfall' => [
         'label' => 'Недобор по заказу',
         'subject' => 'Заказ {{order_number}}: часть позиций не набралась',

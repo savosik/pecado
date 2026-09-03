@@ -20,4 +20,9 @@ return [
     // (их настройка), поэтому запрошенный срок сверх предела 1С урежет
     // и вернёт фактический reserved_until.
     'hours' => (int) env('ORDER_RESERVE_HOURS', 24),
+
+    // За сколько часов до истечения предупреждать клиента письмом
+    // (orders.reserve_expiring). Письмо однократное на заказ — дедуп по
+    // origin_key в MailStream.
+    'expiring_notice_hours' => (int) env('ORDER_RESERVE_EXPIRING_NOTICE_HOURS', 3),
 ];

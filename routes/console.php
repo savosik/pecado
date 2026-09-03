@@ -17,6 +17,9 @@ Schedule::command('documents:reconcile')->hourly()->withoutOverlapping();
 Schedule::command('documents:clean-exchange')->dailyAt('04:10')->withoutOverlapping();
 Schedule::command('documents:prune')->dailyAt('04:20')->withoutOverlapping();
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
+// v16.9.0 (режим «Заказы в резерве», res-09): основной таймер снятия просроченных
+// резервов — у сайта; страховка 1С (+6 ч) в норме не срабатывает
+Schedule::command('reserve:release-expired')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('health:check')->everyMinute();
 Schedule::command('search:sync')->cron('0 3 */3 * *'); // каждые 3 дня в 03:00
 Schedule::command('search:repair-embeddings --reindex-missing')->dailyAt('03:20')->withoutOverlapping(); // досчёт векторов у товаров без эмбеддинга (упавших по 402/после сброса индекса)
