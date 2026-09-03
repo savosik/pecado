@@ -187,7 +187,8 @@ class CheckoutController extends Controller
                 $request->validated('comment'),
                 $request->validated('manager_comment'),
                 $request->validated('warehouse_comment'),
-                $deliveryMethod
+                $deliveryMethod,
+                $request->boolean('reserve'),
             );
 
             // Запомнить выбранный способ доставки для предвыбора на следующем checkout.
@@ -200,6 +201,19 @@ class CheckoutController extends Controller
 
             // Очистить корзину после успешного заказа
             $cart->items()->delete();
+
+            // v16.9.0 (res-06): резервный заказ — сразу в рабочее место резервов.
+            // Один заказ → его страница (там таймер и кнопки), несколько →
+            // раздел «Заказы в резерве».
+            $reserveOrder = $orders->first(fn (Order $o) => $o->reserve);
+
+            if ($reserveOrder !== null) {
+                $target = $orders->count() === 1
+                    ? redirect()->route('cabinet.orders.show', $reserveOrder)
+                    : redirect()->route('cabinet.reserves.index');
+
+                return $target->with('success', $this->successMessage($orders));
+            }
 
             // Если создано несколько заказов (обычный / предзаказ / уценка) —
             // редиректим в список заказов

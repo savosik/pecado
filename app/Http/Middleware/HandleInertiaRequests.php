@@ -149,6 +149,10 @@ class HandleInertiaRequests extends Middleware
             'reserve_count' => $enabled
                 ? \App\Models\Order::query()->where('user_id', $user->id)->where('reserve', true)->count()
                 : 0,
+            // Срок резерва для подписи radio в чекауте (индивидуальный или умолчание)
+            'reserve_hours' => $enabled
+                ? app(\App\Services\Order\ReservePolicy::class)->hoursFor($user)
+                : 0,
         ];
     }
 }

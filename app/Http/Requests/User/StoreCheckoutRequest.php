@@ -69,7 +69,24 @@ class StoreCheckoutRequest extends FormRequest
             // Кнопка «Только со склада»: предзаказные строки корзины не оформляются
             // и удаляются — клиент решил не ждать поставку.
             'instock_only' => ['sometimes', 'boolean'],
+            // v16.9.0 (режим «Заказы в резерве», res-06): «Поставьте в резерв».
+            // Доступно только участнику режима — проверка в withValidator.
+            'reserve' => ['sometimes', 'boolean'],
         ];
+    }
+
+    /**
+     * Резерв может запросить только участник режима (рубильник ∧ флаг 1С ∧
+     * не отключён точечно) — обход UI отбивается здесь.
+     */
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
+    {
+        $validator->after(function (\Illuminate\Validation\Validator $validator) {
+            if ($this->boolean('reserve')
+                && ! app(\App\Services\Order\ReservePolicy::class)->availableFor($this->user())) {
+                $validator->errors()->add('reserve', 'Режим резерва вам недоступен — оформите заказ обычным способом.');
+            }
+        });
     }
 
     public function messages(): array

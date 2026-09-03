@@ -82,6 +82,14 @@ class PublishOrderToErp
             'timestamp' => now()->toIso8601String(),
         ];
 
+        // v16.9.0 (режим «Заказы в резерве»): признак и запрошенный срок удержания.
+        // Только по резервным заказам — обычные payload не раздуваем. Фактический
+        // срок 1С вернёт ответным order.updated (может урезать до своего предела).
+        if ($order->reserve) {
+            $payload['reserve'] = true;
+            $payload['reserved_until'] = $order->reserved_until?->toIso8601String();
+        }
+
         // Данные контрагента (v13.2: приоритет UUID, fallback на ИНН)
         if ($order->company) {
             $company = $order->company;

@@ -37,6 +37,7 @@ class CheckoutService implements CheckoutServiceInterface
         protected PromotionEngine $promotionEngine,
         protected PromoPickListFormatter $promoPickListFormatter,
         protected DebtGate $debtGate,
+        protected ReservePolicy $reservePolicy,
     ) {}
 
     /**
@@ -52,13 +53,19 @@ class CheckoutService implements CheckoutServiceInterface
         ?string $comment = null,
         ?string $managerComment = null,
         ?string $warehouseComment = null,
-        DeliveryMethod $deliveryMethod = DeliveryMethod::DELIVERY
+        DeliveryMethod $deliveryMethod = DeliveryMethod::DELIVERY,
+        bool $reserve = false,
     ): Collection {
         // Лестница долга — до транзакции и до остатков: отказ по долгу
         // объясняется одной фразой, и резервировать под него нечего.
         $this->debtGate->check($cart->user, $company, $cart);
 
-        return DB::transaction(function () use ($cart, $company, $deliveryAddress, $comment, $managerComment, $warehouseComment, $deliveryMethod) {
+        // v16.9.0 (режим «Заказы в резерве»): защитный гейт на уровне сервиса —
+        // запрос валидируется раньше, но обход UI не должен ставить резерв
+        // неучастнику или при выключенном рубильнике.
+        $reserve = $reserve && $this->reservePolicy->availableFor($cart->user);
+
+        return DB::transaction(function () use ($cart, $company, $deliveryAddress, $comment, $managerComment, $warehouseComment, $deliveryMethod, $reserve) {
             $user = $cart->user;
             $currency = $this->currencyResolver->resolve($user);
 
@@ -164,6 +171,8 @@ class CheckoutService implements CheckoutServiceInterface
                 cartId: $cart->id,
                 currency: $currency,
                 warehouseComments: $warehouseComments,
+                reserve: $reserve,
+                reservedUntil: $reserve ? $this->reservePolicy->requestedReservedUntil($user) : null,
             );
 
             // Заказ уценки отгружается со склада некондиции. Остаток партии проверен

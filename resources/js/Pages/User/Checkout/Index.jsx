@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     Box, Flex, Text, Heading, Button, Table, Badge, Separator,
-    Textarea, NativeSelect, RadioCard, Stack, Dialog, Portal, Input, SimpleGrid, HStack,
+    Textarea, NativeSelect, RadioCard, Stack, Dialog, Portal, Input, SimpleGrid, HStack, VStack,
 } from '@chakra-ui/react';
 import { LuArrowLeft, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch, LuStore, LuTriangleAlert, LuTruck, LuWand, LuBadgePercent, LuGift, LuSprout, LuClock3, LuChevronDown, LuReceiptText } from 'react-icons/lu';
 import axios from 'axios';
@@ -11,6 +11,7 @@ import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toaster } from '@/components/ui/toaster';
 import { Field } from '@/components/ui/field';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Radio, RadioGroup } from '@/components/ui/radio';
 import { Tooltip } from '@/components/ui/tooltip';
 import { PhoneInput } from '@/components/common/PhoneInput';
 import { PartySuggest } from '@/components/common/PartySuggest';
@@ -89,6 +90,8 @@ export default function CheckoutIndex({
         address_name: '',
         address_make_default: false,
         address_data: null,
+        // v16.9.0 (режим «Заказы в резерве», res-06): radio «Поставьте в резерв»
+        reserve: false,
     });
 
     // Выбор адреса: id сохранённого адреса (строкой) либо 'new' для ручного ввода.
@@ -674,6 +677,8 @@ export default function CheckoutIndex({
                             preorderQty={preorderQty}
                             onSubmitInstockOnly={() => submit(true)}
                             onAddCompany={() => setCompanyDialogOpen(true)}
+                            reserveValue={data.reserve}
+                            onReserveChange={(v) => setData('reserve', v)}
                         />
 
                         <Flex>
@@ -1276,12 +1281,22 @@ function OrderSummaryTicket({
     companies, data, addresses, addressChoice, groups, grandTotal, leadLabel,
     fmt, currencySymbol, hasConflicts, debtRestriction, processing,
     canInstockOnly, instockOnlyQty, preorderQty, onSubmitInstockOnly, onAddCompany,
+    reserveValue, onReserveChange,
 }) {
     const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
     // Чек и придуман, чтобы клиент не жал кнопку на автомате: галочка — последний
     // осознанный шаг, без неё кнопки оформления неактивны.
     const [confirmed, setConfirmed] = useState(false);
+
+    // v16.9.0 (режим «Заказы в резерве», res-06): участнику режима вместо галочки —
+    // radio «можно отгружать / поставьте в резерв». Резервируется только складская
+    // часть корзины, поэтому без instock-строк radio не показываем.
+    const { config: pageConfig } = usePage().props;
+    const reserveAvailable = !!pageConfig?.reserves_enabled && groups.instock.items.length > 0;
+    const reserveHours = Number(pageConfig?.reserve_hours || 24);
+    const [decision, setDecision] = useState(null); // null | 'ship' | 'reserve'
+    const confirmedFinal = reserveAvailable ? decision !== null : confirmed;
 
     const selectedCompany = companies.find((c) => String(c.id) === String(data.company_id)) ?? null;
     const isPickup = data.delivery_method === 'pickup';
@@ -1335,7 +1350,9 @@ function OrderSummaryTicket({
     // «Со склада N шт.» вместо «Заказ N шт.»: документов может быть до трёх
     // (склад / уценка / предзаказ), а вот отгрузка — правда одна и сразу.
     let submitLabel = 'Оформить заказ';
-    if (hasPreorder && canInstockOnly) {
+    if (reserveAvailable && decision === 'reserve') {
+        submitLabel = 'Поставить в резерв';
+    } else if (hasPreorder && canInstockOnly) {
         submitLabel = `Со склада ${instockOnlyQty} шт. + предзаказ ${preorderQty} шт.`;
     } else if (hasPreorder) {
         submitLabel = `Оформить предзаказ (${preorderQty} шт.)`;
@@ -1584,7 +1601,7 @@ function OrderSummaryTicket({
                         и пульсирующие круги (встроенный keyframe ping), пока не отмечена.
                         Круги позиционируются без transform — ping сам анимирует scale. */}
                     <Box position="relative" display="inline-flex" alignSelf={{ base: 'flex-start', md: 'center' }}>
-                        {!confirmed && (
+                        {!confirmedFinal && (
                             <Box
                                 position="absolute"
                                 left="-6px"
@@ -1598,6 +1615,34 @@ function OrderSummaryTicket({
                                 <Box position="absolute" inset="1" rounded="full" bg="pecado.solid" opacity="0.25" animation="ping" animationDelay="0.5s" />
                             </Box>
                         )}
+                        {reserveAvailable ? (
+                            /* v16.9.0: участнику режима резервов — осознанный выбор судьбы
+                               заказа вместо галочки. Крупные тап-зоны: основной сценарий
+                               интернетчика — оформление с телефона. */
+                            <RadioGroup
+                                value={decision}
+                                onValueChange={({ value }) => {
+                                    setDecision(value);
+                                    onReserveChange?.(value === 'reserve');
+                                }}
+                                colorPalette="pecado"
+                                size="lg"
+                            >
+                                <VStack align="flex-start" gap="2">
+                                    <Radio value="ship" fontWeight="600">
+                                        Данные проверены — можно отгружать
+                                    </Radio>
+                                    <Radio value="reserve" fontWeight="600">
+                                        <VStack align="flex-start" gap="0">
+                                            <Text>Поставьте в резерв — подтвержу отгрузку позже</Text>
+                                            <Text fontSize="xs" fontWeight="400" color="fg.muted">
+                                                Товар удержим до {reserveHours} ч. Не подтвердите — резерв снимется сам
+                                            </Text>
+                                        </VStack>
+                                    </Radio>
+                                </VStack>
+                            </RadioGroup>
+                        ) : (
                         <Checkbox
                             checked={confirmed}
                             onCheckedChange={({ checked }) => setConfirmed(!!checked)}
@@ -1614,6 +1659,7 @@ function OrderSummaryTicket({
                         >
                             Данные заказа мною проверены — можно отправлять на сборку
                         </Checkbox>
+                        )}
                     </Box>
 
                     {/* До md — столбиком на всю ширину: две широкие кнопки с длинными
@@ -1621,9 +1667,13 @@ function OrderSummaryTicket({
                         Тултипы висят на Box-обёртках: выключенная кнопка не получает событий
                         мыши, поэтому pointerEvents у неё гасятся, а наведение ловит обёртка. */}
                     {(() => {
-                        const buttonsDisabled = submitDisabled || !confirmed;
+                        const buttonsDisabled = submitDisabled || !confirmedFinal;
                         const disabledHint = submitBlockReason
-                            ?? (!confirmed ? 'Сначала подтвердите галочкой, что проверили данные заказа' : null);
+                            ?? (!confirmedFinal
+                                ? (reserveAvailable
+                                    ? 'Сначала выберите: отправить на сборку или поставить в резерв'
+                                    : 'Сначала подтвердите галочкой, что проверили данные заказа')
+                                : null);
 
                         return (
                             <Flex gap="3" direction={{ base: 'column-reverse', md: 'row' }} justify="flex-end" flexShrink="0">

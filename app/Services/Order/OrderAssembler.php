@@ -100,6 +100,12 @@ class OrderAssembler
             'rate_coefficient' => $draft->currency->rate_coefficient ?? 1.0,
             'currency_code' => $draft->currency->code ?? 'RUB',
             'type' => OrderType::from($type),
+            // v16.9.0 (режим «Заказы в резерве»): резервируется только обычный
+            // заказ — предзаказ/уценка/промо идут своим конвейером без удержания
+            ...($draft->reserve && $type === OrderType::ORDER->value ? [
+                'reserve' => true,
+                'reserved_until' => $draft->reservedUntil,
+            ] : []),
         ];
     }
 

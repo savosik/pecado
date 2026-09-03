@@ -34,6 +34,11 @@ final readonly class OrderDraft
         public ?int $cartId = null,
         public ?Currency $currency = null,
         public array $warehouseComments = [],
+        // v16.9.0 (режим «Заказы в резерве», res-06): применяется ТОЛЬКО к группе
+        // type=order — предзаказ/уценка/промо в резерв не ставятся.
+        // reservedUntil — запрошенный сайтом срок; фактический вернёт 1С.
+        public bool $reserve = false,
+        public ?\Carbon\CarbonInterface $reservedUntil = null,
     ) {}
 
     /**
