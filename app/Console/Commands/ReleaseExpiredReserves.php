@@ -59,6 +59,8 @@ class ReleaseExpiredReserves extends Command
                 request()->merge(['status_comment' => 'Резерв истёк — заказ снят автоматически']);
 
                 $fresh->reserve = false;
+                // Исход для метрик злоупотреблений (res-11)
+                $fresh->reserve_outcome = 'expired';
                 $fresh->status = OrderStatus::CLOSED;
                 $fresh->save();
                 $fresh->deleteQuietly();

@@ -25,4 +25,9 @@ return [
     // (orders.reserve_expiring). Письмо однократное на заказ — дедуп по
     // origin_key в MailStream.
     'expiring_notice_hours' => (int) env('ORDER_RESERVE_EXPIRING_NOTICE_HOURS', 3),
+
+    // Красная зона сводки /crm/reserves: доля резервов, снятых по таймауту,
+    // выше порога подсвечивает партнёра «резервирует и бросает». Только сигнал —
+    // решение (сократить окно, отключить режим) принимает РОП руками.
+    'expired_share_alert' => (float) env('ORDER_RESERVE_EXPIRED_SHARE_ALERT', 0.3),
 ];

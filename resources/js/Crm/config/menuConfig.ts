@@ -25,6 +25,7 @@ import {
     LuFileDown,
     LuFilePen,
     LuPackageX,
+    LuClock3,
     LuBellRing,
     LuHistory,
     LuMegaphone,
@@ -92,6 +93,9 @@ export const menuConfig: MenuGroup[] = [
             // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
             // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
             { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", counter: "shortages" },
+            // Резервы заказов (v16.9.0): сводка «кто резервирует и бросает»
+            // и рычаг РОПа — отключение режима, индивидуальное окно.
+            { label: "Резервы заказов", icon: LuClock3, path: "/crm/reserves", permission: "crm-reserves.view" },
         ],
     },
     {

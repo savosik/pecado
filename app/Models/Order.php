@@ -130,6 +130,7 @@ class Order extends Model implements HasMedia
         'reserve',
         'reserved_until',
         'items_version',
+        'reserve_outcome',
         'erp_created_at',
         'erp_updated_at',
     ];

@@ -142,6 +142,9 @@ class RolesAndPermissionsSeeder extends Seeder
         // Недоборы: view — журнал и сводки, edit — причина отмены и комментарий
         // в строке. Границы задаёт скоуп клиентов, как в остальных разделах.
         'crm-shortages' => ['view', 'edit'],
+        // Режим «Заказы в резерве» (v16.9.0, res-11): сводка злоупотреблений
+        // и рычаг РОПа (точечное отключение, индивидуальное окно).
+        'crm-reserves' => ['view', 'edit'],
         // Справочник причин недоборов ведёт руководитель: менеджер выбирает
         // причину из списка, но не дописывает сам список — иначе в сводке
         // разведутся синонимы одной и той же причины.
@@ -343,7 +346,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'label' => 'Руководитель отдела продаж',
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
-                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-department', 'crm-leads', 'crm-lead-stages', 'crm-contractors', 'crm-team', 'crm-absences', 'crm-timesheet', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-shortages', 'crm-shortage-reasons', 'crm-contacts', 'crm-contracts', 'crm-agent-tokens', 'crm-impersonate', 'crm-salary',
+                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-department', 'crm-leads', 'crm-lead-stages', 'crm-contractors', 'crm-team', 'crm-absences', 'crm-timesheet', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-shortages', 'crm-shortage-reasons', 'crm-reserves', 'crm-contacts', 'crm-contracts', 'crm-agent-tokens', 'crm-impersonate', 'crm-salary',
                 // Себестоимость руководителю отдела появится вместе с отчётом по марже
                 // и только под `crm-`-префиксом: `product-costs` — админский ресурс,
                 // и выдача его этой роли открыла бы ей вход в /admin (PermissionNamingTest).

@@ -47,6 +47,8 @@ class ClientOrderActions
         $order->status = OrderStatus::CLOSED;
         if ($order->reserve) {
             $order->reserve = false;
+            // Исход для метрик злоупотреблений (res-11)
+            $order->reserve_outcome = 'cancelled';
         }
         $order->save();
         $order->deleteQuietly();
@@ -67,6 +69,8 @@ class ClientOrderActions
         $publisher->publishConfirmed($order);
 
         $order->reserve = false;
+        // Исход для метрик злоупотреблений (res-11)
+        $order->reserve_outcome = 'confirmed';
         $order->save();
     }
 

@@ -782,6 +782,14 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     });
 
     // Недоборы: журнал отменённых строк заказов. view — журнал, сводки и
+    // v16.9.0 (res-11): резервы заказов — сводка злоупотреблений и рычаг РОПа
+    Route::middleware('permission:crm-reserves.view')->group(function () {
+        Route::get('/reserves', [\App\Http\Controllers\Crm\ReserveControlController::class, 'index'])->name('reserves.index');
+    });
+    Route::middleware('permission:crm-reserves.edit')->group(function () {
+        Route::put('/reserves/{user}', [\App\Http\Controllers\Crm\ReserveControlController::class, 'update'])->name('reserves.update');
+    });
+
     // степень удовлетворения, edit — причина недобора и комментарий к строке.
     // Замен сайт не предлагает: отмену делает и склад при сборке, и клиент.
     Route::middleware('permission:crm-shortages.view')->group(function () {
