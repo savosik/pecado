@@ -4,8 +4,9 @@ import {
     Card, HStack, VStack, SimpleGrid, Image, Collapsible,
     Dialog, Portal, CloseButton,
 } from '@chakra-ui/react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
+import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
 import {
     LuArrowLeft, LuPackage, LuWarehouse, LuBadgePercent,
     LuClock, LuClock3, LuUser, LuMessageSquare, LuBuilding2, LuLandmark, LuMapPin, LuTruck, LuShoppingBag,
@@ -103,6 +104,30 @@ export default function OrderShow({ order }) {
         }
     }, [cartTotal, doRepeat]);
 
+    // ─── Отменить заказ (v16.9.0, режим «Заказы в резерве») ───
+    // Кнопка приходит с бэка только пока 1С не начала сборку (или заказ в резерве)
+    const [cancelOpen, setCancelOpen] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
+
+    const doCancel = useCallback(async () => {
+        setCancelling(true);
+        try {
+            const { data } = await axios.post(`/cabinet/orders/${order.id}/cancel`);
+            toastSuccess('Заказ отменён', data?.message || 'Товар возвращён в свободный остаток.');
+            setCancelOpen(false);
+            router.reload();
+        } catch (err) {
+            toastError('Отменить не удалось', err?.response?.data?.message || 'Попробуйте ещё раз или свяжитесь с менеджером.');
+            setCancelOpen(false);
+            // Статус мог уехать (гонка со сборкой) — показываем актуальное состояние
+            if (err?.response?.status === 422) {
+                router.reload();
+            }
+        } finally {
+            setCancelling(false);
+        }
+    }, [order.id]);
+
     return (
         <CabinetLayout
             title={`Заказ ${order.number}`}
@@ -130,6 +155,18 @@ export default function OrderShow({ order }) {
                             </Link>
                         </Button>
                     )}
+                    {order.can_cancel && (
+                        <Button
+                            colorPalette="red"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCancelOpen(true)}
+                            loading={cancelling}
+                        >
+                            <LuBan size={16} />
+                            Отменить заказ
+                        </Button>
+                    )}
                     <Button asChild variant="outline" size="sm">
                         <Link href="/cabinet/orders">
                             <LuArrowLeft size={16} />
@@ -140,6 +177,17 @@ export default function OrderShow({ order }) {
             }
         >
             <Head title={`Заказ ${order.number} — Pecado`} />
+
+            <ConfirmDialog
+                open={cancelOpen}
+                onClose={() => setCancelOpen(false)}
+                onConfirm={doCancel}
+                title="Отменить заказ?"
+                description={`Заказ ${order.number} будет отменён, товар вернётся в свободный остаток. Действие необратимо — для нового заказа соберите корзину заново или используйте «Повторить заказ» до отмены.`}
+                confirmLabel="Отменить заказ"
+                cancelLabel="Не отменять"
+                isLoading={cancelling}
+            />
 
             <RepeatOrderDialog
                 open={confirmOpen}

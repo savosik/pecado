@@ -162,6 +162,33 @@ class Order extends Model implements HasMedia
     }
 
     /**
+     * Может ли клиент отменить заказ сам (v16.9.0, режим «Заказы в резерве», res-04).
+     *
+     * Да — пока 1С не начала сборку: ранние статусы до «Готов к отгрузке».
+     * Резервный заказ отменяем независимо от статуса: в 1С он приезжает как
+     * ready_for_shipment (своего статуса у резерва нет), но в сборку не идёт
+     * до подтверждения — окно резерва и есть окно отмены.
+     */
+    public function cancellableByClient(): bool
+    {
+        if ($this->trashed()) {
+            return false;
+        }
+
+        if ($this->reserve) {
+            return true;
+        }
+
+        return in_array($this->status, [
+            OrderStatus::PENDING_APPROVAL,
+            OrderStatus::PENDING_PAYMENT_BEFORE_PROVISION,
+            OrderStatus::READY_FOR_PROVISION,
+            OrderStatus::PENDING_PAYMENT_BEFORE_SHIPMENT,
+            OrderStatus::AWAITING_PROVISION,
+        ], true);
+    }
+
+    /**
      * The "booted" method of the model.
      */
     protected static function booted(): void

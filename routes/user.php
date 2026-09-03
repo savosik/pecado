@@ -180,6 +180,8 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/orders/export', [OrderController::class, 'export'])->name('orders.export');
     Route::get('/orders/{order}/items/export', [OrderController::class, 'exportItems'])->name('orders.items.export');
     Route::post('/orders/{order}/repeat', [OrderController::class, 'repeat'])->name('orders.repeat');
+    // v16.9.0 (res-04): отмена заказа клиентом — за рубильником order_reserve.enabled
+    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
     // Изменения заказов (сводная лента)

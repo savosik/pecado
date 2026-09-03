@@ -504,6 +504,9 @@ class OrderController extends Controller
                 'uuid' => $order->uuid,
                 'status' => $order->status?->value,
                 'status_label' => $this->getStatusLabel($order->status),
+                // v16.9.0 (res-04): кнопка «Отменить заказ» — за глобальным рубильником
+                // и только пока 1С не начала сборку (или заказ в окне резерва)
+                'can_cancel' => (bool) config('order_reserve.enabled') && $order->cancellableByClient(),
                 'type' => $order->type?->value,
                 'comment' => $order->comment,
                 'manager_comment' => $order->manager_comment,
@@ -751,6 +754,53 @@ class OrderController extends Controller
      * Позиции без привязки к каталогу (product_id пустой — товар удалён из
      * каталога) повторить нельзя, они возвращаются в skipped_count.
      */
+    /**
+     * Отмена заказа клиентом (v16.9.0, режим «Заказы в резерве», res-04).
+     * POST /cabinet/orders/{order}/cancel
+     *
+     * Доступна, пока 1С не начала сборку (ранние статусы) либо пока заказ в окне
+     * резерва. В 1С уходит order.deleted с reason=client_cancelled (там — отмена
+     * строк + «Закрыт», без пометки удаления); локально заказ закрывается сразу,
+     * не дожидаясь эха, — клиент видит результат мгновенно.
+     */
+    public function cancel(
+        Request $request,
+        Order $order,
+        \App\Services\Erp\OrderReservePublisher $publisher,
+    ): JsonResponse {
+        // Весь контур резервов за глобальным рубильником — до включения владельцами
+        // кнопка не рендерится, а прямой запрос получает 404.
+        abort_unless((bool) config('order_reserve.enabled'), 404);
+        abort_unless($order->user_id === $request->user()->id, 403);
+
+        // Гонка: статус мог уехать между рендером страницы и запросом
+        if (! $order->cancellableByClient()) {
+            return response()->json([
+                'message' => 'Заказ уже передан в сборку — отменить его из кабинета нельзя. Свяжитесь с вашим менеджером.',
+            ], 422);
+        }
+
+        // Публикация в 1С до локального закрытия: если постановка джобы упала,
+        // заказ остаётся активным и клиент просто повторит попытку.
+        $publisher->publishDeleted($order, \App\Services\Erp\OrderReservePublisher::REASON_CLIENT_CANCELLED);
+
+        // Переход статуса сам ложится в OrderStatusHistory (booted::updating)
+        // с user_id клиента; комментарий истории берётся из запроса — менеджер
+        // в карточке заказа увидит, что отмена клиентская, а не 1С.
+        $request->merge(['status_comment' => 'Отменён клиентом из кабинета']);
+
+        $order->status = OrderStatus::CLOSED;
+        if ($order->reserve) {
+            $order->reserve = false;
+        }
+        $order->save();
+        $order->deleteQuietly();
+
+        return response()->json([
+            'message' => 'Заказ отменён. Товар возвращён в свободный остаток.',
+        ]);
+    }
+
     public function repeat(Request $request, Order $order, CartServiceInterface $cartService): JsonResponse
     {
         $user = $request->user();
