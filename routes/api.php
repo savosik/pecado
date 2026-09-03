@@ -177,6 +177,12 @@ Route::prefix('client-api/{token}')
         Route::get('/shipments', [\App\Http\Controllers\Api\ClientApiController::class, 'shipments'])->name('shipments');
         Route::get('/shipments/{shipment}', [\App\Http\Controllers\Api\ClientApiController::class, 'shipment'])->name('shipments.show');
         Route::post('/orders', [\App\Http\Controllers\Api\ClientApiController::class, 'orders'])->name('orders');
+        // v16.9.0 (режим «Заказы в резерве», res-10): самообслуживание резервов —
+        // система интернет-магазина сама подтверждает/правит/отменяет резерв
+        Route::get('/reserves', [\App\Http\Controllers\Api\ClientApiController::class, 'reserves'])->name('reserves');
+        Route::post('/reserves/{order}/confirm', [\App\Http\Controllers\Api\ClientApiController::class, 'reserveConfirm'])->name('reserves.confirm');
+        Route::post('/reserves/{order}/items', [\App\Http\Controllers\Api\ClientApiController::class, 'reserveItems'])->name('reserves.items');
+        Route::post('/reserves/{order}/cancel', [\App\Http\Controllers\Api\ClientApiController::class, 'reserveCancel'])->name('reserves.cancel');
     });
 
 // ──────────────────────────────────────────────────────────────

@@ -36,6 +36,192 @@ class ClientApiController extends Controller
     ) {}
 
     /**
+     * GET /api/client-api/{token}/reserves
+     * Заказы в резерве (v16.9.0, режим «Заказы в резерве»).
+     *
+     * Список удержанных заказов интеграции: состав, суммы и фактический срок
+     * `reserved_until` (может быть короче запрошенного — 1С урезает до своего
+     * предела удержания). Пока заказ в резерве, товар удержан на складе и не
+     * уйдёт другому покупателю; не подтвердите до срока — резерв снимется
+     * автоматически.
+     *
+     * Доступно только участнику режима (`reserve_allowed`); иначе 403
+     * с кодом `reserve_unavailable`.
+     */
+    public function reserves(Request $request, string $token): JsonResponse
+    {
+        $apiToken = $this->resolveToken($token);
+        $user = $apiToken->user;
+
+        if ($guard = $this->guardReserveMode($user)) {
+            return $guard;
+        }
+
+        $orders = Order::query()
+            ->where('user_id', $user->id)
+            ->where('reserve', true)
+            ->with(['items' => fn ($q) => $q->where('cancelled', false), 'items.product:id,sku,slug,name'])
+            ->orderBy('reserved_until')
+            ->get();
+
+        return response()->json([
+            'reserves' => $orders->map(fn (Order $order) => [
+                'order_id' => $order->id,
+                'number' => $order->erp_number ?? $order->number,
+                'uuid' => $order->uuid,
+                'total_amount' => (float) $order->total_amount,
+                'currency_code' => $order->currency_code,
+                'reserved_until' => $order->reserved_until?->toIso8601String(),
+                'created_at' => ($order->erp_created_at ?? $order->created_at)?->toIso8601String(),
+                'items' => $order->items->map(fn ($item) => [
+                    'item_id' => $item->id,
+                    'sku' => $item->product?->sku,
+                    'name' => $item->product?->name ?? $item->name,
+                    'quantity' => (float) $item->quantity,
+                    'price' => (float) ($item->final_price ?? $item->price),
+                    'subtotal' => (float) $item->subtotal,
+                ])->values(),
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * POST /api/client-api/{token}/reserves/{order}/confirm
+     * Подтвердить резервный заказ — отправить в отгрузку (v16.9.0).
+     *
+     * После подтверждения заказ уходит в сборку по обычному конвейеру,
+     * изменить или отменить его через API больше нельзя.
+     */
+    public function reserveConfirm(Request $request, string $token, int $order): JsonResponse
+    {
+        $apiToken = $this->resolveToken($token);
+
+        return $this->reserveAction($apiToken->user, $order, function (Order $target) {
+            app(\App\Services\Order\ClientOrderActions::class)
+                ->confirmReserve($target, app(\App\Services\Erp\OrderReservePublisher::class));
+
+            return response()->json([
+                'message' => 'Заказ отправлен в отгрузку.',
+                'order_id' => $target->id,
+            ]);
+        });
+    }
+
+    /**
+     * POST /api/client-api/{token}/reserves/{order}/items
+     * Изменить состав резервного заказа (v16.9.0).
+     *
+     * Передаётся ЦЕЛЕВОЙ состав: `items: [{item_id, quantity}]` по остающимся
+     * строкам (item_id — из списка /reserves); отсутствующие строки удаляются.
+     * V1 — только уменьшение: увеличение отклоняется кодом `increase_forbidden`
+     * (нужно больше — создайте отдельный заказ). Пустой состав не принимается
+     * (`empty_composition`) — для полного отказа используйте /cancel.
+     */
+    public function reserveItems(Request $request, string $token, int $order): JsonResponse
+    {
+        $apiToken = $this->resolveToken($token);
+
+        $validated = $request->validate([
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.item_id' => ['required', 'integer'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+        ], [
+            'items.required' => 'Состав пуст — для отказа от всего заказа используйте /cancel.',
+            'items.min' => 'Состав пуст — для отказа от всего заказа используйте /cancel.',
+        ]);
+
+        $target = array_map(
+            fn (array $row) => ['id' => (int) $row['item_id'], 'quantity' => (int) $row['quantity']],
+            $validated['items'],
+        );
+
+        return $this->reserveAction($apiToken->user, $order, function (Order $orderModel) use ($target) {
+            app(\App\Services\Order\ClientOrderActions::class)->updateReserveItems(
+                $orderModel,
+                $target,
+                app(\App\Services\Erp\OrderReservePublisher::class),
+                $this->changeLogger,
+            );
+
+            return response()->json([
+                'message' => 'Состав обновлён.',
+                'order_id' => $orderModel->id,
+                'total_amount' => (float) $orderModel->refresh()->total_amount,
+            ]);
+        });
+    }
+
+    /**
+     * POST /api/client-api/{token}/reserves/{order}/cancel
+     * Отменить заказ (v16.9.0).
+     *
+     * Работает для заказа в окне резерва и для обычного заказа в ранних
+     * статусах (пока 1С не начала сборку). Товар возвращается в свободный
+     * остаток; поздние статусы отклоняются кодом `not_cancellable`.
+     */
+    public function reserveCancel(Request $request, string $token, int $order): JsonResponse
+    {
+        $apiToken = $this->resolveToken($token);
+
+        return $this->reserveAction($apiToken->user, $order, function (Order $target) {
+            app(\App\Services\Order\ClientOrderActions::class)->cancel(
+                $target,
+                app(\App\Services\Erp\OrderReservePublisher::class),
+                'Отменён клиентом через API',
+            );
+
+            return response()->json([
+                'message' => 'Заказ отменён. Товар возвращён в свободный остаток.',
+                'order_id' => $target->id,
+            ]);
+        });
+    }
+
+    /**
+     * Общий каркас действий над резервом: гейт режима, поиск заказа владельца,
+     * маппинг доменных отказов в машиночитаемый JSON.
+     *
+     * @param  callable(Order): JsonResponse  $action
+     */
+    protected function reserveAction(\App\Models\User $user, int $orderId, callable $action): JsonResponse
+    {
+        if ($guard = $this->guardReserveMode($user)) {
+            return $guard;
+        }
+
+        $order = Order::withTrashed()
+            ->where('user_id', $user->id)
+            ->whereKey($orderId)
+            ->first();
+
+        if ($order === null) {
+            return response()->json(['error' => 'Заказ не найден.', 'code' => 'order_not_found'], 404);
+        }
+
+        try {
+            return $action($order);
+        } catch (\App\Services\Order\ReserveActionException $e) {
+            return response()->json(['error' => $e->getMessage(), 'code' => $e->errorCode], $e->status);
+        }
+    }
+
+    /**
+     * Режим «Заказы в резерве» доступен только участнику: глобальный рубильник,
+     * флаг 1С и отсутствие точечного отключения на сайте.
+     */
+    protected function guardReserveMode(\App\Models\User $user): ?JsonResponse
+    {
+        if (! app(\App\Services\Order\ReservePolicy::class)->availableFor($user)) {
+            return response()->json([
+                'error' => 'Режим «Заказы в резерве» вам недоступен.',
+                'code' => 'reserve_unavailable',
+            ], 403);
+        }
+
+        return null;
+    }
+
+    /**
      * GET /api/client-api/{token}/prices
      * Получить цены пользователя.
      *
@@ -561,6 +747,10 @@ class ClientApiController extends Controller
             'products.*.identifier' => 'required|string|max:255',
             'products.*.quantity' => 'required|integer|min:1',
             'apply_promotions' => 'nullable|boolean',
+            // v16.9.0 (режим «Заказы в резерве»): создать заказ с удержанием товара.
+            // Резервируется только складская часть (type=order); подтверждение,
+            // правка и отмена — методы /reserves/*
+            'reserve' => 'nullable|boolean',
         ], [
             'inn.required' => 'ИНН обязателен',
             'delivery_method.in' => 'Недопустимый способ доставки. Допустимые значения: delivery, pickup',
@@ -579,6 +769,16 @@ class ClientApiController extends Controller
                 'error' => 'Компания с указанным ИНН не найдена в вашем аккаунте',
                 'inn' => $validated['inn'],
             ], 422);
+        }
+
+        // v16.9.0: резерв доступен только участнику режима — явный отказ,
+        // а не молчаливое игнорирование флага
+        $reserve = $request->boolean('reserve');
+        if ($reserve && ! app(\App\Services\Order\ReservePolicy::class)->availableFor($user)) {
+            return response()->json([
+                'error' => 'Режим «Заказы в резерве» вам недоступен.',
+                'code' => 'reserve_unavailable',
+            ], 403);
         }
 
         // Резолвим товары и раскладываем на выполнимую часть.
@@ -703,6 +903,10 @@ class ClientApiController extends Controller
             currency: $currency,
             // Лист отбора промо-позиций — та же пометка складу, что и в чекауте
             warehouseComments: $promoResult !== null ? $promoResult->warehouseComments : [],
+            reserve: $reserve,
+            reservedUntil: $reserve
+                ? app(\App\Services\Order\ReservePolicy::class)->requestedReservedUntil($user)
+                : null,
         );
 
         // Заказы и запись о недостаче — одной транзакцией. OrderCreated сборщик
@@ -746,6 +950,9 @@ class ClientApiController extends Controller
             'total_amount' => round((float) $order->total_amount, 2),
             'items_count' => $order->items()->count(),
             'status' => $order->status?->value ?? OrderStatus::PENDING_APPROVAL->value,
+            // v16.9.0: запрошенный срок удержания; фактический (возможно, урезанный
+            // 1С) виден в GET /reserves после эха
+            ...($order->reserve ? ['reserve' => true, 'reserved_until' => $order->reserved_until?->toIso8601String()] : []),
         ], $createdOrders);
 
         $response = [

@@ -780,28 +780,13 @@ class OrderController extends Controller
         abort_unless((bool) config('order_reserve.enabled'), 404);
         abort_unless($order->user_id === $request->user()->id, 403);
 
-        // Гонка: статус мог уехать между рендером страницы и запросом
-        if (! $order->cancellableByClient()) {
-            return response()->json([
-                'message' => 'Заказ уже передан в сборку — отменить его из кабинета нельзя. Свяжитесь с вашим менеджером.',
-            ], 422);
+        try {
+            // Гонку (статус уехал между рендером и запросом) отбивает сервис
+            app(\App\Services\Order\ClientOrderActions::class)
+                ->cancel($order, $publisher, 'Отменён клиентом из кабинета');
+        } catch (\App\Services\Order\ReserveActionException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->status);
         }
-
-        // Публикация в 1С до локального закрытия: если постановка джобы упала,
-        // заказ остаётся активным и клиент просто повторит попытку.
-        $publisher->publishDeleted($order, \App\Services\Erp\OrderReservePublisher::REASON_CLIENT_CANCELLED);
-
-        // Переход статуса сам ложится в OrderStatusHistory (booted::updating)
-        // с user_id клиента; комментарий истории берётся из запроса — менеджер
-        // в карточке заказа увидит, что отмена клиентская, а не 1С.
-        $request->merge(['status_comment' => 'Отменён клиентом из кабинета']);
-
-        $order->status = OrderStatus::CLOSED;
-        if ($order->reserve) {
-            $order->reserve = false;
-        }
-        $order->save();
-        $order->deleteQuietly();
 
         return response()->json([
             'message' => 'Заказ отменён. Товар возвращён в свободный остаток.',
