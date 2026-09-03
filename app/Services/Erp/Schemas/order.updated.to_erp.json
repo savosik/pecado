@@ -1,0 +1,83 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "order.updated.to_erp",
+    "title": "order.updated (Сайт → 1С)",
+    "description": "Правка состава заказа клиентом с сайта. Добавлено в v16.9.0 (режим «Заказы в резерве», топик №5 Agent Hub). Сайт отправляет ТОЛЬКО для заказа в окне резерва (reserve = true, не подтверждён). Состав присылается ЦЕЛИКОМ и заменяет табличную часть документа. В v1 сайт гарантирует только уменьшение: снизить количество, удалить строку; добавления позиций и роста количества не бывает. 1С применяет правку к проведённому заказу (распровести → заменить состав → провести), только пока по заказу нет расходного ордера и реализации.",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string",
+            "description": "Тип события. Всегда «order.updated».",
+            "const": "order.updated"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Уникальный идентификатор сообщения для идемпотентности (формат: msg-<uuid>). При конфликте версий 1С возвращает его в conflict.rejected_message_id ответного order.updated."
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID заказа (документ «Заказ клиента» в 1С)."
+        },
+        "base_items_version": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Версия состава заказа, от которой клиент делал правку (последний items_version, применённый сайтом из сообщений 1С). Оптимистичная блокировка: если версия состава в 1С уже больше, правка НЕ применяется, 1С отвечает order.updated с актуальным составом, items_version и полем conflict. ⚠️ Это НЕ revision: revision — счётчик отправленных сообщений (растёт и без изменения состава), к блокировке не относится."
+        },
+        "items": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Позиции заказа ЦЕЛИКОМ — целевой состав после правки. Строки идентифицируются по line_number (постоянен на жизненном цикле документа). Отсутствующая в массиве строка удаляется из заказа.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "line_number": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "description": "Номер строки заказа — тот же, что был в order.created и сообщениях 1С по этому заказу."
+                    },
+                    "product_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "quantity": {
+                        "type": "number",
+                        "minimum": 1,
+                        "description": "Новое количество. В v1 не превышает количество той же строки в текущем составе (только уменьшение)."
+                    },
+                    "base_price": {
+                        "type": "number",
+                        "minimum": 0
+                    },
+                    "discount_percent": {
+                        "type": "number",
+                        "maximum": 100
+                    },
+                    "final_price": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Цена позиции. При правке не меняется — переносится из текущего состава."
+                    }
+                }
+            }
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time"
+        }
+    },
+    "required": [
+        "event",
+        "message_id",
+        "uuid",
+        "base_items_version",
+        "items"
+    ],
+    "additionalProperties": true
+}

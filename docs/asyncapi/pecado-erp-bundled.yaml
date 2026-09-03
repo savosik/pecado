@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 16.7.0
+  version: 16.9.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -111,6 +111,22 @@ channels:
               description: UUID строка
               examples:
                 - 550e8400-e29b-41d4-a716-446655440000
+            reserve_allowed:
+              type:
+                - boolean
+                - 'null'
+              description: >
+                Участник режима «Заказы в резерве» (v16.9.0, топик №5 Agent
+                Hub).
+
+                Мастер флага — 1С (отдельный реквизит партнёра): сайт показывает
+                выбор
+
+                резерва в чекауте только участникам и может точечно сузить охват
+                на своей
+
+                стороне, но не расширить. Отсутствие поля и null — «не
+                участник».
             login:
               type: string
               description: Логин (= email)
@@ -247,6 +263,30 @@ channels:
               description: UUID строка
               examples:
                 - 550e8400-e29b-41d4-a716-446655440000
+            reserve_allowed:
+              type:
+                - boolean
+                - 'null'
+              description: >
+                Участник режима «Заказы в резерве» (v16.9.0, топик №5 Agent
+                Hub).
+
+                Мастер флага — 1С (отдельный реквизит партнёра): сайт показывает
+                выбор
+
+                резерва в чекауте только участникам и может точечно сузить охват
+                на своей
+
+                стороне, но не расширить. Отсутствие поля и null — «признак не
+                меняется».
+
+                При раскатке 1С размечает флаг по списку партнёров сайта (84
+                uuid,
+
+                поимённая сверка из resolution топика №5) и возвращает
+                фактический
+
+                состав участников этими сообщениями.
             login:
               type: string
               description: Логин (= email), используется для сопоставления по email
@@ -1412,6 +1452,75 @@ channels:
               type: string
               examples:
                 - msg-order-created-site-o1a2b3c4
+            reserve:
+              type:
+                - boolean
+                - 'null'
+              description: >
+                Режим «Заказы в резерве» (v16.9.0, топик №5 Agent Hub).
+                Двунаправленное:
+
+
+                **Сайт → 1С**: `true` — создать заказ со строками «Резервировать
+                на складе»
+
+                (`СоСклада`), статус «К выполнению», в сборку не отправлять до
+
+                `order.confirmed`. Отправляется только по партнёру-участнику
+
+                (`reserve_allowed: true`); по неучастнику 1С игнорирует признак
+                и
+
+                возвращает `reserve: false` ответным `order.updated`.
+
+
+                **1С → Сайт**: `true` — заказ удерживается в резерве. Отсутствие
+                поля
+
+                и null — «не резерв».
+
+
+                ⚠️ Статуса «Резерв» в перечислении статусов НЕТ: резервный заказ
+                приезжает
+
+                со `status: ready_for_shipment`, различать режим — только по
+                этому полю.
+            reserved_until:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >
+                Срок удержания резерва (ISO-8601 с таймзоной). Обязателен при
+
+                `reserve: true`, повторяется в каждом сообщении по заказу.
+
+
+                **Сайт → 1С** — запрошенный срок (источник истины в пределах
+                верхнего
+
+                лимита 1С: настройка, стартово 24 часа от создания заказа).
+
+                **1С → Сайт** — ФАКТИЧЕСКИЙ срок удержания (сверх лимита —
+                урезан),
+
+                сайт показывает клиенту именно его. Срок в прошлом = `reserve:
+                false`.
+            items_version:
+              type:
+                - integer
+                - 'null'
+              minimum: 0
+              description: >
+                Версия состава заказа (v16.9.0, только 1С → Сайт). Растёт ТОЛЬКО
+                при
+
+                изменении строк табличной части — в отличие от `revision`,
+                растущего при
+
+                каждой публикации. Базис оптимистичной блокировки правок клиента
+
+                (`base_items_version` в `order.updated` от сайта).
             revision:
               type:
                 - integer
@@ -2040,6 +2149,87 @@ channels:
               type: string
               examples:
                 - msg-order-upd-o1a2b3c4
+            reserve:
+              type:
+                - boolean
+                - 'null'
+              description: >
+                Режим «Заказы в резерве» (v16.9.0, топик №5 Agent Hub): `true` —
+                заказ
+
+                удерживается в резерве; `false` — резерв снят (подтверждение
+                применено,
+
+                менеджер вручную двинул заказ, признак по неучастнику
+                проигнорирован или
+
+                срок оказался в прошлом) — сайт убирает заказ из раздела
+                резервов и
+
+                закрывает клиентские правки. Отсутствие поля и null — «режим не
+                меняется».
+
+
+                ⚠️ Статуса «Резерв» в перечислении статусов НЕТ: резервный заказ
+                приезжает
+
+                со `status: ready_for_shipment`, различать режим — только по
+                этому полю.
+            reserved_until:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >
+                ФАКТИЧЕСКИЙ срок удержания резерва в 1С (ISO-8601 с таймзоной),
+                а не эхо
+
+                присланного сайтом: запрошенный срок сверх верхнего лимита 1С
+                (настройка,
+
+                стартово 24 часа) урезается. Сайт показывает клиенту именно это
+                значение.
+            items_version:
+              type:
+                - integer
+                - 'null'
+              minimum: 0
+              description: >
+                Версия состава заказа (v16.9.0). Растёт ТОЛЬКО при изменении
+                строк
+
+                табличной части — в отличие от `revision`, растущего при каждой
+                публикации.
+
+                Сайт хранит последнее применённое значение и отправляет его как
+
+                `base_items_version` в исходящем `order.updated`.
+            conflict:
+              type:
+                - object
+                - 'null'
+              description: >
+                Отказ в применении правки клиента (v16.9.0). Присылается, когда
+
+                `base_items_version` входящего `order.updated` от сайта отстал
+                от версии
+
+                состава в 1С: правка не применена, в этом же сообщении —
+                актуальный состав
+
+                и `items_version`. Сайт показывает клиенту «заказ изменился,
+                обновите
+
+                страницу» и обновляет базу для следующей правки.
+              properties:
+                rejected_message_id:
+                  type: string
+                  description: message_id отклонённого сообщения сайта.
+                reason:
+                  type:
+                    - string
+                    - 'null'
+                  description: Человекочитаемая причина отказа.
             revision:
               type:
                 - integer
@@ -8412,9 +8602,18 @@ channels:
   erpOutOrders:
     address: erp_out.orders
     title: Заказы (Сайт → 1С)
-    description: |
-      Очередь для новых заказов, созданных на сайте.
-      Routing key: `order.created`
+    description: >
+      Очередь для заказов, созданных и изменяемых на сайте.
+
+      Routing keys: `order.created`, `order.updated`, `order.deleted`,
+      `order.confirmed`.
+
+
+      До v16.9.0 канал нёс только `order.created`. Режим «Заказы в резерве»
+
+      (топик №5 Agent Hub, resolution 03.09.2026) добавил три события
+
+      самообслуживания клиента: правка состава, отмена, подтверждение отгрузки.
     messages:
       orderCreatedFromSite:
         name: order.created
@@ -8446,6 +8645,75 @@ channels:
               type: string
               examples:
                 - msg-order-created-site-o1a2b3c4
+            reserve:
+              type:
+                - boolean
+                - 'null'
+              description: >
+                Режим «Заказы в резерве» (v16.9.0, топик №5 Agent Hub).
+                Двунаправленное:
+
+
+                **Сайт → 1С**: `true` — создать заказ со строками «Резервировать
+                на складе»
+
+                (`СоСклада`), статус «К выполнению», в сборку не отправлять до
+
+                `order.confirmed`. Отправляется только по партнёру-участнику
+
+                (`reserve_allowed: true`); по неучастнику 1С игнорирует признак
+                и
+
+                возвращает `reserve: false` ответным `order.updated`.
+
+
+                **1С → Сайт**: `true` — заказ удерживается в резерве. Отсутствие
+                поля
+
+                и null — «не резерв».
+
+
+                ⚠️ Статуса «Резерв» в перечислении статусов НЕТ: резервный заказ
+                приезжает
+
+                со `status: ready_for_shipment`, различать режим — только по
+                этому полю.
+            reserved_until:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >
+                Срок удержания резерва (ISO-8601 с таймзоной). Обязателен при
+
+                `reserve: true`, повторяется в каждом сообщении по заказу.
+
+
+                **Сайт → 1С** — запрошенный срок (источник истины в пределах
+                верхнего
+
+                лимита 1С: настройка, стартово 24 часа от создания заказа).
+
+                **1С → Сайт** — ФАКТИЧЕСКИЙ срок удержания (сверх лимита —
+                урезан),
+
+                сайт показывает клиенту именно его. Срок в прошлом = `reserve:
+                false`.
+            items_version:
+              type:
+                - integer
+                - 'null'
+              minimum: 0
+              description: >
+                Версия состава заказа (v16.9.0, только 1С → Сайт). Растёт ТОЛЬКО
+                при
+
+                изменении строк табличной части — в отличие от `revision`,
+                растущего при
+
+                каждой публикации. Базис оптимистичной блокировки правок клиента
+
+                (`base_items_version` в `order.updated` от сайта).
             revision:
               type:
                 - integer
@@ -9048,6 +9316,222 @@ channels:
                         - `accountable` — подотчётная, выписывается в накладную клиенту;
                         - `sample` — рекламный образец, в накладную не выписывается.
                       Присутствует только у позиций с `is_promo = true`.
+      orderUpdatedFromSite:
+        name: order.updated
+        title: Правка состава заказа клиентом (Сайт → 1С)
+        summary: >-
+          Полная замена состава резервного заказа (v16.9.0, только уменьшение в
+          v1)
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - message_id
+            - uuid
+            - base_items_version
+            - items
+          properties:
+            event:
+              type: string
+              const: order.updated
+            message_id:
+              type: string
+              description: >
+                Уникальный ID сообщения (msg-<uuid>). При конфликте версий 1С
+                возвращает
+
+                его в `conflict.rejected_message_id` ответного `order.updated`.
+              examples:
+                - msg-order-upd-site-o1a2b3c4
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            base_items_version:
+              type: integer
+              minimum: 0
+              description: >
+                Версия состава, от которой клиент делал правку — последний
+                `items_version`,
+
+                применённый сайтом из сообщений 1С. Оптимистичная блокировка:
+                если версия
+
+                состава в 1С уже больше, правка не применяется, 1С отвечает
+                `order.updated`
+
+                с актуальным составом и полем `conflict`.
+
+
+                ⚠️ Это НЕ `revision`: тот считает отправленные сообщения и
+                растёт без
+
+                изменения состава.
+              examples:
+                - 3
+            items:
+              type: array
+              minItems: 1
+              description: >
+                Позиции ЦЕЛИКОМ — целевой состав после правки. Строки
+                идентифицируются по
+
+                `line_number` (постоянен на жизненном цикле документа);
+                отсутствующая
+
+                в массиве строка удаляется. В v1 — только уменьшение количества
+                и удаление
+
+                строк, цены переносятся из текущего состава без изменений.
+              items:
+                type: object
+                properties:
+                  line_number:
+                    type:
+                      - integer
+                      - 'null'
+                    minimum: 1
+                  product_uuid:
+                    type:
+                      - string
+                      - 'null'
+                  quantity:
+                    type: number
+                    minimum: 1
+                  base_price:
+                    type: number
+                    minimum: 0
+                  discount_percent:
+                    type: number
+                    maximum: 100
+                  final_price:
+                    type: number
+                    minimum: 0
+            timestamp:
+              type: string
+              format: date-time
+          examples:
+            - event: order.updated
+              message_id: msg-order-upd-site-o1a2b3c4
+              uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
+              base_items_version: 3
+              items:
+                - line_number: 1
+                  product_uuid: 5f6f4f10-4f2a-4c2e-9f4e-111111111111
+                  quantity: 2
+                  base_price: 1500
+                  discount_percent: 10
+                  final_price: 1350
+              timestamp: '2026-09-03T12:00:00+03:00'
+      orderDeletedFromSite:
+        name: order.deleted
+        title: Отмена заказа клиентом (Сайт → 1С)
+        summary: Отмена клиентом или снятие просроченного резерва (v16.9.0)
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - message_id
+            - uuid
+            - reason
+          properties:
+            event:
+              type: string
+              const: order.deleted
+            message_id:
+              type: string
+              examples:
+                - msg-order-del-site-o1a2b3c4
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            reason:
+              type: string
+              enum:
+                - client_cancelled
+                - reserve_expired
+              description: >
+                `client_cancelled` — клиент отменил заказ сам (кабинет или
+                клиентский API);
+
+                `reserve_expired` — сайт снял резерв по истечении
+                `reserved_until`.
+            timestamp:
+              type: string
+              format: date-time
+          examples:
+            - event: order.deleted
+              message_id: msg-order-del-site-o1a2b3c4
+              uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
+              reason: client_cancelled
+              timestamp: '2026-09-03T12:00:00+03:00'
+      orderConfirmedFromSite:
+        name: order.confirmed
+        title: Подтверждение резервного заказа (Сайт → 1С)
+        summary: Клиент отправил резервный заказ в отгрузку (v16.9.0)
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - message_id
+            - uuid
+            - confirmed_at
+          properties:
+            event:
+              type: string
+              const: order.confirmed
+            message_id:
+              type: string
+              examples:
+                - msg-order-confirm-o1a2b3c4
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            confirmed_at:
+              type: string
+              format: date-time
+              description: Дата-время подтверждения клиентом (ISO-8601 с таймзоной).
+            timestamp:
+              type: string
+              format: date-time
+          examples:
+            - event: order.confirmed
+              message_id: msg-order-confirm-o1a2b3c4
+              uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
+              confirmed_at: '2026-09-03T12:00:00+03:00'
+              timestamp: '2026-09-03T12:00:01+03:00'
     servers:
       - $ref: '#/servers/rabbitmq'
     bindings:
@@ -10121,7 +10605,33 @@ operations:
 
       Заказ фиксируется в валюте пользователя с курсом и коэффициентом.
 
-      После отправки пользователь изменять заказ НЕ может.
+
+      **v16.9.0 (режим «Заказы в резерве»):** правило «после отправки
+      пользователь
+
+      изменять заказ не может» уточнено. Для заказа в окне резерва (`reserve:
+      true`,
+
+      не подтверждён) клиент сам правит состав (`order.updated`), отменяет
+
+      (`order.deleted`) и подтверждает отгрузку (`order.confirmed`) — см.
+      операции
+
+      `sendOrderUpdated` / `sendOrderDeleted` / `sendOrderConfirmed`. Для
+      обычных
+
+      заказов правило прежнее.
+
+
+      Поля `reserve` / `reserved_until` отправляются только по
+      партнёру-участнику
+
+      режима (`reserve_allowed: true` из `partner.*`). Срок — источник истины
+      сайта
+
+      в пределах верхнего лимита удержания 1С (настройка, стартово 24 часа):
+
+      сверх лимита 1С урезает срок и возвращает фактический `reserved_until`.
 
 
       **v15.3:** Поле `delivery_method` (`delivery` | `pickup`) передаёт способ
@@ -10142,6 +10652,147 @@ operations:
     tags:
       - name: US-08
       - name: orders
+  sendOrderUpdated:
+    title: Правка состава заказа клиентом (Сайт → 1С)
+    summary: Клиент изменил состав резервного заказа в кабинете или через API
+    description: >
+      **v16.9.0, режим «Заказы в резерве»** (топик №5 Agent Hub, resolution
+      03.09.2026).
+
+
+      Отправляется ТОЛЬКО для заказа в окне резерва (`reserve: true`, не
+      подтверждён).
+
+      Состав присылается целиком и заменяет табличную часть документа.
+
+      В v1 сайт гарантирует **только уменьшение**: снизить количество, удалить
+      строку.
+
+
+      Оптимистичная блокировка — по `base_items_version` (последний применённый
+      сайтом
+
+      `items_version` из сообщений 1С). Если версия состава в 1С уже больше,
+      правка НЕ
+
+      применяется: 1С отвечает `order.updated` с актуальным составом,
+      `items_version`
+
+      и полем `conflict {rejected_message_id, reason}`.
+
+
+      ⚠️ `revision` для блокировки НЕ используется: это счётчик отправленных
+      сообщений,
+
+      он растёт и без изменения состава (перепроведение, эхо с номером, дренаж
+      очереди).
+
+
+      1С применяет правку к проведённому заказу (распровести → заменить состав →
+
+      провести), только пока по заказу нет расходного ордера и реализации.
+    action: send
+    channel:
+      $ref: '#/channels/erpOutOrders'
+    messages:
+      - $ref: '#/channels/erpOutOrders/messages/orderUpdatedFromSite'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-08
+      - name: orders
+      - name: reserve
+  sendOrderDeleted:
+    title: Отмена заказа клиентом (Сайт → 1С)
+    summary: Клиент отменил заказ, либо сайт снял просроченный резерв
+    description: >
+      **v16.9.0, режим «Заказы в резерве»** (топик №5 Agent Hub, resolution
+      03.09.2026).
+
+
+      Причина в поле `reason`: `client_cancelled` — клиент отменил сам (кабинет
+      или
+
+      клиентский API), `reserve_expired` — сайт снял резерв по истечении
+      `reserved_until`
+
+      (таймер сайта — основной; страховочный регламент 1С срабатывает только при
+
+      `reserved_until` + 6 часов грации и в норме не срабатывает никогда).
+
+
+      Семантика в 1С: строки помечаются отменёнными с причиной, статус документа
+      —
+
+      «Закрыт», резерв освобождается. **Пометка удаления НЕ ставится** —
+      спутники
+
+      документа потребовали бы ручного разбора.
+
+
+      Идемпотентно: повтор по уже отменённому заказу — успех без изменений.
+    action: send
+    channel:
+      $ref: '#/channels/erpOutOrders'
+    messages:
+      - $ref: '#/channels/erpOutOrders/messages/orderDeletedFromSite'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-08
+      - name: orders
+      - name: reserve
+  sendOrderConfirmed:
+    title: Подтверждение резервного заказа (Сайт → 1С)
+    summary: Клиент отправил резервный заказ в отгрузку
+    description: >
+      **v16.9.0, режим «Заказы в резерве»** (топик №5 Agent Hub, resolution
+      03.09.2026).
+
+
+      Семантика в 1С: строки «Резервировать на складе» (`СоСклада`) переводятся
+      в
+
+      «Отгрузить», статус документа — «К отгрузке», дальше заказ идёт по
+      обычному
+
+      конвейеру (включая авто-оформление отгрузки, если оно включено у
+      контрагента).
+
+
+      Отдельное событие (а не `order.updated` с `reserve: false`) — намеренно:
+
+      `order.updated` пересобирает состав, и совмещение правки состава со сменой
+
+      режима давало бы неоднозначный порядок применения при доставке пачкой.
+
+
+      До получения `order.confirmed` заказ в сборку не идёт **ни автоматически,
+      ни
+
+      руками**: авто-оформление отгрузки в 1С гейтится по признаку резерва.
+      Ручной
+
+      перевод менеджером — аварийный путь: 1С сообщает о нём `order.updated`
+
+      с `reserve: false`, сайт убирает заказ из раздела резервов.
+
+
+      Идемпотентно: повтор по уже подтверждённому заказу — успех без изменений.
+    action: send
+    channel:
+      $ref: '#/channels/erpOutOrders'
+    messages:
+      - $ref: '#/channels/erpOutOrders/messages/orderConfirmedFromSite'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-08
+      - name: orders
+      - name: reserve
   receiveReturnUpdated:
     title: Обновление возврата
     summary: 1С обновляет статус и/или номер возврата
@@ -10991,6 +11642,20 @@ components:
             description: UUID строка
             examples:
               - 550e8400-e29b-41d4-a716-446655440000
+          reserve_allowed:
+            type:
+              - boolean
+              - 'null'
+            description: >
+              Участник режима «Заказы в резерве» (v16.9.0, топик №5 Agent Hub).
+
+              Мастер флага — 1С (отдельный реквизит партнёра): сайт показывает
+              выбор
+
+              резерва в чекауте только участникам и может точечно сузить охват
+              на своей
+
+              стороне, но не расширить. Отсутствие поля и null — «не участник».
           login:
             type: string
             description: Логин (= email)
@@ -11127,6 +11792,27 @@ components:
             description: UUID строка
             examples:
               - 550e8400-e29b-41d4-a716-446655440000
+          reserve_allowed:
+            type:
+              - boolean
+              - 'null'
+            description: >
+              Участник режима «Заказы в резерве» (v16.9.0, топик №5 Agent Hub).
+
+              Мастер флага — 1С (отдельный реквизит партнёра): сайт показывает
+              выбор
+
+              резерва в чекауте только участникам и может точечно сузить охват
+              на своей
+
+              стороне, но не расширить. Отсутствие поля и null — «признак не
+              меняется».
+
+              При раскатке 1С размечает флаг по списку партнёров сайта (84 uuid,
+
+              поимённая сверка из resolution топика №5) и возвращает фактический
+
+              состав участников этими сообщениями.
           login:
             type: string
             description: Логин (= email), используется для сопоставления по email
@@ -12179,6 +12865,74 @@ components:
             type: string
             examples:
               - msg-order-created-site-o1a2b3c4
+          reserve:
+            type:
+              - boolean
+              - 'null'
+            description: >
+              Режим «Заказы в резерве» (v16.9.0, топик №5 Agent Hub).
+              Двунаправленное:
+
+
+              **Сайт → 1С**: `true` — создать заказ со строками «Резервировать
+              на складе»
+
+              (`СоСклада`), статус «К выполнению», в сборку не отправлять до
+
+              `order.confirmed`. Отправляется только по партнёру-участнику
+
+              (`reserve_allowed: true`); по неучастнику 1С игнорирует признак и
+
+              возвращает `reserve: false` ответным `order.updated`.
+
+
+              **1С → Сайт**: `true` — заказ удерживается в резерве. Отсутствие
+              поля
+
+              и null — «не резерв».
+
+
+              ⚠️ Статуса «Резерв» в перечислении статусов НЕТ: резервный заказ
+              приезжает
+
+              со `status: ready_for_shipment`, различать режим — только по этому
+              полю.
+          reserved_until:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >
+              Срок удержания резерва (ISO-8601 с таймзоной). Обязателен при
+
+              `reserve: true`, повторяется в каждом сообщении по заказу.
+
+
+              **Сайт → 1С** — запрошенный срок (источник истины в пределах
+              верхнего
+
+              лимита 1С: настройка, стартово 24 часа от создания заказа).
+
+              **1С → Сайт** — ФАКТИЧЕСКИЙ срок удержания (сверх лимита —
+              урезан),
+
+              сайт показывает клиенту именно его. Срок в прошлом = `reserve:
+              false`.
+          items_version:
+            type:
+              - integer
+              - 'null'
+            minimum: 0
+            description: >
+              Версия состава заказа (v16.9.0, только 1С → Сайт). Растёт ТОЛЬКО
+              при
+
+              изменении строк табличной части — в отличие от `revision`,
+              растущего при
+
+              каждой публикации. Базис оптимистичной блокировки правок клиента
+
+              (`base_items_version` в `order.updated` от сайта).
           revision:
             type:
               - integer
@@ -12805,6 +13559,74 @@ components:
             type: string
             examples:
               - msg-order-created-site-o1a2b3c4
+          reserve:
+            type:
+              - boolean
+              - 'null'
+            description: >
+              Режим «Заказы в резерве» (v16.9.0, топик №5 Agent Hub).
+              Двунаправленное:
+
+
+              **Сайт → 1С**: `true` — создать заказ со строками «Резервировать
+              на складе»
+
+              (`СоСклада`), статус «К выполнению», в сборку не отправлять до
+
+              `order.confirmed`. Отправляется только по партнёру-участнику
+
+              (`reserve_allowed: true`); по неучастнику 1С игнорирует признак и
+
+              возвращает `reserve: false` ответным `order.updated`.
+
+
+              **1С → Сайт**: `true` — заказ удерживается в резерве. Отсутствие
+              поля
+
+              и null — «не резерв».
+
+
+              ⚠️ Статуса «Резерв» в перечислении статусов НЕТ: резервный заказ
+              приезжает
+
+              со `status: ready_for_shipment`, различать режим — только по этому
+              полю.
+          reserved_until:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >
+              Срок удержания резерва (ISO-8601 с таймзоной). Обязателен при
+
+              `reserve: true`, повторяется в каждом сообщении по заказу.
+
+
+              **Сайт → 1С** — запрошенный срок (источник истины в пределах
+              верхнего
+
+              лимита 1С: настройка, стартово 24 часа от создания заказа).
+
+              **1С → Сайт** — ФАКТИЧЕСКИЙ срок удержания (сверх лимита —
+              урезан),
+
+              сайт показывает клиенту именно его. Срок в прошлом = `reserve:
+              false`.
+          items_version:
+            type:
+              - integer
+              - 'null'
+            minimum: 0
+            description: >
+              Версия состава заказа (v16.9.0, только 1С → Сайт). Растёт ТОЛЬКО
+              при
+
+              изменении строк табличной части — в отличие от `revision`,
+              растущего при
+
+              каждой публикации. Базис оптимистичной блокировки правок клиента
+
+              (`base_items_version` в `order.updated` от сайта).
           revision:
             type:
               - integer
@@ -13401,6 +14223,222 @@ components:
                       - `accountable` — подотчётная, выписывается в накладную клиенту;
                       - `sample` — рекламный образец, в накладную не выписывается.
                     Присутствует только у позиций с `is_promo = true`.
+    OrderUpdatedFromSite:
+      name: order.updated
+      title: Правка состава заказа клиентом (Сайт → 1С)
+      summary: >-
+        Полная замена состава резервного заказа (v16.9.0, только уменьшение в
+        v1)
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - message_id
+          - uuid
+          - base_items_version
+          - items
+        properties:
+          event:
+            type: string
+            const: order.updated
+          message_id:
+            type: string
+            description: >
+              Уникальный ID сообщения (msg-<uuid>). При конфликте версий 1С
+              возвращает
+
+              его в `conflict.rejected_message_id` ответного `order.updated`.
+            examples:
+              - msg-order-upd-site-o1a2b3c4
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          base_items_version:
+            type: integer
+            minimum: 0
+            description: >
+              Версия состава, от которой клиент делал правку — последний
+              `items_version`,
+
+              применённый сайтом из сообщений 1С. Оптимистичная блокировка: если
+              версия
+
+              состава в 1С уже больше, правка не применяется, 1С отвечает
+              `order.updated`
+
+              с актуальным составом и полем `conflict`.
+
+
+              ⚠️ Это НЕ `revision`: тот считает отправленные сообщения и растёт
+              без
+
+              изменения состава.
+            examples:
+              - 3
+          items:
+            type: array
+            minItems: 1
+            description: >
+              Позиции ЦЕЛИКОМ — целевой состав после правки. Строки
+              идентифицируются по
+
+              `line_number` (постоянен на жизненном цикле документа);
+              отсутствующая
+
+              в массиве строка удаляется. В v1 — только уменьшение количества и
+              удаление
+
+              строк, цены переносятся из текущего состава без изменений.
+            items:
+              type: object
+              properties:
+                line_number:
+                  type:
+                    - integer
+                    - 'null'
+                  minimum: 1
+                product_uuid:
+                  type:
+                    - string
+                    - 'null'
+                quantity:
+                  type: number
+                  minimum: 1
+                base_price:
+                  type: number
+                  minimum: 0
+                discount_percent:
+                  type: number
+                  maximum: 100
+                final_price:
+                  type: number
+                  minimum: 0
+          timestamp:
+            type: string
+            format: date-time
+        examples:
+          - event: order.updated
+            message_id: msg-order-upd-site-o1a2b3c4
+            uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
+            base_items_version: 3
+            items:
+              - line_number: 1
+                product_uuid: 5f6f4f10-4f2a-4c2e-9f4e-111111111111
+                quantity: 2
+                base_price: 1500
+                discount_percent: 10
+                final_price: 1350
+            timestamp: '2026-09-03T12:00:00+03:00'
+    OrderDeletedFromSite:
+      name: order.deleted
+      title: Отмена заказа клиентом (Сайт → 1С)
+      summary: Отмена клиентом или снятие просроченного резерва (v16.9.0)
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - message_id
+          - uuid
+          - reason
+        properties:
+          event:
+            type: string
+            const: order.deleted
+          message_id:
+            type: string
+            examples:
+              - msg-order-del-site-o1a2b3c4
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          reason:
+            type: string
+            enum:
+              - client_cancelled
+              - reserve_expired
+            description: >
+              `client_cancelled` — клиент отменил заказ сам (кабинет или
+              клиентский API);
+
+              `reserve_expired` — сайт снял резерв по истечении
+              `reserved_until`.
+          timestamp:
+            type: string
+            format: date-time
+        examples:
+          - event: order.deleted
+            message_id: msg-order-del-site-o1a2b3c4
+            uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
+            reason: client_cancelled
+            timestamp: '2026-09-03T12:00:00+03:00'
+    OrderConfirmedFromSite:
+      name: order.confirmed
+      title: Подтверждение резервного заказа (Сайт → 1С)
+      summary: Клиент отправил резервный заказ в отгрузку (v16.9.0)
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - message_id
+          - uuid
+          - confirmed_at
+        properties:
+          event:
+            type: string
+            const: order.confirmed
+          message_id:
+            type: string
+            examples:
+              - msg-order-confirm-o1a2b3c4
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          confirmed_at:
+            type: string
+            format: date-time
+            description: Дата-время подтверждения клиентом (ISO-8601 с таймзоной).
+          timestamp:
+            type: string
+            format: date-time
+        examples:
+          - event: order.confirmed
+            message_id: msg-order-confirm-o1a2b3c4
+            uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
+            confirmed_at: '2026-09-03T12:00:00+03:00'
+            timestamp: '2026-09-03T12:00:01+03:00'
     OrderUpdated:
       name: order.updated
       title: Заказ обновлён
@@ -13427,6 +14465,86 @@ components:
             type: string
             examples:
               - msg-order-upd-o1a2b3c4
+          reserve:
+            type:
+              - boolean
+              - 'null'
+            description: >
+              Режим «Заказы в резерве» (v16.9.0, топик №5 Agent Hub): `true` —
+              заказ
+
+              удерживается в резерве; `false` — резерв снят (подтверждение
+              применено,
+
+              менеджер вручную двинул заказ, признак по неучастнику
+              проигнорирован или
+
+              срок оказался в прошлом) — сайт убирает заказ из раздела резервов
+              и
+
+              закрывает клиентские правки. Отсутствие поля и null — «режим не
+              меняется».
+
+
+              ⚠️ Статуса «Резерв» в перечислении статусов НЕТ: резервный заказ
+              приезжает
+
+              со `status: ready_for_shipment`, различать режим — только по этому
+              полю.
+          reserved_until:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >
+              ФАКТИЧЕСКИЙ срок удержания резерва в 1С (ISO-8601 с таймзоной), а
+              не эхо
+
+              присланного сайтом: запрошенный срок сверх верхнего лимита 1С
+              (настройка,
+
+              стартово 24 часа) урезается. Сайт показывает клиенту именно это
+              значение.
+          items_version:
+            type:
+              - integer
+              - 'null'
+            minimum: 0
+            description: >
+              Версия состава заказа (v16.9.0). Растёт ТОЛЬКО при изменении строк
+
+              табличной части — в отличие от `revision`, растущего при каждой
+              публикации.
+
+              Сайт хранит последнее применённое значение и отправляет его как
+
+              `base_items_version` в исходящем `order.updated`.
+          conflict:
+            type:
+              - object
+              - 'null'
+            description: >
+              Отказ в применении правки клиента (v16.9.0). Присылается, когда
+
+              `base_items_version` входящего `order.updated` от сайта отстал от
+              версии
+
+              состава в 1С: правка не применена, в этом же сообщении —
+              актуальный состав
+
+              и `items_version`. Сайт показывает клиенту «заказ изменился,
+              обновите
+
+              страницу» и обновляет базу для следующей правки.
+            properties:
+              rejected_message_id:
+                type: string
+                description: message_id отклонённого сообщения сайта.
+              reason:
+                type:
+                  - string
+                  - 'null'
+                description: Человекочитаемая причина отказа.
           revision:
             type:
               - integer
@@ -20327,6 +21445,27 @@ components:
           description: UUID строка
           examples:
             - 550e8400-e29b-41d4-a716-446655440000
+        reserve_allowed:
+          type:
+            - boolean
+            - 'null'
+          description: >
+            Участник режима «Заказы в резерве» (v16.9.0, топик №5 Agent Hub).
+
+            Мастер флага — 1С (отдельный реквизит партнёра): сайт показывает
+            выбор
+
+            резерва в чекауте только участникам и может точечно сузить охват на
+            своей
+
+            стороне, но не расширить. Отсутствие поля и null — «признак не
+            меняется».
+
+            При раскатке 1С размечает флаг по списку партнёров сайта (84 uuid,
+
+            поимённая сверка из resolution топика №5) и возвращает фактический
+
+            состав участников этими сообщениями.
         login:
           type: string
           description: Логин (= email), используется для сопоставления по email
@@ -20442,6 +21581,20 @@ components:
           description: UUID строка
           examples:
             - 550e8400-e29b-41d4-a716-446655440000
+        reserve_allowed:
+          type:
+            - boolean
+            - 'null'
+          description: >
+            Участник режима «Заказы в резерве» (v16.9.0, топик №5 Agent Hub).
+
+            Мастер флага — 1С (отдельный реквизит партнёра): сайт показывает
+            выбор
+
+            резерва в чекауте только участникам и может точечно сузить охват на
+            своей
+
+            стороне, но не расширить. Отсутствие поля и null — «не участник».
         login:
           type: string
           description: Логин (= email)
@@ -21618,6 +22771,183 @@ components:
         пустым,
 
         факт попадёт в лог.
+    OrderUpdatedFromSitePayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+        - base_items_version
+        - items
+      properties:
+        event:
+          type: string
+          const: order.updated
+        message_id:
+          type: string
+          description: >
+            Уникальный ID сообщения (msg-<uuid>). При конфликте версий 1С
+            возвращает
+
+            его в `conflict.rejected_message_id` ответного `order.updated`.
+          examples:
+            - msg-order-upd-site-o1a2b3c4
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        base_items_version:
+          type: integer
+          minimum: 0
+          description: >
+            Версия состава, от которой клиент делал правку — последний
+            `items_version`,
+
+            применённый сайтом из сообщений 1С. Оптимистичная блокировка: если
+            версия
+
+            состава в 1С уже больше, правка не применяется, 1С отвечает
+            `order.updated`
+
+            с актуальным составом и полем `conflict`.
+
+
+            ⚠️ Это НЕ `revision`: тот считает отправленные сообщения и растёт
+            без
+
+            изменения состава.
+          examples:
+            - 3
+        items:
+          type: array
+          minItems: 1
+          description: >
+            Позиции ЦЕЛИКОМ — целевой состав после правки. Строки
+            идентифицируются по
+
+            `line_number` (постоянен на жизненном цикле документа);
+            отсутствующая
+
+            в массиве строка удаляется. В v1 — только уменьшение количества и
+            удаление
+
+            строк, цены переносятся из текущего состава без изменений.
+          items:
+            type: object
+            properties:
+              line_number:
+                type:
+                  - integer
+                  - 'null'
+                minimum: 1
+              product_uuid:
+                type:
+                  - string
+                  - 'null'
+              quantity:
+                type: number
+                minimum: 1
+              base_price:
+                type: number
+                minimum: 0
+              discount_percent:
+                type: number
+                maximum: 100
+              final_price:
+                type: number
+                minimum: 0
+        timestamp:
+          type: string
+          format: date-time
+      examples:
+        - event: order.updated
+          message_id: msg-order-upd-site-o1a2b3c4
+          uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
+          base_items_version: 3
+          items:
+            - line_number: 1
+              product_uuid: 5f6f4f10-4f2a-4c2e-9f4e-111111111111
+              quantity: 2
+              base_price: 1500
+              discount_percent: 10
+              final_price: 1350
+          timestamp: '2026-09-03T12:00:00+03:00'
+    OrderDeletedFromSitePayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+        - reason
+      properties:
+        event:
+          type: string
+          const: order.deleted
+        message_id:
+          type: string
+          examples:
+            - msg-order-del-site-o1a2b3c4
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        reason:
+          type: string
+          enum:
+            - client_cancelled
+            - reserve_expired
+          description: >
+            `client_cancelled` — клиент отменил заказ сам (кабинет или
+            клиентский API);
+
+            `reserve_expired` — сайт снял резерв по истечении `reserved_until`.
+        timestamp:
+          type: string
+          format: date-time
+      examples:
+        - event: order.deleted
+          message_id: msg-order-del-site-o1a2b3c4
+          uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
+          reason: client_cancelled
+          timestamp: '2026-09-03T12:00:00+03:00'
+    OrderConfirmedFromSitePayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+        - confirmed_at
+      properties:
+        event:
+          type: string
+          const: order.confirmed
+        message_id:
+          type: string
+          examples:
+            - msg-order-confirm-o1a2b3c4
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        confirmed_at:
+          type: string
+          format: date-time
+          description: Дата-время подтверждения клиентом (ISO-8601 с таймзоной).
+        timestamp:
+          type: string
+          format: date-time
+      examples:
+        - event: order.confirmed
+          message_id: msg-order-confirm-o1a2b3c4
+          uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
+          confirmed_at: '2026-09-03T12:00:00+03:00'
+          timestamp: '2026-09-03T12:00:01+03:00'
     OrderCreatedPayload:
       type: object
       required:
@@ -21636,6 +22966,72 @@ components:
           type: string
           examples:
             - msg-order-created-site-o1a2b3c4
+        reserve:
+          type:
+            - boolean
+            - 'null'
+          description: >
+            Режим «Заказы в резерве» (v16.9.0, топик №5 Agent Hub).
+            Двунаправленное:
+
+
+            **Сайт → 1С**: `true` — создать заказ со строками «Резервировать на
+            складе»
+
+            (`СоСклада`), статус «К выполнению», в сборку не отправлять до
+
+            `order.confirmed`. Отправляется только по партнёру-участнику
+
+            (`reserve_allowed: true`); по неучастнику 1С игнорирует признак и
+
+            возвращает `reserve: false` ответным `order.updated`.
+
+
+            **1С → Сайт**: `true` — заказ удерживается в резерве. Отсутствие
+            поля
+
+            и null — «не резерв».
+
+
+            ⚠️ Статуса «Резерв» в перечислении статусов НЕТ: резервный заказ
+            приезжает
+
+            со `status: ready_for_shipment`, различать режим — только по этому
+            полю.
+        reserved_until:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >
+            Срок удержания резерва (ISO-8601 с таймзоной). Обязателен при
+
+            `reserve: true`, повторяется в каждом сообщении по заказу.
+
+
+            **Сайт → 1С** — запрошенный срок (источник истины в пределах
+            верхнего
+
+            лимита 1С: настройка, стартово 24 часа от создания заказа).
+
+            **1С → Сайт** — ФАКТИЧЕСКИЙ срок удержания (сверх лимита — урезан),
+
+            сайт показывает клиенту именно его. Срок в прошлом = `reserve:
+            false`.
+        items_version:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          description: >
+            Версия состава заказа (v16.9.0, только 1С → Сайт). Растёт ТОЛЬКО при
+
+            изменении строк табличной части — в отличие от `revision`, растущего
+            при
+
+            каждой публикации. Базис оптимистичной блокировки правок клиента
+
+            (`base_items_version` в `order.updated` от сайта).
         revision:
           type:
             - integer
@@ -22238,6 +23634,85 @@ components:
           type: string
           examples:
             - msg-order-upd-o1a2b3c4
+        reserve:
+          type:
+            - boolean
+            - 'null'
+          description: >
+            Режим «Заказы в резерве» (v16.9.0, топик №5 Agent Hub): `true` —
+            заказ
+
+            удерживается в резерве; `false` — резерв снят (подтверждение
+            применено,
+
+            менеджер вручную двинул заказ, признак по неучастнику проигнорирован
+            или
+
+            срок оказался в прошлом) — сайт убирает заказ из раздела резервов и
+
+            закрывает клиентские правки. Отсутствие поля и null — «режим не
+            меняется».
+
+
+            ⚠️ Статуса «Резерв» в перечислении статусов НЕТ: резервный заказ
+            приезжает
+
+            со `status: ready_for_shipment`, различать режим — только по этому
+            полю.
+        reserved_until:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >
+            ФАКТИЧЕСКИЙ срок удержания резерва в 1С (ISO-8601 с таймзоной), а не
+            эхо
+
+            присланного сайтом: запрошенный срок сверх верхнего лимита 1С
+            (настройка,
+
+            стартово 24 часа) урезается. Сайт показывает клиенту именно это
+            значение.
+        items_version:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          description: >
+            Версия состава заказа (v16.9.0). Растёт ТОЛЬКО при изменении строк
+
+            табличной части — в отличие от `revision`, растущего при каждой
+            публикации.
+
+            Сайт хранит последнее применённое значение и отправляет его как
+
+            `base_items_version` в исходящем `order.updated`.
+        conflict:
+          type:
+            - object
+            - 'null'
+          description: >
+            Отказ в применении правки клиента (v16.9.0). Присылается, когда
+
+            `base_items_version` входящего `order.updated` от сайта отстал от
+            версии
+
+            состава в 1С: правка не применена, в этом же сообщении — актуальный
+            состав
+
+            и `items_version`. Сайт показывает клиенту «заказ изменился,
+            обновите
+
+            страницу» и обновляет базу для следующей правки.
+          properties:
+            rejected_message_id:
+              type: string
+              description: message_id отклонённого сообщения сайта.
+            reason:
+              type:
+                - string
+                - 'null'
+              description: Человекочитаемая причина отказа.
         revision:
           type:
             - integer

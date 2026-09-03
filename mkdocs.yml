@@ -59,6 +59,7 @@ nav:
     - Внешние остатки (ESB): rules/external-remains.md
     - Контрагенты: rules/contractors.md
     - Заказы: rules/orders.md
+    - Заказы в резерве: rules/order-reserves.md
     - Возвраты: rules/returns.md
     - Реализации: rules/shipments.md
     - Расходные ордера: rules/goods-issues.md
@@ -82,6 +83,7 @@ nav:
     - "Фаза 2: Сайт → 1С": tests/phase-2-outbound.md
     - "Фаза 3: Сквозные сценарии": tests/phase-3-e2e.md
     - "Фаза 4: Edge-кейсы": tests/phase-4-edge.md
+    - "Заказы в резерве (v16.9.0)": tests/reserves.md
   - Гайды для 1С:
     - "Аудит-метки 1С (erp_created_at / erp_updated_at)": guides/erp-timestamps-for-1c.md
     - "График оплат: что сделать в 1С (v15.12.0)": guides/payment-schedule-for-1c.md

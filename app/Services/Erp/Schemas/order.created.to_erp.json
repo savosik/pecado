@@ -82,6 +82,19 @@
             ],
             "description": "Комментарий для склада — передаётся в отдельный реквизит заказа в 1С"
         },
+        "reserve": {
+            "type": "boolean",
+            "default": false,
+            "description": "Режим «Заказы в резерве» (v16.9.0, топик №5 Agent Hub): true — 1С создаёт заказ со строками «Резервировать на складе» (СоСклада), статус «К выполнению», в сборку не отправляет до order.confirmed. Отправляется только по партнёру-участнику режима (reserve_allowed = true из partner.*); по неучастнику 1С игнорирует признак, обрабатывает как обычный заказ и возвращает reserve = false в ответном order.updated."
+        },
+        "reserved_until": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "date-time",
+            "description": "Запрошенный срок удержания резерва (ISO-8601 с таймзоной). ОБЯЗАТЕЛЕН при reserve = true и повторяется в каждом сообщении по заказу. Источник истины — сайт, но в пределах верхнего лимита удержания 1С (настройка, стартово 24 часа от создания заказа): срок сверх лимита 1С урезает и возвращает фактический reserved_until в ответном order.updated. Срок в прошлом трактуется как reserve = false."
+        },
         "timestamp": {
             "type": "string",
             "format": "date-time"
@@ -306,5 +319,20 @@
         "uuid",
         "items"
     ],
+    "if": {
+        "properties": {
+            "reserve": {
+                "const": true
+            }
+        },
+        "required": [
+            "reserve"
+        ]
+    },
+    "then": {
+        "required": [
+            "reserved_until"
+        ]
+    },
     "additionalProperties": true
 }

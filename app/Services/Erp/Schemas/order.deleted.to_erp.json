@@ -1,0 +1,43 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "order.deleted.to_erp",
+    "title": "order.deleted (Сайт → 1С)",
+    "description": "Отмена заказа клиентом с сайта или снятие просроченного резерва. Добавлено в v16.9.0 (режим «Заказы в резерве», топик №5 Agent Hub). Семантика в 1С: строки помечаются отменёнными с причиной, статус документа — «Закрыт», резерв освобождается. Пометка удаления НЕ ставится (спутники документа потребовали бы ручного разбора). Идемпотентно: повтор по уже отменённому заказу — успех без изменений.",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string",
+            "description": "Тип события. Всегда «order.deleted».",
+            "const": "order.deleted"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Уникальный идентификатор сообщения для идемпотентности (формат: msg-<uuid>)."
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID заказа (документ «Заказ клиента» в 1С)."
+        },
+        "reason": {
+            "type": "string",
+            "enum": [
+                "client_cancelled",
+                "reserve_expired"
+            ],
+            "description": "Причина отмены: 'client_cancelled' — клиент отменил заказ сам (кнопка в кабинете или клиентский API), 'reserve_expired' — сайт снял резерв по истечении reserved_until (таймер сайта — основной; страховочный регламент 1С срабатывает только при reserved_until + 6 часов грации)."
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time"
+        }
+    },
+    "required": [
+        "event",
+        "message_id",
+        "uuid",
+        "reason"
+    ],
+    "additionalProperties": true
+}

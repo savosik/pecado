@@ -1,0 +1,40 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "order.confirmed.to_erp",
+    "title": "order.confirmed (Сайт → 1С)",
+    "description": "Подтверждение резервного заказа: клиент отправил заказ в отгрузку. Добавлено в v16.9.0 (режим «Заказы в резерве», топик №5 Agent Hub). Семантика в 1С: строки «Резервировать на складе» (СоСклада) переводятся в «Отгрузить», статус документа — «К отгрузке», дальше заказ идёт по обычному конвейеру. Отдельное событие (а не order.updated с reserve=false) намеренно: order.updated пересобирает состав, и совмещение правки состава со сменой режима давало бы неоднозначный порядок применения при доставке пачкой. Идемпотентно: повтор по уже подтверждённому заказу — успех без изменений.",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string",
+            "description": "Тип события. Всегда «order.confirmed».",
+            "const": "order.confirmed"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Уникальный идентификатор сообщения для идемпотентности (формат: msg-<uuid>)."
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID заказа (документ «Заказ клиента» в 1С)."
+        },
+        "confirmed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата-время подтверждения клиентом (ISO-8601 с таймзоной)."
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time"
+        }
+    },
+    "required": [
+        "event",
+        "message_id",
+        "uuid",
+        "confirmed_at"
+    ],
+    "additionalProperties": true
+}
