@@ -62,6 +62,11 @@ class HandlePartnerCreated
         // v15: manager → PersonalManager по erp_uuid
         $personalManagerId = $this->resolvePersonalManagerId($payload);
 
+        // v16.9.0 (режим «Заказы в резерве»): реплика признака участника режима.
+        // Мастер флага — 1С; отсутствие ключа или null — признак не трогаем
+        // (для нового пользователя сработает default false колонки).
+        $reserveAllowed = isset($payload['reserve_allowed']) ? (bool) $payload['reserve_allowed'] : null;
+
         if (! $uuid || ! $email) {
             Log::warning('partner.created: отсутствует uuid или email', ['payload' => $payload]);
 
@@ -72,7 +77,7 @@ class HandlePartnerCreated
         $user = User::where('erp_id', $uuid)->first();
 
         if ($user) {
-            User::withoutEvents(function () use ($user, $uuid, $name, $city, $country, $phone, $userStatus, $clientStatusId, $personalManagerId) {
+            User::withoutEvents(function () use ($user, $uuid, $name, $city, $country, $phone, $userStatus, $clientStatusId, $personalManagerId, $reserveAllowed) {
                 $updateData = array_filter([
                     'erp_id' => $uuid,
                     // Рабочее наименование обновляем, личное `name` — нет: им
@@ -82,6 +87,7 @@ class HandlePartnerCreated
                     'city' => $city,
                     'country' => $country,
                     'phone' => $phone,
+                    'reserve_allowed' => $reserveAllowed,
                 ], fn ($v) => $v !== null);
 
                 // client_status_id может быть null (сброс) — не фильтруем
@@ -111,11 +117,15 @@ class HandlePartnerCreated
         $user = User::where('email', $login)->first();
 
         if ($user) {
-            User::withoutEvents(function () use ($user, $uuid, $name, $userStatus, $clientStatusId, $personalManagerId) {
+            User::withoutEvents(function () use ($user, $uuid, $name, $userStatus, $clientStatusId, $personalManagerId, $reserveAllowed) {
                 $updateData = [
                     'erp_id' => $uuid,
                     'status' => $userStatus,
                 ];
+
+                if ($reserveAllowed !== null) {
+                    $updateData['reserve_allowed'] = $reserveAllowed;
+                }
 
                 // Карточка из 1С привязалась к аккаунту, зарегистрированному на
                 // сайте: наименование берём, имя оставляем клиенту.
@@ -181,6 +191,10 @@ class HandlePartnerCreated
 
         if ($personalManagerId !== false) {
             $createData['personal_manager_id'] = $personalManagerId;
+        }
+
+        if ($reserveAllowed !== null) {
+            $createData['reserve_allowed'] = $reserveAllowed;
         }
 
         $newUser = User::withoutEvents(function () use ($createData) {

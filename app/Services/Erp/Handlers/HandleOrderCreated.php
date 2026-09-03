@@ -192,6 +192,20 @@ class HandleOrderCreated
                     $fields['delivery_method'] = $payload['delivery_method'];
                 }
 
+                // v16.9.0 (режим «Заказы в резерве»): reserve/reserved_until/items_version.
+                // reserved_until — ФАКТИЧЕСКИЙ срок удержания (1С могла урезать
+                // запрошенный до своего предела), сайт показывает клиенту именно его.
+                // Отсутствие ключа при upsert сохранённое значение не трогает.
+                if (array_key_exists('reserve', $payload)) {
+                    $fields['reserve'] = (bool) $payload['reserve'];
+                }
+                if (array_key_exists('reserved_until', $payload)) {
+                    $fields['reserved_until'] = $payload['reserved_until'];
+                }
+                if (array_key_exists('items_version', $payload)) {
+                    $fields['items_version'] = $payload['items_version'];
+                }
+
                 // v13.7: аудит-метки 1С (опционально). При отсутствии в payload
                 // на upsert не перезаписываем — пишем только то, что прислали.
                 // TZ-нормализация — в App\Casts\ErpDatetime.

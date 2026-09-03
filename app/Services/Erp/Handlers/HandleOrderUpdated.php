@@ -98,6 +98,22 @@ class HandleOrderUpdated
         // v13.8: comment — пользовательское поле, не перезаписываем из шины 1С.
         // То, что клиент ввёл при оформлении заказа на сайте, неприкосновенно.
 
+        // v16.9.0 (режим «Заказы в резерве»): reserve/reserved_until/items_version.
+        // reserve: false означает «резерв снят» (подтверждение применено, менеджер
+        // вручную двинул заказ, признак по неучастнику проигнорирован или срок в
+        // прошлом) — заказ уходит из раздела резервов, клиентские правки закрываются.
+        // Отсутствие ключа или null у reserve — режим не меняется.
+        // reserved_until — ФАКТИЧЕСКИЙ срок удержания в 1С, не эхо запрошенного.
+        if (isset($payload['reserve'])) {
+            $order->reserve = (bool) $payload['reserve'];
+        }
+        if (array_key_exists('reserved_until', $payload)) {
+            $order->reserved_until = $payload['reserved_until'];
+        }
+        if (isset($payload['items_version'])) {
+            $order->items_version = (int) $payload['items_version'];
+        }
+
         // v13.7: аудит-метки 1С. array_key_exists, чтобы передача null
         // тоже считалась явной операцией; отсутствие ключа — не трогаем БД.
         // TZ-нормализация — в App\Casts\ErpDatetime.

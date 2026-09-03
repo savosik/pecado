@@ -269,6 +269,7 @@ class User extends Authenticatable implements HasMedia
         'region_id',
         'client_status_id',
         'personal_manager_id',
+        'reserve_allowed',
     ];
 
     /**
@@ -342,6 +343,9 @@ class User extends Authenticatable implements HasMedia
             'region_id' => 'integer',
             'client_status_id' => 'integer',
             'personal_manager_id' => 'integer',
+            // v16.9.0 (режим «Заказы в резерве»): реплика реквизита партнёра из 1С,
+            // мастер флага — 1С (partner.created/partner.updated)
+            'reserve_allowed' => 'boolean',
         ];
     }
 

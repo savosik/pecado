@@ -51,6 +51,29 @@
 - У партнёра с отключённой опцией: чекаут без radio, раздел резервов скрыт, уже висящие
   резервы доживают штатно (до подтверждения или таймаута).
 
+## Ход работ
+
+- **03.09.2026** — реализовано:
+  - миграция `2026_09_03_180000_add_order_reserve_fields`: `orders.reserve` /
+    `reserved_until` (каст ErpDatetime, TZ-нормализация) / `items_version` + индекс
+    `(reserve, reserved_until)` под таймер res-09; `users.reserve_allowed` (реплика 1С);
+    таблица `order_reserve_overrides` (только отклонения: `disabled`, `hours`,
+    `created_by`); комментарии БД, `db:comments:audit --strict` чистый;
+  - `config/order_reserve.php`: `ORDER_RESERVE_ENABLED` (умолчание **false** — тихая
+    выкатка) и `ORDER_RESERVE_HOURS` (24 — решение владельцев 03.09.2026);
+  - `App\Services\Order\ReservePolicy`: `availableFor()` = рубильник ∧ флаг 1С ∧
+    не отключено точечно (сужать можно, расширять нельзя), `hoursFor()`,
+    `requestedReservedUntil()`;
+  - обработчики: `HandleOrderCreated`/`HandleOrderUpdated` принимают
+    reserve/reserved_until/items_version (отсутствие ключа значение не трогает,
+    reserve:false = резерв снят), `HandlePartnerCreated`/`HandlePartnerUpdated` —
+    реплику `reserve_allowed`;
+  - тесты `OrderReserveModelTest` (6 шт), смежный прогон Erp/Listeners — 412 зелёных.
+- ⚠️ После выкатки на прод: `php artisan bi:sync-grants` (новая таблица
+  `order_reserve_overrides`), иначе BI-агент её не увидит.
+- Экран отключения в CRM (карточка партнёра) — перенесён в res-11 (там же метрики
+  и рычаг РОПа), здесь только модельный слой и политика.
+
 ## Критерии готовности
 
 - [ ] Поля `reserve`/`reserved_until`/`items_version` принимаются из 1С и сохраняются на заказе.

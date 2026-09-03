@@ -127,6 +127,9 @@ class Order extends Model implements HasMedia
         'currency_code',
         'parent_id',
         'type',
+        'reserve',
+        'reserved_until',
+        'items_version',
         'erp_created_at',
         'erp_updated_at',
     ];
@@ -148,6 +151,11 @@ class Order extends Model implements HasMedia
             'rate_coefficient' => 'decimal:4',
             'type' => \App\Enums\OrderType::class,
             'delivery_method' => \App\Enums\DeliveryMethod::class,
+            // v16.9.0 (режим «Заказы в резерве»): режим определяется флагом, не статусом.
+            // reserved_until — фактический срок из 1С, TZ-нормализация как у аудит-меток
+            'reserve' => 'boolean',
+            'reserved_until' => \App\Casts\ErpDatetime::class,
+            'items_version' => 'integer',
             'erp_created_at' => \App\Casts\ErpDatetime::class,
             'erp_updated_at' => \App\Casts\ErpDatetime::class,
         ];

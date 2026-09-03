@@ -131,6 +131,12 @@ class HandlePartnerUpdated
                 : UserStatus::BLOCKED;
         }
 
+        // v16.9.0 (режим «Заказы в резерве»): реплика признака участника режима.
+        // Мастер флага — 1С; отсутствие ключа или null — признак не меняется.
+        if (isset($payload['reserve_allowed'])) {
+            $updateData['reserve_allowed'] = (bool) $payload['reserve_allowed'];
+        }
+
         // client_status → ClientStatus по external_id
         $clientStatusId = $this->resolveClientStatusId($payload);
         if ($clientStatusId !== false) {
