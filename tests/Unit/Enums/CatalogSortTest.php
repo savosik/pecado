@@ -4,12 +4,47 @@ namespace Tests\Unit\Enums;
 
 use App\Enums\CatalogSort;
 use App\Models\Product;
+use App\Services\Stock\StockService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class CatalogSortTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * Запрос каталога в том виде, в каком его собирают контроллеры: с
+     * подзапросами остатков. Сортировки `default` и `newest` раскладывают
+     * выдачу по полкам наличия и без этих алиасов не соберутся.
+     *
+     * Складов в юнит-тесте нет, поэтому обе полки нулевые и порядок внутри
+     * полки виден в чистом виде.
+     *
+     * @return Builder<Product>
+     */
+    private function catalogQuery(): Builder
+    {
+        $query = Product::query()->select('products.*');
+        app(StockService::class)->applyStockSubselects($query, null);
+
+        return $query;
+    }
+
+    /**
+     * Товар с проставленным баллом витрины.
+     *
+     * Балл вне `$fillable` — его пишет только `catalog:rebuild-sort-scores`
+     * запросом, поэтому и тест кладёт его тем же способом.
+     */
+    private function scoredProduct(float $score, float $price = 100): Product
+    {
+        $product = Product::factory()->create(['base_price' => $price]);
+        DB::table('products')->where('id', $product->id)->update(['sort_score' => $score]);
+
+        return $product;
+    }
 
     // ─── apply() ────────────────────────────────────────────
 
@@ -18,10 +53,35 @@ class CatalogSortTest extends TestCase
         $old = Product::factory()->create(['created_at' => now()->subDays(2)]);
         $new = Product::factory()->create(['created_at' => now()]);
 
-        $result = CatalogSort::Newest->apply(Product::query())->pluck('id');
+        $result = CatalogSort::Newest->apply($this->catalogQuery())->pluck('id');
 
         $this->assertEquals($new->id, $result->first());
         $this->assertEquals($old->id, $result->last());
+    }
+
+    public function test_default_sorts_by_sort_score_desc(): void
+    {
+        // Товар с высоким баллом заводим первым: вторичный порядок — id desc,
+        // и без сортировки по баллу он оказался бы последним.
+        $high = $this->scoredProduct(900);
+        $low = $this->scoredProduct(10);
+
+        $result = CatalogSort::Default->apply($this->catalogQuery())->pluck('id');
+
+        $this->assertEquals($high->id, $result->first());
+        $this->assertEquals($low->id, $result->last());
+    }
+
+    public function test_default_puts_products_without_price_below(): void
+    {
+        // Балл выше, но цены нет — купить нельзя, значит и наверху делать нечего.
+        $withPrice = $this->scoredProduct(1, 100);
+        $noPrice = $this->scoredProduct(900, 0);
+
+        $result = CatalogSort::Default->apply($this->catalogQuery())->pluck('id');
+
+        $this->assertEquals($withPrice->id, $result->first());
+        $this->assertEquals($noPrice->id, $result->last());
     }
 
     public function test_price_asc_sorts_cheapest_first(): void
@@ -74,7 +134,7 @@ class CatalogSortTest extends TestCase
         Product::factory()->create(['base_price' => 100, 'created_at' => now()]);
 
         // Сначала сортируем по цене, потом перебиваем на новинки
-        $query = Product::query()->orderBy('base_price');
+        $query = $this->catalogQuery()->orderBy('base_price');
         $result = CatalogSort::Newest->apply($query)->pluck('id');
 
         // Самый новый должен быть первым (не самый дешёвый)
@@ -95,6 +155,7 @@ class CatalogSortTest extends TestCase
 
     public function test_label_values_are_correct(): void
     {
+        $this->assertEquals('По умолчанию', CatalogSort::Default->label());
         $this->assertEquals('Новинки', CatalogSort::Newest->label());
         $this->assertEquals('Сначала дешёвые', CatalogSort::PriceAsc->label());
         $this->assertEquals('Сначала дорогие', CatalogSort::PriceDesc->label());
@@ -110,7 +171,9 @@ class CatalogSortTest extends TestCase
     {
         $options = CatalogSort::options();
 
-        $this->assertCount(7, $options);
+        $this->assertCount(8, $options);
+
+        $this->assertSame('default', $options[0]['value'], 'Витрина по умолчанию должна быть первым пунктом списка');
 
         foreach ($options as $option) {
             $this->assertArrayHasKey('value', $option);
@@ -123,6 +186,7 @@ class CatalogSortTest extends TestCase
 
     public function test_try_from_returns_enum_for_valid_value(): void
     {
+        $this->assertSame(CatalogSort::Default, CatalogSort::tryFrom('default'));
         $this->assertSame(CatalogSort::Newest, CatalogSort::tryFrom('newest'));
         $this->assertSame(CatalogSort::PriceAsc, CatalogSort::tryFrom('price_asc'));
     }

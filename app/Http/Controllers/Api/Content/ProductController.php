@@ -62,7 +62,7 @@ class ProductController extends Controller
      * @queryParam in_stock boolean Только в наличии
      * @queryParam collection_ids array Из подборки
      * @queryParam attribute_value_ids array Фильтр по атрибутам
-     * @queryParam sort string Сортировка: newest, price_asc, price_desc, popular
+     * @queryParam sort string Сортировка: default (балл витрины), newest, price_asc, price_desc, name_asc, name_desc, article_asc, article_desc. Default: newest
      * @queryParam per_page integer Записей на странице (5–100). Default: 20
      */
     public function index(ProductFilterRequest $request): JsonResponse

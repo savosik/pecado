@@ -44,6 +44,8 @@ use Spatie\Tags\HasTags;
  * @property string|null $hs_code
  * @property string|null $abc_xyz
  * @property numeric|null $turnover
+ * @property numeric $sort_score Балл сортировки каталога «по умолчанию» (catalog:rebuild-sort-scores)
+ * @property \Illuminate\Support\Carbon|null $sort_score_updated_at
  * @property bool $is_marked
  * @property bool $is_liquidation
  * @property bool $for_marketplaces
@@ -341,6 +343,10 @@ class Product extends Model implements HasMedia
             'height' => 'decimal:2',
             'depth' => 'decimal:2',
             'turnover' => 'decimal:4',
+            // Балл витрины: считает только catalog:rebuild-sort-scores, в $fillable
+            // не входит намеренно — обмен с 1С его перезаписать не должен.
+            'sort_score' => 'decimal:4',
+            'sort_score_updated_at' => 'datetime',
             'erp_created_at' => \App\Casts\ErpDatetime::class,
             'erp_updated_at' => \App\Casts\ErpDatetime::class,
         ];

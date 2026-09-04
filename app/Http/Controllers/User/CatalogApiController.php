@@ -39,8 +39,9 @@ class CatalogApiController extends Controller
 
         $query = $this->queryBuilder->build($validated);
 
-        // Сортировка
-        $sort = CatalogSort::tryFrom($validated['sort'] ?? '') ?? CatalogSort::Newest;
+        // Сортировка. По умолчанию — балл сортировки (`catalog:rebuild-sort-scores`)
+        // поверх полки наличия; «Новинки» перестали быть витриной по умолчанию.
+        $sort = CatalogSort::tryFrom($validated['sort'] ?? '') ?? CatalogSort::Default;
         $sort->apply($query);
 
         // Eager-загрузка

@@ -37,9 +37,14 @@ const ARRAY_PARAMS = new Set([
     'collection_ids',
 ]);
 
-/** Дефолтные значения — не попадают в URL */
+/**
+ * Дефолтные значения — не попадают в URL.
+ *
+ * sort = 'default' — балл витрины (products.sort_score, считается по расписанию)
+ * поверх полки наличия. На поиске дефолт свой — 'relevance'.
+ */
 export const DEFAULTS = {
-    sort: 'newest',
+    sort: 'default',
     view: 'grid',
     per_page: 20,
     page: 1,

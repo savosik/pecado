@@ -14,7 +14,8 @@ import {
  * При изменении фильтров — обновляет URL через history.replaceState.
  *
  * @param {{ initialFilters?: object, defaults?: object }} options
- *   defaults — дефолты страницы (sort/view/per_page/page); на поиске sort = relevance
+ *   defaults — дефолты страницы (sort/view/per_page/page); в каталоге sort = default,
+ *   на поиске sort = relevance
  * @returns {{
  *   filters: object,
  *   view: string,
@@ -25,7 +26,7 @@ import {
  * }}
  */
 export default function useCatalogFilters({ initialFilters = {}, defaults = DEFAULTS } = {}) {
-    // Дефолты страницы: каталог — newest, поиск — relevance
+    // Дефолты страницы: каталог — default (балл витрины), поиск — relevance
     const cfg = useRef({ ...DEFAULTS, ...defaults }).current;
 
     // Парсим URL один раз при монтировании

@@ -7,6 +7,7 @@ import { FilterBadge } from './ProductFiltersSheet';
 const PER_PAGE_OPTIONS = [10, 20, 40, 60, 100];
 
 const SORT_LABELS = {
+    default: 'По умолчанию',
     newest: 'Новинки',
     popular: 'Популярные',
     price_asc: 'Цена ↑',
