@@ -154,6 +154,35 @@ class ProductShowDefectsTest extends TestCase
         $this->assertNull($prices[$withoutDefect->id]);
     }
 
+    public function test_catalog_list_exposes_single_defect_lot(): void
+    {
+        // Раздел «Уценка»: одна партия — карточка кладёт в корзину именно её,
+        // несколько — показывает кнопку «Выбрать», поэтому партию не отдаём.
+        $single = Product::factory()->create();
+        $several = Product::factory()->create();
+
+        $lot = ProductDefect::factory()->for($single)->sellable(250)->create(['quantity' => 3]);
+        $this->reserve($lot, 1);
+
+        ProductDefect::factory()->for($several)->sellable(400)->create(['quantity' => 1]);
+        ProductDefect::factory()->for($several)->sellable(300)->create(['quantity' => 2]);
+
+        $rows = collect(
+            $this->actingAs($this->activeUser())
+                ->getJson('/api/catalog/products')
+                ->assertOk()
+                ->json('data')
+        )->keyBy('id');
+
+        $this->assertSame(1, $rows[$single->id]['defect_lots_count']);
+        $this->assertSame($lot->id, $rows[$single->id]['defect_lot']['id']);
+        $this->assertEquals(250.0, $rows[$single->id]['defect_lot']['price']);
+        $this->assertSame(2, $rows[$single->id]['defect_lot']['available_quantity']);
+
+        $this->assertSame(2, $rows[$several->id]['defect_lots_count']);
+        $this->assertNull($rows[$several->id]['defect_lot']);
+    }
+
     public function test_guest_catalog_hides_defect_min_price(): void
     {
         $product = Product::factory()->create();
@@ -165,5 +194,7 @@ class ProductShowDefectsTest extends TestCase
 
         $this->assertTrue($row['has_defects']);
         $this->assertArrayNotHasKey('defect_min_price', $row, 'Гостю ценовое поле вырезается вместе с остальными ценами');
+        $this->assertArrayNotHasKey('defect_lot', $row, 'Партия с ценой и остатком гостю не отдаётся');
+        $this->assertArrayNotHasKey('defect_lots_count', $row);
     }
 }

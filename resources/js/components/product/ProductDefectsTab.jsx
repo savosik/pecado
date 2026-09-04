@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { usePage } from '@inertiajs/react';
-import { Badge, Box, HStack, Image, SimpleGrid, Spinner, Stack, Text, VStack } from '@chakra-ui/react';
+import { useState } from 'react';
+import { Badge, Box, HStack, Image, SimpleGrid, Stack, Text, VStack } from '@chakra-ui/react';
 import { LuImageOff } from 'react-icons/lu';
-import QuantityControl from '@/components/common/QuantityControl';
 import ImageLightbox from '@/components/common/ImageLightbox';
-import { useCartStore } from '@/stores/useCartStore';
+import DefectQuantityControl from './DefectQuantityControl';
 
 const formatPrice = (value, currency) => {
     const symbol = currency?.symbol ?? '₽';
@@ -111,64 +109,6 @@ function DefectPhotos({ photos, alt }) {
 }
 
 /**
- * Контрол уценки в корзине — идентичен товарному (CartQuantityControl):
- * счётчик [−] N [+], привязанный к стору корзины. Изменение сразу оптимистично
- * применяется и дебаунсом синкается на сервер (0 = удалить), без отдельной
- * кнопки «В корзину». N = количество ЭТОЙ партии, уже лежащее в корзине.
- * Только для активных пользователей (данные с ценами приходят только им).
- */
-function DefectCartControl({ defect }) {
-    const { auth } = usePage().props;
-    const user = auth?.user && (auth.user.status === 'active' || auth.user.is_staff) ? auth.user : null;
-
-    const [qty, setQty] = useState(0);
-    const [syncing, setSyncing] = useState(false);
-    const initRef = useRef(false);
-
-    useEffect(() => {
-        if (!user) return undefined;
-
-        const store = useCartStore.getState();
-        if (!initRef.current) {
-            store.init(user);
-            initRef.current = true;
-        }
-
-        const did = Number(defect.id);
-        setQty(store.getDefectQuantity(did));
-        setSyncing(store.isSyncingDefect(did));
-
-        return useCartStore.subscribe((state) => {
-            setQty(state.defectQuantities[did] || 0);
-            setSyncing(state.syncingDefects.has(did));
-        });
-    }, [defect.id, user]);
-
-    if (!user) return null;
-
-    // Потолок — свободный остаток партии + уже лежащее в корзине (иначе своя же
-    // позиция «съела» бы остаток и потолок оказался бы ниже текущего qty).
-    const max = Math.max(0, Number(defect.available_quantity || 0)) + qty;
-
-    return (
-        <Box position="relative" display="inline-block">
-            <QuantityControl
-                value={qty}
-                onChange={(value) => useCartStore.getState().setDefectQuantity(defect.id, value)}
-                min={0}
-                max={max > 0 ? max : undefined}
-                size="sm"
-            />
-            {syncing && (
-                <Box position="absolute" top="50%" right="-6" transform="translateY(-50%)" pointerEvents="none" aria-hidden="true">
-                    <Spinner size="xs" color="pecado.500" />
-                </Box>
-            )}
-        </Box>
-    );
-}
-
-/**
  * Таб «Уценка» на карточке товара.
  *
  * Список партий некондиции этого товара, допущенных в продажу: описание дефекта,
@@ -213,7 +153,7 @@ export default function ProductDefectsTab({ defects = [], currency = null }) {
                                     ? `Осталось: ${defect.available_quantity} шт`
                                     : 'Нет в наличии'}
                             </Badge>
-                            <DefectCartControl defect={defect} />
+                            <DefectQuantityControl defect={defect} />
                         </VStack>
                     </SimpleGrid>
                 </Box>

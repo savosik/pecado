@@ -45,7 +45,7 @@ function isValidSpecValue(val) {
  *   similarProducts: Array<Object>
  * }} props
  */
-export default function ProductDetailTabs({ specifications = {}, specificationGroups = [], description = '', media = [], certificates = [], sizeChart = null, similarProducts = [], defects = [], currency = null }) {
+export default function ProductDetailTabs({ specifications = {}, specificationGroups = [], description = '', media = [], certificates = [], sizeChart = null, similarProducts = [], defects = [], currency = null, initialTab = null }) {
     const sanitizedDescription = useMemo(() => DOMPurify.sanitize(description ?? ''), [description]);
 
     const validSpecifications = useMemo(() => {
@@ -149,6 +149,10 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
 
     if (tabs.length === 0) return null;
 
+    // Вкладка открытия: QuickView из раздела «Уценка» просит сразу «Уценку».
+    // Если такой вкладки у товара нет — открываем первую, как обычно.
+    const defaultTab = tabs.some((tab) => tab.key === initialTab) ? initialTab : tabs[0].key;
+
     const handleDownload = (url, filename) => {
         const link = document.createElement('a');
         link.href = url;
@@ -163,7 +167,7 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
     const additionalVideos = media.filter(m => m.type === 'video');
 
     return (
-        <Tabs.Root defaultValue={tabs[0].key} variant="line" colorPalette="pecado">
+        <Tabs.Root key={defaultTab} defaultValue={defaultTab} variant="line" colorPalette="pecado">
             <Box position="relative" mx={{ base: '-4', md: '0' }}>
                 <Box
                     overflowX="auto"

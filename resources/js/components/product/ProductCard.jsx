@@ -5,6 +5,7 @@ import { LuHeart, LuCheck, LuCircleX, LuClock3, LuWarehouse, LuTruck, LuPackageX
 import ProductMiniGallery from './ProductMiniGallery';
 import TagList from './TagList';
 import CartQuantityControl from './CartQuantityControl';
+import DefectCartBlock from './DefectCartBlock';
 import { useProductHelpers } from '@/hooks/useProductHelpers';
 import { formatShelfLife } from '@/utils/product';
 import { toaster } from '@/components/ui/toaster';
@@ -12,9 +13,14 @@ import { toaster } from '@/components/ui/toaster';
 /**
  * ProductCard — карточка товара для каталога и подборок (по дизайну референса).
  *
- * @param {{ product: Object, loading?: boolean }} props
+ * `defectMode` — карточка в разделе «Уценка»: клиент пришёл за некондицией,
+ * поэтому статус наличия обычного товара не показывается, цена всегда «старая
+ * зачёркнута → фиолетовая цена уценки», а счётчик кладёт в корзину партию
+ * (или предлагает выбрать её, если партий несколько).
+ *
+ * @param {{ product: Object, loading?: boolean, defectMode?: boolean }} props
  */
-function ProductCard({ product, loading = false }) {
+function ProductCard({ product, loading = false, defectMode = false }) {
     const {
         user, isFav, toggleFavorite, formatPrice,
         hasSale, isInStock, isPreorder, isDefectOnly, defectMinPrice, brandName,
@@ -24,6 +30,10 @@ function ProductCard({ product, loading = false }) {
     // Срок поставки предзаказа («7–9 дней») — рядом со статусом, чтобы клиент
     // видел, чего ждать, до того как рамка счётчика станет оранжевой.
     const leadLabel = usePage().props.preorder?.lead_label ?? '';
+
+    // Сколько партий уценки в продаже — от этого зависит «от X ₽» в цене
+    // и что показывает нижний блок: счётчик партии или кнопку «Выбрать».
+    const defectLotsCount = Number(product?.defect_lots_count ?? 0);
 
     // product может быть undefined в режиме скелетона (loading) — optional chaining
     // обязателен, иначе падаем ещё до раннего return скелетона.
@@ -173,7 +183,7 @@ function ProductCard({ product, loading = false }) {
                 {/* Значки в правом углу — не в общей стопке слева: там уже до шести
                     бейджей, седьмой её переполнит. Уценка и промо-позиция стоят
                     колонкой, чтобы не перекрывать друг друга. */}
-                {(product.has_defects || product.is_promo_reward) && (
+                {((product.has_defects && !defectMode) || product.is_promo_reward) && (
                     <Box
                         position="absolute"
                         top="2"
@@ -184,7 +194,7 @@ function ProductCard({ product, loading = false }) {
                         gap="1"
                         pointerEvents="none"
                     >
-                        {product.has_defects && (
+                        {product.has_defects && !defectMode && (
                             <Box color="purple.500" title="Есть уценённые экземпляры с дефектами">
                                 <LuBadgePercent size={18} />
                             </Box>
@@ -296,9 +306,16 @@ function ProductCard({ product, loading = false }) {
                         {/* Статус + Цена */}
                         {/* Строка не переносится: статус и цена всегда на одной высоте,
                             иначе соседние плитки в ряду «скачут». Длинное — в title. */}
-                        <Flex align="end" justify="space-between" gap="2" minW="0" flexWrap="nowrap">
-                            {/* Статус наличия */}
-                            <Flex align="center" gap="1" fontSize="xs" fontWeight="500" minW="0" flexShrink={1}>
+                        <Flex
+                            align="end"
+                            justify={defectMode ? 'flex-end' : 'space-between'}
+                            gap="2"
+                            minW="0"
+                            flexWrap="nowrap"
+                        >
+                            {/* Статус наличия. В разделе «Уценка» не показывается:
+                                продаётся не складской остаток, а конкретная партия */}
+                            <Flex align="center" gap="1" fontSize="xs" fontWeight="500" minW="0" flexShrink={1} display={defectMode ? 'none' : 'flex'}>
                                 {isInStock ? (
                                     <>
                                         <Box display={{ base: 'inline-flex', md: 'none' }} aria-label="В наличии" title="В наличии">
@@ -355,7 +372,7 @@ function ProductCard({ product, loading = false }) {
 
                             {/* Цена. Осталась только уценка — обычная цена зачёркнута,
                                 вместо неё цена уценки цветом статуса «Уценка» */}
-                            {isDefectOnly && defectMinPrice != null ? (
+                            {(defectMode || isDefectOnly) && defectMinPrice != null ? (
                                 <Flex direction="column" alignItems="flex-end" flexShrink={0}>
                                     {price != null && (
                                         <Text fontSize="xs" color="gray.400" textDecoration="line-through" lineHeight="1">
@@ -363,7 +380,7 @@ function ProductCard({ product, loading = false }) {
                                         </Text>
                                     )}
                                     <Text fontSize="lg" fontWeight="600" lineHeight="1" color="purple.500">
-                                        от {formatPrice(defectMinPrice)}
+                                        {defectLotsCount > 1 ? 'от ' : ''}{formatPrice(defectMinPrice)}
                                     </Text>
                                 </Flex>
                             ) : price != null && (
@@ -388,14 +405,18 @@ function ProductCard({ product, loading = false }) {
                         {/* Уценка — еле заметная подсказка о минимальной цене партий.
                             Когда осталась только уценка, цена уже показана фиолетовым выше —
                             подсказка была бы дублем */}
-                        {product.has_defects && defectMinPrice != null && !isDefectOnly && (
+                        {product.has_defects && defectMinPrice != null && !isDefectOnly && !defectMode && (
                             <Text fontSize="2xs" color="gray.400" lineClamp="1">
                                 Есть на уценке от {formatPrice(defectMinPrice)}
                             </Text>
                         )}
 
-                        {/* Корзина — скрываем, если нет в наличии и не предзаказ, или цена 0 */}
-                        {(isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (
+                        {/* Корзина. В разделе «Уценка» — счётчик партии (или кнопка
+                            «Выбрать»), иначе обычный товарный счётчик; его скрываем,
+                            если нет в наличии и не предзаказ, или цена 0 */}
+                        {defectMode ? (
+                            <DefectCartBlock product={product} size="sm" fullWidth />
+                        ) : (isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (
                             <Box onClick={preventAndStop}>
                                 <CartQuantityControl
                                     productId={product.id}

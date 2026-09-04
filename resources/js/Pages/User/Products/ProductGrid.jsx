@@ -22,6 +22,7 @@ const DEFAULT_GRID_COLUMNS = {
  *   error: string | null,
  *   skeletonCount?: number,
  *   templateColumns?: object | string,
+ *   defectMode?: boolean,
  * }} props
  */
 export default function ProductGrid({
@@ -31,6 +32,7 @@ export default function ProductGrid({
     error = null,
     skeletonCount = 12,
     templateColumns = DEFAULT_GRID_COLUMNS,
+    defectMode = false,
 }) {
     // ─── Skeleton ───
     if (loading) {
@@ -107,7 +109,7 @@ export default function ProductGrid({
         return (
             <Flex direction="column" gap={{ base: '3', md: '4' }} w="100%">
                 {products.map((product) => (
-                    <ProductListItem key={product.id} product={product} />
+                    <ProductListItem key={product.id} product={product} defectMode={defectMode} />
                 ))}
             </Flex>
         );
@@ -121,7 +123,7 @@ export default function ProductGrid({
         >
             {products.map((product) => (
                 <GridItem key={product.id} overflow="hidden">
-                    <ProductGridItem product={product} />
+                    <ProductGridItem product={product} defectMode={defectMode} />
                 </GridItem>
             ))}
         </Grid>

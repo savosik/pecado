@@ -176,6 +176,57 @@ class DefectStockServiceTest extends TestCase
         $this->assertSame([], $this->service()->minSellablePriceMap([]));
     }
 
+    public function test_sellable_summary_map_returns_single_lot_for_lonely_defect(): void
+    {
+        $single = Product::factory()->create();
+        $several = Product::factory()->create();
+        $without = Product::factory()->create();
+
+        $lot = ProductDefect::factory()->for($single)->sellable(400)->create(['quantity' => 5]);
+        $this->orderFor($lot, 2);
+
+        ProductDefect::factory()->for($several)->sellable(700)->create(['quantity' => 1]);
+        ProductDefect::factory()->for($several)->sellable(600)->create(['quantity' => 1]);
+
+        $map = $this->service()->sellableSummaryMap([$single->id, $several->id, $without->id]);
+
+        // Одна партия — карточка каталога кладёт в корзину сразу её.
+        $this->assertSame(1, $map[$single->id]['count']);
+        $this->assertSame(400.0, $map[$single->id]['min_price']);
+        $this->assertSame(
+            ['id' => $lot->id, 'price' => 400.0, 'available_quantity' => 3],
+            $map[$single->id]['lot']
+        );
+
+        // Несколько партий — выбирает клиент, партию наружу не отдаём.
+        $this->assertSame(2, $map[$several->id]['count']);
+        $this->assertSame(600.0, $map[$several->id]['min_price']);
+        $this->assertNull($map[$several->id]['lot']);
+
+        $this->assertArrayNotHasKey($without->id, $map);
+    }
+
+    public function test_sellable_summary_map_skips_fully_reserved_defects(): void
+    {
+        $product = Product::factory()->create();
+
+        $free = ProductDefect::factory()->for($product)->sellable(900)->create(['quantity' => 1]);
+        $taken = ProductDefect::factory()->for($product)->sellable(100)->create(['quantity' => 1]);
+        $this->orderFor($taken, 1);
+
+        $map = $this->service()->sellableSummaryMap([$product->id]);
+
+        // Выбранная партия не занижает минимум и не превращает товар в «выбор из двух».
+        $this->assertSame(1, $map[$product->id]['count']);
+        $this->assertSame(900.0, $map[$product->id]['min_price']);
+        $this->assertSame($free->id, $map[$product->id]['lot']['id']);
+    }
+
+    public function test_sellable_summary_map_returns_empty_for_empty_input(): void
+    {
+        $this->assertSame([], $this->service()->sellableSummaryMap([]));
+    }
+
     public function test_sellable_for_product_exposes_available_quantity(): void
     {
         $product = Product::factory()->create();

@@ -15,7 +15,7 @@ import ProductPromotions from './ProductPromotions';
  * Рендерит те же компоненты, что и Show.jsx, но в overlay-диалоге.
  */
 export default function ProductQuickViewModal() {
-    const { open, data, loading, closeQuickView } = useProductQuickView();
+    const { open, data, loading, initialTab, closeQuickView } = useProductQuickView();
     const { currency } = usePage().props;
     const currencySymbol = currency?.symbol || '₽';
     const dialogRef = useRef(null);
@@ -232,6 +232,7 @@ export default function ProductQuickViewModal() {
                                             similarProducts={similarProducts}
                                             defects={defects}
                                             currency={currency}
+                                            initialTab={initialTab}
                                         />
                                     </Box>
 
@@ -264,6 +265,7 @@ export default function ProductQuickViewModal() {
                                                 similarProducts={similarProducts}
                                                 defects={defects}
                                                 currency={currency}
+                                                initialTab={initialTab}
                                             />
                                         </GridItem>
                                     </Grid>

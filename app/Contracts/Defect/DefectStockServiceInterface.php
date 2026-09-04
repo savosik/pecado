@@ -56,6 +56,24 @@ interface DefectStockServiceInterface
     public function minSellablePriceMap(array $productIds): array;
 
     /**
+     * Карта «id товара → сводка по уценке в продаже» одним запросом.
+     *
+     * Нужна разделу «Уценка» витрины, где карточка кладёт в корзину не товар,
+     * а конкретную партию: по количеству партий она решает, показать счётчик
+     * или кнопку «Выбрать».
+     *
+     * Товары без партий в продаже в карте отсутствуют. Формат значения:
+     *  - `count` — сколько партий доступно к покупке;
+     *  - `min_price` — минимальная цена среди них;
+     *  - `lot` — сама партия `['id', 'price', 'available_quantity']`, но только
+     *    когда она единственная (иначе `null`: выбирать должен клиент).
+     *
+     * @param  array<int, int>  $productIds
+     * @return array<int, array{count: int, min_price: float, lot: array{id: int, price: float, available_quantity: int}|null}>
+     */
+    public function sellableSummaryMap(array $productIds): array;
+
+    /**
      * Партии товара, доступные клиенту к покупке, со свободным остатком.
      *
      * @return \Illuminate\Support\Collection<int, ProductDefect>

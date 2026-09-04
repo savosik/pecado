@@ -100,6 +100,18 @@ class DefectStockService implements DefectStockServiceInterface
      */
     public function minSellablePriceMap(array $productIds): array
     {
+        return array_map(
+            fn (array $summary) => $summary['min_price'],
+            $this->sellableSummaryMap($productIds)
+        );
+    }
+
+    /**
+     * @param  array<int, int>  $productIds
+     * @return array<int, array{count: int, min_price: float, lot: array{id: int, price: float, available_quantity: int}|null}>
+     */
+    public function sellableSummaryMap(array $productIds): array
+    {
         $productIds = array_values(array_unique(array_map('intval', $productIds)));
 
         if ($productIds === []) {
@@ -119,16 +131,29 @@ class DefectStockService implements DefectStockServiceInterface
 
         $result = [];
         foreach ($defects as $defect) {
-            if (($available[(int) $defect->id] ?? 0) <= 0) {
+            $free = $available[(int) $defect->id] ?? 0;
+            if ($free <= 0) {
                 continue;
             }
 
             $productId = (int) $defect->product_id;
             $price = (float) $defect->price;
 
-            if (! isset($result[$productId]) || $price < $result[$productId]) {
-                $result[$productId] = $price;
+            if (! isset($result[$productId])) {
+                $result[$productId] = [
+                    'count' => 0,
+                    'min_price' => $price,
+                    'lot' => null,
+                ];
             }
+
+            $result[$productId]['count']++;
+            $result[$productId]['min_price'] = min($result[$productId]['min_price'], $price);
+            // Единственную партию отдаём целиком — по ней карточка каталога
+            // кладёт уценку в корзину без захода в карточку товара.
+            $result[$productId]['lot'] = $result[$productId]['count'] === 1
+                ? ['id' => (int) $defect->id, 'price' => $price, 'available_quantity' => $free]
+                : null;
         }
 
         return $result;

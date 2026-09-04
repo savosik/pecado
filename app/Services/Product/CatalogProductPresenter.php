@@ -36,8 +36,9 @@ class CatalogProductPresenter
         $items = ProductQueryService::enrichProductsWithPromotions($items);
 
         // Маркеры уценки (некондиции): значок в карточке каталога (has_defects, булев,
-        // отдаётся и гостям) и минимальная цена партии (defect_min_price — ценовое
-        // поле, гостям вырезается ниже вместе с остальными ценами).
+        // отдаётся и гостям), минимальная цена партии и сама партия, когда она одна
+        // (defect_min_price / defect_lots_count / defect_lot — ценовые и складские
+        // поля, гостям вырезаются ниже вместе с остальными ценами).
         $items = ProductQueryService::enrichProductsWithDefects($items);
 
         $user = Auth::user();
@@ -69,6 +70,8 @@ class CatalogProductPresenter
                 $product['stock_quantity'],
                 $product['preorder_quantity'],
                 $product['defect_min_price'],
+                $product['defect_lots_count'],
+                $product['defect_lot'],
             );
 
             return $product;

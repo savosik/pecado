@@ -1,12 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { router } from '@inertiajs/react';
+import { toaster } from '@/components/ui/toaster';
 
 const ProductQuickViewContext = createContext({
     open: false,
     productSlug: null,
     data: null,
     loading: false,
-    openQuickView: (_slug) => { },
+    initialTab: null,
+    openQuickView: (_slug, _options) => { },
     closeQuickView: () => { },
     prefetchQuickView: (_slug) => { },
 });
@@ -18,6 +20,8 @@ export function ProductQuickViewProvider({ children }) {
     const [productSlug, setProductSlug] = useState(null);
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
+    // Вкладка, на которой открывать модалку (раздел «Уценка» — сразу «Уценка»).
+    const [initialTab, setInitialTab] = useState(null);
     const abortRef = useRef(null);
     const prefetchAbortRef = useRef(null);
     const cacheRef = useRef(new Map());
@@ -30,6 +34,7 @@ export function ProductQuickViewProvider({ children }) {
         setOpen(false);
         setProductSlug(null);
         setData(null);
+        setInitialTab(null);
         setLoading(false);
         document.body.style.overflow = '';
     }, []);
@@ -134,7 +139,11 @@ export function ProductQuickViewProvider({ children }) {
         }
     }, []);
 
-    const openQuickView = useCallback(async (slug) => {
+    /**
+     * @param {string} slug
+     * @param {{ tab?: string, notice?: string }} [options] вкладка открытия и тост-подсказка
+     */
+    const openQuickView = useCallback(async (slug, options = {}) => {
         try {
             if (!slug) return;
             if (abortRef.current) {
@@ -143,12 +152,19 @@ export function ProductQuickViewProvider({ children }) {
             const controller = new AbortController();
             abortRef.current = controller;
             setProductSlug(slug);
+            setInitialTab(options?.tab ?? null);
             setOpen(true);
             setLoading(true);
             document.body.style.overflow = 'hidden';
             const json = await loadData(slug, controller.signal);
             setData(json);
             setLoading(false);
+
+            // Подсказку показываем, только если запрошенная вкладка реально есть:
+            // тост «выберите вариант уценки» на товаре без партий — обман.
+            if (options?.notice && (options.tab !== 'defects' || (json?.defects ?? []).length > 0)) {
+                toaster.create({ title: options.notice, type: 'info', duration: 4000 });
+            }
 
             // Лениво подтягиваем сгенерированный rich-content (если его ещё нет в БД).
             ensureRichContent(slug, json, controller.signal);
@@ -167,10 +183,11 @@ export function ProductQuickViewProvider({ children }) {
         productSlug,
         data,
         loading,
+        initialTab,
         openQuickView,
         closeQuickView,
         prefetchQuickView,
-    }), [open, productSlug, data, loading, openQuickView, closeQuickView, prefetchQuickView]);
+    }), [open, productSlug, data, loading, initialTab, openQuickView, closeQuickView, prefetchQuickView]);
 
     return (
         <ProductQuickViewContext.Provider value={value}>

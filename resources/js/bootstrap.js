@@ -14,6 +14,7 @@ if ('serviceWorker' in navigator) {
 }
 import { router } from '@inertiajs/react';
 import { toastError } from '@/utils/toast';
+import { DEFECT_QUICK_VIEW_OPTIONS } from '@/utils/quickView';
 
 window.axios = axios;
 
@@ -80,7 +81,13 @@ if (typeof document !== 'undefined') {
             const slug = decodeURIComponent(match[1]);
             if (window.__openProductQuickView) {
                 window.__closeSearch?.();
-                window.__openProductQuickView(slug);
+                // Раздел «Уценка» (флаг ставит Pages/User/Products/Index.jsx):
+                // клиент пришёл за партией некондиции — открываем сразу её вкладку
+                // и подсказываем тостом, что выбрать нужно конкретный экземпляр.
+                window.__openProductQuickView(
+                    slug,
+                    window.__catalogDefectMode ? DEFECT_QUICK_VIEW_OPTIONS : undefined
+                );
             } else {
                 window.location.href = href;
             }

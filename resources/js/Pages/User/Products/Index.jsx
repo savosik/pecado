@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Box, Flex, Heading } from '@chakra-ui/react';
 import { usePage } from '@inertiajs/react';
 import UserLayout from '../UserLayout';
@@ -51,6 +51,11 @@ export default function Index() {
 
     // Контекст страницы: скрываем фильтры, заданные контекстом
     const isAuthenticated = !!auth?.user;
+    // Раздел «Уценка» (/products/utsenka): фильтр наличия задан контекстом и
+    // менять его тут незачем — клиент пришёл именно за некондицией. Карточки
+    // работают в «уценённом» режиме, а QuickView открывается на вкладке уценки
+    // (флаг читает глобальный перехватчик кликов в bootstrap.js).
+    const isDefectSection = initialFilters.in_stock_mode === 'defect';
     const isBrandPage = !!(initialFilters.brand_ids?.length);
     const isCategoryPage = !!(initialFilters.category_ids?.length || initialFilters.category_id);
 
@@ -84,6 +89,13 @@ export default function Index() {
     const { priceData } = usePriceIntervals({ filters });
     const { facets } = useCatalogFacets({ filters });
 
+    useEffect(() => {
+        if (!isDefectSection) return undefined;
+
+        window.__catalogDefectMode = true;
+        return () => { delete window.__catalogDefectMode; };
+    }, [isDefectSection]);
+
     // ─── Infinite Scroll ───
     const [infiniteScroll, setInfiniteScroll] = useState(() => {
         try {
@@ -95,7 +107,12 @@ export default function Index() {
 
     // ─── Mobile Filters Drawer ───
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-    const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters]);
+    // Наличие в разделе «Уценка» задано самим разделом — в счётчик активных
+    // фильтров оно не идёт, иначе кнопка «Фильтры» вечно горит единицей.
+    const activeFilterCount = useMemo(
+        () => countActiveFilters(isDefectSection ? { ...filters, in_stock_mode: undefined } : filters),
+        [filters, isDefectSection]
+    );
     const openMobileFilters = useCallback(() => setMobileFiltersOpen(true), []);
     const closeMobileFilters = useCallback(() => setMobileFiltersOpen(false), []);
 
@@ -226,7 +243,7 @@ export default function Index() {
                         onPerPageChange={(value) => updateFilter('per_page', value)}
                         inStockMode={filters.in_stock_mode || ''}
                         onStockChange={handleStockChange}
-                        showStockFilter={isAuthenticated}
+                        showStockFilter={isAuthenticated && !isDefectSection}
                         onOpenFilters={openMobileFilters}
                         activeFilterCount={activeFilterCount}
                     />
@@ -267,6 +284,7 @@ export default function Index() {
                         loading={loading}
                         error={error}
                         skeletonCount={skeletonCount}
+                        defectMode={isDefectSection}
                     />
 
                     {/* Пагинация */}

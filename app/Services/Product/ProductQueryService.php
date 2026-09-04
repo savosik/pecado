@@ -126,10 +126,14 @@ class ProductQueryService
     /**
      * Проставить товарам маркеры уценки в продаже.
      *
-     * Одним запросом на всю пачку (см. DefectStockService::minSellablePriceMap):
+     * Одним запросом на всю пачку (см. DefectStockService::sellableSummaryMap):
      *  - `has_defects` — есть опубликованная партия с ценой и свободным остатком;
      *  - `defect_min_price` — минимальная цена такой партии (надпись «Есть на
-     *    уценке от X ₽» и статус «Уценка», когда основного товара нет).
+     *    уценке от X ₽» и статус «Уценка», когда основного товара нет);
+     *  - `defect_lots_count` — сколько партий в продаже (раздел «Уценка»
+     *    показывает кнопку «Выбрать», когда партий больше одной);
+     *  - `defect_lot` — единственная партия целиком (id, цена, свободный
+     *    остаток), чтобы карточка каталога клала в корзину именно её.
      *
      * Флаг булев и отдаётся всем, в том числе гостям; `defect_min_price` — ценовое
      * поле, гостям его вырезает CatalogProductPresenter вместе с остальными ценами.
@@ -150,12 +154,16 @@ class ProductQueryService
             return $products;
         }
 
-        $priceMap = app(\App\Contracts\Defect\DefectStockServiceInterface::class)
-            ->minSellablePriceMap($ids);
+        $summaryMap = app(\App\Contracts\Defect\DefectStockServiceInterface::class)
+            ->sellableSummaryMap($ids);
 
-        return array_map(function ($product) use ($priceMap) {
-            $product['has_defects'] = isset($priceMap[$product['id']]);
-            $product['defect_min_price'] = $priceMap[$product['id']] ?? null;
+        return array_map(function ($product) use ($summaryMap) {
+            $summary = $summaryMap[$product['id']] ?? null;
+
+            $product['has_defects'] = $summary !== null;
+            $product['defect_min_price'] = $summary['min_price'] ?? null;
+            $product['defect_lots_count'] = $summary['count'] ?? 0;
+            $product['defect_lot'] = $summary['lot'] ?? null;
 
             return $product;
         }, $products);
