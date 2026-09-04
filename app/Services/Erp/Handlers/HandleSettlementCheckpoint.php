@@ -70,13 +70,31 @@ class HandleSettlementCheckpoint
         // форматом соединения, и в SQLite это «2026-07-01 00:00:00». Сравнение
         // с чистой датой не нашло бы существующую точку, а вставка второй упёрлась
         // бы в уникальный индекс — на MySQL всё работало бы, а тесты падали.
-        $checkpoint = SettlementCheckpoint::query()
+        $candidates = SettlementCheckpoint::query()
             ->where('contractor_uuid', $contractorUuid)
-            ->where('partner_uuid', $partnerUuid)
             ->where('organization_uuid', $organizationUuid)
             ->where('currency_code', $currency)
             ->whereDate('as_of_date', $asOfDate)
-            ->first() ?? new SettlementCheckpoint($keys);
+            ->get();
+
+        $checkpoint = $candidates->firstWhere('partner_uuid', $partnerUuid);
+
+        // До круга 11 1С слала точки без partner_uuid, и они лежат с пустым партнёром.
+        // Пересылка той же точки уже с партнёром обязана обновить легаси-строку,
+        // а не породить дубль (круг 13, пара Кириллова): партнёр дописывается.
+        if ($checkpoint === null && $partnerUuid !== '') {
+            $checkpoint = $candidates->firstWhere('partner_uuid', '');
+            $checkpoint?->setAttribute('partner_uuid', $partnerUuid);
+        }
+
+        // Обратный случай: точка пришла без партнёра, а строка оси ровно одна —
+        // это та же точка, её партнёра не затираем. При нескольких строках
+        // (контрагент у двух партнёров, кейс Войдакова) адресат неоднозначен.
+        if ($checkpoint === null && $partnerUuid === '' && $candidates->count() === 1) {
+            $checkpoint = $candidates->first();
+        }
+
+        $checkpoint ??= new SettlementCheckpoint($keys);
 
         $checkpoint->fill([
             'user_id' => $parties['user_id'],

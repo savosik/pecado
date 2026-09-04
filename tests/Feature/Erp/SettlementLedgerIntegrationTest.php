@@ -503,4 +503,59 @@ class SettlementLedgerIntegrationTest extends TestCase
 
         $this->assertSame(2, SettlementCheckpoint::query()->whereDate('as_of_date', '2026-08-19')->count());
     }
+
+    #[Test]
+    public function точка_с_партнёром_обновляет_легаси_строку_без_партнёра(): void
+    {
+        // Круг 13 (пара Кириллова): точки, принятые до круга 11, лежат с пустым
+        // partner_uuid. Пересылка той же точки уже с партнёром должна обновить их
+        // и дописать партнёра, а не породить вторую строку.
+        $message = [
+            'event' => 'settlement.checkpoint',
+            'message_id' => 'msg-checkpoint-legacy-1',
+            'as_of_date' => '2026-08-01',
+            'amount' => -22267.05,
+            'contractor_uuid' => self::CONTRACTOR_UUID,
+            'organization_uuid' => self::ORGANIZATION_UUID,
+            'currency_code' => 'RUB',
+        ];
+
+        $this->dispatch($message);
+        $this->dispatch([
+            'message_id' => 'msg-checkpoint-legacy-2',
+            'amount' => 0.20,
+            'partner_uuid' => '00000000-0000-4000-a000-0000000000b1',
+        ] + $message);
+
+        $checkpoint = SettlementCheckpoint::query()->sole();
+
+        $this->assertEqualsWithDelta(0.20, (float) $checkpoint->amount, 0.01);
+        $this->assertSame('00000000-0000-4000-a000-0000000000b1', $checkpoint->partner_uuid);
+    }
+
+    #[Test]
+    public function точка_без_партнёра_обновляет_единственную_строку_оси_не_затирая_партнёра(): void
+    {
+        $message = [
+            'event' => 'settlement.checkpoint',
+            'message_id' => 'msg-checkpoint-bare-1',
+            'as_of_date' => '2026-08-01',
+            'amount' => -22267.05,
+            'contractor_uuid' => self::CONTRACTOR_UUID,
+            'organization_uuid' => self::ORGANIZATION_UUID,
+            'partner_uuid' => '00000000-0000-4000-a000-0000000000b1',
+            'currency_code' => 'RUB',
+        ];
+
+        $this->dispatch($message);
+
+        $bare = $message;
+        unset($bare['partner_uuid']);
+        $this->dispatch(['message_id' => 'msg-checkpoint-bare-2', 'amount' => 0.20] + $bare);
+
+        $checkpoint = SettlementCheckpoint::query()->sole();
+
+        $this->assertEqualsWithDelta(0.20, (float) $checkpoint->amount, 0.01);
+        $this->assertSame('00000000-0000-4000-a000-0000000000b1', $checkpoint->partner_uuid);
+    }
 }
