@@ -228,7 +228,9 @@ jobs:
   build-frontend:
     name: "⚡ Build Frontend"
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 10 минут стало впритык: холодная загрузка запиненного @asyncapi/cli
+    # на hosted-раннере съедает ~3 мин, джоба умирала на 10m12s (04.09.2026)
+    timeout-minutes: 18
 
     steps:
       - name: "📥 Checkout"
