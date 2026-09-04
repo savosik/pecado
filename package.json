@@ -7,9 +7,9 @@
         "lint:js": "eslint resources/js && npm run lint:ts",
         "lint:ts": "tsc --noEmit -p tsconfig.lint.json",
         "dev": "vite",
-        "asyncapi:validate": "npx -y @asyncapi/cli validate docs/asyncapi/pecado-erp-integration.yaml",
-        "asyncapi:bundle": "npx -y @asyncapi/cli bundle docs/asyncapi/pecado-erp-integration.yaml -o docs/asyncapi/pecado-erp-bundled.yaml",
-        "asyncapi:html": "npx -y @asyncapi/cli generate fromTemplate docs/asyncapi/pecado-erp-integration.yaml @asyncapi/html-template@2.3.10 -o docs/asyncapi/html --force-write",
+        "asyncapi:validate": "npx -y @asyncapi/cli@4.1.1 validate docs/asyncapi/pecado-erp-integration.yaml",
+        "asyncapi:bundle": "npx -y @asyncapi/cli@4.1.1 bundle docs/asyncapi/pecado-erp-integration.yaml -o docs/asyncapi/pecado-erp-bundled.yaml",
+        "asyncapi:html": "timeout 420 npx -y @asyncapi/cli@4.1.1 generate fromTemplate docs/asyncapi/pecado-erp-integration.yaml @asyncapi/html-template@2.3.10 -o docs/asyncapi/html --force-write",
         "asyncapi:html:safe": "npm run asyncapi:html || { echo '::warning::asyncapi:html failed (upstream generator regression) — using committed HTML'; git checkout -- docs/asyncapi/html 2>/dev/null || true; }",
         "asyncapi:build": "npm run asyncapi:validate && npm run asyncapi:bundle && npm run asyncapi:html:safe"
     },
