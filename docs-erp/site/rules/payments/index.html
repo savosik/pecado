@@ -624,6 +624,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../order-reserves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Заказы в резерве
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../returns/" class="md-nav__link">
         
   
@@ -1396,6 +1424,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/reserves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Заказы в резерве (v16.9.0)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2066,6 +2122,11 @@
 сторон не роняло обмен.</p>
 <p><strong>Сам документ платежа остаётся.</strong> Клиенту нужен ответ на вопрос «дошёл ли мой платёж»,
 и отвечает на него именно журнал платежей: дата, сумма, номер по банку, наш счёт.</p>
+<p><strong>(v16.8.0) Сайт больше не хранит разнесение.</strong> Таблица расшифровки и колонки
+<code>allocated_amount</code> / <code>unallocated_amount</code> удалены вместе со старым счётным ядром:
+для платежей, пришедших после v16.0.0, они были пусты всегда, и колонка «Разнесение»
+в журнале показывала бы всем «аванс». Связь «платёж → что он закрыл» видна в акте
+сверки и в движениях регистра.</p>
 <h2 id="_2">События<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2148,9 +2209,10 @@
 <li>[x] <strong>(v15.11.0)</strong> Возврат (<code>direction: "out"</code>) отражается как возврат, а не как поступление</li>
 <li>[x] <strong>(v15.11.0)</strong> Клиент видит свои оплаты в личном кабинете</li>
 <li>[x] <strong>(v15.16.0)</strong> Комментарий из 1С не затирает заметку менеджера</li>
-<li>[ ] <strong>(v16.0.0)</strong> Сообщение с присланным по инерции <code>allocations</code> обрабатывается без ошибки,
+<li>[x] <strong>(v16.0.0)</strong> Сообщение с присланным по инерции <code>allocations</code> обрабатывается без ошибки,
       поле игнорируется</li>
-<li>[ ] <strong>(v16.0.0)</strong> Оплата документов отражается движениями регистра, а не расшифровкой платежа</li>
+<li>[x] <strong>(v16.0.0)</strong> Оплата документов отражается движениями регистра, а не расшифровкой платежа</li>
+<li>[x] <strong>(v16.8.0)</strong> Расшифровка на сайте не хранится: приём <code>allocations</code> снят целиком</li>
 </ul>
 <blockquote>
 <p>Отмеченное подтверждено автотестами: <code>HandlePayment*Test</code>, <code>PaymentTopologyIntegrationTest</code>,

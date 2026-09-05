@@ -624,6 +624,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../rules/order-reserves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Заказы в резерве
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../rules/returns/" class="md-nav__link">
         
   
@@ -2030,6 +2058,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="1.25 — График оплаты (payment_schedule.updated, v16.0.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v1680" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Проекция на карточку документа (v16.8.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2206,6 +2251,34 @@
     
   
     Фаза 4: Edge-кейсы
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reserves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Заказы в резерве (v16.9.0)
   
 
     
@@ -3579,6 +3652,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="1.25 — График оплаты (payment_schedule.updated, v16.0.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v1680" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Проекция на карточку документа (v16.8.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -4488,6 +4578,31 @@
 <p>🔵 <strong>1С отправляет</strong> график со строкой <strong>без</strong> <code>due_date</code>.</p>
 <ul>
 <li>[ ] Сообщение отклонено целиком, частичный график не сохранён</li>
+</ul>
+<h3 id="v1680">Проекция на карточку документа (v16.8.0)<a class="headerlink" href="#v1680" title="Permanent link">&para;</a></h3>
+<p>График — единственный источник полей оплаты в реализации: собственного расчёта
+у сайта больше нет.</p>
+<p>🔵 <strong>1С отправляет</strong> график реализации на 1 000 ₽ с <code>settled_amount: 700.00</code>.</p>
+<ul>
+<li>[ ] В карточке реализации (CRM, админка, кабинет, клиентский API) блок
+      «График оплаты» показывает строку: оплачено 700 ₽, остаток 300 ₽</li>
+<li>[ ] Статус документа стал «Оплачена частично», ближайший срок — дата строки</li>
+<li>[ ] Фильтр «Оплата» в кабинете находит документ по этому статусу</li>
+</ul>
+<p>🔵 <strong>1С досылает</strong> тот же график с <code>settled_amount: 1000.00</code>.</p>
+<ul>
+<li>[ ] Статус стал «Оплачена», срок платежа снят</li>
+<li>[ ] Повторная доставка того же графика ничего не меняет (идемпотентность)</li>
+</ul>
+<p>🔵 <strong>Реализация приезжает ПОЗЖЕ своего графика</strong> (обычный порядок очередей).</p>
+<ul>
+<li>[ ] Карточка сразу показывает график и статус оплаты — без ожидания
+      следующего сообщения</li>
+</ul>
+<p>🔵 <strong>По реализации графика нет вовсе.</strong></p>
+<ul>
+<li>[ ] Поля оплаты документа не обнуляются: у регистра нет о нём мнения,
+      а «не оплачена» на пустом месте — ложь</li>
 </ul>
 <hr />
 <h2 id="126-printed_document-v1610">1.26 — Печатные формы документов (<code>printed_document.*</code>, v16.1.0)<a class="headerlink" href="#126-printed_document-v1610" title="Permanent link">&para;</a></h2>

@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/rules/settlements/">
+        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/rules/order-reserves/">
       
       
-        <link rel="prev" href="../printed-documents/">
+        <link rel="prev" href="../orders/">
       
       
-        <link rel="next" href="../payment-schedule/">
+        <link rel="next" href="../returns/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Регистр взаиморасчётов - Pecado ERP — Интеграция 1С ↔ Сайт</title>
+        <title>Заказы в резерве - Pecado ERP — Интеграция 1С ↔ Сайт</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#_1" class="md-skip">
+        <a href="#v1690-v1691" class="md-skip">
           Перейти к содержанию
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Регистр взаиморасчётов
+              Заказы в резерве
             
           </span>
         </div>
@@ -621,10 +621,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../order-reserves/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Заказы в резерве
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -640,6 +667,70 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Содержание">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Как резерв выражен в 1С
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Жизненный цикл
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Правила
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        События протокола
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -789,37 +880,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Регистр взаиморасчётов
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../settlements/" class="md-nav__link">
         
   
   
@@ -835,164 +899,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Содержание">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Содержание
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Зачем понадобилось
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        События
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ⚠️ Знаковое соглашение
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="⚠️ Знаковое соглашение">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Числовой пример
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#-" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Бизнес-правила
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1630" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Начальное сальдо не применяется (с 16.3.0)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1631" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Внутренние организации исключаются (с 16.3.1)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Контрольная точка — единственный эталон
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#paying_amount-1640" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Два определения долга и paying_amount (с 16.4.0)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Что считается из регистра
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ось акта сверки
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Критерии приёмки
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2114,10 +2020,32 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Как резерв выражен в 1С
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Жизненный цикл
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Зачем понадобилось
+        Правила
       
     </span>
   </a>
@@ -2128,123 +2056,7 @@
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        События
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ⚠️ Знаковое соглашение
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="⚠️ Знаковое соглашение">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Числовой пример
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#-" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Бизнес-правила
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1630" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Начальное сальдо не применяется (с 16.3.0)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#1631" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Внутренние организации исключаются (с 16.3.1)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Контрольная точка — единственный эталон
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#paying_amount-1640" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Два определения долга и paying_amount (с 16.4.0)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Что считается из регистра
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ось акта сверки
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Критерии приёмки
+        События протокола
       
     </span>
   </a>
@@ -2268,331 +2080,150 @@
 
 
 
-<h1 id="_1">Регистр взаиморасчётов<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
-<blockquote>
-<p><strong>JSON Schema:</strong> <a href="/docs/erp/schemas/settlement.posted.json"><code>settlement.posted.json</code></a> | <a href="/docs/erp/schemas/settlement.reverted.json"><code>settlement.reverted.json</code></a> | <a href="/docs/erp/schemas/settlement.opening_balance.json"><code>settlement.opening_balance.json</code></a> | <a href="/docs/erp/schemas/settlement.checkpoint.json"><code>settlement.checkpoint.json</code></a><br />
-<strong>AsyncAPI:</strong> <a href="/docs/erp/spec.yaml">Полная спецификация</a></p>
-</blockquote>
-<p><strong>Направление:</strong> 1С → Сайт | <strong>Очередь:</strong> <code>erp_in.settlements</code> | <strong>Версия:</strong> v16.0.0</p>
-<p>Движения регистра «Расчёты с клиентами» из 1С. Ядро мажорной версии 16.0.0: <strong>сайт перестаёт
-считать деньги и становится витриной регистра</strong>.</p>
-<h2 id="_2">Зачем понадобилось<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
-<p>До v16.0.0 сайт выводил долг клиента из первичных документов: реализации минус платежи,
-разложенные по расшифровке, с поправкой на график оплат. Эта арифметика систематически
-не сходилась с 1С, потому что 1С гасит долг ещё и авансами по заказам, взаимозачётами
-и корректировками, которых сайт не видит.</p>
+<h1 id="v1690-v1691">Заказы в резерве (v16.9.0, уточнение ключа строки — v16.9.1)<a class="headerlink" href="#v1690-v1691" title="Permanent link">&para;</a></h1>
+<p>Режим самообслуживания для клиентов-интернет-магазинов: заказ сразу создаётся в 1С
+с удержанием товара, а окно между «зарезервировал» и «подтвердил» клиент обслуживает
+сам — правит состав, отменяет или отправляет в отгрузку из кабинета сайта или через
+клиентский API, без звонка менеджеру.</p>
+<p>Протокол согласован в топике №5 Agent Hub (resolution 03.09.2026).</p>
+<h2 id="1">Как резерв выражен в 1С<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
+<p>Отдельного статуса «Резерв» в перечислении статусов заказа <strong>нет и не будет</strong> —
+резерв живёт на строке документа:</p>
 <table>
 <thead>
 <tr>
-<th>Что мерили</th>
-<th>Результат</th>
+<th>Что</th>
+<th>Значение</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Доля денег, помещавшаяся в модель «платёж → реализация»</td>
-<td>28,6 %</td>
+<td>Реквизит строки <code>ВариантОбеспечения</code></td>
+<td><code>СоСклада</code> («Резервировать на складе»)</td>
 </tr>
 <tr>
-<td>Не помещалось</td>
-<td>111 872 793,21 ₽</td>
+<td>Статус документа</td>
+<td><code>КОбеспечению</code> («К выполнению / В резерве»)</td>
 </tr>
 <tr>
-<td>Просрочка одного клиента: сайт против 1С</td>
-<td>5,53 млн ₽ против 478 тыс ₽</td>
+<td>Регистр удержания</td>
+<td><code>ТоварыКОтгрузке</code>, ресурс <code>ВРезерве</code></td>
+</tr>
+<tr>
+<td>Публикуемый остаток</td>
+<td>уже за вычетом резерва (<code>ЗапасыИПотребности</code>)</td>
 </tr>
 </tbody>
 </table>
-<p>Итогом стало отключение денежного раздела в личном кабинете: показывать клиенту завышенный
-в десять раз долг оказалось хуже, чем не показывать никакого.</p>
-<p><strong>Корень проблемы:</strong> сайт не может знать то, что знает только 1С. Регистр взаиморасчётов —
-единственное место, где долг посчитан правильно, и теперь он приезжает целиком.</p>
-<h2 id="_3">События<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<p>Следствия:</p>
+<ul>
+<li>постановка в резерв <strong>сама</strong> снимает товар с витрины через обычный <code>stock.updated</code>;</li>
+<li>на сайт резервный заказ приезжает со <code>status: ready_for_shipment</code> — режим
+  различается <strong>только</strong> по полю <code>reserve</code> в <code>order.created</code> / <code>order.updated</code>;</li>
+<li>расходный ордер не оформляется (ресурс <code>КОтгрузке</code> у резервной строки нулевой),
+  поэтому заказ не уходит в сборку.</li>
+</ul>
+<h2 id="_1">Жизненный цикл<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>оформление (reserve: true) ──► резерв в 1С (окно ожидания)
+    │ клиент правит состав          │ order.updated (сайт → 1С)
+    │ клиент отменяет               │ order.deleted, reason=client_cancelled
+    │ срок истёк                    │ order.deleted, reason=reserve_expired
+    └ клиент подтверждает ──────────► order.confirmed → «К отгрузке», обычный конвейер
+</code></pre></div>
+<h2 id="_2">Правила<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Охват</strong> — только партнёры-участники: флаг <code>reserve_allowed</code> в
+   <code>partner.created</code> / <code>partner.updated</code>, <strong>мастер — 1С</strong> (отдельный реквизит
+   партнёра). Сайт показывает выбор резерва в чекауте только участникам и может
+   точечно сузить охват, но не расширить.</li>
+<li><strong>Срок удержания</strong> — <code>reserved_until</code> присылает сайт (обязателен при
+   <code>reserve: true</code>, повторяется в каждом сообщении). У 1С — верхний предел удержания
+   (настройка, стартово <strong>24 часа</strong> от создания заказа): срок сверх предела урезается,
+   в исходящих 1С <code>reserved_until</code> — всегда <strong>фактический</strong> срок, не эхо. Сайт
+   показывает клиенту фактический срок.</li>
+<li><strong>Рассинхрон флагов</strong>: <code>reserve: true</code> по неучастнику — обычный заказ, признак
+   игнорируется, в ответном <code>order.updated</code> возвращается <code>reserve: false</code>;
+   <code>reserved_until</code> в прошлом — трактуется как <code>reserve: false</code>.</li>
+<li><strong>Неподтверждённый резерв в сборку не идёт</strong> — ни автоматически (авто-оформление
+   отгрузки в 1С гейтится по признаку резерва), ни руками. Ручной перевод менеджером —
+   аварийный путь: 1С шлёт <code>order.updated</code> с <code>reserve: false</code>, сайт убирает заказ из
+   раздела резервов и закрывает клиентские правки.</li>
+<li><strong>Правка состава</strong> (<code>order.updated</code> сайт → 1С) — только в окне резерва, состав
+   целиком, в v1 <strong>только уменьшение</strong> (снизить количество, удалить строку).
+   1С применяет к проведённому документу (распровести → заменить → провести), пока
+   нет расходного ордера и реализации.</li>
+<li><strong>Ключ строки — пара <code>items_version</code> + <code>line_number</code></strong> (уточнено в v16.9.1).
+   <code>line_number</code> стабилен только в пределах версии состава: при физическом удалении
+   строки платформа 1С перенумеровывает последующие. Поэтому состав всегда идёт и
+   применяется целиком (snapshot), сопоставление строк — внутри одного сообщения,
+   а <strong>любое</strong> изменение состава (включая перенумерацию) увеличивает <code>items_version</code>.
+   Сайт со своей стороны требует версию состава от клиента (кабинет и клиентский API)
+   и отклоняет правку с устаревшей версией <strong>до</strong> отправки в шину — проверка 1С
+   остаётся вторым рубежом.</li>
+<li><strong>Конфликты</strong> — оптимистичная блокировка по версии состава: сайт шлёт
+   <code>base_items_version</code> (последний применённый <code>items_version</code> из сообщений 1С);
+   при расхождении правка не применяется, 1С отвечает <code>order.updated</code> с актуальным
+   составом, <code>items_version</code> и <code>conflict {rejected_message_id, reason}</code>.
+   ⚠️ <code>revision</code> для блокировки не годится — это счётчик отправленных сообщений,
+   он растёт и без изменения состава (перепроведение, эхо с номером, дренаж очереди).</li>
+<li><strong>Отмена</strong> (<code>order.deleted</code> сайт → 1С) — строки помечаются отменёнными с причиной,
+   статус «Закрыт», резерв освобождается. <strong>Пометка удаления не ставится.</strong></li>
+<li><strong>Таймаут</strong> — основной таймер у сайта: по истечении <code>reserved_until</code> сайт шлёт
+   <code>order.deleted</code> с <code>reason: reserve_expired</code>. Страховочный регламент 1С снимает
+   резерв при <code>reserved_until</code> + <strong>6 часов</strong> грации — последний рубеж на случай
+   потери сообщения, в норме не срабатывает.</li>
+<li><strong>Идемпотентность</strong> — повторная доставка любого сообщения (по <code>message_id</code> /
+   <code>uuid</code>) не меняет состояние повторно; повтор <code>order.confirmed</code> по подтверждённому
+   заказу — успех без изменений.</li>
+<li><strong>Раскатка</strong> — за флагами обеих сторон, включение по отдельному решению
+    владельцев. Перед включением — поимённая сверка списков участников: сайт передаёт
+    свои uuid партнёров-интернетчиков, 1С размечает <code>reserve_allowed</code> и возвращает
+    фактический состав через <code>partner.updated</code>.</li>
+</ol>
+<h2 id="_3">События протокола<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
 <th>Событие</th>
-<th>Описание</th>
+<th>Направление</th>
+<th>Назначение</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>settlement.posted</code></td>
-<td>Все движения одного документа. Полная замена</td>
+<td><code>order.created</code> + <code>reserve</code>/<code>reserved_until</code></td>
+<td>Сайт → 1С</td>
+<td>создать заказ в резерве</td>
 </tr>
 <tr>
-<td><code>settlement.reverted</code></td>
-<td>Отмена проведения: движения документа аннулируются</td>
+<td><code>order.updated</code> + <code>base_items_version</code></td>
+<td>Сайт → 1С</td>
+<td>правка состава клиентом</td>
 </tr>
 <tr>
-<td><code>settlement.opening_balance</code></td>
-<td>~~Сальдо на дату отсечки~~ <strong>устарело с 16.3.0, в ленту не попадает</strong></td>
+<td><code>order.deleted</code> + <code>reason</code></td>
+<td>Сайт → 1С</td>
+<td>отмена клиентом / снятие по таймауту</td>
 </tr>
 <tr>
-<td><code>settlement.checkpoint</code></td>
-<td>Сверенное сальдо на дату закрытия периода — единственный эталон</td>
+<td><code>order.confirmed</code></td>
+<td>Сайт → 1С</td>
+<td>отправить резерв в отгрузку</td>
+</tr>
+<tr>
+<td><code>order.created</code>/<code>order.updated</code> + <code>reserve</code>, <code>reserved_until</code>, <code>items_version</code>, <code>conflict</code></td>
+<td>1С → Сайт</td>
+<td>состояние резерва, фактический срок, версия состава, отказ правки</td>
+</tr>
+<tr>
+<td><code>partner.created</code>/<code>partner.updated</code> + <code>reserve_allowed</code></td>
+<td>1С → Сайт</td>
+<td>признак участника режима</td>
 </tr>
 </tbody>
 </table>
-<h2 id="_4">⚠️ Знаковое соглашение<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
-<p>Самое опасное место контракта: перепутанный знак <strong>не ловится валидацией схемы</strong> — суммы
-правильные, а баланс инвертирован у всей базы.</p>
-<p><strong><code>amount</code> со знаком, «+» означает «в пользу клиента».</strong></p>
-<table>
-<thead>
-<tr>
-<th><code>type</code></th>
-<th>Знак</th>
-<th>Смысл</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>shipment</code></td>
-<td><strong>−</strong></td>
-<td>Реализация: клиент стал должен больше</td>
-</tr>
-<tr>
-<td><code>payment_in</code></td>
-<td><strong>+</strong></td>
-<td>Поступление средств от клиента</td>
-</tr>
-<tr>
-<td><code>goods_return</code></td>
-<td><strong>+</strong></td>
-<td>Возврат товара от клиента (зачёт)</td>
-</tr>
-<tr>
-<td><code>payment_out</code></td>
-<td><strong>−</strong></td>
-<td>Возврат денег клиенту</td>
-</tr>
-<tr>
-<td><code>commission_sale</code></td>
-<td><strong>−</strong></td>
-<td>Продажа через комиссионера</td>
-</tr>
-<tr>
-<td><code>adjustment</code></td>
-<td><strong>±</strong></td>
-<td>Взаимозачёт, корректировка задолженности или реализации</td>
-</tr>
-</tbody>
-</table>
-<p>Сумма всех движений равна балансу контрагента; <strong>отрицательный баланс означает, что клиент
-должен</strong>. Соглашение совпадает с <code>current_balance</code> в <a href="../balances/"><code>balance.updated</code></a>.</p>
-<p><strong>В 1С знак читается наоборот:</strong> их «Приход» (долг вырос) — это наш минус, их «Расход» — наш
-плюс. Инверсию применяет сторона 1С. Поле <code>movement_kind</code> (<code>income</code> / <code>expense</code>) приезжает
-дополнительно и в арифметике <strong>не участвует</strong> — оно нужно, чтобы при разборе спорной строки
-было видно, что стояло в регистре.</p>
-<h3 id="_5">Числовой пример<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
-<p>Договор в рублях, на 01.01.2026 клиент должен 50 000 ₽.</p>
-<table>
-<thead>
-<tr>
-<th>Дата</th>
-<th>Операция</th>
-<th><code>type</code></th>
-<th><code>amount</code></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>31.12.2025</td>
-<td>Долг прошлых периодов</td>
-<td><code>adjustment</code></td>
-<td>−50 000,00</td>
-</tr>
-<tr>
-<td>15.01.2026</td>
-<td>Реализация на 120 000</td>
-<td><code>shipment</code></td>
-<td>−120 000,00</td>
-</tr>
-<tr>
-<td>20.01.2026</td>
-<td>Поступило 100 000</td>
-<td><code>payment_in</code></td>
-<td>+100 000,00</td>
-</tr>
-<tr>
-<td>25.01.2026</td>
-<td>Возврат товара на 20 000</td>
-<td><code>goods_return</code></td>
-<td>+20 000,00</td>
-</tr>
-<tr>
-<td>30.01.2026</td>
-<td>Вернули клиенту 5 000</td>
-<td><code>payment_out</code></td>
-<td>−5 000,00</td>
-</tr>
-</tbody>
-</table>
-<p>Итог <strong>−55 000</strong>: клиент должен 55 000 ₽. Через дебет и кредит акта сверки: дебет 175 000,
-кредит 120 000, сальдо −55 000. ✓</p>
-<h2 id="-">Бизнес-правила<a class="headerlink" href="#-" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>(v16.0.0) Единица сообщения — документ, а не движение.</strong> В 1С движения порождаются
-  проведением документа, поэтому подписка на проведение даёт идемпотентность без ухищрений.</li>
-<li><strong>(v16.0.0) Движения документа заменяются целиком.</strong> <code>settlement.posted</code> вытесняет всё
-  сохранённое по этому <code>document_uuid</code>. Досылать дельту нельзя: сайт не отличит «строки
-  не изменились» от «строк больше нет». Пустой <code>entries</code> — валидное значение, означает,
-  что движений у документа не осталось.</li>
-<li><strong>(v16.0.0) Все измерения регистра живут в строке, не в шапке.</strong> Замер боевой базы: <strong>33 %
-  документов двигают несколько объектов расчётов</strong>, у 27 документов расходится и ключ
-  аналитики. Правило простое: всё, что берётся из ключа аналитики, живёт в <code>entries[]</code>.</li>
-<li><strong>(v16.0.0) Объект расчётов — не то же, что документ-регистратор.</strong> Регистратор — кто
-  породил движение; объект расчётов (<code>ОбъектРасчетов</code>) — по чему ведётся расчёт. Один платёж
-  закрывает несколько заказов, и это норма.</li>
-<li><strong>(v16.0.0) Перечень <code>type</code> закрытый, перечень <code>settlement_object_kind</code> открытый.</strong>
-  Неизвестный тип движения отбрасывает сообщение в DLQ: пропустить строку молча нельзя,
-  баланс разъедется незаметно. Неизвестный вид объекта расчётов, наоборот, сохраняется
-  <strong>как есть</strong> — состав объекта на стороне 1С заранее не известен, а подмена на <code>other</code>
-  стёрла бы термин без всякой выгоды.</li>
-<li><strong>(v16.0.0) Строка самодостаточна.</strong> Реквизиты документа (<code>document_number</code>,
-  <code>document_date</code>, <code>document_kind</code>) дублируются в сообщение намеренно: движение обязано
-  читаться, даже если самого документа на сайте нет и не будет — например, отчёт комиссионера.
-  Это снимает весь класс проблем «движение приехало раньше документа».</li>
-<li><strong>(v16.0.0) Только движения с ненулевой суммой.</strong> <code>ЗаказКлиента</code> двигает <code>КОплате</code>
-  и <code>КОтгрузке</code>, но <code>Сумма</code> = 0,00 за весь год — заказы в ленту не попадают. Правило
-  сформулировано как «ненулевой <code>Сумма</code>», а не «кроме заказов»: если заказ когда-нибудь
-  начнёт двигать сумму, движение появится автоматически.</li>
-<li><strong>(v16.0.0) Рублёвый эквивалент приходит суммой, а не курсом.</strong> <code>amount_rub</code> — ресурс
-  <code>СуммаРегл</code>, зафиксированный учётом на дату операции. Курс сайта может отставать,
-  а посчитанный учётом эквивалент не разъедется с отчётами 1С.</li>
-<li><strong>(v16.0.0) Отбор контрагентов общий для движений, баланса и сальдо.</strong> Приезжает баланс —
-  обязаны приезжать движения; исключён контрагент — исключён везде. Промежуточных состояний
-  быть не должно, иначе акт сверки не сможет объяснить баланс.</li>
-</ul>
-<h2 id="1630">Начальное сальдо не применяется (с 16.3.0)<a class="headerlink" href="#1630" title="Permanent link">&para;</a></h2>
-<p>Лента приходит от 1С <strong>целиком, с самого начала истории</strong> — первые движения датированы
-2025 годом. <code>settlement.opening_balance</code> описывает ту же историю, свёрнутую в одну строку,
-то есть дублирует ленту.</p>
-<p>Пока сальдо прибавлялось, баланс был задвоен на 13,7 млн ₽. Проверка на контрольной точке
-01.08.2026:</p>
-<table>
-<thead>
-<tr>
-<th>Как считаем</th>
-<th>Расхождение с эталоном 1С</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Лента <strong>со</strong> строками <code>opening_balance</code></td>
-<td>13 899 656,86 ₽</td>
-</tr>
-<tr>
-<td>Лента <strong>без</strong> них</td>
-<td>177 925,32 ₽ (140 пар из 150 сходятся точно)</td>
-</tr>
-</tbody>
-</table>
-<p>Событие продолжает приниматься и логироваться — 1С может слать его по инерции, — но
-движение не создаёт. Правило простое: <strong>баланс на любую дату = <code>SUM(amount)</code> по ленте,
-ничего не прибавлять</strong>.</p>
-<h2 id="1631">Внутренние организации исключаются (с 16.3.1)<a class="headerlink" href="#1631" title="Permanent link">&para;</a></h2>
-<p>В 1С существует техническая организация <strong>«Реклама»</strong> (<code>f3070b58-327d-11e4-ac24-001e6711ed1d</code>):
-на неё проводятся внутренние рекламные операции, к расчётам с партнёрами и контрагентами
-они отношения не имеют. Фигурировать во взаиморасчётах она не должна — ни в акте сверки,
-ни в календаре оплат, ни в реквизитах долга.</p>
-<p>Сайт отбрасывает данные таких организаций <strong>на входе</strong> (флаг
-<code>organizations.is_settlements_excluded</code> в справочнике сайта):</p>
-<ul>
-<li>строки <code>settlement.posted</code>, чья <code>organization_uuid</code> принадлежит исключённой организации,
-  не сохраняются; delete-and-recreate при этом выполняется, поэтому перепроведение
-  документа заодно вычищает ранее принятые движения;</li>
-<li><code>payment_schedule.updated</code> исключённой организации не создаёт плановых строк;</li>
-<li><code>settlement.checkpoint</code> исключённой организации не сохраняется — сверять его не с чем;</li>
-<li>в <code>balance.updated</code> пропускаются её строка разреза <code>organizations[]</code> и строки
-  <code>overdue_details[]</code>.</li>
-</ul>
-<p><strong>Контракт не меняется</strong>: 1С может продолжать присылать эти данные, сообщения остаются
-валидными и в DLQ не попадают. Но агрегаты contractor-уровня (<code>current_balance</code>,
-<code>overdue_debt</code>) 1С считает у себя, и если в них входят суммы «Рекламы» — вычесть их
-сайт не может. Желательно исключить организацию из выгрузки на стороне 1С.</p>
-<h2 id="_6">Контрольная точка — единственный эталон<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
-<p><code>settlement.checkpoint</code> — сверенное сальдо на дату закрытия периода, <code>is_verified: true</code>.
-Инвариант: <strong>сумма ленты до даты точки = сумма точки</strong>. Обе стороны равенства приходят
-из регистра 1С, поэтому расхождение означает дырку в истории, а не спор двух каналов.</p>
-<p>Текущий эталон — <strong>01.08.2026</strong> (итог по 31.07, 150 пар, −6 639 322,54 ₽).</p>
-<p>Точку на текущую дату эталоном брать нельзя: 1С снимала её дважды за час, и она уехала
-на 1,6 млн — вчерашним днём в базу продолжают вводить документы. Свежий эталон снимается
-только в согласованный момент без активности в базе.</p>
-<p>Это тот же принцип, что и во всём разделе: расхождение — сигнал, а не повод считать по-своему.</p>
-<h2 id="paying_amount-1640">Два определения долга и <code>paying_amount</code> (с 16.4.0)<a class="headerlink" href="#paying_amount-1640" title="Permanent link">&para;</a></h2>
-<p>Круг 11 сверки показал: лента и баланс отвечают на разные вопросы. Движения несут
-только ресурс <code>Сумма</code> (<code>amount</code>), а «сколько клиент должен сейчас» 1С считает как
-<code>Сумма − Оплачивается</code>. Пока ресурс «Оплачивается» не попадал в обмен, равенство
-«лента = долг» не сходилось <strong>системно</strong> — даже при идеально доставленной истории.</p>
-<p>С 16.4.0 ресурс передаётся опциональным полем <code>paying_amount</code> (<code>≥ 0</code> либо <code>null</code>):</p>
-<ul>
-<li><code>settlement.posted</code> → <code>entries[].paying_amount</code> — по строке движения;</li>
-<li><code>settlement.checkpoint</code> → <code>paying_amount</code> — сумма по паре; живой нетто-остаток
-  пары = <code>amount − paying_amount</code>.</li>
-</ul>
-<p>Правила использования:</p>
-<ul>
-<li><strong>баланс ленты</strong> (акт сверки) по-прежнему <code>SUM(amount)</code> — <code>paying_amount</code>
-  в него не входит;</li>
-<li><strong>долг клиента в моменте</strong> — определение 1С: <code>SUM(amount) − SUM(paying_amount)</code>;</li>
-<li>сообщения без поля валидны: до подтверждения схемы стороной 1С поле
-  не публикуется, клиент видит долг по <code>balance.updated</code>.</li>
-</ul>
-<h2 id="_7">Что считается из регистра<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Вопрос бизнеса</th>
-<th>Выражение</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Фактический баланс (акт сверки)</td>
-<td><code>SUM(amount)</code> по <code>nature='fact'</code> на дату</td>
-</tr>
-<tr>
-<td>Сколько клиент должен сейчас</td>
-<td>непогашенный план с датой ≤ сегодня</td>
-</tr>
-<tr>
-<td>Текущая просрочка</td>
-<td>то же, дата &lt; сегодня</td>
-</tr>
-<tr>
-<td>Поток по дням</td>
-<td>непогашенный план, дата &gt; сегодня, группировка по дате</td>
-</tr>
-<tr>
-<td>Свободный аванс</td>
-<td>положительный фактический баланс</td>
-</tr>
-</tbody>
-</table>
-<h2 id="_8">Ось акта сверки<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
-<p><strong>Контрагент × организация × валюта</strong> — регистровый срез, который гарантированно сходится
-с <code>balance.updated</code>.</p>
-<p>Соглашение и договор осью <strong>не являются</strong>: соглашение 1С берёт из документа-регистратора,
-и при изменении задним числом группировка исторических движений может разъехаться; договор
-заполнен лишь у 2,2 % документов. Оба служат фильтром и группировкой внутри акта —
-см. <a href="../agreements/">Соглашения</a>.</p>
-<h2 id="_9">Критерии приёмки<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
-<ul>
-<li>[ ] Сайт принимает все четыре события из очереди <code>erp_in.settlements</code></li>
-<li>[ ] Повторная доставка того же <code>document_uuid</code> не задваивает движения</li>
-<li>[ ] <code>settlement.posted</code> заменяет набор движений целиком, пустой <code>entries</code> очищает</li>
-<li>[ ] <code>settlement.reverted</code> гасит вклад документа, включая строки его графика</li>
-<li>[ ] Движение с неизвестным <code>type</code> уходит в DLQ; неизвестный <code>settlement_object_kind</code>
-      сохраняется как есть</li>
-<li>[ ] Движение, приехавшее раньше документа, сохраняется и читается по <code>document_number</code></li>
-<li>[ ] Устаревшая ревизия отбрасывается <code>ErpRevisionGuard</code></li>
-<li>[ ] Валютное движение сохраняет <code>amount_rub</code> из 1С, свой курс не подставляется</li>
-<li>[ ] Сальдо 01.01 + движения первого полугодия сходятся с checkpoint 01.07</li>
-<li>[ ] Сумма движений по контрагенту и организации совпадает с <code>balance.updated</code></li>
-<li>[ ] Знак по каждому <code>type</code> соответствует соглашению — проверяется командой сверки</li>
-</ul>
+<p>Payload-схемы: <a href="/docs/erp/spec.yaml">AsyncAPI</a>, JSON Schemas <code>order.updated.to_erp</code>,
+<code>order.deleted.to_erp</code>, <code>order.confirmed.to_erp</code> в <a href="/docs/erp/schemas/">/docs/erp/schemas/</a>.</p>
 
 
 

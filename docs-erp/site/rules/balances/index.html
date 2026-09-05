@@ -624,6 +624,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../order-reserves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Заказы в резерве
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../returns/" class="md-nav__link">
         
   
@@ -1396,6 +1424,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/reserves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Заказы в резерве (v16.9.0)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2058,7 +2114,8 @@
 настолько, что в документации MCP-агентам приходилось писать «не верьте цифре долга из API,
 отвечайте по <code>payment.balances</code>». Теперь долг приезжает движениями регистра
 (<a href="../settlements/">Регистр взаиморасчётов</a>), а баланс служит их проверкой.</p>
-<p><strong><code>overdue_details</code> удалён из контракта</strong> на обоих уровнях. Просрочка выводится из плановых
+<p><strong><code>overdue_details</code> удалён из контракта</strong> на обоих уровнях (в v16.8.0 снят и приём:
+таблица деталей удалена). Просрочка выводится из плановых
 строк графика оплаты: непогашенные строки с датой раньше сегодняшней. Дублировать её незачем.
 Поле, присланное по инерции, игнорируется.</p>
 <p><strong>Новых уровней разреза не добавляется.</strong> Ось акта сверки — контрагент × организация × валюта,
@@ -2118,7 +2175,7 @@
 <li>[x] Баланс отображается в ЛК в разрезе контрагентов и наших организаций</li>
 <li>[x] <strong>(v13.2)</strong> Company находится сначала по <code>contractors[].uuid</code>, затем fallback
       по <code>tax_id + partner_uuid</code></li>
-<li>[ ] <strong>(v16.0.0)</strong> Сообщение с присланным по инерции <code>overdue_details</code> обрабатывается
+<li>[x] <strong>(v16.0.0)</strong> Сообщение с присланным по инерции <code>overdue_details</code> обрабатывается
       без ошибки, поле игнорируется</li>
 <li>[ ] <strong>(v16.0.0)</strong> <code>SUM(движения)</code> по контрагенту и организации совпадает с <code>current_balance</code></li>
 <li>[ ] <strong>(v16.0.0)</strong> Расхождение больше копейки даёт предупреждение в лог и баннер в CRM</li>

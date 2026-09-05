@@ -624,6 +624,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../order-reserves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Заказы в резерве
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../returns/" class="md-nav__link">
         
   
@@ -1396,6 +1424,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/reserves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Заказы в резерве (v16.9.0)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2104,6 +2160,11 @@
 с учётом авансов и зачётов. Сайт больше не раскладывает платежи ни FIFO, ни как-либо ещё.</p>
 <p>Поле <code>payment_schedule</code>, присланное в реализации по инерции, <strong>игнорируется</strong>: сообщение
 обрабатывается целиком и в очередь недоставленных не уходит.</p>
+<p><strong>(v16.8.0)</strong> Приём этого поля снят целиком вместе со старой таблицей графика: карточка
+реализации, кабинет и внешний API показывают строки из регистра. Колонки
+<code>paid_amount</code> / <code>payment_status</code> / <code>payment_due_date</code> в самой реализации остались —
+их читают фильтры и внешние потребители, — но заполняет их теперь проекция плановых
+строк регистра, а не расчёт сайта.</p>
 <h2 id="-v15160">Счёт-фактура (v15.16.0)<a class="headerlink" href="#-v15160" title="Permanent link">&para;</a></h2>
 <p>Реализация может нести реквизиты счёта-фактуры:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">&quot;invoice&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;number&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;29УТ-004417&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-08-08&quot;</span><span class="w"> </span><span class="p">}</span>
