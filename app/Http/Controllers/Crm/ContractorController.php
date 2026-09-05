@@ -197,6 +197,10 @@ class ContractorController extends CrmController
                 'status_label' => $isOrder
                     ? $document->getAttribute('status')->label()
                     : $document->getAttribute('status_label'),
+                // v16.9.0 (res-12): резервный заказ приходит из 1С как «Готов
+                // к отгрузке» — без пометки менеджер не поймёт, что клиент ещё
+                // согласовывает его сам
+                'reserve' => $isOrder && (bool) $document->getAttribute('reserve'),
                 'url' => $isOrder
                     ? route('crm.orders.show', $document->getKey())
                     : route('crm.shipments.show', $document->getKey()),

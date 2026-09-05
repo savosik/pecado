@@ -16,6 +16,7 @@ import { LuArrowLeft, LuPencil } from "react-icons/lu";
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { Field } from "@/components/ui/field";
+import { Alert } from "@/components/ui/alert";
 import { toaster } from "@/components/ui/toaster";
 import { OrderHistoryTimeline } from "./Components/OrderHistoryTimeline";
 import EntityCrmPanel from "@/Crm/Components/EntityCrmPanel";
@@ -75,6 +76,24 @@ const OrderShow = () => {
                 }
             />
 
+            {/* v16.9.0 (res-12): окно резерва принадлежит клиенту. Из 1С такой заказ
+                приходит со статусом «Готов к отгрузке», поэтому без явной плашки
+                менеджер не отличит его от обычного и может вмешаться в чужое
+                согласование — правки менеджера столкнутся с правками клиента. */}
+            {order.reserve && (
+                <Alert
+                    status="warning"
+                    title={`Резерв клиента до ${order.reserved_until || "—"}`}
+                    mb={6}
+                >
+                    Клиент сейчас согласовывает этот заказ сам: он может изменить состав,
+                    отменить его или отправить в отгрузку из кабинета. Не редактируйте заказ
+                    и не двигайте его по статусам, пока идёт окно резерва — иначе резерв
+                    снимется, и клиент потеряет удержание товара. Если вмешаться необходимо,
+                    сначала свяжитесь с клиентом.
+                </Alert>
+            )}
+
             <SimpleGrid columns={{ base: 1, lg: 2 }} gap={6} mb={6}>
                 {/* Основная информация */}
                 <Card.Root>
@@ -101,6 +120,14 @@ const OrderShow = () => {
                                     >
                                         {order.parent.erp_number || order.parent.number || ("#" + order.parent.id)}
                                     </Button>
+                                </HStack>
+                            )}
+                            {order.reserve && (
+                                <HStack justify="space-between">
+                                    <Text color="fg.muted">Резерв:</Text>
+                                    <Badge colorPalette="purple" variant="solid">
+                                        до {order.reserved_until || "—"}
+                                    </Badge>
                                 </HStack>
                             )}
                             <HStack justify="space-between">

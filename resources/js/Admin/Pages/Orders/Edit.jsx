@@ -20,6 +20,8 @@ import AdminLayout from "@/Admin/Layouts/AdminLayout";
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { Field } from "@/components/ui/field";
 import { toaster } from "@/components/ui/toaster";
+import { Alert } from "@/components/ui/alert";
+import { ConfirmDialog } from "@/Admin/Components/ConfirmDialog";
 import { Select } from "@/components/ui/select";
 import OrderItemsEditor from "@/Admin/Components/OrderItemsEditor";
 import { EntitySelector } from "@/Admin/Components/EntitySelector";
@@ -118,8 +120,25 @@ const Edit = ({ order, statuses, currencies }) => {
         }
     };
 
+    // v16.9.0 (res-12): правка заказа в окне резерва — вмешательство в чужое
+    // согласование. Не запрещаем (менеджеру иногда правда нужно), но требуем
+    // осознанного подтверждения: случайное сохранение снимет клиенту резерв.
+    const [reserveConfirmOpen, setReserveConfirmOpen] = useState(false);
+    const pendingCloseRef = useRef(false);
+
     const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+
+        if (order.reserve && !reserveConfirmOpen) {
+            pendingCloseRef.current = shouldClose;
+            setReserveConfirmOpen(true);
+            return;
+        }
+
+        submitOrder(shouldClose);
+    };
+
+    const submitOrder = (shouldClose = false) => {
         closeAfterSaveRef.current = shouldClose;
 
         if (!data.items || data.items.length === 0) {
@@ -163,6 +182,20 @@ const Edit = ({ order, statuses, currencies }) => {
         <>
             <Head title={`Редактировать заказ ${order.erp_number || order.number || ("#" + order.id)}`} />
 
+            <ConfirmDialog
+                open={reserveConfirmOpen}
+                onClose={() => setReserveConfirmOpen(false)}
+                onConfirm={() => {
+                    setReserveConfirmOpen(false);
+                    submitOrder(pendingCloseRef.current);
+                }}
+                title="Заказ в резерве клиента"
+                description={`Клиент согласовывает этот заказ сам (резерв до ${order.reserved_until || "—"}). Ваша правка вмешается в его окно: клиент может редактировать заказ прямо сейчас, а 1С снимет резерв при ручном вмешательстве — товар перестанет удерживаться. Сохранить изменения?`}
+                confirmLabel="Всё равно сохранить"
+                cancelLabel="Не трогать"
+                colorPalette="orange"
+            />
+
             <PageHeader
                 title={`Редактировать заказ ${order.erp_number || order.number || ("#" + order.id)}`}
                 subtitle={
@@ -189,6 +222,19 @@ const Edit = ({ order, statuses, currencies }) => {
                     </HStack>
                 }
             />
+
+            {order.reserve && (
+                <Alert
+                    status="warning"
+                    title={`Резерв клиента до ${order.reserved_until || "—"}`}
+                    mb={4}
+                >
+                    Клиент согласовывает заказ сам и может менять его прямо сейчас.
+                    Правка из админки вмешается в его окно, а ручное вмешательство
+                    снимает резерв — товар перестанет удерживаться. По возможности
+                    дождитесь решения клиента или свяжитесь с ним.
+                </Alert>
+            )}
 
             <form onSubmit={handleSubmit}>
                 <Tabs.Root defaultValue="general" variant="enclosed">

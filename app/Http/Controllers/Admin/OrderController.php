@@ -144,6 +144,13 @@ class OrderController extends AdminController
                 'type' => $order->type?->value,
                 'status' => $order->status?->value,
                 'status_label' => $this->getStatusLabel($order->status),
+                // v16.9.0 (res-12): резервный заказ приезжает из 1С со статусом
+                // «Готов к отгрузке» — без пометки менеджер примет его за обычный
+                // и полезет править, пока клиент ещё согласовывает свой резерв
+                'reserve' => (bool) $order->reserve,
+                'reserved_until' => $order->reserve
+                    ? $order->reserved_until?->timezone(config('app.timezone'))->format('d.m.Y H:i')
+                    : null,
                 'total_amount' => $order->total_amount,
                 'currency_code' => $order->currency_code ?? '₽',
                 'created_at' => $order->created_at?->format('d.m.Y H:i'),
@@ -322,6 +329,11 @@ class OrderController extends AdminController
                 'type' => $order->type?->value,
                 'status' => $order->status?->value,
                 'status_label' => $this->getStatusLabel($order->status),
+                // v16.9.0 (res-12): окно резерва — время клиента, не менеджера
+                'reserve' => (bool) $order->reserve,
+                'reserved_until' => $order->reserve
+                    ? $order->reserved_until?->timezone(config('app.timezone'))->format('d.m.Y H:i')
+                    : null,
                 'total_amount' => $order->total_amount,
                 'currency_code' => $order->currency_code,
                 'exchange_rate' => $order->exchange_rate,
@@ -516,6 +528,12 @@ class OrderController extends AdminController
                 'delivery_address' => $order->delivery_address,
                 'delivery_method' => $order->delivery_method?->value ?? 'delivery',
                 'status' => $order->status?->value,
+                // v16.9.0 (res-12): предупреждение в форме — заказ в окне резерва,
+                // клиент прямо сейчас может править его сам
+                'reserve' => (bool) $order->reserve,
+                'reserved_until' => $order->reserve
+                    ? $order->reserved_until?->timezone(config('app.timezone'))->format('d.m.Y H:i')
+                    : null,
                 'comment' => $order->comment,
                 'currency_code' => $order->currency_code,
                 'total_amount' => $order->total_amount,
@@ -749,13 +767,32 @@ class OrderController extends AdminController
             'status' => 'required|string|in:'.implode(',', array_column(OrderStatus::cases(), 'value')),
         ]);
 
-        $count = Order::whereIn('id', $validated['order_ids'])->update([
-            'status' => $validated['status'],
-        ]);
+        // v16.9.0 (res-12): резервные заказы из массовой операции исключаем.
+        // Окно резерва принадлежит клиенту, и «выделить всё → сменить статус»
+        // не должно молча снимать удержание у десятка интернет-магазинов.
+        // Точечно менеджер это по-прежнему может — через карточку заказа,
+        // где стоит предупреждение.
+        $reserved = Order::whereIn('id', $validated['order_ids'])
+            ->where('reserve', true)
+            ->pluck('id')
+            ->all();
+
+        $count = Order::whereIn('id', $validated['order_ids'])
+            ->when($reserved !== [], fn ($q) => $q->whereNotIn('id', $reserved))
+            ->update(['status' => $validated['status']]);
+
+        $message = "Статус обновлён для {$count} заказов";
+
+        if ($reserved !== []) {
+            $message .= sprintf(
+                '. Пропущено заказов в резерве клиента: %d — их согласовывают клиенты, статус меняйте из карточки заказа',
+                count($reserved),
+            );
+        }
 
         return redirect()
             ->back()
-            ->with('success', "Статус обновлён для {$count} заказов");
+            ->with('success', $message);
     }
 
     /**

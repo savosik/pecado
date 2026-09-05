@@ -10,6 +10,7 @@ import { ConfirmDialog } from "@/Admin/Components/ConfirmDialog";
 import { toaster } from "@/components/ui/toaster";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
+import { Tooltip } from "@/components/ui/tooltip";
 import { Checkbox } from "@/components/ui/checkbox";
 import { usePermission } from '@/Admin/hooks/usePermission';
 import { DeleteAllButton, TrashedFilter } from '@/Admin/Components';
@@ -343,9 +344,21 @@ const OrdersIndex = ({ filters, statuses, types, companies, organizations, wareh
             key: "status",
             sortable: true,
             render: (_, order) => (
-                <Badge colorPalette={getStatusColor(order.status)}>
-                    {order.status_label}
-                </Badge>
+                <HStack gap="1" flexWrap="wrap">
+                    <Badge colorPalette={getStatusColor(order.status)}>
+                        {order.status_label}
+                    </Badge>
+                    {/* v16.9.0 (res-12): резерв клиента. Из 1С такой заказ приходит
+                        со статусом «Готов к отгрузке» — без бейджа менеджер решит,
+                        что заказ завис, и полезет его двигать. */}
+                    {order.reserve && (
+                        <Tooltip content={`Резерв клиента до ${order.reserved_until || "—"}. Клиент согласовывает заказ сам — не редактировать и не двигать по статусам`}>
+                            <Badge colorPalette="purple" variant="solid">
+                                В резерве
+                            </Badge>
+                        </Tooltip>
+                    )}
+                </HStack>
             ),
         },
         {

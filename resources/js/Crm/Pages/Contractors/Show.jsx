@@ -56,7 +56,16 @@ function DocumentsTable({ rows, emptyMessage }) {
                                 )}
                             </Table.Cell>
                             <Table.Cell>{row.date || '—'}</Table.Cell>
-                            <Table.Cell>{row.status_label || '—'}</Table.Cell>
+                            <Table.Cell>
+                                {row.status_label || '—'}
+                                {/* v16.9.0 (res-12): резерв клиента — заказ приходит
+                                    из 1С как «Готов к отгрузке», пометка обязательна */}
+                                {row.reserve && (
+                                    <Badge colorPalette="purple" variant="solid" ml="2" fontSize="2xs">
+                                        в резерве
+                                    </Badge>
+                                )}
+                            </Table.Cell>
                             <Table.Cell textAlign="end">{formatPrice(row.total)}</Table.Cell>
                             <Table.Cell textAlign="end">
                                 <RowActions size="xs" view={{ href: row.url }} />
