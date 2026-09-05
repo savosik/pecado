@@ -56,10 +56,12 @@ class ReserveControlController extends Controller
             ->get()
             ->keyBy('user_id');
 
+        $canary = app(\App\Services\Order\ReservePolicy::class)->canaryUuids();
+
         $partners = User::query()
             ->whereIn('id', $partnerIds)
-            ->get(['id', 'name', 'erp_name', 'reserve_allowed'])
-            ->map(function (User $partner) use ($outcomes, $active, $overrides) {
+            ->get(['id', 'name', 'erp_name', 'erp_id', 'reserve_allowed'])
+            ->map(function (User $partner) use ($outcomes, $active, $overrides, $canary) {
                 $byOutcome = ($outcomes[$partner->id] ?? collect())->pluck('cnt', 'reserve_outcome');
                 $confirmed = (int) ($byOutcome['confirmed'] ?? 0);
                 $cancelled = (int) ($byOutcome['cancelled'] ?? 0);
@@ -71,6 +73,7 @@ class ReserveControlController extends Controller
                     'user_id' => $partner->id,
                     'name' => $partner->erp_name ?: $partner->name,
                     'reserve_allowed' => (bool) $partner->reserve_allowed,
+                    'is_canary' => in_array((string) $partner->erp_id, $canary, true),
                     'active' => (int) ($active[$partner->id] ?? 0),
                     'confirmed' => $confirmed,
                     'cancelled' => $cancelled,
@@ -92,6 +95,9 @@ class ReserveControlController extends Controller
             'defaultHours' => (int) config('order_reserve.hours'),
             'alertShare' => (float) config('order_reserve.expired_share_alert'),
             'reserveEnabled' => (bool) config('order_reserve.enabled'),
+            // Канареечные испытания: РОП должен понимать, почему у 84 участников
+            // режим не работает — это не поломка, а сужение на время Р-1…Р-6
+            'canaryUuids' => app(\App\Services\Order\ReservePolicy::class)->canaryUuids(),
             'canEdit' => $request->user()->can('crm-reserves.edit'),
         ]);
     }

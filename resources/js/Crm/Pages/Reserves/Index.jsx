@@ -20,7 +20,12 @@ export default function Index() {
     const {
         partners = [], windowDays = 90, defaultHours = 24,
         alertShare = 0.3, reserveEnabled = false, canEdit = false,
+        canaryUuids = [],
     } = usePage().props;
+
+    // Канареечные испытания: режим сужен до 1–2 партнёров. Без пометки экран
+    // выглядел бы поломкой — «84 участника, а резервов ни у кого нет».
+    const canaryMode = (canaryUuids || []).length > 0;
 
     const [drafts, setDrafts] = useState({});
     const [busyId, setBusyId] = useState(null);
@@ -60,6 +65,15 @@ export default function Index() {
                 subtitle={`Исходы резервов за ${windowDays} дней. Красная зона — снято по таймауту чаще ${Math.round(alertShare * 100)}% («резервирует и бросает»).`}
                 icon={<LuClock3 />}
             />
+
+            {canaryMode && (
+                <Alert status="warning" title="Идут канареечные испытания" mb="4">
+                    Режим сужен до {canaryUuids.length}&nbsp;партнёров (отмечены значком «канарейка»).
+                    Остальные участники резерв не видят, даже будучи отмеченными в 1С — это
+                    временная мера на время прогона Р-1…Р-6, а не отключение и не сбой.
+                    Снимается очисткой переменной ORDER_RESERVE_CANARY после успешных испытаний.
+                </Alert>
+            )}
 
             {!reserveEnabled && (
                 <Alert status="info" title="Режим выключен глобально" mb="4">
@@ -104,9 +118,16 @@ export default function Index() {
                                         <Text fontWeight="500">{row.name}</Text>
                                     </Table.Cell>
                                     <Table.Cell textAlign="center">
-                                        <Badge colorPalette={row.reserve_allowed ? 'green' : 'gray'} variant="subtle">
-                                            {row.reserve_allowed ? 'участник' : 'нет'}
-                                        </Badge>
+                                        <HStack gap="1" justify="center">
+                                            <Badge colorPalette={row.reserve_allowed ? 'green' : 'gray'} variant="subtle">
+                                                {row.reserve_allowed ? 'участник' : 'нет'}
+                                            </Badge>
+                                            {row.is_canary && (
+                                                <Badge colorPalette="orange" variant="solid">
+                                                    канарейка
+                                                </Badge>
+                                            )}
+                                        </HStack>
                                     </Table.Cell>
                                     <Table.Cell textAlign="center">{row.active || '—'}</Table.Cell>
                                     <Table.Cell textAlign="center">{row.confirmed}</Table.Cell>
