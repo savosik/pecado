@@ -72,6 +72,10 @@ class ReserveOrderController extends Controller
         abort_unless($order->user_id === $request->user()->id, 403);
 
         $validated = $request->validate([
+            // v16.9.1: версия состава со страницы. Между рендером и сохранением
+            // состав мог измениться из 1С, а ключи строк стабильны только внутри
+            // версии — иначе клиент уменьшил бы не ту позицию
+            'base_items_version' => ['required', 'integer', 'min:0'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.id' => ['required', 'integer'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
@@ -82,7 +86,7 @@ class ReserveOrderController extends Controller
 
         try {
             app(\App\Services\Order\ClientOrderActions::class)
-                ->updateReserveItems($order, $validated['items'], $publisher, $changeLogger);
+                ->updateReserveItems($order, $validated['items'], $publisher, $changeLogger, (int) $validated['base_items_version']);
         } catch (\App\Services\Order\ReserveActionException $e) {
             return response()->json(['message' => $e->getMessage()], $e->status);
         }

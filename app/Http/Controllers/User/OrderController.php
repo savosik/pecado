@@ -510,6 +510,9 @@ class OrderController extends Controller
                 // v16.9.0 (res-07): плашка резерва с таймером и кнопкой «В отгрузку».
                 // reserved_until — фактический срок из 1С (может быть урезан их пределом)
                 'reserve' => (bool) $order->reserve,
+                // v16.9.1: версия состава — фронт отправляет её при правке,
+                // устаревшая отбивается до отправки в шину
+                'items_version' => (int) ($order->items_version ?? 0),
                 'reserved_until' => $order->reserve ? $order->reserved_until?->toIso8601String() : null,
                 'reserved_until_formatted' => $order->reserve
                     ? $order->reserved_until?->timezone(config('app.timezone'))->format('d.m.Y H:i')

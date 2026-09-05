@@ -65,6 +65,7 @@ class ReserveItemsUpdateTest extends TestCase
 
         $this->actingAs($user)
             ->postJson("/cabinet/orders/{$order->id}/reserve-items", [
+                'base_items_version' => 4,
                 'items' => [['id' => $first->id, 'quantity' => 2]],
             ])
             ->assertOk();
@@ -96,6 +97,7 @@ class ReserveItemsUpdateTest extends TestCase
 
         $this->actingAs($user)
             ->postJson("/cabinet/orders/{$order->id}/reserve-items", [
+                'base_items_version' => 4,
                 'items' => [['id' => $first->id, 'quantity' => 5]],
             ])
             ->assertStatus(422)
@@ -111,7 +113,7 @@ class ReserveItemsUpdateTest extends TestCase
         [$order] = $this->reserveOrderWithTwoItems($user);
 
         $this->actingAs($user)
-            ->postJson("/cabinet/orders/{$order->id}/reserve-items", ['items' => []])
+            ->postJson("/cabinet/orders/{$order->id}/reserve-items", ['base_items_version' => 4, 'items' => []])
             ->assertStatus(422);
 
         Queue::assertNotPushed(PublishOrderToErpJob::class);
@@ -125,6 +127,7 @@ class ReserveItemsUpdateTest extends TestCase
 
         $this->actingAs($user)
             ->postJson("/cabinet/orders/{$order->id}/reserve-items", [
+                'base_items_version' => 4,
                 'items' => [
                     ['id' => $first->id, 'quantity' => 3],
                     ['id' => $second->id, 'quantity' => 1],
@@ -147,6 +150,7 @@ class ReserveItemsUpdateTest extends TestCase
 
         $this->actingAs($user)
             ->postJson("/cabinet/orders/{$plain->id}/reserve-items", [
+                'base_items_version' => 0,
                 'items' => [['id' => 1, 'quantity' => 1]],
             ])
             ->assertStatus(422);
@@ -155,9 +159,29 @@ class ReserveItemsUpdateTest extends TestCase
 
         $this->actingAs($user)
             ->postJson("/cabinet/orders/{$foreign->id}/reserve-items", [
+                'base_items_version' => 4,
                 'items' => [['id' => $item->id, 'quantity' => 1]],
             ])
             ->assertForbidden();
+    }
+
+    #[Test]
+    public function stale_items_version_is_rejected_before_publishing(): void
+    {
+        // v16.9.1: клиент правит по устаревшему представлению — ключи строк
+        // стабильны только внутри версии, так что правку отбиваем до шины
+        $user = User::factory()->create();
+        [$order, $first] = $this->reserveOrderWithTwoItems($user);
+
+        $this->actingAs($user)
+            ->postJson("/cabinet/orders/{$order->id}/reserve-items", [
+                'base_items_version' => 3, // у заказа 4
+                'items' => [['id' => $first->id, 'quantity' => 1]],
+            ])
+            ->assertStatus(409);
+
+        $this->assertSame(3, (int) $first->refresh()->quantity, 'состав не тронут');
+        Queue::assertNotPushed(PublishOrderToErpJob::class);
     }
 
     #[Test]
@@ -169,6 +193,7 @@ class ReserveItemsUpdateTest extends TestCase
 
         $this->actingAs($user)
             ->postJson("/cabinet/orders/{$order->id}/reserve-items", [
+                'base_items_version' => 4,
                 'items' => [['id' => $first->id, 'quantity' => 1]],
             ])
             ->assertNotFound();

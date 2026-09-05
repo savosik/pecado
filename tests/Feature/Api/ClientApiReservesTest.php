@@ -108,12 +108,14 @@ class ClientApiReservesTest extends TestCase
         $item = $order->items()->first();
 
         $this->postJson($this->url("/reserves/{$order->id}/items"), [
+            'base_items_version' => 0,
             'items' => [['item_id' => $item->id, 'quantity' => 5]],
         ])
             ->assertStatus(422)
             ->assertJsonPath('code', 'increase_forbidden');
 
         $this->postJson($this->url("/reserves/{$order->id}/items"), [
+            'base_items_version' => 0,
             'items' => [['item_id' => $item->id, 'quantity' => 1]],
         ])
             ->assertOk()
@@ -121,6 +123,41 @@ class ClientApiReservesTest extends TestCase
 
         $this->assertSame(1, (int) $item->refresh()->quantity);
         Queue::assertPushed(PublishOrderToErpJob::class, fn (PublishOrderToErpJob $job) => $job->payload['event'] === 'order.updated');
+    }
+
+    #[Test]
+    public function items_update_requires_and_validates_base_version(): void
+    {
+        $order = $this->reserveOrder();
+        $order->update(['items_version' => 7]);
+        $item = $order->items()->first();
+
+        // без версии — валидация
+        $this->postJson($this->url("/reserves/{$order->id}/items"), [
+            'items' => [['item_id' => $item->id, 'quantity' => 1]],
+        ])->assertStatus(422);
+
+        // с устаревшей версией — конфликт, до шины не доходит
+        $this->postJson($this->url("/reserves/{$order->id}/items"), [
+            'base_items_version' => 6,
+            'items' => [['item_id' => $item->id, 'quantity' => 1]],
+        ])
+            ->assertStatus(409)
+            ->assertJsonPath('code', 'stale_items_version');
+
+        $this->assertSame(3, (int) $item->refresh()->quantity);
+        Queue::assertNotPushed(PublishOrderToErpJob::class);
+    }
+
+    #[Test]
+    public function reserves_list_exposes_items_version(): void
+    {
+        $order = $this->reserveOrder();
+        $order->update(['items_version' => 5]);
+
+        $this->getJson($this->url('/reserves'))
+            ->assertOk()
+            ->assertJsonPath('reserves.0.items_version', 5);
     }
 
     #[Test]

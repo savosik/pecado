@@ -145,7 +145,12 @@ export default function OrderShow({ order }) {
             const items = Object.entries(editItems)
                 .filter(([, qty]) => qty !== null)
                 .map(([id, qty]) => ({ id: Number(id), quantity: Number(qty) }));
-            const { data } = await axios.post(`/cabinet/orders/${order.id}/reserve-items`, { items });
+            const { data } = await axios.post(`/cabinet/orders/${order.id}/reserve-items`, {
+                items,
+                // Версия состава, которую видел клиент: если состав успел измениться
+                // из 1С, сервер отобьёт правку и покажет актуальные данные
+                base_items_version: Number(order.items_version ?? 0),
+            });
             toastSuccess('Состав обновлён', data?.message || 'Изменения применены.');
             setEditItems(null);
         } catch (err) {

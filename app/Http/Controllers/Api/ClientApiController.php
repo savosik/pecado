@@ -72,6 +72,10 @@ class ClientApiController extends Controller
                 'total_amount' => (float) $order->total_amount,
                 'currency_code' => $order->currency_code,
                 'reserved_until' => $order->reserved_until?->toIso8601String(),
+                // v16.9.1: версия состава — обязательный аргумент правки. Ключ строки
+                // (item_id/line_number) стабилен только в пределах версии: 1С
+                // перенумеровывает строки при физическом удалении
+                'items_version' => (int) ($order->items_version ?? 0),
                 'created_at' => ($order->erp_created_at ?? $order->created_at)?->toIso8601String(),
                 'items' => $order->items->map(fn ($item) => [
                     'item_id' => $item->id,
@@ -116,16 +120,24 @@ class ClientApiController extends Controller
      * V1 — только уменьшение: увеличение отклоняется кодом `increase_forbidden`
      * (нужно больше — создайте отдельный заказ). Пустой состав не принимается
      * (`empty_composition`) — для полного отказа используйте /cancel.
+     *
+     * `base_items_version` (обязателен, v16.9.1) — версия состава из /reserves,
+     * от которой вы правите. Если состав успел измениться (правка менеджера в 1С,
+     * пересборка строк), запрос отклоняется кодом `stale_items_version` со
+     * статусом 409: перечитайте /reserves и повторите. Проверка обязательна —
+     * идентификаторы строк стабильны только в пределах версии.
      */
     public function reserveItems(Request $request, string $token, int $order): JsonResponse
     {
         $apiToken = $this->resolveToken($token);
 
         $validated = $request->validate([
+            'base_items_version' => ['required', 'integer', 'min:0'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.item_id' => ['required', 'integer'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
         ], [
+            'base_items_version.required' => 'Укажите base_items_version — версию состава из /reserves.',
             'items.required' => 'Состав пуст — для отказа от всего заказа используйте /cancel.',
             'items.min' => 'Состав пуст — для отказа от всего заказа используйте /cancel.',
         ]);
@@ -135,18 +147,22 @@ class ClientApiController extends Controller
             $validated['items'],
         );
 
-        return $this->reserveAction($apiToken->user, $order, function (Order $orderModel) use ($target) {
+        $baseVersion = (int) $validated['base_items_version'];
+
+        return $this->reserveAction($apiToken->user, $order, function (Order $orderModel) use ($target, $baseVersion) {
             app(\App\Services\Order\ClientOrderActions::class)->updateReserveItems(
                 $orderModel,
                 $target,
                 app(\App\Services\Erp\OrderReservePublisher::class),
                 $this->changeLogger,
+                $baseVersion,
             );
 
             return response()->json([
                 'message' => 'Состав обновлён.',
                 'order_id' => $orderModel->id,
                 'total_amount' => (float) $orderModel->refresh()->total_amount,
+                'items_version' => (int) ($orderModel->items_version ?? 0),
             ]);
         });
     }

@@ -78,13 +78,29 @@ class ClientOrderActions
      * Правка состава резервного заказа: целевой состав {id, quantity},
      * отсутствующие строки удаляются, v1 — только уменьшение.
      *
+     * $baseItemsVersion — версия состава, которую видел клиент. Обязательна для
+     * защиты от гонки: 1С перенумеровывает строки при физическом удалении, и
+     * ключ строки стабилен только в пределах версии (v16.9.1, вопрос 1С в топике
+     * №6). Без проверки клиент со старым представлением уменьшил бы не ту строку —
+     * id у нас стабилен, а товар под ним после roundtrip мог смениться.
+     * Проверка 1С остаётся вторым рубежом, но отбивать устаревшую правку до
+     * отправки в шину честнее: клиент не увидит применённую и откатившуюся правку.
+     *
      * @param  list<array{id: int, quantity: int}>  $targetItems
      *
      * @throws ReserveActionException
      */
-    public function updateReserveItems(Order $order, array $targetItems, OrderReservePublisher $publisher, OrderChangeLogger $changeLogger): void
+    public function updateReserveItems(Order $order, array $targetItems, OrderReservePublisher $publisher, OrderChangeLogger $changeLogger, ?int $baseItemsVersion = null): void
     {
         $this->assertInReserveWindow($order, 'изменить');
+
+        if ($baseItemsVersion !== null && $baseItemsVersion !== (int) ($order->items_version ?? 0)) {
+            throw new ReserveActionException(
+                'stale_items_version',
+                'Состав заказа изменился с момента, когда вы его открыли. Обновите данные и повторите правку.',
+                409,
+            );
+        }
 
         if ($targetItems === []) {
             throw new ReserveActionException(
@@ -150,9 +166,9 @@ class ClientOrderActions
 
         $changeLogger->logItemChanges($order, $oldSnapshot, $changeLogger->snapshotItems($order), $oldTotal, (float) $order->total_amount, 'client');
 
-        // base_items_version — последний применённый items_version от 1С;
-        // для заказа, ещё не получившего эха, — 0
-        $publisher->publishUpdated($order, (int) ($order->items_version ?? 0));
+        // base_items_version — версия, от которой правил клиент (совпадает с нашей
+        // после проверки выше); для заказа, ещё не получившего эха от 1С, — 0
+        $publisher->publishUpdated($order, $baseItemsVersion ?? (int) ($order->items_version ?? 0));
     }
 
     /** @throws ReserveActionException */
