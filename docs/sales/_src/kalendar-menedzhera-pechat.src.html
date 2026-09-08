@@ -1,0 +1,132 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<title>Календарь менеджера</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+@page { size: A4 portrait; margin: 7mm 8mm 5mm; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "IBM Plex Sans", Arial, sans-serif; font-size: 8pt; color: #000; line-height: 1.2; }
+.head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1.5pt solid #000; padding-bottom: 1.5mm; margin-bottom: 2mm; }
+h1 { font-size: 13pt; margin: 0; font-weight: 700; letter-spacing: -.2pt; }
+.sub { font-size: 7.4pt; margin: .5mm 0 0; }
+.fields { font-size: 8pt; text-align: right; line-height: 1.9; }
+.fld { display: inline-block; border-bottom: .6pt solid #000; min-width: 26mm; margin-left: 1.5mm; }
+.ritual { border: .8pt solid #000; padding: 1.4mm 2.5mm; margin-bottom: 2mm; font-size: 7.2pt; display: flex; gap: 4mm; align-items: baseline; }
+.ritual b { font-size: 8pt; white-space: nowrap; }
+.ritual span { white-space: nowrap; }
+table { width: 100%; border-collapse: collapse; }
+th { font-size: 6.6pt; font-weight: 600; text-transform: uppercase; letter-spacing: .2pt; text-align: left; padding: 0 1mm 1mm; border-bottom: .8pt solid #000; }
+td { border-bottom: .35pt solid #999; padding: 0 1mm; height: 5.9mm; vertical-align: middle; }
+td.d { font-weight: 700; font-size: 9pt; text-align: center; width: 7mm; }
+td.t { width: 64mm; font-size: 7.2pt; }
+td.t b { font-weight: 600; }
+td.b { width: 26mm; white-space: nowrap; }
+td.n { border-bottom: .35pt solid #999; }
+.sq { display: inline-block; width: 3.4mm; height: 3.4mm; border: .7pt solid #000; margin-right: 1.6mm; vertical-align: -.4mm; }
+tr.w td { background: #EFEFEF; }
+tr.acc td.d { background: #000; color: #fff; }
+.foot { display: flex; gap: 3mm; margin-top: 2mm; }
+.box { flex: 1; border: .8pt solid #000; padding: 1.4mm 2.2mm; font-size: 6.6pt; }
+.box h3 { font-size: 7.4pt; margin: 0 0 1mm; text-transform: uppercase; letter-spacing: .2pt; }
+.box p { margin: 0 0 .8mm; }
+.legend { font-size: 6.2pt; margin-top: 1.2mm; text-align: center; }
+</style>
+</head><body>
+
+<div class="head">
+  <div>
+    <h1>Календарь менеджера отдела продаж</h1>
+    <p class="sub">Отмечайте выполненное ручкой. Если число выпало на выходной — переносите на ближайший рабочий день.</p>
+  </div>
+  <div class="fields">
+    Месяц <span class="fld"></span><br>
+    Личный план <span class="fld"></span><br>
+    Оплата начинается после <span class="fld"></span>
+  </div>
+</div>
+
+<div class="ritual">
+  <b>КАЖДЫЙ ДЕНЬ:</b>
+  <span><span class="sq"></span>Утро: A1 · долги на сегодня · список звонков</span>
+  <span><span class="sq"></span>5 контактов</span>
+  <span><span class="sq"></span>Долги: обещания</span>
+  <span><span class="sq"></span>Вечер: записать в CRM</span>
+</div>
+
+<table>
+<tr><th></th><th>Тема дня</th><th>Утро · Звонки · Долги · CRM</th><th>Заметки, кому перезвонить</th></tr>
+<tbody id="rows"></tbody>
+</table>
+
+<div class="foot">
+  <div class="box">
+    <h3>Каждый понедельник</h3>
+    <p><span class="sq"></span>A4 — выбрать 3–5 забытых клиентов на неделю</p>
+    <p><span class="sq"></span>A5 — проверить новых клиентов</p>
+    <p><span class="sq"></span>A6 — сверить перечень фокус-товаров</p>
+    <p><span class="sq"></span>Сроки по новым: контакт 10 раб. дней, заказ 90 дней</p>
+    <p><span class="sq"></span>Планёрка отдела</p>
+  </div>
+  <div class="box">
+    <h3>Помнить</h3>
+    <p>Оплата за свою базу начинается после 60 % плана. Дальше — 1,9 копейки с рубля.</p>
+    <p>Новый клиент (не покупал год) — 3 копейки с рубля, полгода. В план не входит.</p>
+    <p>Фокус-товар — плюс 1 копейка с рубля, с первого рубля.</p>
+    <p>Просроченный долг — минус 0,05 % в день. Заплатил — счётчик встал.</p>
+  </div>
+  <div class="box">
+    <h3>Нельзя</h3>
+    <p>Обещать цену ниже категории без визы руководителя.</p>
+    <p>Отгружать незапрошенное ради цифры месяца.</p>
+    <p>Придерживать заказ до следующего месяца.</p>
+    <p>Держать договорённости в голове, а не в CRM.</p>
+  </div>
+</div>
+
+<p class="legend">Полный чек-лист по дням — «Календарь работы менеджера» · формы A1–A7 — «Формы отчётов и расчётов» · ставки — Приложение № 1 к Положению об оплате труда</p>
+
+<script>
+var days = [
+ ["Разбор и старт: расчётный лист, план, разметка базы", 1],
+ ["Крупные клиенты 1–5: план закупок на месяц", 0],
+ ["Ревизия долгов: пройти A3 целиком", 1],
+ ["Крупные клиенты 6–10", 0],
+ ["Расчётный лист зафиксирован: сверить (5 раб. дней на спор)", 1],
+ ["Крупные клиенты 11–15", 0],
+ ["Новые клиенты: план развития каждого (A5)", 1],
+ ["Крупные клиенты 16–20", 0],
+ ["Фокус-товары: подборки тем, кто берёт аналоги", 1],
+ ["Контроль декады: % плана, хватает ли темпа", 1],
+ ["Средние клиенты 1–10", 0],
+ ["Средние клиенты 11–20", 0],
+ ["Долги: кто обещал и не заплатил", 1],
+ ["Средние клиенты 21–30", 0],
+ ["Середина месяца: сверка с планом, план дожима", 1],
+ ["Забытые клиенты: 5 звонков (A4)", 1],
+ ["Средние клиенты 31–40", 0],
+ ["Новые клиенты: динамика, подбор ассортимента", 0],
+ ["Хвост базы: 20 клиентов, подборки", 0],
+ ["Контроль декады: прогноз на конец месяца", 1],
+ ["Долги: эскалация всего старше 15 дней", 1],
+ ["Хвост базы: ещё 20 клиентов", 0],
+ ["Фокус-товары: второй заход по молчунам", 0],
+ ["Кто ещё не купил в этом месяце — прозвонить", 1],
+ ["Сверка перед дожимом: список 20 клиентов", 1],
+ ["Дожим 1–10", 0],
+ ["Дожим 11–20", 0],
+ ["Долги: собрать всё до конца месяца", 1],
+ ["Проверка: все договорённости стали заказами", 0],
+ ["Последние отгрузки; договорённости на след. месяц", 0],
+ ["Закрытие: карточки, задачи на 1-е, итог", 1]
+];
+var html = "";
+for (var i = 0; i < days.length; i++) {
+  var d = i + 1;
+  html += '<tr class="' + (days[i][1] ? "acc" : "") + '">' +
+    '<td class="d">' + d + "</td>" +
+    '<td class="t">' + days[i][0] + "</td>" +
+    '<td class="b"><span class="sq"></span><span class="sq"></span><span class="sq"></span><span class="sq"></span></td>' +
+    '<td class="n"></td></tr>';
+}
+document.getElementById("rows").innerHTML = html;
+</script>
+</body></html>

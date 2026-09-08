@@ -1,0 +1,429 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Рабочее место менеджера — макет</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{--paper:#F4F6F3;--card:#fff;--ink:#1B2620;--muted:#5A6862;--line:#E1E6DE;--accent:#1F6F50;--soft:#E7F1EB;--red:#B23A2E;--redsoft:#FBEEEC;--amber:#9A5B1C;--ambersoft:#FBF3E6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.45 "IBM Plex Sans",-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.app{display:grid;grid-template-columns:216px 1fr;min-height:100vh}
+.side{background:#16241D;color:#D7E2DA;padding:18px 0}
+.side .who{padding:0 18px 16px;border-bottom:1px solid #26382E;margin-bottom:12px}
+.side .who b{display:block;color:#fff;font-size:15px}
+.side .who span{font-size:12px;color:#8FA398}
+.side a{display:flex;justify-content:space-between;align-items:center;padding:9px 18px;color:#D7E2DA;text-decoration:none;font-size:13.5px;cursor:pointer}
+.side a:hover{background:#1E3129}
+.side a.on{background:#1F6F50;color:#fff;font-weight:600}
+.side a .b{background:#B23A2E;color:#fff;border-radius:10px;font-size:11px;padding:1px 7px;font-weight:600}
+.side .grp{padding:14px 18px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6E8478}
+.main{padding:22px 26px 40px;max-width:1320px}
+h1{font-size:21px;margin:0 0 3px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 18px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+.c{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.c .lbl{font-size:12px;color:var(--muted)}
+.c .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:3px}
+.c .n{font-size:12px;color:var(--muted);margin-top:3px}
+.c.hero{background:var(--accent);border-color:var(--accent);color:#fff}
+.c.hero .lbl,.c.hero .n{color:#CFE6DA}
+.c.hero .v{font-size:30px}
+.c.warn{background:var(--redsoft);border-color:#F0D5D1}
+.c.warn .v{color:var(--red)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:18px;overflow-x:auto}
+.panel h2{font-size:15px;margin:0;padding:13px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.panel h2 span{font-weight:400;font-size:12.5px;color:var(--muted)}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:9px 16px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap}
+td{padding:10px 16px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#FAFBF9}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.money{font-weight:600}
+.pos{color:var(--accent)}
+.neg{color:var(--red)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.dot.r{background:var(--red)}.dot.a{background:#D9A05B}.dot.g{background:#9CB3A5}
+.btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer;color:var(--ink)}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.p{background:var(--accent);border-color:var(--accent);color:#fff}
+.tag{display:inline-block;font-size:11px;border-radius:5px;padding:2px 7px;font-weight:600}
+.tag.g{background:var(--soft);color:var(--accent)}
+.tag.r{background:var(--redsoft);color:var(--red)}
+.tag.a{background:var(--ambersoft);color:var(--amber)}
+.bar{height:7px;border-radius:4px;background:var(--line);overflow:hidden;min-width:70px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.bar i.r{background:var(--red)}
+.hint{padding:11px 16px;background:#FAFBF9;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line)}
+.today{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:18px}
+.today h3{margin:0 0 10px;font-size:14px}
+.today .row{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
+.today .row:first-of-type{border-top:none}
+.today .row b{flex:1;font-weight:500}
+.scale{display:flex;align-items:center;gap:10px;margin:4px 0 2px}
+.scale .track{flex:1;height:26px;background:var(--line);border-radius:6px;position:relative}
+.scale .fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);opacity:.85;border-radius:6px 0 0 6px}
+.scale .mark{position:absolute;top:0;bottom:0;width:2px;background:var(--ink)}
+.scale .mark s{position:absolute;top:-20px;left:-85px;width:170px;text-align:center;font-size:11px;font-weight:600;color:var(--ink);text-decoration:none;white-space:nowrap}
+.page{display:none}
+.page.on{display:block}
+.note{background:#FFF8E6;border:1px solid #F0E2BE;border-radius:10px;padding:11px 14px;font-size:12.5px;margin-bottom:18px}
+</style></head><body>
+<div class="app">
+<nav class="side">
+  <div class="who"><b>Иван Сухов</b><span>Менеджер отдела продаж · 18 августа</span></div>
+  <a class="on" data-p="p1">Мой месяц</a>
+  <div class="grp">Работа с клиентами</div>
+  <a data-p="p2">Кто выпал из ритма <span class="b">14</span></a>
+  <a data-p="p3">Долги <span class="b">9</span></a>
+  <a data-p="p6">Фокус-товары</a>
+  <div class="grp">Раз в неделю</div>
+  <a data-p="p4">Кого разбудить</a>
+  <a data-p="p5">Мои новые клиенты</a>
+  <div class="grp">Справочно</div>
+  <a data-p="p8">Моя база <span class="b" style="background:#3D5147">113</span></a>
+  <a data-p="p9">Свободные клиенты <span class="b" style="background:#3D5147">618</span></a>
+  <div class="grp">Деньги</div>
+  <a data-p="p7">Расчётный лист</a>
+  <a data-p="p10">Откуда мой план</a>
+  <a data-p="p11">Премия отдела за квартал</a>
+</nav>
+<main class="main">
+
+<!-- ═════ A1 ═════ -->
+<section class="page on" id="p1">
+  <h1>Мой месяц</h1>
+  <p class="sub">18 августа, прошло 12 рабочих дней из 21</p>
+
+  <div class="cards">
+    <div class="c hero"><div class="lbl">Доход на сегодня</div><div class="v">80 070 ₽</div><div class="n">оклад 70 000 + надбавка 5 000 + премия 5 070</div></div>
+    <div class="c"><div class="lbl">Прогноз к концу месяца</div><div class="v">119 400 ₽</div><div class="n">при текущем темпе продаж</div></div>
+    <div class="c"><div class="lbl">Следующий миллион принесёт</div><div class="v pos">19 000 ₽</div><div class="n">оплата уже началась</div></div>
+    <div class="c warn"><div class="lbl">Просрочка сейчас стоит</div><div class="v">940 ₽/день</div><div class="n">9 накладных на 1 880 тыс. ₽</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>Где я по плану <span>план 6 700 000 ₽ · оплата начинается после 4 020 000 ₽ &nbsp;<a data-p="p10" style="color:var(--accent);cursor:pointer;border-bottom:1px dotted">откуда такой план</a></span></h2>
+    <div style="padding:34px 16px 14px">
+      <div class="scale">
+        <div class="track">
+          <div class="fill" style="width:72%"></div>
+          <div class="mark" style="left:60%"><s>оплата начинается здесь · 4,02 млн ₽</s></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px">
+        <span>0</span><span>продано 4 850 000 ₽ — 72 % плана</span><span>6 700 000 ₽</span>
+      </div>
+    </div>
+    <table>
+      <tr><td>Продано сверх точки старта</td><td class="num money">830 000 ₽</td><td class="num pos money">15 770 ₽</td></tr>
+      <tr><td>Новые клиенты — 3 шт., купили на 210 000 ₽</td><td class="num money">3 %</td><td class="num pos money">6 300 ₽</td></tr>
+      <tr><td>Фокус-товары — 180 000 ₽</td><td class="num money">1 %</td><td class="num pos money">1 800 ₽</td></tr>
+      <tr><td>Просроченные долги — 1 880 000 ₽, 20 дней</td><td class="num money">0,05 %/день</td><td class="num neg money">−18 800 ₽</td></tr>
+      <tr style="background:#FAFBF9"><td><b>Премия на сегодня</b></td><td></td><td class="num money" style="font-size:15px">5 070 ₽</td></tr>
+    </table>
+    <div class="hint">Соберёте долги сегодня — до конца месяца сохраните 12 220 ₽. Продадите ещё 1 млн — получите 19 000 ₽.</div>
+  </div>
+
+  <div class="today">
+    <h3>Три дела на сегодня</h3>
+    <div class="row"><span class="dot r"></span><b>Гевея ООО — обычно берёт 620 тыс., в этом месяце 0. Разрыв стоит 11 780 ₽</b><button class="btn p">Позвонить</button></div>
+    <div class="row"><span class="dot r"></span><b>Ракович В. С. — долг 298 052 ₽ висит 24 дня, стоит 149 ₽ в день</b><button class="btn p">Позвонить</button></div>
+    <div class="row"><span class="dot a"></span><b>Мелешко Т. Л. — молчит 14 месяцев, раньше брал 180 тыс./мес. Вернётся — даст 32 400 ₽ за полгода</b><button class="btn">Открыть</button></div>
+  </div>
+  <div class="panel">
+    <h2>Премия отдела за квартал <span>идёт отдельно от вашего дохода · до конца квартала 43 дня</span></h2>
+    <table>
+      <tr>
+        <td style="width:34%"><b>Засчитано 4 клиента из 12 новых</b><br><span style="color:var(--muted);font-size:12.5px">первая ступень пока не взята</span></td>
+        <td style="width:38%"><div class="bar" style="height:9px"><i style="width:50%"></i></div><span style="font-size:12px;color:var(--muted)">до первой ступени — ещё 4 клиента, это 40 000 ₽ на отдел</span></td>
+        <td class="num"><b>Ваш вклад: 2 клиента</b><br><span style="color:var(--muted);font-size:12.5px">ещё двоим не хватает 77 000 ₽ за квартал</span></td>
+        <td class="num"><button class="btn" data-p="p11">Подробно</button></td>
+      </tr>
+    </table>
+  </div>
+</section>
+
+<!-- ═════ A2 ═════ -->
+<section class="page" id="p2">
+  <h1>Кто выпал из ритма</h1>
+  <p class="sub">14 клиентов взяли меньше обычного. Сверху — те, чей разрыв дороже всего стоит</p>
+  <div class="panel">
+    <h2>Клиенты моей базы <span>суммарный разрыв 2 340 000 ₽ — это 44 460 ₽ вашего дохода</span></h2>
+    <table>
+      <tr><th></th><th>Клиент</th><th class="num">Обычно берёт</th><th class="num">Взял сейчас</th><th class="num">Не добрал</th><th class="num">Стоит вам</th><th class="num">Молчит</th><th>Последний заказ</th><th>Контакт</th><th></th></tr>
+      <tr><td><span class="dot r"></span></td><td><b>Гевея ООО</b></td><td class="num">620 000</td><td class="num">0</td><td class="num money">620 000</td><td class="num money neg">11 780 ₽</td><td class="num">41 дн. <span class="tag r">×2 нормы</span></td><td>08.07 · 618 тыс. · вибраторы, смазки</td><td>Ирина, 921-14-…</td><td><button class="btn p">Позвонить</button></td></tr>
+      <tr><td><span class="dot r"></span></td><td><b>Ракович В. С. ИП</b></td><td class="num">480 000</td><td class="num">92 000</td><td class="num money">388 000</td><td class="num money neg">7 372 ₽</td><td class="num">28 дн. <span class="tag r">×2 нормы</span></td><td>21.07 · 92 тыс. · Satisfyer</td><td>Владимир, 903-77-…</td><td><button class="btn p">Позвонить</button></td></tr>
+      <tr><td><span class="dot a"></span></td><td>Авента ООО</td><td class="num">310 000</td><td class="num">40 000</td><td class="num money">270 000</td><td class="num money neg">5 130 ₽</td><td class="num">22 дн.</td><td>27.07 · 40 тыс. · белье</td><td>Ольга, 383-22-…</td><td><button class="btn">Позвонить</button></td></tr>
+      <tr><td><span class="dot a"></span></td><td>Адалт Тойс ООО</td><td class="num">240 000</td><td class="num">55 000</td><td class="num money">185 000</td><td class="num money neg">3 515 ₽</td><td class="num">19 дн.</td><td>30.07 · 55 тыс. · косметика</td><td>Сергей, 495-11-…</td><td><button class="btn">Позвонить</button></td></tr>
+      <tr><td><span class="dot a"></span></td><td>Иванов С. В.</td><td class="num">180 000</td><td class="num">30 000</td><td class="num money">150 000</td><td class="num money neg">2 850 ₽</td><td class="num">17 дн.</td><td>01.08 · 30 тыс. · lubricants</td><td>Сергей, 381-45-…</td><td><button class="btn">Позвонить</button></td></tr>
+      <tr><td><span class="dot g"></span></td><td>Горбачев П. В. ИП</td><td class="num">450 000</td><td class="num">470 000</td><td class="num">—</td><td class="num">—</td><td class="num">4 дн.</td><td>14.08 · 210 тыс. · ассортимент</td><td>Павел, 916-30-…</td><td><button class="btn">Открыть</button></td></tr>
+    </table>
+    <div class="hint">Оплата у вас уже началась: каждый закрытый рубль приносит 1,9 копейки. Строки, где клиент в своём ритме, серые — их трогать не нужно.</div>
+  </div>
+</section>
+
+<!-- ═════ A3 ═════ -->
+<section class="page" id="p3">
+  <h1>Долги: во что они вам обходятся</h1>
+  <p class="sub">Сейчас с вас списывается 940 ₽ в день. Заплатят сегодня — до конца месяца сохраните 12 220 ₽</p>
+  <div class="panel">
+    <h2>Просроченные накладные <span>9 документов · 1 880 000 ₽</span></h2>
+    <table>
+      <tr><th>Клиент</th><th>Накладная</th><th class="num">Долг</th><th class="num">Ждём с</th><th class="num">Опаздывает</th><th class="num">Стоит в день</th><th class="num">Уже стоило</th><th>Обещал</th><th></th></tr>
+      <tr><td><b>Ракович В. С. ИП</b></td><td>29УТ-005432</td><td class="num money">298 052</td><td class="num">25.07</td><td class="num">24 дн.</td><td class="num money neg">149 ₽</td><td class="num neg">2 682 ₽</td><td><span class="tag r">обещал 12.08, не заплатил</span></td><td><button class="btn p">Позвонить</button></td></tr>
+      <tr><td><b>Гевея ООО</b></td><td>29УТ-005431</td><td class="num money">187 083</td><td class="num">28.07</td><td class="num">21 дн.</td><td class="num money neg">94 ₽</td><td class="num neg">1 974 ₽</td><td>обещал 22.08</td><td><button class="btn">Позвонить</button></td></tr>
+      <tr><td>Афонина А. А. ИП</td><td>A2УТ-000447</td><td class="num money">138 750</td><td class="num">01.08</td><td class="num">17 дн.</td><td class="num money neg">69 ₽</td><td class="num neg">1 173 ₽</td><td>—</td><td><button class="btn">Позвонить</button></td></tr>
+      <tr><td>Авента ООО</td><td>29УТ-005612</td><td class="num money">122 930</td><td class="num">05.08</td><td class="num">13 дн.</td><td class="num money neg">61 ₽</td><td class="num neg">793 ₽</td><td>обещал 20.08</td><td><button class="btn">Позвонить</button></td></tr>
+      <tr><td>Иванов С. В.</td><td>29УТ-005701</td><td class="num money">113 758</td><td class="num">08.08</td><td class="num">10 дн.</td><td class="num money neg">57 ₽</td><td class="num neg">570 ₽</td><td>—</td><td><button class="btn">Позвонить</button></td></tr>
+      <tr><td colspan="9" style="background:#FAFBF9"><b>Требует эскалации:</b> Ракович В. С. — просрочка 24 дня, обещание нарушено. <button class="btn" style="margin-left:8px">Передать руководителю</button></td></tr>
+    </table>
+    <div class="hint">Как только клиент платит, счётчик по его накладной останавливается навсегда — задним числом ничего не добавится.</div>
+  </div>
+</section>
+
+<!-- ═════ A4 ═════ -->
+<section class="page" id="p4">
+  <h1>Кого разбудить</h1>
+  <p class="sub">Клиенты, не покупавшие больше года. При возобновлении закупок дают 3 копейки с рубля вместо 1,9 — и полгода подряд</p>
+  <div class="panel">
+    <h2>Забытые клиенты моей базы <span>7 клиентов</span></h2>
+    <table>
+      <tr><th>Клиент</th><th class="num">Последняя покупка</th><th class="num">Молчит</th><th class="num">Раньше брал</th><th class="num">Принесёт вам</th><th>Что брал</th><th class="num">Есть на складе</th><th>Почему ушёл</th><th></th></tr>
+      <tr><td><b>Мелешко Т. Л.</b></td><td class="num">04.06.2025</td><td class="num">14 мес.</td><td class="num">180 000 ₽/мес</td><td class="num money pos">32 400 ₽</td><td>Satisfyer, Lelo, смазки</td><td class="num">8 из 10</td><td>ушёл к конкуренту по цене</td><td><button class="btn p">Позвонить</button></td></tr>
+      <tr><td><b>Туварджиев К. В.</b></td><td class="num">18.04.2025</td><td class="num">16 мес.</td><td class="num">140 000 ₽/мес</td><td class="num money pos">25 200 ₽</td><td>белье, BDSM-наборы</td><td class="num">6 из 8</td><td>не зафиксировано</td><td><button class="btn p">Позвонить</button></td></tr>
+      <tr><td>Жернакова Г. В.</td><td class="num">22.07.2025</td><td class="num">13 мес.</td><td class="num">95 000 ₽/мес</td><td class="num money pos">17 100 ₽</td><td>косметика, пробники</td><td class="num">9 из 9</td><td>сменился закупщик</td><td><button class="btn">Позвонить</button></td></tr>
+      <tr><td>Соснина И. М. ИП</td><td class="num">11.05.2025</td><td class="num">15 мес.</td><td class="num">60 000 ₽/мес</td><td class="num money pos">10 800 ₽</td><td>вибраторы среднего сегмента</td><td class="num">4 из 7</td><td>жаловался на сроки</td><td><button class="btn">Позвонить</button></td></tr>
+    </table>
+    <div class="hint">Прогноз «принесёт вам» = обычная месячная закупка × 3 копейки с рубля × 6 месяцев повышенной ставки.</div>
+  </div>
+</section>
+
+<!-- ═════ A5 ═════ -->
+<section class="page" id="p5">
+  <h1>Мои новые клиенты</h1>
+  <p class="sub">3 копейки с каждого рубля вы получаете со всех их покупок, начиная с первой. Порог 100 000 ₽ за квартал нужен только для квартальной премии отдела</p>
+  <div class="panel">
+    <h2>Клиенты на повышенной ставке <span>3 клиента · заработано 18 900 ₽ с начала работы</span></h2>
+    <table>
+      <tr><th></th><th>Клиент</th><th class="num">Первая покупка</th><th class="num">Ставка ещё</th><th class="num">Купил в этом месяце</th><th class="num">Купил за квартал</th><th style="width:150px">До зачёта в премию отдела</th><th class="num">Вы заработали</th><th></th></tr>
+      <tr><td><span class="dot g" style="background:var(--accent)"></span></td><td><b>Гамзатова Х. М.</b></td><td class="num">14.06</td><td class="num">4 мес.</td><td class="num">95 000</td><td class="num money">247 000</td><td><span class="tag g">засчитан</span></td><td class="num money pos">7 410 ₽</td><td><button class="btn">Открыть</button></td></tr>
+      <tr><td><span class="dot a"></span></td><td><b>Котрикадзе Е. В.</b></td><td class="num">03.07</td><td class="num">5 мес.</td><td class="num">70 000</td><td class="num money">78 000</td><td><div class="bar"><i style="width:78%"></i></div><span style="font-size:11.5px;color:var(--muted)">не хватает 22 000 ₽</span></td><td class="num money pos">2 340 ₽</td><td><button class="btn p">Позвонить</button></td></tr>
+      <tr><td><span class="dot r"></span></td><td>Бурняшев С. С.</td><td class="num">29.07</td><td class="num">6 мес.</td><td class="num">45 000</td><td class="num money">45 000</td><td><div class="bar"><i class="r" style="width:45%"></i></div><span style="font-size:11.5px;color:var(--red)">квартал кончается, нужно 55 000 ₽</span></td><td class="num money pos">1 350 ₽</td><td><button class="btn p">Позвонить</button></td></tr>
+    </table>
+    <div class="hint">В квартальную премию отдела проходит 1 ваш клиент из 3. На ваше ежемесячное вознаграждение это не влияет — оно начислено со всех покупок.</div>
+  </div>
+</section>
+
+<!-- ═════ A6 ═════ -->
+<section class="page" id="p6">
+  <h1>Фокус-товары: кому предложить</h1>
+  <p class="sub">Наш собственный ассортимент. Плюс 1 копейка с рубля сверх обычной оплаты, с первого рубля и независимо от плана</p>
+  <div class="panel">
+    <h2>Что сейчас в перечне <span>продано в этом месяце 180 000 ₽ · надбавка 1 800 ₽</span></h2>
+    <table>
+      <tr><th>Позиция</th><th class="num">Ставка</th><th class="num">Остаток</th><th class="num">В перечне с</th><th>Примечание</th></tr>
+      <tr><td>Серия «Pecado Basic» — вибраторы, 6 SKU</td><td class="num"><span class="tag g">+1 %</span></td><td class="num">1 240 шт.</td><td class="num">01.06</td><td>—</td></tr>
+      <tr><td>Смазки «Pecado Aqua», 4 SKU</td><td class="num"><span class="tag g">+1 %</span></td><td class="num">3 800 шт.</td><td class="num">01.06</td><td>—</td></tr>
+      <tr><td><b>Новинка: «Pecado Pulse», 3 SKU</b></td><td class="num"><span class="tag a">+2 %</span></td><td class="num">420 шт.</td><td class="num">12.08</td><td>повышенная ставка до 12.11</td></tr>
+    </table>
+  </div>
+  <div class="panel">
+    <h2>Кому предложить <span>клиенты, которые берут аналоги у других</span></h2>
+    <table>
+      <tr><th>Клиент</th><th>Берёт похожее</th><th class="num">На сколько в месяц</th><th class="num">Если переключить</th><th>Уже предлагали</th><th></th></tr>
+      <tr><td><b>Горбачев П. В. ИП</b></td><td>Satisfyer Basic, аналог нашей серии</td><td class="num money">180 000</td><td class="num money pos">1 800 ₽</td><td>—</td><td><button class="btn p">Отправить подборку</button></td></tr>
+      <tr><td><b>Адалт Тойс ООО</b></td><td>смазки стороннего бренда</td><td class="num money">120 000</td><td class="num money pos">1 200 ₽</td><td>05.08 — думает</td><td><button class="btn">Напомнить</button></td></tr>
+      <tr><td>Авента ООО</td><td>вибраторы среднего сегмента</td><td class="num money">90 000</td><td class="num money pos">900 ₽</td><td>—</td><td><button class="btn">Отправить подборку</button></td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ═════ A7 ═════ -->
+<section class="page" id="p7">
+  <h1>Расчётный лист</h1>
+  <p class="sub">Август 2026 · предварительный, будет зафиксирован 5 сентября</p>
+  <div class="note">Расчёт обновляется каждый день. После фиксации у вас будет 5 рабочих дней, чтобы заявить возражение — кнопка появится здесь же.</div>
+  <div class="panel">
+    <h2>Из чего складывается доход</h2>
+    <table>
+      <tr><th>Строка</th><th>Как посчитано</th><th class="num">Сумма</th><th>Пункт Положения</th></tr>
+      <tr><td>Оклад</td><td>За отработанное время, 21 рабочий день</td><td class="num money">70 000 ₽</td><td>4.1</td></tr>
+      <tr><td>Надбавка</td><td>Ведение телеграм-канала</td><td class="num money">5 000 ₽</td><td>4.2</td></tr>
+      <tr><td><b>За продажи своей базе</b></td><td>Продано 4 850 000 ₽, первые 4 020 000 ₽ (60 % плана 6 700 000 ₽) не оплачиваются. Сверх — 830 000 ₽ × 1,9 %</td><td class="num money pos">15 770 ₽</td><td>6.2</td></tr>
+      <tr><td><b>За новых клиентов</b></td><td>3 клиента купили на 210 000 ₽ × 3 %</td><td class="num money pos">6 300 ₽</td><td>6.3</td></tr>
+      <tr><td><b>За фокус-товары</b></td><td>180 000 ₽ × 1 %</td><td class="num money pos">1 800 ₽</td><td>6.4</td></tr>
+      <tr><td><b>Просроченная дебиторка</b></td><td>9 накладных, суммарно 1 880 000 ₽ × 0,05 % × дни просрочки <button class="btn" style="margin-left:6px">Показать все 9</button></td><td class="num money neg">−18 800 ₽</td><td>6.5</td></tr>
+      <tr style="background:var(--soft)"><td colspan="2"><b>Итого к выплате</b></td><td class="num money" style="font-size:16px">80 070 ₽</td><td>3.1</td></tr>
+    </table>
+    <div class="hint">Возвраты за месяц: 1 документ на 24 000 ₽ — уже вычтен из продаж базе. Корректировок руководителя нет.</div>
+  </div>
+</section>
+
+<!-- ═════ МОЯ БАЗА ═════ -->
+<section class="page" id="p8">
+  <h1>Моя база</h1>
+  <p class="sub">Все клиенты, закреплённые за вами. Потенциал считается по вашим же отгрузкам: сколько клиент брал в свой лучший месяц и сколько берёт сейчас</p>
+
+  <div class="cards">
+    <div class="c"><div class="lbl">Закреплено клиентов</div><div class="v">113</div><div class="n">из них 58 не покупали ни разу</div></div>
+    <div class="c"><div class="lbl">Покупали за год</div><div class="v">55</div><div class="n">это ваша живая база</div></div>
+    <div class="c"><div class="lbl">Купили за 90 дней</div><div class="v">46 · 84 %</div><div class="n">от живой базы</div></div>
+    <div class="c warn"><div class="lbl">Потенциал базы</div><div class="v">1 810 тыс./мес</div><div class="n">разрыв к лучшим месяцам — 34 400 ₽ вашего дохода</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>Клиенты и их потенциал <span>сортировка по недобору к лучшему месяцу</span></h2>
+    <table>
+      <tr><th></th><th>Клиент</th><th>Статус</th><th class="num">Обычно берёт</th><th class="num">Лучший месяц</th><th class="num">Потенциал<br>в месяц</th><th class="num">Даст вам</th><th class="num">Ассортимент</th><th class="num">Последняя покупка</th><th class="num">Долг</th><th></th></tr>
+      <tr><td><span class="dot a"></span></td><td><b>Гевея ООО</b></td><td><span class="tag g">покупает</span></td><td class="num">620 тыс./мес</td><td class="num">1 040 тыс.<br><span style="font-size:11.5px;color:var(--muted)">ноябрь 2025</span></td><td class="num money neg">420 тыс.</td><td class="num money pos">7 980 ₽</td><td class="num">7 из 12<div class="bar"><i class="a" style="width:58%"></i></div></td><td class="num">08.07</td><td class="num neg">187 тыс.</td><td><button class="btn p">Вернуть объём</button></td></tr>
+      <tr><td><span class="dot a"></span></td><td><b>Ракович В. С. ИП</b></td><td><span class="tag g">покупает</span></td><td class="num">480 тыс./мес</td><td class="num">790 тыс.<br><span style="font-size:11.5px;color:var(--muted)">март 2026</span></td><td class="num money neg">310 тыс.</td><td class="num money pos">5 890 ₽</td><td class="num">5 из 12<div class="bar"><i class="r" style="width:42%"></i></div></td><td class="num">21.07</td><td class="num neg">298 тыс.</td><td><button class="btn p">Вернуть объём</button></td></tr>
+      <tr><td><span class="dot a"></span></td><td>Авента ООО</td><td><span class="tag g">покупает</span></td><td class="num">310 тыс./мес</td><td class="num">520 тыс.<br><span style="font-size:11.5px;color:var(--muted)">декабрь 2025</span></td><td class="num money neg">210 тыс.</td><td class="num money pos">3 990 ₽</td><td class="num">4 из 12<div class="bar"><i class="r" style="width:33%"></i></div></td><td class="num">27.07</td><td class="num neg">123 тыс.</td><td><button class="btn">Открыть</button></td></tr>
+      <tr><td><span class="dot g"></span></td><td>Горбачев П. В. ИП</td><td><span class="tag g">покупает</span></td><td class="num">450 тыс./мес</td><td class="num">560 тыс.<br><span style="font-size:11.5px;color:var(--muted)">июль 2026</span></td><td class="num money">110 тыс.</td><td class="num money pos">2 090 ₽</td><td class="num">9 из 12<div class="bar"><i style="width:75%"></i></div></td><td class="num">14.08</td><td class="num">—</td><td><button class="btn">Открыть</button></td></tr>
+      <tr><td><span class="dot a"></span></td><td>Адалт Тойс ООО</td><td><span class="tag g">покупает</span></td><td class="num">240 тыс./мес</td><td class="num">430 тыс.<br><span style="font-size:11.5px;color:var(--muted)">октябрь 2025</span></td><td class="num money neg">190 тыс.</td><td class="num money pos">3 610 ₽</td><td class="num">6 из 12<div class="bar"><i class="a" style="width:50%"></i></div></td><td class="num">30.07</td><td class="num">—</td><td><button class="btn">Открыть</button></td></tr>
+      <tr><td><span class="dot g"></span></td><td>Иванов С. В.</td><td><span class="tag g">покупает</span></td><td class="num">180 тыс./мес</td><td class="num">240 тыс.<br><span style="font-size:11.5px;color:var(--muted)">апрель 2026</span></td><td class="num money">60 тыс.</td><td class="num money pos">1 140 ₽</td><td class="num">3 из 12<div class="bar"><i class="r" style="width:25%"></i></div></td><td class="num">01.08</td><td class="num neg">114 тыс.</td><td><button class="btn">Открыть</button></td></tr>
+      <tr><td><span class="dot g"></span></td><td>Гамзатова Х. М.</td><td><span class="tag a">новый · ставка 3 %</span></td><td class="num">95 тыс./мес</td><td class="num">95 тыс.<br><span style="font-size:11.5px;color:var(--muted)">август 2026</span></td><td class="num">пока не ясен</td><td class="num">—</td><td class="num">2 из 12<div class="bar"><i class="r" style="width:17%"></i></div></td><td class="num">12.08</td><td class="num">—</td><td><button class="btn p">Наращивать</button></td></tr>
+      <tr><td><span class="dot r"></span></td><td>Мелешко Т. Л.</td><td><span class="tag n" style="background:#EEF1EE;color:var(--muted)">спит 14 мес.</span></td><td class="num">—</td><td class="num">310 тыс.<br><span style="font-size:11.5px;color:var(--muted)">февраль 2025</span></td><td class="num money neg">180 тыс.</td><td class="num money pos">32 400 ₽<br><span style="font-size:11.5px;color:var(--muted)">по ставке 3 % за полгода</span></td><td class="num">5 из 12<div class="bar"><i class="r" style="width:42%"></i></div></td><td class="num">04.06.2025</td><td class="num">—</td><td><button class="btn p">Разбудить</button></td></tr>
+      <tr><td colspan="11" style="background:#FAFBF9;color:var(--muted);font-size:12.5px">…и ещё 105 клиентов: 47 покупающих, 8 спящих, 58 карточек без единой покупки. <button class="btn" style="margin-left:8px">Показать все</button> <button class="btn">Только спящие</button> <button class="btn">Только с долгом</button> <button class="btn">Без покупок</button></td></tr>
+    </table>
+    <div class="hint">Потенциал — разница между лучшим месяцем клиента за два года и его обычной закупкой сейчас. Колонка «ассортимент» показывает, сколько товарных категорий он у нас берёт из доступных: узкий ассортимент — место для допродажи.</div>
+  </div>
+</section>
+
+<!-- ═════ СВОБОДНЫЕ КЛИЕНТЫ ═════ -->
+<section class="page" id="p9">
+  <h1>Свободные клиенты</h1>
+  <p class="sub">Ничейные клиенты, которых можно взять в работу. Сверху — те, кто уже покупал у нас: по ним понятен объём. Выдаёт руководитель пакетами до 20</p>
+
+  <div class="panel" style="border-color:#C7DDD0;background:var(--soft)">
+    <h2 style="border:none;background:transparent">Ваш кран открыт <span>план по базе выше 60 % два месяца подряд — можно запрашивать пакет</span></h2>
+  </div>
+
+  <div class="cards">
+    <div class="c"><div class="lbl">Свободных клиентов</div><div class="v">618</div><div class="n">не закреплены ни за кем</div></div>
+    <div class="c"><div class="lbl">Покупали у нас когда-то</div><div class="v">62</div><div class="n">по ним есть история закупок</div></div>
+    <div class="c"><div class="lbl">Если взять 10 средних</div><div class="v">~28 500 ₽/мес</div><div class="n">ваша ставка 3 % полгода</div></div>
+    <div class="c"><div class="lbl">У вас в работе сейчас</div><div class="v">3 новых</div><div class="n">из пакета от 5 августа</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>Кого можно взять <span>сортировка по прежнему объёму закупок у нас</span></h2>
+    <table>
+      <tr><th>Клиент</th><th>Город</th><th class="num">Последняя покупка у нас</th><th class="num">Брал в месяц</th><th class="num">Лучший месяц</th><th class="num">Даст вам за полгода</th><th>Чем интересен</th><th></th></tr>
+      <tr><td><b>Мелешко Т. Л.</b></td><td>Санкт-Петербург</td><td class="num">04.06.2025</td><td class="num">180 тыс.</td><td class="num">310 тыс.</td><td class="num money pos">32 400 ₽</td><td><span class="tag a">был нашим, ушёл 14 мес. назад</span></td><td><button class="btn p">Запросить</button></td></tr>
+      <tr><td><b>Туварджиев К. В.</b></td><td>Санкт-Петербург</td><td class="num">18.04.2025</td><td class="num">140 тыс.</td><td class="num">265 тыс.</td><td class="num money pos">25 200 ₽</td><td><span class="tag a">был нашим, ушёл 16 мес. назад</span></td><td><button class="btn p">Запросить</button></td></tr>
+      <tr><td>Жернакова Г. В.</td><td>Комсомольск</td><td class="num">22.07.2025</td><td class="num">95 тыс.</td><td class="num">180 тыс.</td><td class="num money pos">17 100 ₽</td><td><span class="tag a">был нашим</span></td><td><button class="btn">Запросить</button></td></tr>
+      <tr><td>Соснина И. М. ИП</td><td>Новокузнецк</td><td class="num">11.05.2025</td><td class="num">60 тыс.</td><td class="num">120 тыс.</td><td class="num money pos">10 800 ₽</td><td><span class="tag a">был нашим</span></td><td><button class="btn">Запросить</button></td></tr>
+      <tr><td>Шешуков Н. М. ИП</td><td>Москва</td><td class="num">не покупал</td><td class="num">—</td><td class="num">—</td><td class="num">не оценить</td><td><span class="tag n" style="background:#EEF1EE;color:var(--muted)">карточка без истории</span></td><td><button class="btn">Запросить</button></td></tr>
+      <tr><td>ДОН-БАС</td><td>Ростов-на-Дону</td><td class="num">не покупал</td><td class="num">—</td><td class="num">—</td><td class="num">не оценить</td><td><span class="tag n" style="background:#EEF1EE;color:var(--muted)">карточка без истории</span></td><td><button class="btn">Запросить</button></td></tr>
+      <tr><td colspan="8" style="background:#FAFBF9;color:var(--muted);font-size:12.5px">…и ещё 614 клиентов, из них 610 — карточки без единой покупки. <button class="btn" style="margin-left:8px">Показать все</button> <button class="btn">Только с историей</button> <button class="btn">Мой регион</button></td></tr>
+    </table>
+    <div class="hint">Взятый клиент, не покупавший больше года, полгода даёт 3 копейки с рубля. Срок на первый контакт — 10 рабочих дней, на первый заказ — 90 дней, иначе клиент возвращается в общий список.</div>
+  </div>
+</section>
+
+<!-- ═════ ОТКУДА ПЛАН ═════ -->
+<section class="page" id="p10">
+  <h1>Откуда мой план</h1>
+  <p class="sub">План считает формула по истории вашей базы. Руками его не поднимают — это правило, а не обещание</p>
+
+  <div class="panel">
+    <h2>Как получились 6 700 000 ₽ на август</h2>
+    <table>
+      <tr><td style="width:52%">1. Продажи вашей базы за один отработанный рабочий день — среднее за последние 6 месяцев</td><td class="num money">318 000 ₽</td><td style="color:var(--muted);font-size:12.5px">берётся типичный день, а не средний: один провальный месяц план не ломает</td></tr>
+      <tr><td>2. Умножаем на рабочие дни августа</td><td class="num money">× 21 день</td><td style="color:var(--muted);font-size:12.5px">= 6 678 000 ₽</td></tr>
+      <tr><td>3. Сезонный коэффициент августа</td><td class="num money">× 0,97</td><td style="color:var(--muted);font-size:12.5px">август обычно слабее среднего месяца</td></tr>
+      <tr><td>4. Целевой прирост на год</td><td class="num money">+ 3 %</td><td style="color:var(--muted);font-size:12.5px">один на весь отдел, объявлен в январе</td></tr>
+      <tr><td>5. Передача клиентов</td><td class="num">—</td><td style="color:var(--muted);font-size:12.5px">в этом квартале клиентов не передавали</td></tr>
+      <tr style="background:var(--soft)"><td><b>План августа</b></td><td class="num money" style="font-size:15px">6 700 000 ₽</td><td><b>оплата начинается после 4 020 000 ₽ (60 %)</b></td></tr>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>История, из которой считалась медиана <span>шесть месяцев до квартала</span></h2>
+    <table>
+      <tr><th>Месяц</th><th class="num">Продано</th><th class="num">Отработано дней</th><th class="num">За рабочий день</th><th></th></tr>
+      <tr><td>Февраль</td><td class="num">6 240 000</td><td class="num">20</td><td class="num money">312 000</td><td></td></tr>
+      <tr><td>Март</td><td class="num">6 720 000</td><td class="num">21</td><td class="num money">320 000</td><td></td></tr>
+      <tr><td>Апрель</td><td class="num">6 160 000</td><td class="num">22</td><td class="num money">280 000</td><td></td></tr>
+      <tr style="background:var(--soft)"><td><b>Май</b></td><td class="num">5 088 000</td><td class="num">16</td><td class="num money">318 000</td><td><span class="tag g">медиана</span></td></tr>
+      <tr><td>Июнь</td><td class="num">6 700 000</td><td class="num">20</td><td class="num money">335 000</td><td></td></tr>
+      <tr><td>Июль</td><td class="num">7 728 000</td><td class="num">23</td><td class="num money">336 000</td><td></td></tr>
+    </table>
+    <div class="hint">В мае вы были в отпуске 5 дней — в расчёт вошли только отработанные дни, поэтому отпуск план не занижает и не завышает.</div>
+  </div>
+
+  <div class="panel">
+    <h2>Правила, которые вас защищают</h2>
+    <table>
+      <tr><td><span class="dot g"></span><b>План не поднимают за то, что вы перевыполнили</b></td><td style="color:var(--muted);font-size:12.5px">Это прямой запрет. В июле вы сделали 112 %, но август считался по формуле, а не по июлю</td></tr>
+      <tr><td><span class="dot g"></span><b>Перевыполнение входит в будущий план только наполовину</b></td><td style="color:var(--muted);font-size:12.5px">И только со следующего квартала, а не сразу</td></tr>
+      <tr><td><span class="dot g"></span><b>Отпуск и больничный уменьшают план по дням</b></td><td style="color:var(--muted);font-size:12.5px">Автоматически, по табелю, заявление не нужно</td></tr>
+      <tr><td><span class="dot g"></span><b>Забрали клиентов — план уменьшили в тот же день</b></td><td style="color:var(--muted);font-size:12.5px">На их обычный оборот, в обе стороны</td></tr>
+      <tr><td><span class="dot g"></span><b>Внутри квартала план не меняется</b></td><td style="color:var(--muted);font-size:12.5px">Все три месяца известны заранее: август 6,70 · сентябрь 6,98 · октябрь 7,57 млн ₽</td></tr>
+    </table>
+    <div class="hint">Не согласны с расчётом плана — вопрос задаётся до начала квартала. <button class="btn" style="margin-left:6px">Задать вопрос руководителю</button></div>
+  </div>
+</section>
+
+<!-- ═════ КВАРТАЛЬНАЯ ПРЕМИЯ ═════ -->
+<section class="page" id="p11">
+  <h1>Премия отдела за квартал</h1>
+  <p class="sub">Это отдельные деньги на весь отдел за новых клиентов. В ваш ежемесячный доход они не входят, и как их поделить — решает отдел</p>
+
+  <div class="steps" style="display:flex;gap:10px;margin-bottom:16px">
+    <div style="flex:1;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:10px;padding:12px 14px"><b style="display:block;font-size:16px">8 клиентов</b><span style="font-size:12.5px;opacity:.9">и каждый купил от 100 тыс. за квартал</span><div style="font-size:19px;font-weight:700;margin-top:6px">40 000 ₽</div></div>
+    <div style="flex:1;border:1px solid var(--line);background:#fff;border-radius:10px;padding:12px 14px"><b style="display:block;font-size:16px">15 клиентов</b><span style="font-size:12.5px;color:var(--muted)">то же условие</span><div style="font-size:19px;font-weight:700;margin-top:6px">100 000 ₽</div></div>
+    <div style="flex:1;border:1px solid var(--line);background:#fff;border-radius:10px;padding:12px 14px"><b style="display:block;font-size:16px">22 клиента</b><span style="font-size:12.5px;color:var(--muted)">то же условие</span><div style="font-size:19px;font-weight:700;margin-top:6px">160 000 ₽</div></div>
+  </div>
+
+  <div class="cards">
+    <div class="c hero"><div class="lbl">Засчитано отделу</div><div class="v">9 клиентов</div><div class="n">первая ступень взята</div></div>
+    <div class="c"><div class="lbl">Ваш вклад</div><div class="v">4 клиента</div><div class="n">2 засчитаны, 2 не добирают</div></div>
+    <div class="c"><div class="lbl">До следующей ступени</div><div class="v">6 клиентов</div><div class="n">это ещё 60 000 ₽ на отдел</div></div>
+    <div class="c"><div class="lbl">Осталось времени</div><div class="v">43 дня</div><div class="n">до конца квартала</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>Что нужно, чтобы взять вторую ступень <span>по вашим клиентам</span></h2>
+    <table>
+      <tr><th></th><th>Клиент</th><th class="num">Купил за квартал</th><th class="num">Не хватает до зачёта</th><th>Что предложить</th><th></th></tr>
+      <tr><td><span class="dot a"></span></td><td><b>Котрикадзе Е. В.</b></td><td class="num money">78 000</td><td class="num money neg">22 000 ₽</td><td>берёт смазки, не пробовал нашу серию</td><td><button class="btn p">Позвонить</button></td></tr>
+      <tr><td><span class="dot r"></span></td><td><b>Бурняшев С. С.</b></td><td class="num money">45 000</td><td class="num money neg">55 000 ₽</td><td>интересовался белья, на складе есть</td><td><button class="btn p">Позвонить</button></td></tr>
+      <tr><td colspan="6" style="background:#FAFBF9">Двое ваших клиентов дают отделу два зачёта из шести недостающих. Ещё четыре — у коллеги и в новых клиентах, которых можно взять из общего списка. <button class="btn" data-p="p9" style="margin-left:6px">Посмотреть свободных</button></td></tr>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>Как это связано с вашей зарплатой</h2>
+    <table>
+      <tr><td><span class="dot g"></span><b>Ставка 3 % вы получаете со всех покупок нового клиента</b></td><td style="color:var(--muted);font-size:12.5px">С первого рубля, независимо от того, проходит он порог зачёта или нет</td></tr>
+      <tr><td><span class="dot g"></span><b>Порог 100 000 ₽ за квартал нужен только для этой премии</b></td><td style="color:var(--muted);font-size:12.5px">На ваш ежемесячный доход он не влияет никак</td></tr>
+      <tr><td><span class="dot g"></span><b>Зачёт идёт по каждому клиенту отдельно</b></td><td style="color:var(--muted);font-size:12.5px">Один крупный клиент не вытягивает мелких: считается каждый сам по себе</td></tr>
+      <tr><td><span class="dot g"></span><b>Премия не увеличивает ваш план</b></td><td style="color:var(--muted);font-size:12.5px">Продажи новых клиентов в личный план не входят ни сейчас, ни в следующем квартале</td></tr>
+    </table>
+  </div>
+</section>
+
+</main></div>
+<script>
+function go(id){
+  document.querySelectorAll(".side a").forEach(function(x){x.classList.toggle("on", x.dataset.p===id)});
+  document.querySelectorAll(".page").forEach(function(p){p.classList.remove("on")});
+  document.getElementById(id).classList.add("on");
+  window.scrollTo(0,0);
+}
+document.querySelectorAll("[data-p]").forEach(function(el){
+  if(el.closest(".side")) return;
+  el.style.cursor="pointer";
+  el.addEventListener("click",function(){go(el.dataset.p)});
+});
+document.querySelectorAll(".side a").forEach(function(a){
+  a.addEventListener("click",function(){
+    document.querySelectorAll(".side a").forEach(function(x){x.classList.remove("on")});
+    a.classList.add("on");
+    document.querySelectorAll(".page").forEach(function(p){p.classList.remove("on")});
+    document.getElementById(a.dataset.p).classList.add("on");
+    window.scrollTo(0,0);
+  });
+});
+</script>
+</body></html>

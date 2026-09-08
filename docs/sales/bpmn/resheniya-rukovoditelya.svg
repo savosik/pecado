@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1540 2056" font-family="IBM Plex Sans, Arial, sans-serif">
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#1B2620"/></marker></defs>
+<rect width="1540" height="2056" fill="#FFFFFF"/>
+<text x="40" y="46" font-size="24" font-weight="700" fill="#1B2620">Решения руководителя по управлению менеджерами</text>
+<text x="40" y="70" font-size="13" fill="#5A6862">Ежемесячный цикл: кран, концентрация, охват, раздача пула, сроки, утверждение и квартальные решения</text>
+<polyline points="585,146 585,195" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="585,271 585,330" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="610,355 920,355" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="622" y="346" font-size="12" font-weight="600" text-anchor="start" fill="#1F6F50">да</text>
+<polyline points="585,380 585,440" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="595" y="400" font-size="12" font-weight="600" text-anchor="start" fill="#1F6F50">нет</text>
+<polyline points="970,355 1230,353" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="982" y="346" font-size="12" font-weight="600" text-anchor="start" fill="#1F6F50">да</text>
+<polyline points="945,380 945,478 1230,478" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="955" y="400" font-size="12" font-weight="600" text-anchor="start" fill="#1F6F50">нет</text>
+<polyline points="1345,391 1500,391 1500,595 610,595" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="1345,516 1345,595 610,595" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="585,516 585,570" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="585,620 585,660" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="610,685 830,683" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="622" y="676" font-size="12" font-weight="600" text-anchor="start" fill="#1F6F50">да</text>
+<polyline points="585,710 585,790" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="595" y="730" font-size="12" font-weight="600" text-anchor="start" fill="#1F6F50">нет</text>
+<polyline points="945,721 945,815 610,815" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="585,840 585,890" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="610,915 830,913" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="622" y="906" font-size="12" font-weight="600" text-anchor="start" fill="#1F6F50">да</text>
+<polyline points="585,940 585,1020" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="595" y="960" font-size="12" font-weight="600" text-anchor="start" fill="#1F6F50">нет</text>
+<polyline points="945,951 945,1045 610,1045" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="585,1070 585,1120" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="610,1145 830,1143" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="622" y="1136" font-size="12" font-weight="600" text-anchor="start" fill="#1F6F50">да</text>
+<polyline points="585,1170 585,1250" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="595" y="1190" font-size="12" font-weight="600" text-anchor="start" fill="#1F6F50">нет</text>
+<polyline points="945,1181 945,1275 610,1275" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="585,1300 585,1350" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="610,1375 830,1373" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="622" y="1366" font-size="12" font-weight="600" text-anchor="start" fill="#1F6F50">да</text>
+<polyline points="585,1400 585,1480" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="595" y="1420" font-size="12" font-weight="600" text-anchor="start" fill="#1F6F50">нет</text>
+<polyline points="945,1411 945,1505 610,1505" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="585,1530 585,1560" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="585,1636 585,1690" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="610,1715 790,1715 790,1648 830,1648" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="622" y="1706" font-size="12" font-weight="600" text-anchor="start" fill="#1F6F50">да</text>
+<polyline points="945,1686 945,1730" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="585,1740 585,1870" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<text x="595" y="1760" font-size="12" font-weight="600" text-anchor="start" fill="#1F6F50">нет</text>
+<polyline points="945,1806 945,1895 610,1895" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<polyline points="585,1920 585,1960" fill="none" stroke="#1B2620" stroke-width="1.6" marker-end="url(#a)"/>
+<circle cx="585" cy="128" r="18" fill="#FFFFFF" stroke="#1B2620" stroke-width="2"/>
+<text x="585" y="162" font-size="12" text-anchor="middle" fill="#1B2620">Ежемесячный разбор</text>
+<text x="585" y="176" font-size="12" text-anchor="middle" fill="#1B2620">результатов</text>
+<rect x="470" y="195" width="230" height="76" rx="9" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="221" font-size="12.5" text-anchor="middle" fill="#1B2620">Свести показатели: выполнение</text>
+<text x="585" y="237" font-size="12.5" text-anchor="middle" fill="#1B2620">плана, база, долги, новые</text>
+<text x="585" y="253" font-size="12.5" text-anchor="middle" fill="#1B2620">клиенты</text>
+<polygon points="585,330 610,355 585,380 560,355" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="361" font-size="17" text-anchor="middle" fill="#1B2620">&#215;</text>
+<text x="546" y="352" font-size="12" font-weight="600" text-anchor="end" fill="#1B2620">Выполнение плана ниже</text>
+<text x="546" y="366" font-size="12" font-weight="600" text-anchor="end" fill="#1B2620">60 %?</text>
+<polygon points="945,330 970,355 945,380 920,355" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="945" y="361" font-size="17" text-anchor="middle" fill="#1B2620">&#215;</text>
+<text x="906" y="359" font-size="12" font-weight="600" text-anchor="end" fill="#1B2620">Второй месяц подряд?</text>
+<rect x="1230" y="315" width="230" height="76" rx="9" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="1345" y="341" font-size="12.5" text-anchor="middle" fill="#1B2620">Закрыть кран: новые пакеты не</text>
+<text x="1345" y="357" font-size="12.5" text-anchor="middle" fill="#1B2620">выдавать, разобрать причины с</text>
+<text x="1345" y="373" font-size="12.5" text-anchor="middle" fill="#1B2620">менеджером</text>
+<rect x="1230" y="440" width="230" height="76" rx="9" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="1345" y="474" font-size="12.5" text-anchor="middle" fill="#1B2620">Предупредить, включить в</text>
+<text x="1345" y="490" font-size="12.5" text-anchor="middle" fill="#1B2620">еженедельный контроль</text>
+<rect x="470" y="440" width="230" height="76" rx="9" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="474" font-size="12.5" text-anchor="middle" fill="#1B2620">Кран открыт: менеджер</text>
+<text x="585" y="490" font-size="12.5" text-anchor="middle" fill="#1B2620">участвует в раздаче пула</text>
+<polygon points="585,570 610,595 585,620 560,595" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="601" font-size="17" text-anchor="middle" fill="#1B2620">&#215;</text>
+<polygon points="585,660 610,685 585,710 560,685" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="691" font-size="17" text-anchor="middle" fill="#1B2620">&#215;</text>
+<text x="546" y="682" font-size="12" font-weight="600" text-anchor="end" fill="#1B2620">Доля крупнейшего</text>
+<text x="546" y="696" font-size="12" font-weight="600" text-anchor="end" fill="#1B2620">клиента выше 40 %?</text>
+<rect x="830" y="645" width="230" height="76" rx="9" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="945" y="679" font-size="12.5" text-anchor="middle" fill="#1B2620">Снизить концентрацию: выдать</text>
+<text x="945" y="695" font-size="12.5" text-anchor="middle" fill="#1B2620">пул, задача на охват хвоста</text>
+<polygon points="585,790 610,815 585,840 560,815" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="821" font-size="17" text-anchor="middle" fill="#1B2620">&#215;</text>
+<polygon points="585,890 610,915 585,940 560,915" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="921" font-size="17" text-anchor="middle" fill="#1B2620">&#215;</text>
+<text x="546" y="912" font-size="12" font-weight="600" text-anchor="end" fill="#1B2620">Купили за 90 дней</text>
+<text x="546" y="926" font-size="12" font-weight="600" text-anchor="end" fill="#1B2620">менее 60 % живой базы?</text>
+<rect x="830" y="875" width="230" height="76" rx="9" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="945" y="901" font-size="12.5" text-anchor="middle" fill="#1B2620">База велика для одного:</text>
+<text x="945" y="917" font-size="12.5" text-anchor="middle" fill="#1B2620">передать часть клиентов или</text>
+<text x="945" y="933" font-size="12.5" text-anchor="middle" fill="#1B2620">нанять человека</text>
+<polygon points="585,1020 610,1045 585,1070 560,1045" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="1051" font-size="17" text-anchor="middle" fill="#1B2620">&#215;</text>
+<polygon points="585,1120 610,1145 585,1170 560,1145" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="1151" font-size="17" text-anchor="middle" fill="#1B2620">&#215;</text>
+<text x="546" y="1142" font-size="12" font-weight="600" text-anchor="end" fill="#1B2620">Есть свободные клиенты</text>
+<text x="546" y="1156" font-size="12" font-weight="600" text-anchor="end" fill="#1B2620">в общем списке?</text>
+<rect x="830" y="1105" width="230" height="76" rx="9" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="945" y="1139" font-size="12.5" text-anchor="middle" fill="#1B2620">Выдать пакет до 20 клиентов</text>
+<text x="945" y="1155" font-size="12.5" text-anchor="middle" fill="#1B2620">тем, у кого кран открыт</text>
+<polygon points="585,1250 610,1275 585,1300 560,1275" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="1281" font-size="17" text-anchor="middle" fill="#1B2620">&#215;</text>
+<polygon points="585,1350 610,1375 585,1400 560,1375" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="1381" font-size="17" text-anchor="middle" fill="#1B2620">&#215;</text>
+<text x="546" y="1372" font-size="12" font-weight="600" text-anchor="end" fill="#1B2620">Сроки по выданным</text>
+<text x="546" y="1386" font-size="12" font-weight="600" text-anchor="end" fill="#1B2620">нарушены?</text>
+<rect x="830" y="1335" width="230" height="76" rx="9" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="945" y="1361" font-size="12.5" text-anchor="middle" fill="#1B2620">Вернуть клиента в общий</text>
+<text x="945" y="1377" font-size="12.5" text-anchor="middle" fill="#1B2620">список: нет контакта 10 дней</text>
+<text x="945" y="1393" font-size="12.5" text-anchor="middle" fill="#1B2620">или заказа 90 дней</text>
+<polygon points="585,1480 610,1505 585,1530 560,1505" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="1511" font-size="17" text-anchor="middle" fill="#1B2620">&#215;</text>
+<rect x="470" y="1560" width="230" height="76" rx="9" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="1586" font-size="12.5" text-anchor="middle" fill="#1B2620">5-е число: утвердить</text>
+<text x="585" y="1602" font-size="12.5" text-anchor="middle" fill="#1B2620">ведомость, рассмотреть</text>
+<text x="585" y="1618" font-size="12.5" text-anchor="middle" fill="#1B2620">возражения</text>
+<polygon points="585,1690 610,1715 585,1740 560,1715" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="1721" font-size="17" text-anchor="middle" fill="#1B2620">&#215;</text>
+<text x="546" y="1719" font-size="12" font-weight="600" text-anchor="end" fill="#1B2620">Конец квартала?</text>
+<rect x="830" y="1610" width="230" height="76" rx="9" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="945" y="1644" font-size="12.5" text-anchor="middle" fill="#1B2620">Рассчитать планы на три месяца</text>
+<text x="945" y="1660" font-size="12.5" text-anchor="middle" fill="#1B2620">по формуле, издать приказ</text>
+<rect x="830" y="1730" width="230" height="76" rx="9" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="945" y="1764" font-size="12.5" text-anchor="middle" fill="#1B2620">Подвести квартальную премию</text>
+<text x="945" y="1780" font-size="12.5" text-anchor="middle" fill="#1B2620">отдела и распределить её</text>
+<polygon points="585,1870 610,1895 585,1920 560,1895" fill="#FFFFFF" stroke="#1B2620" stroke-width="1.6"/>
+<text x="585" y="1901" font-size="17" text-anchor="middle" fill="#1B2620">&#215;</text>
+<circle cx="585" cy="1978" r="18" fill="#FFFFFF" stroke="#1B2620" stroke-width="4"/>
+<text x="585" y="2012" font-size="12" text-anchor="middle" fill="#1B2620">Цикл закрыт</text>
+</svg>

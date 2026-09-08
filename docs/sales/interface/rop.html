@@ -1,0 +1,275 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Рабочее место руководителя — макет</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{--paper:#F4F6F3;--card:#fff;--ink:#1B2620;--muted:#5A6862;--line:#E1E6DE;--accent:#1F6F50;--soft:#E7F1EB;--red:#B23A2E;--redsoft:#FBEEEC;--amber:#9A5B1C;--ambersoft:#FBF3E6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.45 "IBM Plex Sans",-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.app{display:grid;grid-template-columns:216px 1fr;min-height:100vh}
+.side{background:#16241D;color:#D7E2DA;padding:18px 0}
+.side .who{padding:0 18px 16px;border-bottom:1px solid #26382E;margin-bottom:12px}
+.side .who b{display:block;color:#fff;font-size:15px}
+.side .who span{font-size:12px;color:#8FA398}
+.side a{display:flex;justify-content:space-between;align-items:center;padding:9px 18px;color:#D7E2DA;text-decoration:none;font-size:13.5px;cursor:pointer}
+.side a:hover{background:#1E3129}
+.side a.on{background:#1F6F50;color:#fff;font-weight:600}
+.side a .b{background:#B23A2E;color:#fff;border-radius:10px;font-size:11px;padding:1px 7px;font-weight:600}
+.side .grp{padding:14px 18px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6E8478}
+.main{padding:22px 26px 40px;max-width:1360px}
+h1{font-size:21px;margin:0 0 3px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 18px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.c{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.c .lbl{font-size:12px;color:var(--muted)}
+.c .v{font-size:23px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:3px}
+.c .n{font-size:12px;color:var(--muted);margin-top:3px}
+.c.hero{background:var(--accent);border-color:var(--accent);color:#fff}
+.c.hero .lbl,.c.hero .n{color:#CFE6DA}
+.c.warn{background:var(--redsoft);border-color:#F0D5D1}
+.c.warn .v{color:var(--red)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:18px;overflow-x:auto}
+.panel h2{font-size:15px;margin:0;padding:13px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.panel h2 span{font-weight:400;font-size:12.5px;color:var(--muted)}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:9px 16px;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap}
+td{padding:10px 16px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#FAFBF9}
+tr.total td{background:#FAFBF9;font-weight:600}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.money{font-weight:600}
+.pos{color:var(--accent)}.neg{color:var(--red)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.dot.r{background:var(--red)}.dot.a{background:#D9A05B}.dot.g{background:var(--accent)}
+.btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer;color:var(--ink)}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.p{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.d{border-color:#E2C9C4;color:var(--red)}
+.tag{display:inline-block;font-size:11px;border-radius:5px;padding:2px 7px;font-weight:600}
+.tag.g{background:var(--soft);color:var(--accent)}
+.tag.r{background:var(--redsoft);color:var(--red)}
+.tag.a{background:var(--ambersoft);color:var(--amber)}
+.tag.n{background:#EEF1EE;color:var(--muted)}
+.bar{height:7px;border-radius:4px;background:var(--line);overflow:hidden;min-width:80px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.bar i.r{background:var(--red)}.bar i.a{background:#D9A05B}
+.hint{padding:11px 16px;background:#FAFBF9;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line)}
+.alert{background:var(--redsoft);border:1px solid #F0D5D1;border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:14px;display:flex;gap:10px;align-items:center}
+.alert b{color:var(--red)}
+.note{background:#FFF8E6;border:1px solid #F0E2BE;border-radius:10px;padding:11px 14px;font-size:12.5px;margin-bottom:18px}
+.page{display:none}.page.on{display:block}
+.steps{display:flex;gap:10px;margin:0 0 4px}
+.step{flex:1;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12.5px}
+.step.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.step b{display:block;font-size:15px}
+</style></head><body>
+<div class="app">
+<nav class="side">
+  <div class="who"><b>Вячеслав Трипуть</b><span>Руководитель отдела продаж · 18 августа</span></div>
+  <a class="on" data-p="r1">Сводка отдела</a>
+  <div class="grp">Управление</div>
+  <a data-p="r2">Здоровье базы <span class="b">2</span></a>
+  <a data-p="r3">Пул и раздача</a>
+  <a data-p="r4">Квартальная премия</a>
+  <div class="grp">Деньги</div>
+  <a data-p="r5">Ведомость к утверждению</a>
+  <a data-p="r6">Планы на квартал</a>
+  <a data-p="r7">Скидки на визе <span class="b">3</span></a>
+</nav>
+<main class="main">
+
+<!-- ═════ B2 ═════ -->
+<section class="page on" id="r1">
+  <h1>Сводка отдела</h1>
+  <p class="sub">Август 2026 · 18-е число, прошло 12 рабочих дней из 21</p>
+
+  <div class="alert"><span class="dot r"></span><div><b>Курочкина — второй месяц ниже 60 % плана.</b> Кран новых клиентов закрыт: пакеты из общего списка не выдаются до восстановления показателя. Нужен разбор причин.</div><button class="btn d">Открыть разбор</button></div>
+
+  <div class="cards">
+    <div class="c hero"><div class="lbl">Продано отделом</div><div class="v">7 640 000 ₽</div><div class="n">65 % плана 11 660 000 ₽</div></div>
+    <div class="c"><div class="lbl">Прогноз к концу месяца</div><div class="v">11 210 000 ₽</div><div class="n">96 % плана при текущем темпе</div></div>
+    <div class="c"><div class="lbl">Фонд оплаты за месяц</div><div class="v">153 900 ₽</div><div class="n">на сегодня, 2,0 % от выручки</div></div>
+    <div class="c warn"><div class="lbl">Просрочка отдела</div><div class="v">2 700 000 ₽</div><div class="n">стоит менеджерам 1 350 ₽/день</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>По менеджерам</h2>
+    <table>
+      <tr><th></th><th>Менеджер</th><th class="num">План месяца</th><th class="num">Оплата с</th><th class="num">Продано</th><th class="num">Выполнение</th><th class="num">Прогноз</th><th class="num">Новые</th><th class="num">Фокус</th><th class="num">Просрочка</th><th class="num">Доход сегодня</th></tr>
+      <tr><td><span class="dot g"></span></td><td><b>Сухов Иван</b></td><td class="num">6 700 000</td><td class="num">4 020 000</td><td class="num money">4 850 000</td><td class="num">72 %<div class="bar"><i style="width:72%"></i></div></td><td class="num">8 490 000<br><span class="tag g">127 %</span></td><td class="num">3 · 210 тыс.</td><td class="num">180 тыс.</td><td class="num neg">1 880 тыс.</td><td class="num money">80 070 ₽</td></tr>
+      <tr><td><span class="dot r"></span></td><td><b>Курочкина Елена</b></td><td class="num">4 960 000</td><td class="num">2 976 000</td><td class="num money">2 790 000</td><td class="num">56 %<div class="bar"><i class="r" style="width:56%"></i></div></td><td class="num">4 880 000<br><span class="tag a">98 %</span></td><td class="num">0</td><td class="num">40 тыс.</td><td class="num neg">820 тыс.</td><td class="num money">73 800 ₽</td></tr>
+      <tr class="total"><td></td><td>Итого</td><td class="num">11 660 000</td><td class="num">6 996 000</td><td class="num">7 640 000</td><td class="num">65 %</td><td class="num">13 370 000</td><td class="num">3</td><td class="num">220 тыс.</td><td class="num">2 700 тыс.</td><td class="num">153 870 ₽</td></tr>
+    </table>
+    <div class="hint">Красная точка — выполнение ниже точки старта оплаты (60 % плана). Два месяца подряд — кран новых клиентов закрывается автоматически.</div>
+  </div>
+</section>
+
+<!-- ═════ B5 ═════ -->
+<section class="page" id="r2">
+  <h1>Здоровье базы</h1>
+  <p class="sub">Показатели этого экрана не влияют на оплату труда. Это основание для решений: перераспределить клиентов, нанять человека, сменить приоритеты</p>
+  <div class="panel">
+    <h2>Состояние закреплённых баз <span>на 18 августа</span></h2>
+    <table>
+      <tr><th>Менеджер</th><th class="num">Закреплено</th><th class="num">Живых<br>(покупали за 12 мес)</th><th class="num">Купили<br>за 90 дней</th><th class="num">Доля<br>крупнейшего</th><th class="num">Доля<br>трёх крупнейших</th><th class="num">Спящих</th><th class="num">Потеряно<br>за квартал</th><th>Сигнал</th></tr>
+      <tr><td><b>Сухов Иван</b></td><td class="num">113</td><td class="num">55</td><td class="num">46 · 84 %<div class="bar"><i style="width:84%"></i></div></td><td class="num">21 %</td><td class="num">44 %</td><td class="num">9</td><td class="num">2 · 180 тыс./мес</td><td><span class="tag g">норма</span></td></tr>
+      <tr><td><b>Курочкина Елена</b></td><td class="num">103</td><td class="num">53</td><td class="num">40 · 75 %<div class="bar"><i class="a" style="width:75%"></i></div></td><td class="num neg"><b>57 %</b></td><td class="num">79 %</td><td class="num">13</td><td class="num">4 · 310 тыс./мес</td><td><span class="tag r">концентрация</span></td></tr>
+    </table>
+    <div class="hint">Порог тревоги: доля крупнейшего клиента выше 40 % — риск концентрации; купили за 90 дней меньше 60 % живой базы — база велика для одного человека.</div>
+  </div>
+  <div class="panel">
+    <h2>Что предлагается сделать</h2>
+    <table>
+      <tr><td><span class="dot r"></span><b>Курочкина: 57 % месяца — один клиент (Афонина А. А.)</b><br><span style="color:var(--muted);font-size:12.5px">Уход этого клиента обвалит её план на следующий квартал и потянет за собой доход</span></td><td class="num"><button class="btn p">Выдать пакет из пула</button> <button class="btn">Задача на охват хвоста</button></td></tr>
+      <tr><td><span class="dot a"></span><b>Обе базы: 108 клиентов не покупали ни разу</b><br><span style="color:var(--muted);font-size:12.5px">Это не спящие, это карточки без истории. Кандидаты на возврат в общий список</span></td><td class="num"><button class="btn">Разобрать список</button></td></tr>
+      <tr><td><span class="dot a"></span><b>Ничейных клиентов: 618, из них покупали когда-либо — 4</b><br><span style="color:var(--muted);font-size:12.5px">Ни за кем не закреплены, 535 с ИНН, все заведены выгрузкой из 1С. Это холодная база, а не спящие клиенты: раздача пакетами по 20 даёт низкую конверсию</span></td><td class="num"><button class="btn">Обоснование найма</button></td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ═════ B4 ═════ -->
+<section class="page" id="r3">
+  <h1>Пул и раздача</h1>
+  <p class="sub">Общий список ничейных клиентов, выданные пакеты и сроки по ним</p>
+
+  <div class="panel">
+    <h2>Состояние крана <span>кому можно выдавать новые пакеты</span></h2>
+    <table>
+      <tr><th>Менеджер</th><th class="num">Июль</th><th class="num">Август (прогноз)</th><th>Кран</th><th>Основание</th><th></th></tr>
+      <tr><td><b>Сухов Иван</b></td><td class="num">112 %</td><td class="num">127 %</td><td><span class="tag g">открыт</span></td><td>оба месяца выше 60 %</td><td class="num"><button class="btn p">Выдать пакет</button></td></tr>
+      <tr><td><b>Курочкина Елена</b></td><td class="num neg">56 %</td><td class="num neg">58 %</td><td><span class="tag r">закрыт</span></td><td>второй месяц подряд ниже 60 %</td><td class="num"><button class="btn" disabled style="opacity:.45">Выдать пакет</button></td></tr>
+    </table>
+    <div class="hint">Закрытие крана не затрагивает уже закреплённых клиентов и не меняет ставки по ним. Пробуждение собственных забытых клиентов краном не ограничено.</div>
+  </div>
+
+  <div class="panel">
+    <h2>Выданные пакеты и сроки <span>2 активных пакета</span></h2>
+    <table>
+      <tr><th>Менеджер</th><th class="num">Пакет выдан</th><th class="num">Клиентов</th><th class="num">Контакт за 10 раб. дней</th><th class="num">Первый заказ за 90 дней</th><th class="num">К возврату</th><th></th></tr>
+      <tr><td><b>Сухов Иван</b></td><td class="num">02.06</td><td class="num">18</td><td class="num">18 из 18 <span class="tag g">в срок</span></td><td class="num">7 из 18<div class="bar"><i style="width:39%"></i></div></td><td class="num">2 <span class="tag a">срок 02.09</span></td><td class="num"><button class="btn">Открыть</button></td></tr>
+      <tr><td><b>Сухов Иван</b></td><td class="num">05.08</td><td class="num">12</td><td class="num neg">9 из 12 <span class="tag r">3 просрочены</span></td><td class="num">1 из 12</td><td class="num">3 <button class="btn d" style="margin-left:6px">Вернуть в пул</button></td><td class="num"><button class="btn">Открыть</button></td></tr>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>Свободные клиенты <span>618 партнёров · сверху те, у кого есть история закупок</span></h2>
+    <table>
+      <tr><th>Клиент</th><th>Город</th><th class="num">Последняя покупка у нас</th><th class="num">Брал в месяц</th><th class="num">Лучший месяц</th><th class="num">Всего купил у нас</th><th>Приоритет</th><th></th></tr>
+      <tr><td><b>Мелешко Т. Л.</b></td><td>Санкт-Петербург</td><td class="num">04.06.2025</td><td class="num money">180 тыс.</td><td class="num">310 тыс.</td><td class="num">4,3 млн</td><td><span class="tag a">был наш, ушёл 14 мес. назад</span></td><td class="num"><button class="btn p">В пакет</button></td></tr>
+      <tr><td><b>Туварджиев К. В.</b></td><td>Санкт-Петербург</td><td class="num">18.04.2025</td><td class="num money">140 тыс.</td><td class="num">265 тыс.</td><td class="num">3,1 млн</td><td><span class="tag a">был наш, ушёл 16 мес. назад</span></td><td class="num"><button class="btn p">В пакет</button></td></tr>
+      <tr><td>Жернакова Г. В.</td><td>Комсомольск</td><td class="num">22.07.2025</td><td class="num money">95 тыс.</td><td class="num">180 тыс.</td><td class="num">1,9 млн</td><td><span class="tag a">был наш</span></td><td class="num"><button class="btn">В пакет</button></td></tr>
+      <tr><td>Соснина И. М. ИП</td><td>Новокузнецк</td><td class="num">11.05.2025</td><td class="num money">60 тыс.</td><td class="num">120 тыс.</td><td class="num">0,9 млн</td><td><span class="tag a">был наш</span></td><td class="num"><button class="btn">В пакет</button></td></tr>
+      <tr><td>Шешуков Н. М. ИП</td><td>Москва</td><td class="num">не покупал</td><td class="num">—</td><td class="num">—</td><td class="num">0</td><td><span class="tag n">карточка без истории</span></td><td class="num"><button class="btn">В пакет</button></td></tr>
+      <tr><td>ДОН-БАС</td><td>Ростов-на-Дону</td><td class="num">не покупал</td><td class="num">—</td><td class="num">—</td><td class="num">0</td><td><span class="tag n">карточка без истории</span></td><td class="num"><button class="btn">В пакет</button></td></tr>
+    </table>
+    <div class="hint">Приоритет задаёт история: сначала те, кто у нас уже покупал и известен объём, затем карточки без истории — по ним объём заранее не оценить.</div>
+  </div>
+</section>
+
+<!-- ═════ B6 ═════ -->
+<section class="page" id="r4">
+  <h1>Квартальная премия отдела</h1>
+  <p class="sub">III квартал 2026 · до конца квартала 43 дня. Премия начисляется на отдел, распределяет её отдел</p>
+  <div class="steps">
+    <div class="step on"><b>8 клиентов</b>и каждый купил от 100 тыс. за квартал → 40 000 ₽</div>
+    <div class="step"><b>15 клиентов</b>то же условие → 100 000 ₽</div>
+    <div class="step"><b>22 клиента</b>то же условие → 160 000 ₽</div>
+  </div>
+  <div class="cards" style="margin-top:16px">
+    <div class="c hero"><div class="lbl">Засчитано клиентов</div><div class="v">9</div><div class="n">первая ступень взята</div></div>
+    <div class="c"><div class="lbl">Премия при текущем результате</div><div class="v">40 000 ₽</div><div class="n">на отдел</div></div>
+    <div class="c"><div class="lbl">До следующей ступени</div><div class="v">6 клиентов</div><div class="n">даст 100 000 ₽</div></div>
+    <div class="c"><div class="lbl">Выручка засчитанных</div><div class="v">1,42 млн ₽</div><div class="n">премия — 2,8 % от неё</div></div>
+  </div>
+  <div class="panel">
+    <h2>Новые клиенты квартала <span>12 клиентов · засчитано 4 · первая ступень требует 8</span></h2>
+    <table>
+      <tr><th></th><th>Клиент</th><th>Менеджер</th><th class="num">Первая покупка</th><th class="num">Куплено за квартал</th><th>Зачёт</th><th></th></tr>
+      <tr><td><span class="dot g"></span></td><td><b>Гамзатова Х. М.</b></td><td>Сухов</td><td class="num">14.06</td><td class="num money">247 000</td><td><span class="tag g">засчитан</span></td><td class="num"><button class="btn">Открыть</button></td></tr>
+      <tr><td><span class="dot g"></span></td><td>Язовских Т. А. ИП</td><td>Сухов</td><td class="num">21.06</td><td class="num money">186 000</td><td><span class="tag g">засчитан</span></td><td class="num"><button class="btn">Открыть</button></td></tr>
+      <tr><td><span class="dot a"></span></td><td><b>Котрикадзе Е. В.</b></td><td>Сухов</td><td class="num">03.07</td><td class="num money">78 000</td><td><div class="bar"><i style="width:78%"></i></div><span style="font-size:11.5px;color:var(--muted)">не хватает 22 000 ₽</span></td><td class="num"><button class="btn p">В приоритет</button></td></tr>
+      <tr><td><span class="dot r"></span></td><td>Бурняшев С. С.</td><td>Сухов</td><td class="num">29.07</td><td class="num money">45 000</td><td><div class="bar"><i class="r" style="width:45%"></i></div><span style="font-size:11.5px;color:var(--red)">нужно 55 000 ₽</span></td><td class="num"><button class="btn p">В приоритет</button></td></tr>
+      <tr><td><span class="dot r"></span></td><td>Тихомирова А. Н.</td><td>Курочкина</td><td class="num">02.08</td><td class="num money">31 000</td><td><div class="bar"><i class="r" style="width:31%"></i></div><span style="font-size:11.5px;color:var(--red)">нужно 69 000 ₽</span></td><td class="num"><button class="btn p">В приоритет</button></td></tr>
+    </table>
+    <div class="hint">Зачёт идёт по каждому клиенту отдельно: общая сумма по группе на количество не делится. Четверым клиентам не хватает суммарно 168 000 ₽ — это ровно та работа, которая переводит отдел на вторую ступень.</div>
+  </div>
+</section>
+
+<!-- ═════ B3 ═════ -->
+<section class="page" id="r5">
+  <h1>Ведомость к утверждению</h1>
+  <p class="sub">Июль 2026 · расчёт зафиксирован 5 августа по данным на 3 августа</p>
+  <div class="note">После утверждения ведомость уходит в бухгалтерию. Изменение возможно только новой версией с указанием основания.</div>
+  <div class="panel">
+    <h2>Расчёт по менеджерам</h2>
+    <table>
+      <tr><th>Менеджер</th><th class="num">Оклад<br>и надбавки</th><th class="num">За базу</th><th class="num">За новых</th><th class="num">Фокус</th><th class="num">Дебиторка</th><th class="num">Корректировка</th><th class="num">Итого</th><th>Особое</th><th></th></tr>
+      <tr><td><b>Сухов Иван</b></td><td class="num">75 000</td><td class="num pos">66 210</td><td class="num pos">4 500</td><td class="num pos">2 100</td><td class="num neg">−18 800</td><td class="num">+3 493</td><td class="num money">132 503</td><td><span class="tag a">корректировка</span></td><td class="num"><button class="btn p">Утвердить</button></td></tr>
+      <tr><td><b>Курочкина Елена</b></td><td class="num">75 000</td><td class="num pos">13 244</td><td class="num">0</td><td class="num pos">600</td><td class="num neg">−8 157</td><td class="num">—</td><td class="num money">80 687</td><td><span class="tag g">гарантия перехода</span></td><td class="num"><button class="btn p">Утвердить</button></td></tr>
+      <tr class="total"><td>Итого фонд</td><td class="num">150 000</td><td class="num">79 454</td><td class="num">4 500</td><td class="num">2 700</td><td class="num">−26 957</td><td class="num">+3 493</td><td class="num">213 190</td><td>1,9 % выручки</td><td class="num"><button class="btn p">Утвердить всё</button></td></tr>
+    </table>
+    <div class="hint">Корректировка Сухову +3 493 ₽ — основание: «просрочка клиентов, переданных в июне, не в зачёт». Требует подписи руководителя.</div>
+  </div>
+  <div class="panel">
+    <h2>Заявленные возражения <span>1 из 2 менеджеров</span></h2>
+    <table>
+      <tr><th>Менеджер</th><th class="num">Дата</th><th>Суть</th><th class="num">Спорная сумма</th><th>Статус</th><th></th></tr>
+      <tr><td><b>Курочкина Елена</b></td><td class="num">07.08</td><td>Накладная 29УТ-003391 оплачена 28 июля, в расчёте показана как просроченная на 66 дней</td><td class="num money">96 864 ₽</td><td><span class="tag a">на рассмотрении</span></td><td class="num"><button class="btn">Проверить в учёте</button> <button class="btn p">Пересчитать</button></td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ═════ B1 ═════ -->
+<section class="page" id="r6">
+  <h1>Планы на квартал</h1>
+  <p class="sub">IV квартал 2026 · расчёт по формуле, приказ издаётся до 20 сентября</p>
+  <div class="panel">
+    <h2>Расчёт личных планов <span>медиана продаж за рабочий день × рабочие дни × сезон × целевой прирост 3 %</span></h2>
+    <table>
+      <tr><th>Менеджер</th><th class="num">Медиана<br>за рабочий день</th><th class="num">Корректировка<br>на передачу</th><th class="num">Октябрь<br>22 дн · 1,05</th><th class="num">Ноябрь<br>20 дн · 1,10</th><th class="num">Декабрь<br>22 дн · 1,25</th><th class="num">Квартал</th><th class="num">К прошлому<br>кварталу</th></tr>
+      <tr><td><b>Сухов Иван</b></td><td class="num">318 000</td><td class="num">—</td><td class="num money">7 566 000</td><td class="num money">7 208 000</td><td class="num money">9 007 000</td><td class="num money">23 781 000</td><td class="num pos">+9 %</td></tr>
+      <tr><td><b>Курочкина Елена</b></td><td class="num">236 000</td><td class="num">−480 000<br><span style="font-size:11.5px;color:var(--muted)">2 клиента переданы</span></td><td class="num money">5 133 000</td><td class="num money">4 712 000</td><td class="num money">5 973 000</td><td class="num money">15 818 000</td><td class="num neg">−4 %</td></tr>
+      <tr class="total"><td>Итого отдел</td><td class="num">554 000</td><td class="num">−480 000</td><td class="num">12 699 000</td><td class="num">11 920 000</td><td class="num">14 980 000</td><td class="num">39 599 000</td><td class="num">+4 %</td></tr>
+    </table>
+    <div class="hint">План на квартал утверждается тремя отдельными значениями — по одному на каждый месяц: рабочие дни и сезонные коэффициенты у них разные. Внутри квартала план не пересматривается.</div>
+  </div>
+  <div class="panel">
+    <h2>Проверка перед приказом</h2>
+    <table>
+      <tr><td><span class="dot g"></span> Сумма личных планов сходится с планом компании на квартал</td><td class="num"><span class="tag g">39 599 000 = 39 599 000</span></td></tr>
+      <tr><td><span class="dot g"></span> Перевыполнение III квартала учтено наполовину</td><td class="num"><span class="tag g">по правилу 5.4</span></td></tr>
+      <tr><td><span class="dot a"></span> У Курочкиной план снижается на 4 % — проверить основание</td><td class="num"><span class="tag a">передача клиентов оформлена</span></td></tr>
+    </table>
+    <div class="hint"><button class="btn p">Выгрузить приложение к приказу</button> <button class="btn">Отправить менеджерам на ознакомление</button></div>
+  </div>
+</section>
+
+<!-- ═════ B7 ═════ -->
+<section class="page" id="r7">
+  <h1>Скидки на визе</h1>
+  <p class="sub">Решение принимается до отгрузки. Отгрузка со скидкой без визы не учитывается в вознаграждении менеджера</p>
+  <div class="panel">
+    <h2>Ожидают решения <span>3 заявки</span></h2>
+    <table>
+      <tr><th>Менеджер</th><th>Клиент</th><th>Позиции</th><th class="num">Цена по категории</th><th class="num">Запрошено</th><th class="num">Отклонение</th><th class="num">Сумма уступки</th><th>Обоснование</th><th></th></tr>
+      <tr><td>Сухов</td><td><b>Гевея ООО</b><br><span style="font-size:11.5px;color:var(--muted)">категория GOLD</span></td><td>Satisfyer Pro 2, 240 шт.</td><td class="num">2 480</td><td class="num">2 280</td><td class="num neg">−8 %</td><td class="num money">48 000 ₽</td><td>уходит к конкуренту, цена подтверждена скрином</td><td class="num"><button class="btn p">Согласовать</button> <button class="btn d">Отклонить</button></td></tr>
+      <tr><td>Курочкина</td><td><b>Афонина А. А. ИП</b><br><span style="font-size:11.5px;color:var(--muted)">категория DIAMOND</span></td><td>серия Pecado Basic, 600 шт.</td><td class="num">690</td><td class="num">640</td><td class="num neg">−7 %</td><td class="num money">30 000 ₽</td><td>объём вдвое выше обычного</td><td class="num"><button class="btn p">Согласовать</button> <button class="btn d">Отклонить</button></td></tr>
+      <tr><td>Сухов</td><td>Адалт Тойс ООО</td><td>смазки Aqua, 1 200 шт.</td><td class="num">210</td><td class="num">185</td><td class="num neg">−12 %</td><td class="num money">30 000 ₽</td><td>без обоснования</td><td class="num"><button class="btn">Запросить обоснование</button></td></tr>
+    </table>
+    <div class="hint">За август согласовано уступок на 214 000 ₽. Больше всего — по клиенту Гевея ООО (96 000 ₽ за три заявки).</div>
+  </div>
+</section>
+
+</main></div>
+<script>
+document.querySelectorAll(".side a").forEach(function(a){
+  a.addEventListener("click",function(){
+    document.querySelectorAll(".side a").forEach(function(x){x.classList.remove("on")});
+    a.classList.add("on");
+    document.querySelectorAll(".page").forEach(function(p){p.classList.remove("on")});
+    document.getElementById(a.dataset.p).classList.add("on");
+    window.scrollTo(0,0);
+  });
+});
+</script>
+</body></html>
