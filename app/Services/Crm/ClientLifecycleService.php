@@ -30,6 +30,30 @@ class ClientLifecycleService
         User $actor,
         ?string $reason = null,
     ): CrmClientProfile {
+        return $this->apply($client, $to, $actor, $reason);
+    }
+
+    /**
+     * Смена без сотрудника — её сделала система (ночная команда возвращения).
+     *
+     * В журнале у такой записи `user_id = NULL`, и карточка показывает её как
+     * системную. Причина обязательна: смена без человека и без объяснения —
+     * ровно то, из-за чего полю статуса перестают верить.
+     */
+    public function changeBySystem(
+        User $client,
+        ClientLifecycleStatus $to,
+        string $reason,
+    ): CrmClientProfile {
+        return $this->apply($client, $to, null, $reason);
+    }
+
+    private function apply(
+        User $client,
+        ClientLifecycleStatus $to,
+        ?User $actor,
+        ?string $reason,
+    ): CrmClientProfile {
         return DB::transaction(function () use ($client, $to, $actor, $reason): CrmClientProfile {
             $profile = $this->profiles->forClient($client);
             $from = $profile->exists ? $profile->lifecycle_status : null;
@@ -41,7 +65,7 @@ class ClientLifecycleService
             $profile->client()->associate($client);
             $profile->lifecycle_status = $to;
             $profile->lifecycle_changed_at = now();
-            $profile->lifecycle_changed_by = $actor->getKey();
+            $profile->lifecycle_changed_by = $actor?->getKey();
 
             // Подсказка отработала (её приняли или пошли своим путём) — снимаем,
             // иначе она висела бы бейджем поверх уже принятого решения.
@@ -56,7 +80,7 @@ class ClientLifecycleService
                 'field' => CrmClientStatusChange::FIELD_LIFECYCLE,
                 'from_value' => $from?->value,
                 'to_value' => $to->value,
-                'user_id' => $actor->getKey(),
+                'user_id' => $actor?->getKey(),
                 'reason' => $reason,
             ]);
 
