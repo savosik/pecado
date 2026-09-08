@@ -60,7 +60,7 @@ URL по `upsell_digests.uuid` (signed, живёт до следующего ц�
 
 ### Кому не шлём
 
-`sentiment = irritated/at_risk`, `lifecycle_status = churned/hopeless`,
+`sentiment = irritated/at_risk`, `lifecycle_status` из группы «Больше не покупает» (`competitor`/`closed`/`bankrupt`/`churned`),
 клиенты без персонального менеджера (пока не назначен), пустой лист
 (< N позиций после фильтров) — дайджест не создаётся.
 

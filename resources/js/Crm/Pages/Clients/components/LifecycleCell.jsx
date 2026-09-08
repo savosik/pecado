@@ -1,9 +1,30 @@
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import { Badge, HStack } from '@chakra-ui/react';
-import { MenuContent, MenuItem, MenuRoot, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
+import { MenuContent, MenuItem, MenuItemGroup, MenuRoot, MenuSeparator, MenuTrigger } from '@/components/ui/menu';
 import { Tooltip } from '@/components/ui/tooltip';
 import { toastSuccess } from '@/utils/toast';
+
+/**
+ * Стадии по группам («Работаем с партнёром» / «Больше не покупает») в порядке
+ * бэкенда: порядок вариантов задаёт перечисление на сервере, и сортировать их
+ * здесь заново значило бы завести вторую лестницу стадий.
+ *
+ * @param {Array<{value: string, label: string, group_label?: string}>} options
+ * @returns {Array<[string, Array<object>]>}
+ */
+function groupOptions(options = []) {
+    const groups = [];
+
+    options.forEach((option) => {
+        const label = option.group_label || 'Стадии';
+        const found = groups.find(([name]) => name === label);
+
+        found ? found[1].push(option) : groups.push([label, [option]]);
+    });
+
+    return groups;
+}
 
 /**
  * Стадия партнёра прямо в таблице.
@@ -97,15 +118,20 @@ export default function LifecycleCell({
                         <MenuSeparator />
                     </>
                 )}
-                {options.map((option) => (
-                    <MenuItem
-                        key={option.value}
-                        value={option.value}
-                        disabled={option.value === lifecycle.status}
-                        onClick={() => change(option.value)}
-                    >
-                        {option.label}
-                    </MenuItem>
+                {groupOptions(options).map(([groupLabel, items]) => (
+                    <MenuItemGroup key={groupLabel} title={groupLabel}>
+                        {items.map((option) => (
+                            <MenuItem
+                                key={option.value}
+                                value={option.value}
+                                disabled={option.value === lifecycle.status}
+                                onClick={() => change(option.value)}
+                                title={option.description || undefined}
+                            >
+                                {option.label}
+                            </MenuItem>
+                        ))}
+                    </MenuItemGroup>
                 ))}
             </MenuContent>
         </MenuRoot>

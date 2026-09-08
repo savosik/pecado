@@ -215,8 +215,8 @@ class SalesSheetImportTest extends TestCase
     }
 
     #[Test]
-    #[TestDox('Новые статусы «Закрывается» и «Непреодолимо» переносятся как есть')]
-    public function it_imports_new_lifecycle_statuses(): void
+    #[TestDox('Снятые подписи таблицы читаются действующими стадиями')]
+    public function it_imports_retired_lifecycle_statuses(): void
     {
         $closing = User::factory()->create(['erp_name' => 'Самохвалова Валерия Олеговна ИП']);
         $hopeless = User::factory()->create(['erp_name' => 'ЭКСЕЛЕНТ ООО']);
@@ -228,14 +228,43 @@ class SalesSheetImportTest extends TestCase
 
         $this->import($path);
 
+        // Листы отдела за прошлые месяцы никуда не делись, и импорт обязан их
+        // понимать: «Закрывается» — это нынешний «Риск ухода», «Непреодолимо»
+        // разобрано в общий «Ушёл».
         $this->assertSame(
-            ClientLifecycleStatus::CLOSING,
+            ClientLifecycleStatus::AT_RISK,
             CrmClientProfile::query()->where('user_id', $closing->id)->firstOrFail()->lifecycle_status,
         );
         $this->assertSame(
-            ClientLifecycleStatus::HOPELESS,
+            ClientLifecycleStatus::CHURNED,
             CrmClientProfile::query()->where('user_id', $hopeless->id)->firstOrFail()->lifecycle_status,
         );
+    }
+
+    #[Test]
+    #[TestDox('Причины ухода из таблицы становятся отдельными стадиями')]
+    public function it_imports_reasons_of_leaving(): void
+    {
+        $competitor = User::factory()->create(['erp_name' => 'Ким Александр Александрович ИП, г.Москва']);
+        $bankrupt = User::factory()->create(['erp_name' => 'ФЛОВЕРТИ ООО, г.Долгопрудный']);
+        $closed = User::factory()->create(['erp_name' => 'ЭКСЕЛЕНТ ООО']);
+
+        $path = $this->makeSheet([
+            $this->clientRow('Ким Александр Александрович ИП, г.Москва', [2 => 'Ушёл к конкуренту']),
+            $this->clientRow('ФЛОВЕРТИ ООО, г.Долгопрудный', [2 => 'Банкрот']),
+            $this->clientRow('ЭКСЕЛЕНТ ООО', [2 => 'Закрылся']),
+        ]);
+
+        $this->import($path);
+
+        $status = fn (User $user) => CrmClientProfile::query()
+            ->where('user_id', $user->id)
+            ->firstOrFail()
+            ->lifecycle_status;
+
+        $this->assertSame(ClientLifecycleStatus::COMPETITOR, $status($competitor));
+        $this->assertSame(ClientLifecycleStatus::BANKRUPT, $status($bankrupt));
+        $this->assertSame(ClientLifecycleStatus::CLOSED, $status($closed));
     }
 
     #[Test]

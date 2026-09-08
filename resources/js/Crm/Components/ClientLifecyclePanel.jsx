@@ -15,6 +15,29 @@ import { Field } from '@/components/ui/field';
 import { toastSuccess } from '@/utils/toast';
 
 /**
+ * Стадии по группам в том порядке, в каком их прислал бэкенд.
+ *
+ * Порядок вариантов задан перечислением на сервере (работа с партнёром →
+ * причины ухода), поэтому здесь ничего не сортируется: пересортировка на фронте
+ * означала бы две разные лестницы стадий в одном интерфейсе.
+ *
+ * @param {Array<{value: string, label: string, group_label?: string}>} options
+ * @returns {Array<[string, Array<object>]>}
+ */
+function groupOptions(options = []) {
+    const groups = [];
+
+    options.forEach((option) => {
+        const label = option.group_label || 'Стадии';
+        const found = groups.find(([name]) => name === label);
+
+        found ? found[1].push(option) : groups.push([label, [option]]);
+    });
+
+    return groups;
+}
+
+/**
  * Статусы партнёра.
  *
  * Их два и они разного происхождения: жизненный статус — поле сайта, им управляет
@@ -111,8 +134,12 @@ export default function ClientLifecyclePanel({ clientId, lifecycle, options, loy
                                 value={data.lifecycle_status}
                                 onChange={(e) => setData('lifecycle_status', e.target.value)}
                             >
-                                {options.map((option) => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                {groupOptions(options).map(([groupLabel, items]) => (
+                                    <optgroup key={groupLabel} label={groupLabel}>
+                                        {items.map((option) => (
+                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                        ))}
+                                    </optgroup>
                                 ))}
                             </NativeSelectField>
                         </NativeSelectRoot>

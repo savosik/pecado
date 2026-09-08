@@ -125,7 +125,11 @@ class CrmLifecycleHints extends Command
                 : [null, null];
         }
 
-        if ($status === ClientLifecycleStatus::SLEEPING
+        // Ожил: снова отгружается. Работает и для «Риск ухода» — стадия про то,
+        // что партнёр сыпется, и свежая отгрузка ей прямо противоречит. Из
+        // терминальных стадий не поднимаем: возврат ушедшего — решение менеджера,
+        // а не следствие одной отгрузки.
+        if (in_array($status, [ClientLifecycleStatus::SLEEPING, ClientLifecycleStatus::AT_RISK], true)
             && $lastShipment !== null
             && $lastShipment->gte($revivedAfter)
         ) {

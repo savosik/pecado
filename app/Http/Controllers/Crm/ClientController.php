@@ -160,7 +160,7 @@ class ClientController extends CrmController
                 'payment_behavior' => PaymentBehavior::options(),
                 'preferred_channel' => PreferredChannel::options(),
                 'sentiment' => ClientSentiment::options(),
-                'lifecycle_status' => ClientLifecycleStatus::options(),
+                'lifecycle_status' => ClientLifecycleStatus::optionsWithColor(),
             ] : null,
             // Секции паспорта приходят с бэкенда, а не описаны в JSX: подпись поля
             // и его правило проверки должны меняться одной правкой, иначе форма

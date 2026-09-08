@@ -28,14 +28,29 @@ class SalesSheetReader
         'июл' => 7, 'авг' => 8, 'сен' => 9, 'окт' => 10, 'ноя' => 11, 'дек' => 12,
     ];
 
+    /**
+     * Словарь подписей из таблицы отдела в стадии CRM.
+     *
+     * Слева — что пишут в чужой Google-таблице, справа — наши стадии. «Закрывается»
+     * и «непреодолимо» остались в словаре, хотя таких стадий больше нет: старые
+     * листы никуда не делись, и импорт не должен спотыкаться о них.
+     */
     private const STATUSES = [
         'активный' => ClientLifecycleStatus::ACTIVE,
         'спящий' => ClientLifecycleStatus::SLEEPING,
         'лид' => ClientLifecycleStatus::LEAD,
         'в работе' => ClientLifecycleStatus::IN_WORK,
-        'закрывается' => ClientLifecycleStatus::CLOSING,
-        'закрылся' => ClientLifecycleStatus::CHURNED,
-        'непреодолимо' => ClientLifecycleStatus::HOPELESS,
+        'риск ухода' => ClientLifecycleStatus::AT_RISK,
+        'закрывается' => ClientLifecycleStatus::AT_RISK,
+        'ушёл к конкуренту' => ClientLifecycleStatus::COMPETITOR,
+        'ушел к конкуренту' => ClientLifecycleStatus::COMPETITOR,
+        'конкурент' => ClientLifecycleStatus::COMPETITOR,
+        'закрылся' => ClientLifecycleStatus::CLOSED,
+        'банкрот' => ClientLifecycleStatus::BANKRUPT,
+        'банкротство' => ClientLifecycleStatus::BANKRUPT,
+        'ушёл' => ClientLifecycleStatus::CHURNED,
+        'ушел' => ClientLifecycleStatus::CHURNED,
+        'непреодолимо' => ClientLifecycleStatus::CHURNED,
     ];
 
     private const BUSINESS_TYPES = [

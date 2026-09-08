@@ -4,12 +4,14 @@ namespace Tests\Feature\Crm;
 
 use App\Enums\Crm\ClientLifecycleStatus;
 use App\Models\CrmClientProfile;
+use App\Models\CrmClientStatusChange;
 use App\Models\PersonalManager;
 use App\Models\Shipment;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\TestDox;
 use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
 use Tests\TestCase;
 
@@ -261,6 +263,86 @@ class ClientLifecycleTest extends TestCase
         $this->assertNull($profile->lifecycle_hint);
         $this->assertNull($profile->lifecycle_hint_reason);
         $this->assertNull($profile->lifecycle_hint_at);
+    }
+
+    #[Test]
+    #[TestDox('Причина ухода — отдельная стадия: «Банкрот» доезжает до профиля и журнала')]
+    public function reason_of_leaving_is_a_stage_of_its_own(): void
+    {
+        $this->change('bankrupt', 'Единственный контрагент признан банкротом')->assertRedirect();
+
+        $profile = CrmClientProfile::query()->where('user_id', $this->client->id)->firstOrFail();
+
+        $this->assertSame(ClientLifecycleStatus::BANKRUPT, $profile->lifecycle_status);
+        $this->assertDatabaseHas('crm_client_status_changes', [
+            'client_user_id' => $this->client->id,
+            'to_value' => 'bankrupt',
+            'reason' => 'Единственный контрагент признан банкротом',
+        ]);
+    }
+
+    #[Test]
+    #[TestDox('Из терминальной стадии система сама не поднимает, из «Риска ухода» — предлагает')]
+    public function terminal_stages_are_never_revived_by_the_night_command(): void
+    {
+        $atRisk = User::factory()->create(['personal_manager_id' => $this->client->personal_manager_id]);
+        CrmClientProfile::factory()->create([
+            'user_id' => $atRisk->id,
+            'lifecycle_status' => ClientLifecycleStatus::AT_RISK,
+        ]);
+        CrmClientProfile::factory()->create([
+            'user_id' => $this->client->id,
+            'lifecycle_status' => ClientLifecycleStatus::BANKRUPT,
+        ]);
+
+        foreach ([$atRisk, $this->client] as $client) {
+            Shipment::factory()->create(['user_id' => $client->id, 'erp_created_at' => now()->subDays(3)]);
+        }
+
+        $this->artisan('crm:lifecycle-hints')->assertSuccessful();
+
+        $this->assertSame(
+            ClientLifecycleStatus::ACTIVE,
+            CrmClientProfile::query()->where('user_id', $atRisk->id)->firstOrFail()->lifecycle_hint,
+        );
+        $this->assertNull(
+            CrmClientProfile::query()->where('user_id', $this->client->id)->firstOrFail()->lifecycle_hint,
+        );
+    }
+
+    #[Test]
+    #[TestDox('История читает снятые стадии по словарю, а не сырым значением')]
+    public function history_labels_retired_stages(): void
+    {
+        // Такие записи остались в журнале с 08.08.2026 — переписывать историю нельзя.
+        CrmClientStatusChange::create([
+            'client_user_id' => $this->client->id,
+            'field' => 'lifecycle',
+            'from_value' => 'active',
+            'to_value' => 'hopeless',
+            'user_id' => $this->manager->id,
+            'reason' => 'Импорт таблицы продаж',
+        ]);
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.clients.show', $this->client))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('lifecycle.history.0.to', 'Непреодолимо (устар.)'));
+    }
+
+    #[Test]
+    #[TestDox('Варианты стадий приезжают на фронт группами')]
+    public function stages_reach_the_front_grouped(): void
+    {
+        $this->actingAs($this->manager)
+            ->get(route('crm.clients.show', $this->client))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('profileOptions.lifecycle_status.0.value', 'lead')
+                ->where('profileOptions.lifecycle_status.0.group_label', 'Работаем с партнёром')
+                ->where('profileOptions.lifecycle_status.8.value', 'churned')
+                ->where('profileOptions.lifecycle_status.8.group_label', 'Больше не покупает')
+            );
     }
 
     #[Test]

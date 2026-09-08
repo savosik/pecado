@@ -220,12 +220,16 @@ class ClientLifecycleService
      *
      * Неизвестное значение отдаётся как есть: журнал переживает переименование
      * вариантов, и подставить «—» вместо исторической записи было бы враньём.
+     * Снятые стадии («Непреодолимо», «Закрывается») подписываются по словарю
+     * енума — иначе в истории читалось бы сырое `hopeless`.
      */
     private function valueLabel(string $field, string $value): string
     {
         return match ($field) {
             CrmClientStatusChange::FIELD_KIND => UserKind::tryFrom($value)?->label() ?? $value,
-            default => ClientLifecycleStatus::tryFrom($value)?->label() ?? $value,
+            default => ClientLifecycleStatus::tryFrom($value)?->label()
+                ?? ClientLifecycleStatus::retiredLabel($value)
+                ?? $value,
         };
     }
 }
