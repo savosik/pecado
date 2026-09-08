@@ -105,6 +105,13 @@ class MotivationPartnerNovelty extends Model
         return $query
             ->whereNotNull('novelty_started_on')
             ->whereDate('novelty_started_on', '<=', $end)
-            ->whereDate('novelty_ends_on', '>=', $start);
+            ->whereDate('novelty_ends_on', '>=', $start)
+            // Партнёр, чей перерыв подтвердить нечем, Новым не признаётся:
+            // иначе весь оборот первых месяцев уходит в П2 по повышенной ставке.
+            // См. config/motivation.php, ключ novelty.requires_confirmed_history.
+            ->when(
+                (bool) config('motivation.novelty.requires_confirmed_history', true),
+                fn (Builder $q): Builder => $q->where('history_incomplete', false),
+            );
     }
 }
