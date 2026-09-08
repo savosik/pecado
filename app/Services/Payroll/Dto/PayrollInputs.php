@@ -2,6 +2,8 @@
 
 namespace App\Services\Payroll\Dto;
 
+use App\Services\Motivation\Dto\MotivationInputs;
+
 /**
  * Входы расчёта зарплаты за месяц — всё, что калькулятору нужно знать о мире.
  *
@@ -26,6 +28,8 @@ final class PayrollInputs
      *                                          в множитель не входят, показываются рядом
      *                                          как объяснение разницы с `/crm/plans`.
      *                                          null — снимок собран до появления счётчика
+     * @param  MotivationInputs|null  $motivation  входы переменной части по Положению 2.2 (эпик mot-00);
+     *                                             null — схема этого месяца их не требует
      */
     public function __construct(
         public readonly int $managerId,
@@ -42,6 +46,7 @@ final class PayrollInputs
         public readonly array $workingDays = ['total' => 0, 'passed' => 0, 'left' => 0],
         public readonly ?string $collectedAt = null,
         public readonly ?int $unplannedActiveCount = null,
+        public readonly ?MotivationInputs $motivation = null,
     ) {}
 
     /**
@@ -87,6 +92,7 @@ final class PayrollInputs
             'working_days' => $this->workingDays,
             'collected_at' => $this->collectedAt,
             'unplanned_active_count' => $this->unplannedActiveCount,
+            'motivation' => $this->motivation?->toArray(),
         ];
     }
 
@@ -121,6 +127,7 @@ final class PayrollInputs
             ],
             collectedAt: isset($data['collected_at']) ? (string) $data['collected_at'] : null,
             unplannedActiveCount: isset($data['unplanned_active_count']) ? (int) $data['unplanned_active_count'] : null,
+            motivation: is_array($data['motivation'] ?? null) ? MotivationInputs::fromArray($data['motivation']) : null,
         );
     }
 

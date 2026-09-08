@@ -22,10 +22,31 @@
 return [
 
     /*
-    | Ключ схемы расчёта, вводимой Положением редакции 2.2. Схема v1 (sal-00)
-    | не изменяется: на её умолчания опирается PayrollCalculatorGoldenTest.
+    | Схема v2 — следующая версия той же схемы отдела продаж (код `sales`),
+    | а не отдельный код: PayrollSchemeRepository::forMonth() берёт последнюю
+    | версию, начавшую действовать не позже расчётного месяца, и переход
+    | получается сменой даты, а не переключением ветки кода.
+    |
+    | config/payroll.php['default_scheme'] (v1) НЕ изменяется: на её умолчания
+    | опирается PayrollCalculatorGoldenTest (125 075,20), который обязан
+    | оставаться зелёным. KpiBonusComponent и множитель активных клиентов
+    | остаются в каталоге и в v2 просто не включены — удаление сделало бы
+    | нечитаемыми прежние снимки.
+    |
+    | Порядок компонентов значим: доплата до гарантии идёт последней, потому что
+    | считается от итога всего остального (п. 12.3).
     */
-    'scheme_code' => 'motivation_v2',
+    'scheme_v2' => [
+        'title' => 'Отдел продаж — Положение 2.2',
+        'components' => [
+            'salary',
+            'motivation_channels_allowance',
+            'motivation_substitution',
+            'motivation_variable',
+            'manual_correction',
+            'motivation_guarantee',
+        ],
+    ],
 
     'default_parameters' => [
 
