@@ -3,10 +3,8 @@
 namespace App\Services\Motivation;
 
 use App\Models\ManagerAbsence;
-use App\Models\Motivation\MotivationPartnerAssignment;
 use App\Models\Motivation\MotivationPartnerNovelty;
 use App\Models\ProductReturn;
-use App\Models\User;
 use App\Services\Analytics\AnalyticsContext;
 use App\Services\Analytics\AnalyticsFilters;
 use App\Services\Analytics\ShipmentAnalyticsService;
@@ -34,6 +32,7 @@ class MotivationInputCollector
     public function __construct(
         private readonly ShipmentAnalyticsService $analytics,
         private readonly FocusRangeResolver $focus,
+        private readonly PartnerAttributionResolver $attribution,
         private readonly OverdueDebtIntegrator $debts,
         private readonly WorkingCalendar $calendar,
     ) {}
@@ -44,7 +43,7 @@ class MotivationInputCollector
     public function collect(int $managerId, CarbonInterface $month, array $params = []): MotivationInputs
     {
         $period = CarbonImmutable::instance($month)->startOfMonth();
-        $names = $this->partnerNames($managerId, $period);
+        $names = $this->attribution->partnersOf($managerId, $period->endOfMonth());
         $partnerIds = array_keys($names);
 
         [$basePartners, $newPartners] = $this->splitByNovelty($partnerIds, $period);
@@ -86,45 +85,6 @@ class MotivationInputCollector
             overdueRows: $overdue['rows'],
             returns: $returns,
         );
-    }
-
-    /**
-     * Партнёры работника в этом месяце: по реестру закрепления, если он заполнен.
-     *
-     * Реестр — единственное основание отнесения отгрузок (п. 8.1), но пока
-     * бэкфилл не выполнен, он пуст, и атрибуция идёт по текущему значению
-     * users.personal_manager_id. Это честный откат, а не умолчание: для прошлых
-     * месяцев он даёт сегодняшнюю картину, о чём обязан предупреждать экран.
-     *
-     * @return array<int, string>
-     */
-    private function partnerNames(int $managerId, CarbonImmutable $period): array
-    {
-        $lastDay = $period->endOfMonth()->startOfDay();
-
-        $fromRegistry = MotivationPartnerAssignment::query()
-            ->where('personal_manager_id', $managerId)
-            ->activeOn($lastDay)
-            ->pluck('user_id')
-            ->map('intval')
-            ->all();
-
-        $query = User::query()->clients();
-
-        if ($fromRegistry !== []) {
-            $query->whereIn('id', $fromRegistry);
-        } elseif (MotivationPartnerAssignment::query()->exists()) {
-            return [];   // реестр заполнен, но у работника в этом месяце партнёров не было
-        } else {
-            $query->where('personal_manager_id', $managerId);
-        }
-
-        $names = [];
-        foreach ($query->get(['id', 'name', 'erp_name']) as $client) {
-            $names[(int) $client->getKey()] = (string) $client->display_name;
-        }
-
-        return $names;
     }
 
     /**

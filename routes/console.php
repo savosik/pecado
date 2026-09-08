@@ -82,3 +82,6 @@ Schedule::command('payroll:close-month')->monthlyOn(1, '06:50')->withoutOverlapp
 // целиком до ночного ребилда моста накладных, чтобы утренний расчёт видел
 // и новых партнёров, и их задолженность в одном состоянии.
 Schedule::command('motivation:rebuild-novelty')->dailyAt('06:10')->withoutOverlapping();
+// Квартальная премия: ежедневный пересчёт черновика — трекер должен показывать
+// текущее положение, а не картину на конец квартала. Утверждённую не трогает.
+Schedule::command('motivation:calculate-quarter')->dailyAt('06:20')->withoutOverlapping();
