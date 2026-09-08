@@ -3,11 +3,12 @@
 namespace App\Models\Motivation;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
  * Кэш новизны партнёра: с какого и по какое число его отгрузки идут в показатель П2.
@@ -81,7 +82,7 @@ class MotivationPartnerNovelty extends Model
     /**
      * Идёт ли отгрузка этого дня в показатель П2.
      */
-    public function isNewOn(Carbon $day): bool
+    public function isNewOn(CarbonInterface $day): bool
     {
         if ($this->novelty_started_on === null || $this->novelty_ends_on === null) {
             return false;
@@ -96,10 +97,10 @@ class MotivationPartnerNovelty extends Model
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
-    public function scopeNewInMonth(Builder $query, Carbon $month): Builder
+    public function scopeNewInMonth(Builder $query, CarbonInterface $month): Builder
     {
-        $start = $month->copy()->startOfMonth();
-        $end = $month->copy()->endOfMonth();
+        $start = CarbonImmutable::instance($month)->startOfMonth();
+        $end = CarbonImmutable::instance($month)->endOfMonth();
 
         return $query
             ->whereNotNull('novelty_started_on')

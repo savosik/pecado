@@ -4,11 +4,11 @@ namespace App\Models\Motivation;
 
 use App\Models\Shipment;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
  * Задолженность, выведенная из базы начисления вычета К1.
@@ -89,7 +89,7 @@ class MotivationDebtExclusion extends Model
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
-    public function scopeActiveOn(Builder $query, Carbon $day): Builder
+    public function scopeActiveOn(Builder $query, CarbonInterface $day): Builder
     {
         return $query
             ->whereDate('excluded_from', '<=', $day)

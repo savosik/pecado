@@ -3,11 +3,12 @@
 namespace App\Models\Motivation;
 
 use App\Models\Product;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
  * Позиция Фокус-перечня в конкретном расчётном периоде со ставкой, действовавшей тогда.
@@ -59,8 +60,8 @@ class MotivationFocusSnapshotItem extends Model
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
-    public function scopeForPeriod(Builder $query, Carbon $month): Builder
+    public function scopeForPeriod(Builder $query, CarbonInterface $month): Builder
     {
-        return $query->whereDate('period_month', $month->copy()->startOfMonth());
+        return $query->whereDate('period_month', CarbonImmutable::instance($month)->startOfMonth());
     }
 }

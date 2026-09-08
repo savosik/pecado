@@ -3,11 +3,12 @@
 namespace App\Models\Motivation;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
  * Приказ с числовыми параметрами Положения о мотивации (Приложение № 1).
@@ -57,10 +58,10 @@ class MotivationParameterOrder extends Model
     /**
      * Приказ, действовавший в расчётном периоде.
      */
-    public static function effectiveFor(Carbon $month): ?self
+    public static function effectiveFor(CarbonInterface $month): ?self
     {
         return self::query()
-            ->whereDate('effective_from', '<=', $month->copy()->startOfMonth())
+            ->whereDate('effective_from', '<=', CarbonImmutable::instance($month)->startOfMonth())
             ->orderByDesc('effective_from')
             ->first();
     }
@@ -69,10 +70,10 @@ class MotivationParameterOrder extends Model
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
-    public function scopeEffectiveAt(Builder $query, Carbon $month): Builder
+    public function scopeEffectiveAt(Builder $query, CarbonInterface $month): Builder
     {
         return $query
-            ->whereDate('effective_from', '<=', $month->copy()->startOfMonth())
+            ->whereDate('effective_from', '<=', CarbonImmutable::instance($month)->startOfMonth())
             ->orderByDesc('effective_from');
     }
 }

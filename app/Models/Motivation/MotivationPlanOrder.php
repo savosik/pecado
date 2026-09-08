@@ -4,11 +4,12 @@ namespace App\Models\Motivation;
 
 use App\Models\PersonalManager;
 use App\Models\User;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
  * Приказ об установлении Личного плана на квартал: обоснование, а не сам план.
@@ -109,8 +110,8 @@ class MotivationPlanOrder extends Model
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
-    public function scopeForQuarter(Builder $query, Carbon $quarterStart): Builder
+    public function scopeForQuarter(Builder $query, CarbonInterface $quarterStart): Builder
     {
-        return $query->whereDate('quarter_start', $quarterStart->copy()->startOfQuarter());
+        return $query->whereDate('quarter_start', CarbonImmutable::instance($quarterStart)->startOfQuarter());
     }
 }

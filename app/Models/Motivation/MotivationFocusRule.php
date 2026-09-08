@@ -3,12 +3,12 @@
 namespace App\Models\Motivation;
 
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Carbon;
 
 /**
  * Правило включения позиций в Фокус-перечень: бренд, категория или отдельный товар.
@@ -79,7 +79,7 @@ class MotivationFocusRule extends Model
      * @param  Builder<self>  $query
      * @return Builder<self>
      */
-    public function scopeActiveOn(Builder $query, Carbon $day): Builder
+    public function scopeActiveOn(Builder $query, CarbonInterface $day): Builder
     {
         return $query
             ->whereDate('starts_on', '<=', $day)

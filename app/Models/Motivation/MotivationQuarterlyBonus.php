@@ -3,11 +3,12 @@
 namespace App\Models\Motivation;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Carbon;
 
 /**
  * Квартальная премия отдела: достигнутая ступень, сумма и снимок расчёта.
@@ -92,8 +93,8 @@ class MotivationQuarterlyBonus extends Model
     /**
      * Первое число квартала, которому принадлежит месяц.
      */
-    public static function quarterStartFor(Carbon $month): Carbon
+    public static function quarterStartFor(CarbonInterface $month): CarbonImmutable
     {
-        return $month->copy()->startOfQuarter()->startOfDay();
+        return CarbonImmutable::instance($month)->startOfQuarter()->startOfDay();
     }
 }
