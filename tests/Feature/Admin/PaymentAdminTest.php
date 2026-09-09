@@ -172,8 +172,22 @@ class PaymentAdminTest extends TestCase
     #[Test]
     public function search_finds_payment_by_bank_number(): void
     {
-        $this->payment(['number' => 'ПЕРВЫЙ', 'bank_number' => '9202']);
-        $this->payment(['number' => 'ВТОРОЙ', 'bank_number' => '7777']);
+        // Поиск идёт и по uuid, ИНН и УИП — у фабрики они случайные, и «9202»
+        // изредка встречалось в них у второго платежа (флак на CI 09.09.2026).
+        $this->payment([
+            'uuid' => '00000000-0000-4000-8000-000000000001',
+            'tax_id' => '1111111111',
+            'uip' => null,
+            'number' => 'ПЕРВЫЙ',
+            'bank_number' => '9202',
+        ]);
+        $this->payment([
+            'uuid' => '00000000-0000-4000-8000-000000000002',
+            'tax_id' => '1111111111',
+            'uip' => null,
+            'number' => 'ВТОРОЙ',
+            'bank_number' => '7777',
+        ]);
 
         $this->actingAs($this->admin)
             ->get(route('admin.payments.index', ['search' => '9202']))
