@@ -75,6 +75,19 @@ class DefectStockServiceTest extends TestCase
         $this->assertSame(2, $this->service()->available($defect), 'Удаление заказа должно снимать резерв');
     }
 
+    public function test_line_cancelled_by_erp_releases_reservation(): void
+    {
+        $defect = ProductDefect::factory()->create(['quantity' => 3]);
+        $order = $this->orderFor($defect, 2);
+
+        // Недобор: 1С отменила строку, она осталась в заказе с количеством,
+        // но товар по ней 1С уже освободила.
+        $order->items()->update(['cancelled' => true]);
+
+        $this->assertSame(0, $this->service()->reserved($defect));
+        $this->assertSame(3, $this->service()->available($defect));
+    }
+
     public function test_non_defect_order_does_not_reserve(): void
     {
         // Страховка от случайной ссылки на партию из обычного заказа.

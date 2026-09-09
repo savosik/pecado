@@ -190,11 +190,15 @@ class DefectCoverageService
     /**
      * Открытые партии, сведённые по паре товар + склад: объём, резерв, простой.
      *
-     * Резерв — позиции живых (не удалённых) заказов уценки, привязанные к партии.
-     * Отмена по любому пути (order.deleted, статус «Удалён», отмена реализации)
-     * делает заказу soft-delete, поэтому по статусу заказа не фильтруем — то же
-     * правило, что в DefectStockService::reservedMap(). Резерв партии ограничен
-     * её объёмом: лишнее (заказали больше, чем в партии) в свободное не уходит.
+     * «Резерв» здесь — всё, что в открытой партии занято живым заказом уценки,
+     * независимо от стадии: ждёт отгрузки или уже уехало по реализации. Отгруженное
+     * тоже вычитается, потому что объём партии при отгрузке не уменьшается — партия
+     * закрывается целиком, когда отгружено всё; до этого уехавшие штуки сидят в её
+     * числе, а в свободном остатке 1С их уже нет. Не резерв: удалённый заказ
+     * (отмена по любому пути делает soft-delete, поэтому по статусу заказа не
+     * фильтруем) и строка, отменённая 1С при недоборе (cancelled) — то же правило,
+     * что в DefectStockService::reservedMap(). Резерв партии ограничен её объёмом:
+     * лишнее (заказали больше, чем в партии) в свободное не уходит.
      */
     private function openBatches(): Builder
     {
@@ -202,6 +206,7 @@ class DefectCoverageService
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->where('orders.type', OrderType::DEFECT->value)
             ->whereNull('orders.deleted_at')
+            ->where('order_items.cancelled', false)
             ->whereNotNull('order_items.product_defect_id')
             ->selectRaw('order_items.product_defect_id, SUM(order_items.quantity) as reserved')
             ->groupBy('order_items.product_defect_id');

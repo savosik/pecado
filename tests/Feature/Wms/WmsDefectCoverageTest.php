@@ -395,6 +395,50 @@ class WmsDefectCoverageTest extends TestCase
     }
 
     #[Test]
+    public function строка_отменённая_1с_при_недоборе_резерв_не_держит(): void
+    {
+        $warehouse = Warehouse::factory()->defect()->create();
+        $product = Product::factory()->create();
+
+        // 1С отменила строку заказа (недобор) и вернула остаток к 3; строка в
+        // заказе осталась с количеством, но с флагом cancelled.
+        $this->stock($product, $warehouse, 3);
+        $defect = ProductDefect::factory()->sellable()->create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 3,
+        ]);
+        $this->reserve($defect, 2)->items()->update(['cancelled' => true]);
+
+        $rows = $this->rows('filter=all');
+        $this->assertCount(1, $rows);
+        $this->assertSame(0, $rows[0]['reserved_quantity']);
+        $this->assertSame(0, $rows[0]['uncovered_quantity']);
+    }
+
+    #[Test]
+    public function отгруженный_но_не_закрывший_партию_заказ_остаётся_занятым(): void
+    {
+        $warehouse = Warehouse::factory()->defect()->create();
+        $product = Product::factory()->create();
+
+        // Партия 3, заказ на 2 отгружен: полка 1, 1С свободно 1. Партия открыта,
+        // потому что отгружено не всё, — уехавшие 2 всё ещё сидят в её объёме.
+        $this->stock($product, $warehouse, 1);
+        $defect = ProductDefect::factory()->sellable()->create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 3,
+        ]);
+        $this->reserve($defect, 2)->update(['status' => \App\Enums\OrderStatus::CLOSED]);
+
+        $rows = $this->rows('filter=all');
+        $this->assertSame(2, $rows[0]['reserved_quantity']);
+        $this->assertSame(1, $rows[0]['free_quantity']);
+        $this->assertSame(0, $rows[0]['uncovered_quantity']);
+    }
+
+    #[Test]
     public function резерв_закрытой_партии_второй_раз_не_вычитается(): void
     {
         $warehouse = Warehouse::factory()->defect()->create();

@@ -203,6 +203,9 @@ class DefectStockService implements DefectStockServiceInterface
             ->whereIn('order_items.product_defect_id', $defectIds)
             ->where('orders.type', OrderType::DEFECT->value)
             ->whereNull('orders.deleted_at')
+            // Строка, отменённая 1С при недоборе, остаётся в заказе с количеством
+            // (клиент её видит), но товар по ней 1С уже освободила — резерв не держит.
+            ->where('order_items.cancelled', false)
             ->select('order_items.product_defect_id', DB::raw('SUM(order_items.quantity) as total'))
             ->groupBy('order_items.product_defect_id')
             ->get();
