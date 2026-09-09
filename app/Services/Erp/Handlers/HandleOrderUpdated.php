@@ -125,6 +125,18 @@ class HandleOrderUpdated
         } elseif (array_key_exists('reserved_until', $payload)) {
             $order->reserved_until = $payload['reserved_until'];
         }
+        // Активный резерв не имеет терминального исхода. Если 1С возвращает
+        // резерв конфликтным эхом (reserve=true) в ответ на нашу отмену/снятие
+        // по таймауту, которую она отбила (срок по её часам ещё не истёк) —
+        // reserve_outcome (cancelled/expired) надо погасить, иначе РОП-отчёт
+        // ReserveControlController посчитает восстановленный резерв истёкшим.
+        // Для обычного эха живого резерва это no-op: outcome и так пуст.
+        // confirmed/cancelled приходят с reserve=false и здесь не затрагиваются.
+        // (v16.9.1, найдено на канареечном smoke-тесте: заказ D после отбитой
+        // отмены остался active-резервом с outcome=expired.)
+        if ($reserveExplicit && $order->reserve) {
+            $order->reserve_outcome = null;
+        }
         if (isset($payload['items_version'])) {
             $order->items_version = (int) $payload['items_version'];
         }
