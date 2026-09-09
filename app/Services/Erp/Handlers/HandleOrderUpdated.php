@@ -112,10 +112,17 @@ class HandleOrderUpdated
         // прошлом) — заказ уходит из раздела резервов, клиентские правки закрываются.
         // Отсутствие ключа или null у reserve — режим не меняется.
         // reserved_until — ФАКТИЧЕСКИЙ срок удержания в 1С, не эхо запрошенного.
-        if (isset($payload['reserve'])) {
+        $reserveExplicit = isset($payload['reserve']);
+        if ($reserveExplicit) {
             $order->reserve = (bool) $payload['reserve'];
         }
-        if (array_key_exists('reserved_until', $payload)) {
+        // reserved_until при снятом резерве авторитетно = null: 1С предупредила
+        // (v16.9.1), что в эхе с reserve=false срок может остаться историческим,
+        // и по нему нельзя восстанавливать таймер/активное состояние. Пишем
+        // фактический срок только когда резерв активен.
+        if ($reserveExplicit && ! $order->reserve) {
+            $order->reserved_until = null;
+        } elseif (array_key_exists('reserved_until', $payload)) {
             $order->reserved_until = $payload['reserved_until'];
         }
         if (isset($payload['items_version'])) {

@@ -67,6 +67,30 @@ class CancelledReserveEchoTest extends TestCase
     }
 
     #[Test]
+    public function reserve_false_echo_clears_historical_until(): void
+    {
+        // 1С предупредила: в эхе с reserve=false срок может остаться историческим.
+        // Снятый резерв не должен нести reserved_until.
+        $order = Order::factory()->create([
+            'status' => OrderStatus::READY_FOR_SHIPMENT,
+            'reserve' => true,
+            'reserved_until' => now()->addDay(),
+        ]);
+
+        app(HandleOrderUpdated::class)->handle([
+            'event' => 'order.updated',
+            'uuid' => $order->uuid,
+            'reserve' => false,
+            'reserved_until' => now()->addDay()->toIso8601String(), // исторический срок
+            'items_version' => 2,
+        ]);
+
+        $fresh = $order->fresh();
+        $this->assertFalse((bool) $fresh->reserve);
+        $this->assertNull($fresh->reserved_until, 'срок снятого резерва обнулён, исторический не сохранён');
+    }
+
+    #[Test]
     public function duplicate_closed_echoes_are_idempotent(): void
     {
         // Дубль эха (дефект отправителя 1С на smoke-тесте): повторное закрытое
