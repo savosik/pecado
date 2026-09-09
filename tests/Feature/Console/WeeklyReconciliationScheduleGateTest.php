@@ -7,9 +7,9 @@ use Illuminate\Console\Scheduling\Schedule;
 use Tests\TestCase;
 
 /**
- * Понедельничная рассылка актов сверки стоит в расписании, но придержана флагом
- * MAIL_WEEKLY_RECONCILIATION_SCHEDULED: это письма клиентам, и после оживления
- * планировщика 2026-09-09 первый понедельник разослал бы их всем должникам разом.
+ * Понедельничная рассылка актов сверки стоит в расписании под рубильником
+ * MAIL_WEEKLY_RECONCILIATION_SCHEDULED: он останавливает именно акты, не трогая
+ * остальной поток. По умолчанию включён (решение заказчика 09.09.2026).
  */
 class WeeklyReconciliationScheduleGateTest extends TestCase
 {
@@ -20,17 +20,16 @@ class WeeklyReconciliationScheduleGateTest extends TestCase
         $this->assertSame('0 9 * * 1', $event->expression);
     }
 
-    public function test_weekly_reconciliation_is_held_back_by_default(): void
+    public function test_weekly_reconciliation_is_held_back_when_flag_is_off(): void
     {
         config(['mail_stream.weekly_reconciliation_scheduled' => false]);
 
         $this->assertFalse($this->weeklyReconciliationEvent()->filtersPass($this->app));
     }
 
-    public function test_weekly_reconciliation_runs_when_flag_is_on(): void
+    public function test_weekly_reconciliation_runs_by_default(): void
     {
-        config(['mail_stream.weekly_reconciliation_scheduled' => true]);
-
+        $this->assertTrue((bool) config('mail_stream.weekly_reconciliation_scheduled'));
         $this->assertTrue($this->weeklyReconciliationEvent()->filtersPass($this->app));
     }
 

@@ -32,7 +32,7 @@ enum MailFolder: string
             self::DRAFTS => 'Ждут отправки — здесь самолётик',
             self::SENT => 'Ушли адресатам',
             self::FAILED => 'Ошибка адреса или отказ почтового сервера',
-            self::UNMATCHED => 'Собрано системой, но ни одно правило не поймало',
+            self::UNMATCHED => 'Собрано системой без отправки: адресат не раскрылся или письмо — точка отсчёта',
         };
     }
 
@@ -47,7 +47,7 @@ enum MailFolder: string
             self::DRAFTS => [EmailStatus::DRAFT->value, EmailStatus::QUEUED->value],
             self::SENT => [EmailStatus::SENT->value],
             self::FAILED => [EmailStatus::FAILED->value],
-            self::UNMATCHED => [EmailStatus::UNMATCHED->value],
+            self::UNMATCHED => [EmailStatus::UNMATCHED->value, EmailStatus::RECORDED->value],
         };
     }
 

@@ -47,16 +47,42 @@ class MailStream
             return null;
         }
 
-        $client = $occasion->clientUserId === null
-            ? null
-            : User::query()->with('crmProfile')->find($occasion->clientUserId);
-
         // Письмо, которое никому не уйдёт, незачем и создавать. Именно из
         // таких состояла папка «Без получателя»: она выглядела недоработкой,
         // хотя была нормой.
         if (! $this->router->wants($occasion)) {
             return null;
         }
+
+        return $this->compose($occasion, silent: false);
+    }
+
+    /**
+     * Записать повод как точку отсчёта: письмо есть, отправки нет.
+     *
+     * Нужен источникам, которые помнят состояние по своему последнему письму
+     * (финансовый обход). При включении обхода на живых данных «возникла
+     * просрочка» по долгам месячной давности — не новость, слать её нельзя;
+     * но без записи рост и погашение этой просрочки не заметить никогда.
+     * Адресат не спрашивается: это память сканера, а не почта.
+     */
+    public function record(Occasion $occasion): ?CrmEmail
+    {
+        if (! $this->accepts($occasion)) {
+            return null;
+        }
+
+        return $this->compose($occasion, silent: true);
+    }
+
+    /**
+     * Общая часть capture() и record(): склейка, тело, автор, вложения.
+     */
+    private function compose(Occasion $occasion, bool $silent): ?CrmEmail
+    {
+        $client = $occasion->clientUserId === null
+            ? null
+            : User::query()->with('crmProfile')->find($occasion->clientUserId);
 
         $data = $this->enrich($occasion, $client);
         $tags = $this->tags->build($occasion->key, $data, $client);
@@ -83,8 +109,13 @@ class MailStream
             'to' => [],
             'subject' => $this->subject($occasion, $data),
             'body_html' => $this->body($occasion),
-            'status' => EmailStatus::UNMATCHED->value,
+            'status' => $silent ? EmailStatus::RECORDED->value : EmailStatus::UNMATCHED->value,
         ]);
+
+        if ($silent) {
+            // Не в $fillable намеренно: причину пропуска ставит только система.
+            $letter->skip_reason = 'Точка отсчёта при включении обхода: состояние зафиксировано, письмо не отправлялось';
+        }
 
         if ($occasion->subject instanceof Model) {
             $letter->related()->associate($occasion->subject);
@@ -110,6 +141,10 @@ class MailStream
 
         $this->attachInvoice($letter, $data);
         $this->attachReconciliationAct($letter, $occasion);
+
+        if ($silent) {
+            return $letter->refresh();
+        }
 
         // Отправка откладывается на окно склейки: партия из 1С должна успеть
         // прийти целиком. Задача ставится одна на партию — поводы, попавшие

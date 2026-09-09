@@ -28,6 +28,18 @@ enum EmailStatus: string
      */
     case UNMATCHED = 'unmatched';
 
+    /**
+     * Собрано и записано без отправки — точка отсчёта.
+     *
+     * Финансовый обход помнит состояние клиента по своему последнему письму.
+     * При включении обхода на живых данных «возникла просрочка» по долгам
+     * месячной давности — не новость, и слать её нельзя; но и пропустить
+     * нельзя, иначе рост и погашение этой просрочки не заметить никогда.
+     * Такое письмо — память сканера, а не почта: чистка «без получателя»
+     * его не трогает, менеджер при желании отправит руками.
+     */
+    case RECORDED = 'recorded';
+
     public function label(): string
     {
         return match ($this) {
@@ -39,6 +51,7 @@ enum EmailStatus: string
             // задаёт настройка партнёра, и если письмо здесь — значит адресат
             // указан, но раскрыть его не удалось.
             self::UNMATCHED => 'Без получателя',
+            self::RECORDED => 'Зафиксировано',
         };
     }
 
@@ -53,6 +66,7 @@ enum EmailStatus: string
             self::SENT => 'green',
             self::FAILED => 'red',
             self::UNMATCHED => 'orange',
+            self::RECORDED => 'gray',
         };
     }
 
@@ -61,7 +75,7 @@ enum EmailStatus: string
      */
     public function isEditable(): bool
     {
-        return $this === self::DRAFT || $this === self::FAILED || $this === self::UNMATCHED;
+        return $this === self::DRAFT || $this === self::FAILED || $this === self::UNMATCHED || $this === self::RECORDED;
     }
 
     /**

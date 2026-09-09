@@ -16,7 +16,8 @@ class MailFinanceScan extends Command
 {
     protected $signature = 'mail:finance-scan
         {--horizon=3 : За сколько дней предупреждать о сроке оплаты}
-        {--dry-run : Посчитать, но писем не создавать}';
+        {--dry-run : Посчитать, но писем не создавать}
+        {--baseline : Записать текущую просрочку как точку отсчёта, ничего не отправляя}';
 
     protected $description = 'Собрать письма по финансовым поводам: срок оплаты, просрочка, погашение';
 
@@ -24,9 +25,16 @@ class MailFinanceScan extends Command
     {
         $dryRun = (bool) $this->option('dry-run');
 
-        $result = $scanner->scan((int) $this->option('horizon'), $dryRun);
+        // Точка отсчёта — для включения обхода на живых данных: первый прогон
+        // без неё разослал бы «возникла просрочка» по долгам месячной давности.
+        if ($this->option('baseline')) {
+            $result = $scanner->baseline();
+            $this->info('Точка отсчёта записана (писем не отправлено):');
+        } else {
+            $result = $scanner->scan((int) $this->option('horizon'), $dryRun);
+            $this->info($dryRun ? 'Пробный обход (писем не создано):' : 'Обход завершён:');
+        }
 
-        $this->info($dryRun ? 'Пробный обход (писем не создано):' : 'Обход завершён:');
         $this->line("  подходит срок оплаты: {$result['due_soon']}");
         $this->line("  возникла просрочка:   {$result['started']}");
         $this->line("  просрочка выросла:    {$result['grew']}");

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Crm\Mail;
 
+use App\Enums\Crm\EmailStatus;
+use App\Jobs\SendNotificationJob;
 use App\Models\Company;
 use App\Models\CrmEmail;
 use App\Models\PersonalManager;
@@ -10,6 +12,7 @@ use App\Models\User;
 use App\Services\Crm\Mail\Sources\FinanceScanner;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -164,5 +167,69 @@ class MailFinanceTest extends TestCase
         $letter = CrmEmail::query()->where('origin_event', 'like', 'finance.%')->latest('id')->firstOrFail();
 
         $this->assertSame(['dir@romashka.ru'], (array) $letter->to);
+    }
+
+    /**
+     * Точка отсчёта: обход включают на живых данных, и «возникла просрочка»
+     * по долгу месячной давности — не новость. Письмо записывается, но не уходит.
+     */
+    #[Test]
+    public function точка_отсчёта_записывает_просрочку_без_отправки(): void
+    {
+        Bus::fake([SendNotificationJob::class]);
+
+        $this->setOverdue(150000, 65);
+        $result = app(FinanceScanner::class)->baseline();
+
+        $this->assertSame(1, $result['started']);
+        $this->assertSame(0, $result['due_soon']);
+
+        $letter = CrmEmail::query()->where('origin_event', 'finance.overdue_started')->firstOrFail();
+        $this->assertSame(EmailStatus::RECORDED, $letter->status);
+        $this->assertSame([], (array) $letter->to);
+        $this->assertNotEmpty($letter->skip_reason);
+
+        Bus::assertNotDispatched(SendNotificationJob::class);
+    }
+
+    #[Test]
+    public function после_точки_отсчёта_неизменная_просрочка_молчит_а_рост_становится_письмом(): void
+    {
+        $this->setOverdue(150000, 65);
+        app(FinanceScanner::class)->baseline();
+
+        // Тот же долг наутро — переходов нет, старое письмо не всплывает.
+        $this->scan();
+        $this->assertSame(1, CrmEmail::query()->where('origin_event', 'like', 'finance.overdue%')->count());
+
+        // Просрочка перешагнула ступень — это новость, и уходит обычным письмом.
+        $this->setOverdue(150000, 95);
+        $this->scan();
+
+        $grew = CrmEmail::query()->where('origin_event', 'finance.overdue_grew')->firstOrFail();
+        $this->assertNotSame(EmailStatus::RECORDED, $grew->status);
+        $this->assertContains('просрочка:90+', $grew->tagList());
+    }
+
+    #[Test]
+    public function после_точки_отсчёта_погашение_замечается(): void
+    {
+        $this->setOverdue(150000, 65);
+        app(FinanceScanner::class)->baseline();
+
+        $this->setOverdue(0, 0);
+        $this->scan();
+
+        $this->assertSame(1, CrmEmail::query()->where('origin_event', 'finance.overdue_cleared')->count());
+    }
+
+    #[Test]
+    public function точка_отсчёта_не_плодится_при_повторе(): void
+    {
+        $this->setOverdue(150000, 65);
+        app(FinanceScanner::class)->baseline();
+        app(FinanceScanner::class)->baseline();
+
+        $this->assertSame(1, CrmEmail::query()->where('origin_event', 'like', 'finance.%')->count());
     }
 }

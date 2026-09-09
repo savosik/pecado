@@ -55,6 +55,25 @@ class FinanceScanner
     }
 
     /**
+     * Точка отсчёта: записать текущую просрочку без отправки.
+     *
+     * Для включения обхода на живых данных. Сканер помнит состояние клиента
+     * по своему последнему письму, и первый прогон без точки отсчёта разослал
+     * бы «возникла просрочка» по долгам месячной давности. Сроки оплаты
+     * не трогаются: они про ближайшие дни и старыми быть не могут — их
+     * заберёт первый настоящий обход.
+     *
+     * @return array{due_soon: int, started: int, grew: int, cleared: int}
+     */
+    public function baseline(): array
+    {
+        return [
+            'due_soon' => 0,
+            ...$this->scanOverdue(CarbonImmutable::today(), dryRun: false, silent: true),
+        ];
+    }
+
+    /**
      * Строки графика оплат, срок по которым подходит.
      */
     private function scanDueSoon(CarbonImmutable $today, int $horizonDays, bool $dryRun): int
@@ -124,7 +143,7 @@ class FinanceScanner
      *
      * @return array{started: int, grew: int, cleared: int}
      */
-    private function scanOverdue(CarbonImmutable $today, bool $dryRun): array
+    private function scanOverdue(CarbonImmutable $today, bool $dryRun, bool $silent = false): array
     {
         $result = ['started' => 0, 'grew' => 0, 'cleared' => 0];
 
@@ -155,7 +174,7 @@ class FinanceScanner
                 companyId: $current['company_id'],
                 data: $data,
                 view: $view,
-            ));
+            ), $silent);
 
             $result[str_replace('finance.overdue_', '', $eventKey)]++;
         }
@@ -299,9 +318,15 @@ class FinanceScanner
     /**
      * Повод превращается в письмо — или только считается, если это сухой прогон.
      */
-    private function publish(bool $dryRun, Occasion $occasion): void
+    private function publish(bool $dryRun, Occasion $occasion, bool $silent = false): void
     {
         if ($dryRun) {
+            return;
+        }
+
+        if ($silent) {
+            $this->stream->record($occasion);
+
             return;
         }
 
