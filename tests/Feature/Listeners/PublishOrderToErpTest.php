@@ -855,4 +855,82 @@ class PublishOrderToErpTest extends TestCase
 
         $this->assertFalse($result['valid']);
     }
+
+    /**
+     * v16.9.2 (топик №6 Agent Hub, 09.09.2026): reserve — авторитетный признак
+     * обеспечения, уходит явным Boolean на КАЖДОМ order.created. Обычный заказ
+     * (reserve=false) обязан нести reserve:false, иначе 1С резервирует по умолчанию
+     * вопреки выбору клиента «к отгрузке».
+     */
+    #[Test]
+    public function order_created_always_carries_explicit_reserve_false_for_normal_order(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create(['erp_id' => 'reserve-flag-user']);
+        $product = Product::factory()->create(['external_id' => 'reserve-flag-prod']);
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'reserve' => false,
+            'reserved_until' => null,
+        ]);
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'name' => $product->name,
+            'quantity' => 3,
+            'price' => 100.0,
+            'subtotal' => 300.0,
+        ]);
+
+        Queue::fake();
+        (new \App\Listeners\PublishOrderToErp)->handle(new OrderCreated($order));
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            $payload = $job->payload;
+            $this->assertArrayHasKey('reserve', $payload, 'reserve присутствует всегда');
+            $this->assertFalse($payload['reserve'], 'обычный заказ → reserve:false');
+            $this->assertArrayNotHasKey('reserved_until', $payload, 'без резерва срок не шлём');
+
+            return $payload['event'] === 'order.created';
+        });
+    }
+
+    #[Test]
+    public function order_created_carries_reserve_true_with_deadline_for_reserve_order(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create(['erp_id' => 'reserve-flag-user-2']);
+        $product = Product::factory()->create(['external_id' => 'reserve-flag-prod-2']);
+        $deadline = now()->addDay();
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'reserve' => true,
+            'reserved_until' => $deadline,
+        ]);
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'name' => $product->name,
+            'quantity' => 2,
+            'price' => 100.0,
+            'subtotal' => 200.0,
+        ]);
+
+        Queue::fake();
+        (new \App\Listeners\PublishOrderToErp)->handle(new OrderCreated($order));
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            $payload = $job->payload;
+            $this->assertTrue($payload['reserve'], 'резервный заказ → reserve:true');
+            $this->assertArrayHasKey('reserved_until', $payload, 'при резерве срок обязателен');
+            $this->assertNotNull($payload['reserved_until']);
+
+            $result = app(\App\Services\Erp\ErpMessageValidator::class)
+                ->validateOutbound('order.created', $payload);
+
+            return $result['valid'] === true;
+        });
+    }
 }
