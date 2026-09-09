@@ -449,6 +449,10 @@ jobs:
 
       - name: "📤 Sync code to /srv/pecado"
         run: |
+          # storage/app/private в исключениях: там лежат приватные файлы,
+          # созданные самим приложением (аватарки партнёров в CRM).
+          # Без этого rsync --delete стирает их при каждом релизе —
+          # запись в БД остаётся, а файла на диске уже нет.
           rsync -a --delete \
             --exclude='.git' \
             --exclude='.env' \
@@ -461,6 +465,7 @@ jobs:
             --exclude='storage/framework/sessions' \
             --exclude='storage/framework/views' \
             --exclude='storage/app/exports' \
+            --exclude='storage/app/private' \
             --exclude='storage/app/public' \
             ./ /srv/pecado/
 

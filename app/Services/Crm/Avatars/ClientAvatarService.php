@@ -9,6 +9,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 /**
  * Хранение аватарок партнёров: единственное место, где файл появляется,
@@ -158,7 +159,13 @@ class ClientAvatarService
             // закешировавший аватарку по адресу, при замене показывал бы старую.
             $path = $client->getKey().'/'.Str::random(24).'.webp';
 
-            $this->disk()->put($path, $webp);
+            // Результат проверяем явно: у диска throw выключен, и молча
+            // не записанный файл превратился бы в запись «аватарка есть»
+            // с битой ссылкой — ровно то, что случилось при первом боевом
+            // прогоне, когда деплой стирал каталог из-под ног.
+            if ($this->disk()->put($path, $webp) === false) {
+                throw new RuntimeException('Не удалось записать файл аватарки на диск.');
+            }
 
             $avatar->fill($meta + [
                 'path' => $path,
