@@ -6,7 +6,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import CabinetLayout from './CabinetLayout';
-import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuPhone, LuMail, LuUserRound, LuInfo, LuBuilding2, LuReceipt } from 'react-icons/lu';
+import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuPhone, LuMail, LuUserRound, LuInfo, LuBuilding2, LuReceipt, LuHourglass } from 'react-icons/lu';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import PaymentOrderDialog from '@/shared/PaymentOrderDialog';
@@ -18,7 +18,7 @@ const toQuery = (params) => new URLSearchParams(
     Object.entries(params).filter(([, v]) => v !== null && v !== undefined && v !== ''),
 ).toString();
 
-export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [], questionnaireCompleted = true, clientStatus = null, personalManager = null, paymentOrdersEnabled = false }) {
+export default function Dashboard({ ordersCount = 0, preordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [], questionnaireCompleted = true, clientStatus = null, personalManager = null, paymentOrdersEnabled = false }) {
     // Пара «контрагент × наше юрлицо», по которой открыт диалог платёжки; null — закрыт.
     const [paymentPair, setPaymentPair] = useState(null);
 
@@ -64,8 +64,13 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
         .toUpperCase()
         .slice(0, 2);
 
+    // Предзаказы — своя плитка: в разделе «Заказы» их нет, и без отдельного
+    // числа они пропали бы из обзора совсем. Пустую плитку не показываем.
     const stats = [
         { label: 'Заказы', value: ordersCount, icon: LuShoppingBag, href: '/cabinet/orders' },
+        ...(preordersCount > 0
+            ? [{ label: 'Предзаказы', value: preordersCount, icon: LuHourglass, href: '/cabinet/preorders' }]
+            : []),
         { label: 'Избранное', value: favoritesCount, icon: LuHeart, href: '/favorites' },
         { label: 'Корзины', value: cartsCount, icon: LuShoppingCart, href: '/cart' },
     ];

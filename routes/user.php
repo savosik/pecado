@@ -178,6 +178,12 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     // Orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/export', [OrderController::class, 'export'])->name('orders.export');
+
+    // Предзаказы — свой раздел меню поверх того же списка: область отбора
+    // контроллер берёт из имени маршрута (OrderController::isPreorderScope),
+    // поэтому «Заказы» предзаказов не показывают, а карточка одна на оба.
+    Route::get('/preorders', [OrderController::class, 'index'])->name('preorders.index');
+    Route::get('/preorders/export', [OrderController::class, 'export'])->name('preorders.export');
     Route::get('/orders/{order}/items/export', [OrderController::class, 'exportItems'])->name('orders.items.export');
     Route::post('/orders/{order}/repeat', [OrderController::class, 'repeat'])->name('orders.repeat');
     // v16.9.0 (res-04): отмена заказа клиентом — за рубильником order_reserve.enabled

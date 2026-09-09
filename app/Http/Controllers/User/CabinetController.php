@@ -20,7 +20,14 @@ class CabinetController extends Controller
         $questionnaire = $user->questionnaire;
         $user->load(['clientStatus', 'personalManager.media']);
 
-        $ordersCount = Order::where('user_id', $user->id)->count();
+        // Предзаказы считаются отдельно: плитка ведёт в раздел «Заказы», а он
+        // их не показывает — иначе клиент кликал бы по числу и видел меньше.
+        $ordersCount = Order::where('user_id', $user->id)
+            ->where('type', '!=', \App\Enums\OrderType::PREORDER->value)
+            ->count();
+        $preordersCount = Order::where('user_id', $user->id)
+            ->where('type', \App\Enums\OrderType::PREORDER->value)
+            ->count();
         $favoritesCount = $user->favorites()->count();
         $cartsCount = $user->carts()->count();
 
@@ -53,6 +60,7 @@ class CabinetController extends Controller
 
         return Inertia::render('User/Cabinet/Dashboard', [
             'ordersCount' => $ordersCount,
+            'preordersCount' => $preordersCount,
             'favoritesCount' => $favoritesCount,
             'cartsCount' => $cartsCount,
             'balance' => $ledger,

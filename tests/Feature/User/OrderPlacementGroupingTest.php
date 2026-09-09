@@ -85,10 +85,34 @@ class OrderPlacementGroupingTest extends TestCase
                 $ids = array_column($page->toArray()['props']['orders']['data'], 'id');
 
                 $this->assertSame(
-                    [$foreign->id, $order->id, $preorder->id, $promo->id],
+                    [$foreign->id, $order->id, $promo->id],
                     $ids,
                     'Документы одной корзины обязаны идти подряд, в порядке сборки',
                 );
+                $this->assertNotContains(
+                    $preorder->id,
+                    $ids,
+                    'Предзаказ живёт в своём разделе и в списке заказов не показывается',
+                );
+            });
+    }
+
+    #[Test]
+    public function предзаказ_показывается_только_в_своём_разделе(): void
+    {
+        $cart = Cart::factory()->create(['user_id' => $this->user->id]);
+
+        $order = $this->order(OrderType::ORDER, $cart->id, '2026-08-01 10:00:00');
+        $preorder = $this->order(OrderType::PREORDER, $cart->id, '2026-08-01 10:00:00');
+
+        $this->actingAs($this->user)
+            ->get('/cabinet/preorders')
+            ->assertInertia(function (AssertableInertia $page) use ($order, $preorder) {
+                $ids = array_column($page->toArray()['props']['orders']['data'], 'id');
+
+                $this->assertSame([$preorder->id], $ids);
+                $this->assertNotContains($order->id, $ids);
+                $page->where('scope', 'preorders');
             });
     }
 

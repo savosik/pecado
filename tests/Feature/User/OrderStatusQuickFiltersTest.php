@@ -98,11 +98,13 @@ class OrderStatusQuickFiltersTest extends TestCase
     #[Test]
     public function counts_respect_other_active_filters(): void
     {
+        // Тип для проверки — уценка, а не предзаказ: предзаказы вынесены в свой
+        // раздел (/cabinet/preorders) и в этот список не попадают вовсе.
         $this->makeOrder(OrderStatus::CLOSED, ['type' => OrderType::ORDER]);
-        $this->makeOrder(OrderStatus::CLOSED, ['type' => OrderType::PREORDER]);
-        $this->makeOrder(OrderStatus::SHIPPING, ['type' => OrderType::PREORDER]);
+        $this->makeOrder(OrderStatus::CLOSED, ['type' => OrderType::DEFECT]);
+        $this->makeOrder(OrderStatus::SHIPPING, ['type' => OrderType::DEFECT]);
 
-        $props = $this->fetchProps('type='.OrderType::PREORDER->value);
+        $props = $this->fetchProps('type='.OrderType::DEFECT->value);
         $counts = $this->statusCounts($props);
 
         $this->assertSame(1, $counts[OrderStatus::CLOSED->value]);

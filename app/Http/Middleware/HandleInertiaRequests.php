@@ -124,7 +124,37 @@ class HandleInertiaRequests extends Middleware
                 // чекауте видны только участнику режима (рубильник ∧ флаг 1С ∧ не
                 // отключён точечно); счётчик — бейдж на пункте меню.
                 ...($this->reserveProps($request)),
+                // Бейджи разделов кабинета (предзаказы, корзины).
+                ...($this->cabinetCounts($request)),
             ],
+        ];
+    }
+
+    /**
+     * Счётчики для бейджей меню кабинета.
+     *
+     * Считаются только на страницах кабинета — на витрине меню нет, и платить
+     * за них каждым запросом каталога незачем. Бейдж есть лишь там, где число
+     * означает незакрытую работу клиента: закрытые предзаказы и пустые корзины
+     * в него не входят, «всего отгрузок» бейджем не выводится вовсе.
+     *
+     * @return array{preorder_count: int, cart_count: int}
+     */
+    private function cabinetCounts(\Illuminate\Http\Request $request): array
+    {
+        $user = $request->user();
+
+        if ($user === null || ! $request->is('cabinet', 'cabinet/*')) {
+            return ['preorder_count' => 0, 'cart_count' => 0];
+        }
+
+        return [
+            'preorder_count' => \App\Models\Order::query()
+                ->where('user_id', $user->id)
+                ->where('type', \App\Enums\OrderType::PREORDER->value)
+                ->where('status', '!=', \App\Enums\OrderStatus::CLOSED->value)
+                ->count(),
+            'cart_count' => $user->carts()->has('items')->count(),
         ];
     }
 

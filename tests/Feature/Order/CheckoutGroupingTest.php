@@ -186,15 +186,20 @@ class CheckoutGroupingTest extends TestCase
 
         $expected = $orders->first()->checkout_uuid;
 
-        $this->actingAs($this->user)
-            ->get(route('cabinet.orders.index'))
-            ->assertOk()
-            ->assertInertia(function (\Inertia\Testing\AssertableInertia $page) use ($expected) {
-                $rows = collect($page->toArray()['props']['orders']['data']);
+        // Оформление дало два документа — заказ и предзаказ, и они разошлись по
+        // разным разделам кабинета. Общий checkout_uuid обязан остаться у обоих:
+        // по нему кабинет и собирает документы одной покупки.
+        foreach ([['cabinet.orders.index', 1], ['cabinet.preorders.index', 1]] as [$route, $count]) {
+            $this->actingAs($this->user)
+                ->get(route($route))
+                ->assertOk()
+                ->assertInertia(function (\Inertia\Testing\AssertableInertia $page) use ($expected, $count) {
+                    $rows = collect($page->toArray()['props']['orders']['data']);
 
-                $this->assertCount(2, $rows);
-                $this->assertSame([$expected], $rows->pluck('checkout_uuid')->unique()->all());
-            });
+                    $this->assertCount($count, $rows);
+                    $this->assertSame([$expected], $rows->pluck('checkout_uuid')->unique()->all());
+                });
+        }
     }
 
     /**

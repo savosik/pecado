@@ -276,14 +276,14 @@ export default function Index({ carts = { data: [], current_page: 1, last_page: 
 
     return (
         <CabinetLayout
-            title="Мои корзины"
+            title="Корзины"
             actions={
                 <Button onClick={openCreateDialog} bg="#9e1b32" color="white" _hover={{ bg: '#7a1527' }} size="sm">
                     <LuPlus /> Создать
                 </Button>
             }
         >
-            <Head title="Мои корзины — Pecado" />
+            <Head title="Корзины — Pecado" />
 
             {/* Toolbar */}
             <Flex gap="2" mb="4" align="center" wrap="wrap">

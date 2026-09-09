@@ -25,7 +25,16 @@ import { useSearchHistory } from '@/hooks/useSearchHistory';
 import { ORDER_STATUS_COLORS as STATUS_COLORS } from '@/constants/orderStatus';
 import { getOrderTypeShortLabel, getOrderTypeColor } from '@/constants/orderType';
 
-export default function OrdersIndex({ filters, statuses, statusTotal = 0, types, companies = [], presetsEnabled = false, exportEnabled = false, suggestion = null }) {
+// Раздел «Предзаказы» — та же страница на своём URL: сервер отбирает документы
+// по типу (OrderController::isPreorderScope), фронт меняет заголовок и адреса
+// навигации. Отдельный URL нужен, чтобы пункт меню подсвечивался по пути.
+const SCOPES = {
+    orders: { title: 'Заказы', basePath: '/cabinet/orders', section: 'orders' },
+    preorders: { title: 'Предзаказы', basePath: '/cabinet/preorders', section: 'preorders' },
+};
+
+export default function OrdersIndex({ scope = 'orders', filters, statuses, statusTotal = 0, types, companies = [], presetsEnabled = false, exportEnabled = false, suggestion = null }) {
+    const { title, basePath, section } = SCOPES[scope] ?? SCOPES.orders;
     const [groupByCart, setGroupByCart] = useState(true);
     const { orders, currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
@@ -51,7 +60,7 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
     });
 
     const navigateWithParams = (params) => {
-        router.get('/cabinet/orders', {
+        router.get(basePath, {
             ...filters,
             ...params,
         }, {
@@ -60,7 +69,7 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
         });
     };
 
-    const { history: searchHistory, push: pushSearchHistory } = useSearchHistory('orders');
+    const { history: searchHistory, push: pushSearchHistory } = useSearchHistory(section);
 
     // Debounce 400 мс для поля поиска (§ «Сквозные принципы» п.3, A-7).
     const lastSubmittedSearch = useRef(filters?.search || '');
@@ -212,8 +221,8 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
     };
 
     return (
-        <CabinetLayout title="Мои заказы">
-            <Head title="Мои заказы — Pecado" />
+        <CabinetLayout title={title}>
+            <Head title={`${title} — Pecado`} />
 
             {/* Поиск + фильтры + сортировка — одной строкой */}
             <Flex gap="2" mb="4" align="center">
@@ -259,15 +268,15 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
 
                 {presetsEnabled && (
                     <SavedSearches
-                        section="orders"
+                        section={section}
                         current={{ ...filters, search }}
-                        basePath="/cabinet/orders"
+                        basePath={basePath}
                     />
                 )}
 
                 {exportEnabled && (
                     <ExportMenu
-                        basePath="/cabinet/orders/export"
+                        basePath={`${basePath}/export`}
                         filters={{ ...filters, search }}
                     />
                 )}
@@ -352,6 +361,8 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
                                     </Select.Root>
                                 </Field>
 
+                                {/* В разделе предзаказов тип один — сервер отдаёт пустой список */}
+                                {types?.length > 0 && (
                                 <Field label="Тип" flex="1">
                                     <Select.Root
                                         collection={typeCollection}
@@ -370,6 +381,7 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
                                         </Select.Content>
                                     </Select.Root>
                                 </Field>
+                                )}
 
                                 {companies.length > 0 && (
                                     <Field label="Контрагент" flex="1">

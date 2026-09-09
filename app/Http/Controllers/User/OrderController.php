@@ -32,8 +32,22 @@ class OrderController extends Controller
     ) {}
 
     /**
+     * Раздел предзаказов — тот же список, отобранный по типу.
+     *
+     * Предзаказ вынесен в отдельный пункт меню: у него своя жизнь («когда
+     * приедет»), а по статусам он ходит по тем же десяти значениям, что и
+     * заказ. Поэтому раздел определяется маршрутом, а не фильтром `type`:
+     * иначе один документ попадал бы в оба списка и считался дважды.
+     */
+    private function isPreorderScope(Request $request): bool
+    {
+        return $request->routeIs('cabinet.preorders.*');
+    }
+
+    /**
      * Список заказов текущего пользователя.
-     * GET /cabinet/orders
+     * GET /cabinet/orders — заказы (всё, кроме предзаказов)
+     * GET /cabinet/preorders — предзаказы
      */
     public function index(Request $request): InertiaResponse
     {
@@ -124,7 +138,10 @@ class OrderController extends Controller
             ? EmptyResultSuggestion::build($search, $this->activeFiltersForSuggestion($context, $companies))
             : null;
 
+        $isPreorders = $this->isPreorderScope($request);
+
         return Inertia::render('User/Cabinet/Orders/Index', [
+            'scope' => $isPreorders ? 'preorders' : 'orders',
             'orders' => $orders,
             'filters' => [
                 'search' => $context['search'],
@@ -149,7 +166,14 @@ class OrderController extends Controller
                 'count' => $statusCounts[$case->value] ?? 0,
             ]),
             'statusTotal' => array_sum($statusCounts),
-            'types' => OrderType::options(),
+            // В разделе предзаказов фильтр по типу лишён смысла — тип там один;
+            // в разделе заказов из списка убран «Предзаказ», он живёт отдельно.
+            'types' => $isPreorders
+                ? []
+                : array_values(array_filter(
+                    OrderType::options(),
+                    fn (array $option) => $option['value'] !== OrderType::PREORDER->value,
+                )),
             'companies' => $companies,
             'presetsEnabled' => (bool) config('search-cabinet.presets'),
             'exportEnabled' => (bool) config('search-cabinet.export'),
@@ -266,11 +290,13 @@ class OrderController extends Controller
             }
         })();
 
-        $filename = 'orders-'.now()->format('Y-m-d-His');
+        $isPreorders = $this->isPreorderScope($request);
+        $filename = ($isPreorders ? 'preorders-' : 'orders-').now()->format('Y-m-d-His');
+        $sheet = $isPreorders ? 'Предзаказы' : 'Заказы';
 
         return $format === 'csv'
             ? $csv->stream($filename, $headers, $rows)
-            : $xlsx->stream($filename, $headers, $rows, 'Заказы');
+            : $xlsx->stream($filename, $headers, $rows, $sheet);
     }
 
     /**
@@ -358,6 +384,14 @@ class OrderController extends Controller
                 }
             });
         }
+
+        // Область раздела (см. `isPreorderScope`) — предустановленный фильтр по
+        // типу, а не пользовательский: предзаказы видны только в своём разделе.
+        $query->where(
+            'type',
+            $this->isPreorderScope($request) ? '=' : '!=',
+            OrderType::PREORDER->value,
+        );
 
         $type = $request->input('type');
         if ($type) {

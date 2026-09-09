@@ -12,8 +12,15 @@ import {
     LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin, LuContact,
     LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuReceipt, LuLayoutGrid, LuWrench, LuCode,
     LuChartPie, LuMessageSquare, LuArrowRightLeft, LuFileText, LuBell, LuFilePen, LuClock3,
+    LuHourglass, LuBanknote,
 } from 'react-icons/lu';
 
+// Меню кабинета группируется по сущностям, а не по стадиям заказа: стадия —
+// это фильтр статуса внутри списка (см. StatusQuickFilters на странице
+// заказов), и вынос её в меню развёл бы один документ по нескольким пунктам.
+// Бейджи стоят только там, где число означает работу клиента; «всего отгрузок»
+// бейджем не выводится — справочное число не зовёт к действию, а запрос за ним
+// платился бы на каждой странице кабинета.
 const menuGroups = [
     {
         title: 'Обзор',
@@ -25,23 +32,37 @@ const menuGroups = [
     {
         title: 'Заказы',
         items: [
-            { href: '/cabinet/orders', label: 'Мои заказы', icon: LuShoppingBag },
+            { href: '/cabinet/orders', label: 'Заказы', icon: LuShoppingBag },
+            // Предзаказ живёт отдельно от заказа: клиент следит не за статусом,
+            // а за «когда приедет». Список на /cabinet/preorders отбирается по
+            // типу, поэтому в «Заказах» предзаказов нет и двойного счёта тоже.
+            { href: '/cabinet/preorders', label: 'Предзаказы', icon: LuHourglass, badge: 'preorder_count' },
             // Режим «Заказы в резерве» (v16.9.0): пункт виден только участнику режима
             // (config.reserves_enabled), бейдж — количество активных резервов.
             { href: '/cabinet/reserves', label: 'Заказы в резерве', icon: LuClock3, feature: 'reserves', badge: 'reserve_count' },
+            { href: '/cabinet/carts', label: 'Корзины', icon: LuShoppingCart, badge: 'cart_count' },
             { href: '/cabinet/order-changes', label: 'Изменения заказов', icon: LuArrowRightLeft },
+        ],
+    },
+    {
+        title: 'Отгрузки и возвраты',
+        items: [
             { href: '/cabinet/shipments', label: 'Отгрузки', icon: LuTruck },
-            // Печатные формы из 1С. Скрыт, пока раздел не открыт (config.documents_enabled);
-            // приём документов из 1С при этом работает всегда.
-            { href: '/cabinet/documents', label: 'Документы', icon: LuFileText, feature: 'documents' },
+            { href: '/cabinet/returns', label: 'Возвраты', icon: LuRotateCcw },
+        ],
+    },
+    {
+        title: 'Финансы',
+        items: [
             // Договоры из реестра CRM: показываются те, что менеджер отметил
             // видимыми партнёру (config.contracts_cabinet_enabled).
             { href: '/cabinet/contracts', label: 'Договоры', icon: LuFilePen, feature: 'contracts' },
+            // Печатные формы из 1С. Скрыт, пока раздел не открыт (config.documents_enabled);
+            // приём документов из 1С при этом работает всегда.
+            { href: '/cabinet/documents', label: 'Документы', icon: LuFileText, feature: 'documents' },
             // Раздел скрыт, пока цифры долга не сверены с 1С (config.cabinet_finance_enabled).
             { href: '/cabinet/payments', label: 'Оплаты', icon: LuReceipt, feature: 'finance' },
-            { href: '/cabinet/payment-orders', label: 'Платёжное поручение', icon: LuReceipt, feature: 'payment_orders' },
-            { href: '/cabinet/returns', label: 'Возвраты', icon: LuRotateCcw },
-            { href: '/cabinet/carts', label: 'Мои корзины', icon: LuShoppingCart },
+            { href: '/cabinet/payment-orders', label: 'Платёжные поручения', icon: LuBanknote, feature: 'payment_orders' },
         ],
     },
     {
