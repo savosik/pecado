@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Wms;
 
+use App\Enums\OrderType;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductDefect;
 use App\Models\User;
@@ -45,6 +47,25 @@ class WmsDefectCoverageTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    /** Живой заказ уценки на партию: резерв, который 1С уже вычла из остатка. */
+    private function reserve(ProductDefect $defect, int $quantity): Order
+    {
+        $order = Order::factory()->create(['type' => OrderType::DEFECT]);
+        $order->items()->create([
+            'product_id' => $defect->product_id,
+            'product_defect_id' => $defect->id,
+            'name' => 'Резерв',
+            'price' => 300,
+            'base_price' => 300,
+            'discount_percent' => 0,
+            'final_price' => 300,
+            'quantity' => $quantity,
+            'subtotal' => 300 * $quantity,
+        ]);
+
+        return $order;
     }
 
     /**
@@ -321,6 +342,131 @@ class WmsDefectCoverageTest extends TestCase
     }
 
     // ────────────────────────────────────────────
+    // Резерв: 1С шлёт свободный остаток, партии описывают полку
+    // ────────────────────────────────────────────
+
+    #[Test]
+    public function резерв_живого_заказа_вычитается_из_партий(): void
+    {
+        $warehouse = Warehouse::factory()->defect()->create();
+        $product = Product::factory()->create();
+
+        // Полка: 3 шт. в партиях, 2 уже заказаны → 1С прислала 1 свободную.
+        $this->stock($product, $warehouse, 1);
+        $defect = ProductDefect::factory()->sellable()->create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 3,
+        ]);
+        $this->reserve($defect, 2);
+
+        // Расхождения нет: свободно в 1С 1, свободно в партиях 3 − 2 = 1.
+        $this->assertSame([], $this->rows('filter=over'));
+
+        $rows = $this->rows('filter=all');
+        $this->assertCount(1, $rows);
+        $this->assertSame(1, $rows[0]['stock_quantity']);
+        $this->assertSame(3, $rows[0]['covered_quantity']);
+        $this->assertSame(2, $rows[0]['reserved_quantity']);
+        $this->assertSame(1, $rows[0]['free_quantity']);
+        $this->assertSame(0, $rows[0]['uncovered_quantity']);
+    }
+
+    #[Test]
+    public function резерв_удалённого_заказа_не_считается(): void
+    {
+        $warehouse = Warehouse::factory()->defect()->create();
+        $product = Product::factory()->create();
+
+        // Заказ отменили: 1С вернула остаток к 3, сайт снял заказ soft-delete-ом.
+        $this->stock($product, $warehouse, 3);
+        $defect = ProductDefect::factory()->sellable()->create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 3,
+        ]);
+        $this->reserve($defect, 2)->delete();
+
+        $rows = $this->rows('filter=all');
+        $this->assertCount(1, $rows);
+        $this->assertSame(0, $rows[0]['reserved_quantity']);
+        $this->assertSame(3, $rows[0]['free_quantity']);
+        $this->assertSame(0, $rows[0]['uncovered_quantity']);
+    }
+
+    #[Test]
+    public function резерв_закрытой_партии_второй_раз_не_вычитается(): void
+    {
+        $warehouse = Warehouse::factory()->defect()->create();
+        $product = Product::factory()->create();
+
+        // После реализации: партия на 2 закрыта как распроданная, заказ на неё
+        // жив (реализация состоялась), открыта одна партия на 1. В 1С свободно 1.
+        $this->stock($product, $warehouse, 1);
+        $sold = ProductDefect::factory()->closed()->create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 2,
+        ]);
+        $this->reserve($sold, 2);
+        ProductDefect::factory()->sellable()->create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 1,
+        ]);
+
+        $rows = $this->rows('filter=all');
+        $this->assertCount(1, $rows);
+        $this->assertSame(1, $rows[0]['covered_quantity']);
+        $this->assertSame(0, $rows[0]['reserved_quantity']);
+        $this->assertSame(0, $rows[0]['uncovered_quantity']);
+    }
+
+    #[Test]
+    public function резерв_партии_ограничен_её_объёмом(): void
+    {
+        $warehouse = Warehouse::factory()->defect()->create();
+        $product = Product::factory()->create();
+
+        // Заказали больше, чем в партии, — свободного меньше нуля не бывает.
+        $this->stock($product, $warehouse, 0);
+        $defect = ProductDefect::factory()->sellable()->create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 1,
+        ]);
+        $this->reserve($defect, 3);
+
+        $rows = $this->rows('filter=all');
+        $this->assertSame(1, $rows[0]['reserved_quantity']);
+        $this->assertSame(0, $rows[0]['free_quantity']);
+        $this->assertSame(0, $rows[0]['uncovered_quantity']);
+    }
+
+    #[Test]
+    public function заказ_который_1с_ещё_не_учла_виден_как_непокрытый_остаток(): void
+    {
+        $warehouse = Warehouse::factory()->defect()->create();
+        $product = Product::factory()->create();
+
+        // Окно между оформлением на сайте и пересчётом в 1С: 1С ещё шлёт 3,
+        // сайт уже держит 2 в заказе. Это не расхождение, а непокрытые 2 шт.
+        $this->stock($product, $warehouse, 3);
+        $defect = ProductDefect::factory()->sellable()->create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 3,
+        ]);
+        $this->reserve($defect, 2);
+
+        $this->assertSame([], $this->rows('filter=over'));
+
+        $rows = $this->rows();
+        $this->assertCount(1, $rows);
+        $this->assertSame(2, $rows[0]['uncovered_quantity']);
+    }
+
+    // ────────────────────────────────────────────
     // Фильтры и сводка
     // ────────────────────────────────────────────
 
@@ -383,6 +529,15 @@ class WmsDefectCoverageTest extends TestCase
             'warehouse_id' => $warehouse->id,
             'quantity' => 2,
         ]);
+
+        // Не расхождение: партий 3, из них 2 в заказе, в 1С свободно 1.
+        $fourth = Product::factory()->create();
+        $this->stock($fourth, $warehouse, 1);
+        $this->reserve(ProductDefect::factory()->sellable()->create([
+            'product_id' => $fourth->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 3,
+        ]), 2);
 
         $stats = app(DefectCoverageService::class)->stats();
 

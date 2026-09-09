@@ -9,7 +9,7 @@ import {
     Text,
     VStack,
 } from '@chakra-ui/react';
-import { LuCheck, LuPackagePlus, LuTriangleAlert } from 'react-icons/lu';
+import { LuCheck, LuInfo, LuPackagePlus, LuTriangleAlert } from 'react-icons/lu';
 import WmsLayout from '@/Wms/Layouts/WmsLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { SearchInput } from '@/Admin/Components/SearchInput';
@@ -26,7 +26,7 @@ const FILTERS = [
 
 const EMPTY_TEXT = {
     uncovered: 'Непокрытых остатков нет — на каждый остаток склада некондиции заведена партия.',
-    over: 'Расхождений нет — партий нигде не больше, чем числится в 1С.',
+    over: 'Расхождений нет — свободного в партиях нигде не больше, чем свободно в 1С.',
     all: 'На складах некондиции нет ни остатков, ни партий.',
 };
 
@@ -40,6 +40,52 @@ function StatCard({ label, value, hint, tone }) {
             </Card.Body>
         </Card.Root>
     );
+}
+
+/** Склонение «штука» для человеческих фраз. */
+function pcs(n) {
+    const abs = Math.abs(n) % 100;
+    const last = abs % 10;
+    if (abs > 10 && abs < 20) return `${n} штук`;
+    if (last === 1) return `${n} штука`;
+    if (last >= 2 && last <= 4) return `${n} штуки`;
+    return `${n} штук`;
+}
+
+/** Короткий вывод по строке — под числом в колонке «Не покрыто». */
+function verdict(row) {
+    if (row.uncovered_quantity > 0) return `нет партий на ${pcs(row.uncovered_quantity)}`;
+    if (row.uncovered_quantity < 0) return `партий больше на ${pcs(-row.uncovered_quantity)}`;
+    return 'сходится';
+}
+
+/**
+ * Разбор строки словами: откуда взялась разница. Одна и та же фраза в
+ * мобильной карточке и в подсказке — кладовщику не нужно помнить формулу.
+ */
+function explain(row) {
+    const parts = [`В 1С свободно ${pcs(row.stock_quantity)}.`];
+
+    if (row.reserved_quantity > 0) {
+        parts.push(
+            `В партиях ${pcs(row.covered_quantity)}, из них ${pcs(row.reserved_quantity)} уже в заказах, `
+            + `значит свободно ${pcs(row.free_quantity)}.`
+        );
+    } else if (row.covered_quantity > 0) {
+        parts.push(`В партиях ${pcs(row.covered_quantity)}, в заказах ничего нет.`);
+    } else {
+        parts.push('Партий не заведено.');
+    }
+
+    if (row.uncovered_quantity > 0) {
+        parts.push(`Значит на ${pcs(row.uncovered_quantity)} партий нет — их нужно завести.`);
+    } else if (row.uncovered_quantity < 0) {
+        parts.push(`Значит партий больше, чем в 1С, на ${pcs(-row.uncovered_quantity)} — это расхождение.`);
+    } else {
+        parts.push('Всё сходится.');
+    }
+
+    return parts.join(' ');
 }
 
 /** Непокрытое количество: положительное — остаток без партий, отрицательное — расхождение. */
@@ -71,6 +117,62 @@ function UncoveredValue({ value }) {
     );
 }
 
+/** «В партиях» с расшифровкой: сколько из них уже в заказах и сколько свободно. */
+function CoveredValue({ row, align = 'end' }) {
+    return (
+        <VStack align={align} gap={0}>
+            <Text fontSize="sm" fontVariantNumeric="tabular-nums">
+                {row.covered_quantity}
+            </Text>
+            {row.reserved_quantity > 0 && (
+                <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">
+                    в заказах {row.reserved_quantity} · свободно {row.free_quantity}
+                </Text>
+            )}
+            {row.idle_quantity > 0 && (
+                <Badge size="xs" colorPalette="gray" variant="subtle">
+                    {row.idle_quantity} не в продаже
+                </Badge>
+            )}
+        </VStack>
+    );
+}
+
+/**
+ * Почему цифры такие. 1С шлёт свободный остаток, партии описывают полку —
+ * без этого объяснения любой заказ уценки до отгрузки выглядит как ошибка склада.
+ */
+function HowToRead() {
+    return (
+        <Card.Root variant="subtle">
+            <Card.Body>
+                <HStack align="start" gap={3}>
+                    <Box pt={0.5} color="fg.muted" flexShrink={0}>
+                        <LuInfo size={16} />
+                    </Box>
+                    <VStack align="stretch" gap={1.5} fontSize="sm">
+                        <Text fontWeight="medium">Как читать цифры</Text>
+                        <Text color="fg.muted">
+                            1С показывает не всё, что лежит на полке, а только то, что ещё никому не продано.
+                            Как только клиент заказал уценку, 1С сразу вычитает её из остатка — хотя товар
+                            ещё лежит на складе и никуда не уехал.
+                        </Text>
+                        <Text color="fg.muted">
+                            Партии брака описывают полку целиком. Поэтому из партий мы вычитаем то, что уже
+                            в заказах, и сравниваем свободное со свободным.
+                        </Text>
+                        <Text color="fg.muted">
+                            Пример: в партиях 3 штуки, из них 2 в заказе — значит свободна 1. В 1С свободна 1.
+                            Разница 0, всё сходится. Когда заказ отгрузят, партии закроются сами, и обе цифры
+                            уменьшатся вместе.
+                        </Text>
+                    </VStack>
+                </HStack>
+            </Card.Body>
+        </Card.Root>
+    );
+}
+
 /**
  * Строка отчёта карточкой — мобильный вариант: таблица из шести колонок
  * в 360px не помещается, а горизонтальный скролл на складе одной рукой не листают.
@@ -86,20 +188,22 @@ function CoverageMobileCard({ row, actions }) {
                     </Text>
                 </Box>
 
-                <HStack gap={4} flexWrap="wrap" fontSize="sm">
+                <HStack gap={4} flexWrap="wrap" fontSize="sm" align="start">
                     <Text>
-                        <Text as="span" color="fg.muted">Остаток 1С: </Text>
+                        <Text as="span" color="fg.muted">Свободно в 1С: </Text>
                         {row.stock_quantity}
                     </Text>
-                    <Text>
+                    <HStack gap={1} align="start">
                         <Text as="span" color="fg.muted">В партиях: </Text>
-                        {row.covered_quantity}
-                    </Text>
+                        <CoveredValue row={row} align="start" />
+                    </HStack>
                     <HStack gap={1}>
                         <Text as="span" color="fg.muted">Не покрыто: </Text>
                         <UncoveredValue value={row.uncovered_quantity} />
                     </HStack>
                 </HStack>
+
+                <Text fontSize="xs" color="fg.muted">{explain(row)}</Text>
 
                 {row.idle_quantity > 0 && (
                     <Text fontSize="xs" color="fg.muted">
@@ -143,10 +247,12 @@ export default function DefectsUncovered() {
             <Head title="Не закрыто партиями — Склад" />
             <PageHeader
                 title="Не закрыто партиями"
-                description="Остатки склада некондиции, на которые не заведены партии брака. Пока партии нет, товар нигде не предлагается."
+                description="Сверка склада некондиции: что свободно в 1С против того, что свободно в партиях брака. Пока партии нет, товар нигде не предлагается."
             />
 
             <VStack gap={4} align="stretch">
+                <HowToRead />
+
                 <SimpleGrid columns={{ base: 2, md: 4 }} gap={3}>
                     <StatCard
                         label="Позиций не покрыто"
@@ -163,7 +269,7 @@ export default function DefectsUncovered() {
                     <StatCard
                         label="Расхождений"
                         value={stats.over_positions}
-                        hint="партий больше, чем в 1С"
+                        hint="свободного в партиях больше, чем в 1С"
                         tone={stats.over_positions > 0 ? 'red.500' : undefined}
                     />
                     <StatCard
@@ -243,7 +349,7 @@ export default function DefectsUncovered() {
                                                 <Table.Row>
                                                     <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                                     <Table.ColumnHeader>Склад</Table.ColumnHeader>
-                                                    <Table.ColumnHeader textAlign="end">Остаток 1С</Table.ColumnHeader>
+                                                    <Table.ColumnHeader textAlign="end">Свободно в 1С</Table.ColumnHeader>
                                                     <Table.ColumnHeader textAlign="end">В партиях</Table.ColumnHeader>
                                                     <Table.ColumnHeader textAlign="end">Не покрыто</Table.ColumnHeader>
                                                     <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
@@ -267,19 +373,15 @@ export default function DefectsUncovered() {
                                                             {row.stock_quantity}
                                                         </Table.Cell>
                                                         <Table.Cell textAlign="end">
-                                                            <VStack align="end" gap={0}>
-                                                                <Text fontSize="sm" fontVariantNumeric="tabular-nums">
-                                                                    {row.covered_quantity}
-                                                                </Text>
-                                                                {row.idle_quantity > 0 && (
-                                                                    <Badge size="xs" colorPalette="gray" variant="subtle">
-                                                                        {row.idle_quantity} не в продаже
-                                                                    </Badge>
-                                                                )}
-                                                            </VStack>
+                                                            <CoveredValue row={row} />
                                                         </Table.Cell>
-                                                        <Table.Cell textAlign="end">
-                                                            <UncoveredValue value={row.uncovered_quantity} />
+                                                        <Table.Cell textAlign="end" title={explain(row)}>
+                                                            <VStack align="end" gap={0}>
+                                                                <UncoveredValue value={row.uncovered_quantity} />
+                                                                <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">
+                                                                    {verdict(row)}
+                                                                </Text>
+                                                            </VStack>
                                                         </Table.Cell>
                                                         <Table.Cell>
                                                             <RowActions {...actionsFor(row)} size="sm" />

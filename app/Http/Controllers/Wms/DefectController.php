@@ -128,6 +128,8 @@ class DefectController extends WmsController
             'warehouse_name' => $row->warehouse_name,
             'stock_quantity' => (int) $row->stock_quantity,
             'covered_quantity' => (int) $row->covered_quantity,
+            'reserved_quantity' => (int) $row->reserved_quantity,
+            'free_quantity' => (int) $row->free_quantity,
             'idle_quantity' => (int) $row->idle_quantity,
             'batches_count' => (int) $row->batches_count,
             'uncovered_quantity' => (int) $row->uncovered_quantity,

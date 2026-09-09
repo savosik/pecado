@@ -87,7 +87,7 @@ class DefectController extends Controller
             'defects-'.($filter ?: 'open').'-'.now()->format('Y-m-d'),
             [
                 'Партия №', 'Код 1С', 'Артикул', 'Товар', 'Склад', 'Дефект',
-                'Свободно 1С', 'Разобрано партиями', 'Не разобрано',
+                'Свободно 1С', 'Разобрано партиями', 'Из них в заказах', 'Свободно в партиях', 'Не разобрано',
                 'Заведено складом', 'В резерве', 'Доступно к продаже',
                 'Цена клиента, ₽', 'Статус цены клиента', 'Цена уценки, ₽', 'Скидка от цены клиента, %',
                 'На сайте', 'Состояние партии', 'Заведено кем', 'Заведено когда',
@@ -132,7 +132,7 @@ class DefectController extends Controller
      * Остаток 1С и объём открытых партий по товарам выборки.
      *
      * @param  Collection<int, ProductDefect>  $defects
-     * @return array<string, array{stock: int, covered: int}>
+     * @return array<string, array{stock: int, covered: int, reserved: int}>
      */
     private function stockTotals(Collection $defects): array
     {
@@ -326,7 +326,7 @@ class DefectController extends Controller
     /**
      * @param  array<int, int>  $availableMap
      * @param  array<int, array<string, mixed>>  $referenceMap
-     * @param  array<string, array{stock: int, covered: int}>  $stockMap
+     * @param  array<string, array{stock: int, covered: int, reserved: int}>  $stockMap
      * @return array<string, mixed>
      */
     private function presentDefect(ProductDefect $defect, array $availableMap, array $referenceMap = [], array $stockMap = []): array
@@ -339,11 +339,14 @@ class DefectController extends Controller
             'quantity' => $defect->quantity,
             'available_quantity' => $availableMap[$defect->id] ?? 0,
             'reserved_quantity' => $defect->quantity - ($availableMap[$defect->id] ?? 0),
-            // Что числится по товару на складе некондиции в 1С: остаток целиком,
-            // сколько из него разобрано открытыми партиями и сколько осталось.
+            // Что числится по товару на складе некондиции в 1С (свободный остаток,
+            // 1С уже вычла резерв), сколько разобрано открытыми партиями, сколько
+            // из этого в заказах, и разница «свободно в 1С − свободно в партиях».
             'erp_stock_quantity' => $stock['stock'],
             'covered_quantity' => $stock['covered'],
-            'uncovered_quantity' => $stock['stock'] - $stock['covered'],
+            'covered_reserved_quantity' => $stock['reserved'],
+            'covered_free_quantity' => $stock['covered'] - $stock['reserved'],
+            'uncovered_quantity' => $stock['stock'] - ($stock['covered'] - $stock['reserved']),
             'price' => $defect->price !== null ? (float) $defect->price : null,
             'is_published' => $defect->is_published,
             'closed_at' => $defect->closed_at?->toIso8601String(),
@@ -376,7 +379,7 @@ class DefectController extends Controller
      *
      * @param  array<int, int>  $availableMap
      * @param  array<int, array<string, mixed>>  $referenceMap
-     * @param  array<string, array{stock: int, covered: int}>  $stockMap
+     * @param  array<string, array{stock: int, covered: int, reserved: int}>  $stockMap
      * @return array<int, string|int|float|null>
      */
     private function exportRow(ProductDefect $defect, array $availableMap, array $referenceMap, array $stockMap): array
@@ -396,7 +399,9 @@ class DefectController extends Controller
             $defect->defect_description,
             $stock['stock'],
             $stock['covered'],
-            $stock['stock'] - $stock['covered'],
+            $stock['reserved'],
+            $stock['covered'] - $stock['reserved'],
+            $stock['stock'] - ($stock['covered'] - $stock['reserved']),
             (int) $defect->quantity,
             (int) $defect->quantity - $available,
             $available,
@@ -421,13 +426,13 @@ class DefectController extends Controller
     /**
      * Остаток 1С и покрытие партиями для пары товар + склад этой партии.
      *
-     * @param  array<string, array{stock: int, covered: int}>  $stockMap
-     * @return array{stock: int, covered: int}
+     * @param  array<string, array{stock: int, covered: int, reserved: int}>  $stockMap
+     * @return array{stock: int, covered: int, reserved: int}
      */
     private function defectStockRow(ProductDefect $defect, array $stockMap): array
     {
         $key = DefectCoverageService::pairKey((int) $defect->product_id, (int) $defect->warehouse_id);
 
-        return $stockMap[$key] ?? ['stock' => 0, 'covered' => 0];
+        return $stockMap[$key] ?? ['stock' => 0, 'covered' => 0, 'reserved' => 0];
     }
 }

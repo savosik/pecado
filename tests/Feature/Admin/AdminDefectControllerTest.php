@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\OrderType;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductDefect;
 use App\Models\User;
@@ -240,6 +242,50 @@ class AdminDefectControllerTest extends TestCase
             );
     }
 
+    /**
+     * 1С шлёт по некондиции свободный остаток (резерв уже вычтен), поэтому из
+     * партий вычитается резерв живых заказов уценки — иначе каждый заказ до
+     * отгрузки выглядел бы расхождением.
+     */
+    #[Test]
+    public function index_subtracts_live_defect_reserve_from_batches(): void
+    {
+        $product = Product::factory()->create();
+        $warehouse = Warehouse::factory()->defect()->create();
+
+        // Полка: 3 шт. в партиях, 2 уже в заказе → 1С показывает 1 свободную.
+        $this->stock($product, $warehouse, 1);
+
+        $defect = ProductDefect::factory()->create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 3,
+        ]);
+
+        $order = Order::factory()->create(['type' => OrderType::DEFECT]);
+        $order->items()->create([
+            'product_id' => $product->id,
+            'product_defect_id' => $defect->id,
+            'name' => 'Резерв',
+            'price' => 300,
+            'base_price' => 300,
+            'discount_percent' => 0,
+            'final_price' => 300,
+            'quantity' => 2,
+            'subtotal' => 600,
+        ]);
+
+        $this->actingAs($this->buyer())
+            ->get('/admin/defects')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('defects.data.0.erp_stock_quantity', 1)
+                ->where('defects.data.0.covered_quantity', 3)
+                ->where('defects.data.0.covered_reserved_quantity', 2)
+                ->where('defects.data.0.covered_free_quantity', 1)
+                ->where('defects.data.0.uncovered_quantity', 0)
+            );
+    }
+
     /** Партий заведено больше, чем числится в 1С, — расхождение уходит в минус. */
     #[Test]
     public function index_reports_negative_uncovered_when_batches_exceed_erp_stock(): void
@@ -315,9 +361,11 @@ class AdminDefectControllerTest extends TestCase
         $this->assertSame('Порвана упаковка', $row[5]);
         $this->assertSame(5, (int) $row[6], 'Свободно 1С');
         $this->assertSame(2, (int) $row[7], 'Разобрано партиями');
-        $this->assertSame(3, (int) $row[8], 'Не разобрано');
-        $this->assertSame(2, (int) $row[9], 'Заведено складом');
-        $this->assertSame(300.0, (float) $row[14], 'Цена уценки');
+        $this->assertSame(0, (int) $row[8], 'Из них в заказах');
+        $this->assertSame(2, (int) $row[9], 'Свободно в партиях');
+        $this->assertSame(3, (int) $row[10], 'Не разобрано');
+        $this->assertSame(2, (int) $row[11], 'Заведено складом');
+        $this->assertSame(300.0, (float) $row[16], 'Цена уценки');
     }
 
     #[Test]

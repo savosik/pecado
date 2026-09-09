@@ -128,28 +128,38 @@ function DefectPhoto({ defect, onOpen }) {
 function ErpStock({ defect }) {
     const stock = defect.erp_stock_quantity ?? 0;
     const covered = defect.covered_quantity ?? 0;
+    const reserved = defect.covered_reserved_quantity ?? 0;
+    const free = defect.covered_free_quantity ?? covered;
     const uncovered = defect.uncovered_quantity ?? 0;
     const over = uncovered < 0;
 
     const hint = (
         <VStack align="stretch" gap={2} minW="240px">
             <Text fontSize="xs">
-                По этому артикулу на складе «{defect.warehouse.name}» в 1С лежит {stock} шт. брака.
+                По этому артикулу на складе «{defect.warehouse.name}» в 1С свободно {stock} шт. брака.
                 Это остаток на весь артикул, а не на эту партию.
             </Text>
             <Text fontSize="xs">
-                Кладовщик разбирает этот остаток на партии: одну и ту же 1С-строку он может
-                расписать на несколько партий с разными дефектами — поэтому у всех партий
-                одного артикула здесь одно и то же число.
+                1С показывает только то, что ещё никому не продано: заказ уценки она вычитает
+                сразу, до отгрузки. Партии описывают полку целиком, поэтому из партий вычитаем
+                то, что уже в заказах, и сравниваем свободное со свободным.
             </Text>
             <VStack align="stretch" gap={1}>
                 <HStack justify="space-between" gap={3}>
-                    <Text fontSize="xs">Лежит в 1С</Text>
+                    <Text fontSize="xs">Свободно в 1С</Text>
                     <Text fontSize="xs">{stock} шт.</Text>
                 </HStack>
                 <HStack justify="space-between" gap={3}>
-                    <Text fontSize="xs">Уже разложено по партиям</Text>
+                    <Text fontSize="xs">Разложено по партиям</Text>
                     <Text fontSize="xs">{covered} шт.</Text>
+                </HStack>
+                <HStack justify="space-between" gap={3}>
+                    <Text fontSize="xs">Из них уже в заказах</Text>
+                    <Text fontSize="xs">{reserved} шт.</Text>
+                </HStack>
+                <HStack justify="space-between" gap={3}>
+                    <Text fontSize="xs">Свободно в партиях</Text>
+                    <Text fontSize="xs">{free} шт.</Text>
                 </HStack>
                 <HStack justify="space-between" gap={3}>
                     <Text fontSize="xs">{over ? 'Партий больше, чем в 1С, на' : 'Ещё не разложено'}</Text>
@@ -158,12 +168,12 @@ function ErpStock({ defect }) {
             </VStack>
             <Text fontSize="xs" opacity={0.8}>
                 {over
-                    ? 'Партий заведено больше, чем брака числится в 1С. Это расхождение: '
+                    ? 'Свободного в партиях больше, чем брака свободно в 1С. Это расхождение: '
                       + 'либо остаток уже списали в 1С, либо партию завели с лишним количеством.'
                     : uncovered > 0
                         ? 'Остаток есть, а партии на него нет — этот брак нигде не продаётся, '
                           + 'пока кладовщик не заведёт на него партию.'
-                        : 'Весь остаток разложен по партиям — расхождений нет.'}
+                        : 'Свободно в 1С столько же, сколько свободно в партиях — расхождений нет.'}
             </Text>
         </VStack>
     );
@@ -176,7 +186,7 @@ function ErpStock({ defect }) {
                 </Text>
                 {covered > 0 && (
                     <Text fontSize="xs" color="fg.muted">
-                        в партиях {covered}
+                        в партиях {covered}{reserved > 0 ? ` · свободно ${free}` : ''}
                     </Text>
                 )}
             </VStack>

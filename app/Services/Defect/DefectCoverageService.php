@@ -2,6 +2,7 @@
 
 namespace App\Services\Defect;
 
+use App\Enums\OrderType;
 use App\Models\Warehouse;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -21,16 +22,32 @@ use Illuminate\Support\Facades\DB;
  *
  * Разница считается по паре товар + склад: складов некондиции может быть
  * несколько, и остаток одного не закрывается партией на другом.
+ *
+ * Сравниваем свободное со свободным. 1С присылает по некондиции не то, что
+ * лежит на полке, а остаток за вычетом резерва: заказ уценки уменьшает
+ * stock.updated в момент резервирования, до отгрузки (проверено на проде
+ * 07.09.2026: order.updated и падение остатка 3 → 1 пришли в одну секунду, расходный
+ * ордер — через две минуты). Партия же описывает полку и закрывается только по
+ * реализации. Поэтому из объёма партий вычитается резерв живых заказов уценки,
+ * иначе каждый заказ между оформлением и отгрузкой выглядит как расхождение.
+ *
+ * Резерв считается только по открытым партиям: закрытая партия из покрытия уже
+ * ушла, а позиции заказа ссылаться на неё не перестают — вычесть её резерв
+ * второй раз нельзя. Резерв одной партии ограничен её объёмом, как в
+ * DefectStockService::available().
  */
 class DefectCoverageService
 {
-    /** Непокрытый остаток: сколько числится в 1С минус объём открытых партий. */
-    private const UNCOVERED = 'COALESCE(pw.quantity, 0) - COALESCE(batches.covered_quantity, 0)';
+    /** Свободно в партиях: объём открытых партий минус резерв живых заказов уценки. */
+    private const FREE = '(COALESCE(batches.covered_quantity, 0) - COALESCE(batches.reserved_quantity, 0))';
+
+    /** Непокрытый остаток: свободно в 1С минус свободно в партиях. */
+    private const UNCOVERED = 'COALESCE(pw.quantity, 0) - '.self::FREE;
 
     /** Только непокрытые позиции: остаток есть, партий на него не хватает. */
     public const FILTER_UNCOVERED = 'uncovered';
 
-    /** Партий заведено больше, чем числится остатка, — расхождение с 1С. */
+    /** Свободного в партиях больше, чем свободно в 1С, — расхождение с 1С. */
     public const FILTER_OVER = 'over';
 
     /** Все позиции склада некондиции, включая полностью закрытые партиями. */
@@ -88,8 +105,11 @@ class DefectCoverageService
      * партия живёт на том складе, на котором её завели, и показать её остаток
      * нужно в любом случае.
      *
+     * Резерв (reserved) — та часть объёма открытых партий, что уже в живых
+     * заказах уценки; с остатком 1С сравнивается covered − reserved.
+     *
      * @param  iterable<array{0: int, 1: int}>  $pairs  [[product_id, warehouse_id], …]
-     * @return array<string, array{stock: int, covered: int}> ключ — pairKey()
+     * @return array<string, array{stock: int, covered: int, reserved: int}> ключ — pairKey()
      */
     public function pairTotals(iterable $pairs): array
     {
@@ -101,7 +121,7 @@ class DefectCoverageService
             $productId = (int) $productId;
             $warehouseId = (int) $warehouseId;
 
-            $totals[self::pairKey($productId, $warehouseId)] = ['stock' => 0, 'covered' => 0];
+            $totals[self::pairKey($productId, $warehouseId)] = ['stock' => 0, 'covered' => 0, 'reserved' => 0];
             $productIds[$productId] = true;
             $warehouseIds[$warehouseId] = true;
         }
@@ -126,20 +146,17 @@ class DefectCoverageService
             }
         }
 
-        $covered = DB::table('product_defects')
-            ->selectRaw('product_id, warehouse_id, SUM(quantity) as covered')
-            ->whereIn('product_id', $productIds)
-            ->whereIn('warehouse_id', $warehouseIds)
-            ->whereNull('deleted_at')
-            ->whereNull('closed_at')
-            ->groupBy('product_id', 'warehouse_id')
+        $covered = $this->openBatches()
+            ->whereIn('product_defects.product_id', $productIds)
+            ->whereIn('product_defects.warehouse_id', $warehouseIds)
             ->get();
 
         foreach ($covered as $row) {
             $key = self::pairKey((int) $row->product_id, (int) $row->warehouse_id);
 
             if (isset($totals[$key])) {
-                $totals[$key]['covered'] = (int) $row->covered;
+                $totals[$key]['covered'] = (int) $row->covered_quantity;
+                $totals[$key]['reserved'] = (int) $row->reserved_quantity;
             }
         }
 
@@ -171,6 +188,43 @@ class DefectCoverageService
     }
 
     /**
+     * Открытые партии, сведённые по паре товар + склад: объём, резерв, простой.
+     *
+     * Резерв — позиции живых (не удалённых) заказов уценки, привязанные к партии.
+     * Отмена по любому пути (order.deleted, статус «Удалён», отмена реализации)
+     * делает заказу soft-delete, поэтому по статусу заказа не фильтруем — то же
+     * правило, что в DefectStockService::reservedMap(). Резерв партии ограничен
+     * её объёмом: лишнее (заказали больше, чем в партии) в свободное не уходит.
+     */
+    private function openBatches(): Builder
+    {
+        $reserves = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.type', OrderType::DEFECT->value)
+            ->whereNull('orders.deleted_at')
+            ->whereNotNull('order_items.product_defect_id')
+            ->selectRaw('order_items.product_defect_id, SUM(order_items.quantity) as reserved')
+            ->groupBy('order_items.product_defect_id');
+
+        return DB::table('product_defects')
+            ->leftJoinSub($reserves, 'reserves', 'reserves.product_defect_id', '=', 'product_defects.id')
+            ->selectRaw('
+                product_defects.product_id,
+                product_defects.warehouse_id,
+                SUM(product_defects.quantity) as covered_quantity,
+                SUM(CASE
+                    WHEN COALESCE(reserves.reserved, 0) > product_defects.quantity THEN product_defects.quantity
+                    ELSE COALESCE(reserves.reserved, 0)
+                END) as reserved_quantity,
+                SUM(CASE WHEN product_defects.price IS NULL OR product_defects.is_published = 0 THEN product_defects.quantity ELSE 0 END) as idle_quantity,
+                COUNT(*) as batches_count
+            ')
+            ->whereNull('product_defects.deleted_at')
+            ->whereNull('product_defects.closed_at')
+            ->groupBy('product_defects.product_id', 'product_defects.warehouse_id');
+    }
+
+    /**
      * Остаток и партии, сведённые по паре товар + склад.
      *
      * Набор пар собирается объединением обеих сторон: только остатков мало
@@ -198,18 +252,7 @@ class DefectCoverageService
             ->whereNull('deleted_at')
             ->whereNull('closed_at');
 
-        $batches = DB::table('product_defects')
-            ->selectRaw('
-                product_id,
-                warehouse_id,
-                SUM(quantity) as covered_quantity,
-                SUM(CASE WHEN price IS NULL OR is_published = 0 THEN quantity ELSE 0 END) as idle_quantity,
-                COUNT(*) as batches_count
-            ')
-            ->whereIn('warehouse_id', $warehouseIds)
-            ->whereNull('deleted_at')
-            ->whereNull('closed_at')
-            ->groupBy('product_id', 'warehouse_id');
+        $batches = $this->openBatches()->whereIn('product_defects.warehouse_id', $warehouseIds);
 
         return DB::query()
             ->fromSub($stockPairs->union($batchPairs), 'pairs')
@@ -238,6 +281,8 @@ class DefectCoverageService
                 'warehouses.name as warehouse_name',
                 DB::raw('COALESCE(pw.quantity, 0) as stock_quantity'),
                 DB::raw('COALESCE(batches.covered_quantity, 0) as covered_quantity'),
+                DB::raw('COALESCE(batches.reserved_quantity, 0) as reserved_quantity'),
+                DB::raw(self::FREE.' as free_quantity'),
                 DB::raw('COALESCE(batches.idle_quantity, 0) as idle_quantity'),
                 DB::raw('COALESCE(batches.batches_count, 0) as batches_count'),
                 DB::raw(self::UNCOVERED.' as uncovered_quantity'),
