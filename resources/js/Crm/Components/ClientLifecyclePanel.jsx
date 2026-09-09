@@ -69,19 +69,24 @@ export default function ClientLifecyclePanel({ clientId, lifecycle, options, loy
 
     // transform, а не setData перед отправкой: setData асинхронен, и «Применить»
     // из подсказки уехало бы со старым значением селекта.
+    //
+    // Двумя вызовами, а не цепочкой: transform() в React-адаптере Inertia
+    // ничего не возвращает (в отличие от Vue), поэтому `.transform(…).put(…)`
+    // падал с TypeError прямо в обработчике клика — кнопка «Сохранить статус»
+    // молча не делала ничего.
     const submit = (status, reason) => {
-        form
-            .transform(() => ({
-                lifecycle_status: status,
-                reason: reason ?? data.reason,
-            }))
-            .put(route('crm.clients.lifecycle.update', clientId), {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setData('reason', '');
-                    toastSuccess('Статус изменён');
-                },
-            });
+        form.transform(() => ({
+            lifecycle_status: status,
+            reason: reason ?? data.reason,
+        }));
+
+        form.put(route('crm.clients.lifecycle.update', clientId), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setData('reason', '');
+                toastSuccess('Статус изменён');
+            },
+        });
     };
 
     return (
