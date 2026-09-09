@@ -2,6 +2,7 @@
 
 namespace App\Services\Erp\Handlers;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Services\Erp\ErpHandlerOutcome;
 use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
@@ -72,7 +73,14 @@ class HandleOrderUpdated
                     'status_raw' => $rawStatus,
                 ]);
             } else {
-                if ($order->trashed() && ! $shouldSoftDelete) {
+                // Восстанавливаем soft-deleted заказ, только если 1С реально
+                // возвращает его в работу — присылает АКТИВНЫЙ статус. Финальный
+                // `closed` по trashed-заказу оживлять нельзя: это подтверждение
+                // закрытия, а не возврат. Иначе эхо order.updated (status=closed),
+                // которое 1С шлёт в ответ на нашу отмену резерва (order.deleted,
+                // reason=client_cancelled → в 1С «Закрыт»), воскрешало отменённый
+                // заказ (v16.9.1, найдено на канареечном smoke-тесте).
+                if ($order->trashed() && ! $shouldSoftDelete && $mappedStatus !== OrderStatus::CLOSED->value) {
                     $shouldRestore = true;
                 }
                 $order->status = $mappedStatus;
