@@ -70,6 +70,11 @@ final class ClientListFilters
      */
     public const NO_ORDER_DAYS = self::INACTIVE_DAYS;
 
+    /**
+     * Строк на странице, если менеджер не выбрал иначе.
+     */
+    public const PER_PAGE_DEFAULT = 100;
+
     public function __construct(
         public readonly CrmScope $scope,
         public readonly ?string $search,
@@ -136,7 +141,12 @@ final class ClientListFilters
             stockBuffer: self::pick($request->input('stock_buffer'), ['enabled', 'disabled']),
             sortBy: $sortBy,
             sortOrder: $sortOrder,
-            perPage: min(max((int) $request->input('per_page', 15), 5), 100),
+            // Сто строк по умолчанию (решение РОПа 09.09.2026): база отдела —
+            // несколько сотен партнёров, и по пятнадцать их листали страницами.
+            // Догрузка по одной странице — тремя пакетными запросами
+            // ({@see \App\Services\Crm\ClientListService::hydrate()}), поэтому
+            // сотня не дороже пятнадцати по числу запросов.
+            perPage: min(max((int) $request->input('per_page', self::PER_PAGE_DEFAULT), 5), 100),
         );
     }
 

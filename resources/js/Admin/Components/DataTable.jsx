@@ -17,7 +17,7 @@ import {
 } from 'react-icons/lu';
 import { Pagination } from './Pagination';
 
-const DataTableRow = memo(function DataTableRow({ row, columns, selectable, isSelected, onToggleSelect }) {
+const DataTableRow = memo(function DataTableRow({ row, columns, selectable, isSelected, onToggleSelect, rowProps }) {
     const handleCheckboxChange = useCallback((e) => {
         onToggleSelect(row.id, e.checked);
     }, [row.id, onToggleSelect]);
@@ -26,6 +26,9 @@ const DataTableRow = memo(function DataTableRow({ row, columns, selectable, isSe
         <Table.Row
             _hover={{ bg: 'bg.muted' }}
             transition="background 0.2s"
+            // Стиль строки по данным (фон по стадии партнёра и т. п.) — после
+            // дефолтов, чтобы вызывающий мог переопределить и hover.
+            {...(rowProps ? rowProps(row) : null)}
         >
             {selectable && (
                 <Table.Cell>
@@ -59,6 +62,9 @@ const DataTableRow = memo(function DataTableRow({ row, columns, selectable, isSe
  * @param {Array} bulkActions - Массовые действия [{label, action, variant, colorPalette}]
  * @param {boolean} selectable - Разрешить выбор строк
  * @param {ReactNode} emptyMessage - Сообщение при отсутствии данных
+ * @param {Function} rowProps - Пропсы строки по данным: (row) => props для Table.Row
+ * @param {ReactNode} footer - Что показать под таблицей после пагинации
+ *   (кнопка «Загрузить ещё», переключатель прокрутки)
  */
 export const DataTable = ({
     columns = [],
@@ -73,6 +79,8 @@ export const DataTable = ({
     emptyMessage = 'Нет данных для отображения',
     perPage = null,
     onPerPageChange,
+    rowProps = null,
+    footer = null,
 }) => {
     const [selectedRows, setSelectedRows] = useState([]);
 
@@ -220,6 +228,7 @@ export const DataTable = ({
                                         selectable={selectable}
                                         isSelected={selectedSet.has(row.id)}
                                         onToggleSelect={handleSelectRow}
+                                        rowProps={rowProps}
                                     />
                                 ))
                             )}
@@ -233,6 +242,8 @@ export const DataTable = ({
                     perPage={perPage}
                     onPerPageChange={onPerPageChange}
                 />
+
+                {footer}
             </Box>
         </Box>
     );

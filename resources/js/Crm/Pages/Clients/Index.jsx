@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { Head, router } from '@inertiajs/react';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
@@ -19,7 +19,10 @@ import TaskDialog from '@/Crm/Components/TaskDialog';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import CallDialog from '@/Crm/Components/CallDialog';
 import ClientKindDialog from '@/Crm/Components/ClientKindDialog';
+import ListScrollFooter from '@/Crm/Components/ListScrollFooter';
 import ClientsFilterBar from './components/ClientsFilterBar';
+import ClientsSearchBar from './components/ClientsSearchBar';
+import LifecycleFunnel from './components/LifecycleFunnel';
 import QuickFilters from './components/QuickFilters';
 import TasksCell from './components/TasksCell';
 import PlanFactCell from './components/PlanFactCell';
@@ -32,8 +35,41 @@ import DebtLevelBadge from '@/Crm/Components/DebtLevelBadge';
 import { EmailCell, PhoneCell } from './components/ContactCells';
 import { toastError, toastSuccess } from '@/utils/toast';
 
+const LS_INFINITE_SCROLL_KEY = 'crm_clients_infinite_scroll';
+
+/**
+ * Фон строки по стадии партнёра — светлый оттенок цвета её чипа.
+ *
+ * Работает всегда, а не только при выбранном чипе: таблица должна читаться
+ * как воронка и без отбора — зелёные активные, жёлтые спящие, серые ушедшие.
+ * Оттенок берётся самый бледный (50/950), чтобы текст и бейджи в строке не
+ * спорили с фоном; при наведении — на шаг темнее.
+ *
+ * @param {string|undefined} color — colorPalette стадии
+ */
+function stageRowProps(color) {
+    const palette = color || 'gray';
+
+    return {
+        bg: `${palette}.50`,
+        _dark: { bg: `${palette}.950` },
+        _hover: { bg: `${palette}.100`, _dark: { bg: `${palette}.900` } },
+    };
+}
+
+/**
+ * Параметры запроса без пустых значений: axios и так пропускает null,
+ * но в адресе догрузки не должно быть ни `search=` ни `lifecycle=null`.
+ */
+function cleanParams(params) {
+    return Object.fromEntries(
+        Object.entries(params).filter(([, value]) => value !== null && value !== undefined && value !== ''),
+    );
+}
+
 export default function Index({
     clients,
+    funnel = null,
     managers,
     filters,
     presets = [],
@@ -60,6 +96,68 @@ export default function Index({
     const [callFor, setCallFor] = useState(null);
     const [kindFor, setKindFor] = useState(null);
     const [savedPresets, setSavedPresets] = useState(presets);
+
+    // ─── Бесконечная прокрутка — как в каталоге товаров ───
+    // Строки живут в стейте: сервер отдаёт страницу, а при прокрутке к ней
+    // дописываются следующие. Новый ответ Inertia (сменили фильтр, стадию,
+    // сортировку) сбрасывает накопленное — это уже другой список.
+    const [infiniteScroll, setInfiniteScroll] = useState(() => {
+        try {
+            return localStorage.getItem(LS_INFINITE_SCROLL_KEY) === '1';
+        } catch {
+            return false;
+        }
+    });
+    const [rows, setRows] = useState(clients.data);
+    const [nextPage, setNextPage] = useState(clients.current_page + 1);
+    const [hasMore, setHasMore] = useState(clients.current_page < clients.last_page);
+    const [loadingMore, setLoadingMore] = useState(false);
+
+    useEffect(() => {
+        setRows(clients.data);
+        setNextPage(clients.current_page + 1);
+        setHasMore(clients.current_page < clients.last_page);
+    }, [clients]);
+
+    const toggleInfiniteScroll = useCallback((enabled) => {
+        setInfiniteScroll(enabled);
+        try {
+            if (enabled) {
+                localStorage.setItem(LS_INFINITE_SCROLL_KEY, '1');
+            } else {
+                localStorage.removeItem(LS_INFINITE_SCROLL_KEY);
+            }
+        } catch {
+            // Приватный режим: переключатель работает, но не запоминается.
+        }
+    }, []);
+
+    const loadMore = useCallback(async () => {
+        if (loadingMore || !hasMore) return;
+
+        setLoadingMore(true);
+        try {
+            const { data } = await axios.get(route('crm.clients.data'), {
+                params: { ...cleanParams(filters), page: nextPage },
+            });
+
+            // Дубли отбрасываем: между порциями список мог сдвинуться
+            // (коллега сменил стадию, приехал партнёр из 1С).
+            setRows((prev) => {
+                const seen = new Set(prev.map((row) => row.id));
+
+                return [...prev, ...data.data.filter((row) => !seen.has(row.id))];
+            });
+            setNextPage(data.current_page + 1);
+            setHasMore(data.current_page < data.last_page);
+        } catch {
+            toastError('Не удалось догрузить партнёров');
+        } finally {
+            setLoadingMore(false);
+        }
+    }, [loadingMore, hasMore, nextPage, filters]);
+
+    const rowProps = useCallback((row) => stageRowProps(row.lifecycle?.color), []);
 
     const canEditLifecycle = can('crm-profile.edit');
     const canWriteEmail = can('crm-emails.create');
@@ -279,42 +377,66 @@ export default function Index({
                 onSave={savePreset}
             />
 
+            {/* Сверху вниз: поиск → воронка стадий → уточняющие отборы →
+                быстрые чипы по задачам. Раздел читается как воронка, а
+                остальные отборы её только сужают. */}
             <VStack align="stretch" gap={3} mb={4}>
+                <ClientsSearchBar value={searchQuery} onChange={handleSearch} />
+
+                {funnel && (
+                    <LifecycleFunnel
+                        funnel={funnel}
+                        active={filters.lifecycle || undefined}
+                        onSelect={(value) => applyFilters({ lifecycle: value })}
+                    />
+                )}
+
                 <ClientsFilterBar
                     filters={filters}
-                    searchQuery={searchQuery}
-                    onSearch={handleSearch}
                     onChange={applyFilters}
-                    lifecycleOptions={lifecycleOptions}
                     managers={managers}
                     canSeeAll={canSeeAll}
                     canSeeTasks={canSeeTasks}
                     canSeePlans={canSeePlans}
                     uncoveredCount={uncoveredCount}
-                />
-                <HStack gap={4} wrap="wrap">
+                >
                     <ScopeToggle section="clients" scope={filters.scope} available={canSeeAll} />
-                    <QuickFilters
-                        filters={filters}
-                        onApply={applyFilters}
-                        onReset={resetFilters}
-                        canSeeTasks={canSeeTasks}
-                        canSeePlans={canSeePlans}
-                        uncoveredCount={uncoveredCount}
-                    />
-                </HStack>
+                </ClientsFilterBar>
+
+                <QuickFilters
+                    filters={filters}
+                    onApply={applyFilters}
+                    onReset={resetFilters}
+                    canSeeTasks={canSeeTasks}
+                    canSeePlans={canSeePlans}
+                    uncoveredCount={uncoveredCount}
+                />
             </VStack>
 
             <DataTable
-                data={clients.data}
+                data={rows}
                 columns={columns}
-                pagination={clients}
+                // В режиме прокрутки страницы листает подвал, а не пагинация.
+                pagination={infiniteScroll ? null : clients}
                 sortColumn={filters.sort_by}
                 sortDirection={filters.sort_order}
                 onSort={handleSort}
                 perPage={filters.per_page}
                 onPerPageChange={(perPage) => applyFilters({ per_page: perPage })}
                 emptyMessage="Партнёры не найдены"
+                rowProps={rowProps}
+                footer={(
+                    <ListScrollFooter
+                        infinite={infiniteScroll}
+                        onToggle={toggleInfiniteScroll}
+                        shown={rows.length}
+                        total={clients.total}
+                        hasMore={hasMore}
+                        loadingMore={loadingMore}
+                        onLoadMore={loadMore}
+                        allLoadedText="Все партнёры загружены"
+                    />
+                )}
             />
 
             <TaskDialog
