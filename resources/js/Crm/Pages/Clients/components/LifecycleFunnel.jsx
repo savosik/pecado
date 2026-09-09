@@ -1,4 +1,4 @@
-import { Box, HStack, Text, Wrap, WrapItem } from '@chakra-ui/react';
+import { Box, HStack, Text, VStack, Wrap, WrapItem } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { formatMoney } from '@/utils/formatPrice';
 
@@ -142,22 +142,26 @@ export default function LifecycleFunnel({ funnel, active, onSelect }) {
 
                 {groups.map(([key, label, stages]) => (
                     <WrapItem key={key} alignItems="flex-start">
-                        <HStack gap={2} align="flex-start">
+                        {/* Подпись группы — над её чипами, а не сбоку: сбоку
+                            она либо режется, либо отъедает место у чипов. */}
+                        <VStack
+                            align="stretch"
+                            gap={1}
+                            pl={3}
+                            borderLeftWidth="1px"
+                            borderColor="border"
+                        >
                             <Text
                                 fontSize="10px"
                                 textTransform="uppercase"
                                 letterSpacing="wide"
                                 color="fg.muted"
                                 whiteSpace="nowrap"
-                                alignSelf="center"
-                                pl={2}
-                                borderLeftWidth="1px"
-                                borderColor="border"
-                                lineHeight="1.1"
-                                maxW="64px"
+                                lineHeight="1"
                             >
                                 {label}
                             </Text>
+                            <HStack gap={2} align="flex-start" wrap="wrap">
                             {stages.map((stage) => (
                                 <StageChip
                                     key={stage.value}
@@ -172,7 +176,8 @@ export default function LifecycleFunnel({ funnel, active, onSelect }) {
                                     onClick={() => onSelect(active === stage.value ? undefined : stage.value)}
                                 />
                             ))}
-                        </HStack>
+                            </HStack>
+                        </VStack>
                     </WrapItem>
                 ))}
             </Wrap>
