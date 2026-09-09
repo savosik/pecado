@@ -225,7 +225,10 @@ export default function OrderShow({ order }) {
                             </Link>
                         </Button>
                     )}
-                    {order.can_cancel && (
+                    {/* У резервного заказа отмена живёт в плашке резерва рядом с
+                        «Изменить состав» и «Отправить в отгрузку» — здесь дублировать
+                        не нужно. Для обычных ранних заказов кнопка остаётся тут. */}
+                    {order.can_cancel && !order.reserve && (
                         <Button
                             colorPalette="red"
                             variant="outline"
@@ -304,17 +307,10 @@ export default function OrderShow({ order }) {
                                         </Text>
                                     </VStack>
                                 </HStack>
+                                {/* Три действия резерва вместе: подтвердить, изменить, отменить.
+                                    Отправка в отгрузку — основная (зелёная), правка и отмена —
+                                    outline; отмена красная, чтобы её нельзя было спутать. */}
                                 <Flex gap="2" flexShrink="0" direction={{ base: 'column', sm: 'row' }}>
-                                    {editItems === null && (
-                                        <Button
-                                            variant="outline"
-                                            size="md"
-                                            onClick={startEditItems}
-                                        >
-                                            <LuPencil size={16} />
-                                            Изменить состав
-                                        </Button>
-                                    )}
                                     <Button
                                         colorPalette="green"
                                         size="md"
@@ -325,6 +321,29 @@ export default function OrderShow({ order }) {
                                         <LuSend size={16} />
                                         Отправить в отгрузку
                                     </Button>
+                                    {editItems === null && (
+                                        <Button
+                                            variant="outline"
+                                            size="md"
+                                            onClick={startEditItems}
+                                        >
+                                            <LuPencil size={16} />
+                                            Изменить состав
+                                        </Button>
+                                    )}
+                                    {order.can_cancel && (
+                                        <Button
+                                            colorPalette="red"
+                                            variant="outline"
+                                            size="md"
+                                            onClick={() => setCancelOpen(true)}
+                                            loading={cancelling}
+                                            disabled={editItems !== null}
+                                        >
+                                            <LuBan size={16} />
+                                            Отменить
+                                        </Button>
+                                    )}
                                 </Flex>
                             </Flex>
 
@@ -447,21 +466,26 @@ export default function OrderShow({ order }) {
                     >
                         {typeLabel}
                     </Badge>
-                    <Badge
-                        colorPalette={STATUS_COLORS[order.status] ?? 'gray'}
-                        variant="subtle"
-                        fontSize="sm"
-                        px="3"
-                        py="1"
-                        borderRadius="full"
-                    >
-                        {STATUS_LABELS[order.status] ?? order.status}
-                    </Badge>
-                    {/* Резервный заказ приезжает из 1С как «Готов к отгрузке» — своего
-                        статуса у резерва нет, поэтому режим помечаем отдельным бейджем */}
-                    {order.reserve && (
-                        <Badge colorPalette="purple" variant="subtle" fontSize="sm" px="3" py="1" borderRadius="full">
+                    {/* Резервный заказ приезжает из 1С с техническим статусом
+                        «Готов к отгрузке» — у резерва своего статуса нет. Показывать
+                        его рядом с «В резерве» вводит клиента в заблуждение («готов,
+                        а висит»), поэтому у резервного заказа показываем ЕДИНСТВЕННОЕ
+                        понятное состояние — «В резерве», а реальный статус вернётся
+                        сам, как только клиент подтвердит отгрузку. */}
+                    {order.reserve ? (
+                        <Badge colorPalette="purple" variant="solid" fontSize="sm" px="3" py="1" borderRadius="full">
                             В резерве
+                        </Badge>
+                    ) : (
+                        <Badge
+                            colorPalette={STATUS_COLORS[order.status] ?? 'gray'}
+                            variant="subtle"
+                            fontSize="sm"
+                            px="3"
+                            py="1"
+                            borderRadius="full"
+                        >
+                            {STATUS_LABELS[order.status] ?? order.status}
                         </Badge>
                     )}
                     <Badge

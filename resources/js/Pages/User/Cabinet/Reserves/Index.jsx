@@ -4,7 +4,7 @@ import {
 } from '@chakra-ui/react';
 import { Head, Link, router } from '@inertiajs/react';
 import axios from 'axios';
-import { LuClock3, LuEye, LuSend, LuPackage } from 'react-icons/lu';
+import { LuClock3, LuEye, LuSend, LuPackage, LuBan } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import ReserveCountdown from '@/components/cabinet/ReserveCountdown';
 import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
@@ -37,6 +37,25 @@ export default function ReservesIndex({ reserves }) {
         }
     }, [confirmTarget]);
 
+    // Отмена прямо из списка — не заставляем открывать заказ ради одного действия
+    const [cancelTarget, setCancelTarget] = useState(null);
+    const [cancelling, setCancelling] = useState(false);
+
+    const doCancel = useCallback(async () => {
+        if (!cancelTarget) return;
+        setCancelling(true);
+        try {
+            const { data } = await axios.post(`/cabinet/orders/${cancelTarget.id}/cancel`);
+            toastSuccess('Заказ отменён', data?.message || 'Товар возвращён в свободный остаток.');
+        } catch (err) {
+            toastError('Отменить не удалось', err?.response?.data?.message || 'Попробуйте ещё раз.');
+        } finally {
+            setCancelling(false);
+            setCancelTarget(null);
+            router.reload();
+        }
+    }, [cancelTarget]);
+
     return (
         <CabinetLayout title="Заказы в резерве">
             <Head title="Заказы в резерве — Pecado" />
@@ -53,6 +72,19 @@ export default function ReservesIndex({ reserves }) {
                 cancelLabel="Ещё подумаю"
                 colorPalette="green"
                 isLoading={confirming}
+            />
+
+            <ConfirmDialog
+                open={!!cancelTarget}
+                onClose={() => setCancelTarget(null)}
+                onConfirm={doCancel}
+                title="Отменить заказ?"
+                description={cancelTarget
+                    ? `Заказ ${cancelTarget.number} будет отменён, товар вернётся в свободный остаток. Действие необратимо.`
+                    : ''}
+                confirmLabel="Отменить заказ"
+                cancelLabel="Не отменять"
+                isLoading={cancelling}
             />
 
             {reserves.length === 0 ? (
@@ -96,21 +128,32 @@ export default function ReservesIndex({ reserves }) {
                                     </VStack>
                                 </Flex>
 
-                                {/* Полноценные кнопки, не тесные иконки: тапать с телефона */}
-                                <Flex mt="4" gap="2" direction={{ base: 'column', sm: 'row' }}>
+                                {/* Полноценные кнопки, не тесные иконки: тапать с телефона.
+                                    Все действия резерва доступны прямо из списка. */}
+                                <Flex mt="4" gap="2" direction={{ base: 'column', sm: 'row' }} flexWrap="wrap">
                                     <Button
                                         colorPalette="green"
                                         size="sm"
-                                        flex="1"
+                                        flex={{ base: 'none', sm: '1' }}
                                         onClick={() => setConfirmTarget(order)}
                                     >
                                         <LuSend size={16} />
-                                        Отправить в отгрузку
+                                        В отгрузку
                                     </Button>
-                                    <Button asChild variant="outline" size="sm" flex="1">
+                                    <Button
+                                        colorPalette="red"
+                                        variant="outline"
+                                        size="sm"
+                                        flex={{ base: 'none', sm: '1' }}
+                                        onClick={() => setCancelTarget(order)}
+                                    >
+                                        <LuBan size={16} />
+                                        Отменить
+                                    </Button>
+                                    <Button asChild variant="outline" size="sm" flex={{ base: 'none', sm: '1' }}>
                                         <Link href={`/cabinet/orders/${order.id}`}>
                                             <LuEye size={16} />
-                                            Открыть заказ
+                                            Открыть
                                         </Link>
                                     </Button>
                                 </Flex>
@@ -124,7 +167,7 @@ export default function ReservesIndex({ reserves }) {
                 <Text fontSize="xs" color="fg.muted">
                     Пока заказ в резерве, товар удержан на складе и не уедет другому покупателю.
                     Не подтвердите до истечения срока — резерв снимется автоматически, и товар
-                    вернётся в свободный остаток. Изменить состав или отменить заказ можно на его странице.
+                    вернётся в свободный остаток. Изменить состав можно на странице заказа, подтвердить и отменить — прямо здесь.
                 </Text>
             </Box>
         </CabinetLayout>
