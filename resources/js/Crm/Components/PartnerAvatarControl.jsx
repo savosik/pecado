@@ -35,7 +35,7 @@ export default function PartnerAvatarControl({
         : (avatar ? 'Загружена вручную' : 'Аватарки пока нет');
 
     if (!canEdit) {
-        return <PartnerAvatar avatar={avatar} name={name} size={56} hint={hint} />;
+        return <PartnerAvatar avatar={avatar} name={name} size={64} hint={hint} />;
     }
 
     const upload = async (file) => {
@@ -96,10 +96,15 @@ export default function PartnerAvatarControl({
             <MenuRoot>
                 <MenuTrigger asChild disabled={busy}>
                     <Box cursor="pointer" opacity={busy ? 0.5 : 1} title="Аватарка партнёра">
-                        <PartnerAvatar avatar={avatar} name={name} size={56} hint={hint} />
+                        <PartnerAvatar avatar={avatar} name={name} size={64} hint={hint} preview={false} />
                     </Box>
                 </MenuTrigger>
                 <MenuContent>
+                    {avatar && (
+                        <MenuItem value="open" onClick={() => window.open(avatar.url, '_blank', 'noopener')}>
+                            Открыть в полном размере
+                        </MenuItem>
+                    )}
                     <MenuItem value="upload" onClick={() => fileInput.current?.click()}>
                         Загрузить свою…
                     </MenuItem>

@@ -211,6 +211,32 @@ class ClientAvatarGenerationTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('Отбор по менеджеру берёт только его партнёров, неизвестное имя обрывает прогон')]
+    public function the_command_can_be_limited_to_a_manager(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $manager = PersonalManager::factory()->create(['name' => 'Сухов Иван']);
+        $mine = User::factory()->create(['personal_manager_id' => $manager->id]);
+
+        $this->artisan('crm:avatars-generate --manager=Сухов')->assertSuccessful();
+
+        \Illuminate\Support\Facades\Queue::assertPushed(
+            GenerateClientAvatar::class,
+            fn (GenerateClientAvatar $job): bool => $job->clientId === $mine->id,
+        );
+        // Партнёр другого менеджера (из setUp) в отбор не попал.
+        \Illuminate\Support\Facades\Queue::assertNotPushed(
+            GenerateClientAvatar::class,
+            fn (GenerateClientAvatar $job): bool => $job->clientId === $this->client->id,
+        );
+
+        // Опечатка в фамилии не должна тихо раздать аватарки всей базе.
+        $this->expectException(\RuntimeException::class);
+        $this->artisan('crm:avatars-generate --manager=Сухоф');
+    }
+
+    #[Test]
     #[TestDox('Команда ставит задания только тем, у кого аватарки нет')]
     public function the_command_queues_only_partners_without_avatars(): void
     {

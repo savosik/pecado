@@ -4,8 +4,10 @@ namespace App\Console\Commands;
 
 use App\Jobs\GenerateClientAvatar;
 use App\Models\CrmClientAvatar;
+use App\Models\PersonalManager;
 use App\Models\User;
 use Illuminate\Console\Command;
+use RuntimeException;
 
 /**
  * Пачка аватарок: раздать джобы тем партнёрам, у кого картинки ещё нет.
@@ -20,6 +22,7 @@ class CrmAvatarsGenerate extends Command
     protected $signature = 'crm:avatars-generate
         {--limit= : Сколько партнёров взять за прогон (по умолчанию из конфига)}
         {--client= : Только этот партнёр (users.id)}
+        {--manager=* : Только партнёры этих менеджеров: id или часть фамилии}
         {--force : Перерисовать даже тем, у кого аватарка уже есть (ручные не трогает)}
         {--dry-run : Показать, кому поставили бы задание, ничего не ставя}';
 
@@ -56,6 +59,46 @@ class CrmAvatarsGenerate extends Command
         $this->info('Заданий поставлено: '.$clients->count().($dryRun ? ' (сухой прогон)' : ''));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Отбор по менеджерам: `--manager=1 --manager=Курочкина`.
+     *
+     * Часть фамилии, а не только id, потому что команду запускают руками и по
+     * живому поводу («раздай аватарки моим»), а id менеджера в этот момент
+     * никто не помнит. Ненайденное имя обрывает прогон: молча раздать аватарки
+     * всей базе вместо одного отдела — хуже, чем не раздать никому.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<User>  $query
+     */
+    private function applyManagers($query): void
+    {
+        /** @var list<string> $needles */
+        $needles = array_filter((array) $this->option('manager'));
+
+        if ($needles === []) {
+            return;
+        }
+
+        $ids = [];
+
+        foreach ($needles as $needle) {
+            $found = PersonalManager::query()
+                ->when(ctype_digit((string) $needle),
+                    fn ($q) => $q->where('id', (int) $needle),
+                    fn ($q) => $q->where('name', 'like', '%'.$needle.'%'),
+                )
+                ->pluck('id')
+                ->all();
+
+            if ($found === []) {
+                throw new RuntimeException("Менеджер «{$needle}» не найден.");
+            }
+
+            $ids = array_merge($ids, $found);
+        }
+
+        $query->whereIn('users.personal_manager_id', array_unique($ids));
     }
 
     /**
@@ -97,6 +140,8 @@ class CrmAvatarsGenerate extends Command
         if ($client = $this->option('client')) {
             $query->where('users.id', (int) $client);
         }
+
+        $this->applyManagers($query);
 
         return $query
             ->orderByDesc(

@@ -1,6 +1,12 @@
 import { useState } from 'react';
-import { Box, Text } from '@chakra-ui/react';
+import { Box, Text, VStack } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
+import {
+    HoverCardArrow,
+    HoverCardContent,
+    HoverCardRoot,
+    HoverCardTrigger,
+} from '@/components/ui/hover-card';
 
 /**
  * Аватарка партнёра в CRM.
@@ -56,8 +62,11 @@ function paletteFor(name = '') {
  * @param {string} name — для инициалов и цвета
  * @param {number} size — сторона квадрата в пикселях
  * @param {string|null} hint — подсказка при наведении
+ * @param {boolean} preview — показывать увеличенную картинку при наведении.
+ *   В списке аватарка 28 px: разобрать, что там нарисовано, без увеличения
+ *   невозможно, а ради этого её и рисовали.
  */
-export default function PartnerAvatar({ avatar, name, size = 28, hint = null }) {
+export default function PartnerAvatar({ avatar, name, size = 28, hint = null, preview = true }) {
     // Файл мог исчезнуть с диска (переезд хранилища, ручная чистка). Тогда
     // показываем инициалы, а не сломанную картинку.
     const [failed, setFailed] = useState(false);
@@ -101,5 +110,35 @@ export default function PartnerAvatar({ avatar, name, size = 28, hint = null }) 
         </Box>
     );
 
-    return hint ? <Tooltip content={hint} openDelay={400}>{box}</Tooltip> : box;
+    // Без картинки увеличивать нечего: инициалы крупнее не станут понятнее,
+    // и всплывающая карточка на пустом месте только мешала бы.
+    if (!showImage || !preview) {
+        return hint ? <Tooltip content={hint} openDelay={400}>{box}</Tooltip> : box;
+    }
+
+    return (
+        <HoverCardRoot size="sm" openDelay={250} closeDelay={80} positioning={{ placement: 'right' }}>
+            <HoverCardTrigger asChild>
+                <Box cursor="help" display="inline-flex">{box}</Box>
+            </HoverCardTrigger>
+            <HoverCardContent maxW="260px">
+                <HoverCardArrow />
+                <VStack gap={2} align="stretch">
+                    <Box borderRadius="md" overflow="hidden" bg="bg.muted">
+                        <img
+                            src={avatar.url}
+                            alt=""
+                            width={220}
+                            height={220}
+                            style={{ width: '220px', height: '220px', objectFit: 'cover', display: 'block' }}
+                        />
+                    </Box>
+                    <Text fontSize="xs" color="fg.muted" lineHeight="1.3">
+                        {name}
+                        {hint ? ` · ${hint}` : ''}
+                    </Text>
+                </VStack>
+            </HoverCardContent>
+        </HoverCardRoot>
+    );
 }
