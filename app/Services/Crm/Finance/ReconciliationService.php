@@ -28,6 +28,16 @@ use Illuminate\Support\Facades\DB;
  *
  * Организация обязательна к выбору не из технических соображений: сводный акт
  * по нескольким нашим юрлицам юридически бессмыслен — его нельзя подписать.
+ *
+ * ## Строка акта — документ, а не движение регистра
+ *
+ * Регистр 1С хранит по строке на объект расчётов: платёж на 5 000 ₽, закрывший
+ * четыре реализации, приезжает четырьмя движениями с одним номером документа
+ * (на боевой базе так устроена каждая пятая проводка). Для бухгалтерии клиента
+ * это один платёжный документ, и в акте сверки его показывают одной строкой —
+ * разбивка по объектам в актах не принята (замечание заказчика 09.09.2026).
+ * Поэтому движения одного документа схлопываются здесь, а объекты расчётов
+ * перечисляются в подписи к строке.
  */
 class ReconciliationService
 {
@@ -100,28 +110,34 @@ class ReconciliationService
         $credit = 0.0;
         $rows = [];
 
-        foreach ($entries as $entry) {
-            $amount = (float) $entry->amount;
+        foreach ($this->groupByDocument($entries) as $group) {
+            /** @var SettlementEntry $first */
+            $first = $group->first();
+            $amount = (float) $group->sum(static fn (SettlementEntry $entry): float => (float) $entry->amount);
+            $rowDebit = (float) $group->sum(static fn (SettlementEntry $entry): float => (float) $entry->debit);
+            $rowCredit = (float) $group->sum(static fn (SettlementEntry $entry): float => (float) $entry->credit);
+
             $balance += $amount;
-            $debit += (float) $entry->debit;
-            $credit += (float) $entry->credit;
+            $debit += $rowDebit;
+            $credit += $rowCredit;
 
             $rows[] = [
-                'id' => $entry->id,
-                'date' => $entry->date?->toDateString(),
-                'date_label' => $entry->date?->format('d.m.Y'),
-                'document' => $entry->document_label,
-                'document_url' => $this->documentUrl($entry),
-                'type' => $entry->type,
-                'type_label' => $entry->type_label,
-                'debit' => round((float) $entry->debit, 2),
-                'credit' => round((float) $entry->credit, 2),
+                'id' => $first->id,
+                'date' => $first->date?->toDateString(),
+                'date_label' => $first->date?->format('d.m.Y'),
+                'document' => $first->document_label,
+                'document_url' => $this->documentUrl($first),
+                'type' => $first->type,
+                'type_label' => $first->type_label,
+                'debit' => round($rowDebit, 2),
+                'credit' => round($rowCredit, 2),
                 'balance' => round($balance, 2),
-                'agreement_name' => $entry->agreement_name,
-                'company_name' => $entry->company?->getAttribute('name'),
-                'organization_name' => $entry->organization?->getAttribute('name'),
-                'settlement_object_name' => $entry->settlement_object_name,
-                'comment' => $entry->comment,
+                'agreement_name' => $first->agreement_name,
+                'company_name' => $first->company?->getAttribute('name'),
+                'organization_name' => $first->organization?->getAttribute('name'),
+                'settlement_object_name' => $this->joinDistinct($group->pluck('settlement_object_name')),
+                'comment' => $this->joinDistinct($group->pluck('comment')),
+                'entries_count' => $group->count(),
             ];
         }
 
@@ -141,6 +157,47 @@ class ReconciliationService
             'ledger_starts_at' => self::LEDGER_STARTS_AT,
             'discrepancy' => $this->discrepancy($client, $organizationId, $currency, $companyId),
         ];
+    }
+
+    /**
+     * Движения одного документа — одной группой, в порядке первого появления.
+     *
+     * Ключ — регистратор плюс всё, что в строке акта показывается отдельно:
+     * дата, тип операции, стороны и соглашение. На боевой базе движения одного
+     * документа никогда не расходятся по дате и типу, а по контрагенту —
+     * расходятся (26 документов): такие строки остаются раздельными, иначе
+     * в акте по всем юрлицам сумма двух контрагентов легла бы в одну строку.
+     * Движение без регистратора (ручной ввод остатков) — само себе группа.
+     *
+     * Порядок групп совпадает с порядком движений: внутри ключа дата одна,
+     * поэтому первое появление документа и есть его место в ленте.
+     *
+     * @param  \Illuminate\Support\Collection<int, SettlementEntry>  $entries
+     * @return \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, SettlementEntry>>
+     */
+    private function groupByDocument(\Illuminate\Support\Collection $entries): \Illuminate\Support\Collection
+    {
+        return $entries->groupBy(static fn (SettlementEntry $entry): string => implode('|', [
+            $entry->document_uuid ?? 'entry:'.$entry->id,
+            $entry->date?->toDateString(),
+            $entry->type,
+            $entry->company_id,
+            $entry->organization_id,
+            $entry->agreement_id,
+        ]), preserveKeys: true);
+    }
+
+    /**
+     * Подпись из непустых уникальных значений группы: «Реализация 29УТ-004344…;
+     * Реализация 29УТ-004584…». null, если подписывать нечем.
+     *
+     * @param  \Illuminate\Support\Collection<int, string|null>  $values
+     */
+    private function joinDistinct(\Illuminate\Support\Collection $values): ?string
+    {
+        $joined = $values->filter()->unique()->implode('; ');
+
+        return $joined === '' ? null : $joined;
     }
 
     /**

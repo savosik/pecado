@@ -210,6 +210,81 @@ class FinanceReconciliationTest extends TestCase
     }
 
     /**
+     * Платёж, закрывший несколько реализаций, приезжает из 1С движением на каждый
+     * объект расчётов. Для бухгалтерии это один документ — в акте он одной строкой
+     * с общей суммой (кейс Исько, 09.09.2026: четыре строки 29УТ-001643 в акте).
+     */
+    #[Test]
+    public function движения_одного_документа_схлопываются_в_одну_строку(): void
+    {
+        $document = '2db44e62-534e-11f1-8941-9d41c30edadd';
+
+        foreach ([[4136, '29УТ-004344'], [600, '29УТ-004584'], [224, '29УТ-004585'], [40, '29УТ-004622']] as [$amount, $shipment]) {
+            $this->entry([
+                'type' => SettlementEntry::TYPE_PAYMENT_IN,
+                'amount' => $amount,
+                'date' => '2026-05-18',
+                'document_uuid' => $document,
+                'document_kind' => 'payment',
+                'document_number' => '29УТ-001643',
+                'settlement_object_name' => 'Реализация товаров и услуг '.$shipment,
+            ]);
+        }
+        $this->entry(['type' => SettlementEntry::TYPE_SHIPMENT, 'amount' => -4136, 'date' => '2026-05-20']);
+
+        $act = $this->open([
+            'client_id' => $this->client->id,
+            'date_from' => '2026-05-01',
+            'date_to' => '2026-05-31',
+        ])['act'];
+
+        $this->assertCount(2, $act['rows']);
+        $this->assertSame(2, $act['rows_count']);
+
+        $payment = $act['rows'][0];
+        $this->assertSame('Платёжный документ 29УТ-001643', $payment['document']);
+        $this->assertEqualsWithDelta(5000.0, $payment['credit'], 0.01);
+        $this->assertEqualsWithDelta(0.0, $payment['debit'], 0.01);
+        $this->assertEqualsWithDelta(5000.0, $payment['balance'], 0.01);
+        $this->assertSame(4, $payment['entries_count']);
+        $this->assertSame(
+            'Реализация товаров и услуг 29УТ-004344; Реализация товаров и услуг 29УТ-004584; '
+            .'Реализация товаров и услуг 29УТ-004585; Реализация товаров и услуг 29УТ-004622',
+            $payment['settlement_object_name'],
+        );
+
+        // Итоги не зависят от схлопывания.
+        $this->assertEqualsWithDelta(864.0, $act['rows'][1]['balance'], 0.01);
+        $this->assertEqualsWithDelta(864.0, $act['closing_balance'], 0.01);
+        $this->assertEqualsWithDelta(5000.0, $act['turnover_credit'], 0.01);
+        $this->assertEqualsWithDelta(4136.0, $act['turnover_debit'], 0.01);
+    }
+
+    /**
+     * Один документ 1С может двигать расчёты двух контрагентов партнёра. В акте
+     * по всем юрлицам такие движения остаются раздельными строками: иначе сумма
+     * двух контрагентов легла бы в одну строку, и понять, чья она, стало бы нельзя.
+     */
+    #[Test]
+    public function движения_одного_документа_по_разным_контрагентам_не_схлопываются(): void
+    {
+        $document = '9c1b5a2e-0000-4000-8000-000000000001';
+        $other = Company::factory()->create(['user_id' => $this->client->id]);
+
+        $this->entry(['type' => SettlementEntry::TYPE_PAYMENT_IN, 'amount' => 1000, 'date' => '2026-05-18', 'document_uuid' => $document]);
+        $this->entry(['type' => SettlementEntry::TYPE_PAYMENT_IN, 'amount' => 700, 'date' => '2026-05-18', 'document_uuid' => $document, 'company_id' => $other->id]);
+
+        $act = $this->open([
+            'client_id' => $this->client->id,
+            'date_from' => '2026-05-01',
+            'date_to' => '2026-05-31',
+        ])['act'];
+
+        $this->assertCount(2, $act['rows']);
+        $this->assertEqualsWithDelta(1700.0, $act['closing_balance'], 0.01);
+    }
+
+    /**
      * Акт уходит клиенту. Молча отправить цифру, не сходящуюся с учётной
      * системой, нельзя — поэтому расхождение отдаётся отдельным полем.
      */
