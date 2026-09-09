@@ -19,7 +19,6 @@ RUN apt-get update && apt-get install -y \
     libwebp-dev \
     librabbitmq-dev \
     supervisor \
-    cron \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip sockets \
     && pecl install amqp redis \
@@ -39,9 +38,10 @@ RUN useradd -G www-data,root -u $uid -d /home/$user $user \
 WORKDIR /var/www
 
 
-# Setup Cron
-RUN echo "* * * * * cd /var/www && php artisan schedule:run >> /dev/null 2>&1" > /etc/cron.d/laravel-cron \
-    && chmod 0644 /etc/cron.d/laravel-cron \
-    && crontab /etc/cron.d/laravel-cron
+# Планировщик Laravel запускает supervisor (docker/supervisor/conf.d/scheduler.conf,
+# `php artisan schedule:work`), а не cron. Cron здесь стоял с первого коммита и не
+# работал ни дня: Debian-cron даёт заданиям PATH=/usr/bin:/bin, а php в этом образе
+# лежит в /usr/local/bin — `php artisan schedule:run` падал с «php: not found» в /dev/null.
+# Обнаружено 2026-09-09. Не возвращать cron без строки PATH= в crontab.
 
 USER $user

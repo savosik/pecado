@@ -60,7 +60,11 @@ Schedule::command('mail:prune-unmatched')->dailyAt('04:40')->withoutOverlapping(
 // Понедельничные поводы вокруг сверки. 1С выкладывает акты каждый день, и письмо
 // на каждый акт клиент перестаёт замечать через неделю; сводка раз в неделю —
 // отдельное событие, на которое подписываются осознанно.
-Schedule::command('mail:weekly-reconciliation')->mondays()->at('09:00')->withoutOverlapping();
+// Придержано флагом MAIL_WEEKLY_RECONCILIATION_SCHEDULED (config/mail_stream.php):
+// планировщик ожил 2026-09-09, и первый понедельник разослал бы акты всем должникам
+// разом (dry-run на проде: 54 акта + 5 сводок). Включается осознанно, не релизом.
+Schedule::command('mail:weekly-reconciliation')->mondays()->at('09:00')->withoutOverlapping()
+    ->when(fn () => (bool) config('mail_stream.weekly_reconciliation_scheduled'));
 // Дни рождения контактов: задача «Поздравить» ставится персональному менеджеру
 // накануне. Идемпотентно — повторный прогон задачи не плодит.
 Schedule::command('contacts:birthday-tasks')->dailyAt('06:20')->withoutOverlapping();
