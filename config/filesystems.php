@@ -47,6 +47,24 @@ return [
             'report' => false,
         ],
 
+        /*
+         * Аватарки партнёров в CRM. Отдельный диск, а не медиатека на публичном
+         * хранилище: аватарку рисует отдел продаж для себя, и партнёр не должен
+         * найти её в кабинете или по прямой ссылке. Отсюда файлы уходят только
+         * через маршрут crm.clients.avatar под правом crm-clients.view.
+         *
+         * `serve` намеренно false: встроенная отдача Laravel дала бы адрес,
+         * который открывается без проверки прав.
+         */
+        'crm-avatars' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/crm-avatars'),
+            'serve' => false,
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

@@ -7,6 +7,7 @@ use App\Http\Controllers\Crm\AttachmentController;
 use App\Http\Controllers\Crm\BedsController;
 use App\Http\Controllers\Crm\CalendarFeedController;
 use App\Http\Controllers\Crm\CallController;
+use App\Http\Controllers\Crm\ClientAvatarController;
 use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\ClientProfileController;
 use App\Http\Controllers\Crm\CommentController;
@@ -131,6 +132,26 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // и у журналов документов: суммы по своему партнёру менеджер и так видит.
         Route::get('/partners/{client}/insights', [ClientController::class, 'insights'])
             ->name('clients.insights')
+            ->whereNumber('client');
+
+        // Аватарки партнёров. Единственный выход файла наружу: диск приватный,
+        // публичного адреса у картинки нет, и партнёр свою аватарку в кабинете
+        // не увидит — её рисует отдел продаж для себя.
+        //
+        // Отдача открыта всем, кто видит партнёров; загрузка, перерисовка и
+        // снятие — под crm-profile.edit (проверка в контроллере), потому что
+        // это правка карточки, а не просмотр.
+        Route::get('/partners/{client}/avatar', [ClientAvatarController::class, 'show'])
+            ->name('clients.avatar')
+            ->whereNumber('client');
+        Route::post('/partners/{client}/avatar', [ClientAvatarController::class, 'store'])
+            ->name('clients.avatar.store')
+            ->whereNumber('client');
+        Route::post('/partners/{client}/avatar/regenerate', [ClientAvatarController::class, 'regenerate'])
+            ->name('clients.avatar.regenerate')
+            ->whereNumber('client');
+        Route::delete('/partners/{client}/avatar', [ClientAvatarController::class, 'destroy'])
+            ->name('clients.avatar.destroy')
             ->whereNumber('client');
 
         // Документы внутри CRM. Отдельного права нет: «вижу партнёра, но не вижу

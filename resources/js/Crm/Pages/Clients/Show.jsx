@@ -127,6 +127,7 @@ export default function Show() {
                     lifecycle={canViewProfile ? lifecycle : null}
                     lifecycleOptions={profileOptions?.lifecycle_status || []}
                     canEditLifecycle={can('crm-profile.edit')}
+                    canEditAvatar={can('crm-profile.edit')}
                 />
 
                 {/* Голосовое досье — прямо в шапке, а не в спойлере: надиктовать

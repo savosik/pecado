@@ -4,6 +4,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import LifecycleCell from './LifecycleCell';
 import LastVisitHint from '@/Crm/Components/LastVisitHint';
 import DebtLevelBadge from '@/Crm/Components/DebtLevelBadge';
+import PartnerAvatarControl from '@/Crm/Components/PartnerAvatarControl';
 
 /**
  * Один факт о партнёре: подпись мелко, значение рядом.
@@ -33,17 +34,34 @@ function Fact({ icon: Icon, label, children }) {
  * @param {object|null} lifecycle
  * @param {Array} lifecycleOptions
  * @param {boolean} canEditLifecycle
+ * @param {boolean} canEditAvatar — право crm-profile.edit: аватарку правит тот же,
+ *   кто правит карточку
  */
 export default function ClientSummaryBar({
     client,
     lifecycle = null,
     lifecycleOptions = [],
     canEditLifecycle = false,
+    canEditAvatar = false,
     debt = null,
 }) {
     return (
         <Box borderWidth="1px" borderColor="border" borderRadius="lg" bg="bg.panel" px={3} py={2}>
             <Wrap gap={4} align="center">
+                {/* Аватарка первой: карточку открывают десятками за день,
+                    и картинка отвечает «тот ли это партнёр» раньше, чем
+                    менеджер дочитает наименование из 1С. */}
+                {client.avatars_enabled !== false && (
+                    <WrapItem>
+                        <PartnerAvatarControl
+                            clientId={client.id}
+                            name={client.name}
+                            avatar={client.avatar}
+                            canEdit={canEditAvatar}
+                            generationEnabled={client.avatar_generation_enabled !== false}
+                        />
+                    </WrapItem>
+                )}
                 {debt?.partner && debt.partner.level !== 'clean' && (
                     <WrapItem>
                         <DebtLevelBadge

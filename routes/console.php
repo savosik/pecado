@@ -41,6 +41,7 @@ Schedule::command('sitemap:generate')->dailyAt('03:30'); // после search:sy
 Schedule::command('feed:build-yandex')->hourly()->withoutOverlapping(); // публичный YML-фид Яндекс.Маркета
 Schedule::command('promo:rebuild-rule-products')->dailyAt('02:40')->withoutOverlapping(); // участники правил акций: состав категорий и теги меняются массово
 Schedule::command('crm:lifecycle-revive')->dailyAt('06:05')->withoutOverlapping(); // возврат в «Активен» тех, за кем снова пошли заказы/отгрузки; до подсказок, чтобы те считали уже по свежим стадиям
+Schedule::command('crm:avatars-generate')->dailyAt('04:40')->withoutOverlapping(); // аватарки партнёрам без картинки: пачка ограничена конфигом, генерация платная
 Schedule::command('crm:lifecycle-hints')->dailyAt('06:10')->withoutOverlapping(); // подсказки по жизненному статусу клиентов — статусы НЕ меняет
 Schedule::command('crm:back-in-stock-drafts')->dailyAt('07:20')->withoutOverlapping(); // черновики писем о вернувшихся в продажу товарах; ничего не отправляет
 Schedule::command('crm:tasks-recur')->dailyAt('05:40')->withoutOverlapping(); // задачи по расписанию: материализация на сутки вперёд, до утренних напоминаний

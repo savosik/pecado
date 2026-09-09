@@ -173,6 +173,11 @@ class ClientController extends CrmController
                 // показываем рядом, только если партнёр назвал себя иначе.
                 'name' => $user->display_name,
                 'personal_name' => $user->personal_name_if_differs,
+                // Аватарка карточки: только адрес защищённого маршрута —
+                // файл лежит на приватном диске и партнёру не отдаётся.
+                'avatar' => app(\App\Services\Crm\Avatars\ClientAvatarLinks::class)->for((int) $user->getKey()),
+                'avatars_enabled' => (bool) config('crm_avatars.enabled'),
+                'avatar_generation_enabled' => (bool) config('crm_avatars.generation.enabled'),
                 'email' => $user->email,
                 'phone' => $user->phone,
                 // Номер без форматирования — для tel:-ссылки: из 1С он приходит

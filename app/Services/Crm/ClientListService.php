@@ -507,6 +507,9 @@ class ClientListService
         $lastComments = $this->lastComments($ids);
         $planFact = $canSeePlans ? $this->planFact->forClients($ids, CarbonImmutable::now()) : [];
         $lastOrders = $this->enricher->lastOrders($ids);
+        // Аватарки — одним запросом на страницу. Картинка не отдаётся здесь,
+        // только адрес защищённого маршрута: файлы лежат на приватном диске.
+        $avatars = app(\App\Services\Crm\Avatars\ClientAvatarLinks::class)->forClients($ids);
         // Ступень долга — бейдж в строке: закрытые заказы менеджер должен видеть
         // до того, как заведёт заказ в 1С.
         $debtLevels = $actor->can('crm-finance.view') ? app(\App\Services\Debt\DebtOverview::class)->levelsFor($ids) : [];
@@ -521,6 +524,7 @@ class ClientListService
             $canSeeTasks,
             $canSeeProfile,
             $debtLevels[(int) $client->getKey()] ?? null,
+            $avatars[(int) $client->getKey()] ?? null,
         ));
 
         return $hydrated;
@@ -558,6 +562,7 @@ class ClientListService
      * Одна строка таблицы.
      *
      * @param  array{plan: float|null, fact: float, percent: int|null}|null  $planFact
+     * @param  array{url: string, source: string|null}|null  $avatar
      * @return array<string, mixed>
      */
     private function row(
@@ -569,6 +574,7 @@ class ClientListService
         bool $canSeeTasks,
         bool $canSeeProfile,
         ?array $debt = null,
+        ?array $avatar = null,
     ): array {
         $profile = $canSeeProfile ? $client->crmProfile : null;
         // Партнёр без профиля читается как активный — тот же дефолт, что в колонке БД.
@@ -584,6 +590,8 @@ class ClientListService
             // показывается, только когда партнёр переименовал себя в кабинете.
             'name' => $client->display_name,
             'personal_name' => $client->personal_name_if_differs,
+            // Аватарка: NULL — её ещё не нарисовали, строка покажет инициалы.
+            'avatar' => $avatar,
             'email' => $client->email,
             'phone' => $client->phone,
             // Номер для tel:-ссылки: в базе он приходит из 1С в произвольном формате.

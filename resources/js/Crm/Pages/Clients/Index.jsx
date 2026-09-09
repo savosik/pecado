@@ -25,6 +25,7 @@ import TasksCell from './components/TasksCell';
 import PlanFactCell from './components/PlanFactCell';
 import LastOrderCell from '@/Crm/Components/LastOrderCell';
 import LifecycleCell from './components/LifecycleCell';
+import PartnerAvatar from '@/Crm/Components/PartnerAvatar';
 import ActivityHint from './components/ActivityHint';
 import LastVisitHint from '@/Crm/Components/LastVisitHint';
 import DebtLevelBadge from '@/Crm/Components/DebtLevelBadge';
@@ -123,7 +124,16 @@ export default function Index({
             label: 'Партнёр',
             sortable: true,
             render: (_, row) => (
-                <VStack align="start" gap={0}>
+                <HStack align="start" gap={2}>
+                    {/* Аватарка — чтобы строка узнавалась по картинке, а не
+                        вычитывалась из десятка похожих «ООО …». */}
+                    <PartnerAvatar
+                        avatar={row.avatar}
+                        name={row.name}
+                        size={28}
+                        hint={row.avatar?.source === 'ai' ? 'Аватарку нарисовал ИИ — можно заменить в карточке' : null}
+                    />
+                    <VStack align="start" gap={0}>
                     <HStack gap={2}>
                         <Text fontWeight="semibold">{row.name}</Text>
                         <Text fontFamily="mono" fontSize="10px" color="fg.muted">#{row.id}</Text>
@@ -147,7 +157,8 @@ export default function Index({
                     )}
                     <LastVisitHint visit={row.last_visit} />
                     <ActivityHint activity={row.activity} />
-                </VStack>
+                    </VStack>
+                </HStack>
             ),
         },
         {
