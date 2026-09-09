@@ -97,6 +97,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
 
     Route::middleware('permission:crm-clients.view')->group(function () {
         Route::get('/partners', [ClientController::class, 'index'])->name('clients.index');
+        // Догрузка страниц для бесконечной прокрутки — до /partners/{client},
+        // хотя тот и ограничен whereNumber: порядок здесь дешевле, чем догадка.
+        Route::get('/partners/data', [ClientController::class, 'data'])->name('clients.data');
         // Личные отборы списка — до /partners/{client}, иначе «presets» ушло бы
         // в маршрут карточки. Отдельного права нет: отбор личный и живёт под тем
         // же crm-clients.view, что и сам список.

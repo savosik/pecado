@@ -67,13 +67,32 @@ class ClientListService
         $canSeeProfile = $actor->can('crm-profile.view');
         $canSeeTasks = $actor->can('crm-tasks.view');
 
-        $query = User::query()
-            ->inCrmScope($actor, $filters->scope)
+        $query = $this->filtered($actor, $filters)
             ->with(['personalManager:id,name', 'clientStatus:id,name,color'])
             ->when($canSeeProfile, fn (Builder $q) => $q->with(
                 'crmProfile:id,user_id,lifecycle_status,lifecycle_hint'
             ))
             ->when($canSeeTasks, fn (Builder $q) => $q->withCount($this->tasks->activeTasksCount()));
+
+        $this->applySort($query, $filters, $actor);
+
+        return $query;
+    }
+
+    /**
+     * Отобранные партнёры без догрузки и сортировки — голый WHERE.
+     *
+     * Нужен воронке ({@see ClientFunnelService}): она считает стадии по тому же
+     * отбору, что и список, но сама стадия из него исключается — чип «Спящие»
+     * обязан показывать число спящих и тогда, когда выбран чип «Активные».
+     * Остальные отборы (менеджер, задачи, покупки) остаются: они сужают базу,
+     * по которой читается воронка, а не спорят с ней.
+     *
+     * @return Builder<User>
+     */
+    public function filtered(User $actor, ClientListFilters $filters, bool $withLifecycle = true): Builder
+    {
+        $query = User::query()->inCrmScope($actor, $filters->scope);
 
         if ($filters->search !== null) {
             $this->applySearch($query, $filters->search, $actor);
@@ -83,7 +102,7 @@ class ClientListService
             $query->where('personal_manager_id', $filters->managerId);
         }
 
-        if ($filters->lifecycle !== null) {
+        if ($withLifecycle && $filters->lifecycle !== null) {
             $this->applyLifecycle($query, $filters->lifecycle);
         }
 
@@ -115,8 +134,6 @@ class ClientListService
         if ($filters->stockBuffer !== null) {
             $query->where('stock_buffer_enabled', $filters->stockBuffer === 'enabled');
         }
-
-        $this->applySort($query, $filters, $actor);
 
         return $query;
     }

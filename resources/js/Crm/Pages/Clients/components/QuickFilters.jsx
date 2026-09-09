@@ -66,7 +66,9 @@ export default function QuickFilters({
 
     const hasAny = Boolean(
         filters.search || filters.lifecycle || filters.task_state || filters.coverage
-        || filters.plan_state || filters.inactive_days || filters.manager_id,
+        || filters.plan_state || filters.inactive_days || filters.manager_id
+        || filters.no_order_days || filters.stock_buffer
+        || filters.order_amount_from || filters.order_amount_to,
     );
 
     return (

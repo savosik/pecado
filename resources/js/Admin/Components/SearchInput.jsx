@@ -9,12 +9,16 @@ import { LuSearch, LuX } from 'react-icons/lu';
  * @param {Function} onChange - Callback изменения значения
  * @param {string} placeholder - Placeholder для поля
  * @param {number} debounceMs - Задержка debounce в миллисекундах
+ * @param {string} size - Размер поля Chakra (sm | md | lg)
+ * @param {Object} inputProps - Дополнительные пропсы самого Input (фон, рамка…)
  */
 export const SearchInput = ({
     value = '',
     onChange,
     placeholder = 'Поиск...',
     debounceMs = 300,
+    size = 'md',
+    inputProps = null,
 }) => {
     const [localValue, setLocalValue] = useState(value);
 
@@ -57,9 +61,11 @@ export const SearchInput = ({
             }
         >
             <Input
+                size={size}
                 value={localValue}
                 onChange={(e) => setLocalValue(e.target.value)}
                 placeholder={placeholder}
+                {...inputProps}
             />
         </InputGroup>
     );

@@ -13,6 +13,7 @@ use App\Models\CrmClientProfileRevision;
 use App\Models\Organization;
 use App\Models\PersonalManager;
 use App\Models\User;
+use App\Services\Crm\ClientFunnelService;
 use App\Services\Crm\ClientInsightService;
 use App\Services\Crm\ClientLifecycleService;
 use App\Services\Crm\ClientListService;
@@ -30,8 +31,12 @@ use Inertia\Response;
 
 class ClientController extends CrmController
 {
-    public function index(Request $request, CrmTaskService $tasks, ClientListService $clients): Response
-    {
+    public function index(
+        Request $request,
+        CrmTaskService $tasks,
+        ClientListService $clients,
+        ClientFunnelService $funnel,
+    ): Response {
         $actor = $this->crmActor($request);
         $seesAll = $this->seesDepartment($request);
 
@@ -43,6 +48,9 @@ class ClientController extends CrmController
 
         return Inertia::render('Crm/Pages/Clients/Index', [
             'clients' => $clients->paginate($actor, $filters),
+            // Воронка по стадиям — над таблицей. Суммы отгрузок гейтит то же
+            // право, что и колонку «План / факт»: это та же выручка партнёров.
+            'funnel' => $canSeeProfile ? $funnel->forFilters($actor, $filters, $canSeePlans) : null,
             'managers' => $seesAll
                 ? PersonalManager::query()->active()->select('id', 'name')->orderBy('name')->get()
                 : [],
@@ -55,6 +63,22 @@ class ClientController extends CrmController
             'presets' => $this->presetsPayload($actor),
             'filters' => $filters->toArray(),
         ]);
+    }
+
+    /**
+     * Страница списка как JSON — для догрузки при бесконечной прокрутке.
+     *
+     * Тот же отбор и та же сборка строки, что у {@see index()}: догруженная
+     * страница не имеет права отличаться от первой ни составом, ни границей
+     * видимости. Отдельный маршрут, а не partial reload Inertia: тот заменил
+     * бы страницу целиком, а нужно дописать строки в конец.
+     */
+    public function data(Request $request, ClientListService $clients): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        $filters = ClientListFilters::fromRequest($request, $actor, $this->seesDepartment($request));
+
+        return response()->json($clients->paginate($actor, $filters));
     }
 
     /**

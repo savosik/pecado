@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Box, HStack, Input, Text } from '@chakra-ui/react';
-import { SearchInput } from '@/Admin/Components/SearchInput';
+import { LuSlidersHorizontal } from 'react-icons/lu';
 import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
 
 /**
@@ -25,10 +25,10 @@ function AmountInput({ value, onCommit, placeholder }) {
 
     return (
         <Input
-            size="sm"
+            size="xs"
             type="number"
             min={0}
-            maxW="90px"
+            maxW="80px"
             value={draft}
             placeholder={placeholder}
             onChange={(event) => setDraft(event.target.value)}
@@ -43,14 +43,21 @@ function AmountInput({ value, onCommit, placeholder }) {
  *
  * Пустое значение всегда означает «неважно» и уходит из запроса как undefined —
  * иначе в адресной строке копились бы пустые параметры и портили сохранённый отбор.
+ * Выбранный селект подсвечивается рамкой: в компактном ряду иначе не видно,
+ * что отбор вообще включён.
  */
-function FilterSelect({ value, onChange, placeholder, options, minW = '180px' }) {
+function FilterSelect({ value, onChange, placeholder, options, minW = '150px' }) {
+    const chosen = value !== undefined && value !== null && value !== '';
+
     return (
         <Box minW={minW}>
-            <NativeSelectRoot size="sm">
+            <NativeSelectRoot size="xs">
                 <NativeSelectField
                     value={value ?? ''}
                     onChange={(event) => onChange(event.target.value || undefined)}
+                    fontWeight={chosen ? '600' : '400'}
+                    borderColor={chosen ? 'fg' : undefined}
+                    color={chosen ? 'fg' : 'fg.muted'}
                 >
                     <option value="">{placeholder}</option>
                     {options.map((option) => (
@@ -63,43 +70,45 @@ function FilterSelect({ value, onChange, placeholder, options, minW = '180px' })
 }
 
 /**
- * Строка поиска и отборов списка партнёров.
+ * Уточняющие отборы списка партнёров — компактный ряд под воронкой.
+ *
+ * Стадии здесь нет: её выбирают чипами воронки. Всё остальное — менеджер,
+ * задачи, план, покупки, заказы, страховой запас — комплементарно воронке:
+ * сужает базу, по которой считаются её чипы, а не спорит с ней.
  *
  * @param {object} filters
- * @param {string} searchQuery
- * @param {Function} onSearch
  * @param {Function} onChange — применить один изменившийся параметр
- * @param {Array} lifecycleOptions
  * @param {Array} managers
  */
 export default function ClientsFilterBar({
     filters,
-    searchQuery,
-    onSearch,
     onChange,
-    lifecycleOptions = [],
     managers = [],
     canSeeAll = false,
     canSeeTasks = false,
     canSeePlans = false,
     uncoveredCount = null,
+    children = null,
 }) {
     return (
-        <HStack gap={3} align="center" wrap="wrap">
-            <Box flex="1" minW="260px">
-                <SearchInput
-                    value={searchQuery}
-                    onChange={onSearch}
-                    placeholder="Имя, email, телефон, текст задачи или комментария, номер документа..."
-                />
-            </Box>
+        <HStack gap={2} align="center" wrap="wrap">
+            <HStack gap={1} color="fg.muted" pr={1}>
+                <LuSlidersHorizontal size={13} />
+                <Text fontSize="xs" whiteSpace="nowrap">Уточнить</Text>
+            </HStack>
 
-            {lifecycleOptions.length > 0 && (
+            {children}
+
+            {canSeeAll && (
                 <FilterSelect
-                    value={filters.lifecycle}
-                    onChange={(value) => onChange({ lifecycle: value })}
-                    placeholder="Все стадии"
-                    options={lifecycleOptions}
+                    value={filters.manager_id}
+                    onChange={(value) => onChange({ manager_id: value })}
+                    placeholder="Все менеджеры"
+                    minW="170px"
+                    options={managers.map((manager) => ({
+                        value: String(manager.id),
+                        label: manager.name,
+                    }))}
                 />
             )}
 
@@ -108,7 +117,6 @@ export default function ClientsFilterBar({
                     value={filters.task_state}
                     onChange={(value) => onChange({ task_state: value })}
                     placeholder="Задачи: неважно"
-                    minW="200px"
                     options={[
                         { value: 'overdue', label: 'Есть просроченные' },
                         { value: 'today', label: 'Есть на сегодня' },
@@ -127,7 +135,6 @@ export default function ClientsFilterBar({
                     value={filters.plan_state}
                     onChange={(value) => onChange({ plan_state: value })}
                     placeholder="План: неважно"
-                    minW="190px"
                     options={[
                         { value: 'behind', label: 'Отстают от плана' },
                         { value: 'ahead', label: 'Выполнили план' },
@@ -141,24 +148,10 @@ export default function ClientsFilterBar({
                 value={filters.inactive_days}
                 onChange={(value) => onChange({ inactive_days: value })}
                 placeholder="Покупки: неважно"
-                minW="200px"
                 options={[
                     { value: '30', label: 'Не покупает 30 дней' },
                     { value: '60', label: 'Не покупает 60 дней' },
                     { value: '90', label: 'Не покупает 90 дней' },
-                ]}
-            />
-
-            {/* Страховой запас (buf-02): включённых ~50 — менеджеру нужен их
-                список одним кликом. */}
-            <FilterSelect
-                value={filters.stock_buffer}
-                onChange={(value) => onChange({ stock_buffer: value })}
-                placeholder="Страховой запас: неважно"
-                minW="220px"
-                options={[
-                    { value: 'enabled', label: 'Страховой запас включён' },
-                    { value: 'disabled', label: 'Страховой запас выключен' },
                 ]}
             />
 
@@ -168,11 +161,23 @@ export default function ClientsFilterBar({
                 value={filters.no_order_days}
                 onChange={(value) => onChange({ no_order_days: value })}
                 placeholder="Заказы: неважно"
-                minW="200px"
                 options={[
                     { value: '30', label: 'Не заказывал 30 дней' },
                     { value: '60', label: 'Не заказывал 60 дней' },
                     { value: '90', label: 'Не заказывал 90 дней' },
+                ]}
+            />
+
+            {/* Страховой запас (buf-02): включённых ~50 — менеджеру нужен их
+                список одним кликом. */}
+            <FilterSelect
+                value={filters.stock_buffer}
+                onChange={(value) => onChange({ stock_buffer: value })}
+                placeholder="Страховой запас: неважно"
+                minW="190px"
+                options={[
+                    { value: 'enabled', label: 'Страховой запас включён' },
+                    { value: 'disabled', label: 'Страховой запас выключен' },
                 ]}
             />
 
@@ -189,19 +194,6 @@ export default function ClientsFilterBar({
                     placeholder="до"
                 />
             </HStack>
-
-            {canSeeAll && (
-                <FilterSelect
-                    value={filters.manager_id}
-                    onChange={(value) => onChange({ manager_id: value })}
-                    placeholder="Все менеджеры"
-                    minW="220px"
-                    options={managers.map((manager) => ({
-                        value: String(manager.id),
-                        label: manager.name,
-                    }))}
-                />
-            )}
         </HStack>
     );
 }
