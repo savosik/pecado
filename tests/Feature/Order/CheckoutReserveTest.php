@@ -119,8 +119,12 @@ class CheckoutReserveTest extends TestCase
         $this->assertFalse((bool) $order->reserve);
         $this->assertNull($order->reserved_until);
 
+        // v16.9.2: reserve — авторитетный признак, уходит явным Boolean на каждом
+        // заказе. Обычный заказ обязан нести reserve:false (без срока), иначе 1С
+        // резервирует по умолчанию вопреки выбору «к отгрузке».
         Queue::assertPushed(PublishOrderToErpJob::class, function (PublishOrderToErpJob $job) {
-            return ! array_key_exists('reserve', $job->payload);
+            return ($job->payload['reserve'] ?? null) === false
+                && ! array_key_exists('reserved_until', $job->payload);
         });
     }
 
