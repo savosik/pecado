@@ -83,6 +83,7 @@ class MotivationInputCollector
             newRows: $this->partnerRows($newPartners, $names, $period),
             focusRows: $this->focusRows($partnerIds, $focusItems, $period),
             overdueRows: $overdue['rows'],
+            overdueExcludedRows: $overdue['excluded'],
             returns: $returns,
         );
     }

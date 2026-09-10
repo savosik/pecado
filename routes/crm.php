@@ -24,6 +24,7 @@ use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\MailSuppressionController;
 use App\Http\Controllers\Crm\MotivationController;
+use App\Http\Controllers\Crm\MotivationDebtsController;
 use App\Http\Controllers\Crm\MotivationPartnersController;
 use App\Http\Controllers\Crm\NotificationPreferenceController;
 use App\Http\Controllers\Crm\OpportunityController;
@@ -638,6 +639,8 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/motivation/base/data', [MotivationPartnersController::class, 'baseData'])->name('motivation.base.data');
         Route::get('/motivation/rhythm', [MotivationPartnersController::class, 'rhythm'])->name('motivation.rhythm');
         Route::get('/motivation/rhythm/data', [MotivationPartnersController::class, 'rhythmData'])->name('motivation.rhythm.data');
+        Route::get('/motivation/debts', [MotivationDebtsController::class, 'index'])->name('motivation.debts');
+        Route::get('/motivation/debts/data', [MotivationDebtsController::class, 'data'])->name('motivation.debts.data');
     });
 
     // Зарплата (эпик pay-00). view — своя; чужой `manager` в адресе открывается

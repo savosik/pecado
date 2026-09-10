@@ -52,7 +52,7 @@ class OverdueDebtIntegrator
             ->whereNotNull('due_on')
             ->whereDate('due_on', '<=', $monthEnd)
             ->where(fn ($q) => $q->whereNull('settled_on')->orWhereDate('settled_on', '>=', $period))
-            ->get(['id', 'shipment_id', 'user_id', 'erp_number', 'total_amount', 'due_on', 'settled_on', 'payments']);
+            ->get(['id', 'shipment_id', 'user_id', 'erp_number', 'total_amount', 'shipped_on', 'due_on', 'settled_on', 'payments', 'needs_review']);
 
         $exclusions = $this->exclusions($partnerIds, $period, $monthEnd);
 
@@ -74,11 +74,17 @@ class OverdueDebtIntegrator
                 'partner_id' => (int) $invoice->user_id,
                 'partner_name' => $names[(int) $invoice->user_id] ?? '',
                 'amount' => (float) $invoice->total_amount,
+                'shipped_on' => $invoice->shipped_on?->toDateString(),
                 'due_on' => $invoice->due_on?->toDateString(),
+                // «Заплатить был должен» — срок плюс льготные рабочие дни: с этого дня идёт начисление.
+                'grace_ends_on' => $result['grace_ends_on'],
                 'settled_on' => $invoice->settled_on?->toDateString(),
                 'days' => $result['days'],
                 'integral' => $result['integral'],
                 'balance_end' => $result['balance_end'],
+                // Дата погашения не восстановлена: начисление идёт по состоянию «не погашено»,
+                // и работник обязан это видеть, а не обнаруживать в расчётном листе.
+                'needs_review' => (bool) $invoice->needs_review,
             ];
 
             if ($result['excluded_days'] > 0) {
@@ -104,7 +110,7 @@ class OverdueDebtIntegrator
      * Интеграл по одной накладной внутри месяца.
      *
      * @param  list<array{shipment_id: int|null, from: CarbonImmutable, until: CarbonImmutable|null, reason: string}>  $exclusions
-     * @return array{days: int, integral: float, balance_end: float, excluded_days: int, exclusion_reason: string|null}|null
+     * @return array{days: int, integral: float, balance_end: float, grace_ends_on: string, excluded_days: int, exclusion_reason: string|null}|null
      */
     private function integrate(
         PayrollInvoiceSettlement $invoice,
@@ -167,10 +173,23 @@ class OverdueDebtIntegrator
             $integral += $balance;
         }
 
+        // Остаток на конец периода — по всем платежам до его конца, а не по последнему
+        // начисляемому дню: платёж в день оплаты в цикл не попадает (начисление
+        // прекращается с этого дня), но долг он закрывает. Закрытая накладная
+        // на конец месяца стоит ноль в день, хотя вычет за дни до оплаты остаётся.
+        $paidByEnd = 0.0;
+        foreach ($payments as $payment) {
+            if ($payment['date']->lte($monthEnd)) {
+                $paidByEnd += $payment['amount'];
+            }
+        }
+        $balanceEnd = $settled !== null && $settled->lte($monthEnd) ? 0.0 : max(0.0, $total - $paidByEnd);
+
         return [
             'days' => $days,
             'integral' => Money::round($integral),
-            'balance_end' => Money::round(max(0.0, $balance)),
+            'balance_end' => Money::round($balanceEnd),
+            'grace_ends_on' => $overdueFrom->subDay()->toDateString(),
             'excluded_days' => $excludedDays,
             'exclusion_reason' => $exclusionReason,
         ];

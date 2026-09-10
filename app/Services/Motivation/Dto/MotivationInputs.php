@@ -35,6 +35,7 @@ final class MotivationInputs
      * @param  list<array<string, mixed>>  $newRows  улики П2: партнёры в Периоде новизны
      * @param  list<array<string, mixed>>  $focusRows  улики П3: позиции; ключ `rate` задаёт повышенную ставку (п. 6.4.4)
      * @param  list<array<string, mixed>>  $overdueRows  улики К1: документы, остаток и дни просрочки
+     * @param  list<array<string, mixed>>  $overdueExcludedRows  документы, выведенные из базы начисления руководителем, с основанием
      * @param  array{base: float, new: float, focus: float}  $returns  возвраты периода по группам, ₽
      */
     public function __construct(
@@ -51,6 +52,7 @@ final class MotivationInputs
         public readonly array $newRows = [],
         public readonly array $focusRows = [],
         public readonly array $overdueRows = [],
+        public readonly array $overdueExcludedRows = [],
         public readonly array $returns = ['base' => 0.0, 'new' => 0.0, 'focus' => 0.0],
     ) {}
 
@@ -96,6 +98,7 @@ final class MotivationInputs
             'new_rows' => $this->newRows,
             'focus_rows' => $this->focusRows,
             'overdue_rows' => $this->overdueRows,
+            'overdue_excluded_rows' => $this->overdueExcludedRows,
             'returns' => $this->returns,
         ];
     }
@@ -126,6 +129,7 @@ final class MotivationInputs
             newRows: $rows($data['new_rows'] ?? []),
             focusRows: $rows($data['focus_rows'] ?? []),
             overdueRows: $rows($data['overdue_rows'] ?? []),
+            overdueExcludedRows: $rows($data['overdue_excluded_rows'] ?? []),
             returns: [
                 'base' => (float) ($returns['base'] ?? 0),
                 'new' => (float) ($returns['new'] ?? 0),
