@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     Box, Flex, Text, Heading, Button, Table, Badge, Separator,
@@ -1306,6 +1306,28 @@ function OrderSummaryTicket({
     const [decision, setDecision] = useState(null); // null | 'ship' | 'reserve'
     const confirmedFinal = reserveAvailable ? decision !== null : confirmed;
 
+    // Подсказка-пульсация у radio резерва: мягко пульсирует ровно 3 раза, когда
+    // блок впервые попадает в зону видимости, и больше не трогает глаз. Триггерим
+    // по IntersectionObserver, чтобы 3 пульса пришлись именно на «попадание на глаза».
+    const reserveHintRef = useRef(null);
+    const [reserveHintSeen, setReserveHintSeen] = useState(false);
+    useEffect(() => {
+        if (!reserveAvailable || reserveHintSeen) return undefined;
+        const el = reserveHintRef.current;
+        if (!el || typeof IntersectionObserver === 'undefined') {
+            setReserveHintSeen(true); // без наблюдателя — просто показываем один раз
+            return undefined;
+        }
+        const io = new IntersectionObserver((entries) => {
+            if (entries.some((e) => e.isIntersecting)) {
+                setReserveHintSeen(true);
+                io.disconnect();
+            }
+        }, { threshold: 0.5 });
+        io.observe(el);
+        return () => io.disconnect();
+    }, [reserveAvailable, reserveHintSeen]);
+
     const selectedCompany = companies.find((c) => String(c.id) === String(data.company_id)) ?? null;
     const isPickup = data.delivery_method === 'pickup';
     const savedAddress = !isPickup && addressChoice !== 'new'
@@ -1629,53 +1651,50 @@ function OrderSummaryTicket({
                             /* v16.9.0: участнику режима резервов — осознанный выбор судьбы
                                заказа вместо галочки. Крупные тап-зоны: основной сценарий
                                интернетчика — оформление с телефона. */
-                            <RadioGroup
-                                value={decision}
-                                onValueChange={({ value }) => {
-                                    setDecision(value);
-                                    onReserveChange?.(value === 'reserve');
-                                }}
-                                colorPalette="pecado"
-                                size="lg"
-                            >
-                                <VStack align="stretch" gap="2">
-                                    {/* Пульсация на каждом radio, пока выбор не сделан:
-                                        круги ping над контролом, слева. Гаснут, как только
-                                        клиент выбрал вариант (decision !== null). */}
-                                    <Box position="relative">
-                                        {decision === null && (
-                                            <Box position="absolute" left="-6px" top="50%" mt="-4" boxSize="8" pointerEvents="none" aria-hidden="true">
-                                                <Box position="absolute" inset="0" rounded="full" bg="pecado.solid" opacity="0.3" animation="ping" />
-                                                <Box position="absolute" inset="1" rounded="full" bg="pecado.solid" opacity="0.25" animation="ping" animationDelay="0.5s" />
-                                            </Box>
-                                        )}
-                                        <Radio value="ship" fontWeight="600">
-                                            <VStack align="flex-start" gap="0">
-                                                <Text>Данные проверены — можно отгружать</Text>
-                                                <Text fontSize="xs" fontWeight="400" color="fg.muted">
-                                                    Заказ направляется на склад для сборки. Внести изменения или отменить не получится.
-                                                </Text>
-                                            </VStack>
-                                        </Radio>
-                                    </Box>
-                                    <Box position="relative">
-                                        {decision === null && (
-                                            <Box position="absolute" left="-6px" top="50%" mt="-4" boxSize="8" pointerEvents="none" aria-hidden="true">
-                                                <Box position="absolute" inset="0" rounded="full" bg="pecado.solid" opacity="0.3" animation="ping" />
-                                                <Box position="absolute" inset="1" rounded="full" bg="pecado.solid" opacity="0.25" animation="ping" animationDelay="0.5s" />
-                                            </Box>
-                                        )}
-                                        <Radio value="reserve" fontWeight="600">
-                                            <VStack align="flex-start" gap="0">
-                                                <Text>Поставьте в резерв — подтвержу отгрузку позже</Text>
-                                                <Text fontSize="xs" fontWeight="400" color="fg.muted">
-                                                    Ваш заказ будет зарезервирован на {reserveHours} {reserveHoursWord}, за это время вы можете его отменить или подтвердить.
-                                                </Text>
-                                            </VStack>
-                                        </Radio>
-                                    </Box>
-                                </VStack>
-                            </RadioGroup>
+                            <>
+                                {/* Мягкая подсказка: одно кольцо, 3 медленных пульса при
+                                    первом попадании блока в зону видимости — клиент замечает,
+                                    куда нажать, и дальше ничего не мельтешит (не бесконечная). */}
+                                <style>{'@keyframes reserveHint{0%{transform:scale(0.85);opacity:0.35}70%{transform:scale(1.7);opacity:0}100%{transform:scale(1.7);opacity:0}}'}</style>
+                                <RadioGroup
+                                    value={decision}
+                                    onValueChange={({ value }) => {
+                                        setDecision(value);
+                                        onReserveChange?.(value === 'reserve');
+                                    }}
+                                    colorPalette="pecado"
+                                    size="lg"
+                                >
+                                    <VStack ref={reserveHintRef} align="stretch" gap="2">
+                                        <Box position="relative">
+                                            {reserveHintSeen && decision === null && (
+                                                <Box position="absolute" left="-3px" top="50%" mt="-3" boxSize="6" rounded="full" bg="pecado.solid" pointerEvents="none" aria-hidden="true" css={{ animation: 'reserveHint 2s ease-out 3 both' }} />
+                                            )}
+                                            <Radio value="ship" fontWeight="600">
+                                                <VStack align="flex-start" gap="0">
+                                                    <Text>Данные проверены — можно отгружать</Text>
+                                                    <Text fontSize="xs" fontWeight="400" color="fg.muted">
+                                                        Заказ направляется на склад для сборки. Внести изменения или отменить не получится.
+                                                    </Text>
+                                                </VStack>
+                                            </Radio>
+                                        </Box>
+                                        <Box position="relative">
+                                            {reserveHintSeen && decision === null && (
+                                                <Box position="absolute" left="-3px" top="50%" mt="-3" boxSize="6" rounded="full" bg="pecado.solid" pointerEvents="none" aria-hidden="true" css={{ animation: 'reserveHint 2s ease-out 3 both' }} />
+                                            )}
+                                            <Radio value="reserve" fontWeight="600">
+                                                <VStack align="flex-start" gap="0">
+                                                    <Text>Поставьте в резерв — подтвержу отгрузку позже</Text>
+                                                    <Text fontSize="xs" fontWeight="400" color="fg.muted">
+                                                        Ваш заказ будет зарезервирован на {reserveHours} {reserveHoursWord}, за это время вы можете его отменить или подтвердить.
+                                                    </Text>
+                                                </VStack>
+                                            </Radio>
+                                        </Box>
+                                    </VStack>
+                                </RadioGroup>
+                            </>
                         ) : (
                         <Checkbox
                             checked={confirmed}
