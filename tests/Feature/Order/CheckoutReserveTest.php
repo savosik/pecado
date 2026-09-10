@@ -158,6 +158,27 @@ class CheckoutReserveTest extends TestCase
     }
 
     #[Test]
+    public function http_reserve_checkout_requires_delivery_address(): void
+    {
+        // Резерв — тот же POST /checkout с флагом, правило адреса общее:
+        // «Доставка по адресу» без адреса не проходит и заказ не создаётся.
+        $this->cartWithInstock();
+
+        $this->actingAs($this->user)
+            ->from('/checkout')
+            ->post('/checkout', [
+                'company_id' => $this->company->id,
+                'delivery_method' => 'delivery',
+                'delivery_address' => '',
+                'reserve' => true,
+            ])
+            ->assertRedirect('/checkout')
+            ->assertSessionHasErrors(['delivery_address' => 'Укажите адрес доставки.']);
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    #[Test]
     public function http_reserve_checkout_redirects_to_order_page(): void
     {
         $this->cartWithInstock();

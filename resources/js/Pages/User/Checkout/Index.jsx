@@ -171,10 +171,32 @@ export default function CheckoutIndex({
 
     // instockOnly — кнопка «Только со склада»: предзаказные строки не оформляются
     // и удаляются из корзины, обычный заказ уходит как есть.
+    // Ошибки полей рисуются в своих блоках выше по странице, а клиент после клика
+    // остаётся внизу у кнопок (preserveScroll). Чтобы отказ не выглядел как «ничего
+    // не произошло», подъезжаем к первому проблемному блоку и дублируем текст тостом.
+    const errorAnchors = {
+        company_id: 'checkout-company',
+        delivery_method: 'checkout-delivery',
+        delivery_address: 'checkout-address',
+        address_name: 'checkout-address',
+    };
+    const revealFirstError = (errs) => {
+        const key = Object.keys(errorAnchors).find((k) => errs?.[k]);
+        if (!key) return;
+        document.getElementById(errorAnchors[key])?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        toaster.create({
+            title: 'Заказ не оформлен',
+            description: errs[key],
+            type: 'error',
+            duration: 7000,
+        });
+    };
+
     const submit = (instockOnly = false) => {
         transform((form) => ({ ...form, instock_only: instockOnly }));
         post('/checkout', {
             preserveScroll: true,
+            onError: revealFirstError,
         });
     };
 
@@ -1372,10 +1394,19 @@ function OrderSummaryTicket({
         },
     ].filter(Boolean);
 
-    const submitDisabled = processing || companies.length === 0 || hasConflicts || !!debtRestriction?.blocks_all_orders;
-    const submitBlockReason = hasConflicts
-        ? 'Сначала уточните корзину — есть позиции с изменившимся остатком.'
-        : (debtRestriction?.blocks_all_orders ? 'Оформление приостановлено до погашения задолженности.' : null);
+    // Доставка без адреса: сервер всё равно откажет («Укажите адрес доставки»),
+    // поэтому кнопки гасим заранее и объясняем причину прямо у них.
+    const addressMissing = !isPickup && !String(addressText || '').trim();
+    const submitDisabled = processing || companies.length === 0 || hasConflicts
+        || !!debtRestriction?.blocks_all_orders || addressMissing;
+    let submitBlockReason = null;
+    if (hasConflicts) {
+        submitBlockReason = 'Сначала уточните корзину — есть позиции с изменившимся остатком.';
+    } else if (debtRestriction?.blocks_all_orders) {
+        submitBlockReason = 'Оформление приостановлено до погашения задолженности.';
+    } else if (addressMissing) {
+        submitBlockReason = 'Укажите адрес доставки — без него заказ не оформить.';
+    }
 
     // «Со склада N шт.» вместо «Заказ N шт.»: документов может быть до трёх
     // (склад / уценка / предзаказ), а вот отгрузка — правда одна и сразу.
@@ -1512,8 +1543,22 @@ function OrderSummaryTicket({
                                         {savedAddress?.name ? `${savedAddress.name} · ` : ''}{addressText}
                                     </Text>
                                 ) : (
-                                    <Text fontSize="sm" fontWeight="700" color="orange.600" _dark={{ color: 'orange.400' }} mt="1">
-                                        Адрес пока не указан
+                                    <Text
+                                        as="button"
+                                        type="button"
+                                        onClick={() => scrollTo('checkout-address')}
+                                        fontSize="sm"
+                                        fontWeight="700"
+                                        color="orange.600"
+                                        _dark={{ color: 'orange.400' }}
+                                        textDecoration="underline"
+                                        textDecorationStyle="dotted"
+                                        textUnderlineOffset="3px"
+                                        cursor="pointer"
+                                        textAlign="left"
+                                        mt="1"
+                                    >
+                                        Адрес пока не указан — укажите, чтобы оформить заказ
                                     </Text>
                                 )
                             )}
