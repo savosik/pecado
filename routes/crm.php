@@ -24,6 +24,7 @@ use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\MailSuppressionController;
 use App\Http\Controllers\Crm\MotivationController;
+use App\Http\Controllers\Crm\MotivationPartnersController;
 use App\Http\Controllers\Crm\NotificationPreferenceController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PaymentOrderController;
@@ -633,6 +634,10 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/motivation/data', [MotivationController::class, 'data'])->name('motivation.data');
         Route::get('/motivation/evidence', [MotivationController::class, 'evidence'])->name('motivation.evidence');
         Route::post('/motivation/simulate', [MotivationController::class, 'simulate'])->name('motivation.simulate');
+        Route::get('/motivation/base', [MotivationPartnersController::class, 'base'])->name('motivation.base');
+        Route::get('/motivation/base/data', [MotivationPartnersController::class, 'baseData'])->name('motivation.base.data');
+        Route::get('/motivation/rhythm', [MotivationPartnersController::class, 'rhythm'])->name('motivation.rhythm');
+        Route::get('/motivation/rhythm/data', [MotivationPartnersController::class, 'rhythmData'])->name('motivation.rhythm.data');
     });
 
     // Зарплата (эпик pay-00). view — своя; чужой `manager` в адресе открывается

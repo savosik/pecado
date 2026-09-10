@@ -32,6 +32,7 @@ import {
     LuBan,
     LuBanknote,
     LuSparkles,
+    LuActivity,
     LuSlidersHorizontal,
     LuCoins,
 } from "react-icons/lu";
@@ -94,6 +95,8 @@ export const menuConfig: MenuGroup[] = [
             // Мотивация 2.0 (mot-00): своё право, а не crm-salary — раздел не показывается
             // менеджерам до ввода Положения в действие, иначе они увидят две разные цифры дохода.
             { label: "Моя мотивация", icon: LuSparkles, path: "/crm/motivation", permission: "crm-motivation.view" },
+            { label: "Моя база", icon: LuUsersRound, path: "/crm/motivation/base", permission: "crm-motivation.view" },
+            { label: "Кто выпал из ритма", icon: LuActivity, path: "/crm/motivation/rhythm", permission: "crm-motivation.view" },
             // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
             // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
             { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", counter: "shortages" },
