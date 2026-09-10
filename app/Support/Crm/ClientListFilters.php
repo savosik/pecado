@@ -135,11 +135,10 @@ final class ClientListFilters
             scope: CrmScope::fromRequest($request, $actor),
             search: $search,
             managerId: $seesAll ? self::sanitizeId($request->input('manager_id')) : null,
-            // «Без менеджера» — нераспределённые партнёры: нужна и видимость
-            // отдела, и включённая галочка «Нераспределённые», иначе отбор пуст.
-            withoutManager: $seesAll
-                && (bool) $actor->crm_show_unassigned
-                && $request->input('manager_id') === self::WITHOUT_MANAGER,
+            // «Без менеджера» — нераспределённые партнёры, их видит только тот,
+            // кто видит отдел; для остальных значение гасится вместе с manager_id.
+            // Галочку «Нераспределённые» отбор включает сам (ClientController).
+            withoutManager: $seesAll && $request->input('manager_id') === self::WITHOUT_MANAGER,
             lifecycle: $canSeeProfile
                 ? ClientLifecycleStatus::tryFrom((string) $request->input('lifecycle'))
                 : null,

@@ -33,6 +33,9 @@ trait SharesPanelAuth
                 'is_admin' => $user->hasAdminAccess(),
                 'is_crm' => $user->hasCrmAccess(),
                 'is_wms' => $user->hasWmsAccess(),
+                // CRM: галочка «Нераспределённые» рядом с «Только мои». Лениво:
+                // отбор «Без менеджера» включает её уже в контроллере, после share().
+                'crm_show_unassigned' => fn (): bool => (bool) $user->crm_show_unassigned,
             ] : null,
         ];
     }

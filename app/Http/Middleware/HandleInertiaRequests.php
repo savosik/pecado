@@ -62,8 +62,6 @@ class HandleInertiaRequests extends Middleware
                     'is_admin' => $user->hasAdminAccess(),
                     'is_crm' => $user->hasCrmAccess(),
                     'is_wms' => $user->hasWmsAccess(),
-                    // CRM: галочка «Нераспределённые» рядом с «Только мои».
-                    'crm_show_unassigned' => (bool) $user->crm_show_unassigned,
                     // В режиме просмотра флаг гасим: у клиентов из 1С он взведён,
                     // и ChangePasswordDialog закрыл бы менеджеру экран диалогом,
                     // который нельзя ни закрыть, ни отправить (пароль он не знает).

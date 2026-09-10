@@ -219,6 +219,10 @@ class CrmClientVisibilityTest extends TestCase
             ->assertRedirect();
 
         $this->assertTrue($head->fresh()->crm_show_unassigned);
+        // Фронт читает флаг из auth.user, который CRM шарит своим middleware.
+        $this->actingAs($head)
+            ->get(route('crm.clients.index'))
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('auth.user.crm_show_unassigned', true));
 
         $this->actingAs($head)
             ->put(route('crm.preferences.unassigned'), ['enabled' => false])
@@ -243,8 +247,9 @@ class CrmClientVisibilityTest extends TestCase
         $this->clientsOf($this->profileA, 2);
         $lead = User::factory()->create(['personal_manager_id' => null]);
 
+        // Галочка «Нераспределённые» выключена: отбор включает её сам,
+        // иначе он был бы пуст, а карточки из списка отвечали бы 404.
         $head = $this->salesHead();
-        $head->forceFill(['crm_show_unassigned' => true])->save();
 
         $this->actingAs($head)
             ->get(route('crm.clients.index', ['manager_id' => 'none']))
@@ -252,7 +257,11 @@ class CrmClientVisibilityTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('clients.total', 1)
                 ->where('clients.data.0.id', $lead->id)
-                ->where('filters.manager_id', 'none'));
+                ->where('filters.manager_id', 'none')
+                ->where('auth.user.crm_show_unassigned', true));
+
+        $this->assertTrue($head->fresh()->crm_show_unassigned);
+        $this->actingAs($head)->get(route('crm.clients.show', $lead->id))->assertOk();
     }
 
     #[Test]

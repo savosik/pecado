@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Box, HStack, Input, Text } from '@chakra-ui/react';
 import { LuSlidersHorizontal } from 'react-icons/lu';
 import { NativeSelectField, NativeSelectRoot } from '@/components/ui/native-select';
-import { useShowUnassigned } from '@/Crm/hooks/useShowUnassigned';
 
 /**
  * Граница суммы отбора.
@@ -91,8 +90,6 @@ export default function ClientsFilterBar({
     uncoveredCount = null,
     children = null,
 }) {
-    const { enabled: showUnassigned } = useShowUnassigned();
-
     return (
         <HStack gap={2} align="center" wrap="wrap">
             <HStack gap={1} color="fg.muted" pr={1}>
@@ -109,9 +106,9 @@ export default function ClientsFilterBar({
                     placeholder="Все менеджеры"
                     minW="170px"
                     options={[
-                        // Нераспределённые партнёры (лиды) — только когда включена
-                        // галочка «Нераспределённые», иначе отбор был бы пуст.
-                        ...(showUnassigned ? [{ value: 'none', label: 'Без менеджера' }] : []),
+                        // Нераспределённые партнёры (лиды). Выбор отбора сам включает
+                        // галочку «Нераспределённые», иначе он был бы пуст.
+                        { value: 'none', label: 'Без менеджера' },
                         ...managers.map((manager) => ({
                             value: String(manager.id),
                             label: manager.name,

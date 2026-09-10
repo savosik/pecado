@@ -45,6 +45,7 @@ class ClientController extends CrmController
         $canSeePlans = $actor->can('crm-plans.view');
 
         $filters = ClientListFilters::fromRequest($request, $actor, $seesAll);
+        $this->showUnassignedIfFiltered($actor, $filters);
 
         return Inertia::render('Crm/Pages/Clients/Index', [
             'clients' => $clients->paginate($actor, $filters),
@@ -77,8 +78,24 @@ class ClientController extends CrmController
     {
         $actor = $this->crmActor($request);
         $filters = ClientListFilters::fromRequest($request, $actor, $this->seesDepartment($request));
+        $this->showUnassignedIfFiltered($actor, $filters);
 
         return response()->json($clients->paginate($actor, $filters));
+    }
+
+    /**
+     * Отбор «Без менеджера» включает галочку «Нераспределённые».
+     *
+     * Иначе отбор был бы пуст: партнёры без менеджера входят в границу
+     * видимости только с галочкой. Сотрудник, выбравший такой отбор, явно
+     * просит их показать — включаем галочку за него, и она остаётся включённой,
+     * чтобы карточки из списка открывались, а не отвечали 404.
+     */
+    private function showUnassignedIfFiltered(User $actor, ClientListFilters $filters): void
+    {
+        if ($filters->withoutManager && ! $actor->crm_show_unassigned) {
+            $actor->forceFill(['crm_show_unassigned' => true])->save();
+        }
     }
 
     /**
