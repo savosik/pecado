@@ -167,6 +167,127 @@ class OrderItemsSynchronizerTest extends TestCase
         }
     }
 
+    /**
+     * Инцидент ORD-2026-8666 (09.09.2026): 1С переставила строки заказа уценки
+     * (анальный душ из 4-й строки стал 1-й, остальные сдвинулись). Сопоставление
+     * по номеру без проверки товара оставило привязки к партиям на старых номерах —
+     * три позиции ссылались на партии чужих артикулов.
+     */
+    #[Test]
+    public function renumbered_lines_keep_defect_batch_of_their_product(): void
+    {
+        $order = Order::factory()->create(['type' => 'defect']);
+
+        $treasure = Product::factory()->create(['external_id' => 'uuid-583008']);
+        $darling = Product::factory()->create(['external_id' => 'uuid-583007']);
+        $douche = Product::factory()->create(['external_id' => 'uuid-761312']);
+        $idol = Product::factory()->create(['external_id' => 'uuid-583010']);
+
+        $batches = [
+            22 => ProductDefect::factory()->create(['product_id' => $treasure->id, 'defect_description' => 'Партия 22']),
+            24 => ProductDefect::factory()->create(['product_id' => $darling->id, 'defect_description' => 'Партия 24']),
+            25 => ProductDefect::factory()->create(['product_id' => $darling->id, 'defect_description' => 'Партия 25']),
+            58 => ProductDefect::factory()->create(['product_id' => $douche->id, 'defect_description' => 'Партия 58']),
+            23 => ProductDefect::factory()->create(['product_id' => $idol->id, 'defect_description' => 'Партия 23']),
+        ];
+
+        // Состав в порядке оформления на сайте.
+        $initial = [
+            [1, $treasure, 22, 1040],
+            [2, $darling, 24, 1010],
+            [3, $darling, 25, 1350],
+            [4, $douche, 58, 450],
+            [5, $idol, 23, 1670],
+        ];
+        foreach ($initial as [$line, $product, $batch, $price]) {
+            OrderItem::factory()->create([
+                'order_id' => $order->id,
+                'line_number' => $line,
+                'product_id' => $product->id,
+                'quantity' => 1,
+                'price' => $price,
+                'base_price' => $price,
+                'discount_percent' => 0,
+                'final_price' => $price,
+                'subtotal' => $price,
+                'product_defect_id' => $batches[$batch]->id,
+                'defect_description' => "Партия {$batch}",
+            ]);
+        }
+
+        // order.updated ревизии 4: те же товары, другой порядок строк.
+        $row = fn (int $line, string $uuid, float $price) => [
+            'line_number' => $line,
+            'product_uuid' => $uuid,
+            'quantity' => 1,
+            'cancelled' => false,
+            'base_price' => $price,
+            'discount_percent' => 0,
+            'final_price' => $price,
+        ];
+
+        $this->synchronizer->sync($order, [
+            $row(1, 'uuid-761312', 449.99),
+            $row(2, 'uuid-583008', 1040.03),
+            $row(3, 'uuid-583007', 1010.06),
+            $row(4, 'uuid-583007', 1349.95),
+            $row(5, 'uuid-583010', 1670.22),
+        ]);
+
+        $items = $order->fresh()->items()->orderBy('line_number')->get();
+        $this->assertCount(5, $items);
+
+        // Партия принадлежит товару строки, а не её номеру.
+        foreach ($items as $item) {
+            $batch = ProductDefect::find($item->product_defect_id);
+            $this->assertNotNull($batch, "Строка {$item->line_number} потеряла партию");
+            $this->assertSame(
+                $item->product_id,
+                $batch->product_id,
+                "Строка {$item->line_number}: партия чужого артикула",
+            );
+            $this->assertSame($batch->defect_description, $item->defect_description);
+        }
+
+        // Ни одна партия не потеряна и не задвоена.
+        $this->assertEqualsCanonicalizing(
+            collect($batches)->pluck('id')->all(),
+            $items->pluck('product_defect_id')->all(),
+        );
+
+        $this->assertSame($batches[58]->id, $items[0]->product_defect_id);
+        $this->assertSame($batches[22]->id, $items[1]->product_defect_id);
+        $this->assertSame($batches[23]->id, $items[4]->product_defect_id);
+    }
+
+    /**
+     * Перенумерация не должна пересоздавать позиции: id сохраняются, только
+     * перераспределяются между номерами строк.
+     */
+    #[Test]
+    public function renumbered_lines_reuse_existing_items(): void
+    {
+        $order = Order::factory()->create();
+        $a = Product::factory()->create(['external_id' => 'uuid-a']);
+        $b = Product::factory()->create(['external_id' => 'uuid-b']);
+
+        $itemA = OrderItem::factory()->create(['order_id' => $order->id, 'line_number' => 1, 'product_id' => $a->id, 'quantity' => 1]);
+        $itemB = OrderItem::factory()->create(['order_id' => $order->id, 'line_number' => 2, 'product_id' => $b->id, 'quantity' => 1]);
+
+        $this->synchronizer->sync($order, [
+            ['line_number' => 1, 'product_uuid' => 'uuid-b', 'quantity' => 1, 'base_price' => 100, 'final_price' => 100],
+            ['line_number' => 2, 'product_uuid' => 'uuid-a', 'quantity' => 1, 'base_price' => 100, 'final_price' => 100],
+        ]);
+
+        $items = $order->fresh()->items()->orderBy('line_number')->get();
+
+        $this->assertCount(2, $items);
+        $this->assertSame($itemB->id, $items[0]->id);
+        $this->assertSame($b->id, $items[0]->product_id);
+        $this->assertSame($itemA->id, $items[1]->id);
+        $this->assertSame($a->id, $items[1]->product_id);
+    }
+
     #[Test]
     public function it_is_idempotent_on_redelivery(): void
     {

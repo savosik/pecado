@@ -32,9 +32,22 @@ use Illuminate\Support\Facades\Log;
  *
  * ## Сопоставление строк
  *
- * 1. По `line_number` — основной путь.
- * 2. FIFO по `product_id` среди несопоставленных — переходный путь для заказов,
- *    заведённых до v15.16.0, и для случая, когда 1С перенумеровала строки.
+ * Два прохода по всем строкам payload, а не поиск «на месте» для каждой:
+ *
+ * 1. По `line_number` **при том же товаре** — основной путь.
+ * 2. FIFO по `product_id` среди несопоставленных — для заказов, заведённых до
+ *    v15.16.0 (номеров строк нет), и для случая, когда 1С перенумеровала строки.
+ *
+ * Совпадение номера без совпадения товара сопоставлением не считается. Инцидент
+ * ORD-2026-8666 (09.09.2026): 1С переставила строки заказа уценки, синхронизатор
+ * сопоставил их по номеру и оставил на строках старые привязки к партиям — в
+ * итоге три позиции ссылались на партии чужих артикулов, реализация закрыла не
+ * те партии, а «К отгрузке» показывала складу не тот брак.
+ *
+ * Привязка следует за товаром, а не за номером строки, поэтому у одного товара с
+ * несколькими партиями в заказе перестановка строк в 1С может поменять партии
+ * между этими строками местами. На учёт это не влияет: резерв и списание партий
+ * считаются по товару (см. DefectShipmentService).
  *
  * Складские привязки, не разобранные сопоставлением, наследуются по товару из
  * снимка «до»: при дроблении строки на активную и отменённую обе обязаны
@@ -60,13 +73,13 @@ class OrderItemsSynchronizer
         // строки её партия некондиции должна достаться обеим половинам.
         $linksByProduct = $this->captureLinks($existing);
 
-        [$byLine, $orphans] = $this->indexExisting($existing);
+        $matches = $this->matchRows($rows, $existing);
 
         $matchedIds = [];
         $total = 0.0;
 
-        foreach ($rows as $row) {
-            $match = $this->matchExisting($row, $byLine, $orphans);
+        foreach ($rows as $index => $row) {
+            $match = $matches[$index];
 
             if ($match !== null) {
                 $matchedIds[] = $match->id;
@@ -134,7 +147,8 @@ class OrderItemsSynchronizer
      * Разбор payload-строк.
      *
      * Номер строки: из payload, иначе порядковый номер элемента. Второе —
-     * деградация, а не режим: при перестановке строк в 1С привязки разъедутся.
+     * деградация, а не режим: без настоящих номеров две строки одного товара
+     * различить нечем, и при перестановке в 1С они могут поменяться местами.
      *
      * Позиция с неизвестным сайту товаром **сохраняется** со снимком имени.
      * До v15.16.0 `order.updated` такие строки молча выбрасывал, а `order.created`
@@ -194,59 +208,74 @@ class OrderItemsSynchronizer
     }
 
     /**
-     * Разложить существующие позиции на индекс по номеру строки и пул остальных.
+     * Сопоставить строки payload с существующими позициями.
      *
-     * Дубль номера в пределах заказа возможен (уникального ключа в БД нет
-     * намеренно) — вторая такая позиция уходит в пул, а не затирает первую.
+     * Первый проход — номер строки при том же товаре; второй — FIFO по товару
+     * среди всего, что осталось (позиции без номера, с чужим номером после
+     * перенумерации в 1С, дубли номера). Каждая позиция достаётся не более чем
+     * одной строке. Дубль номера в пределах заказа возможен (уникального ключа
+     * в БД нет намеренно) — по номеру берётся первая, вторая уходит во второй проход.
      *
+     * Строки с неизвестным сайту товаром (`product_id` null) сопоставляются только
+     * по номеру, и только с такой же безтоварной позицией.
+     *
+     * @param  list<array<string, mixed>>  $rows
      * @param  Collection<int, OrderItem>  $existing
-     * @return array{0: array<int, OrderItem>, 1: array<int, list<OrderItem>>}
+     * @return array<int, OrderItem|null> по индексу строки payload
      */
-    private function indexExisting(Collection $existing): array
+    private function matchRows(array $rows, Collection $existing): array
     {
+        /** @var array<int, OrderItem> $pool id → позиция, ещё не отданная ни одной строке */
+        $pool = [];
+        /** @var array<int, OrderItem> $byLine */
         $byLine = [];
-        $orphans = [];
 
         foreach ($existing as $item) {
-            $line = $item->line_number;
+            $pool[(int) $item->id] = $item;
 
-            if ($line !== null && ! isset($byLine[$line])) {
-                $byLine[$line] = $item;
+            if ($item->line_number !== null && ! isset($byLine[$item->line_number])) {
+                $byLine[$item->line_number] = $item;
+            }
+        }
 
+        $matches = array_fill(0, count($rows), null);
+
+        // Проход 1: тот же номер строки и тот же товар.
+        foreach ($rows as $index => $row) {
+            $candidate = $byLine[$row['line_number']] ?? null;
+
+            if ($candidate === null || ! isset($pool[(int) $candidate->id])) {
                 continue;
             }
 
+            if ((int) $candidate->product_id !== (int) $row['product_id']) {
+                continue;
+            }
+
+            $matches[$index] = $candidate;
+            unset($pool[(int) $candidate->id]);
+        }
+
+        // Проход 2: FIFO по товару среди оставшихся, в порядке их id.
+        /** @var array<int, list<OrderItem>> $orphans */
+        $orphans = [];
+        foreach ($pool as $item) {
             $orphans[(int) $item->product_id][] = $item;
         }
 
-        return [$byLine, $orphans];
-    }
+        foreach ($rows as $index => $row) {
+            if ($matches[$index] !== null) {
+                continue;
+            }
 
-    /**
-     * Найти существующую позицию под строку payload.
-     *
-     * @param  array<string, mixed>  $row
-     * @param  array<int, OrderItem>  $byLine
-     * @param  array<int, list<OrderItem>>  $orphans
-     */
-    private function matchExisting(array $row, array &$byLine, array &$orphans): ?OrderItem
-    {
-        $line = $row['line_number'];
+            $productId = (int) $row['product_id'];
 
-        if (isset($byLine[$line])) {
-            $match = $byLine[$line];
-            unset($byLine[$line]);
-
-            return $match;
+            if ($productId > 0 && ! empty($orphans[$productId])) {
+                $matches[$index] = array_shift($orphans[$productId]);
+            }
         }
 
-        $productId = (int) $row['product_id'];
-
-        if ($productId > 0 && ! empty($orphans[$productId])) {
-            return array_shift($orphans[$productId]);
-        }
-
-        return null;
+        return $matches;
     }
 
     /**

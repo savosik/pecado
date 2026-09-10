@@ -746,15 +746,18 @@ class CartService implements CartServiceInterface
      * Данные строки корзины для позиции уценки.
      *
      * Форма совместима с обычной строкой (те же ключи), но цена берётся из партии,
-     * а лимит — свободный остаток партии + уже лежащее в этой строке (иначе своя же
-     * позиция «съела» бы весь остаток и потолок оказался бы ниже текущего qty).
+     * а лимит — свободный остаток партии как есть. Корзина партию не резервирует
+     * (резерв держат только позиции заказов, см. DefectStockService), поэтому своё
+     * количество к остатку прибавлять нельзя: партия, целиком ушедшая в чужой заказ,
+     * выглядела бы доступной до самого оформления. Инцидент 10.09.2026: партия № 24
+     * арт. 583007 продана другому клиенту, а в корзине лежала как «в наличии».
      */
     private function defectItemDetails(CartItem $item, Product $product): array
     {
         $defect = $item->productDefect;
         $sellable = $defect && $defect->is_published && $defect->price !== null && ! $defect->isClosed();
         $available = ($defect && $sellable) ? $this->defectStockService->available($defect) : 0;
-        $maxTotal = $available + ($sellable ? $item->quantity : 0);
+        $maxTotal = $available;
         $price = (float) ($item->price ?? 0);
 
         return [

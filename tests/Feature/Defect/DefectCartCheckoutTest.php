@@ -391,6 +391,79 @@ class DefectCartCheckoutTest extends TestCase
         $this->assertSame(OrderType::DEFECT, $orders->first()->type);
     }
 
+    /**
+     * Инцидент 10.09.2026: партия № 24 арт. 583007 целиком ушла в заказ другого
+     * клиента, а в корзине лежала как доступная — лимит строки прибавлял к
+     * свободному остатку своё количество, хотя корзина партию не резервирует.
+     */
+    #[Test]
+    public function cart_line_of_batch_taken_by_another_order_is_unavailable(): void
+    {
+        $user = User::factory()->create();
+        $cart = Cart::factory()->create(['user_id' => $user->id, 'is_active' => true]);
+        $defect = $this->sellableDefect(1, 1010);
+
+        $this->cartService()->setDefectQuantity($user, $cart, $defect, 1);
+
+        $this->reserveByOtherOrder($defect, 1);
+
+        $line = $this->defectLine($cart->fresh());
+
+        $this->assertTrue($line['is_unavailable']);
+        $this->assertSame(0, $line['max_total']);
+        $this->assertSame(0, $line['available_quantity']);
+        $this->assertSame('unavailable', $line['stock_status']);
+    }
+
+    #[Test]
+    public function cart_line_over_remaining_batch_is_partial(): void
+    {
+        $user = User::factory()->create();
+        $cart = Cart::factory()->create(['user_id' => $user->id, 'is_active' => true]);
+        $defect = $this->sellableDefect(3, 300);
+
+        $this->cartService()->setDefectQuantity($user, $cart, $defect, 2);
+
+        // Другой клиент забрал 2 из 3 — на нашу строку остаётся 1.
+        $this->reserveByOtherOrder($defect, 2);
+
+        $line = $this->defectLine($cart->fresh());
+
+        $this->assertFalse($line['is_unavailable']);
+        $this->assertSame(1, $line['max_total']);
+        $this->assertSame('partial', $line['stock_status']);
+        $this->assertSame(2, $line['quantity']);
+    }
+
+    private function reserveByOtherOrder(ProductDefect $defect, int $quantity): void
+    {
+        $other = Order::factory()->create(['type' => OrderType::DEFECT]);
+        $other->items()->create([
+            'product_id' => $defect->product_id,
+            'product_defect_id' => $defect->id,
+            'name' => 'Резерв',
+            'price' => $defect->price,
+            'base_price' => $defect->price,
+            'discount_percent' => 0,
+            'final_price' => $defect->price,
+            'quantity' => $quantity,
+            'subtotal' => $quantity * (float) $defect->price,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function defectLine(Cart $cart): array
+    {
+        $items = $this->cartService()->getCartDetails($cart, $cart->user)['items'];
+        $line = collect($items)->firstWhere('item_type', 'defect');
+
+        $this->assertNotNull($line, 'Строка уценки не найдена в корзине');
+
+        return $line;
+    }
+
     #[Test]
     public function checkout_rejects_defect_over_available(): void
     {
