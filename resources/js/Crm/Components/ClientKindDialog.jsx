@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { router } from '@inertiajs/react';
-import { Dialog, HStack, Portal, Text, Textarea, VStack } from '@chakra-ui/react';
+import { Dialog, HStack, Portal, Text, Textarea, VStack, Wrap } from '@chakra-ui/react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Radio, RadioGroup } from '@/components/ui/radio';
@@ -17,35 +17,93 @@ const KINDS = [
         label: 'Служебный',
         hint: 'Техническая учётка: интеграция, тестовый аккаунт, дубль из 1С. Прячется везде, кроме списка пользователей.',
     },
+    {
+        value: 'deleted',
+        label: 'Удалить',
+        hint: 'Мягкое удаление: аккаунт скрыт из всех списков, вход и API-токены закрыты. Заказы и документы остаются в истории. Вернуть можно в админке по фильтру «Удалён».',
+    },
 ];
+
+/**
+ * Типовые причины «это не партнёр», по типам, к которым они подходят.
+ *
+ * Это подсказки для текста, а не справочник: в журнал уходит строка
+ * «причина: уточнение», и через полгода её читают глазами, а не кодом.
+ */
+const REASONS = [
+    { label: 'Наш сотрудник', kinds: ['staff'] },
+    { label: 'Закупщик или сотрудник партнёра — покупает юрлицо', kinds: ['staff'] },
+    { label: 'Подрядчик: фотограф, дизайнер, маркетолог', kinds: ['staff'] },
+    { label: 'Интеграция или API-учётка', kinds: ['service'] },
+    { label: 'Тестовый аккаунт', kinds: ['service'] },
+    { label: 'Собственное юрлицо компании', kinds: ['service'] },
+    { label: 'Дубль — тот же партнёр под другим кодом 1С', kinds: ['service', 'deleted'] },
+    { label: 'Конкурент', kinds: ['service', 'deleted'] },
+    { label: 'Спам или бот-регистрация', kinds: ['deleted'] },
+    { label: 'Ошибочная регистрация', kinds: ['deleted'] },
+    { label: 'Розница или физлицо — оптом не покупает', kinds: ['deleted'] },
+    { label: 'Попросил удалить свои данные', kinds: ['deleted'] },
+];
+
+const REASON_MAX = 255;
+
+const PLACEHOLDERS = {
+    staff: 'Например: закупщик Гевеи, сам не покупает',
+    service: 'Например: выгрузка остатков для Гевеи',
+    deleted: 'Например: регистрации с одного IP за ночь',
+};
 
 /**
  * «Это не партнёр» — убрать аккаунт из базы партнёров отдела.
  *
- * Аккаунт не удаляется и не блокируется: он перестаёт быть партнёром для CRM,
- * а заказы, документы и вход в кабинет остаются как были. 1С этой пометки
- * не касается, поэтому её не перезапишет очередной partner.updated.
+ * Сотрудник и служебный не удаляются и не блокируются: аккаунт перестаёт быть
+ * партнёром для CRM, а заказы, документы и вход в кабинет остаются как были.
+ * «Удалить» — мягкое удаление: строка остаётся ради истории, но аккаунт
+ * скрыт везде и войти не может. 1С этой пометки не касается, поэтому её
+ * не перезапишет очередной partner.updated.
  */
 export default function ClientKindDialog({ client, open, onClose }) {
     const [kind, setKind] = useState('staff');
-    const [reason, setReason] = useState('');
+    const [preset, setPreset] = useState(null);
+    const [comment, setComment] = useState('');
     const [busy, setBusy] = useState(false);
 
     useEffect(() => {
         if (open) {
             setKind('staff');
-            setReason('');
+            setPreset(null);
+            setComment('');
         }
     }, [open]);
 
+    const presets = useMemo(() => REASONS.filter((item) => item.kinds.includes(kind)), [kind]);
+
+    // Итоговая строка журнала: «причина: уточнение», либо только одно из двух.
+    const reason = useMemo(() => {
+        const note = comment.trim();
+        if (preset && note) return `${preset}: ${note}`;
+
+        return preset || note || null;
+    }, [preset, comment]);
+
+    const commentLimit = REASON_MAX - (preset ? preset.length + 2 : 0);
+
     if (!client) return null;
+
+    const changeKind = (value) => {
+        setKind(value);
+        // Причина другого типа к новому не подходит — снимаем, уточнение оставляем.
+        if (preset && !REASONS.find((item) => item.label === preset)?.kinds.includes(value)) {
+            setPreset(null);
+        }
+    };
 
     const submit = () => {
         setBusy(true);
 
         router.put(route('crm.clients.kind.update', client.id), {
             user_kind: kind,
-            reason: reason.trim() || null,
+            reason,
         }, {
             preserveScroll: true,
             onError: (errors) => toastError(
@@ -58,6 +116,8 @@ export default function ClientKindDialog({ client, open, onClose }) {
             },
         });
     };
+
+    const isDelete = kind === 'deleted';
 
     return (
         <Dialog.Root open={open} onOpenChange={(e) => { if (!e.open) onClose(); }} size="md">
@@ -73,12 +133,13 @@ export default function ClientKindDialog({ client, open, onClose }) {
                             <VStack align="stretch" gap={4}>
                                 <Text fontSize="sm" color="fg.muted">
                                     «{client.name}» пропадёт из списка партнёров, планов, задач и отчётов
-                                    продаж. Заказы, документы и вход в кабинет останутся как есть —
-                                    аккаунт не удаляется и не блокируется.
+                                    продаж. {isDelete
+                                        ? 'Аккаунт будет скрыт везде, включая список пользователей, а вход в кабинет закрыт. Заказы и документы останутся в истории.'
+                                        : 'Заказы, документы и вход в кабинет останутся как есть — аккаунт не удаляется и не блокируется.'}
                                 </Text>
 
                                 <Field label="Кто это на самом деле">
-                                    <RadioGroup value={kind} onValueChange={(e) => setKind(e.value)}>
+                                    <RadioGroup value={kind} onValueChange={(e) => changeKind(e.value)}>
                                         <VStack align="stretch" gap={3}>
                                             {KINDS.map((option) => (
                                                 <VStack key={option.value} align="start" gap={0}>
@@ -96,12 +157,29 @@ export default function ClientKindDialog({ client, open, onClose }) {
                                     label="Причина"
                                     helperText="Необязательно, но через полгода вопрос «почему его нет в базе» задают обязательно."
                                 >
+                                    <Wrap gap={2} mb={2}>
+                                        {presets.map((item) => {
+                                            const active = preset === item.label;
+
+                                            return (
+                                                <Button
+                                                    key={item.label}
+                                                    size="xs"
+                                                    variant={active ? 'solid' : 'outline'}
+                                                    colorPalette={active ? 'blue' : 'gray'}
+                                                    onClick={() => setPreset(active ? null : item.label)}
+                                                >
+                                                    {item.label}
+                                                </Button>
+                                            );
+                                        })}
+                                    </Wrap>
                                     <Textarea
                                         rows={2}
-                                        value={reason}
-                                        maxLength={255}
-                                        placeholder="Например: закупщик Гевеи, сам не покупает"
-                                        onChange={(e) => setReason(e.target.value)}
+                                        value={comment}
+                                        maxLength={commentLimit}
+                                        placeholder={preset ? 'Уточнение (необязательно)' : PLACEHOLDERS[kind]}
+                                        onChange={(e) => setComment(e.target.value)}
                                     />
                                 </Field>
                             </VStack>
@@ -111,7 +189,7 @@ export default function ClientKindDialog({ client, open, onClose }) {
                             <HStack gap={2}>
                                 <Button variant="outline" onClick={onClose} disabled={busy}>Отмена</Button>
                                 <Button colorPalette="red" onClick={submit} loading={busy}>
-                                    Убрать из базы
+                                    {isDelete ? 'Удалить аккаунт' : 'Убрать из базы'}
                                 </Button>
                             </HStack>
                         </Dialog.Footer>

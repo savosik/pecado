@@ -50,8 +50,12 @@ class UserController extends Controller
             $query->where('status', $request->input('status'));
         }
 
+        // Мягко удалённые — только по явному фильтру: «Все типы» их не показывает,
+        // иначе удаление ничем не отличалось бы от смены типа.
         if ($request->filled('user_kind')) {
             $query->where('user_kind', $request->input('user_kind'));
+        } else {
+            $query->notDeleted();
         }
 
         // Сортировка
@@ -100,7 +104,8 @@ class UserController extends Controller
                 'value' => $status->value,
                 'label' => $status->label(),
             ]),
-            'userKinds' => UserKind::options(),
+            // Удалённым аккаунт не заводят — только делают из существующего.
+            'userKinds' => UserKind::assignableOptions(),
             'availableRoles' => Role::orderBy('name')->get()->map(fn ($r) => ['id' => $r->id, 'name' => $r->name]),
             'clientStatuses' => ClientStatus::select('id', 'name')->orderBy('name')->get(),
             'personalManagers' => PersonalManager::select('id', 'name')->orderBy('name')->get(),
@@ -121,7 +126,7 @@ class UserController extends Controller
             'terms_accepted' => 'boolean',
             'status' => 'nullable|string|in:'.implode(',', array_column(UserStatus::cases(), 'value')),
             'comment' => 'nullable|string',
-            'user_kind' => 'nullable|string|in:'.implode(',', array_column(UserKind::cases(), 'value')),
+            'user_kind' => 'nullable|string|in:'.implode(',', array_column(UserKind::assignableOptions(), 'value')),
             'erp_id' => 'nullable|string|max:255|unique:users,erp_id',
             'roles' => 'array',
             'roles.*' => 'string|exists:roles,name',

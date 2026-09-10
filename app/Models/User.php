@@ -293,6 +293,47 @@ class User extends Authenticatable implements HasMedia
                 $user->view_token = \Illuminate\Support\Str::random(48);
             }
         });
+
+        // deleted_at следует за типом аккаунта, кто бы его ни менял: CRM-диалог,
+        // селект в админке, tinker. Два поля с одним смыслом иначе разъедутся.
+        static::saving(function (self $user) {
+            if ($user->user_kind === UserKind::DELETED) {
+                $user->deleted_at ??= now();
+            } else {
+                $user->deleted_at = null;
+            }
+        });
+
+        // Удалённого выкидываем отовсюду, где он ещё держится: сессии
+        // (драйвер database) и персональные API-токены. Иначе «удалён» означало
+        // бы лишь «не виден в списках», а его открытая вкладка работала бы дальше.
+        static::saved(function (self $user) {
+            if ($user->user_kind === UserKind::DELETED && $user->wasChanged('user_kind')) {
+                $user->revokeAccess();
+            }
+        });
+    }
+
+    /**
+     * Мягко удалён: строка на месте, но аккаунт скрыт и вход закрыт.
+     */
+    public function isDeleted(): bool
+    {
+        return $this->user_kind === UserKind::DELETED;
+    }
+
+    /**
+     * Закрыть текущие входы: активные сессии и API-токены Sanctum.
+     */
+    public function revokeAccess(): void
+    {
+        $this->tokens()->delete();
+
+        if (config('session.driver') === 'database') {
+            \Illuminate\Support\Facades\DB::table(config('session.table', 'sessions'))
+                ->where('user_id', $this->getKey())
+                ->delete();
+        }
     }
 
     /**
@@ -326,6 +367,8 @@ class User extends Authenticatable implements HasMedia
         return [
             'email_verified_at' => 'datetime',
             'last_seen_at' => 'datetime',
+            // Не в $fillable: выставляется хуком saving по user_kind = 'deleted'.
+            'deleted_at' => 'datetime',
             'password' => 'hashed',
             'must_change_password' => 'boolean',
             'is_subscribed' => 'boolean',
@@ -744,6 +787,18 @@ class User extends Authenticatable implements HasMedia
     public function scopeClients(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
     {
         return $query->where('users.user_kind', UserKind::CLIENT->value);
+    }
+
+    /**
+     * Без мягко удалённых — для списков, где сотрудники и служебные учётки уместны,
+     * а удалённые нет (список пользователей в админке, подборы по email).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<self>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<self>
+     */
+    public function scopeNotDeleted(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->where('users.user_kind', '!=', UserKind::DELETED->value);
     }
 
     /**

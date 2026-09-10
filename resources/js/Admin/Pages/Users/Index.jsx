@@ -21,6 +21,7 @@ const kindColors = {
     client: 'green',
     staff: 'purple',
     service: 'gray',
+    deleted: 'red',
 };
 
 export default function Index({ users, filters, statuses, statusCounts, userKinds, userKindCounts }) {
@@ -221,7 +222,8 @@ export default function Index({ users, filters, statuses, statusCounts, userKind
                 ))}
             </HStack>
 
-            {/* Фильтр по типу аккаунта: сотрудников и служебные учётки в CRM не видно */}
+            {/* Фильтр по типу аккаунта: сотрудников и служебные учётки в CRM не видно,
+                мягко удалённые показываются только по своему фильтру */}
             <HStack gap={2} mb={4} flexWrap="wrap">
                 <Button
                     size="sm"
@@ -229,7 +231,7 @@ export default function Index({ users, filters, statuses, statusCounts, userKind
                     colorPalette={!filters.user_kind ? 'blue' : 'gray'}
                     onClick={() => handleKindFilter('')}
                 >
-                    Все типы
+                    Все, кроме удалённых
                 </Button>
                 {userKinds?.map((kind) => (
                     <Button

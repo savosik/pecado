@@ -103,6 +103,61 @@ class AdminUserKindTest extends TestCase
     }
 
     #[Test]
+    public function deleted_accounts_are_hidden_from_the_list_by_default(): void
+    {
+        User::factory()->count(2)->create();
+        $deleted = User::factory()->deleted()->create();
+
+        // Без фильтра — все, кроме удалённых: два клиента и сам админ.
+        $this->actingAs($this->admin)
+            ->get(route('admin.users.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('users.total', 3)
+                ->where('users.data', fn ($rows) => ! collect($rows)->contains('id', $deleted->id))
+            );
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.users.index', ['user_kind' => UserKind::DELETED->value]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('users.total', 1)
+                ->where('users.data.0.id', $deleted->id)
+            );
+    }
+
+    #[Test]
+    public function admin_restores_deleted_account_by_choosing_another_kind(): void
+    {
+        $user = User::factory()->deleted()->create();
+        $this->assertNotNull($user->fresh()->deleted_at);
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.users.update', $user->id), $this->payload($user, [
+                'user_kind' => UserKind::CLIENT->value,
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $user->refresh();
+        $this->assertSame(UserKind::CLIENT, $user->user_kind);
+        $this->assertNull($user->deleted_at);
+    }
+
+    #[Test]
+    public function new_user_cannot_be_created_as_deleted(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.users.store'), [
+                'name' => 'Новый',
+                'email' => 'new@example.test',
+                'password' => 'secret-password',
+                'user_kind' => UserKind::DELETED->value,
+                'roles' => [],
+            ])
+            ->assertSessionHasErrors('user_kind');
+    }
+
+    #[Test]
     public function unknown_kind_is_rejected(): void
     {
         $user = User::factory()->create();

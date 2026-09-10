@@ -183,7 +183,7 @@ export default function Edit({ user, regions, countries, statuses, userKinds, av
                             <FormField
                                 label="Тип аккаунта"
                                 error={errors.user_kind}
-                                helpText="Сотрудники и служебные учётки не попадают в CRM: их не видно в клиентах, планах продаж и покрытии задачами."
+                                helpText="Сотрудники и служебные учётки не попадают в CRM: их не видно в клиентах, планах продаж и покрытии задачами. «Удалён» — мягкое удаление: аккаунт скрыт из списков, вход и API-токены закрыты; вернуть — выбрать другой тип."
                             >
                                 <select
                                     value={data.user_kind}

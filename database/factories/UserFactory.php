@@ -63,4 +63,14 @@ class UserFactory extends Factory
             'user_kind' => UserKind::SERVICE,
         ]);
     }
+
+    /**
+     * Мягко удалённый: скрыт везде, вход закрыт, строка на месте.
+     */
+    public function deleted(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'user_kind' => UserKind::DELETED,
+        ]);
+    }
 }

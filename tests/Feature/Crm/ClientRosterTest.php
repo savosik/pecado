@@ -6,6 +6,7 @@ use App\Enums\UserKind;
 use App\Models\CrmClientStatusChange;
 use App\Models\PersonalManager;
 use App\Models\User;
+use App\Services\Erp\Handlers\HandlePartnerUpdated;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -124,6 +125,98 @@ class ClientRosterTest extends TestCase
             ->assertRedirect(route('crm.clients.index'));
 
         $this->assertSame(UserKind::STAFF, $lead->fresh()->user_kind);
+    }
+
+    // --- Мягкое удаление ----------------------------------------------------
+
+    #[Test]
+    public function head_soft_deletes_account(): void
+    {
+        $this->client->createToken('api');
+
+        $this->actingAs($this->head)
+            ->put(route('crm.clients.kind.update', $this->client->id), [
+                'user_kind' => 'deleted',
+                'reason' => 'Спам или бот-регистрация: десять регистраций за ночь',
+            ])
+            ->assertRedirect(route('crm.clients.index'));
+
+        $client = $this->client->fresh();
+        $this->assertSame(UserKind::DELETED, $client->user_kind);
+        $this->assertNotNull($client->deleted_at);
+        // Персональные API-токены отозваны вместе с аккаунтом.
+        $this->assertSame(0, $client->tokens()->count());
+        $this->assertFalse(User::query()->visibleInCrm($this->head)->whereKey($client->id)->exists());
+        $this->assertFalse(User::query()->notDeleted()->whereKey($client->id)->exists());
+        // Строка на месте: заказы, документы и журнал ссылаются на неё как раньше.
+        $this->assertDatabaseHas('users', ['id' => $client->id]);
+        $this->assertDatabaseHas('crm_client_status_changes', [
+            'client_user_id' => $client->id,
+            'field' => CrmClientStatusChange::FIELD_KIND,
+            'to_value' => 'deleted',
+            'reason' => 'Спам или бот-регистрация: десять регистраций за ночь',
+        ]);
+    }
+
+    #[Test]
+    public function deleted_account_cannot_log_in(): void
+    {
+        $this->client->update(['password' => 'secret-password', 'user_kind' => UserKind::DELETED->value]);
+
+        // Та же ошибка, что при неверном пароле: подтверждать, что учётка была, незачем.
+        $this->post('/login', ['email' => $this->client->email, 'password' => 'secret-password'])
+            ->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
+
+    #[Test]
+    public function deleted_account_is_logged_out_on_next_request(): void
+    {
+        $this->client->update(['user_kind' => UserKind::DELETED->value]);
+
+        $this->actingAs($this->client)
+            ->get('/')
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
+
+    #[Test]
+    public function erp_update_does_not_resurrect_deleted_account(): void
+    {
+        $uuid = '550e8400-e29b-41d4-a716-446655440099';
+        $this->client->update(['erp_id' => $uuid, 'user_kind' => UserKind::DELETED->value]);
+
+        // 1С про пометку не знает и шлёт partner.updated как обычно: реквизиты
+        // обновляются, но аккаунт остаётся удалённым — владелец поля сайт.
+        (new HandlePartnerUpdated)->handle([
+            'event' => 'partner.updated',
+            'message_id' => 'msg-upd-deleted',
+            'uuid' => $uuid,
+            'login' => $this->client->email,
+            'name' => 'Снова партнёр',
+        ]);
+
+        $client = $this->client->fresh();
+        $this->assertSame(UserKind::DELETED, $client->user_kind);
+        $this->assertNotNull($client->deleted_at);
+        $this->assertSame('Снова партнёр', $client->erp_name);
+    }
+
+    #[Test]
+    public function deleted_account_can_be_restored(): void
+    {
+        $this->client->update(['user_kind' => UserKind::DELETED->value]);
+        $this->assertNotNull($this->client->fresh()->deleted_at);
+
+        $this->actingAs($this->head)
+            ->put(route('crm.clients.kind.update', $this->client->id), ['user_kind' => 'client'])
+            ->assertRedirect();
+
+        $client = $this->client->fresh();
+        $this->assertSame(UserKind::CLIENT, $client->user_kind);
+        $this->assertNull($client->deleted_at);
+        $this->assertTrue(User::query()->visibleInCrm($this->head)->whereKey($client->id)->exists());
     }
 
     // --- Закрепление за менеджером ------------------------------------------

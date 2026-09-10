@@ -36,6 +36,10 @@ class AuthController extends Controller
             'password.required' => 'Пароль обязателен для заполнения',
         ]);
 
+        // Мягко удалённый аккаунт для входа не существует: та же ошибка,
+        // что и при неверном пароле, — подтверждать, что учётка была, незачем.
+        $credentials[] = fn ($query) => $query->notDeleted();
+
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 

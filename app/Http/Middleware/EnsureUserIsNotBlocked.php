@@ -14,7 +14,12 @@ class EnsureUserIsNotBlocked
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check() && Auth::user()->status === UserStatus::BLOCKED) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        // Заблокированный — решение по клиенту; удалённый — мягкое удаление
+        // аккаунта (user_kind = 'deleted'). Обоим на сайте делать нечего.
+        if ($user !== null && ($user->status === UserStatus::BLOCKED || $user->isDeleted())) {
             // Клиента заблокировали, пока менеджер смотрел сайт его глазами:
             // возвращаем менеджера в CRM. Иначе чужая блокировка выкинула бы
             // его на /login вместе с рабочей сессией.
@@ -27,7 +32,9 @@ class EnsureUserIsNotBlocked
             $request->session()->regenerateToken();
 
             return redirect()->route('login')->withErrors([
-                'email' => 'Ваш аккаунт заблокирован. Если вы считаете это ошибкой, пожалуйста, свяжитесь с нами.',
+                'email' => $user->isDeleted()
+                    ? 'Аккаунт удалён. Если вы считаете это ошибкой, пожалуйста, свяжитесь с нами.'
+                    : 'Ваш аккаунт заблокирован. Если вы считаете это ошибкой, пожалуйста, свяжитесь с нами.',
             ]);
         }
 

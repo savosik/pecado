@@ -160,7 +160,9 @@ class ClientProfileController extends CrmController
         // не-партнёра отдаёт 404.
         return redirect()
             ->route('crm.clients.index')
-            ->with('success', "{$user->display_name}: тип аккаунта — {$kind->label()}. Аккаунт убран из базы партнёров отдела.");
+            ->with('success', $kind->isDeleted()
+                ? "{$user->display_name}: аккаунт удалён. Вход закрыт, из списков скрыт; вернуть можно в админке по фильтру «Удалён»."
+                : "{$user->display_name}: тип аккаунта — {$kind->label()}. Аккаунт убран из базы партнёров отдела.");
     }
 
     /**
