@@ -107,7 +107,7 @@ export default function ClientsFilterBar({
                     minW="170px"
                     options={[
                         // Нераспределённые партнёры (лиды). Выбор отбора сам включает
-                        // галочку «Нераспределённые», иначе он был бы пуст.
+                        // галочку «Нераспределённые» — это одно и то же условие.
                         { value: 'none', label: 'Без менеджера' },
                         ...managers.map((manager) => ({
                             value: String(manager.id),

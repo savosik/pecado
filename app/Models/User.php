@@ -798,6 +798,11 @@ class User extends Authenticatable implements HasMedia
      * Разрез «мои» у сотрудника без карточки менеджера ничего не сужает:
      * {@see CrmScope::resolve()} до этого места такой разрез не пропускает.
      *
+     * Галочка «Нераспределённые» (users.crm_show_unassigned) — тоже фокус:
+     * в разрезе «весь отдел» она оставляет только партнёров без менеджера.
+     * Граница (scopeVisibleInCrm) при этом шире — карточки закреплённых
+     * открываются, счётчики считают отдел целиком вместе с лидами.
+     *
      * @param  \Illuminate\Database\Eloquent\Builder<self>  $query
      * @return \Illuminate\Database\Eloquent\Builder<self>
      */
@@ -809,6 +814,8 @@ class User extends Authenticatable implements HasMedia
 
         if ($scope->isMine() && $managerId !== null) {
             $query->where('personal_manager_id', $managerId);
+        } elseif (! $scope->isMine() && $actor->crm_show_unassigned && $actor->can('crm-department.view')) {
+            $query->whereNull('personal_manager_id');
         }
 
         return $query;

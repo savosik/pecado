@@ -122,11 +122,14 @@ class CrmScopeTest extends TestCase
 
         $manager->forceFill(['crm_show_unassigned' => true])->save();
 
-        // С галочкой лид в отделе и открывается; в разрезе «мои» его по-прежнему нет.
+        // С галочкой в отделе остаются только нераспределённые, карточка лида
+        // открывается; в разрезе «мои» его по-прежнему нет.
         $this->actingAs($manager)
             ->get(route('crm.clients.index', ['scope' => CrmScope::DEPARTMENT->value]))
             ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('clients.total', 6));
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('clients.total', 1)
+                ->where('clients.data.0.id', $lead->id));
         $this->actingAs($manager)->get(route('crm.clients.show', $lead->id))->assertOk();
         $this->actingAs($manager)
             ->get(route('crm.clients.index', ['scope' => CrmScope::MINE->value]))

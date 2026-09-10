@@ -195,18 +195,25 @@ class CrmClientVisibilityTest extends TestCase
     }
 
     #[Test]
-    public function client_without_manager_is_listed_for_sales_head_with_checkbox_on(): void
+    public function checkbox_on_leaves_only_clients_without_manager(): void
     {
         $this->clientsOf($this->profileA, 2);
-        User::factory()->create(['personal_manager_id' => null]);
+        $lead = User::factory()->create(['personal_manager_id' => null]);
 
         $head = $this->salesHead();
         $head->forceFill(['crm_show_unassigned' => true])->save();
 
+        // Список — только нераспределённые; граница видимости шире: карточка
+        // закреплённого партнёра по-прежнему открывается.
+        $assigned = User::query()->where('personal_manager_id', $this->profileA->id)->firstOrFail();
+
         $this->actingAs($head)
             ->get(route('crm.clients.index'))
             ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('clients.total', 3));
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('clients.total', 1)
+                ->where('clients.data.0.id', $lead->id));
+        $this->actingAs($head)->get(route('crm.clients.show', $assigned->id))->assertOk();
     }
 
     #[Test]
