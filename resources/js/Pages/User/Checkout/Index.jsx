@@ -1295,6 +1295,14 @@ function OrderSummaryTicket({
     const { config: pageConfig } = usePage().props;
     const reserveAvailable = !!pageConfig?.reserves_enabled && groups.instock.items.length > 0;
     const reserveHours = Number(pageConfig?.reserve_hours || 24);
+    // Склонение «час/часа/часов» под срок резерва (24 → «часа», 48 → «часов»).
+    const reserveHoursWord = (() => {
+        const d = reserveHours % 10;
+        const dd = reserveHours % 100;
+        if (d === 1 && dd !== 11) return 'час';
+        if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return 'часа';
+        return 'часов';
+    })();
     const [decision, setDecision] = useState(null); // null | 'ship' | 'reserve'
     const confirmedFinal = reserveAvailable ? decision !== null : confirmed;
 
@@ -1601,7 +1609,9 @@ function OrderSummaryTicket({
                         и пульсирующие круги (встроенный keyframe ping), пока не отмечена.
                         Круги позиционируются без transform — ping сам анимирует scale. */}
                     <Box position="relative" display="inline-flex" alignSelf={{ base: 'flex-start', md: 'center' }}>
-                        {!confirmedFinal && (
+                        {/* Пульсация галочки — только для не-участников режима резерва.
+                            У участников она перенесена на каждый radio (ниже). */}
+                        {!confirmedFinal && !reserveAvailable && (
                             <Box
                                 position="absolute"
                                 left="-6px"
@@ -1628,18 +1638,42 @@ function OrderSummaryTicket({
                                 colorPalette="pecado"
                                 size="lg"
                             >
-                                <VStack align="flex-start" gap="2">
-                                    <Radio value="ship" fontWeight="600">
-                                        Данные проверены — можно отгружать
-                                    </Radio>
-                                    <Radio value="reserve" fontWeight="600">
-                                        <VStack align="flex-start" gap="0">
-                                            <Text>Поставьте в резерв — подтвержу отгрузку позже</Text>
-                                            <Text fontSize="xs" fontWeight="400" color="fg.muted">
-                                                Товар удержим до {reserveHours} ч. Не подтвердите — резерв снимется сам
-                                            </Text>
-                                        </VStack>
-                                    </Radio>
+                                <VStack align="stretch" gap="2">
+                                    {/* Пульсация на каждом radio, пока выбор не сделан:
+                                        круги ping над контролом, слева. Гаснут, как только
+                                        клиент выбрал вариант (decision !== null). */}
+                                    <Box position="relative">
+                                        {decision === null && (
+                                            <Box position="absolute" left="-6px" top="50%" mt="-4" boxSize="8" pointerEvents="none" aria-hidden="true">
+                                                <Box position="absolute" inset="0" rounded="full" bg="pecado.solid" opacity="0.3" animation="ping" />
+                                                <Box position="absolute" inset="1" rounded="full" bg="pecado.solid" opacity="0.25" animation="ping" animationDelay="0.5s" />
+                                            </Box>
+                                        )}
+                                        <Radio value="ship" fontWeight="600">
+                                            <VStack align="flex-start" gap="0">
+                                                <Text>Данные проверены — можно отгружать</Text>
+                                                <Text fontSize="xs" fontWeight="400" color="fg.muted">
+                                                    Заказ направляется на склад для сборки. Внести изменения или отменить не получится.
+                                                </Text>
+                                            </VStack>
+                                        </Radio>
+                                    </Box>
+                                    <Box position="relative">
+                                        {decision === null && (
+                                            <Box position="absolute" left="-6px" top="50%" mt="-4" boxSize="8" pointerEvents="none" aria-hidden="true">
+                                                <Box position="absolute" inset="0" rounded="full" bg="pecado.solid" opacity="0.3" animation="ping" />
+                                                <Box position="absolute" inset="1" rounded="full" bg="pecado.solid" opacity="0.25" animation="ping" animationDelay="0.5s" />
+                                            </Box>
+                                        )}
+                                        <Radio value="reserve" fontWeight="600">
+                                            <VStack align="flex-start" gap="0">
+                                                <Text>Поставьте в резерв — подтвержу отгрузку позже</Text>
+                                                <Text fontSize="xs" fontWeight="400" color="fg.muted">
+                                                    Ваш заказ будет зарезервирован на {reserveHours} {reserveHoursWord}, за это время вы можете его отменить или подтвердить.
+                                                </Text>
+                                            </VStack>
+                                        </Radio>
+                                    </Box>
                                 </VStack>
                             </RadioGroup>
                         ) : (
