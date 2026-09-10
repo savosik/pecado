@@ -31,6 +31,7 @@ import {
     LuMegaphone,
     LuBan,
     LuBanknote,
+    LuSparkles,
     LuSlidersHorizontal,
     LuCoins,
 } from "react-icons/lu";
@@ -90,6 +91,9 @@ export const menuConfig: MenuGroup[] = [
             // Зарплата рядом с планом: это ответ на вопрос «сколько я заработал
             // на этом плане прямо сейчас» — менеджер смотрит их вместе.
             { label: "Моя зарплата", icon: LuBanknote, path: "/crm/salary", permission: "crm-salary.view" },
+            // Мотивация 2.0 (mot-00): своё право, а не crm-salary — раздел не показывается
+            // менеджерам до ввода Положения в действие, иначе они увидят две разные цифры дохода.
+            { label: "Моя мотивация", icon: LuSparkles, path: "/crm/motivation", permission: "crm-motivation.view" },
             // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
             // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
             { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", counter: "shortages" },

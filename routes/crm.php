@@ -23,6 +23,7 @@ use App\Http\Controllers\Crm\ImpersonationController;
 use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\MailSuppressionController;
+use App\Http\Controllers\Crm\MotivationController;
 use App\Http\Controllers\Crm\NotificationPreferenceController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PaymentOrderController;
@@ -622,6 +623,16 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::delete('/plans/{plan}', [PlanController::class, 'destroy'])
             ->name('plans.destroy')
             ->whereNumber('plan');
+    });
+
+    // Мотивация 2.0 (эпик mot-00). Своё право crm-motivation.view, а не crm-salary:
+    // раздел не показывается менеджерам до ввода Положения в действие. Скоуп
+    // тот же, что у зарплаты: чужой `manager` — только с crm-clients-all.view.
+    Route::middleware('permission:crm-motivation.view')->group(function () {
+        Route::get('/motivation', [MotivationController::class, 'index'])->name('motivation.index');
+        Route::get('/motivation/data', [MotivationController::class, 'data'])->name('motivation.data');
+        Route::get('/motivation/evidence', [MotivationController::class, 'evidence'])->name('motivation.evidence');
+        Route::post('/motivation/simulate', [MotivationController::class, 'simulate'])->name('motivation.simulate');
     });
 
     // Зарплата (эпик pay-00). view — своя; чужой `manager` в адресе открывается
