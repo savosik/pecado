@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { LuEye, LuMail, LuReceipt, LuUserX } from 'react-icons/lu';
+import { LuEye, LuMail, LuPencil, LuReceipt, LuUserX } from 'react-icons/lu';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
-import { Badge, Box, Card, HStack, SimpleGrid, Tabs, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, Card, HStack, IconButton, SimpleGrid, Tabs, Text, VStack } from '@chakra-ui/react';
 import {
     AccordionItem,
     AccordionItemContent,
@@ -25,6 +25,7 @@ import ClientLifecyclePanel from '@/Crm/Components/ClientLifecyclePanel';
 import TaskPanel from '@/Crm/Components/TaskPanel';
 import EmailComposeDialog from '@/Crm/Components/EmailComposeDialog';
 import ClientKindDialog from '@/Crm/Components/ClientKindDialog';
+import ClientManagerDialog from '@/Crm/Components/ClientManagerDialog';
 import PartnerContractors from '@/Crm/Components/PartnerContractors';
 import PartnerContracts from '@/Crm/Components/PartnerContracts';
 import PartnerPurchases from '@/Crm/Components/PartnerPurchases';
@@ -59,6 +60,7 @@ export default function Show() {
         canSeeContractors = false,
         contracts = [],
         canSeeContracts = false,
+        managers = [],
     } = usePage().props;
     const { can } = usePermission();
 
@@ -70,6 +72,7 @@ export default function Show() {
     const [composeOpen, setComposeOpen] = useState(false);
     const [paymentOrderOpen, setPaymentOrderOpen] = useState(false);
     const [kindOpen, setKindOpen] = useState(false);
+    const [managerOpen, setManagerOpen] = useState(false);
     const [impersonateOpen, setImpersonateOpen] = useState(false);
     // Раскрытые спойлеры держим в состоянии: блок закупок ходит за данными
     // сам и монтируется только тогда, когда менеджер его открыл.
@@ -171,7 +174,27 @@ export default function Show() {
                                 <InfoRow label="Город" value={client.city} />
                                 <InfoRow label="Страна" value={client.country} />
                                 <InfoRow label="Статус" value={client.status_label} />
-                                <InfoRow label="Персональный менеджер" value={client.manager?.name} />
+                                {/* Закрепление ведёт РОП (с v16.10.0 1С менеджера не присылает):
+                                    карандаш открывает диалог, партнёр без менеджера — лид. */}
+                                <Box>
+                                    <Text fontSize="xs" color="gray.500" mb="0.5">Персональный менеджер</Text>
+                                    <HStack gap={1}>
+                                        {client.manager
+                                            ? <Text fontSize="sm" fontWeight="500">{client.manager.name}</Text>
+                                            : <Text fontSize="sm" color="fg.muted">не закреплён</Text>}
+                                        {canManageKind && (
+                                            <IconButton
+                                                size="2xs"
+                                                variant="ghost"
+                                                aria-label="Изменить менеджера"
+                                                title="Изменить менеджера"
+                                                onClick={() => setManagerOpen(true)}
+                                            >
+                                                <LuPencil />
+                                            </IconButton>
+                                        )}
+                                    </HStack>
+                                </Box>
                                 <InfoRow label="Зарегистрирован" value={client.created_at} />
                                 <InfoRow
                                     label="Последний визит на сайт"
@@ -428,6 +451,13 @@ export default function Show() {
                 open={kindOpen}
                 client={client}
                 onClose={() => setKindOpen(false)}
+            />
+
+            <ClientManagerDialog
+                open={managerOpen}
+                client={client}
+                managers={managers}
+                onClose={() => setManagerOpen(false)}
             />
 
             {/* Режим занимает всю сессию браузера: пока идёт просмотр, вкладки CRM

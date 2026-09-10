@@ -179,6 +179,12 @@ export default function ClientLifecyclePanel({ clientId, lifecycle, options, loy
                             {lifecycle.history.map((change) => (
                                 <Box key={change.id} borderWidth="1px" borderRadius="md" p={2}>
                                     <Text fontSize="sm">
+                                        {/* Журнал общий на статусы, тип аккаунта и менеджера:
+                                            без подписи поля «Сухов → Курочкина» рядом с
+                                            «Лид → Активен» читается как загадка. */}
+                                        {change.field && change.field !== 'lifecycle' && (
+                                            <Text as="span" color="fg.muted">{change.field_label}: </Text>
+                                        )}
                                         {change.from ? `${change.from} → ${change.to}` : `Установлен: ${change.to}`}
                                     </Text>
                                     <Text fontSize="xs" color="fg.muted">

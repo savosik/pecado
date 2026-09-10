@@ -7,12 +7,14 @@ use App\Enums\Crm\ClientLifecycleStatus;
 use App\Enums\UserKind;
 use App\Models\CrmClientProfile;
 use App\Models\CrmClientStatusChange;
+use App\Models\PersonalManager;
 use App\Models\ProductExport;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Единственная точка смены статусов партнёра: жизненного и типа аккаунта.
+ * Единственная точка смены статусов партнёра: жизненного, типа аккаунта,
+ * закрепления за менеджером.
  *
  * Оба журналируются в `crm_client_status_changes` в одной транзакции со сменой:
  * статус без записи «кто и почему» через месяц никому ничего не объясняет.
@@ -126,6 +128,39 @@ class ClientLifecycleService
     }
 
     /**
+     * Закрепить партнёра за менеджером или снять закрепление (users.personal_manager_id).
+     *
+     * Только руками РОПа: с v16.10.0 1С поле `manager` не задаёт, поэтому эта
+     * запись — единственный след того, кто и когда передал партнёра. `null` —
+     * партнёр остаётся в базе отдела без менеджера (лид), из CRM он не пропадает.
+     */
+    public function changeManager(User $client, ?PersonalManager $to, User $actor, ?string $reason = null): User
+    {
+        return DB::transaction(function () use ($client, $to, $actor, $reason): User {
+            $from = $client->personal_manager_id === null ? null : (int) $client->personal_manager_id;
+            $toId = $to?->getKey();
+
+            if ($from === $toId) {
+                return $client;
+            }
+
+            $client->personal_manager_id = $toId;
+            $client->save();
+
+            CrmClientStatusChange::create([
+                'client_user_id' => $client->getKey(),
+                'field' => CrmClientStatusChange::FIELD_MANAGER,
+                'from_value' => $from === null ? null : (string) $from,
+                'to_value' => $toId === null ? CrmClientStatusChange::MANAGER_NONE : (string) $toId,
+                'user_id' => $actor->getKey(),
+                'reason' => $reason,
+            ]);
+
+            return $client;
+        });
+    }
+
+    /**
      * Включить или выключить страховой запас (users.stock_buffer_enabled).
      *
      * Только руками менеджера: автопроставления по анкете нет намеренно —
@@ -214,22 +249,39 @@ class ClientLifecycleService
      */
     public function history(User $client, int $limit = 20): array
     {
-        return CrmClientStatusChange::query()
+        $changes = CrmClientStatusChange::query()
             ->where('client_user_id', $client->getKey())
             ->with('author:id,name')
             ->latest('id')
             ->take($limit)
-            ->get()
+            ->get();
+
+        // Имена менеджеров — одним запросом на всю историю, а не по строке:
+        // в журнале id карточки, читателю нужна фамилия.
+        $managerIds = $changes
+            ->where('field', CrmClientStatusChange::FIELD_MANAGER)
+            ->flatMap(fn (CrmClientStatusChange $change): array => [$change->from_value, $change->to_value])
+            ->filter(fn (?string $value): bool => $value !== null && ctype_digit($value))
+            ->map(fn (string $value): int => (int) $value)
+            ->unique()
+            ->values();
+        $managerNames = $managerIds->isEmpty()
+            ? []
+            : PersonalManager::query()->whereKey($managerIds)->pluck('name', 'id')->all();
+
+        return $changes
             ->map(fn (CrmClientStatusChange $change): array => [
                 'id' => $change->id,
                 'field' => $change->field,
-                'field_label' => $change->field === CrmClientStatusChange::FIELD_KIND
-                    ? 'Тип аккаунта'
-                    : 'Жизненный статус',
+                'field_label' => match ($change->field) {
+                    CrmClientStatusChange::FIELD_KIND => 'Тип аккаунта',
+                    CrmClientStatusChange::FIELD_MANAGER => 'Персональный менеджер',
+                    default => 'Жизненный статус',
+                },
                 'from' => $change->from_value === null
                     ? null
-                    : $this->valueLabel($change->field, $change->from_value),
-                'to' => $this->valueLabel($change->field, $change->to_value),
+                    : $this->valueLabel($change->field, $change->from_value, $managerNames),
+                'to' => $this->valueLabel($change->field, $change->to_value, $managerNames),
                 // user_id обнуляется при удалении сотрудника — журнал переживает автора.
                 // @phpstan-ignore-next-line nullsafe.neverNull
                 'author' => $change->author?->name ?? 'Сотрудник удалён',
@@ -245,12 +297,18 @@ class ClientLifecycleService
      * Неизвестное значение отдаётся как есть: журнал переживает переименование
      * вариантов, и подставить «—» вместо исторической записи было бы враньём.
      * Снятые стадии («Непреодолимо», «Закрывается») подписываются по словарю
-     * енума — иначе в истории читалось бы сырое `hopeless`.
+     * енума — иначе в истории читалось бы сырое `hopeless`. Удалённая карточка
+     * менеджера подписывается номером — журнал переживает и её.
+     *
+     * @param  array<int, string>  $managerNames
      */
-    private function valueLabel(string $field, string $value): string
+    private function valueLabel(string $field, string $value, array $managerNames = []): string
     {
         return match ($field) {
             CrmClientStatusChange::FIELD_KIND => UserKind::tryFrom($value)?->label() ?? $value,
+            CrmClientStatusChange::FIELD_MANAGER => $value === CrmClientStatusChange::MANAGER_NONE
+                ? 'Не закреплён'
+                : ($managerNames[(int) $value] ?? "Менеджер №{$value}"),
             default => ClientLifecycleStatus::tryFrom($value)?->label()
                 ?? ClientLifecycleStatus::retiredLabel($value)
                 ?? $value,

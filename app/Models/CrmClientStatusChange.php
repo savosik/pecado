@@ -53,6 +53,19 @@ class CrmClientStatusChange extends Model
      */
     public const FIELD_PREORDERS = 'preorders';
 
+    /**
+     * Персональный менеджер (users.personal_manager_id): за кем закреплён партнёр.
+     *
+     * Значения — id карточки `personal_managers`; {@see MANAGER_NONE} — «не
+     * закреплён» (лид). С v16.10.0 закрепление ведёт РОП в CRM, 1С его не
+     * трогает, поэтому единственный ответ на «кто и когда передал партнёра» —
+     * эта запись.
+     */
+    public const FIELD_MANAGER = 'manager';
+
+    /** Значение журнала для «менеджер не закреплён». */
+    public const MANAGER_NONE = 'none';
+
     protected $fillable = [
         'client_user_id',
         'field',

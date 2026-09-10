@@ -15,6 +15,7 @@ use App\Http\Controllers\Crm\ContactController;
 use App\Http\Controllers\Crm\ContractCategoryController;
 use App\Http\Controllers\Crm\ContractController;
 use App\Http\Controllers\Crm\ContractorController;
+use App\Http\Controllers\Crm\CrmPreferenceController;
 use App\Http\Controllers\Crm\DashboardController;
 use App\Http\Controllers\Crm\DebtController;
 use App\Http\Controllers\Crm\DocumentController;
@@ -82,6 +83,13 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // открытой вкладки CRM, поэтому запрос обязан оставаться дешёвым:
         // один индексированный WHERE по users.last_seen_at и срез в семь строк.
         Route::get('/presence', PresenceController::class)->name('presence');
+    });
+
+    // Галочка «Нераспределённые» — партнёры без менеджера во всех разделах.
+    // Право то же, что у расфокуса «весь отдел»: без него и показывать нечего.
+    Route::middleware('permission:crm-department.view')->group(function () {
+        Route::put('/preferences/unassigned', [CrmPreferenceController::class, 'unassigned'])
+            ->name('preferences.unassigned');
     });
 
     // Старые адреса раздела партнёров. Менеджеры держат карточки в закладках
@@ -295,6 +303,11 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
     Route::middleware('permission:crm-clients-all.edit')->group(function () {
         Route::put('/partners/{client}/kind', [ClientProfileController::class, 'kind'])
             ->name('clients.kind.update')
+            ->whereNumber('client');
+        // Закрепление за менеджером — тоже состав базы отдела: с v16.10.0 1С
+        // менеджера не присылает, распределяет РОП.
+        Route::put('/partners/{client}/manager', [ClientProfileController::class, 'manager'])
+            ->name('clients.manager.update')
             ->whereNumber('client');
     });
 

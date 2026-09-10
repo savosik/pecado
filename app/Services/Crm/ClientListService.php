@@ -102,6 +102,10 @@ class ClientListService
             $query->where('personal_manager_id', $filters->managerId);
         }
 
+        if ($filters->withoutManager) {
+            $query->whereNull('personal_manager_id');
+        }
+
         if ($withLifecycle && $filters->lifecycle !== null) {
             $this->applyLifecycle($query, $filters->lifecycle);
         }

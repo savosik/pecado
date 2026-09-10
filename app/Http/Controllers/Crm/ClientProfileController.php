@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Crm;
 
 use App\Enums\Crm\ClientLifecycleStatus;
 use App\Enums\UserKind;
+use App\Http\Requests\Crm\AssignClientManagerRequest;
 use App\Http\Requests\Crm\ChangeClientKindRequest;
 use App\Http\Requests\Crm\ChangeClientLifecycleRequest;
 use App\Http\Requests\Crm\UpdateClientProfileRequest;
+use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Crm\ClientLifecycleService;
 use App\Services\Crm\ClientProfileService;
@@ -101,22 +103,50 @@ class ClientProfileController extends CrmController
     }
 
     /**
+     * Закрепить партнёра за менеджером или снять закрепление.
+     *
+     * С v16.10.0 персонального менеджера 1С не присылает — распределяет
+     * базу тот, кто отвечает за отдел (crm-clients-all.edit). Скоуп —
+     * `visibleInCrm()` РОПа: партнёр без менеджера в него входит, так что
+     * лид можно и закрепить, и оставить лидом.
+     */
+    public function manager(
+        AssignClientManagerRequest $request,
+        int $client,
+        ClientLifecycleService $lifecycle,
+    ): RedirectResponse {
+        $user = User::query()
+            ->visibleInCrm($this->crmActor($request))
+            ->findOrFail($client);
+
+        $managerId = $request->validated('personal_manager_id');
+        // Скрытая карточка (уволившийся, техническая) в выборе не участвует:
+        // закрепить за ней нельзя, даже подставив id в запрос.
+        $manager = $managerId === null
+            ? null
+            : PersonalManager::query()->active()->findOrFail($managerId);
+
+        $lifecycle->changeManager($user, $manager, $this->crmActor($request), $request->validated('reason'));
+
+        return back()->with('success', $manager === null
+            ? "{$user->display_name}: менеджер не закреплён"
+            : "{$user->display_name} закреплён за менеджером {$manager->name}");
+    }
+
+    /**
      * Тип аккаунта: убрать из базы партнёров отдела или вернуть обратно.
      *
-     * Скоуп поиска — не `visibleInCrm()`, а вся закреплённая за отделом база:
-     * помеченный сотрудником аккаунт из CRM-выборки сразу выпадает, и по ней
-     * его было бы уже не найти, чтобы отменить ошибочную пометку. Пользователи
-     * без менеджера сюда не попадают вовсе — это не база партнёров отдела,
-     * а лиды и служебные учётки, ими занимается админка.
+     * Скоуп поиска — не `visibleInCrm()`, а вся база: помеченный сотрудником
+     * аккаунт из CRM-выборки сразу выпадает, и по ней его было бы уже не найти,
+     * чтобы отменить ошибочную пометку. Партнёры без менеджера сюда тоже
+     * попадают: с v16.10.0 это лиды отдела, а не жильцы админки.
      */
     public function kind(
         ChangeClientKindRequest $request,
         int $client,
         ClientLifecycleService $lifecycle,
     ): RedirectResponse {
-        $user = User::query()
-            ->whereNotNull('personal_manager_id')
-            ->findOrFail($client);
+        $user = User::query()->findOrFail($client);
 
         $kind = UserKind::from($request->validated('user_kind'));
 

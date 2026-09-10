@@ -168,8 +168,14 @@ class ClientController extends CrmController
         $canSeeContracts = $this->crmActor($request)->can('crm-contracts.view');
         // Лестница долга — те же деньги, что раздел «Финансы», право то же.
         $canSeeDebt = $this->crmActor($request)->can('crm-finance.view') && config('debt.enabled');
+        // Закрепление за менеджером — состав базы отдела, право то же, что у
+        // «Это не партнёр». Список карточек нужен только тому, кто закрепляет.
+        $canAssignManager = $this->crmActor($request)->can('crm-clients-all.edit');
 
         return Inertia::render('Crm/Pages/Clients/Show', [
+            'managers' => $canAssignManager
+                ? PersonalManager::query()->active()->select('id', 'name')->orderBy('name')->get()
+                : [],
             'debt' => $canSeeDebt ? app(\App\Services\Debt\DebtStateService::class)->explain($user) : null,
             'canSeeDebt' => $canSeeDebt,
             'pauseMaxDays' => $this->crmActor($request)->can('crm-clients-all.view')

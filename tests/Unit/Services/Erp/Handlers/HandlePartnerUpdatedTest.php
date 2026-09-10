@@ -346,35 +346,38 @@ class HandlePartnerUpdatedTest extends TestCase
     }
 
     // ──────────────────────────────────────────────
-    // manager → personal_manager_id (v15.1)
+    // v16.10.0: manager из 1С игнорируется — менеджера закрепляет РОП в CRM
     // ──────────────────────────────────────────────
 
     #[Test]
-    public function it_assigns_existing_personal_manager_by_erp_uuid(): void
+    public function it_ignores_manager_object_from_erp(): void
     {
-        $manager = PersonalManager::factory()->create([
-            'erp_uuid' => 'mgr-uuid-0001',
-            'name' => 'Иванов Иван',
-        ]);
+        $ours = PersonalManager::factory()->create(['name' => 'Наш Менеджер']);
 
         $user = User::factory()->create([
             'erp_id' => 'user-uuid-mgr-01',
-            'personal_manager_id' => null,
+            'personal_manager_id' => $ours->id,
         ]);
 
         (new HandlePartnerUpdated)->handle([
             'event' => 'partner.updated',
-            'message_id' => 'msg-mgr-assign',
+            'message_id' => 'msg-mgr-ignore',
             'uuid' => 'user-uuid-mgr-01',
+            'name' => 'Новое наименование',
             'manager' => ['uuid' => 'mgr-uuid-0001', 'name' => 'Иванов Иван'],
         ]);
 
-        $this->assertEquals($manager->id, $user->refresh()->personal_manager_id);
+        $user->refresh();
+        $this->assertEquals($ours->id, $user->personal_manager_id);
+        $this->assertEquals('Новое наименование', $user->erp_name, 'Остальные поля обновляются как раньше.');
+        $this->assertNull(PersonalManager::where('erp_uuid', 'mgr-uuid-0001')->first());
     }
 
     #[Test]
-    public function it_creates_personal_manager_if_not_exists(): void
+    public function it_does_not_assign_manager_to_lead_from_erp(): void
     {
+        PersonalManager::factory()->create(['erp_uuid' => 'mgr-uuid-0002', 'name' => 'Иванов Иван']);
+
         $user = User::factory()->create([
             'erp_id' => 'user-uuid-mgr-02',
             'personal_manager_id' => null,
@@ -382,84 +385,52 @@ class HandlePartnerUpdatedTest extends TestCase
 
         (new HandlePartnerUpdated)->handle([
             'event' => 'partner.updated',
-            'message_id' => 'msg-mgr-create',
+            'message_id' => 'msg-mgr-lead',
             'uuid' => 'user-uuid-mgr-02',
-            'manager' => ['uuid' => 'mgr-uuid-new', 'name' => 'Петров Пётр'],
-        ]);
-
-        $user->refresh();
-        $manager = PersonalManager::where('erp_uuid', 'mgr-uuid-new')->first();
-
-        $this->assertNotNull($manager);
-        $this->assertEquals('Петров Пётр', $manager->name);
-        $this->assertEquals($manager->id, $user->personal_manager_id);
-    }
-
-    #[Test]
-    public function it_resets_personal_manager_when_manager_is_null(): void
-    {
-        $manager = PersonalManager::factory()->create([
-            'erp_uuid' => 'mgr-uuid-reset',
-        ]);
-
-        $user = User::factory()->create([
-            'erp_id' => 'user-uuid-mgr-03',
-            'personal_manager_id' => $manager->id,
-        ]);
-
-        (new HandlePartnerUpdated)->handle([
-            'event' => 'partner.updated',
-            'message_id' => 'msg-mgr-reset',
-            'uuid' => 'user-uuid-mgr-03',
-            'manager' => null,
+            'manager' => ['uuid' => 'mgr-uuid-0002', 'name' => 'Иванов Иван'],
         ]);
 
         $this->assertNull($user->refresh()->personal_manager_id);
     }
 
     #[Test]
-    public function it_does_not_change_manager_when_key_absent(): void
+    public function it_does_not_reset_manager_when_erp_sends_null(): void
     {
-        $manager = PersonalManager::factory()->create([
-            'erp_uuid' => 'mgr-uuid-keep',
-        ]);
+        $ours = PersonalManager::factory()->create();
 
         $user = User::factory()->create([
-            'erp_id' => 'user-uuid-mgr-04',
-            'personal_manager_id' => $manager->id,
+            'erp_id' => 'user-uuid-mgr-03',
+            'personal_manager_id' => $ours->id,
         ]);
 
         (new HandlePartnerUpdated)->handle([
             'event' => 'partner.updated',
-            'message_id' => 'msg-mgr-absent',
-            'uuid' => 'user-uuid-mgr-04',
-            'name' => 'Изменилось только имя',
-            // manager отсутствует — не менять
+            'message_id' => 'msg-mgr-null',
+            'uuid' => 'user-uuid-mgr-03',
+            'manager' => null,
         ]);
 
-        $this->assertEquals($manager->id, $user->refresh()->personal_manager_id);
+        $this->assertEquals($ours->id, $user->refresh()->personal_manager_id);
     }
 
     #[Test]
-    public function it_updates_manager_name_if_changed(): void
+    public function it_does_not_rename_manager_card_from_erp(): void
     {
         $manager = PersonalManager::factory()->create([
             'erp_uuid' => 'mgr-uuid-rename',
-            'name' => 'Старое Имя',
+            'name' => 'Имя на сайте',
         ]);
 
-        $user = User::factory()->create([
-            'erp_id' => 'user-uuid-mgr-05',
-        ]);
+        User::factory()->create(['erp_id' => 'user-uuid-mgr-05']);
 
         (new HandlePartnerUpdated)->handle([
             'event' => 'partner.updated',
             'message_id' => 'msg-mgr-rename',
             'uuid' => 'user-uuid-mgr-05',
-            'manager' => ['uuid' => 'mgr-uuid-rename', 'name' => 'Новое Имя'],
+            'manager' => ['uuid' => 'mgr-uuid-rename', 'name' => 'Имя в 1С'],
         ]);
 
-        $this->assertEquals('Новое Имя', $manager->refresh()->name);
+        $this->assertEquals('Имя на сайте', $manager->refresh()->name);
     }
 
     // ──────────────────────────────────────────────

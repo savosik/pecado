@@ -87,6 +87,69 @@ class ErpIncomingJobTest extends TestCase
     }
 
     #[Test]
+    public function partner_updated_via_incoming_queue_ignores_manager_field(): void
+    {
+        // v16.10.0: полный проход через шину — payload с `manager` проходит
+        // валидацию по JSON Schema (поле deprecated, но допустимо), а закрепление
+        // менеджера, сделанное РОПом в CRM, остаётся нетронутым. Карточка
+        // менеджера из 1С не заводится.
+        $ours = \App\Models\PersonalManager::factory()->create(['name' => 'Закреплён РОПом']);
+        $user = User::factory()->create([
+            'erp_id' => '00000000-0000-4000-a000-000000000046',
+            'personal_manager_id' => $ours->id,
+        ]);
+
+        $this->makeJob([
+            'event' => 'partner.updated',
+            'uuid' => '00000000-0000-4000-a000-000000000046',
+            'name' => 'Партнёр с менеджером в 1С',
+            'manager' => [
+                'uuid' => 'f2c1d4e7-0000-4000-a000-9ab000000000',
+                'name' => 'Менеджер Из 1С',
+            ],
+            'message_id' => 'msg-manager-ignored',
+            'timestamp' => now()->toIso8601String(),
+        ])->fire();
+
+        $user->refresh();
+
+        $this->assertSame($ours->id, $user->personal_manager_id);
+        $this->assertSame('Партнёр с менеджером в 1С', $user->erp_name, 'Остальные поля сообщения приняты.');
+        $this->assertDatabaseMissing('personal_managers', ['erp_uuid' => 'f2c1d4e7-0000-4000-a000-9ab000000000']);
+        $this->assertDatabaseHas('erp_processed_messages', [
+            'message_id' => 'msg-manager-ignored',
+            'event' => 'partner.updated',
+        ]);
+    }
+
+    #[Test]
+    public function partner_updated_via_incoming_queue_accepts_incomplete_manager_object(): void
+    {
+        // v16.10.0: вложенные uuid/name больше не обязательны — некорректный
+        // объект в устаревшем поле не должен валить всё сообщение.
+        $user = User::factory()->create([
+            'erp_id' => '00000000-0000-4000-a000-000000000047',
+            'personal_manager_id' => null,
+        ]);
+
+        $this->makeJob([
+            'event' => 'partner.updated',
+            'uuid' => '00000000-0000-4000-a000-000000000047',
+            'city' => 'Тюмень',
+            'manager' => ['uuid' => 'f2c1d4e7-0000-4000-a000-9ab000000001'],
+            'message_id' => 'msg-manager-incomplete',
+            'timestamp' => now()->toIso8601String(),
+        ])->fire();
+
+        $user->refresh();
+
+        $this->assertSame('Тюмень', $user->city);
+        $this->assertNull($user->personal_manager_id);
+        $this->assertDatabaseHas('erp_processed_messages', ['message_id' => 'msg-manager-incomplete']);
+        $this->assertDatabaseMissing('erp_validation_errors', ['message_id' => 'msg-manager-incomplete']);
+    }
+
+    #[Test]
     public function partner_updated_via_incoming_queue_fills_working_name_only(): void
     {
         // Полный проход через шину: валидация payload по JSON Schema, маршрутизация

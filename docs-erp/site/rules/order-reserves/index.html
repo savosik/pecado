@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#v1690-v1691" class="md-skip">
+        <a href="#v1690-v1691-reserve-v1692" class="md-skip">
           Перейти к содержанию
         </a>
       
@@ -688,6 +688,17 @@
     <span class="md-ellipsis">
       
         Как резерв выражен в 1С
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reserve-ordercreated-v1692" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Обеспечение по флагу reserve на order.created (v16.9.2)
       
     </span>
   </a>
@@ -2031,6 +2042,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#reserve-ordercreated-v1692" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Обеспечение по флагу reserve на order.created (v16.9.2)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2080,7 +2102,7 @@
 
 
 
-<h1 id="v1690-v1691">Заказы в резерве (v16.9.0, уточнение ключа строки — v16.9.1)<a class="headerlink" href="#v1690-v1691" title="Permanent link">&para;</a></h1>
+<h1 id="v1690-v1691-reserve-v1692">Заказы в резерве (v16.9.0; ключ строки — v16.9.1; авторитетность reserve — v16.9.2)<a class="headerlink" href="#v1690-v1691-reserve-v1692" title="Permanent link">&para;</a></h1>
 <p>Режим самообслуживания для клиентов-интернет-магазинов: заказ сразу создаётся в 1С
 с удержанием товара, а окно между «зарезервировал» и «подтвердил» клиент обслуживает
 сам — правит состав, отменяет или отправляет в отгрузку из кабинета сайта или через
@@ -2123,6 +2145,60 @@
 <li>расходный ордер не оформляется (ресурс <code>КОтгрузке</code> у резервной строки нулевой),
   поэтому заказ не уходит в сборку.</li>
 </ul>
+<h2 id="reserve-ordercreated-v1692">Обеспечение по флагу <code>reserve</code> на <code>order.created</code> (v16.9.2)<a class="headerlink" href="#reserve-ordercreated-v1692" title="Permanent link">&para;</a></h2>
+<p>Согласовано в топике №6 Agent Hub (09.09.2026). Поле <code>reserve</code> на <code>order.created</code> —
+<strong>авторитетный признак обеспечения</strong>, а не подсказка. Сайт присылает явный Boolean
+во <strong>всех</strong> новых <code>order.created</code> (не только по участникам режима).</p>
+<table>
+<thead>
+<tr>
+<th><code>reserve</code></th>
+<th>Статус документа в 1С</th>
+<th>Вариант обеспечения строк</th>
+<th>Резерв</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>true</code> (режим вкл ∧ участник ∧ срок валиден)</td>
+<td><code>КОбеспечению</code></td>
+<td><code>СоСклада</code> + <code>Доп_ЗаказВРезерве</code></td>
+<td>да, срок из <code>reserved_until</code></td>
+</tr>
+<tr>
+<td><code>false</code></td>
+<td><code>КОтгрузке</code></td>
+<td><code>Отгрузить</code></td>
+<td>нет</td>
+</tr>
+<tr>
+<td>поле отсутствует / <code>null</code></td>
+<td><code>КОтгрузке</code> (fallback как <code>false</code>)</td>
+<td><code>Отгрузить</code></td>
+<td>нет</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Резерв по умолчанию НЕ ставится.</strong> Только валидный <code>reserve: true</code> переводит
+  заказ в обеспечение; при <code>false</code> и отсутствии поля обычный заказ идёт сразу под
+  отгрузку.</li>
+<li>Право на резерв всё равно гейтит 1С: режим включён ∧ партнёр помечен участником
+  (<code>reserve_allowed</code>) ∧ срок валиден. По неучастнику <code>reserve: true</code> игнорируется и
+  в ответном <code>order.updated</code> возвращается <code>reserve: false</code> (см. правило 3).</li>
+<li>Совместимость: <code>absent = false</code> сохраняет поведение старых отправителей и
+  неучастников — они и раньше не подразумевали резерв.</li>
+<li>Предзаказы и аварийные типы (<code>defect</code> / <code>promo</code> / <code>promo_sample</code>) сохраняют своё
+  текущее поведение независимо от <code>reserve</code>.</li>
+</ul>
+<blockquote>
+<p><strong>История дефекта (до v16.9.2):</strong> сайт слал <code>reserve</code> только при <code>true</code>, а 1С
+трактовала отсутствие/<code>false</code> как «резервировать по умолчанию» — заказу до проверки
+флага уже проставлялся <code>КОбеспечению</code>/<code>СоСклада</code>. Клиент, выбравший «к отгрузке»,
+фактически получал резерв. Исправлено с двух сторон: сайт шлёт явный <code>reserve</code>,
+1С делает флаг авторитетным (default-path готовит <code>КОтгрузке</code>, резерв — только по
+валидному <code>true</code>).</p>
+</blockquote>
 <h2 id="_1">Жизненный цикл<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>оформление (reserve: true) ──► резерв в 1С (окно ожидания)
     │ клиент правит состав          │ order.updated (сайт → 1С)

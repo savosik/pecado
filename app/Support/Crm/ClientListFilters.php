@@ -75,10 +75,20 @@ final class ClientListFilters
      */
     public const PER_PAGE_DEFAULT = 100;
 
+    /**
+     * Значение `manager_id`, означающее «партнёры без закреплённого менеджера».
+     *
+     * Живёт в том же параметре, что и выбор менеджера: для РОПа это один
+     * и тот же вопрос «чьи партнёры показать», и ответ «ничьи» — его вариант.
+     */
+    public const WITHOUT_MANAGER = 'none';
+
     public function __construct(
         public readonly CrmScope $scope,
         public readonly ?string $search,
         public readonly ?int $managerId,
+        /** Только партнёры без закреплённого менеджера (`manager_id=none`). */
+        public readonly bool $withoutManager,
         public readonly ?ClientLifecycleStatus $lifecycle,
         public readonly ?string $coverage,
         public readonly ?string $taskState,
@@ -125,6 +135,11 @@ final class ClientListFilters
             scope: CrmScope::fromRequest($request, $actor),
             search: $search,
             managerId: $seesAll ? self::sanitizeId($request->input('manager_id')) : null,
+            // «Без менеджера» — нераспределённые партнёры: нужна и видимость
+            // отдела, и включённая галочка «Нераспределённые», иначе отбор пуст.
+            withoutManager: $seesAll
+                && (bool) $actor->crm_show_unassigned
+                && $request->input('manager_id') === self::WITHOUT_MANAGER,
             lifecycle: $canSeeProfile
                 ? ClientLifecycleStatus::tryFrom((string) $request->input('lifecycle'))
                 : null,
@@ -182,7 +197,7 @@ final class ClientListFilters
         return [
             'scope' => $this->scope->value,
             'search' => $this->search,
-            'manager_id' => $this->managerId,
+            'manager_id' => $this->withoutManager ? self::WITHOUT_MANAGER : $this->managerId,
             'lifecycle' => $this->lifecycle?->value,
             'coverage' => $this->coverage,
             'task_state' => $this->taskState,

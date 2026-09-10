@@ -23,12 +23,15 @@ use Illuminate\Support\Str;
  * 1. По erp_id (UUID) — идемпотентность
  * 2. По email (login) — привязка erp_id + обновление атрибутов
  *
+ * Поле `manager` (v15.1) с v16.10.0 игнорируется: персонального менеджера
+ * закрепляет РОП в CRM сайта, 1С привязку не задаёт и не сбрасывает.
+ *
  * Все операции через User::withoutEvents() для предотвращения петли:
  * partner.updated → UserUpdated → PublishUserToErp → partner.created → LOOP
  */
 class HandlePartnerUpdated
 {
-    use NormalizesCountry, ResolvesPersonalManager;
+    use NormalizesCountry;
 
     public function handle(array $payload): void
     {
@@ -42,13 +45,11 @@ class HandlePartnerUpdated
             return;
         }
 
-        $personalManagerId = $this->resolvePersonalManagerId($payload);
-
         // Сценарий 1: Ищем по erp_id (повторная доставка — идемпотентность)
         $user = User::where('erp_id', $uuid)->first();
 
         if ($user) {
-            $this->updateUser($user, $payload, personalManagerId: $personalManagerId);
+            $this->updateUser($user, $payload);
 
             Log::info('partner.updated: пользователь найден по erp_id, обновлён', [
                 'user_id' => $user->id,
@@ -64,7 +65,7 @@ class HandlePartnerUpdated
         }
 
         if ($user) {
-            $this->updateUser($user, $payload, bindErpId: true, personalManagerId: $personalManagerId);
+            $this->updateUser($user, $payload, bindErpId: true);
 
             Log::info('partner.updated: пользователь найден по email, erp_id привязан', [
                 'user_id' => $user->id,
@@ -89,7 +90,7 @@ class HandlePartnerUpdated
     /**
      * Обновить атрибуты пользователя из payload.
      */
-    private function updateUser(User $user, array $payload, bool $bindErpId = false, int|null|false $personalManagerId = false): void
+    private function updateUser(User $user, array $payload, bool $bindErpId = false): void
     {
         $updateData = [];
 
@@ -141,11 +142,6 @@ class HandlePartnerUpdated
         $clientStatusId = $this->resolveClientStatusId($payload);
         if ($clientStatusId !== false) {
             $updateData['client_status_id'] = $clientStatusId;
-        }
-
-        // manager → personal_manager_id (v15.1)
-        if ($personalManagerId !== false) {
-            $updateData['personal_manager_id'] = $personalManagerId;
         }
 
         if (empty($updateData)) {

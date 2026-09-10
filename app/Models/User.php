@@ -346,6 +346,7 @@ class User extends Authenticatable implements HasMedia
             // v16.9.0 (режим «Заказы в резерве»): реплика реквизита партнёра из 1С,
             // мастер флага — 1С (partner.created/partner.updated)
             'reserve_allowed' => 'boolean',
+            'crm_show_unassigned' => 'boolean',
         ];
     }
 
@@ -748,8 +749,10 @@ class User extends Authenticatable implements HasMedia
     /**
      * Клиенты, видимые пользователю в CRM.
      *
-     * Кто видит отдел (crm-department.view) — всех клиентов отдела,
-     * менеджер — только закреплённых за его карточкой, менеджер без карточки — никого.
+     * Кто видит отдел (crm-department.view) — всех закреплённых клиентов отдела,
+     * а с галочкой «Нераспределённые» (users.crm_show_unassigned) — ещё и партнёров
+     * без менеджера, лидов; менеджер без права на отдел — только закреплённых
+     * за его карточкой, менеджер без карточки — никого.
      *
      * Порядок веток важен: право на весь отдел проверяется до managerProfile,
      * иначе РОП без карточки менеджера увидел бы пустой список.
@@ -764,7 +767,15 @@ class User extends Authenticatable implements HasMedia
         $query->clients();
 
         if ($actor->can('crm-department.view')) {
-            // Клиент без менеджера — лид, он живёт в админке, а не в CRM отдела.
+            // Партнёр без менеджера — лид отдела. С v16.10.0 менеджера закрепляет
+            // РОП в CRM, и нераспределённых надо видеть, чтобы распределить;
+            // раньше их прятали в админку, и «ничейных» приходилось вешать на
+            // карточку РОПа. Но по умолчанию хвост никому не показываем: это
+            // личная галочка сотрудника, а не право.
+            if ($actor->crm_show_unassigned) {
+                return $query;
+            }
+
             return $query->whereNotNull('personal_manager_id');
         }
 

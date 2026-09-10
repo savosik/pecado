@@ -31,14 +31,16 @@ class CrmUserKindScopeTest extends TestCase
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
 
-        $this->manager = User::factory()->create();
+        $this->manager = User::factory()->staff()->create();
         $this->manager->assignRole('sales-manager');
         $this->profile = PersonalManager::factory()->create(['user_id' => $this->manager->id]);
     }
 
+    // Сотрудники — staff, как на проде: РОП видит нераспределённых партнёров
+    // и не должен посчитать лидом собственную учётку.
     private function salesHead(): User
     {
-        $head = User::factory()->create();
+        $head = User::factory()->staff()->create();
         $head->assignRole('sales-head');
 
         return $head;

@@ -25,12 +25,15 @@ use Illuminate\Support\Str;
  * - is_active (boolean) → определяет UserStatus (ACTIVE / BLOCKED)
  * - client_status (string|null) → резолвит ClientStatus по external_id
  *
+ * Поле `manager` (v15) с v16.10.0 игнорируется: персонального менеджера
+ * закрепляет РОП в CRM сайта, 1С привязку не задаёт и не сбрасывает.
+ *
  * Все операции через User::withoutEvents() для предотвращения петли:
  * partner.created → UserUpdated → PublishUserToErp → partner.created → LOOP
  */
 class HandlePartnerCreated
 {
-    use NormalizesCountry, ResolvesPersonalManager;
+    use NormalizesCountry;
 
     public function handle(array $payload): void
     {
@@ -59,9 +62,6 @@ class HandlePartnerCreated
         // v11: client_status → ClientStatus по external_id
         $clientStatusId = $this->resolveClientStatusId($payload);
 
-        // v15: manager → PersonalManager по erp_uuid
-        $personalManagerId = $this->resolvePersonalManagerId($payload);
-
         // v16.9.0 (режим «Заказы в резерве»): реплика признака участника режима.
         // Мастер флага — 1С; отсутствие ключа или null — признак не трогаем
         // (для нового пользователя сработает default false колонки).
@@ -77,7 +77,7 @@ class HandlePartnerCreated
         $user = User::where('erp_id', $uuid)->first();
 
         if ($user) {
-            User::withoutEvents(function () use ($user, $uuid, $name, $city, $country, $phone, $userStatus, $clientStatusId, $personalManagerId, $reserveAllowed) {
+            User::withoutEvents(function () use ($user, $uuid, $name, $city, $country, $phone, $userStatus, $clientStatusId, $reserveAllowed) {
                 $updateData = array_filter([
                     'erp_id' => $uuid,
                     // Рабочее наименование обновляем, личное `name` — нет: им
@@ -93,11 +93,6 @@ class HandlePartnerCreated
                 // client_status_id может быть null (сброс) — не фильтруем
                 if ($clientStatusId !== false) {
                     $updateData['client_status_id'] = $clientStatusId;
-                }
-
-                // personal_manager_id может быть null (сброс) — не фильтруем
-                if ($personalManagerId !== false) {
-                    $updateData['personal_manager_id'] = $personalManagerId;
                 }
 
                 $user->update($updateData);
@@ -117,7 +112,7 @@ class HandlePartnerCreated
         $user = User::where('email', $login)->first();
 
         if ($user) {
-            User::withoutEvents(function () use ($user, $uuid, $name, $userStatus, $clientStatusId, $personalManagerId, $reserveAllowed) {
+            User::withoutEvents(function () use ($user, $uuid, $name, $userStatus, $clientStatusId, $reserveAllowed) {
                 $updateData = [
                     'erp_id' => $uuid,
                     'status' => $userStatus,
@@ -135,10 +130,6 @@ class HandlePartnerCreated
 
                 if ($clientStatusId !== false) {
                     $updateData['client_status_id'] = $clientStatusId;
-                }
-
-                if ($personalManagerId !== false) {
-                    $updateData['personal_manager_id'] = $personalManagerId;
                 }
 
                 $user->update($updateData);
@@ -187,10 +178,6 @@ class HandlePartnerCreated
 
         if ($clientStatusId !== false) {
             $createData['client_status_id'] = $clientStatusId;
-        }
-
-        if ($personalManagerId !== false) {
-            $createData['personal_manager_id'] = $personalManagerId;
         }
 
         if ($reserveAllowed !== null) {

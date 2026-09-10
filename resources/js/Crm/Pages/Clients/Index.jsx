@@ -330,7 +330,9 @@ export default function Index({
         ...(canSeeAll ? [{
             key: 'manager',
             label: 'Менеджер',
-            render: (_, row) => <Text fontSize="sm">{row.manager?.name || '—'}</Text>,
+            render: (_, row) => (row.manager
+                ? <Text fontSize="sm">{row.manager.name}</Text>
+                : <Text fontSize="sm" color="fg.muted">не закреплён</Text>),
         }] : []),
         {
             key: 'actions',

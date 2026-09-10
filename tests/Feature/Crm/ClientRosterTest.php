@@ -36,7 +36,9 @@ class ClientRosterTest extends TestCase
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
 
-        $this->head = User::factory()->create();
+        // РОП с включённой галочкой «Нераспределённые»: без неё лид для него
+        // невидим, а закреплять из карточки — нечего.
+        $this->head = User::factory()->staff()->create(['crm_show_unassigned' => true]);
         $this->head->assignRole('sales-head');
 
         $this->manager = User::factory()->create();
@@ -111,15 +113,159 @@ class ClientRosterTest extends TestCase
     }
 
     #[Test]
-    public function account_without_manager_is_out_of_reach(): void
+    public function head_can_change_kind_of_account_without_manager(): void
     {
-        // Лид или служебная учётка вне отдела — это не клиентская база, ими
-        // занимается админка.
+        // Лид — партнёр без менеджера — с v16.10.0 часть базы отдела, и
+        // «это не партнёр» к нему применимо так же, как к закреплённому.
         $lead = User::factory()->create(['personal_manager_id' => null]);
 
         $this->actingAs($this->head)
             ->put(route('crm.clients.kind.update', $lead->id), ['user_kind' => 'staff'])
+            ->assertRedirect(route('crm.clients.index'));
+
+        $this->assertSame(UserKind::STAFF, $lead->fresh()->user_kind);
+    }
+
+    // --- Закрепление за менеджером ------------------------------------------
+
+    #[Test]
+    public function head_assigns_manager_to_lead(): void
+    {
+        $lead = User::factory()->create(['personal_manager_id' => null]);
+
+        $this->actingAs($this->head)
+            ->put(route('crm.clients.manager.update', $lead->id), [
+                'personal_manager_id' => $this->managerProfile->id,
+                'reason' => 'Регион менеджера',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame($this->managerProfile->id, $lead->fresh()->personal_manager_id);
+
+        $entry = CrmClientStatusChange::query()
+            ->where('field', CrmClientStatusChange::FIELD_MANAGER)
+            ->firstOrFail();
+
+        $this->assertSame($lead->id, $entry->client_user_id);
+        $this->assertNull($entry->from_value);
+        $this->assertSame((string) $this->managerProfile->id, $entry->to_value);
+        $this->assertSame($this->head->id, $entry->user_id);
+        $this->assertSame('Регион менеджера', $entry->reason);
+    }
+
+    #[Test]
+    public function lead_is_out_of_reach_while_checkbox_is_off(): void
+    {
+        $this->head->forceFill(['crm_show_unassigned' => false])->save();
+        $lead = User::factory()->create(['personal_manager_id' => null]);
+
+        $this->actingAs($this->head)
+            ->put(route('crm.clients.manager.update', $lead->id), [
+                'personal_manager_id' => $this->managerProfile->id,
+            ])
             ->assertNotFound();
+    }
+
+    #[Test]
+    public function head_unassigns_manager_and_partner_stays_in_crm(): void
+    {
+        $this->actingAs($this->head)
+            ->put(route('crm.clients.manager.update', $this->client->id), [
+                'personal_manager_id' => null,
+            ])
+            ->assertRedirect();
+
+        $this->assertNull($this->client->fresh()->personal_manager_id);
+        $this->assertTrue(
+            User::query()->visibleInCrm($this->head)->whereKey($this->client->id)->exists(),
+            'Партнёр без менеджера остаётся в базе отдела, а не уходит в админку.',
+        );
+        $this->assertFalse(
+            User::query()->visibleInCrm($this->manager)->whereKey($this->client->id)->exists(),
+            'У бывшего менеджера партнёр пропадает.',
+        );
+
+        $entry = CrmClientStatusChange::query()
+            ->where('field', CrmClientStatusChange::FIELD_MANAGER)
+            ->firstOrFail();
+
+        $this->assertSame((string) $this->managerProfile->id, $entry->from_value);
+        $this->assertSame(CrmClientStatusChange::MANAGER_NONE, $entry->to_value);
+    }
+
+    #[Test]
+    public function reassignment_is_visible_in_status_history(): void
+    {
+        $other = PersonalManager::factory()->create(['name' => 'Курочкина']);
+
+        $this->actingAs($this->head)
+            ->put(route('crm.clients.manager.update', $this->client->id), [
+                'personal_manager_id' => $other->id,
+            ]);
+
+        $history = app(\App\Services\Crm\ClientLifecycleService::class)->history($this->client->fresh());
+
+        $this->assertSame('Персональный менеджер', $history[0]['field_label']);
+        $this->assertSame($this->managerProfile->name, $history[0]['from']);
+        $this->assertSame('Курочкина', $history[0]['to']);
+    }
+
+    #[Test]
+    public function same_manager_does_not_write_journal_entry(): void
+    {
+        $this->actingAs($this->head)
+            ->put(route('crm.clients.manager.update', $this->client->id), [
+                'personal_manager_id' => $this->managerProfile->id,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(0, CrmClientStatusChange::query()->where('field', CrmClientStatusChange::FIELD_MANAGER)->count());
+    }
+
+    #[Test]
+    public function hidden_manager_card_cannot_receive_partners(): void
+    {
+        $hidden = PersonalManager::factory()->create(['is_active' => false]);
+
+        $this->actingAs($this->head)
+            ->put(route('crm.clients.manager.update', $this->client->id), [
+                'personal_manager_id' => $hidden->id,
+            ])
+            ->assertNotFound();
+
+        $this->assertSame($this->managerProfile->id, $this->client->fresh()->personal_manager_id);
+    }
+
+    #[Test]
+    public function manager_cannot_reassign_own_client(): void
+    {
+        $other = PersonalManager::factory()->create();
+
+        $this->actingAs($this->manager)
+            ->put(route('crm.clients.manager.update', $this->client->id), [
+                'personal_manager_id' => $other->id,
+            ])
+            ->assertForbidden();
+
+        $this->assertSame($this->managerProfile->id, $this->client->fresh()->personal_manager_id);
+    }
+
+    #[Test]
+    public function partner_card_offers_manager_list_only_to_head(): void
+    {
+        PersonalManager::factory()->create(['is_active' => false, 'name' => 'Скрытая']);
+
+        $this->actingAs($this->head)
+            ->get(route('crm.clients.show', $this->client->id))
+            ->assertOk()
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->has('managers', 1)
+                ->where('managers.0.id', $this->managerProfile->id));
+
+        $this->actingAs($this->manager)
+            ->get(route('crm.clients.show', $this->client->id))
+            ->assertOk()
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page->has('managers', 0));
     }
 
     // --- Карточки менеджеров ------------------------------------------------

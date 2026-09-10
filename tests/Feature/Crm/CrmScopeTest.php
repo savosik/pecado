@@ -36,7 +36,7 @@ class CrmScopeTest extends TestCase
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
 
-        $this->manager = User::factory()->create();
+        $this->manager = User::factory()->staff()->create();
         $this->manager->assignRole('sales-manager');
         $this->ownCard = PersonalManager::factory()->create(['user_id' => $this->manager->id]);
         $this->foreignCard = PersonalManager::factory()->create();
@@ -105,11 +105,43 @@ class CrmScopeTest extends TestCase
      * ни один партнёр. Показывать пустоту вместо отдела бессмысленно.
      */
     #[Test]
+    public function department_scope_shows_unassigned_only_with_checkbox_on(): void
+    {
+        User::factory()->count(2)->create(['personal_manager_id' => $this->ownCard->id]);
+        User::factory()->count(3)->create(['personal_manager_id' => $this->foreignCard->id]);
+        $lead = User::factory()->create(['personal_manager_id' => null]);
+
+        $manager = $this->seesDepartment($this->manager);
+
+        // Без галочки — отдел, как раньше: лидов нет ни в списке, ни по ссылке.
+        $this->actingAs($manager)
+            ->get(route('crm.clients.index', ['scope' => CrmScope::DEPARTMENT->value]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('clients.total', 5));
+        $this->actingAs($manager)->get(route('crm.clients.show', $lead->id))->assertNotFound();
+
+        $manager->forceFill(['crm_show_unassigned' => true])->save();
+
+        // С галочкой лид в отделе и открывается; в разрезе «мои» его по-прежнему нет.
+        $this->actingAs($manager)
+            ->get(route('crm.clients.index', ['scope' => CrmScope::DEPARTMENT->value]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('clients.total', 6));
+        $this->actingAs($manager)->get(route('crm.clients.show', $lead->id))->assertOk();
+        $this->actingAs($manager)
+            ->get(route('crm.clients.index', ['scope' => CrmScope::MINE->value]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('clients.total', 2));
+    }
+
+    #[Test]
     public function actor_without_manager_card_always_gets_the_department(): void
     {
         User::factory()->count(3)->create(['personal_manager_id' => $this->foreignCard->id]);
 
-        $head = User::factory()->create();
+        // РОП — staff: он видит нераспределённых партнёров и не должен
+        // посчитать лидом собственную учётку.
+        $head = User::factory()->staff()->create();
         $head->assignRole('sales-head');
 
         $this->actingAs($head)

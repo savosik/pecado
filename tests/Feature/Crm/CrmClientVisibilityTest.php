@@ -30,11 +30,11 @@ class CrmClientVisibilityTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
         $this->restrictManagersToOwnClients();
 
-        $this->managerA = User::factory()->create();
+        $this->managerA = User::factory()->staff()->create();
         $this->managerA->assignRole('sales-manager');
         $this->profileA = PersonalManager::factory()->create(['user_id' => $this->managerA->id]);
 
-        $this->managerB = User::factory()->create();
+        $this->managerB = User::factory()->staff()->create();
         $this->managerB->assignRole('sales-manager');
         $this->profileB = PersonalManager::factory()->create(['user_id' => $this->managerB->id]);
     }
@@ -44,9 +44,11 @@ class CrmClientVisibilityTest extends TestCase
         User::factory()->count($count)->create(['personal_manager_id' => $profile->id]);
     }
 
+    // Сотрудники — staff, как на проде: иначе РОП, видящий нераспределённых,
+    // посчитал бы лидом собственную учётку.
     private function salesHead(): User
     {
-        $user = User::factory()->create();
+        $user = User::factory()->staff()->create();
         $user->assignRole('sales-head');
 
         return $user;
@@ -152,7 +154,7 @@ class CrmClientVisibilityTest extends TestCase
         $this->clientsOf($this->profileA, 3);
         $this->clientsOf($this->profileB, 5);
 
-        $admin = User::factory()->create();
+        $admin = User::factory()->staff()->create();
         $admin->assignRole('super-admin');
 
         $this->actingAs($admin)
@@ -166,7 +168,7 @@ class CrmClientVisibilityTest extends TestCase
     {
         $this->clientsOf($this->profileA, 3);
 
-        $orphan = User::factory()->create();
+        $orphan = User::factory()->staff()->create();
         $orphan->assignRole('sales-manager');
 
         $this->actingAs($orphan)
@@ -179,15 +181,96 @@ class CrmClientVisibilityTest extends TestCase
     }
 
     #[Test]
-    public function client_without_manager_is_not_listed_for_sales_head(): void
+    public function client_without_manager_is_hidden_until_head_opts_in(): void
     {
         $this->clientsOf($this->profileA, 2);
-        // Лид: пользователь без закреплённого менеджера.
+        // Лид: партнёр без закреплённого менеджера. С v16.10.0 распределяет
+        // РОП из CRM, но по умолчанию хвост не показывается никому.
         User::factory()->create(['personal_manager_id' => null]);
 
         $this->actingAs($this->salesHead())
             ->get(route('crm.clients.index'))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page->where('clients.total', 2));
+    }
+
+    #[Test]
+    public function client_without_manager_is_listed_for_sales_head_with_checkbox_on(): void
+    {
+        $this->clientsOf($this->profileA, 2);
+        User::factory()->create(['personal_manager_id' => null]);
+
+        $head = $this->salesHead();
+        $head->forceFill(['crm_show_unassigned' => true])->save();
+
+        $this->actingAs($head)
+            ->get(route('crm.clients.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('clients.total', 3));
+    }
+
+    #[Test]
+    public function checkbox_is_switched_through_preferences_endpoint(): void
+    {
+        $head = $this->salesHead();
+
+        $this->actingAs($head)
+            ->put(route('crm.preferences.unassigned'), ['enabled' => true])
+            ->assertRedirect();
+
+        $this->assertTrue($head->fresh()->crm_show_unassigned);
+
+        $this->actingAs($head)
+            ->put(route('crm.preferences.unassigned'), ['enabled' => false])
+            ->assertRedirect();
+
+        $this->assertFalse($head->fresh()->crm_show_unassigned);
+    }
+
+    #[Test]
+    public function manager_without_department_right_cannot_switch_checkbox(): void
+    {
+        // Менеджеры в этом тесте лишены crm-department.view: без права на отдел
+        // показывать нераспределённых нечего, и endpoint закрыт.
+        $this->actingAs($this->managerA)
+            ->put(route('crm.preferences.unassigned'), ['enabled' => true])
+            ->assertForbidden();
+    }
+
+    #[Test]
+    public function sales_head_can_filter_clients_without_manager(): void
+    {
+        $this->clientsOf($this->profileA, 2);
+        $lead = User::factory()->create(['personal_manager_id' => null]);
+
+        $head = $this->salesHead();
+        $head->forceFill(['crm_show_unassigned' => true])->save();
+
+        $this->actingAs($head)
+            ->get(route('crm.clients.index', ['manager_id' => 'none']))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('clients.total', 1)
+                ->where('clients.data.0.id', $lead->id)
+                ->where('filters.manager_id', 'none'));
+    }
+
+    #[Test]
+    public function manager_does_not_see_clients_without_manager(): void
+    {
+        $this->clientsOf($this->profileA, 2);
+        $lead = User::factory()->create(['personal_manager_id' => null]);
+
+        // Даже с включённой галочкой: без права на отдел она ничего не открывает.
+        $this->managerA->forceFill(['crm_show_unassigned' => true])->save();
+
+        $this->actingAs($this->managerA)
+            ->get(route('crm.clients.index', ['manager_id' => 'none']))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('clients.total', 2));
+
+        $this->actingAs($this->managerA)
+            ->get(route('crm.clients.show', $lead->id))
+            ->assertNotFound();
     }
 }
