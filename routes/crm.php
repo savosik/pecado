@@ -30,6 +30,7 @@ use App\Http\Controllers\Crm\MotivationPayslipController;
 use App\Http\Controllers\Crm\MotivationPlansController;
 use App\Http\Controllers\Crm\MotivationReferenceController;
 use App\Http\Controllers\Crm\MotivationSettingsController;
+use App\Http\Controllers\Crm\MotivationTeamController;
 use App\Http\Controllers\Crm\NotificationPreferenceController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PaymentOrderController;
@@ -677,6 +678,18 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/motivation/plans/calculate', [MotivationPlansController::class, 'calculate'])->name('motivation.plans.calculate');
         Route::post('/motivation/plans/{order}/override', [MotivationPlansController::class, 'override'])->name('motivation.plans.override')->whereNumber('order');
         Route::post('/motivation/plans/{order}/approve', [MotivationPlansController::class, 'approve'])->name('motivation.plans.approve')->whereNumber('order');
+        Route::get('/motivation/team', [MotivationTeamController::class, 'index'])->name('motivation.team');
+        Route::get('/motivation/team/data', [MotivationTeamController::class, 'data'])->name('motivation.team.data');
+        Route::get('/motivation/team/export', [MotivationTeamController::class, 'export'])->name('motivation.team.export');
+        Route::get('/motivation/approval', [MotivationTeamController::class, 'approval'])->name('motivation.approval');
+        Route::get('/motivation/approval/data', [MotivationTeamController::class, 'approvalData'])->name('motivation.approval.data');
+        Route::post('/motivation/calculations/{calculation}/recalculate', [MotivationTeamController::class, 'recalculate'])->name('motivation.calculations.recalculate')->whereNumber('calculation');
+        Route::post('/motivation/calculations/{calculation}/approve', [MotivationTeamController::class, 'approve'])->name('motivation.calculations.approve')->whereNumber('calculation');
+        Route::post('/motivation/calculations/{calculation}/reopen', [MotivationTeamController::class, 'reopen'])->name('motivation.calculations.reopen')->whereNumber('calculation');
+        Route::post('/motivation/calculations/{calculation}/paid', [MotivationTeamController::class, 'markPaid'])->name('motivation.calculations.paid')->whereNumber('calculation');
+        Route::post('/motivation/adjustments', [MotivationTeamController::class, 'storeCorrection'])->name('motivation.adjustments.store');
+        Route::delete('/motivation/adjustments/{adjustment}', [MotivationTeamController::class, 'destroyCorrection'])->name('motivation.adjustments.destroy')->whereNumber('adjustment');
+        Route::post('/motivation/objections/{objection}/respond', [MotivationTeamController::class, 'respondObjection'])->name('motivation.objections.respond')->whereNumber('objection');
     });
 
     // Зарплата (эпик pay-00). view — своя; чужой `manager` в адресе открывается

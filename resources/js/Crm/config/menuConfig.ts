@@ -34,6 +34,7 @@ import {
     LuSparkles,
     LuActivity,
     LuFileWarning,
+    LuClipboardCheck,
     LuCalendarRange,
     LuTrophy,
     LuStar,
@@ -212,6 +213,8 @@ export const menuConfig: MenuGroup[] = [
             // Параметры видит и работник; менять может только руководитель.
             { label: "Параметры мотивации", icon: LuSlidersHorizontal, path: "/crm/motivation/settings", permission: "crm-motivation.view" },
             { label: "Планы на квартал", icon: LuCalendarRange, path: "/crm/motivation/plans", permission: "crm-motivation.edit" },
+            { label: "Сводка отдела", icon: LuLayoutDashboard, path: "/crm/motivation/team", permission: "crm-motivation.edit" },
+            { label: "Ведомость к утверждению", icon: LuClipboardCheck, path: "/crm/motivation/approval", permission: "crm-motivation.edit" },
         ],
     },
     {
