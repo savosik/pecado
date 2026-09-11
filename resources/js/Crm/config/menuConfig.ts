@@ -218,6 +218,13 @@ export const menuConfig: MenuGroup[] = [
             { label: "Расчётный лист", icon: LuReceipt, path: "/crm/motivation/payslip", permission: "crm-motivation.view" },
             // Параметры видит и работник; менять может только руководитель.
             { label: "Параметры мотивации", icon: LuSlidersHorizontal, path: "/crm/motivation/settings", permission: "crm-motivation.view" },
+        ],
+    },
+    {
+        // Рабочее место руководителя: приказы, планы, утверждение, пул, перечень, долги.
+        title: "Мотивация · руководитель",
+        icon: LuClipboardCheck,
+        items: [
             { label: "Планы на квартал", icon: LuCalendarRange, path: "/crm/motivation/plans", permission: "crm-motivation.edit" },
             { label: "Сводка отдела", icon: LuLayoutDashboard, path: "/crm/motivation/team", permission: "crm-motivation.edit" },
             { label: "Ведомость к утверждению", icon: LuClipboardCheck, path: "/crm/motivation/approval", permission: "crm-motivation.edit" },

@@ -83,8 +83,10 @@ export default function MotivationIndex(props) {
                 ))}
 
                 {calc && !calc.on_scheme_v2 && !calc.parallel && (
-                    <Alert status="info" title="Показатели Положения 2.2 для этого месяца не рассчитываются">
-                        Расчёт за этот месяц — в разделе <Link href={`/crm/salary?month=${data.month}`}><u>«Моя зарплата»</u></Link>.
+                    <Alert status="info" title="В этом месяце действует прежняя схема оплаты">
+                        Положение 2.2 вводится приказом с датой начала действия
+                        {data.can_edit ? <> — на экране <Link href="/crm/motivation/settings"><u>«Параметры мотивации»</u></Link></> : ' руководителем'}.
+                        {' '}Расчёт по прежней схеме за этот месяц — в разделе <Link href={`/crm/salary?month=${data.month}`}><u>«Моя зарплата»</u></Link>.
                     </Alert>
                 )}
 

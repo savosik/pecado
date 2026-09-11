@@ -56,10 +56,6 @@ class MotivationPresenter
 
         $warnings = array_values((array) ($breakdownData['warnings'] ?? []));
 
-        if (! $onScheme) {
-            $warnings[] = 'Этот месяц считается по прежней схеме оплаты: показатели Положения 2.2 для него не рассчитываются.';
-        }
-
         return [
             'id' => (int) $calculation->getKey(),
             'status' => $calculation->status,
