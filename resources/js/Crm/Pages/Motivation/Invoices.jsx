@@ -66,13 +66,13 @@ export default function MotivationInvoices(props) {
 
             <VStack align="stretch" gap={4}>
                 <Alert status="info" title="Незнание толкуется в пользу работника">
-                    1С считает эти накладные оплаченными, но какого числа пришли деньги — не сообщает (зачёт, платёж без ссылки на реализацию). Пока дата не проставлена, расчёт начисляет вычет по состоянию «не погашено» — колонка «В расчёте» показывает, во что это обходится.
+                    1С считает эти накладные оплаченными, но какого числа пришли деньги — не сообщает (зачёт, платёж без ссылки на реализацию). Пока дата не проставлена, вычет по такой накладной не начисляется. Проставьте дату, если знаете её: дни просрочки до оплаты попадут в вычет.
                 </Alert>
 
                 <SimpleGrid columns={{ base: 1, md: 3 }} gap={3}>
                     <Stat label="Накладных в очереди" value={String(data.summary.total)} />
                     <Stat label="На сумму" value={fmtRub0(data.summary.amount)} />
-                    <Stat label="Добавляют к К1 за месяц" value={fmtRub0(data.summary.k1_cost)} />
+                    <Stat label="Оплачено без даты" value={fmtRub0(data.summary.undated)} />
                 </SimpleGrid>
 
                 <HStack gap={2} flexWrap="wrap">
@@ -113,7 +113,7 @@ export default function MotivationInvoices(props) {
                                         <Table.ColumnHeader textAlign="right">Сумма</Table.ColumnHeader>
                                         <Table.ColumnHeader>Срок</Table.ColumnHeader>
                                         <Table.ColumnHeader>Закрыта</Table.ColumnHeader>
-                                        <Table.ColumnHeader textAlign="right"><HStack justify="flex-end" gap={1}>В расчёте<MetricHint text="Сколько накладная добавляет к К1 работника за выбранный месяц по состоянию «не погашено». Считается тем же интегратором, что расчёт." /></HStack></Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="right"><HStack justify="flex-end" gap={1}>Без даты оплаты<MetricHint text="Сколько 1С считает оплаченным, а мост не нашёл, какого числа. Эта сумма в вычет не идёт. Проставьте дату — тогда дни до оплаты попадут в вычет." /></HStack></Table.ColumnHeader>
                                         <Table.ColumnHeader textAlign="right">Действия</Table.ColumnHeader>
                                     </Table.Row>
                                 </Table.Header>
@@ -129,7 +129,7 @@ export default function MotivationInvoices(props) {
                                                 <Text fontSize="sm">{r.settled_on ? fmtDay(r.settled_on) : '—'}</Text>
                                                 {r.settled_source === 'manual' && <Badge size="xs" variant="subtle" colorPalette="blue" title={r.manual_comment ?? ''}>вручную · {r.manual_by}</Badge>}
                                             </Table.Cell>
-                                            <Table.Cell textAlign="right"><Text fontSize="sm" fontWeight="700" color={r.k1_cost > 0 ? 'red.fg' : 'fg.subtle'}>{fmtRub0(r.k1_cost)}</Text></Table.Cell>
+                                            <Table.Cell textAlign="right"><Text fontSize="sm" fontWeight="700">{fmtRub0(r.undated)}</Text></Table.Cell>
                                             <Table.Cell textAlign="right">
                                                 {data.can_edit && (
                                                     <HStack justify="flex-end" gap={1}>

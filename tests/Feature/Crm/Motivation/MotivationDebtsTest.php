@@ -21,6 +21,7 @@ use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestDox;
 use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
+use Tests\Feature\Crm\Motivation\Concerns\RegistersInvoicesInLedger;
 use Tests\TestCase;
 
 /**
@@ -32,6 +33,7 @@ use Tests\TestCase;
 class MotivationDebtsTest extends TestCase
 {
     use RefreshDatabase;
+    use RegistersInvoicesInLedger;
     use RestrictsManagersToOwnClients;
 
     private User $head;
@@ -48,6 +50,9 @@ class MotivationDebtsTest extends TestCase
         $this->restrictManagersToOwnClients();
 
         $this->month = CarbonImmutable::now()->startOfMonth();
+        // К1 текущего месяца считается до сегодняшнего дня: без фиксации времени
+        // тесты зависели бы от числа, в которое их запустили.
+        $this->travelTo($this->month->addDays(20)->setTime(12, 0));
         $this->head = User::factory()->create();
         $this->head->assignRole('sales-head');
         $this->profile = PersonalManager::factory()->create(['user_id' => $this->head->id, 'name' => 'Трипуть']);
@@ -81,18 +86,16 @@ class MotivationDebtsTest extends TestCase
             'subtotal' => $amount,
         ]);
 
-        return PayrollInvoiceSettlement::query()->create([
-            'shipment_id' => $shipment->id,
-            'shipment_uuid' => $shipment->uuid,
-            'user_id' => $partner->id,
-            'erp_number' => $shipment->erp_number,
-            'total_amount' => $amount,
-            'shipped_on' => $shipped->toDateString(),
-            'due_on' => $this->month->subMonth()->toDateString(),
-            'settled_on' => $settledOn,
-            'payments' => $settledOn === null ? null : [['date' => $settledOn, 'amount' => $amount]],
-            'needs_review' => $needsReview,
-        ]);
+        $due = $this->month->subMonth()->toDateString();
+
+        return $this->ledgerInvoice(
+            $shipment,
+            $due,
+            $settledOn === null ? [] : [['date' => $settledOn, 'amount' => $amount]],
+            $needsReview ? $amount : null,
+            // «Оплачено по 1С, дата не найдена»: в ленте регистра зачёт есть, мост его не видит.
+            $needsReview ? [['date' => $due, 'amount' => $amount]] : [],
+        );
     }
 
     #[Test]
@@ -114,12 +117,12 @@ class MotivationDebtsTest extends TestCase
         $this->assertEqualsWithDelta($debts['summary']['deducted_this_month'], $sum, 0.01 * count($debts['partners']));
 
         $this->assertSame(2, $debts['summary']['partners_count']);
-        $this->assertSame(3, $debts['summary']['invoices_count']);
-        $this->assertSame(1, $debts['summary']['needs_review_count']);
+        // Накладная, оплаченная по 1С без найденной даты, в вычет не идёт — в пользу работника.
+        $this->assertSame(2, $debts['summary']['invoices_count']);
+        $this->assertSame(0, $debts['summary']['needs_review_count']);
         $this->assertSame('Альфа', $debts['partners'][0]['name'], 'Самый дорогой партнёр сверху');
-        $this->assertSame(420_000.0, $debts['partners'][0]['debt']);
-        $this->assertCount(2, $debts['partners'][0]['invoices']);
-        $this->assertTrue($debts['partners'][0]['invoices'][1]['needs_review']);
+        $this->assertSame(300_000.0, $debts['partners'][0]['debt']);
+        $this->assertCount(1, $debts['partners'][0]['invoices']);
     }
 
     #[Test]

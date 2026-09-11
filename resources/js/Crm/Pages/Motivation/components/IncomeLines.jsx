@@ -135,7 +135,7 @@ function Evidence({ lineKey, count, evidence, loading, failed, onRetry }) {
         <Box borderWidth="1px" borderColor="border" borderRadius="lg" overflow="hidden" mt={1}>
             <HStack px={3} py={2} bg="bg.subtle" fontSize="xs" color="fg.muted" justify="space-between">
                 <Text>{overdue ? 'Накладные с просрочкой' : lineKey === 'focus' ? 'Позиции перечня' : 'Партнёры'} · {count}</Text>
-                <Text>{overdue ? 'вклад в базу вычета' : 'отгружено'}</Text>
+                <Text>{overdue ? 'вычет за месяц' : 'отгружено'}</Text>
             </HStack>
             <VStack align="stretch" gap={0} divideY="1px" divideColor="border">
                 {shown.map((row, i) => (
@@ -146,7 +146,7 @@ function Evidence({ lineKey, count, evidence, loading, failed, onRetry }) {
                             </Text>
                             {overdue && (
                                 <Text fontSize="xs" color="fg.subtle">
-                                    {fmtRub(row.amount, 0)} · срок {row.due_on ?? '—'} · {row.days} дн.
+                                    долг {fmtRub(row.balance_end ?? 0, 0)} из {fmtRub(row.amount, 0)} · срок {row.due_on ?? '—'} · {row.days} дн. просрочки
                                 </Text>
                             )}
                             {row.rate !== undefined && row.rate !== null && (
@@ -154,7 +154,7 @@ function Evidence({ lineKey, count, evidence, loading, failed, onRetry }) {
                             )}
                         </Box>
                         <Text fontVariantNumeric="tabular-nums" flexShrink={0}>
-                            {fmtRub(overdue ? row.integral : row.amount, 0)}
+                            {overdue ? `−${fmtRub(row.deduction ?? 0, 0)}` : fmtRub(row.amount, 0)}
                         </Text>
                     </HStack>
                 ))}

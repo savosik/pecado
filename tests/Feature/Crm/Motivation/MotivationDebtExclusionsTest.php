@@ -25,6 +25,7 @@ use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestDox;
 use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
+use Tests\Feature\Crm\Motivation\Concerns\RegistersInvoicesInLedger;
 use Tests\TestCase;
 
 /**
@@ -33,6 +34,7 @@ use Tests\TestCase;
 class MotivationDebtExclusionsTest extends TestCase
 {
     use RefreshDatabase;
+    use RegistersInvoicesInLedger;
     use RestrictsManagersToOwnClients;
 
     private User $head;
@@ -49,6 +51,9 @@ class MotivationDebtExclusionsTest extends TestCase
         $this->restrictManagersToOwnClients();
 
         $this->month = CarbonImmutable::now()->startOfMonth();
+        // К1 текущего месяца считается до сегодняшнего дня: без фиксации времени
+        // тесты зависели бы от числа, в которое их запустили.
+        $this->travelTo($this->month->addDays(20)->setTime(12, 0));
         $this->head = User::factory()->create(['user_kind' => UserKind::STAFF->value]);
         $this->head->assignRole('sales-head');
         $this->profile = PersonalManager::factory()->create(['user_id' => $this->head->id, 'name' => 'Трипуть']);
@@ -82,17 +87,17 @@ class MotivationDebtExclusionsTest extends TestCase
             'subtotal' => $amount,
         ]);
 
-        return PayrollInvoiceSettlement::query()->create([
-            'shipment_id' => $shipment->id,
-            'shipment_uuid' => $shipment->uuid,
-            'user_id' => $partner->id,
-            'personal_manager_id' => $this->profile->id,
-            'erp_number' => $shipment->erp_number,
-            'total_amount' => $amount,
-            'shipped_on' => $shipped->toDateString(),
-            'due_on' => $this->month->subMonths($dueMonthsAgo)->toDateString(),
-            'needs_review' => $needsReview,
-        ]);
+        $due = $this->month->subMonths($dueMonthsAgo)->toDateString();
+
+        return $this->ledgerInvoice(
+            $shipment,
+            $due,
+            [],
+            $needsReview ? $amount : null,
+            // «Оплачено по 1С, дата не найдена»: в ленте регистра зачёт есть, мост его не видит.
+            $needsReview ? [['date' => $due, 'amount' => $amount]] : [],
+            ['personal_manager_id' => $this->profile->id],
+        );
     }
 
     #[Test]
@@ -158,7 +163,7 @@ class MotivationDebtExclusionsTest extends TestCase
     }
 
     #[Test]
-    #[TestDox('Очередь разметки: колонка «в расчёте», сортировка по цене, простановка даты через проектор')]
+    #[TestDox('Очередь разметки: сумма оплат без даты, сортировка по ней, простановка даты через проектор')]
     public function review_queue_prices_invoices(): void
     {
         $partner = User::factory()->create(['personal_manager_id' => $this->profile->id, 'name' => 'Партнёр']);
@@ -175,7 +180,7 @@ class MotivationDebtExclusionsTest extends TestCase
                 ->has('rows.data', 2)
                 ->where('rows.data.0.id', $costly->id)
                 ->where('rows.data.1.id', $cheap->id)
-                ->where('rows.data.0.k1_cost', fn ($v) => $v > 0));
+                ->where('rows.data.0.undated', 400000));
 
         $this->actingAs($this->head)
             ->patchJson("/crm/motivation/invoices/{$costly->id}", ['settled_on' => $this->month->subMonths(3)->toDateString(), 'comment' => 'Зачёт по письму'])

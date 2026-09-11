@@ -7,6 +7,7 @@ use App\Services\Payroll\Components\AbstractComponent;
 use App\Services\Payroll\Dto\ComponentResult;
 use App\Services\Payroll\Dto\PayrollContext;
 use App\Services\Payroll\Support\Money;
+use Carbon\CarbonImmutable;
 
 /**
  * К1 — вычет за просроченную задолженность партнёров (п. 6.5 Положения).
@@ -75,11 +76,17 @@ class OverdueDebtPart extends AbstractComponent
         $rows = $motivation->overdueRows ?? [];
 
         $amount = Money::round($integral * $rate);
+        $debt = Money::round(array_sum(array_map(fn (array $row): float => (float) ($row['balance_end'] ?? 0), $rows)));
+        $asOf = $rows[0]['as_of'] ?? null;
 
+        // В пояснении — рубли долга и рубли вычета. «База» в рубле-днях читалась как
+        // сумма долга и пугала десятками миллионов (замечание заказчика 11.09.2026).
         $explanation = $integral > 0
             ? sprintf(
-                'База начисления %s · дней × %s за день = %s (документов: %d)',
-                Money::rub($integral), Money::percent($rate, 3), Money::rub($amount), count($rows),
+                'Просроченный долг %s — %s по %d %s. За каждый день просрочки — %s от остатка; за месяц набежало %s',
+                $asOf === null ? 'сейчас' : 'на '.CarbonImmutable::parse((string) $asOf)->format('d.m.Y'),
+                Money::rub($debt), count($rows), count($rows) === 1 ? 'документу' : 'документам',
+                Money::percent($rate, 3), Money::rub($amount),
             )
             : 'Просроченной задолженности в периоде не было';
 
@@ -94,6 +101,7 @@ class OverdueDebtPart extends AbstractComponent
             meta: [
                 'rate_per_day' => $rate,
                 'integral' => $integral,
+                'debt' => $debt,
                 'documents' => count($rows),
             ],
         );

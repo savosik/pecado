@@ -18,12 +18,15 @@ use App\Models\Shipment;
 use App\Models\ShipmentItem;
 use App\Models\User;
 use App\Services\Motivation\MotivationInputCollector;
+use App\Services\Motivation\OverdueDebtIntegrator;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestDox;
+use Tests\Feature\Crm\Motivation\Concerns\RegistersInvoicesInLedger;
 use Tests\TestCase;
 
 /**
@@ -36,6 +39,7 @@ use Tests\TestCase;
 class MotivationInputCollectorTest extends TestCase
 {
     use RefreshDatabase;
+    use RegistersInvoicesInLedger;
 
     private PersonalManager $manager;
 
@@ -209,15 +213,7 @@ class MotivationInputCollectorTest extends TestCase
         $shipment = $this->shipment($this->base, 100_000, Carbon::parse('2026-05-01'));
 
         // Срок 25 мая, льгота 5 рабочих дней → просрочка с 2 июня.
-        PayrollInvoiceSettlement::query()->create([
-            'shipment_id' => $shipment->id,
-            'shipment_uuid' => $shipment->uuid,
-            'user_id' => $this->base->id,
-            'erp_number' => $shipment->erp_number,
-            'total_amount' => 100_000,
-            'due_on' => '2026-05-25',
-            'settled_on' => null,
-        ]);
+        $this->ledgerInvoice($shipment, '2026-05-25');
 
         $inputs = $this->collect();
 
@@ -233,16 +229,7 @@ class MotivationInputCollectorTest extends TestCase
     {
         $shipment = $this->shipment($this->base, 100_000, Carbon::parse('2026-05-01'));
 
-        PayrollInvoiceSettlement::query()->create([
-            'shipment_id' => $shipment->id,
-            'shipment_uuid' => $shipment->uuid,
-            'user_id' => $this->base->id,
-            'erp_number' => $shipment->erp_number,
-            'total_amount' => 100_000,
-            'due_on' => '2026-05-25',
-            'settled_on' => '2026-06-12',
-            'payments' => [['date' => '2026-06-12', 'amount' => 100_000]],
-        ]);
+        $this->ledgerInvoice($shipment, '2026-05-25', [['date' => '2026-06-12', 'amount' => 100_000]]);
 
         // Со 2 по 11 июня — 10 дней; день оплаты не начисляется.
         $this->assertSame(1_000_000.0, $this->collect()->overdueIntegral);
@@ -254,16 +241,7 @@ class MotivationInputCollectorTest extends TestCase
     {
         $shipment = $this->shipment($this->base, 100_000, Carbon::parse('2026-05-01'));
 
-        PayrollInvoiceSettlement::query()->create([
-            'shipment_id' => $shipment->id,
-            'shipment_uuid' => $shipment->uuid,
-            'user_id' => $this->base->id,
-            'erp_number' => $shipment->erp_number,
-            'total_amount' => 100_000,
-            'due_on' => '2026-05-25',
-            'settled_on' => null,
-            'payments' => [['date' => '2026-06-11', 'amount' => 60_000]],
-        ]);
+        $this->ledgerInvoice($shipment, '2026-05-25', [['date' => '2026-06-11', 'amount' => 60_000]]);
 
         // 2–10 июня по 100 000 (9 дней), 11–30 июня по 40 000 (20 дней).
         $this->assertSame(9 * 100_000.0 + 20 * 40_000.0, $this->collect()->overdueIntegral);
@@ -275,15 +253,7 @@ class MotivationInputCollectorTest extends TestCase
     {
         $shipment = $this->shipment($this->base, 100_000, Carbon::parse('2026-05-01'));
 
-        PayrollInvoiceSettlement::query()->create([
-            'shipment_id' => $shipment->id,
-            'shipment_uuid' => $shipment->uuid,
-            'user_id' => $this->base->id,
-            'erp_number' => $shipment->erp_number,
-            'total_amount' => 100_000,
-            'due_on' => '2026-05-25',
-            'settled_on' => null,
-        ]);
+        $this->ledgerInvoice($shipment, '2026-05-25');
 
         MotivationDebtExclusion::factory()->create([
             'shipment_id' => $shipment->id,
@@ -301,15 +271,7 @@ class MotivationInputCollectorTest extends TestCase
     {
         $shipment = $this->shipment($this->base, 100_000, Carbon::parse('2026-05-01'));
 
-        PayrollInvoiceSettlement::query()->create([
-            'shipment_id' => $shipment->id,
-            'shipment_uuid' => $shipment->uuid,
-            'user_id' => $this->base->id,
-            'erp_number' => $shipment->erp_number,
-            'total_amount' => 100_000,
-            'due_on' => '2026-05-25',
-            'settled_on' => null,
-        ]);
+        $this->ledgerInvoice($shipment, '2026-05-25');
 
         MotivationDebtExclusion::factory()->create([
             'shipment_id' => $shipment->id,
@@ -320,6 +282,56 @@ class MotivationInputCollectorTest extends TestCase
 
         // Считаются только 21–30 июня: десять дней по 100 000 ₽.
         $this->assertSame(1_000_000.0, $this->collect()->overdueIntegral);
+    }
+
+    #[Test]
+    #[TestDox('Оплату, которую 1С видит, а мост не датировал, в вычет не берём')]
+    public function registry_paid_without_date_is_not_overdue(): void
+    {
+        $shipment = $this->shipment($this->base, 100_000, Carbon::parse('2026-05-01'));
+
+        // Зачёт 30 мая: регистр закрыл накладную, мост платежа по номеру не нашёл.
+        $this->ledgerInvoice($shipment, '2026-05-25', [], registryPaid: 100_000, undatedCredits: [['date' => '2026-05-30', 'amount' => 100_000]]);
+
+        $this->assertSame(0.0, $this->collect()->overdueIntegral, 'Незнание даты трактуется в пользу работника');
+    }
+
+    #[Test]
+    #[TestDox('Просрочка партнёра не больше его долга по регистру взаиморасчётов')]
+    public function overdue_is_capped_by_the_ledger_debt(): void
+    {
+        $shipment = $this->shipment($this->base, 100_000, Carbon::parse('2026-05-01'));
+
+        // График и проекция считают накладную неоплаченной, а по ленте регистра
+        // до начала июня прошёл зачёт 70 000 ₽ — долг партнёра 30 000 ₽.
+        $this->ledgerInvoice($shipment, '2026-05-25', [], registryPaid: 0.0, undatedCredits: [['date' => '2026-05-28', 'amount' => 70_000]]);
+
+        $this->assertSame(29 * 30_000.0, $this->collect()->overdueIntegral);
+    }
+
+    #[Test]
+    #[TestDox('Текущий месяц считается только до сегодняшнего дня')]
+    public function current_month_counts_only_until_today(): void
+    {
+        $shipment = $this->shipment($this->base, 100_000, Carbon::parse('2026-05-01'));
+        $this->ledgerInvoice($shipment, '2026-05-25');
+
+        $result = app(OverdueDebtIntegrator::class)->forMonth([$this->base->id], CarbonImmutable::parse('2026-06-01'), [], 5, CarbonImmutable::parse('2026-06-10'));
+
+        // Со 2 по 10 июня — 9 дней; 11–30 июня ещё не наступили.
+        $this->assertSame(900_000.0, $result['integral']);
+        $this->assertSame('2026-06-10', $result['as_of']);
+        $this->assertSame(100_000.0, $result['rows'][0]['balance_end'], 'Долг на дату расчёта — в рублях');
+    }
+
+    #[Test]
+    #[TestDox('Накладная без графика оплаты в регистре в вычет не идёт')]
+    public function invoice_without_registry_schedule_is_ignored(): void
+    {
+        $shipment = $this->shipment($this->base, 100_000, Carbon::parse('2026-05-01'));
+        $this->ledgerInvoice($shipment, '2026-05-25', bridge: ['due_source' => PayrollInvoiceSettlement::DUE_SHIPMENT_COLUMN]);
+
+        $this->assertSame(0.0, $this->collect()->overdueIntegral);
     }
 
     #[Test]

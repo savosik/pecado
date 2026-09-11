@@ -21,7 +21,6 @@ class InvoiceReviewQueueService
     public const PER_PAGE = 50;
 
     public function __construct(
-        private readonly OverdueDebtIntegrator $integrator,
         private readonly PartnerAttributionResolver $attribution,
         private readonly ParameterOrderService $orders,
     ) {}
@@ -34,13 +33,11 @@ class InvoiceReviewQueueService
         $period = CarbonImmutable::instance($month)->startOfMonth();
         $values = $this->orders->effective($period)['values'];
         $rate = (float) ($values['rate_k1_per_day'] ?? 0);
-        $grace = (int) ($values['grace_working_days'] ?? 5);
 
         $managers = PersonalManager::query()->active()->where('payroll_enabled', true)
             ->when($managerId !== null, fn ($q) => $q->whereKey($managerId))
             ->orderBy('name')->get(['id', 'name']);
 
-        $costByInvoice = [];
         $managerByPartner = [];
         $names = [];
         foreach ($managers as $manager) {
@@ -48,12 +45,6 @@ class InvoiceReviewQueueService
             foreach ($partners as $id => $name) {
                 $managerByPartner[$id] = (string) $manager->name;
                 $names[$id] = $name;
-            }
-            if ($partners === []) {
-                continue;
-            }
-            foreach ($this->integrator->forMonth(array_keys($partners), $period, $partners, $grace)['rows'] as $row) {
-                $costByInvoice[(int) $row['invoice_id']] = Money::round((float) $row['integral'] * $rate);
             }
         }
 
@@ -68,7 +59,7 @@ class InvoiceReviewQueueService
         $total = (clone $query)->count();
         $amount = (float) (clone $query)->sum('total_amount');
 
-        $rows = $query->get(['id', 'shipment_id', 'user_id', 'erp_number', 'total_amount', 'shipped_on', 'due_on', 'settled_on', 'settled_source', 'payments', 'manual_settled_on', 'manual_comment', 'manual_by_user_id', 'matched_settled_on', 'needs_review'])
+        $rows = $query->get(['id', 'shipment_id', 'user_id', 'erp_number', 'total_amount', 'shipped_on', 'due_on', 'settled_on', 'settled_source', 'payments', 'manual_settled_on', 'manual_comment', 'manual_by_user_id', 'matched_settled_on', 'matched_paid_amount', 'needs_review'])
             ->map(fn (PayrollInvoiceSettlement $row): array => [
                 'id' => (int) $row->getKey(),
                 'shipment_id' => (int) $row->shipment_id,
@@ -86,9 +77,11 @@ class InvoiceReviewQueueService
                 'manual_comment' => $row->manual_comment,
                 'manual_by' => $row->manualBy === null ? null : (string) $row->manualBy->name,
                 'payments' => $row->payments ?? [],
-                'k1_cost' => $costByInvoice[(int) $row->getKey()] ?? 0.0,
+                // 1С считает накладную оплаченной, а какого числа — мост не нашёл: эта сумма
+                // в вычет не идёт, пока руководитель не проставит дату (незнание — в пользу работника).
+                'undated' => Money::round(max(0.0, (float) $row->total_amount - (float) $row->matched_paid_amount)),
             ])
-            ->sortByDesc(fn (array $r): array => [$r['k1_cost'], $r['amount']])
+            ->sortByDesc(fn (array $r): array => [$r['undated'], $r['amount']])
             ->values();
 
         $lastPage = max(1, (int) ceil($rows->count() / self::PER_PAGE));
@@ -102,7 +95,7 @@ class InvoiceReviewQueueService
             'summary' => [
                 'total' => $total,
                 'amount' => Money::round($amount),
-                'k1_cost' => Money::round($rows->sum('k1_cost')),
+                'undated' => Money::round($rows->sum('undated')),
             ],
             'rows' => [
                 'data' => $rows->slice(($page - 1) * self::PER_PAGE, self::PER_PAGE)->values()->all(),

@@ -72,7 +72,7 @@ class DebtExclusionService
                 $overdueDays = $graceEnds->lessThan($today) ? (int) $graceEnds->diffInDays($today) : 0;
                 $balance = (float) $row['balance_end'];
 
-                if ($overdueDays < $olderThanDays || $balance <= 0 || $row['settled_on'] !== null) {
+                if ($overdueDays < $olderThanDays || $balance <= 0) {
                     continue;
                 }
 

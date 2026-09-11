@@ -119,7 +119,7 @@
                 <th>Партнёр</th>
                 <th style="width: 12%">Срок</th>
                 <th class="right" style="width: 8%">Дней</th>
-                <th class="right" style="width: 16%">База, ₽·дн.</th>
+                <th class="right" style="width: 16%">Вычет, ₽</th>
             </tr>
         </thead>
         <tbody>
@@ -129,7 +129,7 @@
                     <td>{{ $row['partner_name'] }}</td>
                     <td>{{ $date($row['due_on'] ?? null) }}</td>
                     <td class="right num">{{ $row['days'] }}</td>
-                    <td class="right num">{{ $money($row['integral'], 0) }}</td>
+                    <td class="right num">{{ $money($row['deduction'] ?? 0, 0) }}</td>
                 </tr>
             @endforeach
         </tbody>

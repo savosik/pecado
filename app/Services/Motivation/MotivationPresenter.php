@@ -106,7 +106,12 @@ class MotivationPresenter
             default => [],
         };
 
-        $field = $line === 'overdue' ? 'integral' : 'amount';
+        if ($line === 'overdue') {
+            $rate = (float) (EffectiveParams::fromArray((array) $calculation->params_effective)->for('motivation_variable')['rate_k1_per_day'] ?? 0);
+            $rows = array_map(fn (array $row): array => $row + ['deduction' => Money::round((float) ($row['integral'] ?? 0) * $rate)], $rows);
+        }
+
+        $field = $line === 'overdue' ? 'deduction' : 'amount';
         $total = array_sum(array_map(fn (array $row): float => (float) ($row[$field] ?? 0), $rows));
 
         return ['line' => $line, 'rows' => $rows, 'total' => Money::round($total)];

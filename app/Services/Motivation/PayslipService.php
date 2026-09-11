@@ -7,6 +7,7 @@ use App\Models\Motivation\MotivationQuarterlyBonus;
 use App\Models\Motivation\MotivationQuarterlyShare;
 use App\Models\PayrollCalculation;
 use App\Models\User;
+use App\Services\Payroll\Dto\EffectiveParams;
 use App\Services\Payroll\Dto\PayrollInputs;
 use App\Services\Payroll\Support\Money;
 use App\Services\Payroll\Support\WorkingCalendar;
@@ -53,6 +54,7 @@ class PayslipService
         $inputs = PayrollInputs::fromArray((array) $calculation->inputs);
         $motivation = $inputs->motivation;
 
+        $rateK1 = (float) (EffectiveParams::fromArray((array) $calculation->params_effective)->for('motivation_variable')['rate_k1_per_day'] ?? 0);
         $documents = $motivation->documents ?? [];
         $groups = ['base' => [], 'new' => []];
 
@@ -107,7 +109,7 @@ class PayslipService
                 'documents_count' => count($documents),
             ],
             'returns' => $motivation->returnRows ?? [],
-            'overdue' => $motivation->overdueRows ?? [],
+            'overdue' => array_map(fn (array $row): array => $row + ['deduction' => Money::round((float) ($row['integral'] ?? 0) * $rateK1)], $motivation->overdueRows ?? []),
             'excluded' => $motivation->overdueExcludedRows ?? [],
             'corrections' => array_map(fn ($row): array => (array) $row, $inputs->corrections === [] ? [] : array_map(fn ($c) => $c->toArray(), $inputs->corrections)),
             'objection' => $this->objection($calculation),

@@ -163,8 +163,8 @@ export default function MotivationPayslip({ month, month_label: monthLabel, mont
                                 <Text fontSize="xs" color="fg.muted" mb={2}>Полный перечень по партнёрам и накладным — на экране «Долги»; здесь — состав вычета.</Text>
                                 {slip.overdue.slice(0, 20).map((r) => (
                                     <HStack key={r.invoice_id} justify="space-between" fontSize="sm" py={1}>
-                                        <Text>{r.number} · {r.partner_name} · {r.days} дн.{r.needs_review ? ' · дата не восстановлена' : ''}</Text>
-                                        <Text fontVariantNumeric="tabular-nums" color="fg.muted">{fmtRub(r.integral, 0)} ₽·дн.</Text>
+                                        <Text>{r.number} · {r.partner_name} · долг {fmtRub(r.balance_end ?? 0, 0)} · {r.days} дн.</Text>
+                                        <Text fontVariantNumeric="tabular-nums" color="red.fg">−{fmtRub(r.deduction ?? 0, 0)}</Text>
                                     </HStack>
                                 ))}
                                 {slip.overdue.length > 20 && <Text fontSize="xs" color="fg.subtle">…и ещё {slip.overdue.length - 20}. Полный перечень — в PDF.</Text>}
