@@ -27,6 +27,7 @@ use App\Http\Controllers\Crm\MotivationController;
 use App\Http\Controllers\Crm\MotivationDebtsController;
 use App\Http\Controllers\Crm\MotivationPartnersController;
 use App\Http\Controllers\Crm\MotivationPayslipController;
+use App\Http\Controllers\Crm\MotivationPlansController;
 use App\Http\Controllers\Crm\MotivationReferenceController;
 use App\Http\Controllers\Crm\MotivationSettingsController;
 use App\Http\Controllers\Crm\NotificationPreferenceController;
@@ -671,6 +672,11 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/motivation/settings/order', [MotivationSettingsController::class, 'order'])->name('motivation.settings.order');
         Route::post('/motivation/settings/personal', [MotivationSettingsController::class, 'storePersonal'])->name('motivation.settings.personal');
         Route::delete('/motivation/settings/personal', [MotivationSettingsController::class, 'resetPersonal'])->name('motivation.settings.personal.reset');
+        Route::get('/motivation/plans', [MotivationPlansController::class, 'index'])->name('motivation.plans');
+        Route::get('/motivation/plans/data', [MotivationPlansController::class, 'data'])->name('motivation.plans.data');
+        Route::post('/motivation/plans/calculate', [MotivationPlansController::class, 'calculate'])->name('motivation.plans.calculate');
+        Route::post('/motivation/plans/{order}/override', [MotivationPlansController::class, 'override'])->name('motivation.plans.override')->whereNumber('order');
+        Route::post('/motivation/plans/{order}/approve', [MotivationPlansController::class, 'approve'])->name('motivation.plans.approve')->whereNumber('order');
     });
 
     // Зарплата (эпик pay-00). view — своя; чужой `manager` в адресе открывается

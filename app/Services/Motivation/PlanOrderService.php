@@ -128,18 +128,29 @@ class PlanOrderService
 
         DB::transaction(function () use ($order, $actor): void {
             foreach ((array) $order->values as $month => $amount) {
-                CrmSalesPlan::query()->updateOrCreate(
-                    [
-                        'period_month' => CarbonImmutable::parse((string) $month)->startOfMonth()->toDateString(),
-                        'target_type' => PlanTarget::MANAGER->value,
-                        'target_id' => $order->personal_manager_id,
-                    ],
-                    [
-                        'amount' => Money::round((float) $amount),
-                        'author_id' => $actor->getKey(),
-                        'comment' => sprintf('Приказ о планах на квартал, версия %d', $order->version),
-                    ],
-                );
+                $period = CarbonImmutable::parse((string) $month)->startOfMonth();
+                $attributes = [
+                    'amount' => Money::round((float) $amount),
+                    'author_id' => $actor->getKey(),
+                    'comment' => sprintf('Приказ о планах на квартал, версия %d', $order->version),
+                ];
+
+                // Поиск — скоупами модели: они нормализуют дату так же, как unique-индекс.
+                // Прямой updateOrCreate по строке даты не находил существующий план
+                // и падал на дубликате.
+                $existing = CrmSalesPlan::query()->forPeriod($period)->forManager((int) $order->personal_manager_id)->first();
+
+                if ($existing !== null) {
+                    $existing->update($attributes);
+
+                    continue;
+                }
+
+                CrmSalesPlan::query()->create($attributes + [
+                    'period_month' => $period->toDateString(),
+                    'target_type' => PlanTarget::MANAGER->value,
+                    'target_id' => $order->personal_manager_id,
+                ]);
             }
 
             $order->forceFill([

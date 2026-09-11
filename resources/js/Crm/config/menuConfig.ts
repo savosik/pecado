@@ -34,6 +34,7 @@ import {
     LuSparkles,
     LuActivity,
     LuFileWarning,
+    LuCalendarRange,
     LuTrophy,
     LuStar,
     LuSlidersHorizontal,
@@ -210,6 +211,7 @@ export const menuConfig: MenuGroup[] = [
             { label: "Расчётный лист", icon: LuReceipt, path: "/crm/motivation/payslip", permission: "crm-motivation.view" },
             // Параметры видит и работник; менять может только руководитель.
             { label: "Параметры мотивации", icon: LuSlidersHorizontal, path: "/crm/motivation/settings", permission: "crm-motivation.view" },
+            { label: "Планы на квартал", icon: LuCalendarRange, path: "/crm/motivation/plans", permission: "crm-motivation.edit" },
         ],
     },
     {
