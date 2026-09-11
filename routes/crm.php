@@ -24,8 +24,10 @@ use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\MailSuppressionController;
 use App\Http\Controllers\Crm\MotivationController;
+use App\Http\Controllers\Crm\MotivationDebtExclusionsController;
 use App\Http\Controllers\Crm\MotivationDebtsController;
 use App\Http\Controllers\Crm\MotivationFocusAdminController;
+use App\Http\Controllers\Crm\MotivationInvoicesController;
 use App\Http\Controllers\Crm\MotivationPartnersController;
 use App\Http\Controllers\Crm\MotivationPayslipController;
 use App\Http\Controllers\Crm\MotivationPlansController;
@@ -703,6 +705,14 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/motivation/focus-list/rules', [MotivationFocusAdminController::class, 'store'])->name('motivation.focus-list.rules.store');
         Route::patch('/motivation/focus-list/rules/{rule}', [MotivationFocusAdminController::class, 'close'])->name('motivation.focus-list.rules.close')->whereNumber('rule');
         Route::post('/motivation/focus-list/freeze', [MotivationFocusAdminController::class, 'freeze'])->name('motivation.focus-list.freeze');
+        Route::get('/motivation/debt-exclusions', [MotivationDebtExclusionsController::class, 'index'])->name('motivation.debt-exclusions');
+        Route::get('/motivation/debt-exclusions/data', [MotivationDebtExclusionsController::class, 'data'])->name('motivation.debt-exclusions.data');
+        Route::post('/motivation/debt-exclusions', [MotivationDebtExclusionsController::class, 'store'])->name('motivation.debt-exclusions.store');
+        Route::patch('/motivation/debt-exclusions/{exclusion}', [MotivationDebtExclusionsController::class, 'close'])->name('motivation.debt-exclusions.close')->whereNumber('exclusion');
+        Route::get('/motivation/invoices', [MotivationInvoicesController::class, 'index'])->name('motivation.invoices');
+        Route::get('/motivation/invoices/data', [MotivationInvoicesController::class, 'data'])->name('motivation.invoices.data');
+        Route::patch('/motivation/invoices/{invoice}', [MotivationInvoicesController::class, 'mark'])->name('motivation.invoices.mark')->whereNumber('invoice');
+        Route::delete('/motivation/invoices/{invoice}/mark', [MotivationInvoicesController::class, 'unmark'])->name('motivation.invoices.unmark')->whereNumber('invoice');
     });
 
     // Зарплата (эпик pay-00). view — своя; чужой `manager` в адресе открывается

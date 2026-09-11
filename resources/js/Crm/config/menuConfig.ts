@@ -35,6 +35,8 @@ import {
     LuActivity,
     LuFileWarning,
     LuPackage,
+    LuShieldBan,
+    LuFileSearch,
     LuClipboardCheck,
     LuCalendarRange,
     LuTrophy,
@@ -218,6 +220,8 @@ export const menuConfig: MenuGroup[] = [
             { label: "Ведомость к утверждению", icon: LuClipboardCheck, path: "/crm/motivation/approval", permission: "crm-motivation.edit" },
             { label: "Пул и раздача", icon: LuPackage, path: "/crm/motivation/pool/admin", permission: "crm-motivation.edit" },
             { label: "Фокус-перечень", icon: LuListChecks, path: "/crm/motivation/focus-list", permission: "crm-motivation.edit" },
+            { label: "Исключения долгов", icon: LuShieldBan, path: "/crm/motivation/debt-exclusions", permission: "crm-motivation.edit" },
+            { label: "Очередь разметки", icon: LuFileSearch, path: "/crm/motivation/invoices", permission: "crm-motivation.edit" },
         ],
     },
     {
