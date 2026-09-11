@@ -4,7 +4,7 @@ import {
     IconButton, Heading, Code, SimpleGrid, Separator, Stack,
     Input,
 } from '@chakra-ui/react';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
 import {
     LuPlus, LuCopy, LuCheck, LuTrash2, LuRefreshCw,
@@ -189,6 +189,7 @@ const apiMethods = [
             { name: 'products', type: 'array', required: true, desc: 'Массив товаров' },
             { name: 'products[].identifier', type: 'string', required: true, desc: 'UUID / code / sku / barcode' },
             { name: 'products[].quantity', type: 'int', required: true, desc: 'Количество (мин. 1)' },
+            { name: 'reserve', type: 'bool', desc: 'Участникам режима «Заказы в резерве»: true — поставить складскую часть в резерв (удержание ~24 ч; затем подтвердить/изменить/отменить через /reserves). По умолчанию false — обычный заказ. Неучастнику режима вернётся 403 reserve_unavailable.' },
         ],
         requestBody: JSON.stringify({
             inn: "7707083893",
@@ -226,6 +227,10 @@ const apiMethods = [
             {
                 title: 'ИНН не найден (422)',
                 body: JSON.stringify({ error: "Компания с указанным ИНН не найдена в вашем аккаунте", inn: "0000000000" }, null, 2),
+            },
+            {
+                title: 'Резерв недоступен (403)',
+                body: JSON.stringify({ error: "Режим «Заказы в резерве» вам недоступен.", code: "reserve_unavailable" }, null, 2),
             },
         ],
     },
@@ -350,6 +355,115 @@ const apiMethods = [
             },
         ],
     },
+    {
+        method: 'GET',
+        path: '/reserves',
+        title: 'Заказы в резерве',
+        description: 'Ваши заказы, удержанные в резерве: состав, суммы и фактический срок reserved_until (может быть короче запрошенного — 1С урезает до своего предела удержания, обычно 24 часа). Пока заказ в резерве, товар закреплён за вами и не уйдёт другому покупателю; не подтвердите до срока — резерв снимется автоматически. Поля item_id и items_version нужны для правки состава через /reserves/{order}/items. Доступно участникам режима «Заказы в резерве».',
+        icon: LuClock,
+        color: 'purple',
+        params: [],
+        responseExample: JSON.stringify({
+            reserves: [
+                {
+                    order_id: 1234,
+                    number: "29УТ-014200",
+                    uuid: "00000003-...-000000001234",
+                    total_amount: 5400.00,
+                    currency_code: "RUB",
+                    reserved_until: "2026-09-12T18:00:00+03:00",
+                    items_version: 3,
+                    created_at: "2026-09-11T18:00:00+03:00",
+                    items: [
+                        { item_id: 90211, sku: "SKU-001", name: "Товар 1", quantity: 3, price: 1200.00, subtotal: 3600.00 },
+                        { item_id: 90212, sku: "SKU-007", name: "Товар 7", quantity: 2, price: 900.00, subtotal: 1800.00 },
+                    ],
+                },
+            ],
+        }, null, 2),
+        errorExamples: [
+            {
+                title: 'Режим недоступен (403)',
+                body: JSON.stringify({ error: "Режим «Заказы в резерве» вам недоступен.", code: "reserve_unavailable" }, null, 2),
+            },
+        ],
+    },
+    {
+        method: 'POST',
+        path: '/reserves/{order}/confirm',
+        title: 'Подтвердить резерв',
+        description: 'Отправить резервный заказ в отгрузку. После подтверждения заказ уходит в сборку обычным конвейером — изменить или отменить его через API уже нельзя.',
+        icon: LuCheck,
+        color: 'green',
+        params: [
+            { name: 'order', type: 'int', required: true, desc: 'ID заказа (order_id из /reserves), в пути запроса' },
+        ],
+        responseExample: JSON.stringify({ message: "Заказ отправлен в отгрузку.", order_id: 1234 }, null, 2),
+        errorExamples: [
+            {
+                title: 'Заказ не в резерве (422)',
+                body: JSON.stringify({ error: "Заказ не находится в резерве.", code: "not_reserved" }, null, 2),
+            },
+            {
+                title: 'Заказ не найден (404)',
+                body: JSON.stringify({ error: "Заказ не найден.", code: "order_not_found" }, null, 2),
+            },
+        ],
+    },
+    {
+        method: 'POST',
+        path: '/reserves/{order}/items',
+        title: 'Изменить состав резерва',
+        description: 'Передаётся ЦЕЛЕВОЙ состав по остающимся строкам (item_id — из /reserves); строки, которых нет в запросе, удаляются. Версия 1 — только уменьшение: увеличение количества отклоняется (increase_forbidden), для большего объёма создайте отдельный заказ. Пустой состав не принимается (empty_composition) — для полного отказа используйте /cancel. base_items_version обязателен: это items_version из /reserves, от которого вы правите. Если состав успел измениться (правка менеджером в 1С, пересборка строк) — ответ 409 stale_items_version: перечитайте /reserves и повторите.',
+        icon: LuArrowRightLeft,
+        color: 'orange',
+        params: [
+            { name: 'order', type: 'int', required: true, desc: 'ID заказа (order_id из /reserves), в пути запроса' },
+            { name: 'base_items_version', type: 'int', required: true, desc: 'Версия состава (items_version из /reserves), от которой правите' },
+            { name: 'items', type: 'array', required: true, desc: 'Целевой состав — остающиеся строки' },
+            { name: 'items[].item_id', type: 'int', required: true, desc: 'ID строки из /reserves' },
+            { name: 'items[].quantity', type: 'int', required: true, desc: 'Новое количество (мин. 1, не больше текущего)' },
+        ],
+        requestBody: JSON.stringify({
+            base_items_version: 3,
+            items: [
+                { item_id: 90211, quantity: 2 },
+            ],
+        }, null, 2),
+        responseExample: JSON.stringify({ message: "Состав обновлён.", order_id: 1234, total_amount: 2400.00, items_version: 4 }, null, 2),
+        errorExamples: [
+            {
+                title: 'Версия состава устарела (409)',
+                body: JSON.stringify({ error: "Состав заказа изменился — обновите данные из /reserves и повторите.", code: "stale_items_version" }, null, 2),
+            },
+            {
+                title: 'Увеличение запрещено (422)',
+                body: JSON.stringify({ error: "Увеличивать количество нельзя — создайте отдельный заказ.", code: "increase_forbidden" }, null, 2),
+            },
+            {
+                title: 'Пустой состав (422)',
+                body: JSON.stringify({ error: "Состав пуст — для отказа от всего заказа используйте /cancel.", code: "empty_composition" }, null, 2),
+            },
+        ],
+    },
+    {
+        method: 'POST',
+        path: '/reserves/{order}/cancel',
+        title: 'Отменить заказ',
+        description: 'Отменить заказ в резерве или обычный заказ в ранних статусах (пока 1С не начала сборку). Товар возвращается в свободный остаток. Поздние статусы (заказ уже в сборке) отклоняются кодом not_cancellable — обратитесь к менеджеру.',
+        icon: LuTrash2,
+        color: 'red',
+        params: [
+            { name: 'order', type: 'int', required: true, desc: 'ID заказа (order_id из /reserves), в пути запроса' },
+        ],
+        responseExample: JSON.stringify({ message: "Заказ отменён. Товар возвращён в свободный остаток.", order_id: 1234 }, null, 2),
+        errorExamples: [
+            {
+                title: 'Отмена невозможна (422)',
+                body: JSON.stringify({ error: "Заказ уже передан в сборку — отменить его нельзя. Свяжитесь с вашим менеджером.", code: "not_cancellable" }, null, 2),
+            },
+        ],
+    },
 ];
 
 /* ──────────────────────────────────────────────── */
@@ -358,6 +472,13 @@ const apiMethods = [
 export default function Index({ tokens: initialTokens }) {
     const [tokens, setTokens] = useState(initialTokens);
     const [creating, setCreating] = useState(false);
+
+    // Методы резерва показываем только участнику режима «Заказы в резерве» —
+    // как и раздел кабинета: неучастнику они всё равно вернут 403.
+    const reservesEnabled = !!usePage().props?.config?.reserves_enabled;
+    const visibleMethods = apiMethods.filter(
+        (m) => reservesEnabled || ! m.path.startsWith('/reserves'),
+    );
 
     const handleCreate = async () => {
         try {
@@ -536,7 +657,7 @@ export default function Index({ tokens: initialTokens }) {
 
                 {/* API Methods — Accordion */}
                 <Accordion.Root collapsible variant="plain">
-                    {apiMethods.map((m, i) => (
+                    {visibleMethods.map((m, i) => (
                         <Accordion.Item key={i} value={`method-${i}`}
                             borderRadius="xl" mb="3"
                             border="1px solid" borderColor="border.muted"
