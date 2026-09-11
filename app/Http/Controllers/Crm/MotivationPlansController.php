@@ -125,7 +125,7 @@ class MotivationPlansController extends CrmController
         foreach ($this->managers(null) as $manager) {
             $managerId = (int) $manager->getKey();
             $order = $this->approvedOrder($managerId, $quarter)
-                ?? MotivationPlanOrder::query()->forQuarter($quarter)->where('personal_manager_id', $managerId)->orderByDesc('version')->first();
+                ?? $this->latestOrder($managerId, $quarter);
 
             $calculated = $this->calculator->calculate($managerId, $quarter, [], $order?->decline_limit_waived_reason !== null);
             $values = $order === null ? $calculated['values'] : (array) $order->values;
@@ -238,12 +238,23 @@ class MotivationPlansController extends CrmController
 
     private function approvedOrder(int $managerId, CarbonImmutable $quarter): ?MotivationPlanOrder
     {
-        return MotivationPlanOrder::query()
+        return $this->latestOrder($managerId, $quarter, MotivationPlanOrder::STATUS_APPROVED);
+    }
+
+    /**
+     * Последняя версия приказа: сначала id, затем строка — сортировка строк
+     * с JSON-колонками валит MySQL «Out of sort memory».
+     */
+    private function latestOrder(int $managerId, CarbonImmutable $quarter, ?string $status = null): ?MotivationPlanOrder
+    {
+        $id = MotivationPlanOrder::query()
             ->forQuarter($quarter)
             ->where('personal_manager_id', $managerId)
-            ->where('status', MotivationPlanOrder::STATUS_APPROVED)
+            ->when($status !== null, fn ($q) => $q->where('status', $status))
             ->orderByDesc('version')
-            ->first();
+            ->value('id');
+
+        return $id === null ? null : MotivationPlanOrder::query()->find($id);
     }
 
     private function quarter(string $raw): CarbonImmutable

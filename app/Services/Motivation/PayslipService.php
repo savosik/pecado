@@ -37,11 +37,11 @@ class PayslipService
      */
     public function version(int $managerId, CarbonInterface $month, ?int $version): ?PayrollCalculation
     {
-        $query = PayrollCalculation::query()->forManager($managerId)->forPeriod($month);
-
+        // Последняя версия — через latestFor: сортировка всей строки с JSON-входами
+        // валит MySQL «Out of sort memory» (на dev 11.09.2026 — 500 расчётного листа).
         return $version === null
-            ? $query->orderByDesc('version')->first()
-            : $query->where('version', $version)->first();
+            ? PayrollCalculation::latestFor($managerId, $month)
+            : PayrollCalculation::query()->forManager($managerId)->forPeriod($month)->where('version', $version)->first();
     }
 
     /**

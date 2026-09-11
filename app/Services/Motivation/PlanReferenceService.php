@@ -28,12 +28,14 @@ class PlanReferenceService
         $period = CarbonImmutable::instance($month)->startOfMonth();
         $quarter = $period->startOfQuarter();
 
-        $order = MotivationPlanOrder::query()
+        // Сначала id, потом строка: сортировать строки с JSON-колонками MySQL не любит.
+        $orderId = MotivationPlanOrder::query()
             ->forQuarter($quarter)
             ->where('personal_manager_id', $managerId)
             ->where('status', MotivationPlanOrder::STATUS_APPROVED)
             ->orderByDesc('version')
-            ->first();
+            ->value('id');
+        $order = $orderId === null ? null : MotivationPlanOrder::query()->find($orderId);
 
         $calculated = $this->calculator->calculate($managerId, $quarter);
 
