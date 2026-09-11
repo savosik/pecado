@@ -681,6 +681,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/motivation/settings/order', [MotivationSettingsController::class, 'order'])->name('motivation.settings.order');
         Route::post('/motivation/settings/personal', [MotivationSettingsController::class, 'storePersonal'])->name('motivation.settings.personal');
         Route::delete('/motivation/settings/personal', [MotivationSettingsController::class, 'resetPersonal'])->name('motivation.settings.personal.reset');
+        Route::post('/motivation/settings/guarantee', [MotivationSettingsController::class, 'fixGuarantee'])->name('motivation.settings.guarantee');
         Route::get('/motivation/plans', [MotivationPlansController::class, 'index'])->name('motivation.plans');
         Route::get('/motivation/plans/data', [MotivationPlansController::class, 'data'])->name('motivation.plans.data');
         Route::post('/motivation/plans/calculate', [MotivationPlansController::class, 'calculate'])->name('motivation.plans.calculate');

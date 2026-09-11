@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { Badge, Box, HStack, SimpleGrid, Table, Text, VStack } from '@chakra-ui/react';
-import { LuPencil, LuTrash2 } from 'react-icons/lu';
+import { LuPencil, LuShieldCheck, LuTrash2 } from 'react-icons/lu';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { toastError, toastSuccess } from '@/utils/toast';
@@ -27,6 +27,21 @@ const selectStyle = { ...inputStyle, minWidth: '200px' };
 export default function PersonalOverrides({ personal, managers, components, canEdit, onChanged }) {
     const [editing, setEditing] = useState(null);   // { manager_id, component_key, params }
     const [busy, setBusy] = useState(false);
+    const [report, setReport] = useState(null);
+
+    const fixGuarantee = async (overwrite = false) => {
+        setBusy(true);
+        try {
+            const res = await axios.post('/crm/motivation/settings/guarantee', { overwrite });
+            onChanged(res.data.personal);
+            setReport(res.data.report);
+            toastSuccess(res.data.message);
+        } catch (e) {
+            toastError(e.response?.data?.message ?? 'Не удалось зафиксировать базу');
+        } finally {
+            setBusy(false);
+        }
+    };
 
     const startEdit = (managerId, componentKey, current) => {
         const meta = components[componentKey];
@@ -95,6 +110,38 @@ export default function PersonalOverrides({ personal, managers, components, canE
                 </Box>
             )}
 
+            {canEdit && (
+                <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4}>
+                    <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                        <Box>
+                            <Text fontWeight="700">База гарантии переходного периода (п. 12.3)</Text>
+                            <Text fontSize="xs" color="fg.muted">Среднее за три месяца до введения Положения фиксируется один раз всем работникам и действует первый квартал новой системы. Уже зафиксированные не трогаются.</Text>
+                        </Box>
+                        <HStack gap={2}>
+                            <Button size="sm" variant="outline" loading={busy} onClick={() => fixGuarantee(false)}><LuShieldCheck /> Зафиксировать базу</Button>
+                            <Button size="sm" variant="ghost" loading={busy} onClick={() => fixGuarantee(true)}>Пересчитать заново</Button>
+                        </HStack>
+                    </HStack>
+                    {report && (
+                        <Box mt={3} overflowX="auto">
+                            <Text fontSize="xs" color="fg.muted" mb={1}>Введение с {report.effective_from.slice(0, 7)}, гарантия до {report.until.slice(0, 7)} (не включая).</Text>
+                            <Table.Root size="sm">
+                                <Table.Body>
+                                    {report.rows.map((r) => (
+                                        <Table.Row key={r.manager.id}>
+                                            <Table.Cell><Text fontSize="sm" fontWeight="600">{r.manager.name}</Text></Table.Cell>
+                                            <Table.Cell><Text fontSize="xs" color="fg.muted">{r.months.map((m) => `${m.month.slice(0, 7)}: ${Math.round(m.total).toLocaleString('ru-RU')} ₽ (${m.status})`).join(' · ')}</Text></Table.Cell>
+                                            <Table.Cell textAlign="right"><Text fontSize="sm">среднее {Math.round(r.average).toLocaleString('ru-RU')} ₽ · минимум {Math.round(r.minimum).toLocaleString('ru-RU')} ₽</Text></Table.Cell>
+                                            <Table.Cell><Badge size="xs" variant="subtle" colorPalette={r.skipped ? 'gray' : 'green'}>{r.skipped ? 'уже была' : 'зафиксировано'}</Badge></Table.Cell>
+                                        </Table.Row>
+                                    ))}
+                                </Table.Body>
+                            </Table.Root>
+                        </Box>
+                    )}
+                </Box>
+            )}
+
             {editing && (
                 <Box bg="bg.panel" borderWidth="2px" borderColor="blue.solid" borderRadius="xl" p={4}>
                     <Text fontWeight="700" mb={1}>
@@ -105,14 +152,25 @@ export default function PersonalOverrides({ personal, managers, components, canE
                         {Object.entries(components[editing.component_key]?.schema?.properties ?? {}).map(([key, prop]) => (
                             <VStack key={key} align="stretch" gap={1}>
                                 <Text fontSize="xs" color="fg.muted">{prop.title ?? key}</Text>
-                                <input
-                                    type="number"
-                                    step="any"
-                                    style={inputStyle}
-                                    value={editing.params[key] ?? ''}
-                                    aria-label={prop.title ?? key}
-                                    onChange={(e) => setEditing({ ...editing, params: { ...editing.params, [key]: e.target.value === '' ? null : Number(e.target.value) } })}
-                                />
+                                {(Array.isArray(prop.type) ? prop.type.includes('string') : prop.type === 'string') ? (
+                                    <input
+                                        type="text"
+                                        style={inputStyle}
+                                        value={editing.params[key] ?? ''}
+                                        aria-label={prop.title ?? key}
+                                        placeholder="пусто — без ограничения"
+                                        onChange={(e) => setEditing({ ...editing, params: { ...editing.params, [key]: e.target.value === '' ? null : e.target.value } })}
+                                    />
+                                ) : (
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        style={inputStyle}
+                                        value={editing.params[key] ?? ''}
+                                        aria-label={prop.title ?? key}
+                                        onChange={(e) => setEditing({ ...editing, params: { ...editing.params, [key]: e.target.value === '' ? null : Number(e.target.value) } })}
+                                    />
+                                )}
                             </VStack>
                         ))}
                         <VStack align="stretch" gap={1}>

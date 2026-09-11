@@ -56,6 +56,7 @@ class TransitionGuaranteeComponent extends AbstractComponent
             'properties' => [
                 'share' => ['type' => 'number', 'minimum' => 0, 'maximum' => 1, 'title' => 'Доля гарантии'],
                 'base' => ['type' => 'number', 'minimum' => 0, 'title' => 'Средний заработок за три периода до перехода, ₽'],
+                'until' => ['type' => ['string', 'null'], 'title' => 'Действует до периода (ГГГГ-ММ-01, не включая)'],
             ],
             'additionalProperties' => false,
         ];
@@ -66,16 +67,36 @@ class TransitionGuaranteeComponent extends AbstractComponent
         return [
             'share' => (float) (config('motivation.default_parameters.transition_guarantee_share') ?? 0),
             'base' => 0,
+            'until' => null,
         ];
     }
 
     public function validateParams(array $params): array
     {
+        $errors = [];
         $share = $this->number($params, 'share', -1);
 
-        return $share < 0 || $share > 1
-            ? ['Доля гарантии задаётся числом от 0 до 1 (0,9 — это 90 %).']
-            : [];
+        if ($share < 0 || $share > 1) {
+            $errors[] = 'Доля гарантии задаётся числом от 0 до 1 (0,9 — это 90 %).';
+        }
+
+        $until = $params['until'] ?? null;
+        if ($until !== null && $until !== '' && preg_match('/^\d{4}-\d{2}-01$/', (string) $until) !== 1) {
+            $errors[] = 'Срок гарантии задаётся первым числом месяца в формате ГГГГ-ММ-01.';
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Гарантия действует первый квартал новой системы (п. 12.3): с периода `until`
+     * она выключена — доплата 0, а не отсутствие строки, чтобы это было видно.
+     */
+    private function expired(PayrollContext $context, array $params): bool
+    {
+        $until = (string) ($params['until'] ?? '');
+
+        return $until !== '' && $context->inputs->month >= $until;
     }
 
     public function compute(PayrollContext $context, array $params): ComponentResult
@@ -86,6 +107,17 @@ class TransitionGuaranteeComponent extends AbstractComponent
 
         $minimum = Money::round($base * $share);
         $amount = Money::round(max(0.0, $minimum - $earned));
+
+        if ($this->expired($context, $params)) {
+            return new ComponentResult(
+                key: $this->key(),
+                label: $this->label(),
+                kind: $this->kind(),
+                amount: 0.0,
+                explanation: sprintf('Гарантия переходного периода завершилась с %s', \Carbon\CarbonImmutable::parse((string) $params['until'])->translatedFormat('F Y')),
+                meta: ['share' => $share, 'base' => $base, 'minimum' => null, 'earned' => $earned, 'until' => $params['until']],
+            );
+        }
 
         if ($base <= 0 || $share <= 0) {
             return new ComponentResult(

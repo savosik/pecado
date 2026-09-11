@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Crm;
 
 use App\Models\PersonalManager;
+use App\Services\Motivation\GuaranteeBaseService;
+use App\Services\Motivation\ParallelCalculationService;
 use App\Services\Motivation\ParameterOrderService;
 use App\Services\Payroll\Exceptions\InvalidPayrollParams;
 use App\Services\Payroll\PayrollCatalog;
@@ -109,6 +111,35 @@ class MotivationSettingsController extends CrmController
         }
 
         return response()->json(['ok' => true, 'personal' => $this->orders->personal()]);
+    }
+
+    /**
+     * Зафиксировать базу гарантии переходного периода всем работникам (п. 12.3).
+     */
+    public function fixGuarantee(Request $request, GuaranteeBaseService $guarantee, ParallelCalculationService $parallel): JsonResponse
+    {
+        $data = $request->validate([
+            'effective_from' => ['nullable', 'string', 'regex:/^\d{4}-\d{2}$/'],
+            'overwrite' => ['nullable', 'boolean'],
+        ], ['effective_from.regex' => 'Месяц введения задаётся в формате ГГГГ-ММ.']);
+
+        $effective = ! empty($data['effective_from'])
+            ? CarbonImmutable::parse($data['effective_from'].'-01')
+            : ($parallel->window()['effective_from'] ?? null);
+
+        if ($effective === null) {
+            return response()->json(['message' => 'Схема 2.2 ещё не введена приказом — не от чего отсчитывать три предшествующих периода.'], 422);
+        }
+
+        $result = $guarantee->fix($effective, $this->crmActor($request), (bool) ($data['overwrite'] ?? false));
+        $fixed = count(array_filter($result['rows'], fn (array $r): bool => ! $r['skipped']));
+
+        return response()->json([
+            'ok' => true,
+            'message' => $fixed === 0 ? 'База уже зафиксирована у всех — ничего не изменено.' : sprintf('База гарантии зафиксирована: %d работников, действует до %s.', $fixed, $result['until']),
+            'report' => $result,
+            'personal' => $this->orders->personal(),
+        ]);
     }
 
     public function resetPersonal(Request $request): JsonResponse
