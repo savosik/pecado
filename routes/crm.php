@@ -28,6 +28,7 @@ use App\Http\Controllers\Crm\MotivationDebtsController;
 use App\Http\Controllers\Crm\MotivationPartnersController;
 use App\Http\Controllers\Crm\MotivationPayslipController;
 use App\Http\Controllers\Crm\MotivationReferenceController;
+use App\Http\Controllers\Crm\MotivationSettingsController;
 use App\Http\Controllers\Crm\NotificationPreferenceController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PaymentOrderController;
@@ -659,6 +660,17 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/motivation/objection', [MotivationPayslipController::class, 'objection'])->name('motivation.objection');
         Route::get('/motivation/debts', [MotivationDebtsController::class, 'index'])->name('motivation.debts');
         Route::get('/motivation/debts/data', [MotivationDebtsController::class, 'data'])->name('motivation.debts.data');
+        // Параметры видит и работник — чтобы проверить, по каким ставкам его посчитали.
+        Route::get('/motivation/settings', [MotivationSettingsController::class, 'index'])->name('motivation.settings');
+        Route::get('/motivation/settings/data', [MotivationSettingsController::class, 'data'])->name('motivation.settings.data');
+    });
+
+    // Изменение параметров, приказы, персональные отклонения — только руководитель.
+    Route::middleware('permission:crm-motivation.edit')->group(function () {
+        Route::post('/motivation/settings/preview', [MotivationSettingsController::class, 'preview'])->name('motivation.settings.preview');
+        Route::post('/motivation/settings/order', [MotivationSettingsController::class, 'order'])->name('motivation.settings.order');
+        Route::post('/motivation/settings/personal', [MotivationSettingsController::class, 'storePersonal'])->name('motivation.settings.personal');
+        Route::delete('/motivation/settings/personal', [MotivationSettingsController::class, 'resetPersonal'])->name('motivation.settings.personal.reset');
     });
 
     // Зарплата (эпик pay-00). view — своя; чужой `manager` в адресе открывается

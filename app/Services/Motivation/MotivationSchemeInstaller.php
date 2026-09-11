@@ -49,7 +49,7 @@ class MotivationSchemeInstaller
             $components[] = [
                 'key' => $key,
                 'enabled' => true,
-                'defaults' => $this->defaultsFor($key, $values),
+                'defaults' => self::componentDefaults($key, $values),
             ];
         }
 
@@ -72,7 +72,7 @@ class MotivationSchemeInstaller
      * @param  array<string, mixed>  $values
      * @return array<string, mixed>
      */
-    private function defaultsFor(string $key, array $values): array
+    public static function componentDefaults(string $key, array $values): array
     {
         return match ($key) {
             'salary' => ['amount' => $values['salary'] ?? 0],

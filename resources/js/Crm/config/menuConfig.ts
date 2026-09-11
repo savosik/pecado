@@ -95,19 +95,6 @@ export const menuConfig: MenuGroup[] = [
             // Зарплата рядом с планом: это ответ на вопрос «сколько я заработал
             // на этом плане прямо сейчас» — менеджер смотрит их вместе.
             { label: "Моя зарплата", icon: LuBanknote, path: "/crm/salary", permission: "crm-salary.view" },
-            // Мотивация 2.0 (mot-00): своё право, а не crm-salary — раздел не показывается
-            // менеджерам до ввода Положения в действие, иначе они увидят две разные цифры дохода.
-            { label: "Моя мотивация", icon: LuSparkles, path: "/crm/motivation", permission: "crm-motivation.view" },
-            { label: "Моя база", icon: LuUsersRound, path: "/crm/motivation/base", permission: "crm-motivation.view" },
-            { label: "Кто выпал из ритма", icon: LuActivity, path: "/crm/motivation/rhythm", permission: "crm-motivation.view" },
-            { label: "Долги", icon: LuFileWarning, path: "/crm/motivation/debts", permission: "crm-motivation.view" },
-            { label: "Кого разбудить", icon: LuBellRing, path: "/crm/motivation/wake", permission: "crm-motivation.view" },
-            { label: "Мои новые клиенты", icon: LuUserPlus, path: "/crm/motivation/new-partners", permission: "crm-motivation.view" },
-            { label: "Свободные клиенты", icon: LuUsers, path: "/crm/motivation/pool", permission: "crm-motivation.view" },
-            { label: "Фокус-товары", icon: LuStar, path: "/crm/motivation/focus", permission: "crm-motivation.view" },
-            { label: "Откуда мой план", icon: LuTarget, path: "/crm/motivation/plan", permission: "crm-motivation.view" },
-            { label: "Премия отдела", icon: LuTrophy, path: "/crm/motivation/quarter", permission: "crm-motivation.view" },
-            { label: "Расчётный лист", icon: LuReceipt, path: "/crm/motivation/payslip", permission: "crm-motivation.view" },
             // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
             // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
             { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", counter: "shortages" },
@@ -201,6 +188,28 @@ export const menuConfig: MenuGroup[] = [
             // Реестр договоров: своё право — раздел заведён взамен Google-таблицы,
             // и выдавать его нужно тем же, кто вёл таблицу.
             { label: "Договоры", icon: LuFilePen, path: "/crm/contracts", permission: "crm-contracts.view" },
+        ],
+    },
+    {
+        // Мотивация 2.0 (mot-00): рабочее место по Положению об оплате труда 2.2.
+        // Своё право, а не crm-salary — раздел не показывается менеджерам до ввода
+        // Положения в действие, иначе они увидят две разные цифры дохода.
+        title: "Мотивация",
+        icon: LuSparkles,
+        items: [
+            { label: "Мой месяц", icon: LuSparkles, path: "/crm/motivation", permission: "crm-motivation.view" },
+            { label: "Моя база", icon: LuUsersRound, path: "/crm/motivation/base", permission: "crm-motivation.view" },
+            { label: "Кто выпал из ритма", icon: LuActivity, path: "/crm/motivation/rhythm", permission: "crm-motivation.view" },
+            { label: "Долги", icon: LuFileWarning, path: "/crm/motivation/debts", permission: "crm-motivation.view" },
+            { label: "Кого разбудить", icon: LuBellRing, path: "/crm/motivation/wake", permission: "crm-motivation.view" },
+            { label: "Мои новые клиенты", icon: LuUserPlus, path: "/crm/motivation/new-partners", permission: "crm-motivation.view" },
+            { label: "Свободные клиенты", icon: LuUsers, path: "/crm/motivation/pool", permission: "crm-motivation.view" },
+            { label: "Фокус-товары", icon: LuStar, path: "/crm/motivation/focus", permission: "crm-motivation.view" },
+            { label: "Откуда мой план", icon: LuTarget, path: "/crm/motivation/plan", permission: "crm-motivation.view" },
+            { label: "Премия отдела", icon: LuTrophy, path: "/crm/motivation/quarter", permission: "crm-motivation.view" },
+            { label: "Расчётный лист", icon: LuReceipt, path: "/crm/motivation/payslip", permission: "crm-motivation.view" },
+            // Параметры видит и работник; менять может только руководитель.
+            { label: "Параметры мотивации", icon: LuSlidersHorizontal, path: "/crm/motivation/settings", permission: "crm-motivation.view" },
         ],
     },
     {
