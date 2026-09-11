@@ -25,6 +25,22 @@ use App\Http\Controllers\Crm\ImpersonationController;
 use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\MailSuppressionController;
+use App\Http\Controllers\Crm\MotivationController;
+use App\Http\Controllers\Crm\MotivationDebtExclusionsController;
+use App\Http\Controllers\Crm\MotivationDebtsController;
+use App\Http\Controllers\Crm\MotivationDiscountsController;
+use App\Http\Controllers\Crm\MotivationFocusAdminController;
+use App\Http\Controllers\Crm\MotivationForecastController;
+use App\Http\Controllers\Crm\MotivationHealthController;
+use App\Http\Controllers\Crm\MotivationInvoicesController;
+use App\Http\Controllers\Crm\MotivationPartnersController;
+use App\Http\Controllers\Crm\MotivationPayslipController;
+use App\Http\Controllers\Crm\MotivationPlansController;
+use App\Http\Controllers\Crm\MotivationPoolController;
+use App\Http\Controllers\Crm\MotivationQuarterAdminController;
+use App\Http\Controllers\Crm\MotivationReferenceController;
+use App\Http\Controllers\Crm\MotivationSettingsController;
+use App\Http\Controllers\Crm\MotivationTeamController;
 use App\Http\Controllers\Crm\NotificationPreferenceController;
 use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PaymentOrderController;
@@ -659,6 +675,99 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::delete('/plans/{plan}', [PlanController::class, 'destroy'])
             ->name('plans.destroy')
             ->whereNumber('plan');
+    });
+
+    // Мотивация 2.0 (эпик mot-00). Своё право crm-motivation.view, а не crm-salary:
+    // раздел не показывается менеджерам до ввода Положения в действие. Скоуп
+    // тот же, что у зарплаты: чужой `manager` — только с crm-clients-all.view.
+    Route::middleware('permission:crm-motivation.view')->group(function () {
+        Route::get('/motivation', [MotivationController::class, 'index'])->name('motivation.index');
+        Route::get('/motivation/data', [MotivationController::class, 'data'])->name('motivation.data');
+        Route::get('/motivation/evidence', [MotivationController::class, 'evidence'])->name('motivation.evidence');
+        Route::post('/motivation/simulate', [MotivationController::class, 'simulate'])->name('motivation.simulate');
+        Route::get('/motivation/base', [MotivationPartnersController::class, 'base'])->name('motivation.base');
+        Route::get('/motivation/base/data', [MotivationPartnersController::class, 'baseData'])->name('motivation.base.data');
+        Route::get('/motivation/rhythm', [MotivationPartnersController::class, 'rhythm'])->name('motivation.rhythm');
+        Route::get('/motivation/rhythm/data', [MotivationPartnersController::class, 'rhythmData'])->name('motivation.rhythm.data');
+        Route::get('/motivation/wake', [MotivationPartnersController::class, 'wake'])->name('motivation.wake');
+        Route::get('/motivation/wake/data', [MotivationPartnersController::class, 'wakeData'])->name('motivation.wake.data');
+        Route::get('/motivation/new-partners', [MotivationPartnersController::class, 'newPartners'])->name('motivation.new-partners');
+        Route::get('/motivation/new-partners/data', [MotivationPartnersController::class, 'newPartnersData'])->name('motivation.new-partners.data');
+        Route::get('/motivation/pool', [MotivationPartnersController::class, 'pool'])->name('motivation.pool');
+        Route::get('/motivation/pool/data', [MotivationPartnersController::class, 'poolData'])->name('motivation.pool.data');
+        Route::get('/motivation/focus', [MotivationReferenceController::class, 'focus'])->name('motivation.focus');
+        Route::get('/motivation/focus/data', [MotivationReferenceController::class, 'focusData'])->name('motivation.focus.data');
+        Route::get('/motivation/plan', [MotivationReferenceController::class, 'plan'])->name('motivation.plan');
+        Route::get('/motivation/plan/data', [MotivationReferenceController::class, 'planData'])->name('motivation.plan.data');
+        Route::get('/motivation/quarter', [MotivationReferenceController::class, 'quarter'])->name('motivation.quarter');
+        Route::get('/motivation/quarter/data', [MotivationReferenceController::class, 'quarterData'])->name('motivation.quarter.data');
+        Route::get('/motivation/payslip', [MotivationPayslipController::class, 'index'])->name('motivation.payslip');
+        Route::get('/motivation/payslip/data', [MotivationPayslipController::class, 'data'])->name('motivation.payslip.data');
+        Route::get('/motivation/payslip/pdf', [MotivationPayslipController::class, 'pdf'])->name('motivation.payslip.pdf');
+        Route::post('/motivation/objection', [MotivationPayslipController::class, 'objection'])->name('motivation.objection');
+        Route::get('/motivation/debts', [MotivationDebtsController::class, 'index'])->name('motivation.debts');
+        Route::get('/motivation/debts/data', [MotivationDebtsController::class, 'data'])->name('motivation.debts.data');
+        // Параметры видит и работник — чтобы проверить, по каким ставкам его посчитали.
+        Route::get('/motivation/settings', [MotivationSettingsController::class, 'index'])->name('motivation.settings');
+        Route::get('/motivation/settings/data', [MotivationSettingsController::class, 'data'])->name('motivation.settings.data');
+    });
+
+    // Изменение параметров, приказы, персональные отклонения — только руководитель.
+    Route::middleware('permission:crm-motivation.edit')->group(function () {
+        Route::post('/motivation/settings/preview', [MotivationSettingsController::class, 'preview'])->name('motivation.settings.preview');
+        Route::post('/motivation/settings/order', [MotivationSettingsController::class, 'order'])->name('motivation.settings.order');
+        Route::post('/motivation/settings/personal', [MotivationSettingsController::class, 'storePersonal'])->name('motivation.settings.personal');
+        Route::delete('/motivation/settings/personal', [MotivationSettingsController::class, 'resetPersonal'])->name('motivation.settings.personal.reset');
+        Route::post('/motivation/settings/guarantee', [MotivationSettingsController::class, 'fixGuarantee'])->name('motivation.settings.guarantee');
+        Route::get('/motivation/plans', [MotivationPlansController::class, 'index'])->name('motivation.plans');
+        Route::get('/motivation/plans/data', [MotivationPlansController::class, 'data'])->name('motivation.plans.data');
+        Route::post('/motivation/plans/calculate', [MotivationPlansController::class, 'calculate'])->name('motivation.plans.calculate');
+        Route::post('/motivation/plans/{order}/override', [MotivationPlansController::class, 'override'])->name('motivation.plans.override')->whereNumber('order');
+        Route::post('/motivation/plans/{order}/approve', [MotivationPlansController::class, 'approve'])->name('motivation.plans.approve')->whereNumber('order');
+        Route::get('/motivation/team', [MotivationTeamController::class, 'index'])->name('motivation.team');
+        Route::get('/motivation/team/data', [MotivationTeamController::class, 'data'])->name('motivation.team.data');
+        Route::get('/motivation/team/export', [MotivationTeamController::class, 'export'])->name('motivation.team.export');
+        Route::get('/motivation/approval', [MotivationTeamController::class, 'approval'])->name('motivation.approval');
+        Route::get('/motivation/approval/data', [MotivationTeamController::class, 'approvalData'])->name('motivation.approval.data');
+        Route::post('/motivation/calculations/{calculation}/recalculate', [MotivationTeamController::class, 'recalculate'])->name('motivation.calculations.recalculate')->whereNumber('calculation');
+        Route::post('/motivation/calculations/{calculation}/approve', [MotivationTeamController::class, 'approve'])->name('motivation.calculations.approve')->whereNumber('calculation');
+        Route::post('/motivation/calculations/{calculation}/reopen', [MotivationTeamController::class, 'reopen'])->name('motivation.calculations.reopen')->whereNumber('calculation');
+        Route::post('/motivation/calculations/{calculation}/paid', [MotivationTeamController::class, 'markPaid'])->name('motivation.calculations.paid')->whereNumber('calculation');
+        Route::post('/motivation/adjustments', [MotivationTeamController::class, 'storeCorrection'])->name('motivation.adjustments.store');
+        Route::delete('/motivation/adjustments/{adjustment}', [MotivationTeamController::class, 'destroyCorrection'])->name('motivation.adjustments.destroy')->whereNumber('adjustment');
+        Route::post('/motivation/objections/{objection}/respond', [MotivationTeamController::class, 'respondObjection'])->name('motivation.objections.respond')->whereNumber('objection');
+        Route::get('/motivation/pool/admin', [MotivationPoolController::class, 'index'])->name('motivation.pool.admin');
+        Route::get('/motivation/pool/admin/data', [MotivationPoolController::class, 'data'])->name('motivation.pool.admin.data');
+        Route::post('/motivation/pool/packages', [MotivationPoolController::class, 'issue'])->name('motivation.pool.packages.issue');
+        Route::post('/motivation/pool/packages/{package}/refresh', [MotivationPoolController::class, 'refresh'])->name('motivation.pool.packages.refresh')->whereNumber('package');
+        Route::post('/motivation/pool/packages/{package}/return', [MotivationPoolController::class, 'returnToPool'])->name('motivation.pool.packages.return')->whereNumber('package');
+        Route::get('/motivation/focus-list', [MotivationFocusAdminController::class, 'index'])->name('motivation.focus-list');
+        Route::get('/motivation/focus-list/data', [MotivationFocusAdminController::class, 'data'])->name('motivation.focus-list.data');
+        Route::get('/motivation/focus-list/search', [MotivationFocusAdminController::class, 'search'])->name('motivation.focus-list.search');
+        Route::post('/motivation/focus-list/rules', [MotivationFocusAdminController::class, 'store'])->name('motivation.focus-list.rules.store');
+        Route::patch('/motivation/focus-list/rules/{rule}', [MotivationFocusAdminController::class, 'close'])->name('motivation.focus-list.rules.close')->whereNumber('rule');
+        Route::post('/motivation/focus-list/freeze', [MotivationFocusAdminController::class, 'freeze'])->name('motivation.focus-list.freeze');
+        Route::get('/motivation/debt-exclusions', [MotivationDebtExclusionsController::class, 'index'])->name('motivation.debt-exclusions');
+        Route::get('/motivation/debt-exclusions/data', [MotivationDebtExclusionsController::class, 'data'])->name('motivation.debt-exclusions.data');
+        Route::post('/motivation/debt-exclusions', [MotivationDebtExclusionsController::class, 'store'])->name('motivation.debt-exclusions.store');
+        Route::patch('/motivation/debt-exclusions/{exclusion}', [MotivationDebtExclusionsController::class, 'close'])->name('motivation.debt-exclusions.close')->whereNumber('exclusion');
+        Route::get('/motivation/invoices', [MotivationInvoicesController::class, 'index'])->name('motivation.invoices');
+        Route::get('/motivation/invoices/data', [MotivationInvoicesController::class, 'data'])->name('motivation.invoices.data');
+        Route::patch('/motivation/invoices/{invoice}', [MotivationInvoicesController::class, 'mark'])->name('motivation.invoices.mark')->whereNumber('invoice');
+        Route::delete('/motivation/invoices/{invoice}/mark', [MotivationInvoicesController::class, 'unmark'])->name('motivation.invoices.unmark')->whereNumber('invoice');
+        Route::get('/motivation/health', [MotivationHealthController::class, 'index'])->name('motivation.health');
+        Route::get('/motivation/health/data', [MotivationHealthController::class, 'data'])->name('motivation.health.data');
+        Route::get('/motivation/forecast', [MotivationForecastController::class, 'index'])->name('motivation.forecast');
+        Route::get('/motivation/forecast/data', [MotivationForecastController::class, 'data'])->name('motivation.forecast.data');
+        Route::get('/motivation/discounts', [MotivationDiscountsController::class, 'index'])->name('motivation.discounts');
+        Route::get('/motivation/discounts/data', [MotivationDiscountsController::class, 'data'])->name('motivation.discounts.data');
+        Route::get('/motivation/quarter/admin', [MotivationQuarterAdminController::class, 'index'])->name('motivation.quarter.admin');
+        Route::get('/motivation/quarter/admin/data', [MotivationQuarterAdminController::class, 'data'])->name('motivation.quarter.admin.data');
+        Route::post('/motivation/quarter/recalculate', [MotivationQuarterAdminController::class, 'recalculate'])->name('motivation.quarter.recalculate');
+        Route::post('/motivation/quarter/{bonus}/approve', [MotivationQuarterAdminController::class, 'approve'])->name('motivation.quarter.approve')->whereNumber('bonus');
+        Route::post('/motivation/quarter/{bonus}/reopen', [MotivationQuarterAdminController::class, 'reopen'])->name('motivation.quarter.reopen')->whereNumber('bonus');
+        Route::post('/motivation/quarter/{bonus}/distribute', [MotivationQuarterAdminController::class, 'distribute'])->name('motivation.quarter.distribute')->whereNumber('bonus');
+        Route::post('/motivation/quarter/{bonus}/paid', [MotivationQuarterAdminController::class, 'markPaid'])->name('motivation.quarter.paid')->whereNumber('bonus');
     });
 
     // Зарплата (эпик pay-00). view — своя; чужой `manager` в адресе открывается

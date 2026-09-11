@@ -2,9 +2,11 @@
 
 namespace App\Services\Payroll;
 
+use App\Events\Payroll\PayrollCalculationApproved;
 use App\Models\PayrollCalculation;
 use App\Models\PersonalManager;
 use App\Models\User;
+use App\Services\Motivation\MotivationInputCollector;
 use App\Services\Payroll\Dto\EffectiveParams;
 use App\Services\Payroll\Dto\PayrollBreakdown;
 use App\Services\Payroll\Dto\PayrollInputs;
@@ -25,6 +27,7 @@ class PayrollCalculationService
     public function __construct(
         private readonly PayrollParamsResolver $params,
         private readonly PayrollInputCollector $collector,
+        private readonly MotivationInputCollector $motivation,
         private readonly PayrollCalculator $calculator,
         private readonly PayrollForecaster $forecaster,
         private readonly PayrollAdvisor $advisor,
@@ -74,7 +77,7 @@ class PayrollCalculationService
     public function preview(int $managerId, CarbonInterface $month): array
     {
         $params = $this->params->effective($managerId, $month);
-        $inputs = $this->collector->collect($managerId, $month, $params->for('new_clients_bonus'));
+        $inputs = $this->collectInputs($managerId, $month, $params);
 
         return [
             'params' => $params,
@@ -97,6 +100,8 @@ class PayrollCalculationService
             // Прогноз и советы — про будущее; у замороженного месяца будущего нет.
             'forecast' => null,
         ])->save();
+
+        PayrollCalculationApproved::dispatch($calculation);
 
         return $calculation;
     }
@@ -347,12 +352,43 @@ class PayrollCalculationService
     }
 
     /**
+     * Входы месяца: общие плюс входы переменной части, если схема её включает.
+     *
+     * Сбор входов мотивации стоит нескольких запросов, поэтому он не делается
+     * для месяцев, которые считаются по прежней схеме: там компонента нет,
+     * и его входы никто не прочитает.
+     */
+    /**
+     * Входы под заданные параметры — для справочного расчёта по другой схеме
+     * (переходный период, п. 12.2). Сохранения нет: снимок пишет вызывающий.
+     */
+    public function inputsFor(int $managerId, CarbonInterface $month, EffectiveParams $params): PayrollInputs
+    {
+        return $this->collectInputs($managerId, $month, $params);
+    }
+
+    private function collectInputs(int $managerId, CarbonInterface $month, EffectiveParams $params): PayrollInputs
+    {
+        $inputs = $this->collector->collect($managerId, $month, $params->for('new_clients_bonus'));
+
+        if (! $params->enabled('motivation_variable')) {
+            return $inputs;
+        }
+
+        return $inputs->with([
+            'motivation' => $this->motivation
+                ->collect($managerId, $month, $params->for('motivation_variable'))
+                ->toArray(),
+        ]);
+    }
+
+    /**
      * Собрать, посчитать и сохранить черновик (создать или обновить строку).
      */
     private function store(int $managerId, CarbonImmutable|\Illuminate\Support\Carbon $period, ?PayrollCalculation $draft, int $version, string $source): PayrollCalculation
     {
         $params = $this->params->effective($managerId, $period);
-        $inputs = $this->collector->collect($managerId, $period, $params->for('new_clients_bonus'));
+        $inputs = $this->collectInputs($managerId, $period, $params);
         $breakdown = $this->calculator->calculate($params, $inputs);
 
         $hash = $inputs->hash();

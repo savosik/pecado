@@ -6,6 +6,10 @@ use App\Services\Payroll\Components\Kpi\DisciplinePenaltyFactor;
 use App\Services\Payroll\Components\Kpi\RevenueFactor;
 use App\Services\Payroll\Components\KpiBonusComponent;
 use App\Services\Payroll\Components\ManualCorrectionComponent;
+use App\Services\Payroll\Components\Motivation\ChannelsAllowanceComponent;
+use App\Services\Payroll\Components\Motivation\SubstitutionAllowanceComponent;
+use App\Services\Payroll\Components\Motivation\TransitionGuaranteeComponent;
+use App\Services\Payroll\Components\Motivation\VariablePartComponent;
 use App\Services\Payroll\Components\NewClientsBonusComponent;
 use App\Services\Payroll\Components\SalaryComponent;
 
@@ -28,6 +32,14 @@ return [
         'extra_income' => ExtraIncomeComponent::class,
         'new_clients_bonus' => NewClientsBonusComponent::class,
         'manual_correction' => ManualCorrectionComponent::class,
+
+        // Положение о мотивации редакции 2.2 (эпик mot-00). Схема v1 их не включает;
+        // показатели П1…К1 отдельными ключами не регистрируются намеренно: их состав
+        // задан Положением, и включаются они только вместе с переменной частью.
+        'motivation_channels_allowance' => ChannelsAllowanceComponent::class,
+        'motivation_substitution' => SubstitutionAllowanceComponent::class,
+        'motivation_variable' => VariablePartComponent::class,
+        'motivation_guarantee' => TransitionGuaranteeComponent::class,
     ],
 
     /*

@@ -7,6 +7,7 @@ use App\Services\Payroll\Dto\EffectiveParams;
 use App\Services\Payroll\Dto\PayrollBreakdown;
 use App\Services\Payroll\Dto\PayrollContext;
 use App\Services\Payroll\Dto\PayrollInputs;
+use App\Services\Payroll\Support\Money;
 
 /**
  * Чистый расчёт дохода: параметры + входы → разбор по компонентам и итог.
@@ -21,14 +22,19 @@ class PayrollCalculator
 
     public function calculate(EffectiveParams $params, PayrollInputs $inputs): PayrollBreakdown
     {
-        $context = new PayrollContext($inputs, $params);
         $results = [];
         $warnings = [];
+        $running = 0.0;
 
         foreach ($params->order as $entry) {
             if (! $entry['enabled'] || ! $this->catalog->exists($entry['key'])) {
                 continue;
             }
+
+            // Сумма уже посчитанного нужна компонентам, которые по нормативу идут
+            // последними и от итога зависят (доплата до гарантии). Порядок задаёт
+            // схема; интерпретации «куда применить» здесь по-прежнему нет.
+            $context = new PayrollContext($inputs, $params, Money::round($running));
 
             $component = $this->catalog->component($entry['key']);
             $result = $component->compute($context, $params->for($entry['key']));
@@ -38,6 +44,7 @@ class PayrollCalculator
             }
 
             $results[] = $result;
+            $running += (float) ($result->amount ?? 0.0);
             $warnings = array_merge($warnings, $result->warnings);
         }
 

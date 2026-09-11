@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Analytics\AnalyticsContext;
 use App\Services\Analytics\AnalyticsFilters;
 use App\Services\Analytics\ShipmentAnalyticsService;
+use App\Services\Payroll\Support\WorkingCalendar;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Cache;
@@ -62,6 +63,7 @@ class PlanProgressService
         private readonly ShipmentAnalyticsService $analytics,
         private readonly ClientPlanFactService $clientPlanFact,
         private readonly ClientRowEnricher $enricher,
+        private readonly WorkingCalendar $calendar,
     ) {}
 
     /**
@@ -119,16 +121,20 @@ class PlanProgressService
 
         $points = [];
         $cumulative = 0.0;
-        $dayNumber = 0;
+        $workingDays = 0;
 
         foreach ($daily as $date => $amount) {
-            $dayNumber++;
+            // Идеальная линия списывается только по рабочим дням: в выходной
+            // план не «горит», и точка остаётся на уровне предыдущего рабочего дня.
+            if ($this->calendar->isWorkingDay(CarbonImmutable::parse($date))) {
+                $workingDays++;
+            }
             $cumulative += $amount;
 
             $points[] = [
                 'date' => $date,
-                'ideal_remaining' => $plan !== null
-                    ? round(max(0.0, $plan * (1 - $dayNumber / $timeline['days_total'])), 2)
+                'ideal_remaining' => $plan !== null && $timeline['days_total'] > 0
+                    ? round(max(0.0, $plan * (1 - $workingDays / $timeline['days_total'])), 2)
                     : null,
                 'actual_remaining' => $plan !== null ? round($plan - $cumulative, 2) : null,
                 'fact_cumulative' => round($cumulative, 2),
@@ -403,22 +409,15 @@ class PlanProgressService
      */
     public function timeline(CarbonInterface $month): array
     {
-        $start = CarbonImmutable::instance($month)->startOfMonth();
-        $total = (int) $start->daysInMonth;
-        $today = CarbonImmutable::now();
-
-        if ($today->lessThan($start)) {
-            $passed = 0;                       // месяц ещё не начался
-        } elseif ($today->greaterThan($start->endOfMonth())) {
-            $passed = $total;                  // месяц закрыт
-        } else {
-            $passed = (int) $today->day;
-        }
+        // Единый знаменатель дней с расчётом оплаты труда (mot-41): рабочие дни
+        // производственного календаря, а не календарные. Темп «нужно в день» и
+        // прогноз считаются по дням, в которые отдел действительно продаёт.
+        $days = $this->calendar->monthDays($month);
 
         return [
-            'days_total' => $total,
-            'days_passed' => $passed,
-            'days_left' => max(0, $total - $passed),
+            'days_total' => $days['total'],
+            'days_passed' => $days['passed'],
+            'days_left' => $days['left'],
         ];
     }
 

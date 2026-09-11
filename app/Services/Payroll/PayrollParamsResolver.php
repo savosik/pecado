@@ -39,6 +39,16 @@ class PayrollParamsResolver
     }
 
     /**
+     * Параметры по заданной версии схемы с отклонениями менеджера — для
+     * параллельного расчёта переходного периода (п. 12.2): та же схема слоёв,
+     * но версия схемы выбирается вызывающим, а не по месяцу.
+     */
+    public function effectiveForScheme(int $managerId, PayrollScheme $scheme, CarbonInterface $month): EffectiveParams
+    {
+        return $this->merge($scheme, $this->layer($managerId, null), $this->layer($managerId, $month));
+    }
+
+    /**
      * Параметры только по схеме, без отклонений, — для тестов и предпросмотра.
      */
     public function fromScheme(PayrollScheme $scheme): EffectiveParams

@@ -81,3 +81,11 @@ Schedule::command('payroll:rebuild-invoices')->dailyAt('06:30')->withoutOverlapp
 Schedule::command('payroll:recalculate --stale')->everyTenMinutes()->between('7:00', '21:00')->withoutOverlapping();
 // Первого числа — финальный пересчёт черновиков прошлого месяца; утверждает РОП руками.
 Schedule::command('payroll:close-month')->monthlyOn(1, '06:50')->withoutOverlapping();
+
+// Мотивация 2.0 (mot-00). Кэш новизны производен от отгрузок: пересчитывается
+// целиком до ночного ребилда моста накладных, чтобы утренний расчёт видел
+// и новых партнёров, и их задолженность в одном состоянии.
+Schedule::command('motivation:rebuild-novelty')->dailyAt('06:10')->withoutOverlapping();
+// Квартальная премия: ежедневный пересчёт черновика — трекер должен показывать
+// текущее положение, а не картину на конец квартала. Утверждённую не трогает.
+Schedule::command('motivation:calculate-quarter')->dailyAt('06:20')->withoutOverlapping();

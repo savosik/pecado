@@ -339,13 +339,13 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                     title="Выполнение"
                     value={summary.percent === null ? '—' : `${summary.percent}%`}
                     accent={palette(summary.percent)}
-                    hint={`прошло ${summary.days_passed} из ${summary.days_total} дней`}
+                    hint={`прошло ${summary.days_passed} из ${summary.days_total} рабочих дней`}
                 />
                 <KpiTile title="Остаток" value={money(summary.remaining)} />
                 <KpiTile
                     title="Нужно в день"
                     value={money(summary.needed_per_day)}
-                    hint={summary.days_left > 0 ? `осталось ${summary.days_left} дн.` : 'месяц закрыт'}
+                    hint={summary.days_left > 0 ? `осталось ${summary.days_left} раб. дн.` : 'месяц закрыт'}
                 />
                 <KpiTile
                     title="Прогноз при текущем темпе"

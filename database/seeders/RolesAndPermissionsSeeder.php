@@ -172,6 +172,9 @@ class RolesAndPermissionsSeeder extends Seeder
         // на view/edit: это не раздел, а переключатель сессии. Границы задаёт
         // скоуп клиентов — менеджер входит только под своими.
         'crm-impersonate' => ['use'],
+        // Мотивация 2.0 (mot-00). Свои права, а не crm-salary: раздел скрыт от менеджеров
+        // до ввода Положения в действие, а crm-salary у них уже есть ради «Моей зарплаты».
+        'crm-motivation' => ['view', 'edit'],
         // Зарплата: view — своя, у всего отдела; чужие и сводка отдела дополнительно
         // требуют crm-clients-all.view — то же правило, что у разрезов планов.
         // edit — параметры, корректировки, разметка накладных и утверждение: только РОП.
@@ -289,6 +292,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-agent-tokens' => 'CRM: Токены ИИ-агентов',
         'crm-impersonate' => 'CRM: Вход под партнёром',
         'crm-salary' => 'CRM: Зарплата',
+        'crm-motivation' => 'CRM: Мотивация 2.0',
         'wms-dashboard' => 'Склад: Рабочий стол',
         'wms-defects' => 'Склад: Некондиция',
         'wms-defect-types' => 'Склад: Справочник дефектов',
@@ -347,6 +351,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
                 'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-department', 'crm-leads', 'crm-lead-stages', 'crm-contractors', 'crm-team', 'crm-absences', 'crm-timesheet', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-shortages', 'crm-shortage-reasons', 'crm-reserves', 'crm-contacts', 'crm-contracts', 'crm-agent-tokens', 'crm-impersonate', 'crm-salary',
+                // Мотивация 2.0: на время разработки и параллельного расчёта — только руководителю.
+                'crm-motivation',
                 // Себестоимость руководителю отдела появится вместе с отчётом по марже
                 // и только под `crm-`-префиксом: `product-costs` — админский ресурс,
                 // и выдача его этой роли открыла бы ей вход в /admin (PermissionNamingTest).
