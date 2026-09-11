@@ -126,11 +126,26 @@ class ClientProfileController extends CrmController
             ? null
             : PersonalManager::query()->active()->findOrFail($managerId);
 
-        $lifecycle->changeManager($user, $manager, $this->crmActor($request), $request->validated('reason'));
+        $actor = $this->crmActor($request);
 
-        return back()->with('success', $manager === null
+        $lifecycle->changeManager($user, $manager, $actor, $request->validated('reason'));
+
+        $message = $manager === null
             ? "{$user->display_name}: менеджер не закреплён"
-            : "{$user->display_name} закреплён за менеджером {$manager->name}");
+            : "{$user->display_name} закреплён за менеджером {$manager->name}";
+
+        // Снятый с менеджера партнёр — лид, а лидов видно только с галочкой
+        // «Нераспределённые». Без неё back() вёл на карточку, которая для
+        // этого же РОПа тут же отдавала 404, хотя смена уже сохранилась.
+        // Галочку сами не включаем: в разрезе «весь отдел» она сужает список
+        // до одних лидов, и РОП потерял бы привычную выборку.
+        if (! User::query()->visibleInCrm($actor)->whereKey($user->getKey())->exists()) {
+            return redirect()
+                ->route('crm.clients.index')
+                ->with('success', "{$message}. Партнёр теперь лид — его видно с галочкой «Нераспределённые».");
+        }
+
+        return back()->with('success', $message);
     }
 
     /**

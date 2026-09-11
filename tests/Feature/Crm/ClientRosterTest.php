@@ -287,6 +287,41 @@ class ClientRosterTest extends TestCase
     }
 
     #[Test]
+    public function head_without_unassigned_checkbox_returns_to_list_after_unassigning(): void
+    {
+        // Ровно случай с прода: РОП без галочки «Нераспределённые» снял менеджера
+        // из карточки, back() вёл на неё же — а лид для него невидим, отсюда 404.
+        $this->head->forceFill(['crm_show_unassigned' => false])->save();
+
+        $this->actingAs($this->head)
+            ->from(route('crm.clients.show', $this->client->id))
+            ->put(route('crm.clients.manager.update', $this->client->id), [
+                'personal_manager_id' => null,
+            ])
+            ->assertRedirect(route('crm.clients.index'))
+            ->assertSessionHas('success');
+
+        // Смена сохранена, галочка не включена за РОПа.
+        $this->assertNull($this->client->fresh()->personal_manager_id);
+        $this->assertFalse($this->head->fresh()->crm_show_unassigned);
+    }
+
+    #[Test]
+    public function head_with_unassigned_checkbox_stays_on_the_card_after_unassigning(): void
+    {
+        $card = route('crm.clients.show', $this->client->id);
+
+        $this->actingAs($this->head)
+            ->from($card)
+            ->put(route('crm.clients.manager.update', $this->client->id), [
+                'personal_manager_id' => null,
+            ])
+            ->assertRedirect($card);
+
+        $this->actingAs($this->head)->get($card)->assertOk();
+    }
+
+    #[Test]
     public function reassignment_is_visible_in_status_history(): void
     {
         $other = PersonalManager::factory()->create(['name' => 'Курочкина']);
