@@ -4,13 +4,13 @@ namespace Tests\Feature\Order;
 
 use App\Enums\OrderStatus;
 use App\Jobs\PublishOrderToErpJob;
+use App\Models\NotificationPreference;
 use App\Models\Order;
 use App\Models\PersonalManager;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\Test;
-use Tests\Feature\Concerns\EnablesClientNotifications;
 use Tests\TestCase;
 
 /**
@@ -19,7 +19,6 @@ use Tests\TestCase;
  */
 class ReserveAutoReleaseTest extends TestCase
 {
-    use EnablesClientNotifications;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -96,11 +95,11 @@ class ReserveAutoReleaseTest extends TestCase
     }
 
     #[Test]
-    public function released_notification_is_captured_for_subscribed_client(): void
+    public function released_notification_is_captured_by_default(): void
     {
+        // Без настроек партнёра: резервные поводы — исключение из общей тишины
         $user = $this->clientWithManager();
-        $this->enableNotificationsFor($user, ['orders.reserve_released', 'orders.reserve_expiring']);
-        $order = $this->reserveOrder($user, now()->subMinutes(5));
+        $this->reserveOrder($user, now()->subMinutes(5));
 
         $this->artisan('reserve:release-expired')->assertSuccessful();
 
@@ -110,10 +109,27 @@ class ReserveAutoReleaseTest extends TestCase
     }
 
     #[Test]
+    public function partner_can_opt_out_of_expiring_notification(): void
+    {
+        $user = $this->clientWithManager();
+        NotificationPreference::query()->create([
+            'user_id' => $user->id,
+            'occasion_key' => 'orders.reserve_expiring',
+            'is_enabled' => false,
+        ]);
+        $this->reserveOrder($user, now()->addHours(2));
+
+        $this->artisan('reserve:release-expired')->assertSuccessful();
+
+        $this->assertDatabaseMissing('crm_emails', [
+            'origin_event' => 'orders.reserve_expiring',
+        ]);
+    }
+
+    #[Test]
     public function expiring_notification_is_captured_once(): void
     {
         $user = $this->clientWithManager();
-        $this->enableNotificationsFor($user, ['orders.reserve_expiring']);
         $this->reserveOrder($user, now()->addHours(2));
 
         $this->artisan('reserve:release-expired')->assertSuccessful();
