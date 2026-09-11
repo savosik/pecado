@@ -50,9 +50,26 @@ class MotivationSchemaTest extends TestCase
             'motivation_quarterly_shares',
             'motivation_plan_orders',
             'motivation_debt_exclusions',
+            'motivation_objections',
+            'motivation_shadow_calculations',
         ] as $table) {
             $this->assertTrue(Schema::hasTable($table), "Нет таблицы {$table}");
         }
+    }
+
+    #[Test]
+    #[TestDox('В схеме 2.2 нет KPI-премии и множителя активных клиентов: планы на партнёра из оплаты исключены')]
+    public function scheme_v2_has_no_kpi_components(): void
+    {
+        $scheme = app(\App\Services\Motivation\MotivationSchemeInstaller::class)->install(Carbon::parse('2026-10-01'));
+        $keys = array_column($scheme->orderedComponents(), 'key');
+
+        $this->assertSame((array) config('motivation.scheme_v2.components'), $keys);
+        foreach (['kpi_bonus', 'active_clients', 'new_clients_bonus'] as $legacy) {
+            $this->assertNotContains($legacy, $keys, "Компонент прежней схемы {$legacy} не должен входить в 2.2");
+        }
+        $this->assertContains('motivation_variable', $keys);
+        $this->assertSame('motivation_guarantee', end($keys), 'Гарантия считается последней');
     }
 
     #[Test]

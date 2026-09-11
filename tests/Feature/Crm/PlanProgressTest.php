@@ -185,14 +185,16 @@ class PlanProgressTest extends TestCase
 
         $summary = $this->progress($this->manager)['summary'];
 
-        $this->assertSame(10, $summary['days_passed']);
-        $this->assertSame(31, $summary['days_total']);
-        $this->assertSame(21, $summary['days_left']);
+        // Знаменатель — рабочие дни производственного календаря (mot-41): в августе 2026
+        // их 21, к 10-му числу (понедельник) прошло 6 — 3–7 августа и сам 10-й.
+        $this->assertSame(6, $summary['days_passed']);
+        $this->assertSame(21, $summary['days_total']);
+        $this->assertSame(15, $summary['days_left']);
         $this->assertEqualsWithDelta(800000.0, $summary['remaining'], 0.01);
-        // 200 000 за 10 дней → 620 000 за 31 день.
-        $this->assertEqualsWithDelta(620000.0, $summary['forecast'], 0.01);
-        $this->assertEqualsWithDelta(800000 / 21, $summary['needed_per_day'], 0.01);
-        // Ожидалось 1 000 000 × 10/31 ≈ 322 580, получено 200 000 — отстаём.
+        // 200 000 за 6 рабочих дней → 700 000 за 21.
+        $this->assertEqualsWithDelta(700000.0, $summary['forecast'], 0.01);
+        $this->assertEqualsWithDelta(800000 / 15, $summary['needed_per_day'], 0.01);
+        // Ожидалось 1 000 000 × 6/21 ≈ 285 714, получено 200 000 — отстаём.
         $this->assertSame('behind', $summary['pace']);
     }
 
@@ -230,9 +232,10 @@ class PlanProgressTest extends TestCase
         $this->assertSame('2026-08-01', $points[0]['date']);
         $this->assertSame('2026-08-10', $points[9]['date']);
 
-        // Идеальная линия — равномерное списание: за первый день сгорает 1/31 плана.
-        $this->assertEqualsWithDelta(620000 * (1 - 1 / 31), $points[0]['ideal_remaining'], 0.01);
-        $this->assertEqualsWithDelta(620000 * (1 - 10 / 31), $points[9]['ideal_remaining'], 0.01);
+        // Идеальная линия списывается по рабочим дням: 1 августа 2026 — суббота, план
+        // ещё не «горит»; к 10-му прошло 6 рабочих дней из 21.
+        $this->assertEqualsWithDelta(620000.0, $points[0]['ideal_remaining'], 0.01);
+        $this->assertEqualsWithDelta(620000 * (1 - 6 / 21), $points[9]['ideal_remaining'], 0.01);
 
         // Фактическая — план минус накопленный факт: до 3-го числа не продано ничего.
         $this->assertEqualsWithDelta(620000.0, $points[1]['actual_remaining'], 0.01);
@@ -350,8 +353,8 @@ class PlanProgressTest extends TestCase
         $this->assertEqualsWithDelta(300000.0, $mine['fact'], 0.01);
         $this->assertSame(30, $mine['percent']);
         $this->assertSame(1, $mine['clients_count']);
-        // 300 000 за 10 дней → 930 000 за 31 день.
-        $this->assertEqualsWithDelta(930000.0, $mine['forecast'], 0.01);
+        // 300 000 за 6 рабочих дней → 1 050 000 за 21 рабочий день августа.
+        $this->assertEqualsWithDelta(1050000.0, $mine['forecast'], 0.01);
 
         // Менеджер без плана, но с отгрузками, из отчёта не выпадает.
         $this->assertNull($rows[$this->foreignProfile->id]['plan']);
