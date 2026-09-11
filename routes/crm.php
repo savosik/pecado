@@ -26,6 +26,7 @@ use App\Http\Controllers\Crm\MailSuppressionController;
 use App\Http\Controllers\Crm\MotivationController;
 use App\Http\Controllers\Crm\MotivationDebtsController;
 use App\Http\Controllers\Crm\MotivationPartnersController;
+use App\Http\Controllers\Crm\MotivationPayslipController;
 use App\Http\Controllers\Crm\MotivationReferenceController;
 use App\Http\Controllers\Crm\NotificationPreferenceController;
 use App\Http\Controllers\Crm\OpportunityController;
@@ -652,6 +653,10 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/motivation/plan/data', [MotivationReferenceController::class, 'planData'])->name('motivation.plan.data');
         Route::get('/motivation/quarter', [MotivationReferenceController::class, 'quarter'])->name('motivation.quarter');
         Route::get('/motivation/quarter/data', [MotivationReferenceController::class, 'quarterData'])->name('motivation.quarter.data');
+        Route::get('/motivation/payslip', [MotivationPayslipController::class, 'index'])->name('motivation.payslip');
+        Route::get('/motivation/payslip/data', [MotivationPayslipController::class, 'data'])->name('motivation.payslip.data');
+        Route::get('/motivation/payslip/pdf', [MotivationPayslipController::class, 'pdf'])->name('motivation.payslip.pdf');
+        Route::post('/motivation/objection', [MotivationPayslipController::class, 'objection'])->name('motivation.objection');
         Route::get('/motivation/debts', [MotivationDebtsController::class, 'index'])->name('motivation.debts');
         Route::get('/motivation/debts/data', [MotivationDebtsController::class, 'data'])->name('motivation.debts.data');
     });

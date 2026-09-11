@@ -84,6 +84,8 @@ class MotivationInputCollector
             focusRows: $this->focusRows($partnerIds, $focusItems, $period),
             overdueRows: $overdue['rows'],
             overdueExcludedRows: $overdue['excluded'],
+            documents: $this->documents($basePartners, $newPartners, $names, $period),
+            returnRows: $this->returnRows($partnerIds, $names, $period),
             returns: $returns,
         );
     }
@@ -174,6 +176,78 @@ class MotivationInputCollector
             // П3 на величину возвратов фокусных товаров и должно быть видно.
             'focus' => 0.0,
         ];
+    }
+
+    /**
+     * Отгрузки периода по документам — для расчётного листа.
+     *
+     * Снимок обязан содержать перечень документов (п. 11.2): утверждённый лист
+     * читается без обращения к живым данным, а спор о цифре решается чтением,
+     * а не пересчётом. Суммы документов здесь — улика, итог считает движок
+     * по сервису аналитики; расхождение между ними объясняется возвратами.
+     *
+     * @param  list<int>  $basePartners
+     * @param  list<int>  $newPartners
+     * @param  array<int, string>  $names
+     * @return list<array<string, mixed>>
+     */
+    private function documents(array $basePartners, array $newPartners, array $names, CarbonImmutable $period): array
+    {
+        $ids = array_merge($basePartners, $newPartners);
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $new = array_flip($newPartners);
+
+        return \App\Models\Shipment::query()
+            ->withoutInternalOrganizations()
+            ->whereIn('user_id', $ids)
+            ->whereBetween('erp_created_at', [$period->startOfDay(), $period->endOfMonth()->endOfDay()])
+            ->orderBy('erp_created_at')
+            ->orderBy('id')
+            ->get(['id', 'erp_number', 'user_id', 'erp_created_at', 'total_amount'])
+            ->map(fn (\App\Models\Shipment $shipment): array => [
+                'shipment_id' => (int) $shipment->getKey(),
+                'number' => $shipment->erp_number,
+                'date' => $shipment->erp_created_at?->toDateString(),
+                'partner_id' => (int) $shipment->user_id,
+                'partner_name' => $names[(int) $shipment->user_id] ?? '',
+                'amount' => (float) $shipment->total_amount,
+                'group' => isset($new[(int) $shipment->user_id]) ? 'new' : 'base',
+            ])
+            ->all();
+    }
+
+    /**
+     * Возвраты периода по документам — для расчётного листа.
+     *
+     * @param  list<int>  $partnerIds
+     * @param  array<int, string>  $names
+     * @return list<array<string, mixed>>
+     */
+    private function returnRows(array $partnerIds, array $names, CarbonImmutable $period): array
+    {
+        if ($partnerIds === []) {
+            return [];
+        }
+
+        return ProductReturn::query()
+            ->whereIn('user_id', $partnerIds)
+            ->where('status', \App\Enums\ReturnStatus::COMPLETED->value)
+            ->whereBetween('created_at', [$period->startOfDay(), $period->endOfMonth()->endOfDay()])
+            ->orderBy('created_at')
+            ->get(['id', 'erp_number', 'user_id', 'total_amount', 'created_at'])
+            ->map(fn (ProductReturn $return): array => [
+                'return_id' => (int) $return->getKey(),
+                'number' => $return->erp_number,
+                'date' => $return->created_at?->toDateString(),
+                'partner_id' => (int) $return->user_id,
+                'partner_name' => $names[(int) $return->user_id] ?? '',
+                'amount' => (float) $return->total_amount,
+            ])
+            ->all();
     }
 
     /**

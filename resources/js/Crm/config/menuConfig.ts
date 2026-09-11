@@ -107,6 +107,7 @@ export const menuConfig: MenuGroup[] = [
             { label: "Фокус-товары", icon: LuStar, path: "/crm/motivation/focus", permission: "crm-motivation.view" },
             { label: "Откуда мой план", icon: LuTarget, path: "/crm/motivation/plan", permission: "crm-motivation.view" },
             { label: "Премия отдела", icon: LuTrophy, path: "/crm/motivation/quarter", permission: "crm-motivation.view" },
+            { label: "Расчётный лист", icon: LuReceipt, path: "/crm/motivation/payslip", permission: "crm-motivation.view" },
             // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
             // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
             { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", counter: "shortages" },
