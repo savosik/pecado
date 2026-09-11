@@ -358,6 +358,15 @@ class PayrollCalculationService
      * для месяцев, которые считаются по прежней схеме: там компонента нет,
      * и его входы никто не прочитает.
      */
+    /**
+     * Входы под заданные параметры — для справочного расчёта по другой схеме
+     * (переходный период, п. 12.2). Сохранения нет: снимок пишет вызывающий.
+     */
+    public function inputsFor(int $managerId, CarbonInterface $month, EffectiveParams $params): PayrollInputs
+    {
+        return $this->collectInputs($managerId, $month, $params);
+    }
+
     private function collectInputs(int $managerId, CarbonInterface $month, EffectiveParams $params): PayrollInputs
     {
         $inputs = $this->collector->collect($managerId, $month, $params->for('new_clients_bonus'));

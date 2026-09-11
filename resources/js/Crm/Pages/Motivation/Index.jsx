@@ -10,6 +10,7 @@ import PlanProgress from './components/PlanProgress';
 import MotivationLevers from './components/MotivationLevers';
 import ForecastRange from './components/ForecastRange';
 import MotivationCalculator from './components/MotivationCalculator';
+import ParallelBlock from './components/ParallelBlock';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -81,10 +82,19 @@ export default function MotivationIndex(props) {
                     <Alert key={warning} status="warning" title={warning} />
                 ))}
 
-                {calc && !calc.on_scheme_v2 && (
+                {calc && !calc.on_scheme_v2 && !calc.parallel && (
                     <Alert status="info" title="Показатели Положения 2.2 для этого месяца не рассчитываются">
                         Расчёт за этот месяц — в разделе <Link href={`/crm/salary?month=${data.month}`}><u>«Моя зарплата»</u></Link>.
                     </Alert>
+                )}
+
+                {calc && !calc.on_scheme_v2 && calc.parallel && (
+                    <>
+                        <ParallelBlock parallel={calc.parallel} />
+                        <Box fontSize="sm" color="fg.muted">
+                            Выплата за этот месяц — по действующей системе; подробный расчёт — в разделе <Link href={`/crm/salary?month=${data.month}`}><u>«Моя зарплата»</u></Link>.
+                        </Box>
+                    </>
                 )}
 
                 {calc && calc.on_scheme_v2 && (
@@ -118,6 +128,8 @@ export default function MotivationIndex(props) {
                                 Месяц утверждён: числа читаются из снимка расчёта и не меняются. Расчётный лист — в разделе «Моя зарплата».
                             </Box>
                         )}
+
+                        {calc.parallel && <ParallelBlock parallel={calc.parallel} />}
                     </>
                 )}
             </VStack>

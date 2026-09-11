@@ -26,6 +26,7 @@ class TeamSummaryService
         private readonly PayrollCalculationService $calculations,
         private readonly PayrollCalculator $calculator,
         private readonly MotivationAdvisor $advisor,
+        private readonly ParallelCalculationService $parallel,
     ) {}
 
     /**
@@ -45,6 +46,7 @@ class TeamSummaryService
         $plan = $sum('plan');
         $shipped = $sum('shipped');
         $forecasts = array_filter(array_column($rows, 'forecast'), fn ($v): bool => $v !== null);
+        $parallels = array_values(array_filter(array_column($rows, 'parallel'), fn ($v): bool => $v !== null));
 
         return [
             'month' => $period->toDateString(),
@@ -58,6 +60,13 @@ class TeamSummaryService
                 'variable' => $sum('variable'),
                 'overdue' => $sum('overdue'),
                 'note' => 'Квартальная премия отдела в фонд месяца не входит.',
+            ],
+            // Переходный период (п. 12.2): сколько стоит переход фонду — сумма разниц по работникам.
+            'parallel' => $parallels === [] ? null : [
+                'phase' => $parallels[0]['phase'],
+                'scheme_label' => $parallels[0]['scheme_label'],
+                'total' => Money::round(array_sum(array_column($parallels, 'total'))),
+                'difference' => Money::round(array_sum(array_column($parallels, 'difference'))),
             ],
             'rows' => $rows,
             'readiness' => $this->readiness($rows),
@@ -140,6 +149,7 @@ class TeamSummaryService
             'open_objections' => $openObjections,
             'has_plan' => $plan !== null && $plan > 0,
             'warnings' => array_values((array) ($breakdown['warnings'] ?? [])),
+            'parallel' => $this->parallel->summary($calculation),
         ];
     }
 

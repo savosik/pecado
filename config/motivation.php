@@ -56,6 +56,17 @@ return [
         'requires_confirmed_history' => (bool) env('MOTIVATION_NOVELTY_REQUIRES_HISTORY', true),
     ],
 
+    /*
+     * Параллельный расчёт переходного периода (п. 12.2): сколько периодов до
+     * введения Положения считать по обеим системам и сколько после — показывать
+     * «по прежней системе» для сравнения. Снимок по «другой» схеме справочный.
+     */
+    'parallel' => [
+        'months_before' => (int) env('MOTIVATION_PARALLEL_MONTHS_BEFORE', 2),
+        'months_after' => (int) env('MOTIVATION_PARALLEL_MONTHS_AFTER', 3),
+        'stale_minutes' => 10,
+    ],
+
     'scheme_v2' => [
         'title' => 'Отдел продаж — Положение 2.2',
         'components' => [

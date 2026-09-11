@@ -53,6 +53,14 @@ export default function MotivationTeam({ month, month_label: monthLabel, months,
                     <Stat label="Выполнение" value={department.percent === null ? '—' : fmtPercent(department.percent, 0)} tone={department.percent === null ? undefined : department.percent >= 1 ? 'green' : undefined} />
                     <Stat label="Прогноз к концу месяца" value={department.forecast === null ? '—' : fmtRub0(department.forecast)} hint={isCurrent ? 'Доход всех работников, если так и пойдёт: тот же темп отгрузок и долгов до конца месяца.' : 'Прогноз строится только для текущего месяца.'} />
                     <Stat label="Фонд оплаты за месяц" value={fmtRub0(department.payroll)} hint={department.note} />
+                    {department.parallel && (
+                        <Stat
+                            label={department.parallel.phase === 'before' ? 'Стоимость перехода' : 'Против прежней системы'}
+                            value={fmtSigned(department.parallel.difference)}
+                            tone={department.parallel.difference > 0 ? 'orange' : department.parallel.difference < 0 ? 'green' : undefined}
+                            hint={`Сумма разниц по работникам: фонд по схеме «${department.parallel.scheme_label}» ${fmtRub0(department.parallel.total)} против оплачиваемого. Справочно, в ведомость не входит (п. 12.2).`}
+                        />
+                    )}
                 </SimpleGrid>
 
                 {rows.some((r) => !r.on_scheme_v2) && (
@@ -74,6 +82,8 @@ export default function MotivationTeam({ month, month_label: monthLabel, months,
                                 <Table.ColumnHeader textAlign="right">К1</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="right">Переменная</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="right">Итого</Table.ColumnHeader>
+                                {department.parallel && <Table.ColumnHeader textAlign="right"><HStack justify="flex-end" gap={1}>{department.parallel.phase === 'before' ? 'По новой' : 'По прежней'}<MetricHint text={`Справочный расчёт по схеме «${department.parallel.scheme_label}» на тех же данных (п. 12.2). В ведомость не попадает.`} /></HStack></Table.ColumnHeader>}
+                                {department.parallel && <Table.ColumnHeader textAlign="right">Разница</Table.ColumnHeader>}
                                 <Table.ColumnHeader textAlign="right">Просрочка</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="right">Активных</Table.ColumnHeader>
                                 <Table.ColumnHeader>Статус</Table.ColumnHeader>
@@ -103,6 +113,8 @@ export default function MotivationTeam({ month, month_label: monthLabel, months,
                                     <Table.Cell textAlign="right"><Text fontSize="sm" color={r.k1 > 0 ? 'red.fg' : 'fg.subtle'} fontVariantNumeric="tabular-nums">{r.k1 > 0 ? fmtSigned(-r.k1) : '—'}</Text></Table.Cell>
                                     <Table.Cell textAlign="right"><Money v={r.variable} strong /></Table.Cell>
                                     <Table.Cell textAlign="right"><Text fontSize="sm" fontWeight="800" fontVariantNumeric="tabular-nums">{fmtRub0(r.total)}</Text></Table.Cell>
+                                    {department.parallel && <Table.Cell textAlign="right"><Text fontSize="sm" fontVariantNumeric="tabular-nums">{r.parallel ? fmtRub0(r.parallel.total) : '—'}</Text></Table.Cell>}
+                                    {department.parallel && <Table.Cell textAlign="right"><Text fontSize="sm" fontWeight="700" fontVariantNumeric="tabular-nums" color={!r.parallel ? 'fg.subtle' : r.parallel.difference > 0 ? 'green.fg' : r.parallel.difference < 0 ? 'red.fg' : 'fg.subtle'}>{r.parallel ? fmtSigned(r.parallel.difference) : '—'}</Text></Table.Cell>}
                                     <Table.Cell textAlign="right">
                                         <Text fontSize="sm" fontVariantNumeric="tabular-nums" color={r.overdue > 0 ? 'orange.fg' : 'fg.subtle'}>{r.overdue > 0 ? fmtRub0(r.overdue) : '—'}</Text>
                                         {r.overdue_share !== null && r.overdue > 0 && <Text fontSize="xs" color="fg.subtle">{fmtPercent(r.overdue_share, 0)} от вала</Text>}

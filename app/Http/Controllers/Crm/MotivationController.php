@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Crm;
 use App\Models\PayrollCalculation;
 use App\Services\Motivation\Dto\MotivationInputs;
 use App\Services\Motivation\MotivationPresenter;
+use App\Services\Motivation\ParallelCalculationService;
 use App\Services\Payroll\Dto\EffectiveParams;
 use App\Services\Payroll\Dto\PayrollInputs;
 use App\Services\Payroll\PayrollCalculationService;
@@ -39,6 +40,7 @@ class MotivationController extends CrmController
         private readonly MotivationPresenter $presenter,
         private readonly PayrollCalculator $calculator,
         private readonly PayrollParamsResolver $paramsResolver,
+        private readonly ParallelCalculationService $parallel,
     ) {}
 
     public function index(Request $request): Response
@@ -169,6 +171,8 @@ class MotivationController extends CrmController
 
         $calculation = $this->calculations->ensureDraft((int) $manager->getKey(), $month);
         $payload['calculation'] = $this->presenter->present($calculation);
+        // Переходный период (п. 12.2): рядом с оплачиваемым итогом — расчёт по другой системе.
+        $payload['calculation']['parallel'] = $this->parallel->compare($calculation);
 
         return $payload;
     }
