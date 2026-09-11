@@ -55,7 +55,7 @@ class PlanCalculator
      *     decline_limited: bool,
      *     values: array<string, float>,
      *     previous_values: array<string, float|null>,
-     *     sample: array{days: int, excluded_days: int, zero_days: int, from: string, to: string}
+     *     sample: array{days: int, excluded_days: int, zero_days: int, from: string, to: string, by_month: list<array{month: string, amount: float, working_days: int, excluded_days: int}>}
      * }
      */
     public function calculate(int $managerId, CarbonInterface $quarter, array $params = [], bool $waiveDeclineLimit = false): array
@@ -126,6 +126,7 @@ class PlanCalculator
                 // работник действительно простаивал, либо данные периода неполны;
                 // различить это может только человек, и он обязан это видеть.
                 'zero_days' => count(array_filter($sample['amounts'], fn (float $v): bool => $v <= 0.0)),
+                'by_month' => $sample['by_month'],
                 'from' => $start->subMonths($depth)->toDateString(),
                 'to' => $start->subDay()->toDateString(),
             ],
@@ -141,7 +142,7 @@ class PlanCalculator
      * отгрузки — а при истории с января 2026 в новизне побывали почти все,
      * и медиана обращалась в ноль.
      *
-     * @return array{amounts: list<float>, excluded: int}
+     * @return array{amounts: list<float>, excluded: int, by_month: list<array{month: string, amount: float, working_days: int, excluded_days: int}>}
      */
     private function dailyAmounts(int $managerId, CarbonImmutable $from, CarbonImmutable $to): array
     {
@@ -149,6 +150,7 @@ class PlanCalculator
 
         $amounts = [];
         $excluded = 0;
+        $byMonth = [];
 
         for ($month = $from->startOfMonth(); $month->lte($to); $month = $month->addMonth()) {
             $monthStart = $month->greaterThan($from) ? $month : $from;
@@ -156,6 +158,7 @@ class PlanCalculator
             $monthEnd = $monthEnd->greaterThan($to) ? $to : $monthEnd;
 
             $byDay = $this->dailySeries($managerId, $month, $monthStart, $monthEnd);
+            $summary = ['month' => $month->toDateString(), 'amount' => 0.0, 'working_days' => 0, 'excluded_days' => 0];
 
             for ($day = $monthStart; $day->lte($monthEnd); $day = $day->addDay()) {
                 if (! $this->calendar->isWorkingDay($day)) {
@@ -164,17 +167,24 @@ class PlanCalculator
 
                 if (in_array($day->toDateString(), $absence, true)) {
                     $excluded++;
+                    $summary['excluded_days']++;
 
                     continue;
                 }
 
                 // День без отгрузок — это ноль, а не пропуск: медиана берётся вместо
                 // среднего именно затем, чтобы слабые дни были видны.
-                $amounts[] = $byDay[$day->toDateString()] ?? 0.0;
+                $amount = $byDay[$day->toDateString()] ?? 0.0;
+                $amounts[] = $amount;
+                $summary['amount'] += $amount;
+                $summary['working_days']++;
             }
+
+            $summary['amount'] = Money::round($summary['amount']);
+            $byMonth[] = $summary;
         }
 
-        return ['amounts' => $amounts, 'excluded' => $excluded];
+        return ['amounts' => $amounts, 'excluded' => $excluded, 'by_month' => $byMonth];
     }
 
     /**

@@ -37,6 +37,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property array<string, mixed> $values
  * @property array<string, mixed>|null $previous_values
  * @property string $status
+ * @property string|null $comment
+ * @property \Illuminate\Support\Carbon|null $approved_at
  */
 class MotivationPlanOrder extends Model
 {

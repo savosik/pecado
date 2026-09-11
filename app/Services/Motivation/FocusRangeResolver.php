@@ -59,6 +59,25 @@ class FocusRangeResolver
      */
     public function fromRules(CarbonInterface $month): array
     {
+        $items = [];
+
+        foreach ($this->rulesByProduct($month) as $productId => $rule) {
+            $items[$productId] = $rule->rate === null ? null : (float) $rule->rate;
+        }
+
+        return $items;
+    }
+
+    /**
+     * Какое правило применилось к каждому товару в периоде: product_id → правило.
+     *
+     * Нужно экрану перечня — показать, с какого числа позиция в перечне и когда
+     * выходит, — и расчёту, которому важна только ставка.
+     *
+     * @return array<int, MotivationFocusRule>
+     */
+    public function rulesByProduct(CarbonInterface $month): array
+    {
         $period = CarbonImmutable::instance($month)->startOfMonth();
 
         // Правило действует в периоде, если пересекается с ним хотя бы одним днём:
@@ -69,20 +88,18 @@ class FocusRangeResolver
             ->orderBy('scope')
             ->get();
 
-        $items = [];
+        $byProduct = [];
 
         foreach ($rules as $rule) {
-            $rate = $rule->rate === null ? null : (float) $rule->rate;
-
             foreach ($this->productIds($rule) as $productId) {
                 // Своя ставка правила приоритетнее общей; иначе первое совпадение.
-                if ($rate !== null || ! array_key_exists($productId, $items)) {
-                    $items[$productId] = $rate;
+                if ($rule->rate !== null || ! array_key_exists($productId, $byProduct)) {
+                    $byProduct[$productId] = $rule;
                 }
             }
         }
 
-        return $items;
+        return $byProduct;
     }
 
     /**

@@ -34,6 +34,8 @@ import {
     LuSparkles,
     LuActivity,
     LuFileWarning,
+    LuTrophy,
+    LuStar,
     LuSlidersHorizontal,
     LuCoins,
 } from "react-icons/lu";
@@ -102,6 +104,9 @@ export const menuConfig: MenuGroup[] = [
             { label: "Кого разбудить", icon: LuBellRing, path: "/crm/motivation/wake", permission: "crm-motivation.view" },
             { label: "Мои новые клиенты", icon: LuUserPlus, path: "/crm/motivation/new-partners", permission: "crm-motivation.view" },
             { label: "Свободные клиенты", icon: LuUsers, path: "/crm/motivation/pool", permission: "crm-motivation.view" },
+            { label: "Фокус-товары", icon: LuStar, path: "/crm/motivation/focus", permission: "crm-motivation.view" },
+            { label: "Откуда мой план", icon: LuTarget, path: "/crm/motivation/plan", permission: "crm-motivation.view" },
+            { label: "Премия отдела", icon: LuTrophy, path: "/crm/motivation/quarter", permission: "crm-motivation.view" },
             // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
             // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
             { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", counter: "shortages" },
