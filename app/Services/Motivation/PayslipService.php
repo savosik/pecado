@@ -3,6 +3,8 @@
 namespace App\Services\Motivation;
 
 use App\Models\Motivation\MotivationObjection;
+use App\Models\Motivation\MotivationQuarterlyBonus;
+use App\Models\Motivation\MotivationQuarterlyShare;
 use App\Models\PayrollCalculation;
 use App\Models\User;
 use App\Services\Payroll\Dto\PayrollInputs;
@@ -109,7 +111,46 @@ class PayslipService
             'excluded' => $motivation->overdueExcludedRows ?? [],
             'corrections' => array_map(fn ($row): array => (array) $row, $inputs->corrections === [] ? [] : array_map(fn ($c) => $c->toArray(), $inputs->corrections)),
             'objection' => $this->objection($calculation),
+            'quarterly_share' => $this->quarterlyShare($calculation),
             'warnings' => $presented['warnings'],
+        ];
+    }
+
+    /**
+     * Доля работника в квартальной премии отдела — отдельной строкой за последний
+     * месяц квартала (п. 7.6). В переменную часть не входит и в итог месяца не
+     * суммируется: премия начисляется на отдел и выплачивается своим порядком.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function quarterlyShare(PayrollCalculation $calculation): ?array
+    {
+        $month = CarbonImmutable::instance($calculation->period_month)->startOfMonth();
+
+        if (! $month->equalTo($month->endOfQuarter()->startOfMonth())) {
+            return null;
+        }
+
+        $bonus = MotivationQuarterlyBonus::query()->whereDate('quarter_start', $month->startOfQuarter())->first();
+
+        if ($bonus === null || $bonus->status === MotivationQuarterlyBonus::STATUS_DRAFT) {
+            return null;
+        }
+
+        $share = MotivationQuarterlyShare::query()
+            ->where('bonus_id', $bonus->getKey())
+            ->where('personal_manager_id', $calculation->personal_manager_id)
+            ->first();
+
+        return [
+            'quarter_label' => sprintf('%s квартал %d', ['I', 'II', 'III', 'IV'][$month->quarter - 1], $month->year),
+            'bonus_amount' => (float) $bonus->amount,
+            'step' => (int) $bonus->step_reached,
+            'status' => $bonus->status,
+            'status_label' => $bonus->status === MotivationQuarterlyBonus::STATUS_PAID ? 'выплачена' : 'утверждена',
+            'amount' => $share === null ? 0.0 : (float) $share->amount,
+            'reason' => $share?->reason,
+            'distributed' => $share !== null,
         ];
     }
 

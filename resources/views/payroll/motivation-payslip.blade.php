@@ -45,6 +45,19 @@
     </tbody>
 </table>
 
+@if (! empty($slip['quarterly_share']))
+    <h2>Квартальная премия отдела · {{ $slip['quarterly_share']['quarter_label'] }} (п. 7.6)</h2>
+    <p>
+        Премия отдела {{ $money($slip['quarterly_share']['bonus_amount']) }} ({{ $slip['quarterly_share']['status_label'] }}, ступень {{ $slip['quarterly_share']['step'] }}).
+        @if ($slip['quarterly_share']['distributed'])
+            Доля работника: <strong>{{ $money($slip['quarterly_share']['amount']) }}</strong>@if ($slip['quarterly_share']['reason']) — {{ $slip['quarterly_share']['reason'] }}@endif.
+        @else
+            Распределение между работниками ещё не сделано.
+        @endif
+        <span class="muted small">В переменную часть и в итог месяца не входит.</span>
+    </p>
+@endif
+
 @if (($slip['plan']['amount'] ?? null) !== null)
     <h2>План и порог оплаты</h2>
     <table>

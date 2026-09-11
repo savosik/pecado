@@ -26,12 +26,16 @@ use App\Http\Controllers\Crm\MailSuppressionController;
 use App\Http\Controllers\Crm\MotivationController;
 use App\Http\Controllers\Crm\MotivationDebtExclusionsController;
 use App\Http\Controllers\Crm\MotivationDebtsController;
+use App\Http\Controllers\Crm\MotivationDiscountsController;
 use App\Http\Controllers\Crm\MotivationFocusAdminController;
+use App\Http\Controllers\Crm\MotivationForecastController;
+use App\Http\Controllers\Crm\MotivationHealthController;
 use App\Http\Controllers\Crm\MotivationInvoicesController;
 use App\Http\Controllers\Crm\MotivationPartnersController;
 use App\Http\Controllers\Crm\MotivationPayslipController;
 use App\Http\Controllers\Crm\MotivationPlansController;
 use App\Http\Controllers\Crm\MotivationPoolController;
+use App\Http\Controllers\Crm\MotivationQuarterAdminController;
 use App\Http\Controllers\Crm\MotivationReferenceController;
 use App\Http\Controllers\Crm\MotivationSettingsController;
 use App\Http\Controllers\Crm\MotivationTeamController;
@@ -713,6 +717,19 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/motivation/invoices/data', [MotivationInvoicesController::class, 'data'])->name('motivation.invoices.data');
         Route::patch('/motivation/invoices/{invoice}', [MotivationInvoicesController::class, 'mark'])->name('motivation.invoices.mark')->whereNumber('invoice');
         Route::delete('/motivation/invoices/{invoice}/mark', [MotivationInvoicesController::class, 'unmark'])->name('motivation.invoices.unmark')->whereNumber('invoice');
+        Route::get('/motivation/health', [MotivationHealthController::class, 'index'])->name('motivation.health');
+        Route::get('/motivation/health/data', [MotivationHealthController::class, 'data'])->name('motivation.health.data');
+        Route::get('/motivation/forecast', [MotivationForecastController::class, 'index'])->name('motivation.forecast');
+        Route::get('/motivation/forecast/data', [MotivationForecastController::class, 'data'])->name('motivation.forecast.data');
+        Route::get('/motivation/discounts', [MotivationDiscountsController::class, 'index'])->name('motivation.discounts');
+        Route::get('/motivation/discounts/data', [MotivationDiscountsController::class, 'data'])->name('motivation.discounts.data');
+        Route::get('/motivation/quarter/admin', [MotivationQuarterAdminController::class, 'index'])->name('motivation.quarter.admin');
+        Route::get('/motivation/quarter/admin/data', [MotivationQuarterAdminController::class, 'data'])->name('motivation.quarter.admin.data');
+        Route::post('/motivation/quarter/recalculate', [MotivationQuarterAdminController::class, 'recalculate'])->name('motivation.quarter.recalculate');
+        Route::post('/motivation/quarter/{bonus}/approve', [MotivationQuarterAdminController::class, 'approve'])->name('motivation.quarter.approve')->whereNumber('bonus');
+        Route::post('/motivation/quarter/{bonus}/reopen', [MotivationQuarterAdminController::class, 'reopen'])->name('motivation.quarter.reopen')->whereNumber('bonus');
+        Route::post('/motivation/quarter/{bonus}/distribute', [MotivationQuarterAdminController::class, 'distribute'])->name('motivation.quarter.distribute')->whereNumber('bonus');
+        Route::post('/motivation/quarter/{bonus}/paid', [MotivationQuarterAdminController::class, 'markPaid'])->name('motivation.quarter.paid')->whereNumber('bonus');
     });
 
     // Зарплата (эпик pay-00). view — своя; чужой `manager` в адресе открывается

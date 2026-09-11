@@ -127,6 +127,19 @@ export default function MotivationPayslip({ month, month_label: monthLabel, mont
                             </Table.Root>
                         </Box>
 
+                        {slip.quarterly_share && (
+                            <Section title={`Квартальная премия отдела · ${slip.quarterly_share.quarter_label} (п. 7.6)`}>
+                                <HStack justify="space-between" fontSize="sm" py={1} flexWrap="wrap" gap={2}>
+                                    <Text>
+                                        Премия отдела {fmtRub(slip.quarterly_share.bonus_amount)} ({slip.quarterly_share.status_label}, ступень {slip.quarterly_share.step}).
+                                        {slip.quarterly_share.distributed ? ` Ваша доля${slip.quarterly_share.reason ? ` — ${slip.quarterly_share.reason}` : ''}.` : ' Распределение между работниками ещё не сделано.'}
+                                    </Text>
+                                    <Text fontWeight="700" fontVariantNumeric="tabular-nums">{fmtRub(slip.quarterly_share.amount)}</Text>
+                                </HStack>
+                                <Text fontSize="xs" color="fg.muted">В переменную часть и в итог месяца не входит: премия начисляется на отдел и выплачивается своим порядком.</Text>
+                            </Section>
+                        )}
+
                         <Shipments title="Отгрузки закреплённой базы (П1)" groups={slip.shipments.base} />
                         <Shipments title="Отгрузки новым партнёрам (П2)" groups={slip.shipments.new} />
 

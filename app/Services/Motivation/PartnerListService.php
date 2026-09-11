@@ -234,6 +234,17 @@ class PartnerListService
     }
 
     /**
+     * Все строки базы работника без отбора и страницы — для сводных экранов
+     * руководителя («Здоровье базы»): цифры обязаны совпадать с «Моей базой».
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function all(int $managerId, CarbonInterface $month): array
+    {
+        return $this->dataset($managerId, $month);
+    }
+
+    /**
      * Строки по всем партнёрам работника за месяц. Кэшируется на четверть часа:
      * фильтры и сортировка переключаются поверх одного набора.
      *

@@ -277,6 +277,31 @@ class QuarterlyBonusService
         });
     }
 
+    /**
+     * Переоткрыть итог квартала: утверждение и выплата снимаются, доли остаются
+     * как предложение — их можно пересмотреть до нового утверждения.
+     */
+    public function reopen(MotivationQuarterlyBonus $bonus, User $actor): MotivationQuarterlyBonus
+    {
+        if ($bonus->status === MotivationQuarterlyBonus::STATUS_DRAFT) {
+            throw new \InvalidArgumentException('Премия и так в черновике.');
+        }
+
+        $bonus->forceFill([
+            'status' => MotivationQuarterlyBonus::STATUS_DRAFT,
+            'approved_by' => null,
+            'approved_at' => null,
+            'paid_by' => null,
+            'paid_at' => null,
+            'snapshot' => array_replace((array) $bonus->snapshot, [
+                'reopened_at' => now()->toIso8601String(),
+                'reopened_by' => (int) $actor->getKey(),
+            ]),
+        ])->save();
+
+        return $bonus;
+    }
+
     private function sharesTotal(MotivationQuarterlyBonus $bonus): float
     {
         return Money::round((float) MotivationQuarterlyShare::query()
