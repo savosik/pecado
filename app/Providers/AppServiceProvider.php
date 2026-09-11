@@ -178,6 +178,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Events\PartnerSettlementsChanged::class,
             \App\Listeners\RefreshDebtLevel::class,
         );
+        // Мотивация 2.0 (mot-36): утверждение расчёта замораживает состав
+        // Фокус-перечня периода — правка правил задним числом его не меняет.
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\Payroll\PayrollCalculationApproved::class,
+            \App\Listeners\Motivation\FreezeFocusSnapshot::class,
+        );
         // Зарплата (sal-00): те же движения регистра пересобирают мост
         // «накладная → дата закрытия» и пересчитывают черновик менеджера.
         \Illuminate\Support\Facades\Event::listen(

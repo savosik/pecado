@@ -217,6 +217,7 @@ export const menuConfig: MenuGroup[] = [
             { label: "Сводка отдела", icon: LuLayoutDashboard, path: "/crm/motivation/team", permission: "crm-motivation.edit" },
             { label: "Ведомость к утверждению", icon: LuClipboardCheck, path: "/crm/motivation/approval", permission: "crm-motivation.edit" },
             { label: "Пул и раздача", icon: LuPackage, path: "/crm/motivation/pool/admin", permission: "crm-motivation.edit" },
+            { label: "Фокус-перечень", icon: LuListChecks, path: "/crm/motivation/focus-list", permission: "crm-motivation.edit" },
         ],
     },
     {

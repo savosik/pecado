@@ -25,6 +25,7 @@ use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\MailSuppressionController;
 use App\Http\Controllers\Crm\MotivationController;
 use App\Http\Controllers\Crm\MotivationDebtsController;
+use App\Http\Controllers\Crm\MotivationFocusAdminController;
 use App\Http\Controllers\Crm\MotivationPartnersController;
 use App\Http\Controllers\Crm\MotivationPayslipController;
 use App\Http\Controllers\Crm\MotivationPlansController;
@@ -696,6 +697,12 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/motivation/pool/packages', [MotivationPoolController::class, 'issue'])->name('motivation.pool.packages.issue');
         Route::post('/motivation/pool/packages/{package}/refresh', [MotivationPoolController::class, 'refresh'])->name('motivation.pool.packages.refresh')->whereNumber('package');
         Route::post('/motivation/pool/packages/{package}/return', [MotivationPoolController::class, 'returnToPool'])->name('motivation.pool.packages.return')->whereNumber('package');
+        Route::get('/motivation/focus-list', [MotivationFocusAdminController::class, 'index'])->name('motivation.focus-list');
+        Route::get('/motivation/focus-list/data', [MotivationFocusAdminController::class, 'data'])->name('motivation.focus-list.data');
+        Route::get('/motivation/focus-list/search', [MotivationFocusAdminController::class, 'search'])->name('motivation.focus-list.search');
+        Route::post('/motivation/focus-list/rules', [MotivationFocusAdminController::class, 'store'])->name('motivation.focus-list.rules.store');
+        Route::patch('/motivation/focus-list/rules/{rule}', [MotivationFocusAdminController::class, 'close'])->name('motivation.focus-list.rules.close')->whereNumber('rule');
+        Route::post('/motivation/focus-list/freeze', [MotivationFocusAdminController::class, 'freeze'])->name('motivation.focus-list.freeze');
     });
 
     // Зарплата (эпик pay-00). view — своя; чужой `manager` в адресе открывается

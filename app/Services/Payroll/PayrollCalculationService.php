@@ -2,6 +2,7 @@
 
 namespace App\Services\Payroll;
 
+use App\Events\Payroll\PayrollCalculationApproved;
 use App\Models\PayrollCalculation;
 use App\Models\PersonalManager;
 use App\Models\User;
@@ -99,6 +100,8 @@ class PayrollCalculationService
             // Прогноз и советы — про будущее; у замороженного месяца будущего нет.
             'forecast' => null,
         ])->save();
+
+        PayrollCalculationApproved::dispatch($calculation);
 
         return $calculation;
     }
