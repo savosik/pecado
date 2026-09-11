@@ -36,7 +36,7 @@ class InvoiceReviewQueueService
         $rate = (float) ($values['rate_k1_per_day'] ?? 0);
         $grace = (int) ($values['grace_working_days'] ?? 5);
 
-        $managers = PersonalManager::query()->where('payroll_enabled', true)
+        $managers = PersonalManager::query()->active()->where('payroll_enabled', true)
             ->when($managerId !== null, fn ($q) => $q->whereKey($managerId))
             ->orderBy('name')->get(['id', 'name']);
 

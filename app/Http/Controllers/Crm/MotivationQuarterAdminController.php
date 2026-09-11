@@ -102,7 +102,7 @@ class MotivationQuarterAdminController extends CrmController
         $data = $this->reference->build($quarter);
         $bonus = MotivationQuarterlyBonus::query()->whereDate('quarter_start', $quarter)->first();
 
-        $managers = PersonalManager::query()->where('payroll_enabled', true)->orderBy('name')->get(['id', 'name']);
+        $managers = PersonalManager::query()->active()->where('payroll_enabled', true)->orderBy('name')->get(['id', 'name']);
         $shares = $bonus === null ? collect() : MotivationQuarterlyShare::query()->where('bonus_id', $bonus->getKey())->with('author:id,name')->get()->keyBy('personal_manager_id');
 
         // Подсказка к распределению — вклад каждого в квалифицированных партнёрах.

@@ -44,7 +44,7 @@ class GuaranteeBaseService
         $share = (float) ($this->orders->effective($effective)['values']['transition_guarantee_share'] ?? config('motivation.default_parameters.transition_guarantee_share', 0));
 
         $rows = [];
-        foreach (PersonalManager::query()->where('payroll_enabled', true)->orderBy('name')->get() as $manager) {
+        foreach (PersonalManager::query()->active()->where('payroll_enabled', true)->orderBy('name')->get() as $manager) {
             $managerId = (int) $manager->getKey();
             $current = $this->params->layer($managerId, null)['motivation_guarantee'] ?? [];
             $alreadyFixed = (float) ($current['base'] ?? 0) > 0;

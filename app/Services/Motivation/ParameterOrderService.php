@@ -118,7 +118,7 @@ class ParameterOrderService
         $proposed = $this->catalog->complete(array_replace($this->effective($period)['values'], $values));
 
         $managers = PersonalManager::query()
-            ->where('payroll_enabled', true)
+            ->active()->where('payroll_enabled', true)
             ->when($managerId !== null, fn ($q) => $q->whereKey($managerId))
             ->orderBy('name')
             ->get();
@@ -228,7 +228,7 @@ class ParameterOrderService
     {
         $rows = [];
 
-        foreach (PersonalManager::query()->where('payroll_enabled', true)->orderBy('name')->get() as $manager) {
+        foreach (PersonalManager::query()->active()->where('payroll_enabled', true)->orderBy('name')->get() as $manager) {
             $layer = $this->params->layer((int) $manager->getKey(), null);
             $overrides = array_intersect_key($layer, array_flip(self::ORDER_COMPONENTS));
 

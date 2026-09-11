@@ -203,6 +203,6 @@ class TeamSummaryService
      */
     private function managers()
     {
-        return PersonalManager::query()->where('payroll_enabled', true)->orderBy('name')->get();
+        return PersonalManager::query()->active()->where('payroll_enabled', true)->orderBy('name')->get();
     }
 }

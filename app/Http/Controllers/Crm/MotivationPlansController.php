@@ -230,7 +230,7 @@ class MotivationPlansController extends CrmController
     private function managers(?int $only)
     {
         return PersonalManager::query()
-            ->where('payroll_enabled', true)
+            ->active()->where('payroll_enabled', true)
             ->when($only !== null, fn ($q) => $q->whereKey($only))
             ->orderBy('name')
             ->get();

@@ -176,7 +176,7 @@ class MotivationSettingsController extends CrmController
             'month_label' => MonthLabel::ru($month),
             'months' => $this->months(),
             'can_edit' => $actor->can('crm-motivation.edit'),
-            'managers' => PersonalManager::query()->where('payroll_enabled', true)->orderBy('name')->get(['id', 'name'])
+            'managers' => PersonalManager::query()->active()->where('payroll_enabled', true)->orderBy('name')->get(['id', 'name'])
                 ->map(fn (PersonalManager $m): array => ['id' => (int) $m->getKey(), 'name' => (string) $m->name])->all(),
             'components' => $componentMeta,
         ];

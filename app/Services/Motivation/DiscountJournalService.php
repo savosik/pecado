@@ -111,7 +111,7 @@ class DiscountJournalService
         return [
             'from' => $start->toDateString(),
             'to' => $end->toDateString(),
-            'managers' => PersonalManager::query()->where('payroll_enabled', true)->orderBy('name')->get(['id', 'name'])
+            'managers' => PersonalManager::query()->active()->where('payroll_enabled', true)->orderBy('name')->get(['id', 'name'])
                 ->map(fn (PersonalManager $m): array => ['id' => (int) $m->getKey(), 'name' => (string) $m->name])->all(),
             'summary' => [
                 'documents' => count($rows),

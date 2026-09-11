@@ -39,7 +39,7 @@ class BaseHealthService
         $previous = $period->subMonth();
 
         $rows = [];
-        foreach (PersonalManager::query()->where('payroll_enabled', true)->orderBy('name')->get() as $manager) {
+        foreach (PersonalManager::query()->active()->where('payroll_enabled', true)->orderBy('name')->get() as $manager) {
             $rows[] = $this->row((int) $manager->getKey(), (string) $manager->name, $period, $previous);
         }
 

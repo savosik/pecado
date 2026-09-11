@@ -307,7 +307,7 @@ class FocusRuleService
      */
     private function returns(CarbonImmutable $period): array
     {
-        $managers = PersonalManager::query()->where('payroll_enabled', true)->pluck('id')->map('intval')->all();
+        $managers = PersonalManager::query()->active()->where('payroll_enabled', true)->pluck('id')->map('intval')->all();
         $rows = [];
 
         for ($i = self::RETURNS_MONTHS - 1; $i >= 0; $i--) {

@@ -39,7 +39,7 @@ class FundForecastService
         $period = CarbonImmutable::instance($month)->startOfMonth();
         $rows = [];
 
-        foreach (PersonalManager::query()->where('payroll_enabled', true)->orderBy('name')->get() as $manager) {
+        foreach (PersonalManager::query()->active()->where('payroll_enabled', true)->orderBy('name')->get() as $manager) {
             $row = $this->row((int) $manager->getKey(), (string) $manager->name, $period);
             if ($row !== null) {
                 $rows[] = $row;

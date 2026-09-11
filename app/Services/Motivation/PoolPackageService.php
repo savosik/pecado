@@ -56,7 +56,7 @@ class PoolPackageService
             ->get();
 
         $taps = [];
-        foreach (PersonalManager::query()->where('payroll_enabled', true)->orderBy('name')->get() as $manager) {
+        foreach (PersonalManager::query()->active()->where('payroll_enabled', true)->orderBy('name')->get() as $manager) {
             $taps[] = ['manager' => ['id' => (int) $manager->getKey(), 'name' => (string) $manager->name]] + $this->pool->tap((int) $manager->getKey(), $period);
         }
 

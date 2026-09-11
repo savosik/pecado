@@ -33,7 +33,7 @@ class PlanQuarter extends Command
 
         if ($managerIds === []) {
             $managerIds = PersonalManager::query()
-                ->where('payroll_enabled', true)
+                ->active()->where('payroll_enabled', true)
                 ->pluck('id')
                 ->map('intval')
                 ->all();
