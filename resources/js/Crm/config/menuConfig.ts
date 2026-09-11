@@ -34,6 +34,7 @@ import {
     LuSparkles,
     LuActivity,
     LuFileWarning,
+    LuPackage,
     LuClipboardCheck,
     LuCalendarRange,
     LuTrophy,
@@ -215,6 +216,7 @@ export const menuConfig: MenuGroup[] = [
             { label: "Планы на квартал", icon: LuCalendarRange, path: "/crm/motivation/plans", permission: "crm-motivation.edit" },
             { label: "Сводка отдела", icon: LuLayoutDashboard, path: "/crm/motivation/team", permission: "crm-motivation.edit" },
             { label: "Ведомость к утверждению", icon: LuClipboardCheck, path: "/crm/motivation/approval", permission: "crm-motivation.edit" },
+            { label: "Пул и раздача", icon: LuPackage, path: "/crm/motivation/pool/admin", permission: "crm-motivation.edit" },
         ],
     },
     {

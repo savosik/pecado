@@ -28,6 +28,7 @@ use App\Http\Controllers\Crm\MotivationDebtsController;
 use App\Http\Controllers\Crm\MotivationPartnersController;
 use App\Http\Controllers\Crm\MotivationPayslipController;
 use App\Http\Controllers\Crm\MotivationPlansController;
+use App\Http\Controllers\Crm\MotivationPoolController;
 use App\Http\Controllers\Crm\MotivationReferenceController;
 use App\Http\Controllers\Crm\MotivationSettingsController;
 use App\Http\Controllers\Crm\MotivationTeamController;
@@ -690,6 +691,11 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::post('/motivation/adjustments', [MotivationTeamController::class, 'storeCorrection'])->name('motivation.adjustments.store');
         Route::delete('/motivation/adjustments/{adjustment}', [MotivationTeamController::class, 'destroyCorrection'])->name('motivation.adjustments.destroy')->whereNumber('adjustment');
         Route::post('/motivation/objections/{objection}/respond', [MotivationTeamController::class, 'respondObjection'])->name('motivation.objections.respond')->whereNumber('objection');
+        Route::get('/motivation/pool/admin', [MotivationPoolController::class, 'index'])->name('motivation.pool.admin');
+        Route::get('/motivation/pool/admin/data', [MotivationPoolController::class, 'data'])->name('motivation.pool.admin.data');
+        Route::post('/motivation/pool/packages', [MotivationPoolController::class, 'issue'])->name('motivation.pool.packages.issue');
+        Route::post('/motivation/pool/packages/{package}/refresh', [MotivationPoolController::class, 'refresh'])->name('motivation.pool.packages.refresh')->whereNumber('package');
+        Route::post('/motivation/pool/packages/{package}/return', [MotivationPoolController::class, 'returnToPool'])->name('motivation.pool.packages.return')->whereNumber('package');
     });
 
     // Зарплата (эпик pay-00). view — своя; чужой `manager` в адресе открывается
