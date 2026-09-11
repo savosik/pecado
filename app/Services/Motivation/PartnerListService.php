@@ -40,6 +40,12 @@ class PartnerListService
 
     private const ASSORTMENT_MONTHS = 12;
 
+    /** Молчание дольше этого срока выводит партнёра во вкладку «молчат» экрана «Кого разбудить». */
+    private const WAKE_SILENT_DAYS = 90;
+
+    /** Сколько ключевых позиций показывать в «что брал». */
+    private const TOP_PRODUCTS = 3;
+
     /** Колонки, по которым можно сортировать с сервера. */
     private const SORTABLE = [
         'name', 'usual_monthly', 'current_month', 'best_month', 'potential', 'your_gain',
@@ -120,6 +126,111 @@ class PartnerListService
 
         return $this->page($rows, $query, 'cost', 'desc', $month, $summary, $flags,
             '«Что это стоит вам» — недобор до обычной закупки по ставке П1. Список отвечает на вопрос, кому звонить первым, а не кто больше просел в процентах.');
+    }
+
+    /**
+     * «Кого разбудить»: две вкладки, которые нельзя смешивать.
+     *
+     * Основная — закреплённые партнёры без единой покупки: по принятому определению
+     * каждый при первой покупке даёт повышенную ставку на полгода. Вторая — молчащие
+     * дольше трёх месяцев: повышенной ставки они не дают, но работать с ними стоит.
+     * Обратный отсчёт до признания партнёра Новым не показывается намеренно —
+     * иначе выгодно придержать возврат ради повышенной ставки.
+     *
+     * @param  array<string, mixed>  $query  tab (never|silent), sort, direction, page, search
+     * @return array<string, mixed>
+     */
+    public function wake(int $managerId, CarbonInterface $month, array $query = []): array
+    {
+        $rows = $this->dataset($managerId, $month);
+        $tab = ($query['tab'] ?? 'never') === 'silent' ? 'silent' : 'never';
+
+        $never = array_values(array_filter($rows, fn (array $r): bool => ! $r['ever_bought']));
+        $silent = array_values(array_filter(
+            $rows,
+            fn (array $r): bool => $r['ever_bought']
+                && $r['current_month'] <= 0
+                && ($r['silent_days'] ?? 0) >= self::WAKE_SILENT_DAYS,
+        ));
+
+        $summary = ['never' => count($never), 'silent' => count($silent)];
+        $selected = $tab === 'silent' ? $silent : $never;
+
+        if ($tab === 'silent' && $selected !== []) {
+            $products = $this->topProducts(array_column($selected, 'id'));
+
+            foreach ($selected as &$row) {
+                $row['top_products'] = $products[$row['id']] ?? [];
+                $row['silent_months'] = (int) floor(($row['silent_days'] ?? 0) / 30);
+            }
+            unset($row);
+        }
+
+        $defaultSort = $tab === 'silent' ? 'best_month' : 'name';
+
+        return $this->page($selected, $query, $defaultSort, $tab === 'silent' ? 'desc' : 'asc', $month, $summary, $tab,
+            $tab === 'silent'
+                ? 'Партнёры, не покупавшие дольше трёх месяцев. Повышенной ставки они не дают: перерыв короче года.'
+                : 'Партнёры, по которым продаж не было ни разу. Первая покупка каждого даёт повышенную ставку П2 на шесть месяцев.');
+    }
+
+    /**
+     * «Мои новые клиенты»: партнёры в Периоде новизны и их вклад в П2 и в премию отдела.
+     *
+     * Сумма «ваше вознаграждение с него» равна показателю П2 расчёта — с точностью
+     * до возвратов, которые вычитаются из группы, а не из партнёра.
+     *
+     * @return array<string, mixed>
+     */
+    public function newcomers(int $managerId, CarbonInterface $month): array
+    {
+        $period = CarbonImmutable::instance($month)->startOfMonth();
+        $rows = array_values(array_filter($this->dataset($managerId, $period), fn (array $r): bool => $r['in_novelty']));
+        $ids = array_column($rows, 'id');
+
+        $params = $this->motivationParams($managerId, $period);
+        $rateP2 = (float) ($params['rate_p2'] ?? config('motivation.default_parameters.rate_p2', 0));
+        $threshold = (float) config('motivation.default_parameters.quarterly_qualification_amount', 0);
+        $noveltyMonths = max(1, (int) config('motivation.default_parameters.novelty_periods', 6));
+
+        $novelty = $ids === [] ? [] : MotivationPartnerNovelty::query()->whereIn('user_id', $ids)->get()->keyBy('user_id');
+        $quarter = $this->quarterAmounts($ids, $period);
+
+        $result = [];
+        foreach ($rows as $row) {
+            /** @var MotivationPartnerNovelty|null $cache */
+            $cache = $novelty[$row['id']] ?? null;
+            $endsOn = $cache?->novelty_ends_on;
+            $monthsLeft = $endsOn === null ? 0 : max(0, (int) $period->diffInMonths(CarbonImmutable::instance($endsOn)->startOfMonth()) + 1);
+            $quarterAmount = (float) ($quarter[$row['id']] ?? 0);
+
+            $result[] = $row + [
+                'novelty_started_on' => $cache?->novelty_started_on?->toDateString(),
+                'novelty_ends_on' => $endsOn?->toDateString(),
+                'months_left' => min($noveltyMonths, $monthsLeft),
+                'months_total' => $noveltyMonths,
+                'history_incomplete' => (bool) ($cache->history_incomplete ?? false),
+                'reward' => Money::round($row['current_month'] * $rateP2),
+                'quarter_amount' => Money::round($quarterAmount),
+                'to_qualification' => Money::round(max(0.0, $threshold - $quarterAmount)),
+                'qualified' => $quarterAmount >= $threshold,
+            ];
+        }
+
+        usort($result, fn (array $a, array $b): int => $b['reward'] <=> $a['reward']);
+
+        return [
+            'month' => $period->toDateString(),
+            'summary' => [
+                'total' => count($result),
+                'reward_total' => Money::round(array_sum(array_column($result, 'reward'))),
+                'qualified' => count(array_filter($result, fn (array $r): bool => $r['qualified'])),
+                'threshold' => $threshold,
+                'rate_p2' => $rateP2,
+            ],
+            'rows' => $result,
+            'hint' => 'Премия отдела за квартал начисляется отдельно и на месячный доход не влияет: «до зачёта» — это про премию отдела, а не про ваши '.'выплаты.',
+        ];
     }
 
     /**
@@ -504,12 +615,85 @@ class PartnerListService
             ->all();
     }
 
+    /**
+     * Ключевые позиции партнёра за всю историю — что он брал, когда покупал.
+     *
+     * @param  list<int>  $ids
+     * @return array<int, list<array{name: string, amount: float}>>
+     */
+    private function topProducts(array $ids): array
+    {
+        $rows = DB::table('shipment_items')
+            ->join('shipments', 'shipments.id', '=', 'shipment_items.shipment_id')
+            ->leftJoin('products', 'products.id', '=', 'shipment_items.product_id')
+            ->whereIn('shipments.user_id', $ids)
+            ->groupBy('shipments.user_id', 'shipment_items.product_id')
+            ->orderByDesc('total')
+            ->get([
+                'shipments.user_id',
+                'shipment_items.product_id',
+                DB::raw('MAX(COALESCE(products.name, shipment_items.product_name_snapshot)) AS name'),
+                DB::raw('SUM(shipment_items.total) AS total'),
+            ]);
+
+        $result = [];
+
+        foreach ($rows as $row) {
+            $partnerId = (int) $row->user_id;
+
+            if (count($result[$partnerId] ?? []) >= self::TOP_PRODUCTS) {
+                continue;
+            }
+
+            $result[$partnerId][] = ['name' => (string) $row->name, 'amount' => Money::round((float) $row->total)];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Отгрузки партнёров за квартал, в который входит месяц.
+     *
+     * @param  list<int>  $ids
+     * @return array<int, float>
+     */
+    private function quarterAmounts(array $ids, CarbonImmutable $period): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $ctx = AnalyticsContext::forScope($ids, AnalyticsContext::DATE_ERP, null);
+
+        if ($ctx->isEmpty()) {
+            return [];
+        }
+
+        $amounts = [];
+
+        foreach ($this->analytics->byPartner($ctx, new AnalyticsFilters(
+            dateFrom: $period->startOfQuarter()->startOfDay(),
+            dateTo: $period->endOfQuarter()->endOfDay(),
+        ), null) as $row) {
+            if ($row['partner_id'] !== null) {
+                $amounts[(int) $row['partner_id']] = (float) $row['amount'];
+            }
+        }
+
+        return $amounts;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function motivationParams(int $managerId, CarbonImmutable $period): array
+    {
+        return $this->params->effective($managerId, $period)->for('motivation_variable');
+    }
+
     private function rateP1(int $managerId, CarbonImmutable $period): float
     {
-        $params = $this->params->effective($managerId, $period);
-        $variable = $params->for('motivation_variable');
-
-        return (float) ($variable['rate_p1'] ?? config('motivation.default_parameters.rate_p1', 0));
+        return (float) ($this->motivationParams($managerId, $period)['rate_p1'] ?? config('motivation.default_parameters.rate_p1', 0));
     }
 
     /**

@@ -639,6 +639,12 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/motivation/base/data', [MotivationPartnersController::class, 'baseData'])->name('motivation.base.data');
         Route::get('/motivation/rhythm', [MotivationPartnersController::class, 'rhythm'])->name('motivation.rhythm');
         Route::get('/motivation/rhythm/data', [MotivationPartnersController::class, 'rhythmData'])->name('motivation.rhythm.data');
+        Route::get('/motivation/wake', [MotivationPartnersController::class, 'wake'])->name('motivation.wake');
+        Route::get('/motivation/wake/data', [MotivationPartnersController::class, 'wakeData'])->name('motivation.wake.data');
+        Route::get('/motivation/new-partners', [MotivationPartnersController::class, 'newPartners'])->name('motivation.new-partners');
+        Route::get('/motivation/new-partners/data', [MotivationPartnersController::class, 'newPartnersData'])->name('motivation.new-partners.data');
+        Route::get('/motivation/pool', [MotivationPartnersController::class, 'pool'])->name('motivation.pool');
+        Route::get('/motivation/pool/data', [MotivationPartnersController::class, 'poolData'])->name('motivation.pool.data');
         Route::get('/motivation/debts', [MotivationDebtsController::class, 'index'])->name('motivation.debts');
         Route::get('/motivation/debts/data', [MotivationDebtsController::class, 'data'])->name('motivation.debts.data');
     });

@@ -48,7 +48,8 @@ class MotivationPartnerListsTest extends TestCase
         $this->restrictManagersToOwnClients();
 
         $this->month = CarbonImmutable::now()->startOfMonth();
-        $this->head = User::factory()->create();
+        // Учётка сотрудника — не клиент: иначе она попадёт в Пул как партнёр без менеджера.
+        $this->head = User::factory()->create(['user_kind' => \App\Enums\UserKind::STAFF->value]);
         $this->head->assignRole('sales-head');
         $this->profile = PersonalManager::factory()->create(['user_id' => $this->head->id, 'name' => 'Трипуть']);
     }
@@ -211,6 +212,83 @@ class MotivationPartnerListsTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('«Кого разбудить»: без покупок — основная вкладка, молчащие дольше трёх месяцев — отдельная')]
+    public function wake_separates_never_bought_from_silent(): void
+    {
+        $this->partner('Никогда');
+        $silent = $this->partner('Затих');
+        $fresh = $this->partner('Недавний');
+        $this->ship($silent, 80_000, $this->month->subMonths(5)->addDays(2));
+        $this->ship($fresh, 80_000, $this->month->subMonth()->addDays(2));
+
+        $service = app(PartnerListService::class);
+
+        $never = $service->wake($this->profile->id, $this->month);
+        $this->assertSame(['never' => 1, 'silent' => 1], $never['summary']);
+        $this->assertSame('Никогда', $never['rows']['data'][0]['name']);
+
+        $quiet = $service->wake($this->profile->id, $this->month, ['tab' => 'silent']);
+        $this->assertSame('Затих', $quiet['rows']['data'][0]['name']);
+        $this->assertArrayHasKey('top_products', $quiet['rows']['data'][0]);
+        $this->assertGreaterThanOrEqual(4, $quiet['rows']['data'][0]['silent_months']);
+        $this->assertNotContains('Недавний', array_column($quiet['rows']['data'], 'name'), 'Месяц тишины — ещё не «молчит»');
+    }
+
+    #[Test]
+    #[TestDox('«Мои новые клиенты»: сумма вознаграждений равна П2, до зачёта — по порогу квартала')]
+    public function newcomers_rewards_add_up_to_p2(): void
+    {
+        $a = $this->partner('Новый А');
+        $b = $this->partner('Новый Б');
+        $this->partner('Старый');
+
+        foreach ([$a, $b] as $partner) {
+            MotivationPartnerNovelty::factory()
+                ->withinNovelty($this->month->subMonths(2)->toDateString(), $this->month->addMonths(3)->endOfMonth()->toDateString())
+                ->create(['user_id' => $partner->id]);
+        }
+        $this->ship($a, 60_000, $this->month->addDays(1));
+        $this->ship($b, 30_000, $this->month->addDays(1));
+
+        $list = app(PartnerListService::class)->newcomers($this->profile->id, $this->month);
+
+        $this->assertSame(2, $list['summary']['total']);
+        $this->assertEqualsWithDelta(90_000 * 0.03, $list['summary']['reward_total'], 0.01, 'П2 = отгрузки новым × 3 %');
+        $this->assertSame('Новый А', $list['rows'][0]['name'], 'Сверху — кто приносит больше');
+        $this->assertSame(4, $list['rows'][0]['months_left'], 'Период новизны заканчивается через три месяца после текущего');
+        $this->assertSame(6, $list['rows'][0]['months_total']);
+        $this->assertFalse($list['rows'][0]['qualified']);
+        $this->assertGreaterThan(0, $list['rows'][0]['to_qualification']);
+    }
+
+    #[Test]
+    #[TestDox('Пул: по умолчанию только с историей, «даст вам» есть лишь у покупавших, кран открыт без данных')]
+    public function pool_defaults_to_partners_with_history(): void
+    {
+        $cold = User::factory()->create(['personal_manager_id' => null, 'name' => 'Холодный']);
+        $warm = User::factory()->create(['personal_manager_id' => null, 'name' => 'Покупал', 'city' => 'Тула']);
+        User::factory()->create(['personal_manager_id' => null, 'name' => 'Ещё холодный']);
+        $this->ship($warm, 90_000, $this->month->subMonths(2)->addDays(3));
+
+        $service = app(\App\Services\Motivation\PoolListService::class);
+
+        $list = $service->list($this->profile->id, $this->month);
+        $this->assertSame(3, $list['summary']['total']);
+        $this->assertSame(1, $list['summary']['with_history']);
+        $this->assertTrue($list['history_only']);
+        $this->assertCount(1, $list['rows']['data']);
+        $this->assertSame('Покупал', $list['rows']['data'][0]['name']);
+        $this->assertNull($list['rows']['data'][0]['estimate'], 'Одна покупка за полгода — обычная закупка ноль, оценки нет');
+        $this->assertFalse($list['tap']['blocked']);
+        $this->assertNotNull($list['tap']['note'], 'Без расчётов по новой схеме кран честно помечен как непроверяемый');
+
+        $all = $service->list($this->profile->id, $this->month, ['history' => 0]);
+        $this->assertSame(3, $all['rows']['total']);
+        $this->assertSame('Покупал', $all['rows']['data'][0]['name'], 'С историей — первыми при любой сортировке');
+        $this->assertNotNull($cold);
+    }
+
+    #[Test]
     #[TestDox('Страницы открываются руководителю и закрыты менеджеру без права')]
     public function pages_respect_the_motivation_permission(): void
     {
@@ -222,6 +300,27 @@ class MotivationPartnerListsTest extends TestCase
                 ->where('manager.id', $this->profile->id)
                 ->has('list.summary')
                 ->has('list.rows.data'));
+
+        $this->actingAs($this->head)
+            ->get('/crm/motivation/wake?tab=silent')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Crm/Pages/Motivation/Wake')
+                ->where('list.filter', 'silent'));
+
+        $this->actingAs($this->head)
+            ->get('/crm/motivation/new-partners')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Crm/Pages/Motivation/NewPartners')
+                ->has('list.summary.reward_total'));
+
+        $this->actingAs($this->head)
+            ->get('/crm/motivation/pool')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Crm/Pages/Motivation/Pool')
+                ->has('list.tap.blocked'));
 
         $this->actingAs($this->head)
             ->get('/crm/motivation/rhythm?drop=1&stopped=0&silent=0')

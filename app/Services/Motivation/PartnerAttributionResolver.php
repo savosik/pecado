@@ -96,6 +96,25 @@ class PartnerAttributionResolver
         return $managers;
     }
 
+    /**
+     * Партнёры Пула на дату: ни за кем не закреплены.
+     *
+     * @return list<int>
+     */
+    public function poolPartnerIds(CarbonInterface $on): array
+    {
+        if ($this->registryFilled()) {
+            return MotivationPartnerAssignment::query()
+                ->whereNull('personal_manager_id')
+                ->activeOn(CarbonImmutable::instance($on)->startOfDay())
+                ->pluck('user_id')
+                ->map('intval')
+                ->all();
+        }
+
+        return User::query()->clients()->whereNull('personal_manager_id')->pluck('id')->map('intval')->all();
+    }
+
     public function registryFilled(): bool
     {
         return MotivationPartnerAssignment::query()->exists();

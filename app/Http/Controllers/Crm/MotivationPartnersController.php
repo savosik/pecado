@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Crm;
 
 use App\Services\Motivation\PartnerListService;
+use App\Services\Motivation\PoolListService;
 use App\Services\Payroll\PayrollScopeResolver;
 use App\Services\Payroll\Support\MonthLabel;
 use Carbon\CarbonImmutable;
@@ -20,9 +21,13 @@ use Inertia\Response;
  */
 class MotivationPartnersController extends CrmController
 {
+    /** Ключи адреса, которые списки понимают: фильтры, сортировка, страница, поиск. */
+    private const QUERY_KEYS = ['filter', 'tab', 'history', 'sort', 'direction', 'page', 'search', 'drop', 'stopped', 'silent'];
+
     public function __construct(
         private readonly PayrollScopeResolver $scopes,
         private readonly PartnerListService $partners,
+        private readonly PoolListService $pool,
     ) {}
 
     public function base(Request $request): Response
@@ -45,6 +50,36 @@ class MotivationPartnersController extends CrmController
         return response()->json($this->payload($request, 'rhythm'));
     }
 
+    public function wake(Request $request): Response
+    {
+        return Inertia::render('Crm/Pages/Motivation/Wake', $this->payload($request, 'wake'));
+    }
+
+    public function wakeData(Request $request): JsonResponse
+    {
+        return response()->json($this->payload($request, 'wake'));
+    }
+
+    public function newPartners(Request $request): Response
+    {
+        return Inertia::render('Crm/Pages/Motivation/NewPartners', $this->payload($request, 'newcomers'));
+    }
+
+    public function newPartnersData(Request $request): JsonResponse
+    {
+        return response()->json($this->payload($request, 'newcomers'));
+    }
+
+    public function pool(Request $request): Response
+    {
+        return Inertia::render('Crm/Pages/Motivation/Pool', $this->payload($request, 'pool'));
+    }
+
+    public function poolData(Request $request): JsonResponse
+    {
+        return response()->json($this->payload($request, 'pool'));
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -60,7 +95,7 @@ class MotivationPartnersController extends CrmController
             'manager' => $manager === null ? null : ['id' => (int) $manager->getKey(), 'name' => (string) $manager->name],
             'scope_options' => $this->scopes->options($actor),
             'can_see_all' => $this->scopes->seesAll($actor),
-            'query' => $request->only(['filter', 'sort', 'direction', 'page', 'search', 'drop', 'stopped', 'silent']),
+            'query' => $request->only(self::QUERY_KEYS),
             'list' => null,
         ];
 
@@ -68,10 +103,16 @@ class MotivationPartnersController extends CrmController
             return $payload;
         }
 
-        $query = $request->only(['filter', 'sort', 'direction', 'page', 'search', 'drop', 'stopped', 'silent']);
-        $payload['list'] = $list === 'rhythm'
-            ? $this->partners->rhythm((int) $manager->getKey(), $month, $query)
-            : $this->partners->base((int) $manager->getKey(), $month, $query);
+        $managerId = (int) $manager->getKey();
+        $query = $request->only(self::QUERY_KEYS);
+
+        $payload['list'] = match ($list) {
+            'rhythm' => $this->partners->rhythm($managerId, $month, $query),
+            'wake' => $this->partners->wake($managerId, $month, $query),
+            'newcomers' => $this->partners->newcomers($managerId, $month),
+            'pool' => $this->pool->list($managerId, $month, $query),
+            default => $this->partners->base($managerId, $month, $query),
+        };
 
         return $payload;
     }
