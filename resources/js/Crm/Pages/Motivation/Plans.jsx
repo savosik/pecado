@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import MetricHint from '@/Crm/Components/MetricHint';
 import { toastError, toastSuccess } from '@/utils/toast';
 import { fmtDay, fmtFactor, fmtPercent, fmtRub0 } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -67,7 +69,7 @@ export default function MotivationPlans(props) {
     const hasDrafts = data.managers.some((m) => m.order && !m.order.approved);
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Мотивация' }, { label: 'Планы на квартал' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('rules', 'plans')}>
             <Head title="Планы на квартал — CRM" />
             <PageHeader
                 title="Планы на квартал"
@@ -85,6 +87,7 @@ export default function MotivationPlans(props) {
                     </HStack>
                 )}
             />
+            <MotivationTabs hub="rules" current="plans" />
 
             <VStack align="stretch" gap={4}>
                 {data.timesheet_empty && (

@@ -8,6 +8,8 @@ import PartnerTable from './components/PartnerTable';
 import PartnerActions, { usePartnerDialogs } from './components/PartnerActions';
 import { LastTouch, Money, PartnerName } from './components/partnerCells';
 import { fmtRub0, plural } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -67,7 +69,7 @@ export default function MotivationRhythm({ month, month_label: monthLabel, manag
     ];
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Продажи' }, { label: 'Моя мотивация', href: '/crm/motivation' }, { label: 'Кто выпал из ритма' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('clients', 'rhythm')}>
             <Head title="Кто выпал из ритма — CRM" />
             <PageHeader
                 title={canSeeAll && manager ? `Ритм: ${manager.name}` : 'Кто выпал из ритма'}
@@ -79,6 +81,7 @@ export default function MotivationRhythm({ month, month_label: monthLabel, manag
                     </select>
                 ) : null}
             />
+            <MotivationTabs hub="clients" current="rhythm" />
 
             <VStack align="stretch" gap={4}>
                 {manager === null && (

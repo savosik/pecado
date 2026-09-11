@@ -30,10 +30,12 @@ export const useNavigation = () => {
 
     // Самый длинный подошедший путь и есть текущий раздел: `/crm/payments/calendar`
     // выигрывает у `/crm/payments`, а карточка `/crm/payments/17` остаётся за журналом.
+    // Пункт может «владеть» дополнительными путями (`match`): вкладки раздела
+    // живут на своих адресах, а в меню горит один пункт раздела.
     const activePath = menuConfig
-        .flatMap((group) => group.items.map((item) => item.path))
-        .filter(matches)
-        .sort((a, b) => b.length - a.length)[0] ?? null;
+        .flatMap((group) => group.items.flatMap((item) => [item.path, ...(item.match ?? [])].map((alias) => ({ alias, path: item.path }))))
+        .filter(({ alias }) => matches(alias))
+        .sort((a, b) => b.alias.length - a.alias.length)[0]?.path ?? null;
 
     const isActive = (itemPath) => itemPath === activePath;
 

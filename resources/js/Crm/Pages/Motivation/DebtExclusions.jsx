@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import MetricHint from '@/Crm/Components/MetricHint';
 import { toastError, toastSuccess } from '@/utils/toast';
 import { fmtDay, fmtRub0, plural } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
 
 const inputStyle = {
     padding: '0.45rem 0.6rem',
@@ -72,9 +74,10 @@ export default function MotivationDebtExclusions(props) {
     const history = data.exclusions.filter((e) => !e.active);
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Мотивация' }, { label: 'Исключения долгов' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('debts', 'exclusions')}>
             <Head title="Исключения задолженности — CRM" />
             <PageHeader title="Исключения задолженности" description="Какие долги выведены из расчёта и на каком основании. Исключение действует с указанной даты и не меняет утверждённые расчёты." />
+            <MotivationTabs hub="debts" current="exclusions" />
 
             <VStack align="stretch" gap={4}>
                 <SimpleGrid columns={{ base: 2, md: 4 }} gap={3}>

@@ -10,6 +10,9 @@ import { Button } from '@/components/ui/button';
 import MetricHint from '@/Crm/Components/MetricHint';
 import { toastError, toastSuccess } from '@/utils/toast';
 import { fmtDay, fmtPercent, fmtRub0 } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
+import FoldSection from './components/FoldSection';
 
 const inputStyle = {
     padding: '0.45rem 0.6rem',
@@ -89,9 +92,10 @@ export default function MotivationFocusAdmin(props) {
     }
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Мотивация' }, { label: 'Фокус-перечень' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('department', 'focus')}>
             <Head title="Фокус-перечень — CRM" />
             <PageHeader title="Фокус-перечень" description="Что сейчас в перечне и что изменить. Изменение правила не меняет состав в утверждённых периодах." />
+            <MotivationTabs hub="department" current="focus" />
 
             <VStack align="stretch" gap={4}>
                 <Alert status="info" title="Цена показателя">{data.note}</Alert>
@@ -181,71 +185,74 @@ export default function MotivationFocusAdmin(props) {
                     </Box>
                 )}
 
-                <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
-                    <HStack px={4} pt={3} gap={2} flexWrap="wrap">
-                        <Text fontWeight="700">Состав на период</Text>
-                        <select aria-label="Период" style={{ ...inputStyle, minWidth: '140px', padding: '0.25rem 0.4rem' }} value={data.month} onChange={(e) => navigate(e.target.value)}>
-                            {months.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
-                        </select>
-                        {data.composition.frozen
-                            ? <Badge colorPalette="blue" variant="subtle"><LuLock /> снимок заморожен</Badge>
-                            : <Badge variant="subtle">из действующих правил</Badge>}
-                        <Text fontSize="sm" color="fg.muted">{items.length} поз.</Text>
-                        {data.can_edit && !data.composition.frozen && items.length > 0 && (
-                            <Button size="xs" variant="ghost" ml="auto" loading={busy} onClick={() => call('post', '/crm/motivation/focus-list/freeze', {})}><LuSnowflake /> Заморозить состав</Button>
+                <FoldSection title={'Состав перечня на период'} summary={`${items.length} поз.${data.composition.frozen ? ' · снимок заморожен' : ''}`}>
+                    <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
+                        <HStack px={4} pt={3} gap={2} flexWrap="wrap">
+                            <Text fontWeight="700">Состав на период</Text>
+                            <select aria-label="Период" style={{ ...inputStyle, minWidth: '140px', padding: '0.25rem 0.4rem' }} value={data.month} onChange={(e) => navigate(e.target.value)}>
+                                {months.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
+                            </select>
+                            {data.composition.frozen
+                                ? <Badge colorPalette="blue" variant="subtle"><LuLock /> снимок заморожен</Badge>
+                                : <Badge variant="subtle">из действующих правил</Badge>}
+                            <Text fontSize="sm" color="fg.muted">{items.length} поз.</Text>
+                            {data.can_edit && !data.composition.frozen && items.length > 0 && (
+                                <Button size="xs" variant="ghost" ml="auto" loading={busy} onClick={() => call('post', '/crm/motivation/focus-list/freeze', {})}><LuSnowflake /> Заморозить состав</Button>
+                            )}
+                        </HStack>
+                        {items.length === 0 ? <Text px={4} pb={4} pt={2} fontSize="sm" color="fg.muted">В этом периоде перечень пуст.</Text> : (
+                            <Table.Root size="sm" mt={2}>
+                                <Table.Header>
+                                    <Table.Row>
+                                        <Table.ColumnHeader>Позиция</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Артикул</Table.ColumnHeader>
+                                        <Table.ColumnHeader>По какому правилу</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="right">Ставка</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="right">Остаток</Table.ColumnHeader>
+                                    </Table.Row>
+                                </Table.Header>
+                                <Table.Body>
+                                    {items.map((i) => (
+                                        <Table.Row key={i.id}>
+                                            <Table.Cell><Text fontSize="sm">{i.name}</Text></Table.Cell>
+                                            <Table.Cell><Text fontSize="xs" color="fg.muted">{i.sku ?? '—'}</Text></Table.Cell>
+                                            <Table.Cell><Text fontSize="xs">{i.rule_label}</Text></Table.Cell>
+                                            <Table.Cell textAlign="right"><Text fontSize="sm" fontWeight={i.own_rate ? '700' : '400'}>{fmtPercent(i.rate)}</Text></Table.Cell>
+                                            <Table.Cell textAlign="right"><Text fontSize="sm" color={i.stock > 0 ? undefined : 'fg.subtle'}>{i.stock}</Text></Table.Cell>
+                                        </Table.Row>
+                                    ))}
+                                </Table.Body>
+                            </Table.Root>
                         )}
-                    </HStack>
-                    {items.length === 0 ? <Text px={4} pb={4} pt={2} fontSize="sm" color="fg.muted">В этом периоде перечень пуст.</Text> : (
+                    </Box>
+                </FoldSection>
+
+                <FoldSection title={'Отдача: окупается ли показатель'} summary={`за ${data.returns.length} мес.`}>
+                    <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
                         <Table.Root size="sm" mt={2}>
                             <Table.Header>
                                 <Table.Row>
-                                    <Table.ColumnHeader>Позиция</Table.ColumnHeader>
-                                    <Table.ColumnHeader>Артикул</Table.ColumnHeader>
-                                    <Table.ColumnHeader>По какому правилу</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Ставка</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Остаток</Table.ColumnHeader>
+                                    <Table.ColumnHeader>Месяц</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Позиций</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Отгружено</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Начислено П3</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Партнёров берёт</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
-                                {items.map((i) => (
-                                    <Table.Row key={i.id}>
-                                        <Table.Cell><Text fontSize="sm">{i.name}</Text></Table.Cell>
-                                        <Table.Cell><Text fontSize="xs" color="fg.muted">{i.sku ?? '—'}</Text></Table.Cell>
-                                        <Table.Cell><Text fontSize="xs">{i.rule_label}</Text></Table.Cell>
-                                        <Table.Cell textAlign="right"><Text fontSize="sm" fontWeight={i.own_rate ? '700' : '400'}>{fmtPercent(i.rate)}</Text></Table.Cell>
-                                        <Table.Cell textAlign="right"><Text fontSize="sm" color={i.stock > 0 ? undefined : 'fg.subtle'}>{i.stock}</Text></Table.Cell>
+                                {data.returns.map((r) => (
+                                    <Table.Row key={r.month}>
+                                        <Table.Cell><HStack gap={2}><Text fontSize="sm">{monthLabel(r.month)}</Text>{r.frozen && <LuLock size={12} aria-label="Снимок заморожен" />}</HStack></Table.Cell>
+                                        <Table.Cell textAlign="right"><Text fontSize="sm">{r.items}</Text></Table.Cell>
+                                        <Table.Cell textAlign="right"><Text fontSize="sm">{fmtRub0(r.shipped)}</Text></Table.Cell>
+                                        <Table.Cell textAlign="right"><Text fontSize="sm" fontWeight="600">{fmtRub0(r.accrued)}</Text></Table.Cell>
+                                        <Table.Cell textAlign="right"><Text fontSize="sm">{r.partners}</Text></Table.Cell>
                                     </Table.Row>
                                 ))}
                             </Table.Body>
                         </Table.Root>
-                    )}
-                </Box>
-
-                <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
-                    <HStack px={4} pt={3} gap={1}><Text fontWeight="700">Отдача</Text><MetricHint text="Отгружено из перечня партнёрами отдела, начислено работникам по строке П3 расчёта, сколько партнёров брало позиции перечня. Ответ на вопрос, окупается ли показатель." /></HStack>
-                    <Table.Root size="sm" mt={2}>
-                        <Table.Header>
-                            <Table.Row>
-                                <Table.ColumnHeader>Месяц</Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="right">Позиций</Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="right">Отгружено</Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="right">Начислено П3</Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="right">Партнёров берёт</Table.ColumnHeader>
-                            </Table.Row>
-                        </Table.Header>
-                        <Table.Body>
-                            {data.returns.map((r) => (
-                                <Table.Row key={r.month}>
-                                    <Table.Cell><HStack gap={2}><Text fontSize="sm">{monthLabel(r.month)}</Text>{r.frozen && <LuLock size={12} aria-label="Снимок заморожен" />}</HStack></Table.Cell>
-                                    <Table.Cell textAlign="right"><Text fontSize="sm">{r.items}</Text></Table.Cell>
-                                    <Table.Cell textAlign="right"><Text fontSize="sm">{fmtRub0(r.shipped)}</Text></Table.Cell>
-                                    <Table.Cell textAlign="right"><Text fontSize="sm" fontWeight="600">{fmtRub0(r.accrued)}</Text></Table.Cell>
-                                    <Table.Cell textAlign="right"><Text fontSize="sm">{r.partners}</Text></Table.Cell>
-                                </Table.Row>
-                            ))}
-                        </Table.Body>
-                    </Table.Root>
-                </Box>
+                    </Box>
+                </FoldSection>
             </VStack>
         </CrmLayout>
     );

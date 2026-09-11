@@ -5,6 +5,9 @@ import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Alert } from '@/components/ui/alert';
 import { fmtCompact, fmtFactor, fmtPercent, fmtRub0 } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
+import FoldSection from './components/FoldSection';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -54,7 +57,7 @@ export default function MotivationPlan({ month, manager, scope_options: scopeOpt
     }));
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Продажи' }, { label: 'Моя мотивация', href: '/crm/motivation' }, { label: 'Откуда мой план' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('payslip', 'plan')}>
             <Head title="Откуда мой план — CRM" />
             <PageHeader
                 title={canSeeAll && manager ? `План: ${manager.name}` : 'Откуда мой план'}
@@ -66,6 +69,7 @@ export default function MotivationPlan({ month, manager, scope_options: scopeOpt
                     </select>
                 ) : null}
             />
+            <MotivationTabs hub="payslip" current="plan" />
 
             <VStack align="stretch" gap={4} maxW="1100px">
                 {manager === null && (
@@ -127,40 +131,42 @@ export default function MotivationPlan({ month, manager, scope_options: scopeOpt
                             </HStack>
                         </Box>
 
-                        <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
-                            <Text fontWeight="700" px={4} pt={3}>Три месяца квартала</Text>
-                            <Table.Root size="sm">
-                                <Table.Header>
-                                    <Table.Row>
-                                        <Table.ColumnHeader>Месяц</Table.ColumnHeader>
-                                        <Table.ColumnHeader textAlign="right">Рабочих дней</Table.ColumnHeader>
-                                        <Table.ColumnHeader textAlign="right">Сезон</Table.ColumnHeader>
-                                        <Table.ColumnHeader textAlign="right">{data.approved ? 'План' : 'Расчётный план'}</Table.ColumnHeader>
-                                        <Table.ColumnHeader textAlign="right">Действующий сейчас</Table.ColumnHeader>
-                                    </Table.Row>
-                                </Table.Header>
-                                <Table.Body>
-                                    {data.months.map((m) => (
-                                        <Table.Row key={m.month} bg={m.is_this_month ? 'bg.subtle' : undefined}>
-                                            <Table.Cell><Text fontSize="sm" fontWeight={m.is_this_month ? '700' : undefined}>{monthShort(m.month)}{m.is_this_month ? ' · этот месяц' : ''}</Text></Table.Cell>
-                                            <Table.Cell textAlign="right"><Text fontSize="sm">{m.working_days}</Text></Table.Cell>
-                                            <Table.Cell textAlign="right"><Text fontSize="sm">{fmtFactor(m.seasonal)}</Text></Table.Cell>
-                                            <Table.Cell textAlign="right"><Text fontSize="sm" fontWeight="700" fontVariantNumeric="tabular-nums">{fmtRub0(m.plan)}</Text></Table.Cell>
-                                            <Table.Cell textAlign="right"><Text fontSize="sm" color="fg.muted" fontVariantNumeric="tabular-nums">{m.current_plan === null ? '—' : fmtRub0(m.current_plan)}</Text></Table.Cell>
+                        <FoldSection title={'Три месяца квартала'}>
+                            <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
+                                <Table.Root size="sm">
+                                    <Table.Header>
+                                        <Table.Row>
+                                            <Table.ColumnHeader>Месяц</Table.ColumnHeader>
+                                            <Table.ColumnHeader textAlign="right">Рабочих дней</Table.ColumnHeader>
+                                            <Table.ColumnHeader textAlign="right">Сезон</Table.ColumnHeader>
+                                            <Table.ColumnHeader textAlign="right">{data.approved ? 'План' : 'Расчётный план'}</Table.ColumnHeader>
+                                            <Table.ColumnHeader textAlign="right">Действующий сейчас</Table.ColumnHeader>
                                         </Table.Row>
-                                    ))}
-                                </Table.Body>
-                            </Table.Root>
-                        </Box>
+                                    </Table.Header>
+                                    <Table.Body>
+                                        {data.months.map((m) => (
+                                            <Table.Row key={m.month} bg={m.is_this_month ? 'bg.subtle' : undefined}>
+                                                <Table.Cell><Text fontSize="sm" fontWeight={m.is_this_month ? '700' : undefined}>{monthShort(m.month)}{m.is_this_month ? ' · этот месяц' : ''}</Text></Table.Cell>
+                                                <Table.Cell textAlign="right"><Text fontSize="sm">{m.working_days}</Text></Table.Cell>
+                                                <Table.Cell textAlign="right"><Text fontSize="sm">{fmtFactor(m.seasonal)}</Text></Table.Cell>
+                                                <Table.Cell textAlign="right"><Text fontSize="sm" fontWeight="700" fontVariantNumeric="tabular-nums">{fmtRub0(m.plan)}</Text></Table.Cell>
+                                                <Table.Cell textAlign="right"><Text fontSize="sm" color="fg.muted" fontVariantNumeric="tabular-nums">{m.current_plan === null ? '—' : fmtRub0(m.current_plan)}</Text></Table.Cell>
+                                            </Table.Row>
+                                        ))}
+                                    </Table.Body>
+                                </Table.Root>
+                            </Box>
+                        </FoldSection>
 
-                        <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={{ base: 4, md: 5 }}>
-                            <Text fontWeight="700" mb={2}>Что меняет план</Text>
-                            <VStack align="stretch" gap={1.5}>
-                                {data.rules.map((rule) => (
-                                    <Text key={rule} fontSize="sm">• {rule}</Text>
-                                ))}
-                            </VStack>
-                        </Box>
+                        <FoldSection title={'Что меняет план'}>
+                            <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={{ base: 4, md: 5 }}>
+                                <VStack align="stretch" gap={1.5}>
+                                    {data.rules.map((rule) => (
+                                        <Text key={rule} fontSize="sm">• {rule}</Text>
+                                    ))}
+                                </VStack>
+                            </Box>
+                        </FoldSection>
                     </>
                 )}
             </VStack>

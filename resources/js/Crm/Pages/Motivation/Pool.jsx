@@ -8,6 +8,8 @@ import PartnerTable from './components/PartnerTable';
 import PartnerActions, { usePartnerDialogs } from './components/PartnerActions';
 import { BestMonth, Money } from './components/partnerCells';
 import { fmtDay, fmtRub0 } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -73,7 +75,7 @@ export default function MotivationPool({ month, month_label: monthLabelRu, manag
     ];
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Продажи' }, { label: 'Моя мотивация', href: '/crm/motivation' }, { label: 'Свободные клиенты' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('clients', 'pool')}>
             <Head title="Свободные клиенты — CRM" />
             <PageHeader
                 title="Свободные клиенты"
@@ -90,6 +92,7 @@ export default function MotivationPool({ month, month_label: monthLabelRu, manag
                     </HStack>
                 )}
             />
+            <MotivationTabs hub="clients" current="pool" />
 
             <VStack align="stretch" gap={4}>
                 {manager === null && (

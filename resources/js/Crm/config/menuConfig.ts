@@ -57,6 +57,8 @@ export interface MenuItem {
     feature?: string;
     /** Ключ счётчика в `crmCounters` из общих пропсов — числовой бейдж у пункта. */
     counter?: string;
+    /** Дополнительные пути, при которых пункт считается активным (вкладки раздела). */
+    match?: string[];
 }
 
 export interface MenuGroup {
@@ -199,43 +201,26 @@ export const menuConfig: MenuGroup[] = [
         ],
     },
     {
-        // Мотивация 2.0 (mot-00): рабочее место по Положению об оплате труда 2.2.
         // Своё право, а не crm-salary — раздел не показывается менеджерам до ввода
         // Положения в действие, иначе они увидят две разные цифры дохода.
+        // Три пункта у работника; остальные экраны — вкладками внутри (components/hubs.js).
         title: "Мотивация",
         icon: LuSparkles,
         items: [
             { label: "Мой месяц", icon: LuSparkles, path: "/crm/motivation", permission: "crm-motivation.view" },
-            { label: "Моя база", icon: LuUsersRound, path: "/crm/motivation/base", permission: "crm-motivation.view" },
-            { label: "Кто выпал из ритма", icon: LuActivity, path: "/crm/motivation/rhythm", permission: "crm-motivation.view" },
-            { label: "Долги", icon: LuFileWarning, path: "/crm/motivation/debts", permission: "crm-motivation.view" },
-            { label: "Кого разбудить", icon: LuBellRing, path: "/crm/motivation/wake", permission: "crm-motivation.view" },
-            { label: "Мои новые клиенты", icon: LuUserPlus, path: "/crm/motivation/new-partners", permission: "crm-motivation.view" },
-            { label: "Свободные клиенты", icon: LuUsers, path: "/crm/motivation/pool", permission: "crm-motivation.view" },
-            { label: "Фокус-товары", icon: LuStar, path: "/crm/motivation/focus", permission: "crm-motivation.view" },
-            { label: "Откуда мой план", icon: LuTarget, path: "/crm/motivation/plan", permission: "crm-motivation.view" },
-            { label: "Премия отдела", icon: LuTrophy, path: "/crm/motivation/quarter", permission: "crm-motivation.view" },
-            { label: "Расчётный лист", icon: LuReceipt, path: "/crm/motivation/payslip", permission: "crm-motivation.view" },
-            // Параметры видит и работник; менять может только руководитель.
-            { label: "Параметры мотивации", icon: LuSlidersHorizontal, path: "/crm/motivation/settings", permission: "crm-motivation.view" },
+            { label: "Мои клиенты", icon: LuUsers, path: "/crm/motivation/base", permission: "crm-motivation.view", match: ["/crm/motivation/rhythm", "/crm/motivation/debts", "/crm/motivation/wake", "/crm/motivation/new-partners", "/crm/motivation/pool", "/crm/motivation/focus"] },
+            { label: "Расчётный лист", icon: LuReceipt, path: "/crm/motivation/payslip", permission: "crm-motivation.view", match: ["/crm/motivation/plan", "/crm/motivation/quarter"] },
         ],
     },
     {
-        // Рабочее место руководителя: приказы, планы, утверждение, пул, перечень, долги.
+        // Рабочее место руководителя: четыре пункта, внутри вкладки.
         title: "Мотивация · руководитель",
         icon: LuClipboardCheck,
         items: [
-            { label: "Планы на квартал", icon: LuCalendarRange, path: "/crm/motivation/plans", permission: "crm-motivation.edit" },
-            { label: "Сводка отдела", icon: LuLayoutDashboard, path: "/crm/motivation/team", permission: "crm-motivation.edit" },
-            { label: "Ведомость к утверждению", icon: LuClipboardCheck, path: "/crm/motivation/approval", permission: "crm-motivation.edit" },
-            { label: "Пул и раздача", icon: LuPackage, path: "/crm/motivation/pool/admin", permission: "crm-motivation.edit" },
-            { label: "Фокус-перечень", icon: LuListChecks, path: "/crm/motivation/focus-list", permission: "crm-motivation.edit" },
-            { label: "Исключения долгов", icon: LuShieldBan, path: "/crm/motivation/debt-exclusions", permission: "crm-motivation.edit" },
-            { label: "Очередь разметки", icon: LuFileSearch, path: "/crm/motivation/invoices", permission: "crm-motivation.edit" },
-            { label: "Здоровье базы", icon: LuHeartPulse, path: "/crm/motivation/health", permission: "crm-motivation.edit" },
-            { label: "Квартальная премия", icon: LuTrophy, path: "/crm/motivation/quarter/admin", permission: "crm-motivation.edit" },
-            { label: "Прогноз фонда", icon: LuTrendingUp, path: "/crm/motivation/forecast", permission: "crm-motivation.edit" },
-            { label: "Журнал скидок", icon: LuPercent, path: "/crm/motivation/discounts", permission: "crm-motivation.edit" },
+            { label: "Параметры и планы", icon: LuSlidersHorizontal, path: "/crm/motivation/settings", permission: "crm-motivation.edit", match: ["/crm/motivation/plans"] },
+            { label: "Ведомость", icon: LuClipboardCheck, path: "/crm/motivation/team", permission: "crm-motivation.edit", match: ["/crm/motivation/approval", "/crm/motivation/quarter/admin", "/crm/motivation/forecast"] },
+            { label: "Клиенты отдела", icon: LuPackage, path: "/crm/motivation/pool/admin", permission: "crm-motivation.edit", match: ["/crm/motivation/focus-list", "/crm/motivation/health"] },
+            { label: "Долги", icon: LuShieldBan, path: "/crm/motivation/debt-exclusions", permission: "crm-motivation.edit", match: ["/crm/motivation/invoices", "/crm/motivation/discounts"] },
         ],
     },
     {

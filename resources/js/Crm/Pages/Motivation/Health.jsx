@@ -4,6 +4,8 @@ import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import MetricHint from '@/Crm/Components/MetricHint';
 import { fmtPercent, fmtRub0 } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
 
 const inputStyle = {
     padding: '0.45rem 0.6rem',
@@ -30,13 +32,14 @@ export default function MotivationHealth(props) {
     );
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Мотивация' }, { label: 'Здоровье базы' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('department', 'health')}>
             <Head title="Здоровье базы — CRM" />
             <PageHeader
                 title="Здоровье базы"
                 description={`Что происходит с клиентской базой отдела · ${monthLabel}. Показатели считаются теми же сервисами, что экраны работника.`}
                 actions={<input type="month" aria-label="Месяц" style={inputStyle} value={month.slice(0, 7)} onChange={(e) => navigate(e.target.value)} />}
             />
+            <MotivationTabs hub="department" current="health" />
 
             <VStack align="stretch" gap={4}>
                 <SimpleGrid columns={{ base: 2, md: 4 }} gap={3}>

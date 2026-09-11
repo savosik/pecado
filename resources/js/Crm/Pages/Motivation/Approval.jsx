@@ -9,6 +9,8 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { toastError, toastSuccess } from '@/utils/toast';
 import { fmtDateTime, fmtPercent, fmtRub0, fmtSigned } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -63,7 +65,7 @@ export default function MotivationApproval(props) {
     const allReady = data.readiness.every((r) => r.ok);
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Мотивация' }, { label: 'Ведомость к утверждению' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('ledger', 'approval')}>
             <Head title="Ведомость к утверждению — CRM" />
             <PageHeader
                 title="Ведомость к утверждению"
@@ -74,6 +76,7 @@ export default function MotivationApproval(props) {
                     </select>
                 )}
             />
+            <MotivationTabs hub="ledger" current="approval" />
 
             <VStack align="stretch" gap={4}>
                 <Box bg="bg.panel" borderWidth="2px" borderColor={allReady ? 'green.solid' : 'border'} borderRadius="xl" p={4}>

@@ -9,6 +9,9 @@ import MetricHint from '@/Crm/Components/MetricHint';
 import RowActions from '@/shared/Panel/RowActions';
 import TaskDialog from '@/Crm/Components/TaskDialog';
 import { fmtDay, fmtRub, fmtRub0, plural } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
+import FoldSection from './components/FoldSection';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -58,7 +61,7 @@ export default function MotivationDebts({ month, month_label: monthLabel, manage
     const excluded = debts?.excluded ?? [];
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Продажи' }, { label: 'Моя мотивация', href: '/crm/motivation' }, { label: 'Долги' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('clients', 'debts')}>
             <Head title="Долги — CRM" />
             <PageHeader
                 title={canSeeAll && manager ? `Долги: ${manager.name}` : 'Долги: во что они обходятся'}
@@ -70,6 +73,7 @@ export default function MotivationDebts({ month, month_label: monthLabel, manage
                     </select>
                 ) : null}
             />
+            <MotivationTabs hub="clients" current="debts" />
 
             <VStack align="stretch" gap={4}>
                 {manager === null && (
@@ -165,36 +169,34 @@ export default function MotivationDebts({ month, month_label: monthLabel, manage
                         )}
 
                         {excluded.length > 0 && (
-                            <Box>
-                                <HStack gap={2} mb={2}>
-                                    <Text fontWeight="700">Выведено из расчёта</Text>
-                                    <MetricHint text="Долги, по которым руководитель прекратил начисление: списанные, переданные в претензионную работу, оспариваемые. Долг виден, вычета по нему нет — это не ошибка." />
-                                </HStack>
-                                <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
-                                    <Table.Root size="sm">
-                                        <Table.Header>
-                                            <Table.Row>
-                                                <Table.ColumnHeader>Накладная</Table.ColumnHeader>
-                                                <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
-                                                <Table.ColumnHeader textAlign="right">Долг</Table.ColumnHeader>
-                                                <Table.ColumnHeader>Основание</Table.ColumnHeader>
-                                                <Table.ColumnHeader textAlign="right">Дней без начисления</Table.ColumnHeader>
-                                            </Table.Row>
-                                        </Table.Header>
-                                        <Table.Body>
-                                            {excluded.map((row) => (
-                                                <Table.Row key={row.invoice_id}>
-                                                    <Table.Cell><Text fontSize="sm">{row.number}</Text><Text fontSize="xs" color="fg.subtle">срок {row.due_on ? fmtDay(row.due_on) : '—'}</Text></Table.Cell>
-                                                    <Table.Cell><Text fontSize="sm">{row.partner_name}</Text></Table.Cell>
-                                                    <Table.Cell textAlign="right"><Text fontSize="sm" fontVariantNumeric="tabular-nums">{fmtRub0(row.balance || row.amount)}</Text></Table.Cell>
-                                                    <Table.Cell><Badge size="xs" variant="subtle" colorPalette="gray">{row.reason_label}</Badge></Table.Cell>
-                                                    <Table.Cell textAlign="right"><Text fontSize="sm">{row.excluded_days}{row.counted_days > 0 ? ` (начислено ${row.counted_days})` : ''}</Text></Table.Cell>
+                            <FoldSection title={'Выведено из расчёта'} summary={`${excluded.length} ${plural(excluded.length, 'накладная', 'накладные', 'накладных')}`}>
+                                <Box>
+                                    <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
+                                        <Table.Root size="sm">
+                                            <Table.Header>
+                                                <Table.Row>
+                                                    <Table.ColumnHeader>Накладная</Table.ColumnHeader>
+                                                    <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
+                                                    <Table.ColumnHeader textAlign="right">Долг</Table.ColumnHeader>
+                                                    <Table.ColumnHeader>Основание</Table.ColumnHeader>
+                                                    <Table.ColumnHeader textAlign="right">Дней без начисления</Table.ColumnHeader>
                                                 </Table.Row>
-                                            ))}
-                                        </Table.Body>
-                                    </Table.Root>
+                                            </Table.Header>
+                                            <Table.Body>
+                                                {excluded.map((row) => (
+                                                    <Table.Row key={row.invoice_id}>
+                                                        <Table.Cell><Text fontSize="sm">{row.number}</Text><Text fontSize="xs" color="fg.subtle">срок {row.due_on ? fmtDay(row.due_on) : '—'}</Text></Table.Cell>
+                                                        <Table.Cell><Text fontSize="sm">{row.partner_name}</Text></Table.Cell>
+                                                        <Table.Cell textAlign="right"><Text fontSize="sm" fontVariantNumeric="tabular-nums">{fmtRub0(row.balance || row.amount)}</Text></Table.Cell>
+                                                        <Table.Cell><Badge size="xs" variant="subtle" colorPalette="gray">{row.reason_label}</Badge></Table.Cell>
+                                                        <Table.Cell textAlign="right"><Text fontSize="sm">{row.excluded_days}{row.counted_days > 0 ? ` (начислено ${row.counted_days})` : ''}</Text></Table.Cell>
+                                                    </Table.Row>
+                                                ))}
+                                            </Table.Body>
+                                        </Table.Root>
+                                    </Box>
                                 </Box>
-                            </Box>
+                            </FoldSection>
                         )}
                     </>
                 )}

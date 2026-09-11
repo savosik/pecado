@@ -11,6 +11,7 @@ import MotivationLevers from './components/MotivationLevers';
 import ForecastRange from './components/ForecastRange';
 import MotivationCalculator from './components/MotivationCalculator';
 import ParallelBlock from './components/ParallelBlock';
+import FoldSection from './components/FoldSection';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -115,13 +116,17 @@ export default function MotivationIndex(props) {
                         {!calc.frozen && data.is_current_month && (
                             <>
                                 <MotivationLevers levers={calc.levers} />
-                                <ForecastRange forecast={calc.forecast} total={calc.total} />
-                                <MotivationCalculator
-                                    calculation={calc}
-                                    month={data.month}
-                                    managerId={data.manager?.id}
-                                    canSeeAll={data.can_see_all}
-                                />
+                                <FoldSection title="Прогноз к концу месяца и калькулятор «что если»" summary={calc.forecast ? `ожидается ${Math.round(calc.forecast.expected).toLocaleString('ru-RU')} ₽` : undefined}>
+                                    <VStack align="stretch" gap={4} p={4}>
+                                        <ForecastRange forecast={calc.forecast} total={calc.total} />
+                                        <MotivationCalculator
+                                            calculation={calc}
+                                            month={data.month}
+                                            managerId={data.manager?.id}
+                                            canSeeAll={data.can_see_all}
+                                        />
+                                    </VStack>
+                                </FoldSection>
                             </>
                         )}
 

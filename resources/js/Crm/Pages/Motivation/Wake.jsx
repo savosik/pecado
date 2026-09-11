@@ -8,6 +8,8 @@ import PartnerTable from './components/PartnerTable';
 import PartnerActions, { usePartnerDialogs } from './components/PartnerActions';
 import { BestMonth, LastPurchase, Money, PartnerName } from './components/partnerCells';
 import { fmtRub0, plural } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -73,7 +75,7 @@ export default function MotivationWake({ month, month_label: monthLabel, manager
         ];
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Продажи' }, { label: 'Моя мотивация', href: '/crm/motivation' }, { label: 'Кого разбудить' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('clients', 'wake')}>
             <Head title="Кого разбудить — CRM" />
             <PageHeader
                 title={canSeeAll && manager ? `Разбудить: ${manager.name}` : 'Кого разбудить'}
@@ -90,6 +92,7 @@ export default function MotivationWake({ month, month_label: monthLabel, manager
                     </HStack>
                 )}
             />
+            <MotivationTabs hub="clients" current="wake" />
 
             <VStack align="stretch" gap={4}>
                 {manager === null && (

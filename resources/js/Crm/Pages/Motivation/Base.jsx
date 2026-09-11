@@ -7,6 +7,8 @@ import MetricHint from '@/Crm/Components/MetricHint';
 import PartnerTable from './components/PartnerTable';
 import PartnerActions, { usePartnerDialogs } from './components/PartnerActions';
 import { Assortment, BestMonth, Debt, LastPurchase, Money, PartnerName } from './components/partnerCells';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -57,7 +59,7 @@ export default function MotivationBase({ month, month_label: monthLabel, manager
     ];
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Продажи' }, { label: 'Моя мотивация', href: '/crm/motivation' }, { label: 'Моя база' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('clients', 'base')}>
             <Head title="Моя база — CRM" />
             <PageHeader
                 title={canSeeAll && manager ? `База: ${manager.name}` : 'Моя база'}
@@ -81,6 +83,7 @@ export default function MotivationBase({ month, month_label: monthLabel, manager
                     </HStack>
                 )}
             />
+            <MotivationTabs hub="clients" current="base" />
 
             <VStack align="stretch" gap={4}>
                 {manager === null && (

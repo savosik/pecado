@@ -7,6 +7,8 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Pagination } from '@/Admin/Components/Pagination';
 import { Alert } from '@/components/ui/alert';
 import { fmtDay, fmtRub0 } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
 
 const inputStyle = {
     padding: '0.45rem 0.6rem',
@@ -32,9 +34,10 @@ export default function MotivationDiscounts({ query, managers, summary, rows, no
     const docs = rows?.data ?? [];
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Мотивация' }, { label: 'Журнал скидок' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('debts', 'discounts')}>
             <Head title="Журнал скидок — CRM" />
             <PageHeader title="Журнал скидок" description="Какие ручные скидки выданы и кем. Сортировка — по размеру скидки, по убыванию." />
+            <MotivationTabs hub="debts" current="discounts" />
 
             <VStack align="stretch" gap={4}>
                 <Alert status="info" title="Постконтроль">{note}</Alert>

@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import MetricHint from '@/Crm/Components/MetricHint';
 import PartnerActions, { usePartnerDialogs } from './components/PartnerActions';
 import { fmtDay, fmtPercent, fmtRub, fmtRub0 } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -41,7 +43,7 @@ export default function MotivationFocus({ month, month_label: monthLabel, manage
     };
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Продажи' }, { label: 'Моя мотивация', href: '/crm/motivation' }, { label: 'Фокус-товары' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('clients', 'focus')}>
             <Head title="Фокус-товары — CRM" />
             <PageHeader
                 title="Фокус-товары"
@@ -53,6 +55,7 @@ export default function MotivationFocus({ month, month_label: monthLabel, manage
                     </select>
                 ) : null}
             />
+            <MotivationTabs hub="clients" current="focus" />
 
             <VStack align="stretch" gap={4}>
                 {manager === null && (

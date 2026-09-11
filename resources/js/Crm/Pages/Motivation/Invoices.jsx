@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import MetricHint from '@/Crm/Components/MetricHint';
 import { toastError, toastSuccess } from '@/utils/toast';
 import { fmtDay, fmtRub0 } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
 
 const inputStyle = {
     padding: '0.45rem 0.6rem',
@@ -57,9 +59,10 @@ export default function MotivationInvoices(props) {
     const rows = data.rows?.data ?? [];
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Мотивация' }, { label: 'Очередь разметки' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('debts', 'invoices')}>
             <Head title="Очередь разметки накладных — CRM" />
             <PageHeader title="Очередь разметки накладных" description="По каким накладным не восстановлена дата оплаты и сколько каждая добавляет к вычету работника." />
+            <MotivationTabs hub="debts" current="invoices" />
 
             <VStack align="stretch" gap={4}>
                 <Alert status="info" title="Незнание толкуется в пользу работника">

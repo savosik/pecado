@@ -11,6 +11,9 @@ import { Button } from '@/components/ui/button';
 import MetricHint from '@/Crm/Components/MetricHint';
 import { toastError, toastSuccess } from '@/utils/toast';
 import { fmtDay, fmtDateTime, fmtRub0, plural } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
+import FoldSection from './components/FoldSection';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -76,9 +79,10 @@ export default function MotivationPoolAdmin(props) {
     const tapFor = data.taps.find((t) => String(t.manager.id) === String(managerId));
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Мотивация' }, { label: 'Пул и раздача' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('department', 'pool')}>
             <Head title="Пул и раздача — CRM" />
             <PageHeader title="Пул и раздача" description="Кому и что раздать, кто просрочил сроки. Карточка переходит работнику сразу, показатели — с первого числа следующего месяца." />
+            <MotivationTabs hub="department" current="pool" />
 
             <VStack align="stretch" gap={4}>
                 <Alert status="warning" title="Пул холодный">{data.note}</Alert>
@@ -106,82 +110,83 @@ export default function MotivationPoolAdmin(props) {
                     </VStack>
                 </Box>
 
-                <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
-                    <Text fontWeight="700" px={4} pt={3}>Выданные пакеты</Text>
-                    {data.packages.length === 0 ? <Text px={4} pb={4} fontSize="sm" color="fg.muted">Пакетов ещё не выдавали.</Text> : (
-                        <Table.Root size="sm">
-                            <Table.Header>
-                                <Table.Row>
-                                    <Table.ColumnHeader w="1%" />
-                                    <Table.ColumnHeader>Пакет</Table.ColumnHeader>
-                                    <Table.ColumnHeader>Работник</Table.ColumnHeader>
-                                    <Table.ColumnHeader>Выдан</Table.ColumnHeader>
-                                    <Table.ColumnHeader>Контакт до / отгрузка до</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Партнёров</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Контакт в срок</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Отгружено</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Просрочено</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Действия</Table.ColumnHeader>
-                                </Table.Row>
-                            </Table.Header>
-                            <Table.Body>
-                                {data.packages.map((p) => [
-                                    <Table.Row key={p.id}>
-                                        <Table.Cell><Box as="button" type="button" color="fg.subtle" cursor="pointer" onClick={() => toggleOpen(p.id)} aria-expanded={open.has(p.id)} aria-label={`Состав пакета ${p.id}`}>{open.has(p.id) ? <LuChevronDown size={16} /> : <LuChevronRight size={16} />}</Box></Table.Cell>
-                                        <Table.Cell><Text fontSize="sm" fontWeight="600">№ {p.id}</Text><Badge size="xs" variant="subtle" colorPalette={p.status === 'active' ? 'blue' : 'gray'}>{p.status === 'active' ? 'в работе' : p.status === 'closed' ? 'закрыт' : 'кран'}</Badge></Table.Cell>
-                                        <Table.Cell><Text fontSize="sm">{p.manager.name}</Text></Table.Cell>
-                                        <Table.Cell><Text fontSize="sm">{fmtDay(p.issued_on)}</Text></Table.Cell>
-                                        <Table.Cell><Text fontSize="xs">{fmtDay(p.contact_due_on)} / {fmtDay(p.shipment_due_on)}</Text></Table.Cell>
-                                        <Table.Cell textAlign="right"><Text fontSize="sm">{p.count}</Text></Table.Cell>
-                                        <Table.Cell textAlign="right"><Text fontSize="sm">{p.contacted_in_time}</Text></Table.Cell>
-                                        <Table.Cell textAlign="right"><Text fontSize="sm" color={p.shipped > 0 ? 'green.fg' : undefined}>{p.shipped}</Text></Table.Cell>
-                                        <Table.Cell textAlign="right"><Text fontSize="sm" color={p.overdue > 0 ? 'red.fg' : 'fg.subtle'}>{p.overdue}</Text></Table.Cell>
-                                        <Table.Cell textAlign="right">
-                                            {data.can_edit && (
-                                                <HStack justify="flex-end" gap={1}>
-                                                    <Button size="xs" variant="ghost" aria-label="Обновить состояние" title="Обновить по данным CRM" loading={busy} onClick={() => call(`/crm/motivation/pool/packages/${p.id}/refresh`, {})}><LuRefreshCw /></Button>
-                                                    {p.overdue > 0 && (
-                                                        <Button size="xs" variant="outline" colorPalette="orange" loading={busy} onClick={() => call(`/crm/motivation/pool/packages/${p.id}/return`, { item_ids: p.items.filter((i) => i.late).map((i) => i.id) })}><LuUndo2 /> Вернуть просроченных</Button>
-                                                    )}
-                                                </HStack>
-                                            )}
-                                        </Table.Cell>
-                                    </Table.Row>,
-                                    open.has(p.id) && (
-                                        <Table.Row key={`${p.id}-items`}>
-                                            <Table.Cell colSpan={10} bg="bg.subtle" p={0}>
-                                                <Table.Root size="sm" variant="line">
-                                                    <Table.Body>
-                                                        {p.items.map((i) => (
-                                                            <Table.Row key={i.id}>
-                                                                <Table.Cell pl={12}>
-                                                                    <HStack gap={2}>
-                                                                        {data.can_edit && i.outcome !== 'returned' && <input type="checkbox" aria-label="К возврату" checked={Boolean(toReturn[i.id])} onChange={(e) => setToReturn({ ...toReturn, [i.id]: e.target.checked })} />}
-                                                                        <Text fontSize="sm">{i.partner_name}</Text>
-                                                                    </HStack>
-                                                                </Table.Cell>
-                                                                <Table.Cell><Text fontSize="xs" color={i.contact_in_time ? 'green.fg' : 'fg.muted'}>{i.first_contact_at ? `контакт ${fmtDateTime(i.first_contact_at)}` : 'контакта нет'}</Text></Table.Cell>
-                                                                <Table.Cell><Text fontSize="xs" color={i.first_shipment_at ? 'green.fg' : 'fg.muted'}>{i.first_shipment_at ? `отгрузка ${fmtDateTime(i.first_shipment_at)}` : 'отгрузки нет'}</Text></Table.Cell>
-                                                                <Table.Cell><Badge size="xs" variant="subtle" colorPalette={i.late ? 'red' : OUTCOME[i.outcome]?.palette}>{i.late ? 'просрочен' : OUTCOME[i.outcome]?.label}</Badge></Table.Cell>
-                                                            </Table.Row>
-                                                        ))}
-                                                        {data.can_edit && p.items.some((i) => toReturn[i.id]) && (
-                                                            <Table.Row>
-                                                                <Table.Cell colSpan={4} textAlign="right">
-                                                                    <Button size="xs" variant="outline" colorPalette="orange" loading={busy} onClick={async () => { if (await call(`/crm/motivation/pool/packages/${p.id}/return`, { item_ids: p.items.filter((i) => toReturn[i.id]).map((i) => i.id) })) setToReturn({}); }}><LuUndo2 /> Вернуть выбранных в пул</Button>
-                                                                </Table.Cell>
-                                                            </Table.Row>
+                <FoldSection title={'Выданные пакеты'} summary={`${data.packages.length} ${plural(data.packages.length, 'пакет', 'пакета', 'пакетов')}`}>
+                    <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
+                        {data.packages.length === 0 ? <Text px={4} pb={4} fontSize="sm" color="fg.muted">Пакетов ещё не выдавали.</Text> : (
+                            <Table.Root size="sm">
+                                <Table.Header>
+                                    <Table.Row>
+                                        <Table.ColumnHeader w="1%" />
+                                        <Table.ColumnHeader>Пакет</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Работник</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Выдан</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Контакт до / отгрузка до</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="right">Партнёров</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="right">Контакт в срок</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="right">Отгружено</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="right">Просрочено</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="right">Действия</Table.ColumnHeader>
+                                    </Table.Row>
+                                </Table.Header>
+                                <Table.Body>
+                                    {data.packages.map((p) => [
+                                        <Table.Row key={p.id}>
+                                            <Table.Cell><Box as="button" type="button" color="fg.subtle" cursor="pointer" onClick={() => toggleOpen(p.id)} aria-expanded={open.has(p.id)} aria-label={`Состав пакета ${p.id}`}>{open.has(p.id) ? <LuChevronDown size={16} /> : <LuChevronRight size={16} />}</Box></Table.Cell>
+                                            <Table.Cell><Text fontSize="sm" fontWeight="600">№ {p.id}</Text><Badge size="xs" variant="subtle" colorPalette={p.status === 'active' ? 'blue' : 'gray'}>{p.status === 'active' ? 'в работе' : p.status === 'closed' ? 'закрыт' : 'кран'}</Badge></Table.Cell>
+                                            <Table.Cell><Text fontSize="sm">{p.manager.name}</Text></Table.Cell>
+                                            <Table.Cell><Text fontSize="sm">{fmtDay(p.issued_on)}</Text></Table.Cell>
+                                            <Table.Cell><Text fontSize="xs">{fmtDay(p.contact_due_on)} / {fmtDay(p.shipment_due_on)}</Text></Table.Cell>
+                                            <Table.Cell textAlign="right"><Text fontSize="sm">{p.count}</Text></Table.Cell>
+                                            <Table.Cell textAlign="right"><Text fontSize="sm">{p.contacted_in_time}</Text></Table.Cell>
+                                            <Table.Cell textAlign="right"><Text fontSize="sm" color={p.shipped > 0 ? 'green.fg' : undefined}>{p.shipped}</Text></Table.Cell>
+                                            <Table.Cell textAlign="right"><Text fontSize="sm" color={p.overdue > 0 ? 'red.fg' : 'fg.subtle'}>{p.overdue}</Text></Table.Cell>
+                                            <Table.Cell textAlign="right">
+                                                {data.can_edit && (
+                                                    <HStack justify="flex-end" gap={1}>
+                                                        <Button size="xs" variant="ghost" aria-label="Обновить состояние" title="Обновить по данным CRM" loading={busy} onClick={() => call(`/crm/motivation/pool/packages/${p.id}/refresh`, {})}><LuRefreshCw /></Button>
+                                                        {p.overdue > 0 && (
+                                                            <Button size="xs" variant="outline" colorPalette="orange" loading={busy} onClick={() => call(`/crm/motivation/pool/packages/${p.id}/return`, { item_ids: p.items.filter((i) => i.late).map((i) => i.id) })}><LuUndo2 /> Вернуть просроченных</Button>
                                                         )}
-                                                    </Table.Body>
-                                                </Table.Root>
+                                                    </HStack>
+                                                )}
                                             </Table.Cell>
-                                        </Table.Row>
-                                    ),
-                                ])}
-                            </Table.Body>
-                        </Table.Root>
-                    )}
-                </Box>
+                                        </Table.Row>,
+                                        open.has(p.id) && (
+                                            <Table.Row key={`${p.id}-items`}>
+                                                <Table.Cell colSpan={10} bg="bg.subtle" p={0}>
+                                                    <Table.Root size="sm" variant="line">
+                                                        <Table.Body>
+                                                            {p.items.map((i) => (
+                                                                <Table.Row key={i.id}>
+                                                                    <Table.Cell pl={12}>
+                                                                        <HStack gap={2}>
+                                                                            {data.can_edit && i.outcome !== 'returned' && <input type="checkbox" aria-label="К возврату" checked={Boolean(toReturn[i.id])} onChange={(e) => setToReturn({ ...toReturn, [i.id]: e.target.checked })} />}
+                                                                            <Text fontSize="sm">{i.partner_name}</Text>
+                                                                        </HStack>
+                                                                    </Table.Cell>
+                                                                    <Table.Cell><Text fontSize="xs" color={i.contact_in_time ? 'green.fg' : 'fg.muted'}>{i.first_contact_at ? `контакт ${fmtDateTime(i.first_contact_at)}` : 'контакта нет'}</Text></Table.Cell>
+                                                                    <Table.Cell><Text fontSize="xs" color={i.first_shipment_at ? 'green.fg' : 'fg.muted'}>{i.first_shipment_at ? `отгрузка ${fmtDateTime(i.first_shipment_at)}` : 'отгрузки нет'}</Text></Table.Cell>
+                                                                    <Table.Cell><Badge size="xs" variant="subtle" colorPalette={i.late ? 'red' : OUTCOME[i.outcome]?.palette}>{i.late ? 'просрочен' : OUTCOME[i.outcome]?.label}</Badge></Table.Cell>
+                                                                </Table.Row>
+                                                            ))}
+                                                            {data.can_edit && p.items.some((i) => toReturn[i.id]) && (
+                                                                <Table.Row>
+                                                                    <Table.Cell colSpan={4} textAlign="right">
+                                                                        <Button size="xs" variant="outline" colorPalette="orange" loading={busy} onClick={async () => { if (await call(`/crm/motivation/pool/packages/${p.id}/return`, { item_ids: p.items.filter((i) => toReturn[i.id]).map((i) => i.id) })) setToReturn({}); }}><LuUndo2 /> Вернуть выбранных в пул</Button>
+                                                                    </Table.Cell>
+                                                                </Table.Row>
+                                                            )}
+                                                        </Table.Body>
+                                                    </Table.Root>
+                                                </Table.Cell>
+                                            </Table.Row>
+                                        ),
+                                    ])}
+                                </Table.Body>
+                            </Table.Root>
+                        )}
+                    </Box>
+                </FoldSection>
 
                 {data.can_edit && (
                     <Box bg="bg.panel" borderWidth="2px" borderColor={selected.size > 0 ? 'blue.solid' : 'border'} borderRadius="xl" p={4}>

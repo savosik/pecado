@@ -13,6 +13,8 @@ import { toastError, toastSuccess } from '@/utils/toast';
 import ParamField, { formatValue } from './components/settings/ParamField';
 import PersonalOverrides from './components/settings/PersonalOverrides';
 import { fmtDay, fmtRub, fmtSigned } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -86,7 +88,7 @@ export default function MotivationSettings(props) {
     const errors = preview?.errors ?? [];
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Мотивация' }, { label: 'Параметры мотивации' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs(data.can_edit ? 'rules' : 'payslip', data.can_edit ? 'settings' : 'rates')}>
             <Head title="Параметры мотивации — CRM" />
             <PageHeader
                 title="Параметры мотивации"
@@ -99,6 +101,7 @@ export default function MotivationSettings(props) {
                     </HStack>
                 )}
             />
+            <MotivationTabs hub={data.can_edit ? 'rules' : 'payslip'} current={data.can_edit ? 'settings' : 'rates'} />
 
             <VStack align="stretch" gap={4}>
                 <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4}>

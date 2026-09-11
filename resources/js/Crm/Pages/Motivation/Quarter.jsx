@@ -6,6 +6,9 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Alert } from '@/components/ui/alert';
 import MetricHint from '@/Crm/Components/MetricHint';
 import { fmtDay, fmtRub0, plural } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
+import FoldSection from './components/FoldSection';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -37,7 +40,7 @@ export default function MotivationQuarter({ month, data }) {
     }
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Продажи' }, { label: 'Моя мотивация', href: '/crm/motivation' }, { label: 'Премия отдела' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('payslip', 'quarter')}>
             <Head title="Премия отдела за квартал — CRM" />
             <PageHeader
                 title="Премия отдела за квартал"
@@ -48,6 +51,7 @@ export default function MotivationQuarter({ month, data }) {
                     </select>
                 )}
             />
+            <MotivationTabs hub="payslip" current="quarter" />
 
             <VStack align="stretch" gap={4} maxW="1100px">
                 {data && (
@@ -87,42 +91,40 @@ export default function MotivationQuarter({ month, data }) {
                             </Text>
                         )}
 
-                        <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
-                            <HStack px={4} pt={3} pb={1} gap={2}>
-                                <Text fontWeight="700">Кто засчитан</Text>
-                                <MetricHint text="Показаны новые партнёры всего отдела: премия общая. Каждый проверяется отдельно — средней покупки на партнёра здесь нет намеренно." />
-                            </HStack>
-                            {data.candidates.length === 0 ? (
-                                <Text px={4} pb={4} fontSize="sm" color="fg.muted">Новых партнёров с отгрузками в этом квартале нет.</Text>
-                            ) : (
-                                <Table.Root size="sm">
-                                    <Table.Header>
-                                        <Table.Row>
-                                            <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
-                                            <Table.ColumnHeader>Чей</Table.ColumnHeader>
-                                            <Table.ColumnHeader>Первая покупка</Table.ColumnHeader>
-                                            <Table.ColumnHeader textAlign="right">Купил за квартал</Table.ColumnHeader>
-                                            <Table.ColumnHeader textAlign="right">Зачёт</Table.ColumnHeader>
-                                        </Table.Row>
-                                    </Table.Header>
-                                    <Table.Body>
-                                        {data.candidates.map((c) => (
-                                            <Table.Row key={c.partner_id}>
-                                                <Table.Cell><Link href={`/crm/partners/${c.partner_id}`}><Text fontSize="sm" fontWeight="600" _hover={{ textDecoration: 'underline' }}>{c.name}</Text></Link></Table.Cell>
-                                                <Table.Cell><Text fontSize="sm" color="fg.muted">{c.manager ?? '—'}</Text></Table.Cell>
-                                                <Table.Cell><Text fontSize="sm">{c.first_purchase_on ? fmtDay(c.first_purchase_on) : '—'}</Text></Table.Cell>
-                                                <Table.Cell textAlign="right"><Text fontSize="sm" fontVariantNumeric="tabular-nums">{fmtRub0(c.quarter_amount)}</Text></Table.Cell>
-                                                <Table.Cell textAlign="right">
-                                                    {c.qualified
-                                                        ? <Badge size="xs" colorPalette="green" variant="subtle">засчитан</Badge>
-                                                        : <Text fontSize="sm" color="fg.muted" fontVariantNumeric="tabular-nums">ещё {fmtRub0(c.shortfall)}</Text>}
-                                                </Table.Cell>
+                        <FoldSection title={'Кто засчитан'} summary={`${data.candidates.length} ${plural(data.candidates.length, 'кандидат', 'кандидата', 'кандидатов')}`}>
+                            <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
+                                {data.candidates.length === 0 ? (
+                                    <Text px={4} pb={4} fontSize="sm" color="fg.muted">Новых партнёров с отгрузками в этом квартале нет.</Text>
+                                ) : (
+                                    <Table.Root size="sm">
+                                        <Table.Header>
+                                            <Table.Row>
+                                                <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
+                                                <Table.ColumnHeader>Чей</Table.ColumnHeader>
+                                                <Table.ColumnHeader>Первая покупка</Table.ColumnHeader>
+                                                <Table.ColumnHeader textAlign="right">Купил за квартал</Table.ColumnHeader>
+                                                <Table.ColumnHeader textAlign="right">Зачёт</Table.ColumnHeader>
                                             </Table.Row>
-                                        ))}
-                                    </Table.Body>
-                                </Table.Root>
-                            )}
-                        </Box>
+                                        </Table.Header>
+                                        <Table.Body>
+                                            {data.candidates.map((c) => (
+                                                <Table.Row key={c.partner_id}>
+                                                    <Table.Cell><Link href={`/crm/partners/${c.partner_id}`}><Text fontSize="sm" fontWeight="600" _hover={{ textDecoration: 'underline' }}>{c.name}</Text></Link></Table.Cell>
+                                                    <Table.Cell><Text fontSize="sm" color="fg.muted">{c.manager ?? '—'}</Text></Table.Cell>
+                                                    <Table.Cell><Text fontSize="sm">{c.first_purchase_on ? fmtDay(c.first_purchase_on) : '—'}</Text></Table.Cell>
+                                                    <Table.Cell textAlign="right"><Text fontSize="sm" fontVariantNumeric="tabular-nums">{fmtRub0(c.quarter_amount)}</Text></Table.Cell>
+                                                    <Table.Cell textAlign="right">
+                                                        {c.qualified
+                                                            ? <Badge size="xs" colorPalette="green" variant="subtle">засчитан</Badge>
+                                                            : <Text fontSize="sm" color="fg.muted" fontVariantNumeric="tabular-nums">ещё {fmtRub0(c.shortfall)}</Text>}
+                                                    </Table.Cell>
+                                                </Table.Row>
+                                            ))}
+                                        </Table.Body>
+                                    </Table.Root>
+                                )}
+                            </Box>
+                        </FoldSection>
                     </>
                 )}
             </VStack>

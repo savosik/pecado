@@ -7,6 +7,9 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { fmtDateTime, fmtDay, fmtRub, fmtSigned, plural } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
+import FoldSection from './components/FoldSection';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -40,7 +43,7 @@ export default function MotivationPayslip({ month, month_label: monthLabel, mont
     if (calc) pdfParams.set('version', String(calc.version));
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Продажи' }, { label: 'Моя мотивация', href: '/crm/motivation' }, { label: 'Расчётный лист' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('payslip', 'payslip')}>
             <Head title="Расчётный лист — CRM" />
             <PageHeader
                 title={canSeeAll && manager ? `Расчётный лист: ${manager.name}` : 'Расчётный лист'}
@@ -64,6 +67,7 @@ export default function MotivationPayslip({ month, month_label: monthLabel, mont
                     </HStack>
                 )}
             />
+            <MotivationTabs hub="payslip" current="payslip" />
 
             <VStack align="stretch" gap={4} maxW="1100px">
                 {manager === null && (
@@ -128,7 +132,7 @@ export default function MotivationPayslip({ month, month_label: monthLabel, mont
                         </Box>
 
                         {slip.quarterly_share && (
-                            <Section title={`Квартальная премия отдела · ${slip.quarterly_share.quarter_label} (п. 7.6)`}>
+                            <Section open title={`Квартальная премия отдела · ${slip.quarterly_share.quarter_label} (п. 7.6)`}>
                                 <HStack justify="space-between" fontSize="sm" py={1} flexWrap="wrap" gap={2}>
                                     <Text>
                                         Премия отдела {fmtRub(slip.quarterly_share.bonus_amount)} ({slip.quarterly_share.status_label}, ступень {slip.quarterly_share.step}).
@@ -186,12 +190,20 @@ export default function MotivationPayslip({ month, month_label: monthLabel, mont
     );
 }
 
-function Section({ title, children }) {
+function Section({ title, open = false, children }) {
+    if (open) {
+        return (
+            <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={{ base: 4, md: 5 }}>
+                <Text fontWeight="700" mb={2}>{title}</Text>
+                {children}
+            </Box>
+        );
+    }
+
     return (
-        <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={{ base: 4, md: 5 }}>
-            <Text fontWeight="700" mb={2}>{title}</Text>
-            {children}
-        </Box>
+        <FoldSection title={title}>
+            <Box p={{ base: 4, md: 5 }}>{children}</Box>
+        </FoldSection>
     );
 }
 
@@ -246,7 +258,7 @@ function Objection({ slip, isOwn }) {
     };
 
     return (
-        <Section title="Возражение по расчёту (п. 11.3)">
+        <Section open title="Возражение по расчёту (п. 11.3)">
             {state.items.length > 0 && (
                 <VStack align="stretch" gap={2} mb={3}>
                     {state.items.map((item) => (

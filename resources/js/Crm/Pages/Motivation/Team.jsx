@@ -7,6 +7,8 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import MetricHint from '@/Crm/Components/MetricHint';
 import { fmtPercent, fmtRub0, fmtSigned } from '../Salary/components/format';
+import MotivationTabs from './components/MotivationTabs';
+import { hubBreadcrumbs } from './components/hubs';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -29,7 +31,7 @@ export default function MotivationTeam({ month, month_label: monthLabel, months,
     const changeMonth = (m) => router.get('/crm/motivation/team', { month: m }, { preserveState: true, preserveScroll: true, replace: true });
 
     return (
-        <CrmLayout breadcrumbs={[{ label: 'Мотивация' }, { label: 'Сводка отдела' }]}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('ledger', 'team')}>
             <Head title="Сводка отдела — CRM" />
             <PageHeader
                 title="Сводка отдела"
@@ -45,6 +47,7 @@ export default function MotivationTeam({ month, month_label: monthLabel, months,
                     </HStack>
                 )}
             />
+            <MotivationTabs hub="ledger" current="team" />
 
             <VStack align="stretch" gap={4}>
                 <SimpleGrid columns={{ base: 2, md: 5 }} gap={3}>
