@@ -58,6 +58,8 @@ class ClientController extends CrmController
             'canSeeAll' => $seesAll,
             'canSeeTasks' => $canSeeTasks,
             'canSeePlans' => $canSeePlans,
+            // Налоговый режим живёт на юрлицах — отбор по нему у тех, кто их видит.
+            'canSeeTaxRegime' => $actor->can('crm-contractors.view'),
             'uncoveredCount' => $canSeeTasks ? $tasks->uncoveredClients($actor)->count() : null,
             'lifecycleOptions' => $canSeeProfile ? ClientLifecycleStatus::optionsWithColor() : [],
             'managerProfileLinked' => $seesAll || $actor->managerProfile !== null,
@@ -200,6 +202,12 @@ class ClientController extends CrmController
                 : (int) config('debt.pause_max_days_manager', 14),
             'contractors' => $canSeeContractors ? $contractors->forPartner($user) : [],
             'canSeeContractors' => $canSeeContractors,
+            // Налоговый режим юрлиц заполняется во вкладке «Контрагенты» —
+            // право то же, что у анкеты партнёра.
+            'taxRegimeOptions' => $canSeeContractors
+                ? \App\Services\Crm\TaxRegime\ContractorTaxRegimeService::options()
+                : null,
+            'canEditTaxRegime' => $this->crmActor($request)->can('crm-profile.edit'),
             'contracts' => $canSeeContracts ? $contractList->forPartner($user) : [],
             'canSeeContracts' => $canSeeContracts,
             'profile' => $canSeeProfile ? $this->profilePayload($user, $profiles) : null,

@@ -8,6 +8,7 @@ use App\Models\PersonalManager;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\Crm\ContractorListService;
+use App\Services\Crm\TaxRegime\ContractorTaxRegimeService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -54,13 +55,13 @@ class ContractorController extends CrmController
         ]);
     }
 
-    public function show(Request $request, int $contractor): Response
+    public function show(Request $request, int $contractor, ContractorTaxRegimeService $regimes): Response
     {
         $actor = $this->crmActor($request);
 
         $company = Company::query()
             ->visibleInCrm($actor)
-            ->with(['user:id,name,erp_name,email,phone', 'contractorBalance', 'bankAccounts'])
+            ->with(['user:id,name,erp_name,email,phone', 'contractorBalance', 'bankAccounts', 'taxRegime.confirmer:id,name'])
             ->findOrFail($contractor);
 
         return Inertia::render('Crm/Pages/Contractors/Show', [
@@ -70,6 +71,9 @@ class ContractorController extends CrmController
                 'shipments' => $this->documents(Shipment::class, $company),
             ],
             'canSeeDocuments' => $actor->can('crm-clients.view'),
+            'taxRegime' => $regimes->payload($company->taxRegime),
+            'taxRegimeOptions' => ContractorTaxRegimeService::options(),
+            'canEditTaxRegime' => $actor->can('crm-profile.edit'),
         ]);
     }
 

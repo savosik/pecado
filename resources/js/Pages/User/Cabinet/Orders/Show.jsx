@@ -16,6 +16,7 @@ import {
     LuSend, LuPencil, LuUndo2,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
+import { TaxSurveyInvite } from '../../TaxSurvey/TaxSurvey';
 import ReserveCountdown from '@/components/cabinet/ReserveCountdown';
 import { NumberInputRoot, NumberInputField } from '@/components/ui/number-input';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -249,6 +250,8 @@ export default function OrderShow({ order }) {
                 </HStack>
             }
         >
+            {/* Сразу после оформления: заказ собирается — спокойный момент для пары вопросов про НДС. */}
+            <TaxSurveyInvite afterOrder mb="4" />
             <Head title={`Заказ ${order.number} — Pecado`} />
 
             <ConfirmDialog

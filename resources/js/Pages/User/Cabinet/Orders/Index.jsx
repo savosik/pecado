@@ -10,6 +10,7 @@ import {
     LuPackage, LuTruck, LuClock, LuMapPin, LuStore,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
+import { TaxSurveyInvite } from '../../TaxSurvey/TaxSurvey';
 import { Field } from '@/components/ui/field';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select } from '@/components/ui/select';
@@ -223,6 +224,9 @@ export default function OrdersIndex({ scope = 'orders', filters, statuses, statu
     return (
         <CabinetLayout title={title}>
             <Head title={`${title} — Pecado`} />
+
+            {/* После оформления нескольких заказов сюда ведёт чекаут — пара вопросов про НДС. */}
+            <TaxSurveyInvite afterOrder mb="4" />
 
             {/* Поиск + фильтры + сортировка — одной строкой */}
             <Flex gap="2" mb="4" align="center">

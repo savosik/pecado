@@ -76,6 +76,7 @@ export default function Index({
     canSeeAll,
     canSeeTasks = false,
     canSeePlans = false,
+    canSeeTaxRegime = false,
     uncoveredCount = null,
     managerProfileLinked,
     lifecycleOptions = [],
@@ -400,6 +401,7 @@ export default function Index({
                     canSeeAll={canSeeAll}
                     canSeeTasks={canSeeTasks}
                     canSeePlans={canSeePlans}
+                    canSeeTaxRegime={canSeeTaxRegime}
                     uncoveredCount={uncoveredCount}
                 >
                     <ScopeToggle section="clients" scope={filters.scope} available={canSeeAll} />

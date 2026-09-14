@@ -58,6 +58,8 @@ export default function Show() {
         organizationsEnabled,
         contractors = [],
         canSeeContractors = false,
+        taxRegimeOptions = null,
+        canEditTaxRegime = false,
         contracts = [],
         canSeeContracts = false,
         managers = [],
@@ -346,7 +348,11 @@ export default function Show() {
                                             Юрлица партнёра. План и его выполнение считаются по партнёру целиком,
                                             а не по каждому юрлицу отдельно.
                                         </Text>
-                                        <PartnerContractors contractors={contractors} />
+                                        <PartnerContractors
+                                            contractors={contractors}
+                                            taxRegimeOptions={taxRegimeOptions}
+                                            canEditTaxRegime={canEditTaxRegime}
+                                        />
                                     </Tabs.Content>
                                 )}
 

@@ -4,9 +4,12 @@ namespace App\Services\Crm;
 
 use App\Enums\Crm\ClientLifecycleStatus;
 use App\Enums\Crm\TaskStatus;
+use App\Enums\Crm\TaxRegimeShift;
+use App\Models\Company;
 use App\Models\CrmComment;
 use App\Models\CrmTask;
 use App\Models\User;
+use App\Services\Crm\TaxRegime\TaxRegimeQuery;
 use App\Support\Crm\ClientListFilters;
 use App\Support\Crm\LastVisit;
 use Carbon\CarbonImmutable;
@@ -39,6 +42,7 @@ class ClientListService
         private readonly CrmTaskService $tasks,
         private readonly ClientPlanFactService $planFact,
         private readonly ClientRowEnricher $enricher,
+        private readonly TaxRegimeQuery $taxRegimes,
     ) {}
 
     /**
@@ -139,7 +143,35 @@ class ClientListService
             $query->where('stock_buffer_enabled', $filters->stockBuffer === 'enabled');
         }
 
+        if ($filters->taxRegime !== null) {
+            $this->applyTaxRegime($query, $filters->taxRegime);
+        }
+
         return $query;
+    }
+
+    /**
+     * Налоговый режим живёт на юрлицах: партнёр попадает в отбор, если подходит
+     * хотя бы одно его юрлицо. «Нужно уточнить» — тот же набор, по которому
+     * менеджеру ставится задача, чтобы список и задачи не расходились.
+     *
+     * @param  Builder<User>  $query
+     */
+    private function applyTaxRegime(Builder $query, string $state): void
+    {
+        $companies = match ($state) {
+            'attention' => $this->taxRegimes->pending(),
+            'to_vat' => $this->taxRegimes->whereShift(
+                Company::query(),
+                [TaxRegimeShift::TO_DEDUCTIBLE, TaxRegimeShift::TO_REDUCED],
+            ),
+            default => $this->taxRegimes->whereShift(Company::query(), [TaxRegimeShift::UNDECIDED]),
+        };
+
+        $query->whereIn(
+            'users.id',
+            $companies->whereNotNull('companies.user_id')->select('companies.user_id'),
+        );
     }
 
     /**

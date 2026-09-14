@@ -67,6 +67,10 @@ Schedule::command('mail:weekly-reconciliation')->mondays()->at('09:00')->without
 // Дни рождения контактов: задача «Поздравить» ставится персональному менеджеру
 // накануне. Идемпотентно — повторный прогон задачи не плодит.
 Schedule::command('contacts:birthday-tasks')->dailyAt('06:20')->withoutOverlapping();
+// Налоговый режим юрлиц (оценка рисков перехода клиентов на НДС): задача менеджеру по
+// покупающим юрлицам без актуального ответа, автозакрытие собранных. Раз в неделю —
+// ответ устаревает за 90 дней, ежедневный прогон только дёргал бы менеджера.
+Schedule::command('crm:tax-regime-tasks')->mondays()->at('06:25')->withoutOverlapping();
 Schedule::command('crm:tasks-remind')->dailyAt('08:30')->withoutOverlapping(); // напоминания о завтрашних дедлайнах и о просрочке за сутки (за флагом MAIL_FEATURE_CRM_TASKS)
 Schedule::command('shortages:daily-notice')->weekdays()->at('17:00')->withoutOverlapping(); // вечерняя сводка неразнесённых недоборов менеджеру (за флагом MAIL_FEATURE_SHORTAGE_NOTICE); в выходные склад не собирает
 Schedule::command('crm:tasks-push')->everyTenMinutes()->withoutOverlapping(); // push-напоминания подписанным браузерам (за флагом CRM_PUSH_ENABLED; без VAPID молчит)
