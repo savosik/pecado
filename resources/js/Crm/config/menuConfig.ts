@@ -102,6 +102,9 @@ export const menuConfig: MenuGroup[] = [
             // Заказы из 1С: перенесены из «Документов» — менеджер смотрит их
             // каждый день рядом с задачами и планом, а не в архиве первички.
             { label: "Заказы", icon: LuFileText, path: "/crm/orders", permission: "crm-clients.view" },
+            // Реализации рядом с заказами: заказ → отгрузка — одна цепочка продажи,
+            // менеджер смотрит их вместе; деньги по ним — в «Финансах».
+            { label: "Реализации", icon: LuTruck, path: "/crm/shipments", permission: "crm-clients.view" },
             { label: "Планы продаж", icon: LuTarget, path: "/crm/plans", permission: "crm-plans.view" },
             // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
             // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
@@ -151,9 +154,6 @@ export const menuConfig: MenuGroup[] = [
             // Журнал и календарь платежей живут под правом документов: они появились
             // раньше раздела и остаются доступны тем, у кого есть журналы, но нет финансов.
             { label: "Платежи", icon: LuReceipt, path: "/crm/payments", permission: "crm-clients.view" },
-            // Реализации живут здесь, а не в «Документах»: менеджер открывает их
-            // ради денег — что отгружено, что оплачено и что попадёт в сверку.
-            { label: "Реализации", icon: LuTruck, path: "/crm/shipments", permission: "crm-clients.view" },
             { label: "Акт сверки", icon: LuFileText, path: "/crm/finance/reconciliation", permission: "crm-finance.view" },
             // Балансы сразу под актом: оба отвечают на вопрос «сколько должен»,
             // только акт разворачивает ответ по движениям, а балансы — по юрлицам.
