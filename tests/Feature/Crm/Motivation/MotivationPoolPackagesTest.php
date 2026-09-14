@@ -129,6 +129,63 @@ class MotivationPoolPackagesTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('Кандидат показывает закупки у конкурента и чем с ним связаться; берущие у конкурента — выше среди холодных')]
+    public function candidates_show_competitor_purchases_and_contacts(): void
+    {
+        [$plain, $buyer] = $this->poolPartners(2);
+        $plain->forceFill(['phone' => null, 'email' => 'plain@example.com'])->save();
+        $buyer->forceFill(['phone' => '+7 900 000-00-00'])->save();
+        \App\Models\CrmCompetitorPurchase::query()->create([
+            'user_id' => $buyer->id, 'source' => 'andrey', 'competitor_partner' => 'Покупатель ИП',
+            'amount' => 1_250_000, 'documents' => 12, 'first_purchase_on' => '2025-09-01', 'last_purchase_on' => '2026-07-15',
+            'period_from' => '2025-08-01', 'period_to' => '2026-07-31', 'imported_at' => now(),
+        ]);
+        \App\Models\Contact::query()->create(['full_name' => 'Иванова Мария', 'client_user_id' => $buyer->id, 'phone' => '+7 900 111-11-11']);
+
+        $this->actingAs($this->head)
+            ->get('/crm/motivation/pool/admin?history=0')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('candidates.rows.data', 2)
+                ->where('candidates.rows.data.0.id', $buyer->id)
+                ->where('candidates.rows.data.0.competitor.amount', 1_250_000)
+                ->where('candidates.rows.data.0.competitor.documents', 12)
+                ->where('candidates.rows.data.0.contacts.phone', true)
+                ->where('candidates.rows.data.0.contacts.persons', 1)
+                ->where('candidates.rows.data.1.competitor', null)
+                ->where('candidates.rows.data.1.contacts.phone', false)
+                ->where('candidates.rows.data.1.contacts.email', true));
+    }
+
+    #[Test]
+    #[TestDox('Импорт инсайда сопоставляет партнёров по наименованию и заменяет прежний срез источника')]
+    public function competitor_import_matches_by_name(): void
+    {
+        $partner = User::factory()->create(['personal_manager_id' => null, 'name' => 'Магазин Ромашка', 'erp_name' => 'ИП Петрова Анна Ивановна']);
+        $path = tempnam(sys_get_temp_dir(), 'andrey');
+        file_put_contents($path, implode("\n", [
+            'partner;sum;qty;docs;last_date;first_date;contractors',
+            'Петрова Анна Ивановна ИП, г.Тверь;1500000.50;300;7;2026-07-20;2025-10-02;ПЕТРОВА АННА ИВАНОВНА',
+            'Неизвестный Партнёр ООО;99;1;1;2026-01-01;2026-01-01;',
+        ]));
+
+        $this->artisan('crm:import-competitor-purchases', ['file' => $path, '--unmatched' => 0])
+            ->expectsOutputToContain('Сопоставлено партнёров: 1')
+            ->assertSuccessful();
+
+        $row = \App\Models\CrmCompetitorPurchase::query()->where('user_id', $partner->id)->sole();
+        $this->assertSame(1_500_000.5, (float) $row->amount);
+        $this->assertSame(7, $row->documents);
+        $this->assertSame('2026-07-20', $row->last_purchase_on?->toDateString());
+        $this->assertSame('2025-10-02', $row->period_from->toDateString(), 'Окно без --from берётся из данных: с самой ранней закупки');
+
+        // Повторный импорт того же источника не плодит строк.
+        $this->artisan('crm:import-competitor-purchases', ['file' => $path, '--unmatched' => 0])->assertSuccessful();
+        $this->assertSame(1, \App\Models\CrmCompetitorPurchase::query()->count());
+        unlink($path);
+    }
+
+    #[Test]
     #[TestDox('Ушедшие партнёры (банкрот, закрылся) в кандидаты пакета не попадают, но видны по чипу')]
     public function lost_partners_are_kept_out_of_packages(): void
     {

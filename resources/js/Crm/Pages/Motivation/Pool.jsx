@@ -6,7 +6,7 @@ import { Alert } from '@/components/ui/alert';
 import MetricHint from '@/Crm/Components/MetricHint';
 import PartnerTable from './components/PartnerTable';
 import PartnerActions, { usePartnerDialogs } from './components/PartnerActions';
-import { BestMonth, Money } from './components/partnerCells';
+import { BestMonth, Competitor, Contacts, Money } from './components/partnerCells';
 import { fmtDay, fmtRub0 } from '../Salary/components/format';
 import MotivationTabs from './components/MotivationTabs';
 import { hubBreadcrumbs } from './components/hubs';
@@ -60,10 +60,12 @@ export default function MotivationPool({ month, month_label: monthLabelRu, manag
         ) },
         { key: 'usual_monthly', label: 'Брал в месяц', align: 'right', sortable: true, render: (row) => <Money value={row.ever_bought ? row.usual_monthly : null} /> },
         { key: 'best_month', label: 'Лучший месяц', align: 'right', sortable: true, render: (row) => <BestMonth value={row.ever_bought ? row.best_month : null} /> },
+        { key: 'competitor', label: 'Берёт у конкурента', align: 'right', sortable: true, render: (row) => <Competitor value={row.competitor} /> },
         { key: 'city', label: 'Чем интересен', sortable: true, render: (row) => (
             <VStack align="start" gap={0} fontSize="xs">
                 <Text>{row.city || <Text as="span" color="fg.subtle">город не указан</Text>}</Text>
                 {row.registered_on && <Text color="fg.subtle">заведён {fmtDay(row.registered_on)}</Text>}
+                <Contacts value={row.contacts} />
             </VStack>
         ) },
         { key: 'estimate', label: 'Даст вам за полгода', align: 'right', sortable: true, render: (row) => (

@@ -14,6 +14,7 @@ import { fmtDay, fmtDateTime, fmtRub0, plural } from '../Salary/components/forma
 import MotivationTabs from './components/MotivationTabs';
 import { hubBreadcrumbs } from './components/hubs';
 import FoldSection from './components/FoldSection';
+import { Competitor, Contacts } from './components/partnerCells';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -228,6 +229,10 @@ export default function MotivationPoolAdmin(props) {
                                             <Table.ColumnHeader>Последняя покупка</Table.ColumnHeader>
                                             <Table.ColumnHeader textAlign="right">Брал в месяц</Table.ColumnHeader>
                                             <Table.ColumnHeader textAlign="right">Лучший месяц</Table.ColumnHeader>
+                                            <Table.ColumnHeader textAlign="right">
+                                                <HStack gap={1} justify="end"><Text>Берёт у конкурента</Text><MetricHint text={`По инсайдерской выгрузке продаж группы «Андрей» за 12 месяцев: без наших юрлиц и внутригрупповых поставок. Сопоставлено по наименованию — «не видим» означает, что такого имени в выгрузке нет, а не что партнёр не покупает.`} /></HStack>
+                                            </Table.ColumnHeader>
+                                            <Table.ColumnHeader>Связь</Table.ColumnHeader>
                                             <Table.ColumnHeader>Стадия</Table.ColumnHeader>
                                             <Table.ColumnHeader>Приоритет</Table.ColumnHeader>
                                         </Table.Row>
@@ -241,6 +246,8 @@ export default function MotivationPoolAdmin(props) {
                                                 <Table.Cell>{c.last_purchase_on ? <Text fontSize="sm">{fmtDay(c.last_purchase_on)}</Text> : <Badge size="xs" variant="subtle">никогда</Badge>}</Table.Cell>
                                                 <Table.Cell textAlign="right"><Text fontSize="sm">{c.ever_bought && c.usual_monthly > 0 ? fmtRub0(c.usual_monthly) : '—'}</Text></Table.Cell>
                                                 <Table.Cell textAlign="right"><Text fontSize="sm">{c.ever_bought && c.best_month?.amount ? fmtRub0(c.best_month.amount) : '—'}</Text></Table.Cell>
+                                                <Table.Cell textAlign="right"><Competitor value={c.competitor} /></Table.Cell>
+                                                <Table.Cell><Contacts value={c.contacts} /></Table.Cell>
                                                 <Table.Cell>
                                                     <HStack gap={1} flexWrap="wrap">
                                                         <Badge size="xs" variant="subtle" colorPalette={c.stage_color}>{c.stage_label}</Badge>

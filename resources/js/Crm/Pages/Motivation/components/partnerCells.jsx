@@ -98,6 +98,38 @@ export function Debt({ value }) {
 
 const TOUCH_LABEL = { call: 'звонок', email: 'письмо', task: 'задача' };
 
+/**
+ * Инсайд: сколько партнёр берёт у конкурента за окно выгрузки.
+ */
+export function Competitor({ value }) {
+    if (!value) {
+        return <Text fontSize="xs" color="fg.subtle">не видим</Text>;
+    }
+
+    return (
+        <VStack align="end" gap={0}>
+            <Text fontSize="sm" fontWeight="700" color="red.fg" fontVariantNumeric="tabular-nums">{fmtRub0(value.amount)}</Text>
+            <Text fontSize="xs" color="fg.subtle">{value.documents} {plural(value.documents, 'документ', 'документа', 'документов')}{value.last_purchase_on ? ` · посл. ${fmtDay(value.last_purchase_on)}` : ''}</Text>
+        </VStack>
+    );
+}
+
+/**
+ * Есть ли чем связаться: телефон, почта, люди в справочнике.
+ */
+export function Contacts({ value }) {
+    const items = [];
+    if (value?.phone) items.push('телефон');
+    if (value?.email) items.push('почта');
+    if (value?.persons > 0) items.push(`${value.persons} ${plural(value.persons, 'контакт', 'контакта', 'контактов')}`);
+
+    if (items.length === 0) {
+        return <Badge size="xs" variant="subtle" colorPalette="red">нет контактов</Badge>;
+    }
+
+    return <Text fontSize="xs" color={value.phone ? undefined : 'orange.fg'}>{items.join(' · ')}</Text>;
+}
+
 export function LastTouch({ value }) {
     if (!value) {
         return <Text color="fg.subtle" fontSize="sm">не было</Text>;

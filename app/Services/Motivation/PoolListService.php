@@ -4,7 +4,9 @@ namespace App\Services\Motivation;
 
 use App\Enums\Crm\ClientLifecycleStatus;
 use App\Models\Company;
+use App\Models\Contact;
 use App\Models\CrmClientProfile;
+use App\Models\CrmCompetitorPurchase;
 use App\Models\PayrollCalculation;
 use App\Models\Shipment;
 use App\Models\User;
@@ -86,7 +88,7 @@ class PoolListService
             $selected = array_values(array_filter($selected, fn (array $r): bool => str_contains(mb_strtolower($r['name'].' '.$r['city']), $search)));
         }
 
-        $sort = in_array($query['sort'] ?? '', ['name', 'last_purchase_on', 'usual_monthly', 'best_month', 'estimate', 'city'], true)
+        $sort = in_array($query['sort'] ?? '', ['name', 'last_purchase_on', 'usual_monthly', 'best_month', 'estimate', 'city', 'competitor'], true)
             ? (string) $query['sort'] : 'estimate';
         $direction = ($query['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
 
@@ -99,14 +101,23 @@ class PoolListService
             $va = match ($sort) {
                 'best_month' => $a['best_month']['amount'],
                 'estimate' => $a['estimate'] ?? 0,
+                'competitor' => $a['competitor']['amount'] ?? 0,
                 default => $a[$sort] ?? '',
             };
             $vb = match ($sort) {
                 'best_month' => $b['best_month']['amount'],
                 'estimate' => $b['estimate'] ?? 0,
+                'competitor' => $b['competitor']['amount'] ?? 0,
                 default => $b[$sort] ?? '',
             };
             $cmp = is_string($va) ? strcasecmp($va, (string) $vb) : ($va <=> $vb);
+
+            if ($cmp === 0) {
+                // Среди равных (у холодных оценка — ноль) вперёд те, кто берёт у конкурента.
+                $cmp = ($b['competitor']['amount'] ?? 0) <=> ($a['competitor']['amount'] ?? 0);
+
+                return $cmp;
+            }
 
             return $direction === 'asc' ? $cmp : -$cmp;
         });
@@ -222,6 +233,13 @@ class PoolListService
         $stages = CrmClientProfile::query()->whereIn('user_id', $ids)->pluck('lifecycle_status', 'user_id');
         $withCompany = Company::query()->whereIn('user_id', $ids)->distinct()->pluck('user_id')->map('intval')->flip();
 
+        // Инсайд: кто берёт у конкурента — главный признак ценности холодной карточки.
+        $competitor = CrmCompetitorPurchase::query()->whereIn('user_id', $ids)->get()->keyBy('user_id');
+
+        // Люди в справочнике контактов, привязанные к партнёру.
+        $persons = Contact::query()->whereIn('client_user_id', $ids)->whereNull('deleted_at')
+            ->selectRaw('client_user_id, COUNT(*) AS n')->groupBy('client_user_id')->pluck('n', 'client_user_id');
+
         // История есть у единиц: сначала узнаём, у кого вообще были отгрузки,
         // и только по ним ходим за помесячной историей.
         $buyers = Shipment::query()
@@ -261,6 +279,17 @@ class PoolListService
                 'stage_color' => $stage->color(),
                 'lost' => $stage->isTerminal(),
                 'has_company' => isset($withCompany[$id]),
+                'competitor' => isset($competitor[$id]) ? [
+                    'amount' => (float) $competitor[$id]->amount,
+                    'documents' => (int) $competitor[$id]->documents,
+                    'last_purchase_on' => $competitor[$id]->last_purchase_on?->toDateString(),
+                    'period_to' => $competitor[$id]->period_to->toDateString(),
+                ] : null,
+                'contacts' => [
+                    'phone' => (string) ($user->phone ?? '') !== '',
+                    'email' => (string) ($user->email ?? '') !== '',
+                    'persons' => (int) ($persons[$id] ?? 0),
+                ],
                 'name' => (string) ($user->display_name ?? $user->name),
                 'legal_name' => (string) ($user->erp_name ?? ''),
                 'city' => (string) ($user->city ?? ''),
