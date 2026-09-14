@@ -265,10 +265,6 @@ class MotivationPlansController extends CrmController
             $warnings[] = 'Применён предел снижения: расчётная база ниже плана прошлого квартала более чем на допустимую долю.';
         }
 
-        if ($calculated['previous_quarter_total'] !== null && ! $calculated['previous_quarter_comparable']) {
-            $warnings[] = 'Предел снижения не применяется: план прошлого квартала поставлен не по этой методике.';
-        }
-
         if ($quarter->lte(CarbonImmutable::now()->startOfQuarter())) {
             $warnings[] = 'Квартал уже начался: план утверждается до его начала одним решением (п. 5.3).';
         }

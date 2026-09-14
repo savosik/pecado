@@ -129,6 +129,9 @@ function ManagerCard({ manager: m, data, busy, call }) {
     }, [m, order]);
 
     const edited = m.months.some((x) => Number(values[x.month]) !== Number(x.value));
+    const sampleMonths = m.sample_months.filter((r) => r.per_day !== null);
+    const medianHint = `Обычные продажи за рабочий день, приведённые к сезону 1,0: медиана ${sampleMonths.length} месяцев (${fmtDay(m.sample_from)} — ${fmtDay(m.sample_to)}, ${m.days_counted} раб. дн., исключено по табелю ${m.days_excluded_absence}). По месяцам: ${sampleMonths.map((r) => `${monthName(r.month).slice(0, 3)} ${fmtRub0(r.per_day_adjusted)}${r.seasonal !== 1 ? ` (${fmtRub0(r.per_day)} ÷ ${fmtFactor(r.seasonal)})` : ''}`).join(' · ')}. Новые партнёры в выборку не входят (п. 6.3.3).`;
+    const calculatedHint = `Медиана в день × рабочие дни × сезон × (1 + рост)${m.overperformance_carry > 0 ? ` + треть от половины перевыполнения прошлого квартала ${fmtRub0(m.overperformance_carry)} (п. 5.4)` : ''}. Предел снижения ${m.decline_limited ? 'применён: расчёт был ниже плана прошлого квартала более чем на допустимую долю' : (m.previous_quarter_comparable ? 'не потребовался' : 'не применяется — прошлый квартал поставлен по другой методике')}.`;
     const canType = data.can_edit && (!approved || editing);
     const save = (approve) => call(
         '/crm/motivation/plans/save',
@@ -149,37 +152,20 @@ function ManagerCard({ manager: m, data, busy, call }) {
                 </Text>
             </HStack>
 
-            <SimpleGrid columns={{ base: 2, md: 4 }} gap={3} mb={3}>
-                <Step label="Медиана за рабочий день, сезон 1,0" value={fmtRub0(m.median_per_day)} note={`медиана ${m.sample_months.filter((r) => r.per_day !== null).length} мес., ${fmtDay(m.sample_from)} — ${fmtDay(m.sample_to)}; ${m.days_counted} раб. дн., исключено по табелю ${m.days_excluded_absence}`} />
-                <Step label="Половина перевыполнения" value={m.overperformance_carry > 0 ? fmtRub0(m.overperformance_carry) : '—'} note="п. 5.4, распределяется на три месяца" />
-                <Step label="Целевой прирост" value={fmtPercent(m.growth_rate, 1)} note="приказом на год" />
-                <Step
-                    label="Предел снижения"
-                    value={m.decline_limited ? 'применён' : (m.previous_quarter_comparable ? 'не потребовался' : 'не применяется')}
-                    note={m.previous_quarter_total !== null
-                        ? (m.previous_quarter_comparable ? `план прошлого квартала ${fmtRub0(m.previous_quarter_total)}` : 'прошлый квартал поставлен по другой методике')
-                        : 'прошлого квартала нет'}
-                />
-            </SimpleGrid>
-
-            {m.sample_months.length > 0 && (
-                <Text fontSize="xs" color="fg.muted" mb={2}>
-                    За рабочий день по месяцам, приведено к сезону 1,0:{' '}
-                    {m.sample_months.map((r) => `${monthName(r.month).slice(0, 3)} ${r.per_day_adjusted === null ? 'нет дней' : `${fmtRub0(r.per_day_adjusted)}${r.seasonal !== 1 ? ` (факт ${fmtRub0(r.per_day)} ÷ ${fmtFactor(r.seasonal)})` : ''}`}`).join(' · ')}
-                </Text>
-            )}
             {m.warnings.map((w) => <Text key={w} fontSize="xs" color="orange.fg" mb={1}>{w}</Text>)}
 
             <Table.Root size="sm" mt={2}>
                 <Table.Header>
                     <Table.Row>
                         <Table.ColumnHeader>Месяц</Table.ColumnHeader>
-                        <Table.ColumnHeader textAlign="right">Раб. дней</Table.ColumnHeader>
-                        <Table.ColumnHeader textAlign="right">Сезон</Table.ColumnHeader>
-                        <Table.ColumnHeader textAlign="right">Расчётный</Table.ColumnHeader>
-                        <Table.ColumnHeader textAlign="right">{approved && !editing ? 'Утверждённый' : 'План'}</Table.ColumnHeader>
-                        <Table.ColumnHeader textAlign="right">Действующий</Table.ColumnHeader>
-                        <Table.ColumnHeader textAlign="right">Разница</Table.ColumnHeader>
+                        <Table.ColumnHeader textAlign="right"><Th label="Медиана в день" hint={medianHint} /></Table.ColumnHeader>
+                        <Table.ColumnHeader textAlign="right"><Th label="Раб. дней" hint="По производственному календарю. Отпуск и больничный уменьшают план месяца пропорционально отработанным дням (п. 10.2)." /></Table.ColumnHeader>
+                        <Table.ColumnHeader textAlign="right"><Th label="Сезон" hint="Насколько месяц сильнее или слабее среднего месяца года по продажам 2023–2025. Единый для отдела, задаётся приказом в «Параметрах»." /></Table.ColumnHeader>
+                        <Table.ColumnHeader textAlign="right"><Th label="Рост" hint="Целевой прирост на год, единый для отдела (п. 5.2). Единственный множитель, где компания говорит «хотим больше, чем было»." /></Table.ColumnHeader>
+                        <Table.ColumnHeader textAlign="right"><Th label="Расчётный" hint={calculatedHint} /></Table.ColumnHeader>
+                        <Table.ColumnHeader textAlign="right"><Th label={approved && !editing ? 'Утверждённый' : 'План'} hint="Что утверждено приказом или будет утверждено. Отличие от расчётного — правка руководителя с комментарием; повышение со ссылкой на перевыполнение блокируется (п. 5.4)." /></Table.ColumnHeader>
+                        <Table.ColumnHeader textAlign="right"><Th label="Действующий" hint="Что стоит в «Планах продаж» сейчас. До первого приказа — план по прежней методике, сверху вниз от цифры компании." /></Table.ColumnHeader>
+                        <Table.ColumnHeader textAlign="right"><Th label="Разница" hint="План к действующему." /></Table.ColumnHeader>
                     </Table.Row>
                 </Table.Header>
                 <Table.Body>
@@ -189,8 +175,10 @@ function ManagerCard({ manager: m, data, busy, call }) {
                         return (
                             <Table.Row key={x.month}>
                                 <Table.Cell><Text fontSize="sm" textTransform="capitalize">{monthName(x.month)}</Text></Table.Cell>
+                                <Table.Cell textAlign="right"><Text fontSize="sm" fontVariantNumeric="tabular-nums">{fmtRub0(m.median_per_day)}</Text></Table.Cell>
                                 <Table.Cell textAlign="right"><Text fontSize="sm">{x.working_days}</Text></Table.Cell>
                                 <Table.Cell textAlign="right"><Text fontSize="sm">{fmtFactor(x.seasonal)}</Text></Table.Cell>
+                                <Table.Cell textAlign="right"><Text fontSize="sm">{fmtPercent(m.growth_rate, 0)}</Text></Table.Cell>
                                 <Table.Cell textAlign="right"><Text fontSize="sm" color="fg.muted" fontVariantNumeric="tabular-nums">{fmtRub0(x.calculated)}</Text></Table.Cell>
                                 <Table.Cell textAlign="right">
                                     {!canType
@@ -277,12 +265,11 @@ function Stat({ label, value, tone, hint }) {
     );
 }
 
-function Step({ label, value, note }) {
+function Th({ label, hint }) {
     return (
-        <VStack align="start" gap={0}>
-            <Text fontSize="xs" color="fg.muted">{label}</Text>
-            <Text fontWeight="700" fontVariantNumeric="tabular-nums">{value}</Text>
-            <Text fontSize="xs" color="fg.subtle">{note}</Text>
-        </VStack>
+        <HStack gap={1} justify="end" display="inline-flex">
+            <Text>{label}</Text>
+            <MetricHint text={hint} />
+        </HStack>
     );
 }
