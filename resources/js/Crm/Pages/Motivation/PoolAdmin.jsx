@@ -88,8 +88,8 @@ export default function MotivationPoolAdmin(props) {
                 <Alert status="warning" title="Пул холодный">{data.note}</Alert>
 
                 <SimpleGrid columns={{ base: 2, md: 4 }} gap={3}>
-                    <Stat label="В пуле" value={String(data.state.total)} />
-                    <Stat label="С историей покупок" value={String(data.state.with_history)} />
+                    <Stat label="В пуле" value={String(data.candidates.summary.total)} hint={`Без ушедших: банкроты, закрывшиеся, ушедшие к конкуренту — ${data.candidates.summary.lost}, они в пакет не попадают.`} />
+                    <Stat label="С историей покупок" value={String(data.candidates.summary.with_history)} />
                     <Stat label="Выдано в этом квартале" value={String(data.state.issued_this_quarter)} />
                     <Stat label="Возвращено в пул" value={String(data.state.returned_this_quarter)} />
                 </SimpleGrid>
@@ -208,8 +208,11 @@ export default function MotivationPoolAdmin(props) {
                         </HStack>
 
                         <HStack gap={2} flexWrap="wrap" mb={2}>
-                            <Box as="button" type="button" px={3} py={1} borderRadius="full" borderWidth="1px" borderColor={Number(data.query.history ?? 1) ? 'blue.solid' : 'border'} bg={Number(data.query.history ?? 1) ? 'blue.subtle' : 'bg.panel'} fontSize="sm" cursor="pointer" onClick={() => navigate({ history: Number(data.query.history ?? 1) ? 0 : 1, page: undefined })}>
-                                Только с историей покупок · {data.state.with_history}
+                            <Box as="button" type="button" px={3} py={1} borderRadius="full" borderWidth="1px" borderColor={Number(data.query.history ?? 1) && !Number(data.query.lost ?? 0) ? 'blue.solid' : 'border'} bg={Number(data.query.history ?? 1) && !Number(data.query.lost ?? 0) ? 'blue.subtle' : 'bg.panel'} fontSize="sm" cursor="pointer" onClick={() => navigate({ history: Number(data.query.history ?? 1) ? 0 : 1, lost: undefined, page: undefined })}>
+                                Только с историей покупок · {data.candidates.summary.with_history}
+                            </Box>
+                            <Box as="button" type="button" px={3} py={1} borderRadius="full" borderWidth="1px" borderColor={Number(data.query.lost ?? 0) ? 'gray.solid' : 'border'} bg={Number(data.query.lost ?? 0) ? 'gray.subtle' : 'bg.panel'} fontSize="sm" cursor="pointer" onClick={() => navigate({ lost: Number(data.query.lost ?? 0) ? undefined : 1, page: undefined })}>
+                                Ушедшие · {data.candidates.summary.lost}
                             </Box>
                             <input type="search" aria-label="Поиск" placeholder="Название или город…" style={selectStyle} defaultValue={data.query.search ?? ''} onKeyDown={(e) => { if (e.key === 'Enter') navigate({ search: e.target.value, page: undefined }); }} />
                         </HStack>
@@ -225,6 +228,7 @@ export default function MotivationPoolAdmin(props) {
                                             <Table.ColumnHeader>Последняя покупка</Table.ColumnHeader>
                                             <Table.ColumnHeader textAlign="right">Брал в месяц</Table.ColumnHeader>
                                             <Table.ColumnHeader textAlign="right">Лучший месяц</Table.ColumnHeader>
+                                            <Table.ColumnHeader>Стадия</Table.ColumnHeader>
                                             <Table.ColumnHeader>Приоритет</Table.ColumnHeader>
                                         </Table.Row>
                                     </Table.Header>
@@ -237,6 +241,12 @@ export default function MotivationPoolAdmin(props) {
                                                 <Table.Cell>{c.last_purchase_on ? <Text fontSize="sm">{fmtDay(c.last_purchase_on)}</Text> : <Badge size="xs" variant="subtle">никогда</Badge>}</Table.Cell>
                                                 <Table.Cell textAlign="right"><Text fontSize="sm">{c.ever_bought && c.usual_monthly > 0 ? fmtRub0(c.usual_monthly) : '—'}</Text></Table.Cell>
                                                 <Table.Cell textAlign="right"><Text fontSize="sm">{c.ever_bought && c.best_month?.amount ? fmtRub0(c.best_month.amount) : '—'}</Text></Table.Cell>
+                                                <Table.Cell>
+                                                    <HStack gap={1} flexWrap="wrap">
+                                                        <Badge size="xs" variant="subtle" colorPalette={c.stage_color}>{c.stage_label}</Badge>
+                                                        {!c.has_company && <Badge size="xs" variant="outline" colorPalette="orange">без юрлица</Badge>}
+                                                    </HStack>
+                                                </Table.Cell>
                                                 <Table.Cell><Badge size="xs" variant="subtle" colorPalette={c.ever_bought ? 'green' : 'gray'}>{c.ever_bought ? 'есть история' : 'холодный'}</Badge></Table.Cell>
                                             </Table.Row>
                                         ))}

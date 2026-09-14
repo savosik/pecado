@@ -129,6 +129,33 @@ class MotivationPoolPackagesTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('Ушедшие партнёры (банкрот, закрылся) в кандидаты пакета не попадают, но видны по чипу')]
+    public function lost_partners_are_kept_out_of_packages(): void
+    {
+        [$alive, $bankrupt] = $this->poolPartners(2);
+        \App\Models\CrmClientProfile::create(['user_id' => $bankrupt->id, 'lifecycle_status' => \App\Enums\Crm\ClientLifecycleStatus::BANKRUPT]);
+
+        $this->actingAs($this->head)
+            ->get('/crm/motivation/pool/admin?history=0')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('candidates.summary.total', 1)
+                ->where('candidates.summary.lost', 1)
+                ->has('candidates.rows.data', 1)
+                ->where('candidates.rows.data.0.id', $alive->id)
+                ->where('candidates.rows.data.0.stage', 'active'));
+
+        $this->actingAs($this->head)
+            ->get('/crm/motivation/pool/admin?lost=1')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('candidates.rows.data', 1)
+                ->where('candidates.rows.data.0.id', $bankrupt->id)
+                ->where('candidates.rows.data.0.stage_label', 'Банкрот')
+                ->where('candidates.rows.data.0.lost', true));
+    }
+
+    #[Test]
     #[TestDox('Страница руководителя показывает состояние, кран и кандидатов; выдача через API')]
     public function page_and_issue_endpoint(): void
     {

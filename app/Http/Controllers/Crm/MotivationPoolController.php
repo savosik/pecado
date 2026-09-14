@@ -83,7 +83,7 @@ class MotivationPoolController extends CrmController
         $month = CarbonImmutable::now()->startOfMonth();
         $actor = $this->crmActor($request);
 
-        $query = $request->only(['history', 'sort', 'direction', 'page', 'search']);
+        $query = $request->only(['history', 'lost', 'sort', 'direction', 'page', 'search']);
         if (! array_key_exists('history', $query)) {
             $query['history'] = 1;
         }

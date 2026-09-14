@@ -2,6 +2,9 @@
 
 namespace App\Services\Motivation;
 
+use App\Enums\Crm\ClientLifecycleStatus;
+use App\Models\Company;
+use App\Models\CrmClientProfile;
 use App\Models\PayrollCalculation;
 use App\Models\Shipment;
 use App\Models\User;
@@ -50,15 +53,21 @@ class PoolListService
         $period = CarbonImmutable::instance($month)->startOfMonth();
         $rows = $this->dataset($period);
 
-        $withHistory = array_values(array_filter($rows, fn (array $r): bool => $r['ever_bought']));
+        // Ушедшие (банкрот, закрылся, к конкуренту, ушёл) — не свободные клиенты,
+        // а терминальные карточки: в пакет им не место, если РОП не попросил явно.
+        $lost = array_values(array_filter($rows, fn (array $r): bool => $r['lost']));
+        $working = array_values(array_filter($rows, fn (array $r): bool => ! $r['lost']));
+        $withHistory = array_values(array_filter($working, fn (array $r): bool => $r['ever_bought']));
         $summary = [
-            'total' => count($rows),
+            'total' => count($working),
             'with_history' => count($withHistory),
+            'lost' => count($lost),
             'package_size' => (int) config('motivation.default_parameters.pool_package_size', 20),
         ];
 
         $historyOnly = ! array_key_exists('history', $query) || in_array($query['history'], [1, '1', true, 'true'], true);
-        $selected = $historyOnly ? $withHistory : $rows;
+        $showLost = in_array($query['lost'] ?? 0, [1, '1', true, 'true'], true);
+        $selected = $showLost ? $lost : ($historyOnly ? $withHistory : $working);
 
         $rateP2 = (float) ($this->params->effective($managerId, $period)->for('motivation_variable')['rate_p2']
             ?? config('motivation.default_parameters.rate_p2', 0));
@@ -112,6 +121,7 @@ class PoolListService
             'summary' => $summary,
             'tap' => $this->tap($managerId, $period),
             'history_only' => $historyOnly,
+            'lost_only' => $showLost,
             'rows' => [
                 'data' => array_slice($selected, ($page - 1) * self::PER_PAGE, self::PER_PAGE),
                 'current_page' => $page,
@@ -208,6 +218,10 @@ class PoolListService
 
         $users = User::query()->whereIn('id', $ids)->get(['id', 'name', 'erp_name', 'city', 'phone', 'email', 'created_at'])->keyBy('id');
 
+        // Стадия — поле сайта; без профиля партнёр считается активным, как в списке партнёров.
+        $stages = CrmClientProfile::query()->whereIn('user_id', $ids)->pluck('lifecycle_status', 'user_id');
+        $withCompany = Company::query()->whereIn('user_id', $ids)->distinct()->pluck('user_id')->map('intval')->flip();
+
         // История есть у единиц: сначала узнаём, у кого вообще были отгрузки,
         // и только по ним ходим за помесячной историей.
         $buyers = Shipment::query()
@@ -237,8 +251,16 @@ class PoolListService
                 }
             }
 
+            $stage = $stages[$id] ?? null;
+            $stage = $stage instanceof ClientLifecycleStatus ? $stage : (ClientLifecycleStatus::tryFrom((string) $stage) ?? ClientLifecycleStatus::ACTIVE);
+
             $rows[] = [
                 'id' => $id,
+                'stage' => $stage->value,
+                'stage_label' => $stage->label(),
+                'stage_color' => $stage->color(),
+                'lost' => $stage->isTerminal(),
+                'has_company' => isset($withCompany[$id]),
                 'name' => (string) ($user->display_name ?? $user->name),
                 'legal_name' => (string) ($user->erp_name ?? ''),
                 'city' => (string) ($user->city ?? ''),
