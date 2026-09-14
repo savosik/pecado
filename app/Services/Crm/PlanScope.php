@@ -44,14 +44,6 @@ final class PlanScope
     }
 
     /**
-     * Один партнёр.
-     */
-    public static function client(int $clientId, string $label): self
-    {
-        return new self(PlanTarget::CLIENT, $clientId, [$clientId], $label);
-    }
-
-    /**
      * Пустой скоуп — сотрудник без карточки менеджера и без партнёров.
      *
      * Отдельный конструктор, чтобы дашборд показывал «партнёров нет», а не падал

@@ -8,7 +8,6 @@ use App\Models\PersonalManager;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
 use App\Models\User;
-use App\Services\Crm\PlanScopeResolver;
 use App\Services\Crm\SalesPlanService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -151,12 +150,10 @@ class BedsTest extends TestCase
         $this->assertSame(40, $tile['percent']);
         $this->assertSame(60000.0, (float) $tile['lag']);
 
-        // Та же цифра, что отдаёт разбивка «Планов продаж» — витрина не считает сама.
-        $scope = app(PlanScopeResolver::class)->resolve($this->manager, null, null);
+        // Та же цифра, что у сервиса план/факт партнёра, — витрина не считает сама.
         $month = app(SalesPlanService::class)->parseMonth('2026-08');
-        $fromPlans = collect(app(\App\Services\Crm\PlanProgressService::class)
-            ->clients($month, $scope, $this->manager))
-            ->firstWhere('id', $this->clientWithPlan->id);
+        $fromPlans = app(\App\Services\Crm\ClientPlanFactService::class)
+            ->forClients([$this->clientWithPlan->id], $month)[$this->clientWithPlan->id];
 
         $this->assertSame($fromPlans['percent'], $tile['percent']);
         $this->assertSame((float) $fromPlans['fact'], (float) $tile['fact']);

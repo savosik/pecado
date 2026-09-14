@@ -291,7 +291,6 @@ class OperationRegistry
                     Param::integer('manager_id', 'Менеджер — только для руководителя отдела'),
                     Param::string('lifecycle', 'Жизненный статус', enum: array_column(ClientLifecycleStatus::cases(), 'value')),
                     Param::string('task_state', 'Состояние задач по партнёру', enum: ClientListFilters::TASK_STATES),
-                    Param::string('plan_state', 'Состояние выполнения плана', enum: ClientListFilters::PLAN_STATES),
                     Param::integer('inactive_days', 'Нет активности дольше скольких дней', rules: ['in:30,60,90']),
                     Param::string('sort_by', 'Поле сортировки', enum: ClientListFilters::SORTS),
                     Param::string('sort_order', 'Направление сортировки', enum: ['asc', 'desc']),
@@ -959,7 +958,7 @@ class OperationRegistry
                 uri: 'plans',
                 permission: 'crm-plans.view',
                 summary: 'Планы периода, разложенные по целям',
-                description: 'Цели: отдел, менеджер, партнёр. Видны только те, что доступны актору.',
+                description: 'Цели: отдел и менеджер. Видны только те, что доступны актору.',
                 params: [
                     Param::string('month', 'Месяц в формате ГГГГ-ММ; по умолчанию текущий', rules: ['max:7']),
                 ],
@@ -971,10 +970,10 @@ class OperationRegistry
                 method: 'POST',
                 uri: 'plans',
                 permission: 'crm-plans.edit',
-                summary: 'Поставить планы строками «цель → сумма»',
-                description: 'Строка: target_type (department|manager|client), target_id, amount, comment. '
-                    .'Пустая сумма снимает план. Строки вне прав актора пропускаются молча и попадают '
-                    .'в счётчик skipped — одна недоступная цель не должна ронять сохранение остальных.',
+                summary: 'Поставить план отдела строками «цель → сумма»',
+                description: 'Строка: target_type (только department), amount, comment. Пустая сумма снимает план. '
+                    .'План менеджера ставится приказом на квартал в разделе «Мотивация», планов на партнёра нет; '
+                    .'такие строки пропускаются и попадают в счётчик skipped.',
                 params: [
                     Param::string('month', 'Месяц в формате ГГГГ-ММ; по умолчанию текущий', rules: ['max:7']),
                     Param::list('rows', 'Строки планов', itemType: 'object', required: true),
@@ -988,13 +987,12 @@ class OperationRegistry
                 method: 'GET',
                 uri: 'plans/progress',
                 permission: 'crm-plans.view',
-                summary: 'Выполнение плана: план, факт, отставание и разбивка по партнёрам',
+                summary: 'Выполнение плана: план, факт, остаток, прогноз при текущем темпе',
                 description: 'Факт — отгрузки по дате документа в 1С.',
                 params: [
                     Param::string('month', 'Месяц в формате ГГГГ-ММ', rules: ['max:7']),
                     Param::string('scope', 'Разрез: department или manager', enum: ['department', 'manager']),
                     Param::integer('scope_id', 'Менеджер для разреза manager', rules: ['min:1']),
-                    Param::integer('limit', 'Сколько партнёров вернуть (до 200)', rules: ['min:1', 'max:200']),
                 ],
                 handler: [PlanOperations::class, 'progress'],
             ),

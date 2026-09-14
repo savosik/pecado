@@ -13,7 +13,6 @@ use App\Services\Payroll\Support\WorkingCalendar;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Выполнение месячных планов: сводка, прогноз, burndown и разрез по менеджерам.
@@ -61,17 +60,21 @@ class PlanProgressService
 
     public function __construct(
         private readonly ShipmentAnalyticsService $analytics,
-        private readonly ClientPlanFactService $clientPlanFact,
-        private readonly ClientRowEnricher $enricher,
         private readonly WorkingCalendar $calendar,
     ) {}
 
     /**
      * Сводка выполнения: план, факт, остаток, прогноз при текущем темпе и темп.
      *
+     * Рядом с итогом месяца — то же на сегодняшнее число: сколько должно быть
+     * отгружено к этому дню при равномерном темпе, какой это процент и какой
+     * темп в день идёт на самом деле. Без этого «17 % выполнения» на 10-й день
+     * из 22 читается как провал, хотя к этому числу нужно было 45 %.
+     *
      * @return array{
      *   plan: float|null, fact: float, percent: int|null, remaining: float|null,
      *   forecast: float|null, needed_per_day: float|null,
+     *   plan_to_date: float|null, percent_to_date: int|null, remaining_to_date: float|null, current_per_day: float|null,
      *   days_passed: int, days_total: int, days_left: int,
      *   pace: 'ahead'|'on_track'|'behind'|null
      * }
@@ -85,10 +88,17 @@ class PlanProgressService
         $remaining = $plan !== null ? max(0.0, $plan - $fact) : null;
         $daysPassed = $timeline['days_passed'];
         $daysLeft = $timeline['days_left'];
+        $planToDate = $plan !== null && $timeline['days_total'] > 0
+            ? $plan * $daysPassed / $timeline['days_total']
+            : null;
 
         return [
             'plan' => $plan,
             'fact' => round($fact, 2),
+            'plan_to_date' => $planToDate !== null ? round($planToDate, 2) : null,
+            'percent_to_date' => $planToDate !== null && $planToDate > 0 ? (int) round($fact / $planToDate * 100) : null,
+            'remaining_to_date' => $planToDate !== null ? round(max(0.0, $planToDate - $fact), 2) : null,
+            'current_per_day' => $daysPassed > 0 ? round($fact / $daysPassed, 2) : null,
             // Процент только при положительном плане: ноль означает «в этом месяце
             // не продаём», и делить на него нечего.
             'percent' => $plan !== null && $plan > 0 ? (int) round($fact / $plan * 100) : null,
@@ -167,7 +177,6 @@ class PlanProgressService
         $timeline = $this->timeline($month);
 
         $facts = $this->managerFacts($month, $clientIds);
-        $unplanned = $this->unplannedBuyersByManager($month, $clientIds);
         $plans = CrmSalesPlan::query()
             ->forPeriod($month)
             ->where('target_type', PlanTarget::MANAGER->value)
@@ -189,7 +198,6 @@ class PlanProgressService
             $plan = $plans->has($id) ? (float) $plans->get($id) : null;
             $fact = (float) ($facts[$id]['amount'] ?? 0.0);
             $buyers = (int) ($facts[$id]['clients_count'] ?? 0);
-            $withoutPlan = min($buyers, (int) ($unplanned[$id] ?? 0));
 
             $rows[] = [
                 'manager_id' => $id,
@@ -202,8 +210,6 @@ class PlanProgressService
                     ? round($fact / $timeline['days_passed'] * $timeline['days_total'], 2)
                     : null,
                 'clients_count' => $buyers,
-                'planned_clients_count' => $buyers - $withoutPlan,
-                'unplanned_clients_count' => $withoutPlan,
                 'pace' => $this->pace($plan, $fact, $timeline['days_passed'], $timeline['days_total']),
             ];
         }
@@ -218,151 +224,6 @@ class PlanProgressService
     }
 
     /**
-     * Партнёры скоупа: план, факт, процент и отставание — для таблицы «кого догонять».
-     *
-     * Сортировка по отставанию (`план − факт`), поэтому нужен факт по всем партнёрам
-     * сразу, а не по странице: страница из пятнадцати строк для отбора отстающих
-     * бесполезна. Расчёт переиспользует {@see ClientPlanFactService} — тот же кэш,
-     * что и у колонки «План / факт» в списке партнёров.
-     *
-     * @return list<array<string, mixed>>
-     */
-    public function clients(CarbonInterface $month, PlanScope $scope, User $actor, int $limit = 200): array
-    {
-        if ($scope->isEmpty()) {
-            return [];
-        }
-
-        $query = User::query()
-            ->visibleInCrm($actor)
-            ->whereIn('users.id', $scope->clientIds);
-
-        $planFact = $this->clientPlanFact->forScope($query->clone(), $month);
-
-        if ($planFact === []) {
-            return [];
-        }
-
-        // Вместе с именем тянем и владельца карточки: в отделе целиком по одному
-        // названию юрлица не понять, чей это партнёр, а строка «кого догонять»
-        // адресована конкретному менеджеру.
-        $profiles = $query
-            ->select('users.id', 'users.email', 'users.personal_manager_id', DB::raw("COALESCE(NULLIF(users.erp_name, ''), users.name) as name"))
-            ->get()
-            ->keyBy('id');
-
-        $rows = [];
-
-        foreach ($planFact as $id => $cell) {
-            $plan = $cell['plan'];
-            $fact = (float) $cell['fact'];
-
-            // Партнёры без плана и без отгрузок — это просто остальная база
-            // менеджера, в отчёте о выполнении им делать нечего.
-            if ($plan === null && $fact <= 0) {
-                continue;
-            }
-
-            $profile = $profiles[$id] ?? null;
-
-            $rows[] = [
-                'id' => (int) $id,
-                'name' => (string) ($profile->name ?? ('Партнёр #'.$id)),
-                'manager_id' => $profile?->personal_manager_id === null ? null : (int) $profile->personal_manager_id,
-                'plan' => $plan,
-                'fact' => round($fact, 2),
-                'percent' => $cell['percent'],
-                // Отставание считаем только при плане: без него «догонять» нечего,
-                // и такие строки уходят вниз списка.
-                'lag' => $plan !== null ? round(max(0.0, $plan - $fact), 2) : null,
-            ];
-        }
-
-        usort($rows, function (array $a, array $b): int {
-            if (($a['lag'] === null) !== ($b['lag'] === null)) {
-                return $a['lag'] === null ? 1 : -1;
-            }
-
-            return $a['lag'] === null
-                ? $b['fact'] <=> $a['fact']
-                : $b['lag'] <=> $a['lag'];
-        });
-
-        $rows = array_slice($rows, 0, $limit);
-
-        return $this->enrich($rows, $actor);
-    }
-
-    /**
-     * Добавить в строки то, ради чего на этот список смотрят на брифинге:
-     * когда партнёр последний раз был, когда заказывал и что на него поставлено.
-     *
-     * Обогащение идёт после среза по лимиту: тянуть задачи и заказы по двум
-     * сотням партнёров, из которых на экран уедет два десятка, незачем.
-     *
-     * Данные те же и тем же сервисом, что в списке партнёров: разъехавшиеся
-     * колонки на двух экранах читаются как расхождение цифр, а не как две
-     * реализации одной колонки.
-     *
-     * @param  list<array<string, mixed>>  $rows
-     * @return list<array<string, mixed>>
-     */
-    private function enrich(array $rows, User $actor): array
-    {
-        if ($rows === []) {
-            return [];
-        }
-
-        /** @var list<int> $ids */
-        $ids = array_map(static fn (array $row): int => (int) $row['id'], $rows);
-
-        $canSeeTasks = $actor->can('crm-tasks.view');
-
-        // Имя владельца карточки — одним запросом на страницу: у двух сотен строк
-        // менеджеров от силы десяток.
-        $managerIds = array_values(array_unique(array_filter(array_map(
-            static fn (array $row): ?int => $row['manager_id'] ?? null,
-            $rows,
-        ))));
-        $managerNames = $managerIds === []
-            ? collect()
-            : PersonalManager::query()->whereIn('id', $managerIds)->pluck('name', 'id');
-
-        $nextTasks = $canSeeTasks ? $this->enricher->nextTasks($ids, $actor) : [];
-        $taskCounts = $canSeeTasks ? $this->enricher->activeTaskCounts($ids, $actor) : [];
-        $lastOrders = $this->enricher->lastOrders($ids);
-        $lastSeen = User::query()->whereIn('id', $ids)->pluck('last_seen_at', 'id');
-
-        // Долг — те же цифры, что в /crm/finance, и под тем же правом: без
-        // `crm-finance.view` колонка не приходит вовсе, а не приходит нулями.
-        $finance = $actor->can('crm-finance.view') ? $this->enricher->finance($ids) : null;
-
-        return array_map(function (array $row) use ($canSeeTasks, $nextTasks, $taskCounts, $lastOrders, $lastSeen, $finance, $managerNames): array {
-            $id = (int) $row['id'];
-            $managerId = $row['manager_id'] ?? null;
-            unset($row['manager_id']);
-
-            return [
-                ...$row,
-                // Та же форма, что в списке партнёров: {id, name} или null.
-                'manager' => $managerId !== null && $managerNames->has($managerId)
-                    ? ['id' => $managerId, 'name' => (string) $managerNames->get($managerId)]
-                    : null,
-                // Та же форма, что в списке партнёров: ячейка задач общая,
-                // и «нет задач» обязано одинаково предлагать её поставить.
-                'tasks' => $canSeeTasks
-                    ? $this->enricher->tasksPayload($nextTasks[$id] ?? null, $taskCounts[$id] ?? 0)
-                    : null,
-                'last_order' => $lastOrders[$id] ?? null,
-                'last_visit' => $this->enricher->lastVisitPayload($lastSeen[$id] ?? null),
-                'finance' => $finance === null
-                    ? null
-                    : ($finance[$id] ?? ['debt' => 0.0, 'overdue_debt' => 0.0, 'last_payment' => null]),
-            ];
-        }, $rows);
-    }
-
-    /**
      * Сверка «сумма планов уровнем ниже против плана скоупа».
      *
      * Это подсказка, а не ошибка: руководитель может поставить отделу цифру больше
@@ -373,29 +234,18 @@ class PlanProgressService
      */
     public function distribution(CarbonInterface $month, PlanScope $scope): ?array
     {
-        if ($scope->target === PlanTarget::CLIENT) {
+        if ($scope->target !== PlanTarget::DEPARTMENT) {
             return null;
         }
 
         $plan = $this->planAmount($month, $scope);
-
-        if ($scope->target === PlanTarget::DEPARTMENT) {
-            $sum = (float) CrmSalesPlan::query()
-                ->forPeriod($month)
-                ->where('target_type', PlanTarget::MANAGER->value)
-                ->sum('amount');
-            $label = 'Сумма планов менеджеров';
-        } else {
-            $sum = $scope->isEmpty() ? 0.0 : (float) CrmSalesPlan::query()
-                ->forPeriod($month)
-                ->where('target_type', PlanTarget::CLIENT->value)
-                ->whereIn('target_id', $scope->clientIds)
-                ->sum('amount');
-            $label = 'Сумма планов партнёров';
-        }
+        $sum = (float) CrmSalesPlan::query()
+            ->forPeriod($month)
+            ->where('target_type', PlanTarget::MANAGER->value)
+            ->sum('amount');
 
         return [
-            'label' => $label,
+            'label' => 'Сумма планов менеджеров',
             'plan' => $plan,
             'sum' => round($sum, 2),
             'diff' => round($sum - (float) ($plan ?? 0), 2),
@@ -516,49 +366,6 @@ class PlanProgressService
 
             return $result;
         });
-    }
-
-    /**
-     * Сколько партнёров каждого менеджера купили в месяце, не имея плана на него.
-     *
-     * Считается по той же выборке плана и факта, что и таблица «По партнёрам»
-     * ({@see ClientPlanFactService::forScope()} с общим кэшем), а не вторым
-     * агрегатом по отгрузкам: два источника одного числа рано или поздно
-     * разъедутся, и разложение перестанет сходиться с самим `clients_count`.
-     *
-     * @param  list<int>  $clientIds
-     * @return array<int, int> менеджер => сколько его партнёров купили без плана
-     */
-    private function unplannedBuyersByManager(CarbonInterface $month, array $clientIds): array
-    {
-        if ($clientIds === []) {
-            return [];
-        }
-
-        $planFact = $this->clientPlanFact->forScope(
-            User::query()->whereIn('users.id', $clientIds),
-            $month,
-        );
-
-        $owners = User::query()->whereIn('id', $clientIds)->pluck('personal_manager_id', 'id');
-
-        $rows = [];
-
-        foreach ($planFact as $id => $cell) {
-            if ($cell['plan'] !== null || (float) $cell['fact'] <= 0) {
-                continue;
-            }
-
-            $manager = $owners[(int) $id] ?? null;
-
-            if ($manager === null) {
-                continue;   // партнёр без менеджера в разрезе не показывается
-            }
-
-            $rows[(int) $manager] = ($rows[(int) $manager] ?? 0) + 1;
-        }
-
-        return $rows;
     }
 
     /**

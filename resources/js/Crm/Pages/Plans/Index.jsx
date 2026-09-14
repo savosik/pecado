@@ -1,531 +1,205 @@
-import { useMemo, useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
 import axios from 'axios';
-import { Box, Card, Dialog, HStack, Input, Portal, SimpleGrid, Table, Tabs, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, Card, HStack, Input, SimpleGrid, Table, Text, VStack } from '@chakra-ui/react';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
-import { Pagination } from '@/Admin/Components/Pagination';
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
-import { LuCopy, LuMessageSquarePlus, LuSave } from 'react-icons/lu';
+import { LuLock, LuSave, LuSigma } from 'react-icons/lu';
 import { toastError, toastSuccess } from '@/utils/toast';
-import { usePermission } from '@/shared/Panel/usePermission';
-import OpportunityPanel from '@/Crm/Components/OpportunityPanel';
-import TaskDialog from '@/Crm/Components/TaskDialog';
-import CommentThread from '@/Crm/Components/CommentThread';
-import LastVisitHint from '@/Crm/Components/LastVisitHint';
-import LastOrderCell from '@/Crm/Components/LastOrderCell';
-import TasksCell from '@/Crm/Pages/Clients/components/TasksCell';
-import RowActions from '@/shared/Panel/RowActions';
-import { useConfirmDelete } from '@/shared/Panel/useConfirmDelete';
-import ScopeToggle from '@/Crm/Components/ScopeToggle';
+import MetricHint from '@/Crm/Components/MetricHint';
 import ProgressPanel from './components/ProgressPanel';
 
 const fmtMoney = (value) => (value === null || value === undefined
     ? '—'
     : `${Number(value).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽`);
 
-const selectStyle = {
-    padding: '0.4rem',
-    borderRadius: '0.375rem',
-    border: '1px solid var(--chakra-colors-border)',
-    minWidth: '180px',
-};
+const fmtDay = (iso) => (iso ? new Date(iso).toLocaleDateString('ru-RU') : '');
 
 /**
- * Ячейка ввода суммы плана.
+ * Планы продаж: план отдела на месяц, планы менеджеров из приказов на квартал
+ * и выполнение.
  *
- * Пустое поле — «плана нет», а не «план ноль»: в отчёте о выполнении это разные
- * вещи, поэтому очистка ячейки снимает план, а не записывает нулевую цифру.
- */
-function PlanCell({ value, onChange, disabled }) {
-    return (
-        <Input
-            size="sm"
-            type="number"
-            min="0"
-            step="1000"
-            textAlign="right"
-            maxW="160px"
-            placeholder="—"
-            value={value ?? ''}
-            disabled={disabled}
-            onChange={(e) => onChange(e.target.value)}
-        />
-    );
-}
-
-/**
- * Планы продаж на месяц: отдел, менеджеры, партнёры.
- *
- * Сетка сохраняется целиком одной кнопкой, а не по каждой ячейке: план расставляют
- * пачкой на месяц вперёд, и запрос на каждый ввод был бы и медленнее, и шумнее.
+ * С экрана ставится только план отдела. План менеджера пишет приказ на квартал
+ * («Мотивация → Планы на квартал»), планов на партнёра больше нет — они были
+ * инструментом методики «сверху вниз» и из расчёта оплаты исключены.
  */
 export default function Index({
     month,
     monthLabel,
-    previousMonth,
     previousMonthLabel,
+    quarter,
     department,
     managers = [],
     managersSum = 0,
-    clients,
-    managerOptions = [],
     canSeeAll = false,
-    canSeeDepartment = false,
-    canEdit = false,
-    filters = {},
+    canSeeMotivation = false,
 }) {
-    const { can } = usePermission();
-    const canSeeOpportunities = can('crm-opportunities.view');
-    const canCreateTask = can('crm-tasks.create');
-    const canComment = can('crm-comments.create');
-
-    const [drafts, setDrafts] = useState({});
+    const [draft, setDraft] = useState(null);
     const [busy, setBusy] = useState(false);
-    const [copyOpen, setCopyOpen] = useState(false);
-    // Диалоги монтируются по одному на страницу, а не на строку: на брифинге
-    // в сетке бывает сотня партнёров, и сотня модалок в DOM положит таблицу.
-    const [taskFor, setTaskFor] = useState(null);
-    const [openTaskId, setOpenTaskId] = useState(null);
-    const [commentFor, setCommentFor] = useState(null);
-    // Выполнение открыто по умолчанию: план расставляют раз в месяц, а смотрят
-    // на него каждый день.
-    const [tab, setTab] = useState('progress');
 
-    const dirtyCount = Object.keys(drafts).length;
-
-    const planDelete = useConfirmDelete({
-        title: 'Удалить план партнёра?',
-        description: (row) => `План «${row?.name ?? ''}» на ${monthLabel} будет снят. Факт отгрузок не затрагивается.`,
-        onConfirm: async (row) => {
-            try {
-                await axios.delete(route('crm.plans.destroy', row.plan_id));
-                toastSuccess('План удалён');
-                router.reload({ only: ['clients', 'managers', 'managersSum'] });
-            } catch (e) {
-                toastError('Не удалось удалить план', e?.response?.data?.message || 'Попробуйте ещё раз.');
-            }
-        },
-    });
-
-    const setDraft = (key, value) => setDrafts((prev) => ({ ...prev, [key]: value }));
-
-    const valueOf = (key, saved) => (key in drafts
-        ? drafts[key]
-        : (saved === null || saved === undefined ? '' : String(saved)));
+    const value = draft === null ? (department.amount ?? '') : draft;
+    const dirty = draft !== null && String(draft) !== String(department.amount ?? '');
 
     const navigate = (patch) => {
-        router.get(route('crm.plans.index'), { ...filters, month, ...patch, page: undefined }, {
-            preserveState: false,
-            replace: true,
-        });
+        router.get(route('crm.plans.index'), { month, ...patch }, { preserveState: false, replace: true });
     };
 
-    const buildRows = () => Object.entries(drafts).map(([key, value]) => {
-        const [type, id] = key.split(':');
-
-        return {
-            target_type: type,
-            target_id: id ? Number(id) : null,
-            amount: value === '' ? null : Number(value),
-        };
-    });
-
-    const save = async () => {
-        if (dirtyCount === 0) {
-            return;
-        }
-
+    const save = async (amount) => {
         setBusy(true);
         try {
-            const { data } = await axios.post(route('crm.plans.store'), { month, rows: buildRows() });
-
-            setDrafts({});
-            toastSuccess(
-                'Планы сохранены',
-                `Записано: ${data.saved}, снято: ${data.removed}${data.skipped ? `, пропущено: ${data.skipped}` : ''}`,
-            );
+            const { data } = await axios.post(route('crm.plans.store'), {
+                month,
+                rows: [{ target_type: 'department', amount: amount === '' ? null : Number(amount) }],
+            });
+            toastSuccess(data.removed ? 'План отдела снят' : 'План отдела сохранён');
+            setDraft(null);
             router.reload();
         } catch (e) {
-            toastError('Не удалось сохранить', e?.response?.data?.message || 'Проверьте введённые суммы.');
+            toastError('Не удалось сохранить', e?.response?.data?.message || 'Проверьте сумму.');
         } finally {
             setBusy(false);
         }
     };
 
-    const copyPrevious = async (overwrite) => {
-        setBusy(true);
-        try {
-            const { data } = await axios.post(route('crm.plans.copy-previous'), { month, overwrite });
-
-            setDrafts({});
-            toastSuccess(
-                'Скопировано из прошлого месяца',
-                `Перенесено: ${data.copied}${data.skipped ? `, пропущено: ${data.skipped}` : ''}`,
-            );
-            router.reload();
-        } catch (e) {
-            toastError('Не удалось скопировать', e?.response?.data?.message || 'Попробуйте ещё раз.');
-        } finally {
-            setBusy(false);
-            setCopyOpen(false);
-        }
-    };
-
-    // Сумма планов партнёров у менеджера считается на сервере по сохранённым данным:
-    // подсказка о расхождении показывает факт, а не незасохранённый черновик.
-    const mismatched = useMemo(
-        () => managers.filter((row) => row.amount !== null && row.clients_sum > Number(row.amount) + 0.01),
-        [managers],
-    );
+    const mismatch = department.amount !== null && managersSum > 0 && Math.abs(managersSum / Number(department.amount) - 1) > 0.15;
 
     return (
         <>
             <Head title="CRM — Планы продаж" />
             <PageHeader
                 title="Планы продаж"
-                description={`Месяц: ${monthLabel}. Суммы в рублях, факт считается по отгрузкам.`}
+                description={`Месяц: ${monthLabel}. План отдела ставится здесь, планы менеджеров — приказом на квартал; факт считается по отгрузкам.`}
                 actions={(
-                    <HStack gap={2}>
-                        {canEdit && tab === 'input' && (
-                            <Button size="sm" variant="outline" onClick={() => setCopyOpen(true)} disabled={busy}>
-                                <LuCopy /> Скопировать {previousMonthLabel}
-                            </Button>
-                        )}
-                        {canEdit && tab === 'input' && (
-                            <Button size="sm" onClick={save} loading={busy} disabled={dirtyCount === 0}>
-                                <LuSave /> Сохранить{dirtyCount > 0 ? ` (${dirtyCount})` : ''}
-                            </Button>
-                        )}
-                    </HStack>
+                    <Input
+                        size="sm"
+                        type="month"
+                        maxW="180px"
+                        aria-label="Месяц"
+                        value={month}
+                        onChange={(e) => navigate({ month: e.target.value })}
+                    />
                 )}
             />
 
             <VStack gap={4} align="stretch">
+                {(department.can_edit || department.amount !== null) && (
+                    <Card.Root>
+                        <Card.Header>
+                            <HStack gap={1}>
+                                <Text fontWeight="semibold" fontSize="lg">План отдела</Text>
+                                <MetricHint text="Цель отдела на месяц. Личные планы менеджеров из неё не выводятся: они считаются по формуле Положения и утверждаются приказом на квартал. Если план отдела расходится с суммой личных больше чем на 15 %, стоит привести его в соответствие." />
+                            </HStack>
+                        </Card.Header>
+                        <Card.Body>
+                            <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} alignItems="end">
+                                <Box>
+                                    <Text fontSize="xs" color="fg.muted" mb="1">{monthLabel}</Text>
+                                    {department.can_edit ? (
+                                        <HStack gap={2}>
+                                            <Input
+                                                size="sm"
+                                                type="number"
+                                                min="0"
+                                                step="10000"
+                                                textAlign="right"
+                                                maxW="180px"
+                                                placeholder="—"
+                                                aria-label="План отдела"
+                                                value={value}
+                                                onChange={(e) => setDraft(e.target.value)}
+                                            />
+                                            <Button size="sm" onClick={() => save(value)} loading={busy} disabled={!dirty}>
+                                                <LuSave /> Сохранить
+                                            </Button>
+                                        </HStack>
+                                    ) : (
+                                        <Text fontSize="lg" fontWeight="700">{fmtMoney(department.amount)}</Text>
+                                    )}
+                                </Box>
+                                <Box>
+                                    <Text fontSize="xs" color="fg.muted" mb="1">{previousMonthLabel}</Text>
+                                    <Text fontSize="sm">{fmtMoney(department.previous_amount)}</Text>
+                                </Box>
+                                <Box>
+                                    <Text fontSize="xs" color="fg.muted" mb="1">Сумма планов менеджеров</Text>
+                                    <HStack gap={2}>
+                                        <Text fontSize="sm">{fmtMoney(managersSum)}</Text>
+                                        {department.can_edit && managersSum > 0 && Number(department.amount ?? 0) !== managersSum && (
+                                            <Button size="xs" variant="outline" loading={busy} onClick={() => save(managersSum)}>
+                                                <LuSigma /> Поставить сумму
+                                            </Button>
+                                        )}
+                                    </HStack>
+                                </Box>
+                            </SimpleGrid>
+
+                            {mismatch && (
+                                <Alert status="warning" mt={4} title="План отдела расходится с суммой личных планов">
+                                    Отдел: {fmtMoney(department.amount)}, менеджеры вместе: {fmtMoney(managersSum)}.
+                                    Личные планы поставлены по формуле Положения; план отдела стоит привести к их сумме.
+                                </Alert>
+                            )}
+                        </Card.Body>
+                    </Card.Root>
+                )}
+
+                {managers.length > 0 && (
+                    <Card.Root>
+                        <Card.Header>
+                            <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                                <HStack gap={1}>
+                                    <Text fontWeight="semibold" fontSize="lg">Планы менеджеров</Text>
+                                    <MetricHint text="Читаются из «Планов на квартал»: медиана продаж за рабочий день × рабочие дни × сезон × прирост, утверждается приказом до начала квартала. Здесь не правятся." />
+                                </HStack>
+                                {canSeeMotivation && (
+                                    <Button size="sm" variant="outline" asChild>
+                                        <Link href={`/crm/motivation/plans?quarter=${quarter}`}>Планы на квартал</Link>
+                                    </Button>
+                                )}
+                            </HStack>
+                        </Card.Header>
+                        <Card.Body>
+                            <Table.Root size="sm">
+                                <Table.Header>
+                                    <Table.Row>
+                                        <Table.ColumnHeader>Менеджер</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="right">{previousMonthLabel}</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="right">План на {monthLabel}</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Основание</Table.ColumnHeader>
+                                    </Table.Row>
+                                </Table.Header>
+                                <Table.Body>
+                                    {managers.map((row) => (
+                                        <Table.Row key={row.id}>
+                                            <Table.Cell><Text fontSize="sm" fontWeight="500">{row.name}</Text></Table.Cell>
+                                            <Table.Cell textAlign="right"><Text fontSize="sm" color="fg.muted">{fmtMoney(row.previous_amount)}</Text></Table.Cell>
+                                            <Table.Cell textAlign="right"><Text fontSize="sm" fontWeight="700" fontVariantNumeric="tabular-nums">{fmtMoney(row.amount)}</Text></Table.Cell>
+                                            <Table.Cell>
+                                                {row.order
+                                                    ? <Badge colorPalette="green" variant="subtle"><LuLock size={11} /> приказ на квартал, версия {row.order.version} · {fmtDay(row.order.approved_at)}</Badge>
+                                                    : (row.amount !== null
+                                                        ? <Badge colorPalette="gray" variant="subtle">поставлен по прежней методике</Badge>
+                                                        : <Text fontSize="xs" color="fg.subtle">плана нет</Text>)}
+                                            </Table.Cell>
+                                        </Table.Row>
+                                    ))}
+                                </Table.Body>
+                            </Table.Root>
+                        </Card.Body>
+                    </Card.Root>
+                )}
+
                 <Card.Root>
+                    <Card.Header>
+                        <Text fontWeight="semibold" fontSize="lg">Выполнение</Text>
+                    </Card.Header>
                     <Card.Body>
-                        <HStack gap={4} flexWrap="wrap" align="end">
-                            <Box>
-                                <Text fontSize="xs" color="fg.muted" mb="1">Месяц плана</Text>
-                                <Input
-                                    size="sm"
-                                    type="month"
-                                    maxW="180px"
-                                    value={month}
-                                    onChange={(e) => navigate({ month: e.target.value })}
-                                />
-                            </Box>
-                            <Text fontSize="xs" color="fg.muted">
-                                Для сравнения показан {previousMonthLabel}.
-                            </Text>
-                        </HStack>
+                        <ProgressPanel month={month} canSeeAll={canSeeAll} />
                     </Card.Body>
                 </Card.Root>
-
-                <Tabs.Root value={tab} onValueChange={(e) => setTab(e.value)} lazyMount>
-                    <Tabs.List>
-                        <Tabs.Trigger value="progress">Выполнение</Tabs.Trigger>
-                        {canSeeOpportunities && <Tabs.Trigger value="opportunities">Возможности</Tabs.Trigger>}
-                        <Tabs.Trigger value="input">Ввод планов</Tabs.Trigger>
-                    </Tabs.List>
-
-                    <Tabs.Content value="progress" px={0} pt={4}>
-                        <ProgressPanel
-                            month={month}
-                            canSeeAll={canSeeAll}
-                            onTask={canCreateTask ? (row) => setTaskFor(row) : null}
-                            onComment={canComment ? (row) => setCommentFor(row) : null}
-                            onOpenTask={(id) => setOpenTaskId(id)}
-                        />
-                    </Tabs.Content>
-
-                    {/* Отставание рядом с ответом на вопрос «и что с ним делать»:
-                        цифра выполнения без списка звонков — отчёт, а не работа. */}
-                    {canSeeOpportunities && (
-                        <Tabs.Content value="opportunities" px={0} pt={4}>
-                            <OpportunityPanel month={month} canSeeAll={canSeeAll} />
-                        </Tabs.Content>
-                    )}
-
-                    <Tabs.Content value="input" px={0} pt={4}>
-                        <VStack gap={4} align="stretch">
-                            {(department.can_edit || department.amount !== null) && (
-                                <Card.Root>
-                                    <Card.Header>
-                                        <Text fontWeight="semibold" fontSize="lg">План отдела</Text>
-                                    </Card.Header>
-                                    <Card.Body>
-                                        <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
-                                            <Box>
-                                                <Text fontSize="xs" color="fg.muted" mb="1">{monthLabel}</Text>
-                                                <PlanCell
-                                                    value={valueOf('department', department.amount)}
-                                                    disabled={!department.can_edit}
-                                                    onChange={(value) => setDraft('department', value)}
-                                                />
-                                            </Box>
-                                            <Box>
-                                                <Text fontSize="xs" color="fg.muted" mb="1">{previousMonthLabel}</Text>
-                                                <Text fontSize="sm">{fmtMoney(department.previous_amount)}</Text>
-                                            </Box>
-                                            <Box>
-                                                <Text fontSize="xs" color="fg.muted" mb="1">Сумма планов менеджеров</Text>
-                                                <Text fontSize="sm">{fmtMoney(managersSum)}</Text>
-                                            </Box>
-                                        </SimpleGrid>
-
-                                        {department.amount !== null && managersSum > Number(department.amount) + 0.01 && (
-                                            <Alert status="warning" mt={4} title="Менеджерам расписано больше плана отдела">
-                                                Сумма планов менеджеров ({fmtMoney(managersSum)}) больше плана отдела
-                                                ({fmtMoney(department.amount)}). Это не запрещено — но проверьте, так ли задумано.
-                                            </Alert>
-                                        )}
-                                    </Card.Body>
-                                </Card.Root>
-                            )}
-
-                            {managers.length > 0 && (
-                                <Card.Root>
-                                    <Card.Header>
-                                        <Text fontWeight="semibold" fontSize="lg">Менеджеры</Text>
-                                    </Card.Header>
-                                    <Card.Body>
-                                        <Table.Root size="sm">
-                                            <Table.Header>
-                                                <Table.Row>
-                                                    <Table.ColumnHeader>Менеджер</Table.ColumnHeader>
-                                                    <Table.ColumnHeader>{previousMonthLabel}</Table.ColumnHeader>
-                                                    <Table.ColumnHeader>План на {monthLabel}</Table.ColumnHeader>
-                                                    <Table.ColumnHeader>Расписано по партнёрам</Table.ColumnHeader>
-                                                </Table.Row>
-                                            </Table.Header>
-                                            <Table.Body>
-                                                {managers.map((row) => (
-                                                    <Table.Row key={row.id}>
-                                                        <Table.Cell>
-                                                            <Text fontSize="sm" fontWeight="500">{row.name}</Text>
-                                                        </Table.Cell>
-                                                        <Table.Cell>
-                                                            <Text fontSize="sm" color="fg.muted">{fmtMoney(row.previous_amount)}</Text>
-                                                        </Table.Cell>
-                                                        <Table.Cell>
-                                                            <PlanCell
-                                                                value={valueOf(`manager:${row.id}`, row.amount)}
-                                                                disabled={!row.can_edit}
-                                                                onChange={(value) => setDraft(`manager:${row.id}`, value)}
-                                                            />
-                                                        </Table.Cell>
-                                                        <Table.Cell>
-                                                            <Text
-                                                                fontSize="sm"
-                                                                color={row.amount !== null && row.clients_sum > Number(row.amount) + 0.01
-                                                                    ? 'orange.500'
-                                                                    : 'fg.muted'}
-                                                            >
-                                                                {fmtMoney(row.clients_sum)}
-                                                            </Text>
-                                                        </Table.Cell>
-                                                    </Table.Row>
-                                                ))}
-                                            </Table.Body>
-                                        </Table.Root>
-
-                                        {mismatched.length > 0 && (
-                                            <Alert status="info" mt={4} title="Сумма планов партнёров больше плана менеджера">
-                                                {mismatched.map((row) => `${row.name}: расписано ${fmtMoney(row.clients_sum)} из ${fmtMoney(row.amount)}`).join('; ')}.
-                                                Это подсказка, а не запрет.
-                                            </Alert>
-                                        )}
-                                    </Card.Body>
-                                </Card.Root>
-                            )}
-
-                            <Card.Root>
-                                <Card.Header>
-                                    <Text fontWeight="semibold" fontSize="lg">Партнёры</Text>
-                                </Card.Header>
-                                <Card.Body>
-                                    <HStack gap={3} mb={4} flexWrap="wrap" align="center">
-                                        <Input
-                                            size="sm"
-                                            maxW="260px"
-                                            placeholder="Поиск по имени или email"
-                                            defaultValue={filters.search || ''}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    navigate({ search: e.target.value || undefined });
-                                                }
-                                            }}
-                                        />
-
-                                        {canSeeAll && (
-                                            <select
-                                                style={selectStyle}
-                                                value={filters.manager_id || ''}
-                                                onChange={(e) => navigate({ manager_id: e.target.value || undefined })}
-                                            >
-                                                <option value="">Все менеджеры</option>
-                                                {managerOptions.map((manager) => (
-                                                    <option key={manager.id} value={manager.id}>{manager.name}</option>
-                                                ))}
-                                            </select>
-                                        )}
-
-                                        <Checkbox
-                                            checked={!!filters.only_with_plan}
-                                            onCheckedChange={(e) => navigate({ only_with_plan: e.checked ? 1 : undefined })}
-                                        >
-                                            Только с планом
-                                        </Checkbox>
-                                        <ScopeToggle section="plans" scope={filters.scope} available={canSeeDepartment} />
-                                    </HStack>
-
-                                    {clients.data.length === 0 ? (
-                                        <Text fontSize="sm" color="fg.muted">Партнёры не найдены.</Text>
-                                    ) : (
-                                        <>
-                                            <Table.Root size="sm">
-                                                <Table.Header>
-                                                    <Table.Row>
-                                                        <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
-                                                        {canSeeAll && <Table.ColumnHeader>Менеджер</Table.ColumnHeader>}
-                                                        <Table.ColumnHeader>Последний заказ</Table.ColumnHeader>
-                                                        <Table.ColumnHeader>Ближайшая задача</Table.ColumnHeader>
-                                                        <Table.ColumnHeader>{previousMonthLabel}</Table.ColumnHeader>
-                                                        <Table.ColumnHeader>План на {monthLabel}</Table.ColumnHeader>
-                                                        <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
-                                                    </Table.Row>
-                                                </Table.Header>
-                                                <Table.Body>
-                                                    {clients.data.map((row) => (
-                                                        <Table.Row key={row.id}>
-                                                            <Table.Cell>
-                                                                <Text fontSize="sm" fontWeight="500">{row.name}</Text>
-                                                                <LastVisitHint visit={row.last_visit} />
-                                                            </Table.Cell>
-                                                            {canSeeAll && (
-                                                                <Table.Cell>
-                                                                    <Text fontSize="sm" color="fg.muted">{row.manager || '—'}</Text>
-                                                                </Table.Cell>
-                                                            )}
-                                                            <Table.Cell>
-                                                                <LastOrderCell value={row.last_order} />
-                                                            </Table.Cell>
-                                                            <Table.Cell>
-                                                                <TasksCell
-                                                                    tasks={row.tasks}
-                                                                    onCreate={canCreateTask ? () => setTaskFor(row) : undefined}
-                                                                    onOpen={(id) => setOpenTaskId(id)}
-                                                                />
-                                                            </Table.Cell>
-                                                            <Table.Cell>
-                                                                <Text fontSize="sm" color="fg.muted">{fmtMoney(row.previous_amount)}</Text>
-                                                            </Table.Cell>
-                                                            <Table.Cell>
-                                                                <PlanCell
-                                                                    value={valueOf(`client:${row.id}`, row.amount)}
-                                                                    disabled={!row.can_edit}
-                                                                    onChange={(value) => setDraft(`client:${row.id}`, value)}
-                                                                />
-                                                            </Table.Cell>
-                                                            <Table.Cell>
-                                                                <RowActions
-                                                                    size="xs"
-                                                                    view={{ href: route('crm.clients.show', row.id), label: 'Карточка партнёра' }}
-                                                                    extra={[{
-                                                                        icon: LuMessageSquarePlus,
-                                                                        label: 'Оставить комментарий',
-                                                                        allowed: canComment,
-                                                                        onClick: () => setCommentFor(row),
-                                                                    }]}
-                                                                    delete={{
-                                                                        permission: 'crm-plans.delete',
-                                                                        allowed: Boolean(row.can_edit && row.plan_id),
-                                                                        onClick: () => planDelete.request(row),
-                                                                    }}
-                                                                />
-                                                            </Table.Cell>
-                                                        </Table.Row>
-                                                    ))}
-                                                </Table.Body>
-                                            </Table.Root>
-
-                                            <Box mt={4}>
-                                                <Pagination
-                                                    pagination={clients}
-                                                    onPageChange={(page) => router.get(
-                                                        route('crm.plans.index'),
-                                                        { ...filters, month, page },
-                                                        { preserveState: false, replace: true },
-                                                    )}
-                                                />
-                                            </Box>
-                                        </>
-                                    )}
-
-                                    {dirtyCount > 0 && (
-                                        <Alert status="warning" mt={4} title="Есть несохранённые изменения">
-                                            Изменено ячеек: {dirtyCount}. Переход на другую страницу или смена месяца их потеряет.
-                                        </Alert>
-                                    )}
-                                </Card.Body>
-                            </Card.Root>
-                        </VStack>
-                    </Tabs.Content>
-                </Tabs.Root>
             </VStack>
-
-            <TaskDialog
-                open={taskFor !== null || openTaskId !== null}
-                taskId={openTaskId}
-                entity={taskFor ? { type: 'client', id: taskFor.id, label: 'Партнёр', title: taskFor.name } : null}
-                onClose={() => { setTaskFor(null); setOpenTaskId(null); }}
-                onSaved={() => {
-                    setTaskFor(null);
-                    setOpenTaskId(null);
-                    // Перезагружаем только сетку партнёров: несохранённые суммы
-                    // плана живут в стейте и полный визит их потерял бы.
-                    router.reload({ only: ['clients'] });
-                }}
-            />
-
-            <Dialog.Root
-                open={commentFor !== null}
-                onOpenChange={({ open: isOpen }) => ! isOpen && setCommentFor(null)}
-                size="lg"
-                scrollBehavior="inside"
-            >
-                <Portal>
-                    <Dialog.Backdrop />
-                    <Dialog.Positioner>
-                        <Dialog.Content>
-                            <Dialog.Header>
-                                <Dialog.Title>{commentFor?.name}</Dialog.Title>
-                            </Dialog.Header>
-                            <Dialog.Body pb={6}>
-                                {commentFor && (
-                                    <CommentThread entityType="client" entityId={commentFor.id} />
-                                )}
-                            </Dialog.Body>
-                        </Dialog.Content>
-                    </Dialog.Positioner>
-                </Portal>
-            </Dialog.Root>
-
-            <ConfirmDialog
-                open={copyOpen}
-                onClose={() => setCopyOpen(false)}
-                onConfirm={() => copyPrevious(false)}
-                title={`Скопировать планы за ${previousMonthLabel}?`}
-                description={`Планы ${previousMonthLabel} перенесутся в ${monthLabel}. Уже заданные суммы останутся как есть — копирование заполняет пустые ячейки, а не переписывает чужую работу.`}
-                confirmLabel="Скопировать"
-                cancelLabel="Отмена"
-                isLoading={busy}
-            />
-            <ConfirmDialog {...planDelete.dialogProps} />
         </>
     );
 }

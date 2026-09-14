@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
  * @param {Function} onApply — применить набор параметров
  * @param {Function} onReset
  * @param {boolean} canSeeTasks
- * @param {boolean} canSeePlans
  * @param {number|null} uncoveredCount
  */
 export default function QuickFilters({
@@ -21,7 +20,6 @@ export default function QuickFilters({
     onApply,
     onReset,
     canSeeTasks = false,
-    canSeePlans = false,
     uncoveredCount = null,
 }) {
     const chips = [
@@ -55,18 +53,11 @@ export default function QuickFilters({
             params: { inactive_days: 60 },
             active: Number(filters.inactive_days) === 60,
         },
-        ...(canSeePlans ? [{
-            key: 'behind',
-            label: 'Отстают от плана',
-            palette: 'red',
-            params: { plan_state: 'behind', sort_by: 'plan_percent', sort_order: 'asc' },
-            active: filters.plan_state === 'behind',
-        }] : []),
     ];
 
     const hasAny = Boolean(
         filters.search || filters.lifecycle || filters.task_state || filters.coverage
-        || filters.plan_state || filters.inactive_days || filters.manager_id
+        || filters.inactive_days || filters.manager_id
         || filters.no_order_days || filters.stock_buffer
         || filters.order_amount_from || filters.order_amount_to,
     );

@@ -31,7 +31,9 @@ class StoreSalesPlansRequest extends FormRequest
         return [
             'month' => ['nullable', 'string', 'max:10'],
             'rows' => ['required', 'array', 'min:1', 'max:500'],
-            'rows.*.target_type' => ['required', Rule::enum(PlanTarget::class)],
+            // С экрана ставится только план отдела: план менеджера пишет приказ
+            // на квартал, планов на партнёра больше нет (решение РОПа 14.09.2026).
+            'rows.*.target_type' => ['required', Rule::in([PlanTarget::DEPARTMENT->value])],
             'rows.*.target_id' => ['nullable', 'integer', 'min:1'],
             // Верхняя граница — вместимость decimal(15,2): большее число молча
             // обрезалось бы базой, а план — деньги.
@@ -81,7 +83,7 @@ class StoreSalesPlansRequest extends FormRequest
             'rows.required' => 'Нечего сохранять: не изменена ни одна ячейка.',
             'rows.max' => 'За один раз можно сохранить не больше 500 строк.',
             'rows.*.target_type.required' => 'Не указан тип плана.',
-            'rows.*.target_type.enum' => 'Такого типа плана нет.',
+            'rows.*.target_type.in' => 'С этого экрана ставится только план отдела: план менеджера — приказом на квартал в разделе «Мотивация», планов на партнёра больше нет.',
             'rows.*.amount.numeric' => 'Сумма плана должна быть числом.',
             'rows.*.amount.min' => 'Сумма плана не может быть отрицательной.',
             'rows.*.amount.max' => 'Слишком большая сумма плана.',

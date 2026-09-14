@@ -23,7 +23,7 @@ use Illuminate\Support\Str;
  * Рабочий список партнёров: отбор, сортировка и сборка строки таблицы.
  *
  * Вынесено из контроллера целиком, потому что список перестал быть витриной:
- * в строке живут ближайшая задача, последняя активность и выполнение плана,
+ * в строке живут ближайшая задача, последняя активность и последний заказ,
  * и каждый из этих блоков — отдельный пакетный запрос. В контроллере они
  * превратились бы в набор циклов с N+1 в первом же релизе.
  *
@@ -40,7 +40,6 @@ class ClientListService
 
     public function __construct(
         private readonly CrmTaskService $tasks,
-        private readonly ClientPlanFactService $planFact,
         private readonly ClientRowEnricher $enricher,
         private readonly TaxRegimeQuery $taxRegimes,
     ) {}
@@ -54,11 +53,9 @@ class ClientListService
     {
         $query = $this->query($actor, $filters);
 
-        $paginator = $filters->sortBy === 'plan_percent'
-            ? $this->paginateByPlanPercent($query, $filters)
-            : $query->paginate($filters->perPage)->withQueryString();
+        $paginator = $query->paginate($filters->perPage)->withQueryString();
 
-        return $this->hydrate($paginator, $actor, $filters);
+        return $this->hydrate($paginator, $actor);
     }
 
     /**
@@ -132,10 +129,6 @@ class ClientListService
 
         if ($filters->orderAmountFrom !== null || $filters->orderAmountTo !== null) {
             $this->applyLastOrderAmount($query, $filters->orderAmountFrom, $filters->orderAmountTo);
-        }
-
-        if ($filters->planState !== null) {
-            $this->applyPlanState($query, $filters->planState);
         }
 
         // Страховой запас (buf-02): прямой флаг на users, без join-ов.
@@ -375,51 +368,6 @@ class ClientListService
     }
 
     /**
-     * Фильтр по состоянию плана.
-     *
-     * Наличие плана проверяется запросом к таблице планов — это дёшево.
-     * «Отстаёт» и «опережает» требуют факта по всему скоупу, поэтому идут
-     * через {@see ClientPlanFactService::forScope()} и кэш.
-     *
-     * @param  Builder<User>  $query
-     */
-    private function applyPlanState(Builder $query, string $state): void
-    {
-        $month = CarbonImmutable::now();
-
-        if ($state === 'with_plan' || $state === 'without_plan') {
-            $exists = fn () => DB::table('crm_sales_plans')
-                ->whereColumn('crm_sales_plans.target_id', 'users.id')
-                ->where('crm_sales_plans.target_type', 'client')
-                ->whereDate('crm_sales_plans.period_month', $month->startOfMonth()->toDateString());
-
-            $state === 'with_plan'
-                ? $query->whereExists($exists())
-                : $query->whereNotExists($exists());
-
-            return;
-        }
-
-        $percent = $this->planFact->forScope($query, $month);
-
-        $matching = [];
-
-        foreach ($percent as $clientId => $row) {
-            if ($row['percent'] === null) {
-                continue;
-            }
-
-            // 100 % — это выполненный план, он не «отстаёт» и не «опережает»:
-            // попадание в обе корзины сразу сделало бы фильтры бессмысленными.
-            if (($state === 'behind' && $row['percent'] < 100) || ($state === 'ahead' && $row['percent'] >= 100)) {
-                $matching[] = $clientId;
-            }
-        }
-
-        $query->whereIn('users.id', $matching === [] ? [0] : $matching);
-    }
-
-    /**
      * Сортировка списка.
      *
      * `next_task_due` считается подзапросом, а не в PHP: сортировка после
@@ -442,14 +390,6 @@ class ClientListService
 
         if ($filters->sortBy === 'active_tasks_count') {
             $query->orderBy('active_tasks_count', $direction);
-
-            return;
-        }
-
-        if ($filters->sortBy === 'plan_percent') {
-            // Порядок задаёт paginateByPlanPercent(); здесь фиксируем стабильный
-            // вторичный ключ, чтобы выборка id была детерминированной.
-            $query->orderBy('users.id', 'desc');
 
             return;
         }
@@ -477,80 +417,17 @@ class ClientListService
     }
 
     /**
-     * Ручная пагинация по выполнению плана.
-     *
-     * Процент — не колонка, отсортировать по нему в SQL нечем. Поэтому порядок
-     * считается по всему скоупу (тот же кэшированный агрегат, что у фильтра),
-     * а страница догружается по срезу идентификаторов.
-     *
-     * @param  Builder<User>  $query
-     * @return Paginator<int, User>
-     */
-    private function paginateByPlanPercent(Builder $query, ClientListFilters $filters): Paginator
-    {
-        $month = CarbonImmutable::now();
-        $planFact = $this->planFact->forScope($query, $month);
-
-        /** @var list<int> $ids */
-        $ids = $query->clone()->reorder()->pluck('users.id')->map('intval')->all();
-
-        $desc = $filters->sortOrder === 'desc';
-
-        usort($ids, function (int $a, int $b) use ($planFact, $desc): int {
-            $left = $planFact[$a]['percent'] ?? null;
-            $right = $planFact[$b]['percent'] ?? null;
-
-            // Партнёры без плана — в конце при любом направлении: это не «ноль
-            // процентов», а «цифру никто не ставил».
-            if ($left === null && $right === null) {
-                return $b <=> $a;
-            }
-            if ($left === null) {
-                return 1;
-            }
-            if ($right === null) {
-                return -1;
-            }
-
-            return $desc ? $right <=> $left : $left <=> $right;
-        });
-
-        $page = Paginator::resolveCurrentPage();
-        $pageIds = array_slice($ids, ($page - 1) * $filters->perPage, $filters->perPage);
-
-        $models = $pageIds === []
-            ? collect()
-            : $query->clone()->reorder()->whereIn('users.id', $pageIds)->get()->keyBy('id');
-
-        $items = [];
-
-        foreach ($pageIds as $id) {
-            $model = $models->get($id);
-
-            if ($model !== null) {
-                $items[] = $model;
-            }
-        }
-
-        return new Paginator($items, count($ids), $filters->perPage, $page, [
-            'path' => Paginator::resolveCurrentPath(),
-            'query' => request()->query(),
-        ]);
-    }
-
-    /**
      * Догрузить страницу тем, чего нет в самой строке пользователя.
      *
-     * Три пакетных запроса на страницу независимо от per_page: ближайшие задачи,
-     * последние комментарии, план с фактом.
+     * Пакетные запросы на страницу независимо от per_page: ближайшие задачи,
+     * последние комментарии, последние заказы.
      *
      * @param  Paginator<int, User>  $paginator
      * @return LengthAwarePaginator<int, array<string, mixed>>
      */
-    private function hydrate(Paginator $paginator, User $actor, ClientListFilters $filters): LengthAwarePaginator
+    private function hydrate(Paginator $paginator, User $actor): LengthAwarePaginator
     {
         $canSeeTasks = $actor->can('crm-tasks.view');
-        $canSeePlans = $actor->can('crm-plans.view');
         $canSeeProfile = $actor->can('crm-profile.view');
 
         /** @var list<int> $ids */
@@ -558,7 +435,6 @@ class ClientListService
 
         $nextTasks = $canSeeTasks ? $this->enricher->nextTasks($ids, $actor) : [];
         $lastComments = $this->lastComments($ids);
-        $planFact = $canSeePlans ? $this->planFact->forClients($ids, CarbonImmutable::now()) : [];
         $lastOrders = $this->enricher->lastOrders($ids);
         // Аватарки — одним запросом на страницу. Картинка не отдаётся здесь,
         // только адрес защищённого маршрута: файлы лежат на приватном диске.
@@ -572,7 +448,6 @@ class ClientListService
             $client,
             $nextTasks[(int) $client->getKey()] ?? null,
             $lastComments[(int) $client->getKey()] ?? null,
-            $planFact[(int) $client->getKey()] ?? null,
             $lastOrders[(int) $client->getKey()] ?? null,
             $canSeeTasks,
             $canSeeProfile,
@@ -614,7 +489,6 @@ class ClientListService
     /**
      * Одна строка таблицы.
      *
-     * @param  array{plan: float|null, fact: float, percent: int|null}|null  $planFact
      * @param  array{url: string, source: string|null}|null  $avatar
      * @return array<string, mixed>
      */
@@ -622,7 +496,6 @@ class ClientListService
         User $client,
         ?CrmTask $nextTask,
         ?CrmComment $lastComment,
-        ?array $planFact,
         ?array $lastOrder,
         bool $canSeeTasks,
         bool $canSeeProfile,
@@ -681,7 +554,6 @@ class ClientListService
             // Пользуется ли партнёр сайтом вообще: заказ мог приехать из 1С,
             // а в кабинет он не заходил ни разу.
             'last_visit' => LastVisit::payload($client->last_seen_at),
-            'plan_fact' => $planFact,
             // Заказ, а не отгрузка: намерение клиента. Факт продаж в плане
             // и аналитике считается по отгрузкам — цифры не обязаны совпадать.
             'last_order' => $lastOrder,

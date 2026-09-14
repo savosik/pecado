@@ -25,7 +25,6 @@ import ClientsSearchBar from './components/ClientsSearchBar';
 import LifecycleFunnel from './components/LifecycleFunnel';
 import QuickFilters from './components/QuickFilters';
 import TasksCell from './components/TasksCell';
-import PlanFactCell from './components/PlanFactCell';
 import LastOrderCell from '@/Crm/Components/LastOrderCell';
 import LifecycleCell from './components/LifecycleCell';
 import PartnerAvatar from '@/Crm/Components/PartnerAvatar';
@@ -75,7 +74,6 @@ export default function Index({
     presets = [],
     canSeeAll,
     canSeeTasks = false,
-    canSeePlans = false,
     canSeeTaxRegime = false,
     uncoveredCount = null,
     managerProfileLinked,
@@ -315,12 +313,6 @@ export default function Index({
             sortable: true,
             render: (_, row) => <LastOrderCell value={row.last_order} />,
         },
-        ...(canSeePlans ? [{
-            key: 'plan_percent',
-            label: 'План / факт',
-            sortable: true,
-            render: (_, row) => <PlanFactCell value={row.plan_fact} />,
-        }] : []),
         {
             key: 'client_status',
             label: 'Статус',
@@ -400,7 +392,6 @@ export default function Index({
                     managers={managers}
                     canSeeAll={canSeeAll}
                     canSeeTasks={canSeeTasks}
-                    canSeePlans={canSeePlans}
                     canSeeTaxRegime={canSeeTaxRegime}
                     uncoveredCount={uncoveredCount}
                 >
@@ -412,7 +403,6 @@ export default function Index({
                     onApply={applyFilters}
                     onReset={resetFilters}
                     canSeeTasks={canSeeTasks}
-                    canSeePlans={canSeePlans}
                     uncoveredCount={uncoveredCount}
                 />
             </VStack>

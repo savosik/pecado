@@ -20,8 +20,8 @@ final class ClientListFilters
     /**
      * Поля, по которым разрешена сортировка.
      *
-     * `next_task_due`, `active_tasks_count` и `plan_percent` — вычисляемые: их
-     * применяет ClientListService, а не orderBy по колонке.
+     * `next_task_due` и `active_tasks_count` — вычисляемые: их применяет
+     * ClientListService, а не orderBy по колонке.
      *
      * @var list<string>
      */
@@ -32,7 +32,6 @@ final class ClientListFilters
         'created_at',
         'next_task_due',
         'active_tasks_count',
-        'plan_percent',
         'last_order_at',
     ];
 
@@ -44,13 +43,6 @@ final class ClientListFilters
      * @var list<string>
      */
     public const TASK_STATES = ['none', 'overdue', 'today', 'week', 'any'];
-
-    /**
-     * Состояние выполнения плана.
-     *
-     * @var list<string>
-     */
-    public const PLAN_STATES = ['with_plan', 'without_plan', 'behind', 'ahead'];
 
     /**
      * Пороги «давно нет активности», в днях.
@@ -103,7 +95,6 @@ final class ClientListFilters
         public readonly ?ClientLifecycleStatus $lifecycle,
         public readonly ?string $coverage,
         public readonly ?string $taskState,
-        public readonly ?string $planState,
         public readonly ?int $inactiveDays,
         public readonly ?int $noOrderDays,
         public readonly ?float $orderAmountFrom,
@@ -127,7 +118,6 @@ final class ClientListFilters
     {
         $canSeeProfile = $actor->can('crm-profile.view');
         $canSeeTasks = $actor->can('crm-tasks.view');
-        $canSeePlans = $actor->can('crm-plans.view');
 
         $search = self::sanitizeSearch($request->input('search'));
         $sortBy = self::pick($request->input('sort_by'), self::SORTS) ?? 'id';
@@ -136,10 +126,6 @@ final class ClientListFilters
         // Сортировка по невидимым данным сбрасывается на дефолт, а не молча
         // применяется к пустой колонке.
         if (! $canSeeTasks && in_array($sortBy, ['next_task_due', 'active_tasks_count'], true)) {
-            $sortBy = 'id';
-        }
-
-        if (! $canSeePlans && $sortBy === 'plan_percent') {
             $sortBy = 'id';
         }
 
@@ -158,7 +144,6 @@ final class ClientListFilters
                 ? self::pick($request->input('coverage'), ['uncovered', 'covered'])
                 : null,
             taskState: $canSeeTasks ? self::pick($request->input('task_state'), self::TASK_STATES) : null,
-            planState: $canSeePlans ? self::pick($request->input('plan_state'), self::PLAN_STATES) : null,
             inactiveDays: self::pickInt($request->input('inactive_days'), self::INACTIVE_DAYS),
             noOrderDays: self::pickInt($request->input('no_order_days'), self::NO_ORDER_DAYS),
             orderAmountFrom: self::sanitizeAmount($request->input('order_amount_from')),
@@ -181,25 +166,11 @@ final class ClientListFilters
     }
 
     /**
-     * Требует ли отбор факта продаж по всему скоупу.
-     *
-     * Обычная страница считает план/факт только по своим 15 строкам. Сортировка
-     * и фильтр по проценту выполнения так не работают: чтобы отобрать отстающих,
-     * факт нужен по всем видимым партнёрам. Ветка тяжёлая, поэтому включается
-     * только при явном выборе.
-     */
-    public function needsFactForWholeScope(): bool
-    {
-        return $this->sortBy === 'plan_percent'
-            || in_array($this->planState, ['behind', 'ahead'], true);
-    }
-
-    /**
      * Сортировка вычисляемая, то есть применяется не через orderBy по колонке.
      */
     public function hasComputedSort(): bool
     {
-        return in_array($this->sortBy, ['next_task_due', 'plan_percent'], true);
+        return $this->sortBy === 'next_task_due';
     }
 
     /**
@@ -216,7 +187,6 @@ final class ClientListFilters
             'lifecycle' => $this->lifecycle?->value,
             'coverage' => $this->coverage,
             'task_state' => $this->taskState,
-            'plan_state' => $this->planState,
             'inactive_days' => $this->inactiveDays,
             'no_order_days' => $this->noOrderDays,
             'order_amount_from' => $this->orderAmountFrom,

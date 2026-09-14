@@ -2,14 +2,13 @@
 
 namespace App\Services\Crm;
 
-use App\Enums\Crm\CrmScope;
 use App\Enums\Crm\PlanTarget;
-use App\Enums\UserKind;
 use App\Models\CrmSalesPlan;
+use App\Models\Motivation\MotivationPlanOrder;
 use App\Models\PersonalManager;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -37,10 +36,6 @@ class SalesPlanService
         'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
     ];
 
-    public function __construct(
-        private readonly ClientRowEnricher $enricher,
-    ) {}
-
     /**
      * Планы, доступные актору на чтение.
      *
@@ -64,34 +59,22 @@ class SalesPlanService
             ->where('target_type', PlanTarget::DEPARTMENT->value)
             ->when($managerId !== null, fn (Builder $q) => $q->orWhere(fn (Builder $mine) => $mine
                 ->where('target_type', PlanTarget::MANAGER->value)
-                ->where('target_id', $managerId)))
-            ->orWhere(fn (Builder $clients) => $clients
-                ->where('target_type', PlanTarget::CLIENT->value)
-                ->whereIn('target_id', User::query()->visibleInCrm($actor)->select('id'))));
+                ->where('target_id', $managerId))));
     }
 
     /**
-     * Может ли актор ставить план этой цели.
+     * Может ли актор ставить план этой цели с экрана «Планы продаж».
      *
-     * Рамки задаёт не право, а скоуп: право `crm-plans.edit` есть у всего отдела,
-     * но менеджер расписывает только своих партнёров. План отдела и планы менеджеров
-     * ставит тот, кто отвечает за отдел целиком.
+     * С экрана ставится только план отдела — тем, кто отвечает за отдел целиком.
+     * План менеджера пишет приказ на квартал ({@see \App\Services\Motivation\PlanOrderService}),
+     * планов на партнёра больше нет: они были инструментом методики «сверху вниз»
+     * и из расчёта оплаты исключены (решение РОПа 14.09.2026).
      */
     public function canManage(User $actor, PlanTarget $type, ?int $targetId): bool
     {
-        if (! $actor->can('crm-plans.edit')) {
-            return false;
-        }
-
-        if ($actor->can('crm-clients-all.view')) {
-            return $type->needsTarget() ? $this->targetExists($type, $targetId) : true;
-        }
-
-        if ($type !== PlanTarget::CLIENT || $targetId === null) {
-            return false;
-        }
-
-        return User::query()->visibleInCrm($actor)->whereKey($targetId)->exists();
+        return $type === PlanTarget::DEPARTMENT
+            && $actor->can('crm-plans.edit')
+            && $actor->can('crm-clients-all.view');
     }
 
     /**
@@ -178,52 +161,6 @@ class SalesPlanService
     }
 
     /**
-     * Скопировать планы прошлого месяца в указанный.
-     *
-     * Уже заданные значения по умолчанию не трогаются: копирование — это заполнение
-     * пустой сетки, а не откат чужой работы. Перезапись возможна только явным
-     * подтверждением с фронта.
-     *
-     * @return array{copied: int, skipped: int}
-     */
-    public function copyFromPreviousMonth(CarbonInterface $month, User $actor, bool $overwrite = false): array
-    {
-        $target = CrmSalesPlan::normalizeMonth($month);
-        $source = $target->copy()->subMonthNoOverflow();
-
-        $existing = $this->visibleTo($actor)
-            ->forPeriod($target)
-            ->get()
-            ->keyBy(fn (CrmSalesPlan $plan): string => $this->planKey($plan));
-
-        $copied = 0;
-        $skipped = 0;
-
-        DB::transaction(function () use ($source, $target, $actor, $overwrite, $existing, &$copied, &$skipped): void {
-            foreach ($this->visibleTo($actor)->forPeriod($source)->get() as $plan) {
-                $targetId = $plan->target_type->needsTarget() ? $plan->target_id : null;
-
-                if (! $this->canManage($actor, $plan->target_type, $targetId)) {
-                    $skipped++;
-
-                    continue;
-                }
-
-                if (! $overwrite && $existing->has($this->planKey($plan))) {
-                    $skipped++;
-
-                    continue;
-                }
-
-                $this->set($plan->target_type, $targetId, $target, $plan->amountValue(), $actor, $plan->comment);
-                $copied++;
-            }
-        });
-
-        return ['copied' => $copied, 'skipped' => $skipped];
-    }
-
-    /**
      * Планы периода, разложенные по цели: 'department' => сумма, 'manager:7' => сумма.
      *
      * @return array<string, CrmSalesPlan>
@@ -238,11 +175,9 @@ class SalesPlanService
     }
 
     /**
-     * Строки менеджеров для сетки: план, план прошлого месяца и сумма планов их партнёров.
+     * Строки менеджеров: план месяца, план прошлого месяца и приказ, которым он поставлен.
      *
-     * Сумма планов по партнёрам считается отдельным сгруппированным запросом, а не
-     * обходом партнёров: у менеджера их сотни, и подтягивать всех ради одной цифры
-     * незачем.
+     * Правится план менеджера только приказом на квартал — здесь он читается.
      *
      * @param  array<string, CrmSalesPlan>  $plans
      * @param  array<string, CrmSalesPlan>  $previous
@@ -258,7 +193,10 @@ class SalesPlanService
             ->select('id', 'name')
             // Скрытые карточки в сетку не попадают: ставить план уволившемуся
             // и техническому дублю — ровно тот мусор, ради которого флаг заведён.
+            // Карточки без расчёта оплаты (РОП с пулом ничейных) — тоже: личный
+            // план есть только у того, кому он идёт в оплату.
             ->active()
+            ->where('payroll_enabled', true)
             ->when(
                 ! $actor->can('crm-clients-all.view'),
                 fn (Builder $query) => $query->whereKey($ownManagerId),
@@ -266,10 +204,17 @@ class SalesPlanService
             ->orderBy('name')
             ->get();
 
-        $clientSums = $this->clientPlanSumsByManager($month);
+        $quarter = CarbonImmutable::instance($month)->startOfQuarter();
+        $orders = MotivationPlanOrder::query()
+            ->forQuarter($quarter)
+            ->where('status', MotivationPlanOrder::STATUS_APPROVED)
+            ->orderBy('version')
+            ->get()
+            ->keyBy('personal_manager_id');
 
-        return $managers->map(function (PersonalManager $manager) use ($actor, $plans, $previous, $clientSums): array {
+        return $managers->map(function (PersonalManager $manager) use ($plans, $previous, $orders, $quarter): array {
             $key = PlanTarget::MANAGER->value.':'.$manager->id;
+            $order = $orders[$manager->id] ?? null;
 
             return [
                 'id' => $manager->id,
@@ -277,121 +222,14 @@ class SalesPlanService
                 'amount' => isset($plans[$key]) ? $plans[$key]->amountValue() : null,
                 'previous_amount' => isset($previous[$key]) ? $previous[$key]->amountValue() : null,
                 'comment' => $plans[$key]->comment ?? null,
-                'clients_sum' => (float) ($clientSums[$manager->id] ?? 0),
-                'can_edit' => $this->canManage($actor, PlanTarget::MANAGER, $manager->id),
+                'order' => $order === null ? null : [
+                    'id' => (int) $order->getKey(),
+                    'version' => (int) $order->version,
+                    'approved_at' => $order->approved_at?->toIso8601String(),
+                    'quarter' => $quarter->format('Y-m'),
+                ],
             ];
         })->all();
-    }
-
-    /**
-     * Партнёры для сетки — с планом месяца и планом прошлого месяца.
-     *
-     * @param  array<string, mixed>  $filters
-     * @return LengthAwarePaginator<int, array<string, mixed>>
-     */
-    public function clientRows(User $actor, CarbonInterface $month, array $filters): LengthAwarePaginator
-    {
-        $target = CrmSalesPlan::normalizeMonth($month);
-        $previousMonth = $target->copy()->subMonthNoOverflow();
-
-        $query = User::query()
-            ->inCrmScope($actor, CrmScope::resolve($filters['scope'] ?? null, $actor))
-            ->select('id', 'name', 'erp_name', 'email', 'personal_manager_id', 'last_seen_at')
-            ->with('personalManager:id,name');
-
-        if ($search = trim((string) ($filters['search'] ?? ''))) {
-            $query->where(fn (Builder $inner) => $inner
-                ->where('name', 'like', "%{$search}%")
-                ->orWhere('erp_name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%"));
-        }
-
-        // Фильтр по менеджеру — отбор поверх уже видимых партнёров, а не доступ
-        // к чужим: тому, кто отдел не видит, подставленный в адрес чужой id
-        // всё равно ничего не покажет — скоуп отсечёт раньше.
-        if ($actor->can('crm-department.view') && ! empty($filters['manager_id'])) {
-            $query->where('personal_manager_id', (int) $filters['manager_id']);
-        }
-
-        if (($filters['only_with_plan'] ?? false)) {
-            $query->whereIn('id', CrmSalesPlan::query()
-                ->forPeriod($target)
-                ->where('target_type', PlanTarget::CLIENT->value)
-                ->select('target_id'));
-        }
-
-        $perPage = (int) ($filters['per_page'] ?? 25);
-        $perPage = min(max($perPage, 10), 100);
-
-        /** @var \Illuminate\Pagination\LengthAwarePaginator<int, User> $paginator */
-        $paginator = $query->orderBy('name')->paginate($perPage)->withQueryString();
-
-        $ids = collect($paginator->items())->map(fn (User $client): int => (int) $client->getKey())->all();
-
-        $plans = $this->clientPlansFor($ids, $target);
-        $previous = $this->clientPlansFor($ids, $previousMonth);
-
-        // Те же данные и тем же сервисом, что в списке партнёров: на брифинге
-        // по плану колонки обязаны совпадать со списком, иначе разницу прочтут
-        // как ошибку в цифрах.
-        $canSeeTasks = $actor->can('crm-tasks.view');
-        $nextTasks = $canSeeTasks ? $this->enricher->nextTasks($ids, $actor) : [];
-        $taskCounts = $canSeeTasks ? $this->enricher->activeTaskCounts($ids, $actor) : [];
-        $lastOrders = $this->enricher->lastOrders($ids);
-
-        return $paginator->through(
-            fn (User $client): array => $this->clientRow(
-                $client,
-                $actor,
-                $plans,
-                $previous,
-                $canSeeTasks
-                    ? $this->enricher->tasksPayload(
-                        $nextTasks[(int) $client->getKey()] ?? null,
-                        $taskCounts[(int) $client->getKey()] ?? 0,
-                    )
-                    : null,
-                $lastOrders[(int) $client->getKey()] ?? null,
-            ),
-        );
-    }
-
-    /**
-     * Строка партнёра в сетке.
-     *
-     * Вынесена из замыкания намеренно: точная форма массива, выведенная из
-     * инлайн-функции, ломает вариантность дженерика пагинатора.
-     *
-     * @param  array<int, CrmSalesPlan>  $plans
-     * @param  array<int, CrmSalesPlan>  $previous
-     * @return array<string, mixed>
-     */
-    private function clientRow(
-        User $client,
-        User $actor,
-        array $plans,
-        array $previous,
-        ?array $tasks = null,
-        ?array $lastOrder = null,
-    ): array {
-        $id = (int) $client->getKey();
-
-        return [
-            'id' => $id,
-            'name' => $client->display_name,
-            'manager' => $client->personalManager?->name,
-            // Корзине в сетке нужен id самого плана: удаляется запись, а не партнёр.
-            'plan_id' => isset($plans[$id]) ? $plans[$id]->getKey() : null,
-            'amount' => isset($plans[$id]) ? $plans[$id]->amountValue() : null,
-            'previous_amount' => isset($previous[$id]) ? $previous[$id]->amountValue() : null,
-            'comment' => $plans[$id]->comment ?? null,
-            'can_edit' => $this->canManage($actor, PlanTarget::CLIENT, $id),
-            // Ради этих трёх полей раздел и переделывался: на брифинге видно,
-            // когда клиент был, когда заказывал и что на него поставлено.
-            'tasks' => $tasks,
-            'last_order' => $lastOrder,
-            'last_visit' => $this->enricher->lastVisitPayload($client->last_seen_at),
-        ];
     }
 
     /**
@@ -418,65 +256,13 @@ class SalesPlanService
     }
 
     /**
-     * Ключ цели плана: 'department', 'manager:7', 'client:120'.
+     * Ключ цели плана: 'department', 'manager:7'.
      */
     private function planKey(CrmSalesPlan $plan): string
     {
         return $plan->target_type->needsTarget()
             ? $plan->target_type->value.':'.$plan->target_id
             : $plan->target_type->value;
-    }
-
-    /**
-     * Сумма планов по партнёрам месяца в разрезе менеджеров.
-     *
-     * @return array<int, float>
-     */
-    private function clientPlanSumsByManager(CarbonInterface $month): array
-    {
-        return CrmSalesPlan::query()
-            ->forPeriod($month)
-            ->where('target_type', PlanTarget::CLIENT->value)
-            ->join('users', 'users.id', '=', 'crm_sales_plans.target_id')
-            ->where('users.user_kind', UserKind::CLIENT->value)
-            ->whereNotNull('users.personal_manager_id')
-            ->groupBy('users.personal_manager_id')
-            ->selectRaw('users.personal_manager_id as manager_id, sum(crm_sales_plans.amount) as total')
-            ->pluck('total', 'manager_id')
-            ->map(fn ($total): float => (float) $total)
-            ->all();
-    }
-
-    /**
-     * @param  list<int>  $clientIds
-     * @return array<int, CrmSalesPlan>
-     */
-    private function clientPlansFor(array $clientIds, CarbonInterface $month): array
-    {
-        if ($clientIds === []) {
-            return [];
-        }
-
-        return CrmSalesPlan::query()
-            ->forPeriod($month)
-            ->where('target_type', PlanTarget::CLIENT->value)
-            ->whereIn('target_id', $clientIds)
-            ->get()
-            ->keyBy('target_id')
-            ->all();
-    }
-
-    private function targetExists(PlanTarget $type, ?int $targetId): bool
-    {
-        if ($targetId === null) {
-            return false;
-        }
-
-        return match ($type) {
-            PlanTarget::MANAGER => PersonalManager::query()->whereKey($targetId)->exists(),
-            PlanTarget::CLIENT => User::query()->whereKey($targetId)->exists(),
-            PlanTarget::DEPARTMENT => false,
-        };
     }
 
     /**

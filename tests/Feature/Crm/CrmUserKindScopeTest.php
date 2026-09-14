@@ -125,16 +125,17 @@ class CrmUserKindScopeTest extends TestCase
     {
         $staff = $this->staffWithManager();
 
+        // Планов на партнёра больше нет вовсе: строка с такой целью отклоняется
+        // валидацией, а не пропускается молча.
         $this->actingAs($this->manager)
-            ->post(route('crm.plans.store'), [
+            ->postJson(route('crm.plans.store'), [
                 'month' => '2026-08',
                 'rows' => [
                     ['target_type' => 'client', 'target_id' => $staff->id, 'amount' => '100000'],
                 ],
             ])
-            ->assertSuccessful();
+            ->assertStatus(422);
 
-        // Строка вне скоупа молча пропускается — плана в базе нет.
         $this->assertDatabaseMissing('crm_sales_plans', [
             'target_type' => 'client',
             'target_id' => $staff->id,

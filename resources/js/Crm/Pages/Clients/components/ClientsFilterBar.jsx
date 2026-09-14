@@ -86,7 +86,6 @@ export default function ClientsFilterBar({
     managers = [],
     canSeeAll = false,
     canSeeTasks = false,
-    canSeePlans = false,
     canSeeTaxRegime = false,
     uncoveredCount = null,
     children = null,
@@ -132,20 +131,6 @@ export default function ClientsFilterBar({
                             value: 'none',
                             label: uncoveredCount !== null ? `Без задач (${uncoveredCount})` : 'Без задач',
                         },
-                    ]}
-                />
-            )}
-
-            {canSeePlans && (
-                <FilterSelect
-                    value={filters.plan_state}
-                    onChange={(value) => onChange({ plan_state: value })}
-                    placeholder="План: неважно"
-                    options={[
-                        { value: 'behind', label: 'Отстают от плана' },
-                        { value: 'ahead', label: 'Выполнили план' },
-                        { value: 'with_plan', label: 'План задан' },
-                        { value: 'without_plan', label: 'Плана нет' },
                     ]}
                 />
             )}

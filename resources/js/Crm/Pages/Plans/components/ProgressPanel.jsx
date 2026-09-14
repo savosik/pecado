@@ -6,11 +6,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { ProgressBar, ProgressRoot } from '@/components/ui/progress';
-import { LuChartLine, LuDownload, LuMessageSquarePlus, LuUser, LuX } from 'react-icons/lu';
-import LastOrderCell from '@/Crm/Components/LastOrderCell';
-import LastVisitHint from '@/Crm/Components/LastVisitHint';
-import MetricHint from '@/Crm/Components/MetricHint';
-import TasksCell from '@/Crm/Pages/Clients/components/TasksCell';
+import { LuChartLine, LuDownload } from 'react-icons/lu';
 import RowActions from '@/shared/Panel/RowActions';
 import BurndownChart from './BurndownChart';
 
@@ -43,13 +39,6 @@ const PACE = {
     behind: { label: 'Отстаём от плана', color: 'red' },
 };
 
-const daysAgoLabel = (days) => {
-    if (days === 0) return 'сегодня';
-    if (days === 1) return 'вчера';
-
-    return `${days} дн. назад`;
-};
-
 /**
  * «Факт из плана» одной ячейкой: раньше это были три колонки (План, Факт,
  * Выполнение), и таблица не влезала в экран уже на семи колонках.
@@ -72,59 +61,6 @@ function PlanFactCell({ plan, fact, percent }) {
                 </Text>
             </HStack>
         </VStack>
-    );
-}
-
-/**
- * Чей это партнёр — мелкой строкой под названием.
- *
- * Отдельной колонки не заводим: она нужна только в отделе целиком, а таблица
- * и без неё на восьми колонках упирается в ширину экрана.
- */
-function ManagerHint({ manager }) {
-    if (!manager) return null;
-
-    return (
-        <HStack gap={1} color="fg.muted">
-            <LuUser size={11} style={{ flexShrink: 0 }} />
-            <Text fontSize="11px" lineClamp={1}>{manager.name}</Text>
-        </HStack>
-    );
-}
-
-/** Долг партнёра из 1С; просрочка — красной строкой под общей суммой. */
-function DebtCell({ finance }) {
-    if (!finance) {
-        return <Text fontSize="sm" color="fg.muted">—</Text>;
-    }
-
-    return (
-        <>
-            <Text fontSize="sm" color={finance.debt > 0 ? undefined : 'fg.muted'}>{money(finance.debt)}</Text>
-            {finance.overdue_debt > 0 && (
-                <Text fontSize="xs" color="red.fg" fontWeight="600" whiteSpace="nowrap">
-                    просрочено {money(finance.overdue_debt)}
-                </Text>
-            )}
-        </>
-    );
-}
-
-/** Последнее входящее поступление: сумма и как давно оно было. */
-function LastPaymentCell({ finance }) {
-    if (!finance || !finance.last_payment) {
-        return <Text fontSize="sm" color="fg.muted">не было</Text>;
-    }
-
-    const payment = finance.last_payment;
-
-    return (
-        <>
-            <Text fontSize="sm">{money(payment.amount)}</Text>
-            <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">
-                {payment.date} · {daysAgoLabel(payment.days_ago)}
-            </Text>
-        </>
     );
 }
 
@@ -152,12 +88,10 @@ function KpiTile({ title, value, hint, accent = 'gray' }) {
  * терял бы сам список и не мог перейти к следующему. Нижний (выбранный партнёр)
  * меняет только сводку и burndown.
  */
-export default function ProgressPanel({ month, canSeeAll = false, onTask = null, onComment = null, onOpenTask = null }) {
+export default function ProgressPanel({ month, canSeeAll = false }) {
     const [scope, setScope] = useState('department');
-    const [clientId, setClientId] = useState(null);
 
     const [parentData, setParentData] = useState(null);
-    const [clientDetail, setClientDetail] = useState(null);
     const [burndown, setBurndown] = useState(null);
     const [managers, setManagers] = useState([]);
 
@@ -169,11 +103,7 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
         ? { month, scope: 'department' }
         : { month, scope: 'manager', scope_id: Number(scope) }), [month, scope]);
 
-    const detailParams = useMemo(() => (clientId === null
-        ? scopeParams
-        : { month, scope: 'client', scope_id: clientId }), [clientId, month, scopeParams]);
-
-    // Верхний уровень: сводка скоупа, список партнёров и разрез по менеджерам.
+    // Верхний уровень: сводка скоупа и разрез по менеджерам.
     const loadScope = useCallback(async () => {
         setLoadingScope(true);
         setError(null);
@@ -196,28 +126,18 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
         }
     }, [scopeParams, canSeeAll, month]);
 
-    // Нижний уровень: burndown всегда по выбранному объекту, сводка — только
-    // когда выбран партнёр (для скоупа она уже приехала верхним запросом).
     const loadDetail = useCallback(async () => {
         setLoadingDetail(true);
 
         try {
-            const requests = [axios.get(route('crm.plans.burndown'), { params: detailParams })];
-
-            if (clientId !== null) {
-                requests.push(axios.get(route('crm.plans.progress'), { params: detailParams }));
-            }
-
-            const [burndownRes, detailRes] = await Promise.all(requests);
-
-            setBurndown(burndownRes.data);
-            setClientDetail(detailRes?.data ?? null);
+            const { data } = await axios.get(route('crm.plans.burndown'), { params: scopeParams });
+            setBurndown(data);
         } catch (e) {
             setError(e?.response?.data?.message || 'Не удалось загрузить график.');
         } finally {
             setLoadingDetail(false);
         }
-    }, [detailParams, clientId]);
+    }, [scopeParams]);
 
     useEffect(() => {
         loadScope();
@@ -243,35 +163,14 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
         return null;
     }
 
-    const detail = clientId === null ? parentData : clientDetail;
-    const clients = parentData.clients ?? [];
     const scopeOptions = parentData.scopeOptions ?? [];
-    // Долг и платежи приходят только тем, у кого есть право на финансы CRM:
-    // без него finance = null во всех строках, и колонки не рисуются вовсе.
-    const showFinance = clients.some((row) => row.finance);
-    // Менеджера подписываем, только когда в списке их больше одного: в срезе
-    // по конкретному менеджеру одинаковая подпись в каждой строке — шум.
-    const showManager = new Set(clients.map((row) => row.manager?.id).filter(Boolean)).size > 1;
-
-    // Пока сводка по выбранному партнёру не приехала, показываем скоуп — иначе
-    // плитки на мгновение опустели бы.
-    const shown = detail ?? parentData;
+    const shown = parentData;
     const summary = shown.summary;
-    const distribution = clientId === null ? shown.distribution : null;
+    const distribution = shown.distribution;
     const pace = summary.pace ? PACE[summary.pace] : null;
     const busy = loadingScope || loadingDetail;
 
-    const selectScope = (value) => {
-        setScope(value);
-        // Партнёр принадлежал прежнему скоупу — при смене менеджера он бессмыслен.
-        setClientId(null);
-        setClientDetail(null);
-    };
-
-    const selectClient = (value) => {
-        setClientId(value);
-        setClientDetail(null);
-    };
+    const selectScope = (value) => setScope(value);
 
     return (
         <VStack align="stretch" gap={4}>
@@ -290,24 +189,11 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                         </select>
                     )}
 
-                    {clients.length > 0 && (
-                        <select
-                            style={selectStyle}
-                            value={clientId ?? ''}
-                            onChange={(e) => selectClient(e.target.value ? Number(e.target.value) : null)}
-                        >
-                            <option value="">Все партнёры скоупа</option>
-                            {clients.map((client) => (
-                                <option key={client.id} value={client.id}>{client.name}</option>
-                            ))}
-                        </select>
-                    )}
-
                     {busy && <Spinner size="xs" />}
                 </HStack>
 
                 <Button size="sm" variant="outline" asChild>
-                    <a href={route('crm.plans.export', detailParams)}>
+                    <a href={route('crm.plans.export', scopeParams)}>
                         <LuDownload /> Выгрузить XLSX
                     </a>
                 </Button>
@@ -316,36 +202,44 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
             <HStack gap={2} flexWrap="wrap" align="center">
                 <Text fontSize="sm" fontWeight="600">{shown.scope.label}</Text>
                 <Text fontSize="sm" color="fg.muted">
-                    · {shown.monthLabel}
-                    {clientId === null && ` · партнёров в расчёте: ${shown.scope.clients_count}`}
+                    · {shown.monthLabel} · партнёров в расчёте: {shown.scope.clients_count}
                 </Text>
-                {clientId !== null && (
-                    <Button size="xs" variant="ghost" onClick={() => selectClient(null)}>
-                        <LuX /> Вернуться к скоупу
-                    </Button>
-                )}
             </HStack>
 
             {summary.plan === null && (
                 <Alert status="info" title="План на этот месяц не задан">
-                    Факт показан, но сравнивать его не с чем. Поставьте план на вкладке «Ввод планов».
+                    Факт показан, но сравнивать его не с чем. План отдела ставится выше на этой странице, планы менеджеров — приказом на квартал.
                 </Alert>
             )}
 
             <SimpleGrid columns={{ base: 2, md: 3, lg: 6 }} gap={4}>
-                <KpiTile title="План" value={money(summary.plan)} />
-                <KpiTile title="Факт" value={money(summary.fact)} hint="отгрузки по дате документа 1С" />
+                <KpiTile title="План" value={money(summary.plan)} hint={summary.plan_to_date !== null ? `к сегодняшнему дню — ${money(summary.plan_to_date)}` : undefined} />
+                <KpiTile
+                    title="Факт"
+                    value={money(summary.fact)}
+                    hint={summary.plan_to_date !== null
+                        ? `нужно на сегодня ${money(summary.plan_to_date)} · отгрузки по дате документа 1С`
+                        : 'отгрузки по дате документа 1С'}
+                />
                 <KpiTile
                     title="Выполнение"
                     value={summary.percent === null ? '—' : `${summary.percent}%`}
-                    accent={palette(summary.percent)}
-                    hint={`прошло ${summary.days_passed} из ${summary.days_total} рабочих дней`}
+                    accent={palette(summary.percent_to_date ?? summary.percent)}
+                    hint={summary.percent_to_date !== null
+                        ? `${summary.percent_to_date}% от нужного на сегодня · прошло ${summary.days_passed} из ${summary.days_total} раб. дн.`
+                        : `прошло ${summary.days_passed} из ${summary.days_total} рабочих дней`}
                 />
-                <KpiTile title="Остаток" value={money(summary.remaining)} />
+                <KpiTile
+                    title="Остаток"
+                    value={money(summary.remaining)}
+                    hint={summary.remaining_to_date !== null
+                        ? (summary.remaining_to_date > 0 ? `не добрано к сегодняшнему дню ${money(summary.remaining_to_date)}` : 'к сегодняшнему дню идём с опережением')
+                        : undefined}
+                />
                 <KpiTile
                     title="Нужно в день"
                     value={money(summary.needed_per_day)}
-                    hint={summary.days_left > 0 ? `осталось ${summary.days_left} раб. дн.` : 'месяц закрыт'}
+                    hint={`${summary.current_per_day !== null ? `текущий темп ${money(summary.current_per_day)} в день · ` : ''}${summary.days_left > 0 ? `осталось ${summary.days_left} раб. дн.` : 'месяц закрыт'}`}
                 />
                 <KpiTile
                     title="Прогноз при текущем темпе"
@@ -392,12 +286,7 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                                     <Table.ColumnHeader>Менеджер</Table.ColumnHeader>
                                     <Table.ColumnHeader minW="180px">Факт / план</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Прогноз при текущем темпе</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">
-                                        <HStack gap={1} align="center" justify="flex-end">
-                                            <Text as="span">Покупали в месяце</Text>
-                                            <MetricHint text="Партнёры менеджера, у которых в этом месяце была хотя бы одна отгрузка. Ниже разложено, скольким из них поставлен план на месяц: в «Моей зарплате» множитель премии считает только их, поэтому там число меньше — на тех, кто купил без плана." />
-                                        </HStack>
-                                    </Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Покупали в месяце</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
@@ -416,11 +305,6 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                                         <Table.Cell textAlign="right">{money(row.forecast)}</Table.Cell>
                                         <Table.Cell textAlign="right">
                                             <Text fontSize="sm" fontWeight="500">{row.clients_count}</Text>
-                                            {row.unplanned_clients_count > 0 && (
-                                                <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">
-                                                    {row.planned_clients_count} с планом · {row.unplanned_clients_count} без
-                                                </Text>
-                                            )}
                                         </Table.Cell>
                                         <Table.Cell>
                                             <RowActions
@@ -440,97 +324,6 @@ export default function ProgressPanel({ month, canSeeAll = false, onTask = null,
                 </Box>
             )}
 
-            <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4}>
-                <Text fontWeight="600" mb={1}>По партнёрам</Text>
-                <Text fontSize="xs" color="fg.muted" mb={3}>
-                    Сверху — кто сильнее отстаёт от своего плана. Кнопка «Показать на графике»
-                    строит график по этому партнёру; партнёры без плана идут в конце списка.
-                </Text>
-
-                {clients.length === 0 ? (
-                    <Text fontSize="sm" color="fg.muted">
-                        Ни планов, ни отгрузок за этот месяц — показывать нечего.
-                    </Text>
-                ) : (
-                    <Box overflowX="auto">
-                        <Table.Root size="sm" interactive>
-                            <Table.Header>
-                                <Table.Row>
-                                    <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
-                                    <Table.ColumnHeader>Последний заказ</Table.ColumnHeader>
-                                    <Table.ColumnHeader>Ближайшая задача</Table.ColumnHeader>
-                                    <Table.ColumnHeader minW="170px">Факт / план</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Отставание</Table.ColumnHeader>
-                                    {showFinance && <Table.ColumnHeader textAlign="right">Долг</Table.ColumnHeader>}
-                                    {showFinance && <Table.ColumnHeader textAlign="right">Последний платёж</Table.ColumnHeader>}
-                                    <Table.ColumnHeader textAlign="end">Действия</Table.ColumnHeader>
-                                </Table.Row>
-                            </Table.Header>
-                            <Table.Body>
-                                {clients.map((row) => (
-                                    <Table.Row
-                                        key={row.id}
-                                        bg={clientId === row.id ? 'bg.subtle' : undefined}
-                                    >
-                                        <Table.Cell>
-                                            <Text fontSize="sm" fontWeight="500">{row.name}</Text>
-                                            {showManager && <ManagerHint manager={row.manager} />}
-                                            <LastVisitHint visit={row.last_visit} />
-                                        </Table.Cell>
-                                        <Table.Cell>
-                                            <LastOrderCell value={row.last_order} />
-                                        </Table.Cell>
-                                        <Table.Cell>
-                                            <TasksCell
-                                                tasks={row.tasks}
-                                                onCreate={onTask ? () => onTask(row) : undefined}
-                                                onOpen={onOpenTask}
-                                            />
-                                        </Table.Cell>
-                                        <Table.Cell>
-                                            <PlanFactCell plan={row.plan} fact={row.fact} percent={row.percent} />
-                                        </Table.Cell>
-                                        <Table.Cell textAlign="right">
-                                            <Text fontSize="sm" color={row.lag > 0 ? 'red.fg' : 'fg.muted'}>
-                                                {row.lag === null ? '—' : money(row.lag)}
-                                            </Text>
-                                        </Table.Cell>
-                                        {showFinance && (
-                                            <Table.Cell textAlign="right">
-                                                <DebtCell finance={row.finance} />
-                                            </Table.Cell>
-                                        )}
-                                        {showFinance && (
-                                            <Table.Cell textAlign="right">
-                                                <LastPaymentCell finance={row.finance} />
-                                            </Table.Cell>
-                                        )}
-                                        <Table.Cell>
-                                            <RowActions
-                                                size="xs"
-                                                view={{ href: route('crm.clients.show', row.id), label: 'Карточка партнёра' }}
-                                                extra={[
-                                                    {
-                                                        icon: LuChartLine,
-                                                        label: clientId === row.id ? 'Убрать с графика' : 'Показать на графике',
-                                                        onClick: () => selectClient(clientId === row.id ? null : row.id),
-                                                    },
-                                                    {
-                                                        icon: LuMessageSquarePlus,
-                                                        label: 'Оставить комментарий',
-                                                        allowed: Boolean(onComment),
-                                                        onClick: () => onComment?.(row),
-                                                    },
-                                                ]}
-                                            />
-                                        </Table.Cell>
-                                    </Table.Row>
-                                ))}
-                            </Table.Body>
-                        </Table.Root>
-                    </Box>
-                )}
-            </Box>
         </VStack>
     );
 }

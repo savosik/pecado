@@ -44,7 +44,6 @@ class WarmCrmPlansCache extends Command
         $department = $scopes->department($actor);
         $progress->progress($month, $department);
         $progress->burndown($month, $department);
-        $progress->clients($month, $department, $actor);
         $progress->byManager($month, $actor);
 
         $warmed = 1;
@@ -58,7 +57,6 @@ class WarmCrmPlansCache extends Command
 
             $progress->progress($month, $scope);
             $progress->burndown($month, $scope);
-            $progress->clients($month, $scope, $actor);
             $warmed++;
         }
 

@@ -58,10 +58,11 @@ class PlanOperations
     }
 
     /**
-     * Массовая постановка планов: строки «цель → сумма».
+     * Постановка плана отдела строками «цель → сумма».
      *
-     * Отдельного PATCH на один план нет и здесь — сетку правят строками, и
-     * ставить план по одному означало бы N вызовов там, где нужен один.
+     * Через API, как и с экрана, ставится только план отдела: план менеджера
+     * пишет приказ на квартал, планов на партнёра больше нет. Прочие цели
+     * попадают в счётчик skipped.
      *
      * @return array<string, mixed>
      */
@@ -94,7 +95,6 @@ class PlanOperations
             'month_label' => $this->plans->monthLabel($month),
             'scope' => $this->scopes->payload($scope),
             'summary' => $this->progress->progress($month, $scope),
-            'clients' => $this->progress->clients($month, $scope, $actor, min(200, max(1, (int) ($input->int('limit') ?? 50)))),
         ];
     }
 

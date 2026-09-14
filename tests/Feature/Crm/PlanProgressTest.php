@@ -3,9 +3,7 @@
 namespace Tests\Feature\Crm;
 
 use App\Enums\Crm\PlanTarget;
-use App\Models\ContractorBalance;
 use App\Models\CrmSalesPlan;
-use App\Models\Payment;
 use App\Models\PersonalManager;
 use App\Models\Product;
 use App\Models\Shipment;
@@ -20,7 +18,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
-use Spatie\Permission\Models\Role;
 use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
 use Tests\TestCase;
 
@@ -196,6 +193,12 @@ class PlanProgressTest extends TestCase
         $this->assertEqualsWithDelta(800000 / 15, $summary['needed_per_day'], 0.01);
         // Ожидалось 1 000 000 × 6/21 ≈ 285 714, получено 200 000 — отстаём.
         $this->assertSame('behind', $summary['pace']);
+        // То же — на сегодняшнее число: сколько нужно было к этому дню, какой это
+        // процент и какой темп в день идёт на самом деле.
+        $this->assertEqualsWithDelta(285714.29, $summary['plan_to_date'], 0.01);
+        $this->assertSame(70, $summary['percent_to_date']);
+        $this->assertEqualsWithDelta(85714.29, $summary['remaining_to_date'], 0.01);
+        $this->assertEqualsWithDelta(200000 / 6, $summary['current_per_day'], 0.01);
     }
 
     #[Test]
@@ -359,211 +362,6 @@ class PlanProgressTest extends TestCase
         // Менеджер без плана, но с отгрузками, из отчёта не выпадает.
         $this->assertNull($rows[$this->foreignProfile->id]['plan']);
         $this->assertEqualsWithDelta(100000.0, $rows[$this->foreignProfile->id]['fact'], 0.01);
-    }
-
-    #[Test]
-    public function manager_cut_splits_buyers_into_planned_and_unplanned(): void
-    {
-        $withPlan = $this->client();
-        $this->shipment($withPlan, 200000);
-        $this->plan(PlanTarget::CLIENT, $withPlan->id, 300000);
-
-        $withoutPlan = $this->client();
-        $this->shipment($withoutPlan, 50000);
-
-        // План есть, отгрузок нет — в покупателей не попадает вовсе.
-        $silent = $this->client();
-        $this->plan(PlanTarget::CLIENT, $silent->id, 100000);
-
-        $row = collect($this->actingAs($this->head)
-            ->getJson(route('crm.plans.by-manager', ['month' => $this->month]))
-            ->json('rows'))
-            ->firstWhere('manager_id', $this->managerProfile->id);
-
-        // Разложение обязано сходиться с самим числом покупателей: именно этим
-        // объясняется разница с множителем премии на /crm/salary.
-        $this->assertSame(2, $row['clients_count']);
-        $this->assertSame(1, $row['planned_clients_count']);
-        $this->assertSame(1, $row['unplanned_clients_count']);
-        $this->assertSame($row['clients_count'], $row['planned_clients_count'] + $row['unplanned_clients_count']);
-    }
-
-    #[Test]
-    public function client_scope_shows_plan_and_burndown_of_one_client(): void
-    {
-        $target = $this->client();
-        $this->shipment($target, 120000, '2026-08-04');
-        $this->plan(PlanTarget::CLIENT, $target->id, 300000);
-
-        // Второй клиент того же менеджера в цифру провала попасть не должен.
-        $other = $this->client();
-        $this->shipment($other, 500000);
-
-        $params = ['scope' => 'client', 'scope_id' => $target->id];
-        $summary = $this->progress($this->manager, $params)['summary'];
-
-        $this->assertEqualsWithDelta(300000.0, $summary['plan'], 0.01);
-        $this->assertEqualsWithDelta(120000.0, $summary['fact'], 0.01);
-        $this->assertSame(40, $summary['percent']);
-
-        $points = $this->actingAs($this->manager)
-            ->getJson(route('crm.plans.burndown', ['month' => $this->month] + $params))
-            ->assertOk()
-            ->json('points');
-
-        $this->assertCount(10, $points);
-        // До 4-го числа не отгружено ничего, дальше остаток падает на 120 000.
-        $this->assertEqualsWithDelta(300000.0, $points[2]['actual_remaining'], 0.01);
-        $this->assertEqualsWithDelta(180000.0, $points[3]['actual_remaining'], 0.01);
-    }
-
-    #[Test]
-    public function foreign_client_scope_leaks_nothing(): void
-    {
-        $foreign = $this->client($this->foreignProfile);
-        $this->shipment($foreign, 999999);
-        $this->plan(PlanTarget::CLIENT, $foreign->id, 800000);
-
-        $payload = $this->progress($this->manager, [
-            'scope' => 'client',
-            'scope_id' => $foreign->id,
-        ]);
-
-        $this->assertSame(0, $payload['scope']['clients_count']);
-        $this->assertEqualsWithDelta(0.0, $payload['summary']['fact'], 0.01);
-        $this->assertNull($payload['summary']['plan']);
-    }
-
-    #[Test]
-    public function clients_table_is_sorted_by_lag(): void
-    {
-        $behind = $this->client();
-        $this->shipment($behind, 10000);
-        $this->plan(PlanTarget::CLIENT, $behind->id, 500000);
-
-        $almost = $this->client();
-        $this->shipment($almost, 90000);
-        $this->plan(PlanTarget::CLIENT, $almost->id, 100000);
-
-        $noPlan = $this->client();
-        $this->shipment($noPlan, 70000);
-
-        // Ни плана, ни отгрузок — в отчёте о выполнении такому клиенту не место.
-        $this->client();
-
-        $rows = $this->progress($this->manager)['clients'];
-
-        $this->assertSame(
-            [$behind->id, $almost->id, $noPlan->id],
-            array_column($rows, 'id'),
-        );
-        $this->assertEqualsWithDelta(490000.0, $rows[0]['lag'], 0.01);
-        $this->assertNull($rows[2]['lag']);
-    }
-
-    /**
-     * Кто ведёт партнёра — прямо в строке: в отделе целиком по названию юрлица
-     * не понять, чей это партнёр, а список отстающих адресуется менеджеру.
-     */
-    #[Test]
-    public function clients_rows_carry_owning_manager(): void
-    {
-        $own = $this->client();
-        $this->shipment($own, 100000);
-
-        $foreign = $this->client($this->foreignProfile);
-        $this->shipment($foreign, 50000);
-
-        $rows = collect($this->progress($this->head)['clients'])->keyBy('id');
-
-        $this->assertSame($this->managerProfile->id, $rows[$own->id]['manager']['id']);
-        $this->assertSame($this->managerProfile->name, $rows[$own->id]['manager']['name']);
-        $this->assertSame($this->foreignProfile->name, $rows[$foreign->id]['manager']['name']);
-    }
-
-    /**
-     * Долг, просрочка и последний платёж в строке партнёра — те же источники,
-     * что в /crm/finance: суммы `contractor_balances` и свежайшее входящее
-     * поступление из `payments`. Возврат клиенту платежом не считается.
-     */
-    #[Test]
-    public function clients_rows_carry_debt_and_last_payment(): void
-    {
-        $client = $this->client();
-        $this->plan(PlanTarget::CLIENT, $client->id, 100000);
-        $this->shipment($client, 40000);
-
-        // Два контрагента одного партнёра — долг и просрочка складываются.
-        ContractorBalance::create([
-            'user_id' => $client->id,
-            'contractor_uuid' => (string) Str::uuid(),
-            'tax_id' => '7700000001',
-            'current_balance' => 150000,
-            'overdue_debt' => 30000,
-        ]);
-        ContractorBalance::create([
-            'user_id' => $client->id,
-            'contractor_uuid' => (string) Str::uuid(),
-            'tax_id' => '7700000002',
-            'current_balance' => 50000,
-            'overdue_debt' => 0,
-        ]);
-
-        Payment::factory()->create(['user_id' => $client->id, 'date' => '2026-08-03 10:00:00', 'amount' => 25000]);
-        Payment::factory()->create(['user_id' => $client->id, 'date' => '2026-08-08 12:00:00', 'amount' => 40000]);
-        // Возврат позже поступления — последним платежом быть не должен.
-        Payment::factory()->outgoing()->create(['user_id' => $client->id, 'date' => '2026-08-09 09:00:00', 'amount' => 5000]);
-
-        $row = collect($this->progress($this->manager)['clients'])->firstWhere('id', $client->id);
-
-        $this->assertEqualsWithDelta(200000.0, $row['finance']['debt'], 0.01);
-        $this->assertEqualsWithDelta(30000.0, $row['finance']['overdue_debt'], 0.01);
-        $this->assertSame('08.08.2026', $row['finance']['last_payment']['date']);
-        $this->assertEqualsWithDelta(40000.0, $row['finance']['last_payment']['amount'], 0.01);
-        // Сегодня заморожено 10 августа — платёж 8-го был два дня назад.
-        $this->assertSame(2, $row['finance']['last_payment']['days_ago']);
-    }
-
-    /**
-     * Партнёр без строки баланса (1С ещё не прислала) — нули, а не отсутствие
-     * ячейки; без платежей — last_payment = null.
-     */
-    #[Test]
-    public function partner_without_balance_gets_zero_debt_not_missing_cell(): void
-    {
-        $client = $this->client();
-        $this->plan(PlanTarget::CLIENT, $client->id, 100000);
-
-        $row = collect($this->progress($this->manager)['clients'])->firstWhere('id', $client->id);
-
-        $this->assertEqualsWithDelta(0.0, $row['finance']['debt'], 0.001);
-        $this->assertEqualsWithDelta(0.0, $row['finance']['overdue_debt'], 0.001);
-        $this->assertNull($row['finance']['last_payment']);
-    }
-
-    /**
-     * Долг — финансовые данные: без `crm-finance.view` колонка не приходит
-     * вовсе (`finance: null`), а не приходит нулями.
-     */
-    #[Test]
-    public function finance_cell_requires_finance_permission(): void
-    {
-        $client = $this->client();
-        $this->plan(PlanTarget::CLIENT, $client->id, 100000);
-
-        ContractorBalance::create([
-            'user_id' => $client->id,
-            'contractor_uuid' => (string) Str::uuid(),
-            'tax_id' => '7700000003',
-            'current_balance' => 150000,
-            'overdue_debt' => 30000,
-        ]);
-
-        Role::findByName('sales-manager')->revokePermissionTo('crm-finance.view');
-
-        $row = collect($this->progress($this->manager->fresh())['clients'])->firstWhere('id', $client->id);
-
-        $this->assertNull($row['finance']);
     }
 
     #[Test]

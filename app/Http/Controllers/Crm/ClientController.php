@@ -42,22 +42,23 @@ class ClientController extends CrmController
 
         $canSeeProfile = $actor->can('crm-profile.view');
         $canSeeTasks = $actor->can('crm-tasks.view');
-        $canSeePlans = $actor->can('crm-plans.view');
+        // Право на выручку партнёров: гейтит суммы в воронке. Планы на партнёра
+        // из списка убраны, но деньги — это то же право, что и у /crm/plans.
+        $canSeeMoney = $actor->can('crm-plans.view');
 
         $filters = ClientListFilters::fromRequest($request, $actor, $seesAll);
         $this->showUnassignedIfFiltered($actor, $filters);
 
         return Inertia::render('Crm/Pages/Clients/Index', [
             'clients' => $clients->paginate($actor, $filters),
-            // Воронка по стадиям — над таблицей. Суммы отгрузок гейтит то же
-            // право, что и колонку «План / факт»: это та же выручка партнёров.
-            'funnel' => $canSeeProfile ? $funnel->forFilters($actor, $filters, $canSeePlans) : null,
+            // Воронка по стадиям — над таблицей. Суммы отгрузок гейтит право
+            // видеть выручку партнёров — то же, что у раздела планов.
+            'funnel' => $canSeeProfile ? $funnel->forFilters($actor, $filters, $canSeeMoney) : null,
             'managers' => $seesAll
                 ? PersonalManager::query()->active()->select('id', 'name')->orderBy('name')->get()
                 : [],
             'canSeeAll' => $seesAll,
             'canSeeTasks' => $canSeeTasks,
-            'canSeePlans' => $canSeePlans,
             // Налоговый режим живёт на юрлицах — отбор по нему у тех, кто их видит.
             'canSeeTaxRegime' => $actor->can('crm-contractors.view'),
             'uncoveredCount' => $canSeeTasks ? $tasks->uncoveredClients($actor)->count() : null,

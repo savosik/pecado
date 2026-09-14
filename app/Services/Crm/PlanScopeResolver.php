@@ -7,7 +7,7 @@ use App\Models\PersonalManager;
 use App\Models\User;
 
 /**
- * Чей срез показываем: отдел, менеджера или партнёра.
+ * Чей срез показываем: отдел или менеджера.
  *
  * Живёт отдельным сервисом, потому что это граница доступа, а не удобство:
  * «менеджеру доступен только собственный скоуп» должно быть написано ровно один
@@ -28,15 +28,8 @@ class PlanScopeResolver
         $seesAll = $actor->can('crm-clients-all.view');
         $target = PlanTarget::tryFrom((string) $type) ?? PlanTarget::DEPARTMENT;
 
-        if ($target === PlanTarget::CLIENT && $scopeId !== null) {
-            $client = User::query()->visibleInCrm($actor)->whereKey($scopeId)->first(['id', 'name', 'erp_name']);
-
-            return $client === null
-                ? PlanScope::empty()
-                : PlanScope::client((int) $client->getKey(), (string) $client->display_name);
-        }
-
-        if ($target === PlanTarget::MANAGER || ! $seesAll) {
+        // Разреза «партнёр» больше нет: планы на партнёра из системы убраны.
+        if ($target === PlanTarget::MANAGER || $target === PlanTarget::CLIENT || ! $seesAll) {
             $managerId = $seesAll ? $scopeId : $actor->managerProfile?->id;
 
             if ($managerId === null) {

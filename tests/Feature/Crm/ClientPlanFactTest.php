@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\Analytics\AnalyticsContext;
 use App\Services\Analytics\AnalyticsFilters;
 use App\Services\Analytics\ShipmentAnalyticsService;
+use App\Services\Crm\ClientPlanFactService;
 use Carbon\CarbonImmutable;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,11 +22,12 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * Колонка «План / факт» в списке клиентов.
+ * План и факт партнёра за месяц — {@see ClientPlanFactService}.
  *
- * Главный тест здесь — совпадение с ShipmentAnalyticsService. Второй движок
- * расчёта продаж запрещён принципом №1 роадмапа, и единственный способ это
- * удержать — сравнивать цифру колонки с цифрой отчёта в тесте.
+ * Из списка партнёров колонка убрана (планы на партнёра — рудимент), но сервис
+ * читает зарплата. Главный тест здесь — совпадение с ShipmentAnalyticsService:
+ * второй движок расчёта продаж запрещён принципом №1 роадмапа, и единственный
+ * способ это удержать — сравнивать цифру сервиса с цифрой отчёта в тесте.
  */
 class ClientPlanFactTest extends TestCase
 {
@@ -90,24 +92,23 @@ class ClientPlanFactTest extends TestCase
         ]);
     }
 
-    private function rows(User $actor, array $params = []): array
+    /**
+     * @return array{plan: float|null, fact: float, percent: int|null}
+     */
+    private function cell(User $client): array
     {
-        $response = $this->actingAs($actor)->get(route('crm.clients.index', $params));
-        $response->assertOk();
-
-        return collect($response->viewData('page')['props']['clients']['data'])->keyBy('id')->all();
+        return app(ClientPlanFactService::class)->forClients([$client->id], CarbonImmutable::now())[$client->id];
     }
 
     #[Test]
-    public function plan_fact_column_matches_shipment_analytics(): void
+    public function plan_fact_matches_shipment_analytics(): void
     {
         $client = $this->client();
         $this->shipment($client, 400000);
         $this->shipment($client, 212400);
         $this->plan($client, 800000);
 
-        $rows = $this->rows($this->manager);
-        $cell = $rows[$client->id]['plan_fact'];
+        $cell = $this->cell($client);
 
         // Эталон — тот же сервис, что считает /crm/analytics.
         $month = CarbonImmutable::now();
@@ -134,7 +135,7 @@ class ClientPlanFactTest extends TestCase
         $this->shipment($client, 999999, Carbon::now()->subMonthNoOverflow()->startOfMonth()->addDay());
         $this->plan($client, 200000);
 
-        $cell = $this->rows($this->manager)[$client->id]['plan_fact'];
+        $cell = $this->cell($client);
 
         $this->assertEqualsWithDelta(100000.0, $cell['fact'], 0.01);
         $this->assertSame(50, $cell['percent']);
@@ -146,7 +147,7 @@ class ClientPlanFactTest extends TestCase
         $client = $this->client();
         $this->shipment($client, 50000);
 
-        $cell = $this->rows($this->manager)[$client->id]['plan_fact'];
+        $cell = $this->cell($client);
 
         $this->assertNull($cell['plan']);
         $this->assertNull($cell['percent']);
@@ -154,79 +155,27 @@ class ClientPlanFactTest extends TestCase
     }
 
     #[Test]
-    public function plan_fact_hidden_without_crm_plans_view(): void
+    public function client_list_no_longer_carries_plan_fact(): void
     {
         $client = $this->client();
+        $this->shipment($client, 50000);
         $this->plan($client, 100000);
 
-        // Сотрудник с прямыми правами, но без crm-plans.view: колонка не должна
-        // приезжать во фронт вовсе. Роль здесь не годится — sales-manager несёт
-        // планы в наборе, и снять право у одного пользователя нельзя.
-        $stripped = User::factory()->create();
-        $stripped->givePermissionTo(['crm-clients.view', 'crm-tasks.view', 'crm-profile.view']);
-        $card = PersonalManager::factory()->create(['user_id' => $stripped->id]);
-        $client->update(['personal_manager_id' => $card->id]);
-
-        $rows = $this->rows($stripped->fresh());
-
-        $this->assertNull($rows[$client->id]['plan_fact']);
-        $this->actingAs($stripped->fresh())
-            ->get(route('crm.clients.index'))
-            ->assertInertia(fn ($page) => $page->where('canSeePlans', false));
-    }
-
-    #[Test]
-    public function plan_state_behind_selects_only_underperformers(): void
-    {
-        $behind = $this->client();
-        $this->shipment($behind, 10000);
-        $this->plan($behind, 100000);
-
-        $ahead = $this->client();
-        $this->shipment($ahead, 150000);
-        $this->plan($ahead, 100000);
-
-        $noPlan = $this->client();
-        $this->shipment($noPlan, 1000);
-
-        $rows = $this->rows($this->manager, ['plan_state' => 'behind']);
-
-        $this->assertArrayHasKey($behind->id, $rows);
-        $this->assertArrayNotHasKey($ahead->id, $rows);
-        $this->assertArrayNotHasKey($noPlan->id, $rows);
-    }
-
-    #[Test]
-    public function sorting_by_plan_percent_puts_clients_without_plan_last(): void
-    {
-        $low = $this->client();
-        $this->shipment($low, 10000);
-        $this->plan($low, 100000);
-
-        $high = $this->client();
-        $this->shipment($high, 90000);
-        $this->plan($high, 100000);
-
-        $noPlan = $this->client();
-
-        $ids = array_keys($this->rows($this->manager, [
+        $response = $this->actingAs($this->manager)->get(route('crm.clients.index', [
+            'plan_state' => 'behind',
             'sort_by' => 'plan_percent',
-            'sort_order' => 'asc',
         ]));
+        $response->assertOk();
 
-        $this->assertSame([$low->id, $high->id, $noPlan->id], $ids);
-    }
+        $props = $response->viewData('page')['props'];
+        $rows = collect($props['clients']['data'])->keyBy('id')->all();
 
-    #[Test]
-    public function manager_does_not_see_foreign_client_plan(): void
-    {
-        $foreignCard = PersonalManager::factory()->create();
-        $foreign = User::factory()->create(['personal_manager_id' => $foreignCard->id]);
-        $this->shipment($foreign, 500000);
-        $this->plan($foreign, 100000);
-
-        $rows = $this->rows($this->manager);
-
-        $this->assertArrayNotHasKey($foreign->id, $rows);
+        // Партнёр в списке есть: неизвестный фильтр молча отбрасывается,
+        // а строка не несёт ни плана, ни факта — планы на партнёра убраны.
+        $this->assertArrayHasKey($client->id, $rows);
+        $this->assertArrayNotHasKey('plan_fact', $rows[$client->id]);
+        $this->assertArrayNotHasKey('plan_state', $props['filters']);
+        $this->assertSame('id', $props['filters']['sort_by']);
+        $this->assertArrayNotHasKey('canSeePlans', $props);
     }
 }

@@ -433,8 +433,7 @@ class ClientRosterTest extends TestCase
             ->get(route('crm.plans.index'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->where('managers', fn ($rows) => collect($rows)->doesntContain('id', $junk->id))
-                ->where('managerOptions', fn ($rows) => collect($rows)->doesntContain('id', $junk->id)));
+                ->where('managers', fn ($rows) => collect($rows)->doesntContain('id', $junk->id)));
 
         $options = $this->actingAs($this->head)
             ->getJson(route('crm.plans.progress'))

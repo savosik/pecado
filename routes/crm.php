@@ -677,16 +677,10 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
             ->whereNumber('client');
     });
 
+    // С экрана ставится только план отдела: план менеджера пишет приказ на квартал,
+    // планов на партнёра больше нет (решение РОПа 14.09.2026).
     Route::middleware('permission:crm-plans.edit')->group(function () {
         Route::post('/plans', [PlanController::class, 'store'])->name('plans.store');
-        Route::post('/plans/copy-previous', [PlanController::class, 'copyPrevious'])
-            ->name('plans.copy-previous');
-    });
-
-    Route::middleware('permission:crm-plans.delete')->group(function () {
-        Route::delete('/plans/{plan}', [PlanController::class, 'destroy'])
-            ->name('plans.destroy')
-            ->whereNumber('plan');
     });
 
     // Мотивация 2.0 (эпик mot-00). Своё право crm-motivation.view, а не crm-salary:

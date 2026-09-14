@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers\Crm;
 
-use App\Enums\Crm\CrmScope;
 use App\Enums\Crm\PlanTarget;
 use App\Http\Requests\Crm\StoreSalesPlansRequest;
 use App\Models\CrmSalesPlan;
-use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Crm\PlanProgressService;
 use App\Services\Crm\PlanScope;
@@ -21,12 +19,17 @@ use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Планы продаж: сколько отдел, менеджер и партнёр должны дать выручки за месяц,
- * и сколько дали на самом деле.
+ * Планы продаж: план отдела на месяц, планы менеджеров из приказов на квартал
+ * и выполнение — факт, прогноз при текущем темпе, burndown, разрез по менеджерам.
  *
- * Ввод и хранение — `SalesPlanService`; выполнение, прогноз и burndown —
- * `PlanProgressService` поверх `ShipmentAnalyticsService`. Второго движка расчёта
- * продаж не заводим: расхождение /crm/plans с /crm/analytics — баг по определению.
+ * С экрана ставится только план отдела. План менеджера пишет приказ на квартал
+ * («Мотивация → Планы на квартал»), планов на партнёра больше нет: они были
+ * инструментом методики «сверху вниз» и из расчёта оплаты исключены (решение
+ * РОПа 14.09.2026).
+ *
+ * Выполнение, прогноз и burndown — `PlanProgressService` поверх `ShipmentAnalyticsService`.
+ * Второго движка расчёта продаж не заводим: расхождение /crm/plans с /crm/analytics —
+ * баг по определению.
  */
 class PlanController extends CrmController
 {
@@ -44,8 +47,8 @@ class PlanController extends CrmController
     }
 
     /**
-     * Тот же payload в JSON: сетка перезагружается после сохранения без полного
-     * визита, и этот же ответ переиспользует агентский API волны 5.
+     * Тот же payload в JSON: страница перезагружается после сохранения без
+     * полного визита, и этот же ответ переиспользует агентский API.
      */
     public function data(Request $request): JsonResponse
     {
@@ -69,28 +72,6 @@ class PlanController extends CrmController
         return response()->json($result);
     }
 
-    public function copyPrevious(Request $request): JsonResponse
-    {
-        Gate::authorize('create', CrmSalesPlan::class);
-
-        $request->validate([
-            'month' => ['nullable', 'string', 'max:10'],
-            'overwrite' => ['nullable', 'boolean'],
-        ], [
-            'month.max' => 'Некорректный месяц.',
-        ]);
-
-        $month = $this->plans->parseMonth($request->string('month')->value());
-
-        $result = $this->plans->copyFromPreviousMonth(
-            $month,
-            $this->crmActor($request),
-            $request->boolean('overwrite'),
-        );
-
-        return response()->json($result);
-    }
-
     /**
      * Сводка выполнения: план, факт, остаток, прогноз при текущем темпе.
      * GET /crm/plans/progress
@@ -109,7 +90,6 @@ class PlanController extends CrmController
             'scope' => $this->scopes->payload($scope),
             'summary' => $this->progress->progress($month, $scope),
             'distribution' => $this->progress->distribution($month, $scope),
-            'clients' => $this->progress->clients($month, $scope, $actor),
             'scopeOptions' => $this->scopes->options($actor),
             'canSeeAll' => $this->seesManagerBreakdown($request),
         ]);
@@ -151,7 +131,7 @@ class PlanController extends CrmController
     }
 
     /**
-     * XLSX выполнения планов: сводка, менеджеры (если доступны), партнёры.
+     * XLSX выполнения планов: сводка и менеджеры (если доступны).
      * GET /crm/plans/export
      */
     public function export(Request $request, SimpleXlsxExporter $exporter): StreamedResponse
@@ -163,52 +143,27 @@ class PlanController extends CrmController
         $scope = $this->resolveScope($request, $actor);
 
         $summary = $this->progress->progress($month, $scope);
-        $headers = [
-            'Раздел', 'Объект', 'Менеджер', 'План, ₽', 'Факт, ₽', 'Выполнение, %', 'Отставание, ₽',
-            'Прогноз при текущем темпе, ₽', 'Долг, ₽', 'Просрочка, ₽', 'Последний платёж',
-        ];
+        $headers = ['Раздел', 'Объект', 'План, ₽', 'Факт, ₽', 'Выполнение, %', 'Отставание, ₽', 'Прогноз при текущем темпе, ₽'];
 
         $rows = [[
             'Сводка',
             $scope->label,
-            '',
             $summary['plan'] ?? 0,
             $summary['fact'],
             $summary['percent'] ?? '',
             $summary['remaining'] ?? '',
             $summary['forecast'] ?? '',
-            '', '', '',
         ]];
 
         foreach ($this->progress->byManager($month, $actor) as $row) {
             $rows[] = [
                 'Менеджеры',
                 $row['name'],
-                '',
                 $row['plan'] ?? 0,
                 $row['fact'],
                 $row['percent'] ?? '',
                 $row['plan'] !== null ? round(max(0.0, $row['plan'] - $row['fact']), 2) : '',
                 $row['forecast'] ?? '',
-                '', '', '',
-            ];
-        }
-
-        foreach ($this->progress->clients($month, $scope, $actor) as $row) {
-            $payment = $row['finance']['last_payment'] ?? null;
-
-            $rows[] = [
-                'Партнёры',
-                $row['name'],
-                $row['manager']['name'] ?? '',
-                $row['plan'] ?? 0,
-                $row['fact'],
-                $row['percent'] ?? '',
-                $row['lag'] ?? '',
-                '',
-                $row['finance']['debt'] ?? '',
-                $row['finance']['overdue_debt'] ?? '',
-                $payment !== null ? $payment['date'].' — '.$payment['amount'].' ₽' : '',
             ];
         }
 
@@ -218,19 +173,6 @@ class PlanController extends CrmController
             $rows,
             'Выполнение планов',
         );
-    }
-
-    public function destroy(Request $request, int $plan): JsonResponse
-    {
-        // Резолвим через скоуп: чужой план — 404, а не 403. Иначе перебором id
-        // можно было бы узнать, что план соседнего менеджера существует.
-        $model = $this->plans->visibleTo($this->crmActor($request))->findOrFail($plan);
-
-        Gate::authorize('delete', $model);
-
-        $model->delete();
-
-        return response()->json(['deleted' => true]);
     }
 
     /**
@@ -246,14 +188,13 @@ class PlanController extends CrmController
     }
 
     /**
-     * Сетка планов на месяц: отдел, менеджеры, партнёры.
+     * План отдела и планы менеджеров на месяц.
      *
      * @return array<string, mixed>
      */
     private function payload(Request $request): array
     {
         $actor = $this->crmActor($request);
-        $seesAll = $this->seesManagerBreakdown($request);
 
         $month = $this->plans->parseMonth($request->string('month')->value());
         $previousMonth = $month->copy()->subMonthNoOverflow();
@@ -262,17 +203,6 @@ class PlanController extends CrmController
         $previous = $this->plans->indexedByTarget($actor, $previousMonth);
 
         $departmentKey = PlanTarget::DEPARTMENT->value;
-
-        $filters = [
-            'search' => $request->string('search')->value(),
-            // Отбор по менеджеру — поверх видимого, поэтому по видимости отдела;
-            // сетка менеджеров ниже — по РОПовскому праву.
-            'manager_id' => $this->seesDepartment($request) ? $request->input('manager_id') : null,
-            'only_with_plan' => $request->boolean('only_with_plan'),
-            'scope' => CrmScope::fromRequest($request, $actor)->value,
-            'per_page' => (int) $request->input('per_page', 25),
-        ];
-
         $managers = $this->plans->managerRows($actor, $month, $plans, $previous);
 
         return [
@@ -280,6 +210,7 @@ class PlanController extends CrmController
             'monthLabel' => $this->plans->monthLabel($month),
             'previousMonth' => $previousMonth->format('Y-m'),
             'previousMonthLabel' => $this->plans->monthLabel($previousMonth),
+            'quarter' => $month->copy()->startOfQuarter()->format('Y-m'),
             'department' => [
                 'amount' => isset($plans[$departmentKey]) ? $plans[$departmentKey]->amountValue() : null,
                 'previous_amount' => isset($previous[$departmentKey]) ? $previous[$departmentKey]->amountValue() : null,
@@ -291,16 +222,8 @@ class PlanController extends CrmController
                 fn (array $row): float => (float) ($row['amount'] ?? 0),
                 $managers,
             )),
-            'clients' => $this->plans->clientRows($actor, $month, $filters),
-            'managerOptions' => $seesAll
-                ? PersonalManager::query()->active()->select('id', 'name')->orderBy('name')->get()
-                : [],
-            'canSeeAll' => $seesAll,
-            // Расфокус на отдел доступен шире, чем сетка менеджеров: видеть
-            // партнёров коллеги можно, видеть его выручку — нет.
-            'canSeeDepartment' => $this->seesDepartment($request),
-            'canEdit' => $actor->can('crm-plans.edit'),
-            'filters' => $filters,
+            'canSeeAll' => $this->seesManagerBreakdown($request),
+            'canSeeMotivation' => $actor->can('crm-motivation.edit'),
         ];
     }
 }
