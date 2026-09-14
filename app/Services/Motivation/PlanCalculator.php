@@ -19,12 +19,13 @@ use Carbon\CarbonInterface;
  *     База месяца = Медиана отгрузок за отработанный рабочий день
  *                 × Рабочие дни месяца × Сезонный коэффициент × (1 + Целевой прирост)
  *
- * Медиана берётся по дням, а не по месяцам. Разница не косметическая: на боевых
- * данных медиана дневных сумм даёт 244 645 ₽ у Сухова, а медиана помесячных
- * средних — 316 333 ₽, то есть план был бы завышен на треть. Норма говорит
- * «за отработанный рабочий день», и это распределение дней, а не месяцев:
- * усреднение внутри месяца стирает слабые дни, ради которых медиана и берётся
- * вместо среднего.
+ * Медиана берётся по месячным значениям «отгрузки ÷ отработанные рабочие дни»,
+ * а не по дням (решение РОПа 14.09.2026). Первая версия брала медиану дневных
+ * сумм и занижала план: крупные дни у отдела регулярны (10 % дней — 31–38 %
+ * выручки), а медиана дней отбрасывала их как выбросы. На боевых данных она
+ * давала 246 тыс. ₽ у Сухова и 109 тыс. ₽ у Курочкиной против фактического темпа
+ * 307 и 169 тыс. ₽. Медиана шести месяцев защищает от провального или рекордного
+ * месяца так же, но обычную работу внутри месяца не выбрасывает.
  *
  * Дни отсутствия из выборки исключаются (п. 10.5) — иначе отпуск занижал бы
  * медиану и вместе с ней план следующего квартала.
@@ -55,13 +56,19 @@ class PlanCalculator
      *     decline_limited: bool,
      *     values: array<string, float>,
      *     previous_values: array<string, float|null>,
-     *     sample: array{days: int, excluded_days: int, zero_days: int, from: string, to: string, by_month: list<array{month: string, amount: float, working_days: int, excluded_days: int}>}
+     *     sample: array{days: int, excluded_days: int, zero_days: int, from: string, to: string, by_month: list<array{month: string, amount: float, working_days: int, excluded_days: int, per_day: float|null, seasonal: float, per_day_adjusted: float|null}>}
      * }
      */
     public function calculate(int $managerId, CarbonInterface $quarter, array $params = [], bool $waiveDeclineLimit = false): array
     {
         $start = CarbonImmutable::instance($quarter)->startOfQuarter()->startOfDay();
-        $defaults = (array) config('motivation.default_parameters', []);
+        // Слои: умолчания Приложения № 1 ← приказ, действующий на начало квартала ← явные
+        // параметры вызова. Без среднего слоя сезонность и прирост, изданные на экране
+        // «Параметры», до плана не доходили.
+        $defaults = array_replace(
+            (array) config('motivation.default_parameters', []),
+            (array) (\App\Models\Motivation\MotivationParameterOrder::effectiveFor($start)->values ?? []),
+        );
 
         $depth = max(1, (int) ($params['median_depth_periods'] ?? $defaults['median_depth_periods'] ?? 6));
         $growth = (float) ($params['growth_rate'] ?? $defaults['growth_rate'] ?? 0);
@@ -69,8 +76,20 @@ class PlanCalculator
         $carryShare = (float) ($params['overperformance_share'] ?? $defaults['overperformance_share'] ?? 0.5);
         $declineLimit = (float) ($params['plan_decline_limit'] ?? $defaults['plan_decline_limit'] ?? 0.2);
 
-        $sample = $this->dailyAmounts($managerId, $start->subMonths($depth), $start->subDay());
-        $median = $this->median($sample['amounts']);
+        // План ставится до начала квартала, пока идёт последний месяц окна.
+        // Дни после сегодняшнего ещё не отработаны: посчитанные нулями, они
+        // занижали медиану (в сентябре 2026 — на 8–17 %).
+        $sampleFrom = $start->subMonths($depth);
+        $sampleTo = $start->subDay()->min(CarbonImmutable::today());
+        $sample = $this->dailyAmounts($managerId, $sampleFrom, $sampleTo);
+        // Месячные значения приводятся к сезону 1,0 до медианы (решение РОПа 14.09.2026):
+        // окно апрель–сентябрь лежит в слабом сезоне, и без поправки медиана была
+        // занижена на 13–16 %. Сезон возвращается в план множителем месяца.
+        $sampleMonths = $this->perDayByMonth($sample['by_month'], $seasonalMap);
+        $median = $this->median(array_values(array_filter(
+            array_column($sampleMonths, 'per_day_adjusted'),
+            fn (?float $value): bool => $value !== null,
+        )));
 
         $carry = $this->overperformanceCarry($managerId, $start, $carryShare);
         $previousTotal = $this->previousQuarterPlan($managerId, $start);
@@ -126,9 +145,9 @@ class PlanCalculator
                 // работник действительно простаивал, либо данные периода неполны;
                 // различить это может только человек, и он обязан это видеть.
                 'zero_days' => count(array_filter($sample['amounts'], fn (float $v): bool => $v <= 0.0)),
-                'by_month' => $sample['by_month'],
-                'from' => $start->subMonths($depth)->toDateString(),
-                'to' => $start->subDay()->toDateString(),
+                'by_month' => $sampleMonths,
+                'from' => $sampleFrom->toDateString(),
+                'to' => $sampleTo->toDateString(),
             ],
         ];
     }
@@ -377,6 +396,31 @@ class PlanCalculator
             dateFrom: $month->startOfMonth()->startOfDay(),
             dateTo: $month->endOfMonth()->endOfDay(),
         ))['total_amount'], 2);
+    }
+
+    /**
+     * Отгрузки за отработанный рабочий день по каждому месяцу окна.
+     *
+     * Месяц без отработанных дней (весь в отпуске) значения не даёт и в медиану
+     * не входит: это отсутствие данных, а не ноль продаж.
+     *
+     * @param  list<array{month: string, amount: float, working_days: int, excluded_days: int}>  $byMonth
+     * @param  array<int|string, mixed>  $seasonalMap
+     * @return list<array{month: string, amount: float, working_days: int, excluded_days: int, per_day: float|null, seasonal: float, per_day_adjusted: float|null}>
+     */
+    private function perDayByMonth(array $byMonth, array $seasonalMap): array
+    {
+        return array_map(function (array $row) use ($seasonalMap): array {
+            $month = CarbonImmutable::parse($row['month'])->month;
+            $coefficient = (float) ($seasonalMap[$month] ?? $seasonalMap[(string) $month] ?? 1.0);
+            $perDay = $row['working_days'] > 0 ? Money::round($row['amount'] / $row['working_days']) : null;
+
+            return $row + [
+                'per_day' => $perDay,
+                'seasonal' => $coefficient,
+                'per_day_adjusted' => $perDay === null || $coefficient <= 0 ? $perDay : Money::round($perDay / $coefficient),
+            ];
+        }, $byMonth);
     }
 
     /**

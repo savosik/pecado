@@ -118,6 +118,67 @@ class PlanOrderService
     }
 
     /**
+     * Поставить план одним действием: цифры РОПа поверх расчёта, без
+     * отдельного шага «посчитать черновик».
+     *
+     * Черновика нет — он создаётся; квартал уже утверждён — создаётся
+     * следующая версия, прежняя остаётся в истории. Обоснование необязательно:
+     * план ставит руководитель, а п. 5.4 проверяется, только когда основание
+     * названо.
+     *
+     * @param  array<string, float>  $values  месяц Y-m-01 → сумма
+     */
+    public function set(
+        int $managerId,
+        CarbonInterface $quarter,
+        array $values,
+        User $actor,
+        ?string $comment = null,
+        bool $approve = false,
+    ): MotivationPlanOrder {
+        $start = CarbonImmutable::instance($quarter)->startOfQuarter()->startOfDay();
+        $months = [];
+
+        for ($i = 0; $i < 3; $i++) {
+            $months[] = $start->addMonths($i)->toDateString();
+        }
+
+        $normalized = [];
+        foreach ($values as $month => $value) {
+            $key = CarbonImmutable::parse((string) $month)->startOfMonth()->toDateString();
+
+            if (! in_array($key, $months, true)) {
+                throw new \InvalidArgumentException('План задаётся на три месяца выбранного квартала.');
+            }
+
+            $normalized[$key] = (float) $value;
+        }
+
+        if (count($normalized) !== 3) {
+            throw new \InvalidArgumentException('План задаётся на три месяца выбранного квартала.');
+        }
+
+        return DB::transaction(function () use ($managerId, $start, $normalized, $actor, $comment, $approve): MotivationPlanOrder {
+            $order = MotivationPlanOrder::query()
+                ->forQuarter($start)
+                ->where('personal_manager_id', $managerId)
+                ->where('status', MotivationPlanOrder::STATUS_DRAFT)
+                ->first()
+                ?? $this->draft($managerId, $start, [], $actor);
+
+            $current = array_map('floatval', (array) $order->values);
+            $changed = collect($normalized)->contains(fn (float $value, string $month): bool => Money::round($value) !== Money::round($current[$month] ?? 0));
+            $comment = $comment !== null && trim($comment) !== '' ? trim($comment) : null;
+
+            if ($changed || ($comment !== null && $comment !== $order->comment)) {
+                $order = $this->override($order, $normalized, $comment ?? $order->comment ?? 'Ручная правка плана');
+            }
+
+            return $approve ? $this->approve($order, $actor) : $order;
+        });
+    }
+
+    /**
      * Утвердить приказ и записать значения в планы продаж.
      */
     public function approve(MotivationPlanOrder $order, User $actor): MotivationPlanOrder

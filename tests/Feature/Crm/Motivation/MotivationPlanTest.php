@@ -47,6 +47,9 @@ class MotivationPlanTest extends TestCase
         Queue::fake();
 
         $this->quarter = CarbonImmutable::parse('2026-10-01');
+        // Окно выборки обрезается сегодняшним днём: без фиксации времени
+        // результат зависел бы от даты прогона.
+        $this->travelTo($this->quarter->setTime(9, 0));
         $this->manager = PersonalManager::factory()->create([
             'user_id' => User::factory()->create(['user_kind' => UserKind::STAFF->value])->id,
         ]);
@@ -173,6 +176,93 @@ class MotivationPlanTest extends TestCase
             $result['median_per_day'],
             'Медиана устойчива к меньшинству нулей — ровно поэтому норма требует её, а не среднее',
         );
+    }
+
+    #[Test]
+    #[TestDox('Дни после сегодняшнего в выборку не входят: неотработанное — не ноль')]
+    public function future_days_are_not_counted_as_zeros(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-09-14 12:00'));
+        $this->evenShipments(100_000, '2026-04-01', '2026-09-14');
+
+        $result = $this->calculate();
+
+        $this->assertSame('2026-09-14', $result['sample']['to']);
+        $this->assertSame(0, $result['sample']['zero_days'], 'С 15 по 30 сентября ещё не работали');
+        $this->assertSame(100_000.0, $result['median_per_day']);
+    }
+
+    #[Test]
+    #[TestDox('Медиана — по месячным значениям: регулярные крупные дни не выбрасываются')]
+    public function median_is_taken_over_monthly_values(): void
+    {
+        $this->evenShipments(50_000);
+
+        // В первый рабочий день каждого месяца — крупная отгрузка. Медиана дней
+        // её отбросила бы (50 000 ₽), хотя это обычная работа каждый месяц.
+        $calendar = app(\App\Services\Payroll\Support\WorkingCalendar::class);
+        for ($month = CarbonImmutable::parse('2026-04-01'); $month->lt($this->quarter); $month = $month->addMonth()) {
+            $day = $month;
+            while (! $calendar->isWorkingDay($day)) {
+                $day = $day->addDay();
+            }
+            $this->evenShipments(1_000_000, $day->toDateString(), $day->toDateString());
+        }
+
+        $result = $this->calculate();
+
+        // Апрель–сентябрь 2026: 22, 19, 21, 23, 21, 22 рабочих дня; 50 000 + 1 000 000 ÷ дни.
+        // Средние по порядку: 93 478,26 · 95 454,55 · 95 454,55 · 97 619,05 · 97 619,05 · 102 631,58.
+        $this->assertEqualsWithDelta(96_536.80, $result['median_per_day'], 0.01);
+        $this->assertCount(6, $result['sample']['by_month']);
+        $this->assertEqualsWithDelta(95_454.55, $result['sample']['by_month'][0]['per_day'], 0.01);
+    }
+
+    #[Test]
+    #[TestDox('Сезонность и прирост берутся из действующего приказа параметров')]
+    public function seasonal_and_growth_come_from_the_parameter_order(): void
+    {
+        $this->evenShipments(100_000);
+
+        $seasonal = array_fill(1, 12, 1.0);
+        $seasonal[10] = 1.2;
+
+        \App\Models\Motivation\MotivationParameterOrder::query()->create([
+            'effective_from' => '2026-09-01',
+            'values' => app(\App\Services\Motivation\ParameterCatalog::class)->complete(['seasonal' => $seasonal, 'growth_rate' => 0.1]),
+            'author_id' => $this->head->id,
+        ]);
+
+        $result = $this->calculate();
+
+        $this->assertSame(0.1, $result['growth_rate']);
+        $this->assertSame(2_904_000.0, $result['values']['2026-10-01'], '100 000 × 22 × 1,2 × 1,1');
+        $this->assertSame(2_200_000.0, $result['values']['2026-11-01'], '100 000 × 20 × 1,0 × 1,1');
+    }
+
+    #[Test]
+    #[TestDox('Месяцы выборки приводятся к сезону 1,0 до медианы')]
+    public function sample_months_are_deseasonalized_before_the_median(): void
+    {
+        $this->evenShipments(100_000);
+
+        // Всё окно выборки — слабый сезон 0,8; октябрь — 1,0.
+        $seasonal = array_fill(1, 12, 0.8);
+        $seasonal[10] = 1.0;
+
+        \App\Models\Motivation\MotivationParameterOrder::query()->create([
+            'effective_from' => '2026-09-01',
+            'values' => app(\App\Services\Motivation\ParameterCatalog::class)->complete(['seasonal' => $seasonal]),
+            'author_id' => $this->head->id,
+        ]);
+
+        $result = $this->calculate();
+
+        $this->assertSame(125_000.0, $result['median_per_day'], '100 000 ÷ 0,8: слабый сезон не занижает базу');
+        $this->assertSame(100_000.0, $result['sample']['by_month'][0]['per_day']);
+        $this->assertSame(125_000.0, $result['sample']['by_month'][0]['per_day_adjusted']);
+        $this->assertSame(2_750_000.0, $result['values']['2026-10-01'], '125 000 × 22 × 1,0');
+        $this->assertSame(2_000_000.0, $result['values']['2026-11-01'], '125 000 × 20 × 0,8 — сезон возвращается множителем');
     }
 
     #[Test]

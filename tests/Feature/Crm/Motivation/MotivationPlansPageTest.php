@@ -158,6 +158,50 @@ class MotivationPlansPageTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('План ставится одним действием без расчёта черновика, утверждённый меняется новой версией')]
+    public function plan_is_set_directly_and_changed_after_approval(): void
+    {
+        $months = [0, 1, 2];
+        $values = array_combine(
+            array_map(fn (int $i): string => $this->quarter->addMonths($i)->toDateString(), $months),
+            [5_000_000, 5_500_000, 6_000_000],
+        );
+
+        $this->actingAs($this->head)
+            ->postJson('/crm/motivation/plans/save', ['quarter' => $this->q(), 'manager' => $this->profile->id, 'values' => $values, 'approve' => true])
+            ->assertOk()
+            ->assertJsonPath('message', 'План утверждён и записан в планы продаж.')
+            ->assertJsonPath('managers.0.order.approved', true)
+            ->assertJsonPath('managers.0.months.0.value', 5_000_000);
+
+        $this->assertSame(5_500_000.0, (float) CrmSalesPlan::query()->forPeriod($this->quarter->addMonth())->forManager($this->profile->id)->sole()->amount);
+
+        $values[$this->quarter->toDateString()] = 4_000_000;
+
+        $this->actingAs($this->head)
+            ->postJson('/crm/motivation/plans/save', ['quarter' => $this->q(), 'manager' => $this->profile->id, 'values' => $values, 'comment' => 'Уточнили после встречи', 'approve' => true])
+            ->assertOk()
+            ->assertJsonPath('managers.0.order.version', 2)
+            ->assertJsonPath('managers.0.months.0.value', 4_000_000);
+
+        $this->assertSame(4_000_000.0, (float) CrmSalesPlan::query()->forPeriod($this->quarter)->forManager($this->profile->id)->sole()->amount);
+        $this->assertSame(2, MotivationPlanOrder::query()->where('status', MotivationPlanOrder::STATUS_APPROVED)->count(), 'Прежняя версия остаётся в истории');
+
+        // Черновик без утверждения планы продаж не трогает.
+        $values[$this->quarter->toDateString()] = 1_000_000;
+        $this->actingAs($this->head)
+            ->postJson('/crm/motivation/plans/save', ['quarter' => $this->q(), 'manager' => $this->profile->id, 'values' => $values])
+            ->assertOk()
+            ->assertJsonPath('message', 'План сохранён черновиком.');
+        $this->assertSame(4_000_000.0, (float) CrmSalesPlan::query()->forPeriod($this->quarter)->forManager($this->profile->id)->sole()->amount);
+
+        $this->actingAs($this->head)
+            ->postJson('/crm/motivation/plans/save', ['quarter' => $this->q(), 'manager' => $this->profile->id, 'values' => ['2020-01-01' => 1, '2020-02-01' => 1, '2020-03-01' => 1]])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'План задаётся на три месяца выбранного квартала.');
+    }
+
+    #[Test]
     #[TestDox('Правка без обоснования отклоняется, менеджеру без права мастер закрыт')]
     public function validation_and_permissions(): void
     {

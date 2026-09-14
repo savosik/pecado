@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import axios from 'axios';
 import { Badge, Box, HStack, SimpleGrid, Table, Text, VStack } from '@chakra-ui/react';
-import { LuCalculator, LuCheck, LuLock } from 'react-icons/lu';
+import { LuCalculator, LuCheck, LuLock, LuPencil } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Alert } from '@/components/ui/alert';
@@ -120,13 +120,20 @@ function ManagerCard({ manager: m, data, busy, call }) {
     const [values, setValues] = useState(() => Object.fromEntries(m.months.map((x) => [x.month, x.value])));
     const [comment, setComment] = useState(order?.comment ?? '');
     const [waive, setWaive] = useState(order?.waived_reason ?? '');
+    const [editing, setEditing] = useState(false);
 
     useEffect(() => {
         setValues(Object.fromEntries(m.months.map((x) => [x.month, x.value])));
         setComment(order?.comment ?? '');
+        setEditing(false);
     }, [m, order]);
 
     const edited = m.months.some((x) => Number(values[x.month]) !== Number(x.value));
+    const canType = data.can_edit && (!approved || editing);
+    const save = (approve) => call(
+        '/crm/motivation/plans/save',
+        { manager: m.id, values, comment, approve },
+    );
 
     return (
         <Box bg="bg.panel" borderWidth="2px" borderColor={approved ? 'green.solid' : 'border'} borderRadius="xl" p={{ base: 4, md: 5 }}>
@@ -134,8 +141,8 @@ function ManagerCard({ manager: m, data, busy, call }) {
                 <HStack gap={2}>
                     <Text fontWeight="800" fontSize="lg">{m.name}</Text>
                     {approved && <Badge colorPalette="green" variant="subtle"><LuLock size={11} /> утверждён {fmtDay(order.approved_at)} · версия {order.version}</Badge>}
-                    {order && !approved && <Badge colorPalette="blue" variant="subtle">черновик приказа · версия {order.version}</Badge>}
-                    {!order && <Badge colorPalette="gray" variant="subtle">расчёт без приказа</Badge>}
+                    {order && !approved && <Badge colorPalette="blue" variant="subtle">черновик · версия {order.version}</Badge>}
+                    {!order && <Badge colorPalette="gray" variant="subtle">не утверждён</Badge>}
                 </HStack>
                 <Text fontSize="sm" color="fg.muted">
                     Итого за квартал <Text as="span" fontWeight="700">{fmtRub0(m.total)}</Text>{m.current_total > 0 ? ` против действующих ${fmtRub0(m.current_total)}` : ''}
@@ -143,7 +150,7 @@ function ManagerCard({ manager: m, data, busy, call }) {
             </HStack>
 
             <SimpleGrid columns={{ base: 2, md: 4 }} gap={3} mb={3}>
-                <Step label="Медиана за рабочий день" value={fmtRub0(m.median_per_day)} note={`${m.days_counted} дн. выборки, ${fmtDay(m.sample_from)} — ${fmtDay(m.sample_to)}; исключено по табелю ${m.days_excluded_absence}`} />
+                <Step label="Медиана за рабочий день, сезон 1,0" value={fmtRub0(m.median_per_day)} note={`медиана ${m.sample_months.filter((r) => r.per_day !== null).length} мес., ${fmtDay(m.sample_from)} — ${fmtDay(m.sample_to)}; ${m.days_counted} раб. дн., исключено по табелю ${m.days_excluded_absence}`} />
                 <Step label="Половина перевыполнения" value={m.overperformance_carry > 0 ? fmtRub0(m.overperformance_carry) : '—'} note="п. 5.4, распределяется на три месяца" />
                 <Step label="Целевой прирост" value={fmtPercent(m.growth_rate, 1)} note="приказом на год" />
                 <Step
@@ -155,6 +162,12 @@ function ManagerCard({ manager: m, data, busy, call }) {
                 />
             </SimpleGrid>
 
+            {m.sample_months.length > 0 && (
+                <Text fontSize="xs" color="fg.muted" mb={2}>
+                    За рабочий день по месяцам, приведено к сезону 1,0:{' '}
+                    {m.sample_months.map((r) => `${monthName(r.month).slice(0, 3)} ${r.per_day_adjusted === null ? 'нет дней' : `${fmtRub0(r.per_day_adjusted)}${r.seasonal !== 1 ? ` (факт ${fmtRub0(r.per_day)} ÷ ${fmtFactor(r.seasonal)})` : ''}`}`).join(' · ')}
+                </Text>
+            )}
             {m.warnings.map((w) => <Text key={w} fontSize="xs" color="orange.fg" mb={1}>{w}</Text>)}
 
             <Table.Root size="sm" mt={2}>
@@ -164,7 +177,7 @@ function ManagerCard({ manager: m, data, busy, call }) {
                         <Table.ColumnHeader textAlign="right">Раб. дней</Table.ColumnHeader>
                         <Table.ColumnHeader textAlign="right">Сезон</Table.ColumnHeader>
                         <Table.ColumnHeader textAlign="right">Расчётный</Table.ColumnHeader>
-                        <Table.ColumnHeader textAlign="right">{approved ? 'Утверждённый' : 'К утверждению'}</Table.ColumnHeader>
+                        <Table.ColumnHeader textAlign="right">{approved && !editing ? 'Утверждённый' : 'План'}</Table.ColumnHeader>
                         <Table.ColumnHeader textAlign="right">Действующий</Table.ColumnHeader>
                         <Table.ColumnHeader textAlign="right">Разница</Table.ColumnHeader>
                     </Table.Row>
@@ -180,7 +193,7 @@ function ManagerCard({ manager: m, data, busy, call }) {
                                 <Table.Cell textAlign="right"><Text fontSize="sm">{fmtFactor(x.seasonal)}</Text></Table.Cell>
                                 <Table.Cell textAlign="right"><Text fontSize="sm" color="fg.muted" fontVariantNumeric="tabular-nums">{fmtRub0(x.calculated)}</Text></Table.Cell>
                                 <Table.Cell textAlign="right">
-                                    {approved || !order || !data.can_edit
+                                    {!canType
                                         ? <Text fontSize="sm" fontWeight="700" fontVariantNumeric="tabular-nums">{fmtRub0(v)}</Text>
                                         : <input type="number" step="1000" style={inputStyle} value={v} aria-label={`План на ${monthName(x.month)}`} onChange={(e) => setValues({ ...values, [x.month]: e.target.value === '' ? 0 : Number(e.target.value) })} />}
                                 </Table.Cell>
@@ -192,22 +205,43 @@ function ManagerCard({ manager: m, data, busy, call }) {
                 </Table.Body>
             </Table.Root>
 
+            {approved && data.can_edit && !editing && (
+                <HStack justify="flex-end" mt={3}>
+                    <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                        <LuPencil /> Изменить план
+                    </Button>
+                </HStack>
+            )}
+
+            {canType && (
+                <VStack align="stretch" gap={2} mt={3}>
+                    <HStack gap={2} flexWrap="wrap" align="end">
+                        <Box flex="1" minW="260px">
+                            <Text fontSize="xs" color="fg.muted" mb={1}>Комментарий (необязательно)</Text>
+                            <input style={{ ...inputStyle, width: '100%', textAlign: 'left' }} value={comment} aria-label="Комментарий к плану" onChange={(e) => setComment(e.target.value)} placeholder="Например: переданы партнёры из пула" />
+                        </Box>
+                        {editing && (
+                            <Button size="sm" variant="ghost" disabled={busy} onClick={() => { setEditing(false); setValues(Object.fromEntries(m.months.map((x) => [x.month, x.value]))); }}>
+                                Отмена
+                            </Button>
+                        )}
+                        {!editing && (
+                            <Button size="sm" variant="outline" loading={busy} disabled={!edited && Boolean(order)} onClick={() => save(false)}>
+                                Сохранить черновик
+                            </Button>
+                        )}
+                        <Button size="sm" colorPalette="green" loading={busy} onClick={() => save(true)}>
+                            <LuCheck /> Утвердить план
+                        </Button>
+                    </HStack>
+                    <Text fontSize="xs" color="fg.subtle">
+                        Утверждённый план записывается в «Планы продаж». Повышение против расчётного с основанием «перевыполнил в прошлом периоде» блокируется — половина перевыполнения уже учтена (п. 5.4).
+                    </Text>
+                </VStack>
+            )}
+
             {order && !approved && data.can_edit && (
                 <VStack align="stretch" gap={2} mt={3}>
-                    {(edited || order.manual) && (
-                        <HStack gap={2} flexWrap="wrap" align="end">
-                            <Box flex="1" minW="260px">
-                                <Text fontSize="xs" color="fg.muted" mb={1}>Обоснование отклонения от расчётного значения</Text>
-                                <input style={{ ...inputStyle, width: '100%', textAlign: 'left' }} value={comment} aria-label="Обоснование" onChange={(e) => setComment(e.target.value)} placeholder="Например: переданы партнёры из пула" />
-                            </Box>
-                            <Button size="sm" variant="outline" loading={busy} disabled={!edited || comment.trim().length < 5} onClick={() => call(`/crm/motivation/plans/${order.id}/override`, { values, comment }, 'Значения черновика сохранены')}>
-                                Сохранить правку
-                            </Button>
-                        </HStack>
-                    )}
-                    <Text fontSize="xs" color="fg.subtle">
-                        Повышение против расчётного по основанию «перевыполнил в прошлом месяце» блокируется — половина перевыполнения уже учтена (п. 5.4).
-                    </Text>
                     {(m.decline_limited || m.previous_quarter_comparable) && (
                         <HStack gap={2} flexWrap="wrap" align="end">
                             <Box flex="1" minW="260px">
@@ -222,11 +256,6 @@ function ManagerCard({ manager: m, data, busy, call }) {
                             </Button>
                         </HStack>
                     )}
-                    <HStack justify="flex-end">
-                        <Button size="sm" colorPalette="green" loading={busy} disabled={edited} onClick={() => call(`/crm/motivation/plans/${order.id}/approve`, {})}>
-                            <LuCheck /> Утвердить приказ
-                        </Button>
-                    </HStack>
                 </VStack>
             )}
 

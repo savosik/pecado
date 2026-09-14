@@ -734,6 +734,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/motivation/plans', [MotivationPlansController::class, 'index'])->name('motivation.plans');
         Route::get('/motivation/plans/data', [MotivationPlansController::class, 'data'])->name('motivation.plans.data');
         Route::post('/motivation/plans/calculate', [MotivationPlansController::class, 'calculate'])->name('motivation.plans.calculate');
+        Route::post('/motivation/plans/save', [MotivationPlansController::class, 'save'])->name('motivation.plans.save');
         Route::post('/motivation/plans/{order}/override', [MotivationPlansController::class, 'override'])->name('motivation.plans.override')->whereNumber('order');
         Route::post('/motivation/plans/{order}/approve', [MotivationPlansController::class, 'approve'])->name('motivation.plans.approve')->whereNumber('order');
         Route::get('/motivation/team', [MotivationTeamController::class, 'index'])->name('motivation.team');

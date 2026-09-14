@@ -71,6 +71,50 @@ class MotivationPlansController extends CrmController
     }
 
     /**
+     * Поставить план работнику: цифры, необязательный комментарий и, по желанию,
+     * сразу утверждение. Черновик и новая версия поверх утверждённого создаются сами.
+     */
+    public function save(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'quarter' => ['required', 'string', 'regex:/^\d{4}-\d{2}$/'],
+            'manager' => ['required', 'integer', 'exists:personal_managers,id'],
+            'values' => ['required', 'array', 'size:3'],
+            'values.*' => ['required', 'numeric', 'min:0'],
+            'comment' => ['nullable', 'string', 'max:500'],
+            'approve' => ['boolean'],
+        ], [
+            'quarter.required' => 'Не указан квартал.',
+            'quarter.regex' => 'Квартал — в формате ГГГГ-ММ.',
+            'manager.required' => 'Не указан работник.',
+            'values.required' => 'Не переданы значения плана.',
+            'values.size' => 'План задаётся на три месяца квартала.',
+            'values.*.numeric' => 'План — число.',
+            'values.*.min' => 'План не может быть отрицательным.',
+        ]);
+
+        try {
+            $order = $this->orders->set(
+                (int) $data['manager'],
+                $this->quarter($data['quarter']),
+                array_map('floatval', (array) $data['values']),
+                $this->crmActor($request),
+                $data['comment'] ?? null,
+                (bool) ($data['approve'] ?? false),
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => $order->status === MotivationPlanOrder::STATUS_APPROVED
+                ? 'План утверждён и записан в планы продаж.'
+                : 'План сохранён черновиком.',
+        ] + $this->payload($request));
+    }
+
+    /**
      * Ручная правка значений черновика с обоснованием.
      */
     public function override(Request $request, MotivationPlanOrder $order): JsonResponse
@@ -163,6 +207,14 @@ class MotivationPlansController extends CrmController
                 'days_counted' => $calculated['sample']['days'],
                 'days_excluded_absence' => $calculated['sample']['excluded_days'],
                 'zero_days' => $calculated['sample']['zero_days'],
+                'sample_months' => array_map(fn (array $row): array => [
+                    'month' => $row['month'],
+                    'per_day' => $row['per_day'],
+                    'seasonal' => $row['seasonal'],
+                    'per_day_adjusted' => $row['per_day_adjusted'],
+                    'working_days' => $row['working_days'],
+                    'excluded_days' => $row['excluded_days'],
+                ], $calculated['sample']['by_month']),
                 'sample_from' => $calculated['sample']['from'],
                 'sample_to' => $calculated['sample']['to'],
                 'growth_rate' => $calculated['growth_rate'],
