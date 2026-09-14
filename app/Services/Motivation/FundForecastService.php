@@ -121,6 +121,13 @@ class FundForecastService
             'plan' => $plan === null ? null : Money::round($plan),
             'shipped' => Money::round($motivation->baseRevenue + $motivation->newPartnersRevenue),
             'days' => ['passed' => $passed, 'total' => $total],
+            // Фактические входы месяца — точка отсчёта ползунков на странице.
+            'facts' => [
+                'base_revenue' => Money::round($motivation->baseRevenue),
+                'new_partners_revenue' => Money::round($motivation->newPartnersRevenue),
+                'focus_revenue' => Money::round($motivation->focusRevenue),
+                'overdue_integral' => Money::round($motivation->overdueIntegral),
+            ],
             'scenarios' => $scenarios,
         ];
     }

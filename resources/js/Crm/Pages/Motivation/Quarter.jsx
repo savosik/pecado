@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { Badge, Box, HStack, SimpleGrid, Table, Text, VStack } from '@chakra-ui/react';
 import { LuLock } from 'react-icons/lu';
+import { Slider } from '@/components/ui/slider';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Alert } from '@/components/ui/alert';
@@ -91,6 +93,10 @@ export default function MotivationQuarter({ month, data }) {
                             </Text>
                         )}
 
+                        {!data.frozen && data.steps.length > 0 && (
+                            <LadderSlider steps={data.steps} qualified={data.qualified_count} amount={data.qualification_amount} />
+                        )}
+
                         <FoldSection title={'Кто засчитан'} summary={`${data.candidates.length} ${plural(data.candidates.length, 'кандидат', 'кандидата', 'кандидатов')}`}>
                             <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
                                 {data.candidates.length === 0 ? (
@@ -140,6 +146,35 @@ function Stat({ label, value, tone, hint }) {
                 {hint && <MetricHint text={hint} />}
             </HStack>
             <Text fontSize="2xl" fontWeight="800" fontVariantNumeric="tabular-nums" color={tone ? `${tone}.fg` : undefined}>{value}</Text>
+        </Box>
+    );
+}
+
+/**
+ * Лестница «что если»: сколько засчитанных партнёров — какая ступень.
+ * Ступени приходят из приказа; тут только поиск по ним, формулы нет.
+ */
+function LadderSlider({ steps, qualified, amount }) {
+    const [n, setN] = useState(qualified);
+    const max = Math.max(steps[steps.length - 1].count + 4, qualified + 4);
+    const reached = [...steps].reverse().find((s) => n >= s.count) ?? null;
+    const next = steps.find((s) => n < s.count) ?? null;
+
+    return (
+        <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4}>
+            <HStack justify="space-between" fontSize="sm" mb={1} flexWrap="wrap" gap={2}>
+                <Text color="fg.muted">Если засчитанных партнёров будет</Text>
+                <Text fontWeight="700" fontVariantNumeric="tabular-nums">{n}{n !== qualified ? ` (сейчас ${qualified})` : ''}</Text>
+            </HStack>
+            <Slider size="md" colorPalette="green" value={[n]} min={0} max={max} step={1} aria-label={['Засчитанных партнёров']} onValueChange={(e) => setN(e.value[0])} />
+            <HStack justify="space-between" fontSize="xs" color="fg.subtle" mb={2}><Text>0</Text><Text>{max}</Text></HStack>
+            <Text fontSize="sm">
+                {reached
+                    ? <>Ступень {steps.indexOf(reached) + 1} — <Text as="span" fontWeight="800" color="green.fg">{fmtRub0(reached.amount)}</Text> на отдел</>
+                    : <>Ступень не взята — премии нет</>}
+                {next && <Text as="span" color="fg.muted">; до следующей ещё {next.count - n} {plural(next.count - n, 'партнёр', 'партнёра', 'партнёров')} → {fmtRub0(next.amount)}</Text>}
+            </Text>
+            <Text fontSize="xs" color="fg.subtle" mt={1}>Засчитывается новый партнёр, купивший за квартал не менее {fmtRub0(amount)}.</Text>
         </Box>
     );
 }

@@ -14,7 +14,7 @@ import { fmtCompact, fmtRub, fmtSigned } from '../../Salary/components/format';
  * долг задаётся среднедневным остатком — это база вычета, делённая на дни
  * месяца, и обратно она восстанавливается точно, без приближений.
  */
-export default function MotivationCalculator({ calculation, month, managerId, canSeeAll }) {
+export default function MotivationCalculator({ calculation, month, managerId, canSeeAll, defaultOpen = false }) {
     const lines = calculation.lines ?? [];
     const meta = (key) => lines.find((l) => l.key === key)?.meta ?? {};
     const daysInMonth = useMemo(() => {
@@ -92,7 +92,7 @@ export default function MotivationCalculator({ calculation, month, managerId, ca
     ];
 
     return (
-        <Collapsible.Root bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflow="hidden" onOpenChange={(e) => { if (!e.open) reset(); }}>
+        <Collapsible.Root defaultOpen={defaultOpen} bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflow="hidden" onOpenChange={(e) => { if (!e.open) reset(); }}>
             <Collapsible.Trigger asChild>
                 <HStack as="button" type="button" w="100%" gap={3} p={4} textAlign="left" cursor="pointer" _hover={{ bg: 'bg.subtle' }}>
                     <Box p={2} borderRadius="lg" bg="yellow.subtle" color="yellow.fg" display="flex" flexShrink={0}>

@@ -116,16 +116,17 @@ export default function MotivationIndex(props) {
                         {!calc.frozen && data.is_current_month && (
                             <>
                                 <MotivationLevers levers={calc.levers} />
-                                <FoldSection title="Прогноз к концу месяца и калькулятор «что если»" summary={calc.forecast ? `ожидается ${Math.round(calc.forecast.expected).toLocaleString('ru-RU')} ₽` : undefined}>
-                                    <VStack align="stretch" gap={4} p={4}>
+                                <MotivationCalculator
+                                    calculation={calc}
+                                    month={data.month}
+                                    managerId={data.manager?.id}
+                                    canSeeAll={data.can_see_all}
+                                    defaultOpen
+                                />
+                                <FoldSection title="Прогноз к концу месяца" summary={calc.forecast ? `ожидается ${Math.round(calc.forecast.expected).toLocaleString('ru-RU')} ₽` : undefined}>
+                                    <Box p={4}>
                                         <ForecastRange forecast={calc.forecast} total={calc.total} />
-                                        <MotivationCalculator
-                                            calculation={calc}
-                                            month={data.month}
-                                            managerId={data.manager?.id}
-                                            canSeeAll={data.can_see_all}
-                                        />
-                                    </VStack>
+                                    </Box>
                                 </FoldSection>
                             </>
                         )}

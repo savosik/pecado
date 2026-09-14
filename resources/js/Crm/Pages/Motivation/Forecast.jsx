@@ -8,6 +8,7 @@ import { fmtRub0 } from '../Salary/components/format';
 import MotivationTabs from './components/MotivationTabs';
 import { hubBreadcrumbs } from './components/hubs';
 import FoldSection from './components/FoldSection';
+import DepartmentCalculator from './components/DepartmentCalculator';
 
 const inputStyle = {
     padding: '0.45rem 0.6rem',
@@ -50,7 +51,14 @@ export default function MotivationForecast({ month, month_label: monthLabel, row
                     ))}
                 </SimpleGrid>
 
-                <FoldSection title={'По работникам'} summary={`${rows.length} ${rows.length === 1 ? 'работник' : 'работника'}`}>
+                {rows.some((r) => !r.frozen) && (
+                    <Box>
+                        <Text fontWeight="700" mb={2}>Что если: ползунки по работникам</Text>
+                        <DepartmentCalculator month={month} rows={rows.filter((r) => !r.frozen)} />
+                    </Box>
+                )}
+
+                <FoldSection title={'Сценарии по работникам'} summary={`${rows.length} ${rows.length === 1 ? 'работник' : 'работника'}`}>
                     <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
                         {rows.length === 0 ? <Text p={4} fontSize="sm" color="fg.muted">Работников на новой схеме в этом месяце нет.</Text> : (
                             <Table.Root size="sm">
