@@ -71,11 +71,12 @@ export const menuConfig: MenuGroup[] = [
         icon: LuLayoutDashboard,
         items: [
             { label: "Рабочий стол", icon: LuLayoutDashboard, path: "/crm", permission: "crm-dashboard.view" },
+            { label: "Задачи", icon: LuListChecks, path: "/crm/tasks", permission: "crm-tasks.view", counter: "tasks" },
         ],
     },
     {
         // Картотека: с кем работаем. Справочники людей и юрлиц, а не ежедневная
-        // очередь дел — та живёт в «Продажах».
+        // очередь дел — та живёт в «Главной» рядом с рабочим столом.
         title: "Клиенты",
         icon: LuUsers,
         items: [
@@ -95,7 +96,6 @@ export const menuConfig: MenuGroup[] = [
         title: "Продажи",
         icon: LuListChecks,
         items: [
-            { label: "Задачи", icon: LuListChecks, path: "/crm/tasks", permission: "crm-tasks.view", counter: "tasks" },
             // Заказы из 1С: перенесены из «Документов» — менеджер смотрит их
             // каждый день рядом с задачами и планом, а не в архиве первички.
             { label: "Заказы", icon: LuFileText, path: "/crm/orders", permission: "crm-clients.view" },
