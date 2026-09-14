@@ -84,9 +84,6 @@ export const menuConfig: MenuGroup[] = [
             // Контрагенты — юрлица партнёров. Отдельный пункт, потому что переписка
             // о реквизитах и сверках идёт по юрлицу, а у партнёра их может быть несколько.
             { label: "Контрагенты", icon: LuBuilding2, path: "/crm/contractors", permission: "crm-contractors.view" },
-            // Налоговые режимы юрлиц: кто на чём сейчас и что планирует на следующий год —
-            // сбор ответов для оценки рисков перехода клиентов на НДС.
-            { label: "Налоговые режимы", icon: LuPercent, path: "/crm/tax-regimes", permission: "crm-contractors.view" },
             // Справочник людей: контактные лица партнёров и их юрлиц. Отдельным
             // пунктом, а не вкладкой в карточке, — человек бывает у нескольких
             // юрлиц сразу, и искать его надо в одном месте.
@@ -106,9 +103,6 @@ export const menuConfig: MenuGroup[] = [
             // менеджер смотрит их вместе; деньги по ним — в «Финансах».
             { label: "Реализации", icon: LuTruck, path: "/crm/shipments", permission: "crm-clients.view" },
             { label: "Планы продаж", icon: LuTarget, path: "/crm/plans", permission: "crm-plans.view" },
-            // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
-            // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
-            { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", counter: "shortages" },
             // Резервы заказов (v16.9.0): сводка «кто резервирует и бросает»
             // и рычаг РОПа — отключение режима, индивидуальное окно.
             { label: "Резервы заказов", icon: LuClock3, path: "/crm/reserves", permission: "crm-reserves.view" },
@@ -136,6 +130,12 @@ export const menuConfig: MenuGroup[] = [
         icon: LuChartLine,
         items: [
             { label: "Отчёты продаж", icon: LuChartLine, path: "/crm/analytics", permission: "crm-analytics.view" },
+            // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
+            // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
+            { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", counter: "shortages" },
+            // Налоговые режимы юрлиц: кто на чём сейчас и что планирует на следующий год —
+            // сбор ответов для оценки рисков перехода клиентов на НДС.
+            { label: "Налоговые режимы", icon: LuPercent, path: "/crm/tax-regimes", permission: "crm-contractors.view" },
         ],
     },
     {
