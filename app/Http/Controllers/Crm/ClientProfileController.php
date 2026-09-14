@@ -26,7 +26,7 @@ class ClientProfileController extends CrmController
         // Тот же scope, что и в ClientController::show(): чужой партнёр — 404,
         // иначе 403 подтвердил бы, что такой партнёр существует.
         $user = User::query()
-            ->visibleInCrm($this->crmActor($request))
+            ->openableInCrm($this->crmActor($request))
             ->findOrFail($client);
 
         $this->profiles->update($user, $request->validated(), $this->crmActor($request));
@@ -44,7 +44,7 @@ class ClientProfileController extends CrmController
         ClientLifecycleService $lifecycle,
     ): RedirectResponse {
         $user = User::query()
-            ->visibleInCrm($this->crmActor($request))
+            ->openableInCrm($this->crmActor($request))
             ->findOrFail($client);
 
         $status = ClientLifecycleStatus::from($request->validated('lifecycle_status'));
@@ -65,7 +65,7 @@ class ClientProfileController extends CrmController
         ClientLifecycleService $lifecycle,
     ): RedirectResponse {
         $user = User::query()
-            ->visibleInCrm($this->crmActor($request))
+            ->openableInCrm($this->crmActor($request))
             ->findOrFail($client);
 
         $enabled = (bool) $request->validate(['enabled' => ['required', 'boolean']])['enabled'];
@@ -90,7 +90,7 @@ class ClientProfileController extends CrmController
         ClientLifecycleService $lifecycle,
     ): RedirectResponse {
         $user = User::query()
-            ->visibleInCrm($this->crmActor($request))
+            ->openableInCrm($this->crmActor($request))
             ->findOrFail($client);
 
         $enabled = (bool) $request->validate(['enabled' => ['required', 'boolean']])['enabled'];
@@ -116,7 +116,7 @@ class ClientProfileController extends CrmController
         ClientLifecycleService $lifecycle,
     ): RedirectResponse {
         $user = User::query()
-            ->visibleInCrm($this->crmActor($request))
+            ->openableInCrm($this->crmActor($request))
             ->findOrFail($client);
 
         $managerId = $request->validated('personal_manager_id');
@@ -139,7 +139,7 @@ class ClientProfileController extends CrmController
         // этого же РОПа тут же отдавала 404, хотя смена уже сохранилась.
         // Галочку сами не включаем: в разрезе «весь отдел» она сужает список
         // до одних лидов, и РОП потерял бы привычную выборку.
-        if (! User::query()->visibleInCrm($actor)->whereKey($user->getKey())->exists()) {
+        if (! User::query()->openableInCrm($actor)->whereKey($user->getKey())->exists()) {
             return redirect()
                 ->route('crm.clients.index')
                 ->with('success', "{$message}. Партнёр теперь лид — его видно с галочкой «Нераспределённые».");

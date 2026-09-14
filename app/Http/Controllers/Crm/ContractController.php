@@ -72,7 +72,7 @@ class ContractController extends CrmController
             ? Company::query()->visibleInCrm($actor)->select('id', 'name', 'legal_name')->find((int) $request->input('company_id'))
             : null;
         $client = $request->filled('client_id')
-            ? User::query()->visibleInCrm($actor)->select('id', 'name', 'erp_name')->find((int) $request->input('client_id'))
+            ? User::query()->openableInCrm($actor)->select('id', 'name', 'erp_name')->find((int) $request->input('client_id'))
             : null;
 
         return [
@@ -367,7 +367,7 @@ class ContractController extends CrmController
             throw ValidationException::withMessages(['company_id' => 'Контрагент не найден.']);
         }
 
-        if ($clientId !== null && ! User::query()->visibleInCrm($actor)->whereKey((int) $clientId)->exists()) {
+        if ($clientId !== null && ! User::query()->openableInCrm($actor)->whereKey((int) $clientId)->exists()) {
             throw ValidationException::withMessages(['client_id' => 'Партнёр не найден.']);
         }
 

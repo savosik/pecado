@@ -125,7 +125,7 @@ class CrmEntityResolver
     public function clientVisible(User $actor, int $clientId): bool
     {
         return User::query()
-            ->visibleInCrm($actor)
+            ->openableInCrm($actor)
             ->whereKey($clientId)
             ->exists();
     }

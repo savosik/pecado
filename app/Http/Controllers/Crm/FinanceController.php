@@ -717,7 +717,7 @@ class FinanceController extends CrmController
         // visibleInCrm, а не findOrFail: чужой клиент обязан давать 404,
         // а не показывать акт по деньгам другого менеджера.
         $client = $clientId !== null
-            ? User::query()->visibleInCrm($this->crmActor($request))->find($clientId)
+            ? User::query()->openableInCrm($this->crmActor($request))->find($clientId)
             : null;
 
         if ($clientId !== null && $client === null) {

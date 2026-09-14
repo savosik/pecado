@@ -34,7 +34,7 @@ class ImpersonationController extends CrmController
         // Резолвим через тот же скоуп, что и карточка: чужой партнёр — 404,
         // а не 403. Скоуп заодно отсекает сотрудников и служебные аккаунты.
         $target = User::query()
-            ->visibleInCrm($manager)
+            ->openableInCrm($manager)
             ->findOrFail($client);
 
         // Заблокированного не пускаем осознанно: EnsureUserIsNotBlocked

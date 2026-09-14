@@ -18,7 +18,7 @@ trait ResolvesCrmEntities
     protected function client(User $actor, OperationInput $input, string $key = 'client'): User
     {
         return User::query()
-            ->visibleInCrm($actor)
+            ->openableInCrm($actor)
             ->findOrFail((int) $input->int($key));
     }
 }

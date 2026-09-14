@@ -542,7 +542,7 @@ class ContactController extends CrmController
             return $actor->can('crm-clients-all.view');
         }
 
-        return User::query()->visibleInCrm($actor)->whereKey($clientId)->exists();
+        return User::query()->openableInCrm($actor)->whereKey($clientId)->exists();
     }
 
     /**
@@ -555,7 +555,7 @@ class ContactController extends CrmController
             return null;
         }
 
-        return User::query()->visibleInCrm($actor)->whereKey((int) $clientId)->value('id');
+        return User::query()->openableInCrm($actor)->whereKey((int) $clientId)->value('id');
     }
 
     /**

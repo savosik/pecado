@@ -129,7 +129,7 @@ class ClientAvatarController extends CrmController
     private function resolveClient(Request $request, int $client): User
     {
         return User::query()
-            ->visibleInCrm($this->crmActor($request))
+            ->openableInCrm($this->crmActor($request))
             ->findOrFail($client);
     }
 

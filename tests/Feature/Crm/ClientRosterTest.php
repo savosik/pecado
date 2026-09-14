@@ -247,13 +247,26 @@ class ClientRosterTest extends TestCase
     }
 
     #[Test]
-    public function lead_is_out_of_reach_while_checkbox_is_off(): void
+    public function lead_is_reachable_for_those_who_see_the_pool(): void
     {
+        // Лид — свободный партнёр Пула. Тому, кто видит «Мотивацию» (РОП), его
+        // карточка и закрепление доступны и без галочки «Нераспределённые»;
+        // без права на Пул лид по-прежнему вне досягаемости.
         $this->head->forceFill(['crm_show_unassigned' => false])->save();
         $lead = User::factory()->create(['personal_manager_id' => null]);
 
         $this->actingAs($this->head)
             ->put(route('crm.clients.manager.update', $lead->id), [
+                'personal_manager_id' => $this->managerProfile->id,
+            ])
+            ->assertRedirect();
+        $this->assertSame($this->managerProfile->id, (int) $lead->fresh()->personal_manager_id);
+
+        $stranger = User::factory()->create(['personal_manager_id' => null]);
+        \Spatie\Permission\Models\Role::findByName('sales-head')->revokePermissionTo('crm-motivation.view');
+
+        $this->actingAs($this->head->fresh())
+            ->put(route('crm.clients.manager.update', $stranger->id), [
                 'personal_manager_id' => $this->managerProfile->id,
             ])
             ->assertNotFound();
@@ -289,8 +302,10 @@ class ClientRosterTest extends TestCase
     #[Test]
     public function head_without_unassigned_checkbox_returns_to_list_after_unassigning(): void
     {
-        // Ровно случай с прода: РОП без галочки «Нераспределённые» снял менеджера
-        // из карточки, back() вёл на неё же — а лид для него невидим, отсюда 404.
+        // Случай с прода: РОП без галочки «Нераспределённые» снял менеджера из
+        // карточки, back() вёл на неё же — а лид для него был невидим, отсюда 404.
+        // Теперь свободный партнёр открывается тому, кто видит Пул, и РОП
+        // остаётся на карточке; без права на Пул — возврат к списку.
         $this->head->forceFill(['crm_show_unassigned' => false])->save();
 
         $this->actingAs($this->head)
@@ -298,12 +313,20 @@ class ClientRosterTest extends TestCase
             ->put(route('crm.clients.manager.update', $this->client->id), [
                 'personal_manager_id' => null,
             ])
-            ->assertRedirect(route('crm.clients.index'))
+            ->assertRedirect(route('crm.clients.show', $this->client->id))
             ->assertSessionHas('success');
 
-        // Смена сохранена, галочка не включена за РОПа.
         $this->assertNull($this->client->fresh()->personal_manager_id);
         $this->assertFalse($this->head->fresh()->crm_show_unassigned);
+
+        \Spatie\Permission\Models\Role::findByName('sales-head')->revokePermissionTo('crm-motivation.view');
+        $other = User::factory()->create(['personal_manager_id' => $this->managerProfile->id]);
+
+        $this->actingAs($this->head->fresh())
+            ->from(route('crm.clients.show', $other->id))
+            ->put(route('crm.clients.manager.update', $other->id), ['personal_manager_id' => null])
+            ->assertRedirect(route('crm.clients.index'))
+            ->assertSessionHas('success');
     }
 
     #[Test]

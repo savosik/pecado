@@ -294,7 +294,7 @@ class ClientController extends CrmController
 
         // Тот же scope, что и в show(): чужой партнёр — 404, а не 403.
         $user = User::query()
-            ->visibleInCrm($actor)
+            ->openableInCrm($actor)
             ->findOrFail($client);
 
         return response()->json($insights->forClient($user, $actor, 12));

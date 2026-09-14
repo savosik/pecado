@@ -59,7 +59,7 @@ class DebtController extends CrmController
         $actor = $this->crmActor($request);
 
         // Чужой партнёр — 404, как везде в CRM.
-        $client = User::query()->visibleInCrm($actor)->findOrFail((int) $request->validated('user_id'));
+        $client = User::query()->openableInCrm($actor)->findOrFail((int) $request->validated('user_id'));
         $companyId = $request->validated('company_id');
 
         if ($companyId !== null && ! $client->companies()->whereKey($companyId)->exists()) {
@@ -83,7 +83,7 @@ class DebtController extends CrmController
     public function releasePause(Request $request, DebtPause $pause): RedirectResponse
     {
         $actor = $this->crmActor($request);
-        User::query()->visibleInCrm($actor)->findOrFail($pause->user_id);
+        User::query()->openableInCrm($actor)->findOrFail($pause->user_id);
 
         if ($pause->released_at !== null) {
             return back()->with('info', 'Разблокировка уже снята.');

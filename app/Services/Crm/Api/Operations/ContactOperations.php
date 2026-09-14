@@ -109,7 +109,7 @@ class ContactOperations
         $clientId = null;
 
         if ($input->has('client_id')) {
-            $clientId = User::query()->visibleInCrm($actor)->whereKey($input->int('client_id'))->value('id');
+            $clientId = User::query()->openableInCrm($actor)->whereKey($input->int('client_id'))->value('id');
         }
 
         $contact = new Contact([
@@ -181,7 +181,7 @@ class ContactOperations
     {
         Gate::forUser($actor)->authorize('viewAny', Contact::class);
 
-        $clientId = User::query()->visibleInCrm($actor)->whereKey($input->int('client'))->value('id');
+        $clientId = User::query()->openableInCrm($actor)->whereKey($input->int('client'))->value('id');
 
         if ($clientId === null) {
             throw (new ModelNotFoundException)->setModel(User::class, [(int) $input->int('client')]);

@@ -36,7 +36,7 @@ class CommentController extends CrmController
 
         // Резолвим через тот же scope, что и карточка: чужой партнёр — 404.
         $clientModel = User::query()
-            ->visibleInCrm($actor)
+            ->openableInCrm($actor)
             ->findOrFail($client);
 
         $validated = $request->validate([

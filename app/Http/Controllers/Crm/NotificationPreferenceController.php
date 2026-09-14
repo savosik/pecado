@@ -122,7 +122,7 @@ class NotificationPreferenceController extends CrmController
     private function partner(Request $request, int $client): User
     {
         return User::query()
-            ->visibleInCrm($this->crmActor($request))
+            ->openableInCrm($this->crmActor($request))
             ->findOrFail($client);
     }
 }

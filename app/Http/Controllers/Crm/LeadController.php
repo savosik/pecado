@@ -255,7 +255,7 @@ class LeadController extends CrmController
 
         // Привязать можно только к видимому партнёру: иначе через конверсию
         // открылся бы доступ к чужой карточке в обход скоупа.
-        $client = User::query()->visibleInCrm($actor)->findOrFail($validated['user_id']);
+        $client = User::query()->openableInCrm($actor)->findOrFail($validated['user_id']);
 
         return response()->json(['data' => $this->payload($this->leads->convert($lead, $client, $actor))]);
     }

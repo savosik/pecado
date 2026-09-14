@@ -313,7 +313,7 @@ class EmailController extends CrmController
         ]);
 
         $client = isset($validated['client_id'])
-            ? User::query()->visibleInCrm($actor)->find($validated['client_id'])
+            ? User::query()->openableInCrm($actor)->find($validated['client_id'])
             : null;
 
         return response()->json($this->emails->applyTemplate($template, $actor, $client));

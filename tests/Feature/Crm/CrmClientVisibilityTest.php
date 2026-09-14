@@ -215,6 +215,15 @@ class CrmClientVisibilityTest extends TestCase
             ->get(route('crm.clients.show', $free->id))
             ->assertOk();
 
+        // Вкладки карточки резолвят партнёра тем же правилом: лента и
+        // уведомления открываются, а не падают в 404 после открытой карточки.
+        $this->actingAs($this->managerA->fresh())
+            ->getJson("/crm/partners/{$free->id}/timeline")
+            ->assertOk();
+        $this->actingAs($this->managerA->fresh())
+            ->getJson("/crm/partners/{$free->id}/notifications")
+            ->assertOk();
+
         $this->actingAs($this->managerA->fresh())
             ->get(route('crm.clients.index'))
             ->assertOk()

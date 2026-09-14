@@ -61,7 +61,7 @@ class ClientOperations
     public function show(User $actor, OperationInput $input): array
     {
         $client = User::query()
-            ->visibleInCrm($actor)
+            ->openableInCrm($actor)
             ->with(['personalManager:id,name', 'clientStatus:id,name,color'])
             ->findOrFail((int) $input->int('client'));
 
