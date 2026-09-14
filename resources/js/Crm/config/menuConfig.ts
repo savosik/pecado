@@ -8,12 +8,10 @@ import {
     LuListChecks,
     LuMail,
     LuTarget,
-    LuLightbulb,
     LuFileText,
     LuTruck,
     LuReceipt,
     LuKeyRound,
-    LuSprout,
     LuWallet,
     LuGauge,
     LuTriangleAlert,
@@ -135,8 +133,6 @@ export const menuConfig: MenuGroup[] = [
         icon: LuChartLine,
         items: [
             { label: "Отчёты продаж", icon: LuChartLine, path: "/crm/analytics", permission: "crm-analytics.view" },
-            { label: "Грядки", icon: LuSprout, path: "/crm/beds", permission: "crm-beds.view" },
-            { label: "Возможности", icon: LuLightbulb, path: "/crm/opportunities", permission: "crm-opportunities.view" },
         ],
     },
     {

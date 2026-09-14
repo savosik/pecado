@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Crm;
 use App\Models\CrmTask;
 use App\Models\User;
 use App\Services\Crm\CrmTaskService;
-use App\Services\Crm\OpportunityService;
 use App\Services\Crm\PlanScopeResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,7 +15,6 @@ class DashboardController extends CrmController
     public function index(
         Request $request,
         CrmTaskService $tasks,
-        OpportunityService $opportunities,
         PlanScopeResolver $scopes,
     ): Response {
         $actor = $this->crmActor($request);
@@ -28,11 +26,6 @@ class DashboardController extends CrmController
         return Inertia::render('Crm/Pages/Dashboard', [
             'tasks' => $actor->can('crm-tasks.view') ? $this->todayTasks($actor, $tasks) : null,
             'coverage' => $actor->can('crm-tasks.view') ? $this->coverage($actor, $tasks) : null,
-            // Топ-5 возможностей за текущий месяц: пресет здесь не спрашивается,
-            // на рабочем столе нужен ответ «что делать сейчас», а не выбор среза.
-            'opportunities' => $actor->can('crm-opportunities.view')
-                ? $opportunities->top(now(), $scopes->resolve($actor, null, null))
-                : null,
             'stats' => [
                 'visible_clients' => $visibleClients,
                 'department_clients' => $seesAll

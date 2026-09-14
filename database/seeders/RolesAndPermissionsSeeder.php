@@ -133,9 +133,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-plans' => ['view', 'create', 'edit', 'delete'],
         // Возможности: только view — список ничего не меняет, он предлагает,
         // а действия по строке идут через права задач, писем и звонков.
-        'crm-opportunities' => ['view'],
         // Грядки: только view — витрина поверх планов и сигналов, ничего не меняет.
-        'crm-beds' => ['view'],
         // Финансы: только view — раздел читает деньги из 1С и ничего не меняет,
         // а действия по строке идут через права задач. Границы задаёт скоуп клиентов.
         'crm-finance' => ['view'],
@@ -282,8 +280,6 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-calls' => 'CRM: Звонки',
         'crm-emails' => 'CRM: Письма',
         'crm-plans' => 'CRM: Планы продаж',
-        'crm-opportunities' => 'CRM: Возможности',
-        'crm-beds' => 'CRM: Грядки',
         'crm-shortages' => 'CRM: Недоборы',
         'crm-shortage-reasons' => 'CRM: Причины недоборов',
         'crm-contacts' => 'CRM: Контакты',
@@ -335,7 +331,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'payments' => ['view'],
                 // CRM: партнёры отдела. Менеджеры взаимозаменяемы — экран открывается
                 // сфокусированным на своих, расфокус остаётся осознанным действием.
-                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-shortages', 'crm-contacts', 'crm-contracts' => ['view', 'create', 'edit'], 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-shortage-reasons' => ['view'], 'crm-absences' => ['view'], 'crm-impersonate', 'crm-salary' => ['view'],
+                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-finance', 'crm-shortages', 'crm-contacts', 'crm-contracts' => ['view', 'create', 'edit'], 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-shortage-reasons' => ['view'], 'crm-absences' => ['view'], 'crm-impersonate', 'crm-salary' => ['view'],
             ],
         ],
         'sales-manager-crm' => [
@@ -343,14 +339,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
                 // Для менеджеров, которым нужны партнёры отдела, но не нужна админка.
-                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-shortages', 'crm-contacts', 'crm-contracts' => ['view', 'create', 'edit'], 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-shortage-reasons' => ['view'], 'crm-absences' => ['view'], 'crm-impersonate', 'crm-salary' => ['view'],
+                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-finance', 'crm-shortages', 'crm-contacts', 'crm-contracts' => ['view', 'create', 'edit'], 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-shortage-reasons' => ['view'], 'crm-absences' => ['view'], 'crm-impersonate', 'crm-salary' => ['view'],
             ],
         ],
         'sales-head' => [
             'label' => 'Руководитель отдела продаж',
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
-                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-department', 'crm-leads', 'crm-lead-stages', 'crm-contractors', 'crm-team', 'crm-absences', 'crm-timesheet', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-opportunities', 'crm-beds', 'crm-finance', 'crm-shortages', 'crm-shortage-reasons', 'crm-reserves', 'crm-contacts', 'crm-contracts', 'crm-agent-tokens', 'crm-impersonate', 'crm-salary',
+                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-department', 'crm-leads', 'crm-lead-stages', 'crm-contractors', 'crm-team', 'crm-absences', 'crm-timesheet', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-finance', 'crm-shortages', 'crm-shortage-reasons', 'crm-reserves', 'crm-contacts', 'crm-contracts', 'crm-agent-tokens', 'crm-impersonate', 'crm-salary',
                 // Мотивация 2.0: на время разработки и параллельного расчёта — только руководителю.
                 'crm-motivation',
                 // Себестоимость руководителю отдела появится вместе с отчётом по марже

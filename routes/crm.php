@@ -4,7 +4,6 @@ use App\Http\Controllers\Crm\AbsenceController;
 use App\Http\Controllers\Crm\AgentTokenController;
 use App\Http\Controllers\Crm\AnalyticsController;
 use App\Http\Controllers\Crm\AttachmentController;
-use App\Http\Controllers\Crm\BedsController;
 use App\Http\Controllers\Crm\CalendarFeedController;
 use App\Http\Controllers\Crm\CallController;
 use App\Http\Controllers\Crm\ClientAvatarController;
@@ -42,7 +41,6 @@ use App\Http\Controllers\Crm\MotivationReferenceController;
 use App\Http\Controllers\Crm\MotivationSettingsController;
 use App\Http\Controllers\Crm\MotivationTeamController;
 use App\Http\Controllers\Crm\NotificationPreferenceController;
-use App\Http\Controllers\Crm\OpportunityController;
 use App\Http\Controllers\Crm\PaymentOrderController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
@@ -654,27 +652,6 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/plans/by-manager', [PlanController::class, 'byManager'])
             ->middleware('permission:crm-clients-all.view')
             ->name('plans.by-manager');
-    });
-
-    // Возможности (crm-07): витрина поверх планов и gap-анализа. Своего права
-    // на редактирование нет — список ничего не меняет, он предлагает.
-    Route::middleware('permission:crm-opportunities.view')->group(function () {
-        Route::get('/opportunities', [OpportunityController::class, 'index'])->name('opportunities.index');
-        Route::get('/opportunities/data', [OpportunityController::class, 'data'])->name('opportunities.data');
-        Route::get('/opportunities/dimensions', [OpportunityController::class, 'dimensions'])
-            ->name('opportunities.dimensions');
-        Route::get('/opportunities/export', [OpportunityController::class, 'export'])->name('opportunities.export');
-    });
-
-    // Грядки (crm-08): тот же план и те же сигналы, что на «Планах» и
-    // «Возможностях», но одной картинкой. Своих расчётов раздел не добавляет.
-    Route::middleware('permission:crm-beds.view')->group(function () {
-        Route::get('/beds', [BedsController::class, 'index'])->name('beds.index');
-        // До /beds/{client}: иначе «data» ушло бы в биндинг партнёра.
-        Route::get('/beds/data', [BedsController::class, 'data'])->name('beds.data');
-        Route::get('/beds/{client}/details', [BedsController::class, 'details'])
-            ->name('beds.details')
-            ->whereNumber('client');
     });
 
     // С экрана ставится только план отдела: план менеджера пишет приказ на квартал,

@@ -7,7 +7,6 @@ use App\Enums\Crm\CallDirection;
 use App\Enums\Crm\CallResult;
 use App\Enums\Crm\ClientLifecycleStatus;
 use App\Enums\Crm\ClientSentiment;
-use App\Enums\Crm\OpportunityPreset;
 use App\Enums\Crm\PaymentBehavior;
 use App\Enums\Crm\PreferredChannel;
 use App\Enums\Crm\TaskOutcome;
@@ -20,7 +19,6 @@ use App\Services\Crm\Api\Operations\ClientOperations;
 use App\Services\Crm\Api\Operations\CommentOperations;
 use App\Services\Crm\Api\Operations\ContactOperations;
 use App\Services\Crm\Api\Operations\EmailOperations;
-use App\Services\Crm\Api\Operations\OpportunityOperations;
 use App\Services\Crm\Api\Operations\PaymentOperations;
 use App\Services\Crm\Api\Operations\PlanOperations;
 use App\Services\Crm\Api\Operations\ProfileOperations;
@@ -53,7 +51,6 @@ class OperationRegistry
         'calls' => 'Звонки',
         'emails' => 'Письма',
         'plans' => 'Планы продаж',
-        'opportunities' => 'Возможности',
         'attachments' => 'Вложения',
         'payments' => 'Платежи',
         'settlements' => 'Взаиморасчёты',
@@ -76,7 +73,6 @@ class OperationRegistry
             $this->emails(),
             $this->contacts(),
             $this->plans(),
-            $this->opportunities(),
             $this->attachments(),
             $this->payments(),
             $this->settlements(),
@@ -1023,35 +1019,6 @@ class OperationRegistry
                     Param::string('month', 'Месяц в формате ГГГГ-ММ', rules: ['max:7']),
                 ],
                 handler: [PlanOperations::class, 'byManager'],
-            ),
-        ];
-    }
-
-    /**
-     * @return list<Operation>
-     */
-    private function opportunities(): array
-    {
-        return [
-            new Operation(
-                id: 'opportunity.list',
-                section: 'opportunities',
-                method: 'GET',
-                uri: 'opportunities',
-                permission: 'crm-opportunities.view',
-                summary: 'Кому звонить сегодня: ранжированный список с объяснением',
-                description: 'Каждая строка несёт причину попадания в список и оценку приоритета. '
-                    .'Пресет not_buying требует измерения (бренд или категория) — без него список пуст.',
-                params: [
-                    Param::string('preset', 'Пресет отбора', enum: array_column(OpportunityPreset::cases(), 'value')),
-                    Param::string('month', 'Месяц в формате ГГГГ-ММ', rules: ['max:7']),
-                    Param::string('scope', 'Разрез: department или manager', enum: ['department', 'manager']),
-                    Param::integer('scope_id', 'Менеджер для разреза manager', rules: ['min:1']),
-                    Param::string('dimension', 'Измерение для пресета not_buying', enum: ['brand', 'category']),
-                    Param::integer('value', 'Идентификатор бренда или категории', rules: ['min:1']),
-                    Param::integer('limit', 'Сколько строк вернуть', rules: ['min:1', 'max:100']),
-                ],
-                handler: [OpportunityOperations::class, 'list'],
             ),
         ];
     }

@@ -125,3 +125,8 @@ GET /crm/opportunities/export   — XLSX через SimpleXlsxExporter::stream()
 **Право** `crm-opportunities.view` выдано всему отделу, включая менеджеров: список ничего
 не меняет, а границы видимости задаёт скоуп клиентов. Раздаётся миграцией
 `2026_08_04_130000_grant_crm_opportunities_permission` и заведено в `RolesAndPermissionsSeeder`.
+
+
+## Снято 15.09.2026
+
+Раздел удалён вместе с планами на партнёра (методика «сверху вниз»). Сигналы по партнёрам живут в «Мотивация → Мои клиенты» (`OpportunityService::signals()`).
