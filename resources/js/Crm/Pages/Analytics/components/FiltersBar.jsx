@@ -229,6 +229,22 @@ export default function FiltersBar({
                         selectedIds={filters.category_ids || []}
                         onChange={(ids) => update({ category_ids: ids })}
                     />
+                    {(filterOptions.organizations?.length ?? 0) > 0 && (
+                        <MultiSelectFilter
+                            label="Организация"
+                            options={[...(filterOptions.organizations || []), { id: 'none', name: 'Организация не указана' }]}
+                            selectedIds={filters.organization_ids || []}
+                            onChange={(ids) => update({ organization_ids: ids })}
+                        />
+                    )}
+                    {(filterOptions.warehouses?.length ?? 0) > 0 && (
+                        <MultiSelectFilter
+                            label="Склад отгрузки"
+                            options={filterOptions.warehouses || []}
+                            selectedIds={filters.warehouse_ids || []}
+                            onChange={(ids) => update({ warehouse_ids: ids })}
+                        />
+                    )}
                     <CompareControl
                         mode={compareMode}
                         offset={compareOffset}

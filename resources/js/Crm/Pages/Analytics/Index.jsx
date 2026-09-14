@@ -24,6 +24,8 @@ const DEFAULT_FILTERS = {
     company_ids: [],
     brand_ids: [],
     category_ids: [],
+    organization_ids: [],
+    warehouse_ids: [],
     product_ids: [],
     sku: '',
 };
@@ -49,6 +51,8 @@ function buildParams(filters, compareMode, compareOffset) {
     if (filters.company_ids?.length) params['company_ids'] = filters.company_ids;
     if (filters.brand_ids?.length) params['brand_ids'] = filters.brand_ids;
     if (filters.category_ids?.length) params['category_ids'] = filters.category_ids;
+    if (filters.organization_ids?.length) params['organization_ids'] = filters.organization_ids;
+    if (filters.warehouse_ids?.length) params['warehouse_ids'] = filters.warehouse_ids;
     if (filters.product_ids?.length) params['product_ids'] = filters.product_ids;
     if (filters.sku) params.sku = filters.sku;
     if (compareMode && compareMode !== 'none') {
@@ -161,6 +165,9 @@ export default function CrmAnalyticsIndex() {
     const contractorLabelClick = (r) => (r.company_id ? () => applyFilter({ company_ids: [r.company_id] }) : null);
     const partnerLabelClick = (r) => (r.partner_id ? () => applyFilter({ partner_ids: [r.partner_id] }) : null);
     const managerLabelClick = (r) => (r.manager_id ? () => applyFilter({ manager_ids: [r.manager_id] }) : null);
+    // «Организация не указана» — тоже значение фильтра: сервер понимает 'none'.
+    const organizationLabelClick = (r) => () => applyFilter({ organization_ids: [r.organization_id ?? 'none'] });
+    const warehouseLabelClick = (r) => (r.warehouse_id ? () => applyFilter({ warehouse_ids: [r.warehouse_id] }) : null);
     // Клик по товару ставит его единственным фильтром по товарам (как бренд/категория),
     // а не уводит на карточку.
     const productLabelClick = (r) => (r.product_id
@@ -187,6 +194,12 @@ export default function CrmAnalyticsIndex() {
     const partnerTags = idTags(filters.partner_ids, filterOptions?.partners, 'partner_ids');
     const brandTags = idTags(filters.brand_ids, filterOptions?.brands, 'brand_ids');
     const contractorTags = idTags(filters.company_ids, filterOptions?.companies, 'company_ids');
+    const organizationTags = (filters.organization_ids || []).map((id) => ({
+        key: `organization_ids:${id}`,
+        label: id === 'none' ? 'Организация не указана' : ((filterOptions?.organizations || []).find((o) => String(o.id) === String(id))?.name || `#${id}`),
+        onRemove: () => removeId('organization_ids', id),
+    }));
+    const warehouseTags = idTags(filters.warehouse_ids, filterOptions?.warehouses, 'warehouse_ids');
     const categoryTags = (filters.category_ids || []).map((id) => ({
         key: `category:${id}`,
         label: flatCategoryNames[id] || `#${id}`,
@@ -247,6 +260,8 @@ export default function CrmAnalyticsIndex() {
                     { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
                     { key: 'contractors', label: 'Контрагентов', render: (r) => r.contractors_count },
                 ]}
+                getLabelClick={organizationLabelClick}
+                selectedTags={organizationTags}
             />
         ),
     }] : [];
@@ -265,6 +280,8 @@ export default function CrmAnalyticsIndex() {
                     { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
                     { key: 'contractors', label: 'Контрагентов', render: (r) => r.contractors_count },
                 ]}
+                getLabelClick={warehouseLabelClick}
+                selectedTags={warehouseTags}
             />
         ),
     }] : [];
