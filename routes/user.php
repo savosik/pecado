@@ -149,6 +149,14 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/profile', [CabinetController::class, 'profile'])->name('profile');
     Route::put('/profile', [CabinetController::class, 'updateProfile'])->name('profile.update');
     Route::put('/profile/preorders', [CabinetController::class, 'updatePreorders'])->name('profile.preorders');
+
+    // Опрос о налогах и НДС: ответы уходят в CRM менеджеру (оценка рисков перехода на НДС).
+    Route::post('/tax-survey', [\App\Http\Controllers\User\TaxSurveyController::class, 'store'])
+        ->middleware('throttle:20,1')
+        ->name('tax-survey.store');
+    Route::post('/tax-survey/snooze', [\App\Http\Controllers\User\TaxSurveyController::class, 'snooze'])
+        ->middleware('throttle:20,1')
+        ->name('tax-survey.snooze');
     Route::get('/change-password', [CabinetController::class, 'changePassword'])->name('password.change');
     Route::put('/change-password', [CabinetController::class, 'updatePassword'])->name('password.update');
 

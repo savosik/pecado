@@ -11,11 +11,13 @@ import { AuthDialogProvider } from '@/contexts/AuthDialogContext';
 import BugReportWidget from '@/Components/BugReportWidget';
 import AgeGate from '@/components/common/AgeGate';
 import CookieConsent from '@/components/common/CookieConsent';
+import { TaxSurveyProvider, TaxSurveySideTab } from './TaxSurvey/TaxSurvey';
 
 export default function UserLayout({ children, fluid = false, flushTop = false }) {
     return (
         <AuthDialogProvider>
         <ProductQuickViewProvider>
+        <TaxSurveyProvider>
             <Box minH="100vh" bg="bg.subtle" display="flex" flexDirection="column" overflowX="clip">
                 <UserHeader />
                 <UserStatusBanner />
@@ -37,9 +39,11 @@ export default function UserLayout({ children, fluid = false, flushTop = false }
                 <ProductQuickViewMount />
                 <Toaster />
                 <BugReportWidget />
+                <TaxSurveySideTab />
                 <AgeGate />
                 <CookieConsent />
             </Box>
+        </TaxSurveyProvider>
         </ProductQuickViewProvider>
         </AuthDialogProvider>
     );

@@ -58,6 +58,7 @@ use App\Http\Controllers\Crm\StaffNotificationController;
 use App\Http\Controllers\Crm\TaskChecklistController;
 use App\Http\Controllers\Crm\TaskController;
 use App\Http\Controllers\Crm\TaskRecurrenceController;
+use App\Http\Controllers\Crm\TaxRegimeController;
 use App\Http\Controllers\Crm\TeamController;
 use App\Http\Controllers\Crm\TimesheetController;
 use Illuminate\Support\Facades\Route;
@@ -277,6 +278,10 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/contractors/{contractor}', [ContractorController::class, 'show'])
             ->name('contractors.show')
             ->whereNumber('contractor');
+        // Реестр налоговых режимов юрлиц — сбор ответов для оценки рисков
+        // перехода клиентов на НДС. Данные те же юрлица, право то же.
+        Route::get('/tax-regimes', [TaxRegimeController::class, 'index'])->name('tax-regimes.index');
+        Route::get('/tax-regimes/export', [TaxRegimeController::class, 'export'])->name('tax-regimes.export');
     });
 
     // Просмотр сайта от имени партнёра. Право отдельное: режим переключает
@@ -312,6 +317,13 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::put('/partners/{client}/preorders', [ClientProfileController::class, 'preorders'])
             ->name('clients.preorders.update')
             ->whereNumber('client');
+        // Налоговый режим юрлица — такое же знание менеджера о клиенте, как анкета.
+        Route::put('/contractors/{contractor}/tax-regime', [TaxRegimeController::class, 'update'])
+            ->name('contractors.tax-regime.update')
+            ->whereNumber('contractor');
+        Route::post('/contractors/{contractor}/tax-regime/confirm', [TaxRegimeController::class, 'confirm'])
+            ->name('contractors.tax-regime.confirm')
+            ->whereNumber('contractor');
     });
 
     // Тип аккаунта — состав базы партнёров отдела, а не работа с партнёром,

@@ -13,6 +13,7 @@ import ContactsPanel from '@/Crm/Components/ContactsPanel';
 import CommentThread from '@/Crm/Components/CommentThread';
 import TaskPanel from '@/Crm/Components/TaskPanel';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
+import ContractorTaxRegime from '@/Crm/Components/ContractorTaxRegime';
 import { formatPrice } from '@/utils/formatPrice';
 import RowActions from '@/shared/Panel/RowActions';
 
@@ -78,7 +79,14 @@ function DocumentsTable({ rows, emptyMessage }) {
     );
 }
 
-export default function Show({ contractor, documents, canSeeDocuments = false }) {
+export default function Show({
+    contractor,
+    documents,
+    canSeeDocuments = false,
+    taxRegime = null,
+    taxRegimeOptions = null,
+    canEditTaxRegime = false,
+}) {
     const { can } = usePermission();
 
     const canViewComments = can('crm-comments.view');
@@ -146,6 +154,20 @@ export default function Show({ contractor, documents, canSeeDocuments = false })
                         </SimpleGrid>
                     </Card.Body>
                 </Card.Root>
+
+                {taxRegime && (
+                    <Card.Root>
+                        <Card.Body>
+                            <ContractorTaxRegime
+                                contractorId={contractor.id}
+                                contractorName={contractor.name}
+                                regime={taxRegime}
+                                options={taxRegimeOptions}
+                                canEdit={canEditTaxRegime}
+                            />
+                        </Card.Body>
+                    </Card.Root>
+                )}
 
                 {/* Реквизиты закрыты по умолчанию: менеджер приходит сюда за
                     перепиской и задачами, а в договор заглядывает изредка. */}

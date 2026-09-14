@@ -197,6 +197,19 @@ class Company extends Model
     }
 
     /**
+     * Налоговый режим юрлица со слов менеджера: сейчас и план на следующий год.
+     *
+     * Своя таблица, а не колонки юрлица: Company принадлежит 1С, и её сохранение
+     * публикует контрагента в шину — ответ менеджера туда уезжать не должен.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<CrmContractorTaxRegime, $this>
+     */
+    public function taxRegime(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(CrmContractorTaxRegime::class);
+    }
+
+    /**
      * Реализации, проведённые на это юрлицо.
      *
      * @return HasMany<Shipment, $this>

@@ -87,6 +87,7 @@ export default function ClientsFilterBar({
     canSeeAll = false,
     canSeeTasks = false,
     canSeePlans = false,
+    canSeeTaxRegime = false,
     uncoveredCount = null,
     children = null,
 }) {
@@ -185,6 +186,22 @@ export default function ClientsFilterBar({
                     { value: 'disabled', label: 'Страховой запас выключен' },
                 ]}
             />
+
+            {/* Налоговый режим юрлиц: «нужно уточнить» — те же партнёры, по которым
+                менеджеру ставится задача, так что список и задачи совпадают. */}
+            {canSeeTaxRegime && (
+                <FilterSelect
+                    value={filters.tax_regime}
+                    onChange={(value) => onChange({ tax_regime: value })}
+                    placeholder="Налоговый режим: неважно"
+                    minW="200px"
+                    options={[
+                        { value: 'attention', label: 'Налоговый режим: уточнить' },
+                        { value: 'to_vat', label: 'Переходят на НДС' },
+                        { value: 'undecided', label: 'Ещё не решили про НДС' },
+                    ]}
+                />
+            )}
 
             <HStack gap={1} align="center">
                 <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">Заказ, ₽</Text>

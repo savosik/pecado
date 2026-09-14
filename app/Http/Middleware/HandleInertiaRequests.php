@@ -95,6 +95,8 @@ class HandleInertiaRequests extends Middleware
                 'onboarding_completed' => fn () => $request->session()->get('onboarding_completed'),
                 'stock_conflicts' => fn () => $request->session()->get('stock_conflicts'),
                 'debt_restriction' => fn () => $request->session()->get('debt_restriction'),
+                // Заказ только что оформлен: спокойный момент попросить о чём-то (опрос о НДС).
+                'order_placed' => fn () => (bool) $request->session()->get('order_placed'),
             ],
             'footerCategories' => Cache::remember('footer.categories', 3600, fn () => Category::active()->whereIsRoot()->select('id', 'name', 'slug')->limit(5)->get()
             ),
@@ -106,6 +108,10 @@ class HandleInertiaRequests extends Middleware
             // Лестница долга в кабинете: плашка, сквозной баннер и тост при смене
             // ступени. null — норма невидима (или домен не в бою).
             'debt' => fn () => app(\App\Services\Debt\CabinetDebtStatus::class)->forUser($request->user()),
+            // Опрос о налогах и НДС: ярлычок на краю экрана и приглашения. В режиме
+            // просмотра его видит и менеджер — проходит за клиента во время звонка,
+            // ответ записывается от имени менеджера (TaxSurveyController).
+            'taxSurvey' => fn () => app(\App\Services\Crm\TaxRegime\ClientTaxSurvey::class)->forUser($request->user()),
             'config' => [
                 'yandex_maps_api_key' => (string) config('services.yandex_maps.api_key', ''),
                 // Показывать ли клиенту его долги. Флаг нужен и на фронте: пункт меню

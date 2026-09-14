@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import PaymentOrderDialog from '@/shared/PaymentOrderDialog';
 import PwaInstallBanner from '@/components/PwaInstallBanner';
 import { DebtStatusCard, DueSoonCard } from './components/DebtNotices';
+import { TaxSurveyInvite } from '../TaxSurvey/TaxSurvey';
 import { getOrderTypeShortLabel, getOrderTypeColor } from '@/constants/orderType';
 
 const toQuery = (params) => new URLSearchParams(
@@ -271,6 +272,9 @@ export default function Dashboard({ ordersCount = 0, preordersCount = 0, favorit
                     </Card.Body>
                 </Card.Root>
             )}
+
+            {/* Опрос о налогах и НДС: карточка с «Не сейчас», пока есть о чём спросить. */}
+            <TaxSurveyInvite />
 
             {/* Onboarding Reminder */}
             {!questionnaireCompleted && (

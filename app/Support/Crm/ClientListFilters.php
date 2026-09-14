@@ -83,6 +83,17 @@ final class ClientListFilters
      */
     public const WITHOUT_MANAGER = 'none';
 
+    /**
+     * Налоговый режим юрлиц партнёра.
+     *
+     * `attention` — есть покупающее юрлицо без актуального ответа (ровно то,
+     * по чему менеджеру ставится задача), `to_vat` — план на следующий год
+     * означает рост НДС, `undecided` — партнёр ещё не решил.
+     *
+     * @var list<string>
+     */
+    public const TAX_REGIME_STATES = ['attention', 'to_vat', 'undecided'];
+
     public function __construct(
         public readonly CrmScope $scope,
         public readonly ?string $search,
@@ -101,6 +112,7 @@ final class ClientListFilters
         public readonly string $sortBy,
         public readonly string $sortOrder,
         public readonly int $perPage,
+        public readonly ?string $taxRegime = null,
     ) {}
 
     /**
@@ -161,6 +173,10 @@ final class ClientListFilters
             // ({@see \App\Services\Crm\ClientListService::hydrate()}), поэтому
             // сотня не дороже пятнадцати по числу запросов.
             perPage: min(max((int) $request->input('per_page', self::PER_PAGE_DEFAULT), 5), 100),
+            // Налоговый режим живёт на юрлицах — отбор гасится вместе с правом их видеть.
+            taxRegime: $actor->can('crm-contractors.view')
+                ? self::pick($request->input('tax_regime'), self::TAX_REGIME_STATES)
+                : null,
         );
     }
 
@@ -206,6 +222,7 @@ final class ClientListFilters
             'order_amount_from' => $this->orderAmountFrom,
             'order_amount_to' => $this->orderAmountTo,
             'stock_buffer' => $this->stockBuffer,
+            'tax_regime' => $this->taxRegime,
             'sort_by' => $this->sortBy,
             'sort_order' => $this->sortOrder,
             'per_page' => $this->perPage,

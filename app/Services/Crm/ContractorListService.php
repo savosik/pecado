@@ -6,6 +6,7 @@ use App\Enums\Crm\TaskStatus;
 use App\Models\Company;
 use App\Models\ContractorBalance;
 use App\Models\User;
+use App\Services\Crm\TaxRegime\ContractorTaxRegimeService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -161,9 +162,11 @@ class ContractorListService
      */
     public function forPartner(User $partner): array
     {
+        $regimes = app(ContractorTaxRegimeService::class);
+
         return Company::query()
             ->where('companies.user_id', $partner->getKey())
-            ->with(['user:id,name,erp_name', 'contractorBalance'])
+            ->with(['user:id,name,erp_name', 'contractorBalance', 'taxRegime.confirmer:id,name'])
             ->withCount([
                 'crmTasks as open_tasks_count' => fn (Builder $tasks) => $tasks
                     ->whereIn('status', TaskStatus::activeValues()),
@@ -172,7 +175,11 @@ class ContractorListService
             ->orderByDesc('is_default')
             ->orderBy('name')
             ->get()
-            ->map(fn (Company $company): array => $this->row($company))
+            // Налоговый режим — только во вкладке карточки: там его заполняют.
+            // В общем списке раздела он не нужен, для него есть реестр.
+            ->map(fn (Company $company): array => $this->row($company) + [
+                'tax_regime' => $regimes->payload($company->taxRegime),
+            ])
             ->all();
     }
 

@@ -212,7 +212,7 @@ class CheckoutController extends Controller
                     ? redirect()->route('cabinet.orders.show', $reserveOrder)
                     : redirect()->route('cabinet.reserves.index');
 
-                return $target->with('success', $this->successMessage($orders));
+                return $target->with('success', $this->successMessage($orders))->with('order_placed', true);
             }
 
             // Если создано несколько заказов (обычный / предзаказ / уценка) —
@@ -220,13 +220,13 @@ class CheckoutController extends Controller
             if ($orders->count() > 1) {
                 return redirect()
                     ->route('cabinet.orders.index')
-                    ->with('success', $this->successMessage($orders));
+                    ->with('success', $this->successMessage($orders))->with('order_placed', true);
             }
 
             // Один заказ — редиректим на его страницу
             return redirect()
                 ->route('cabinet.orders.show', $orders->first())
-                ->with('success', $this->successMessage($orders));
+                ->with('success', $this->successMessage($orders))->with('order_placed', true);
         } catch (\App\Exceptions\InsufficientStockException $e) {
             return back()
                 ->withErrors([

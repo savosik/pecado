@@ -1,6 +1,7 @@
 import { Badge, Box, Card, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
 import { formatPrice } from '@/utils/formatPrice';
 import RowActions from '@/shared/Panel/RowActions';
+import ContractorTaxRegime from '@/Crm/Components/ContractorTaxRegime';
 
 /**
  * Юрлица партнёра во вкладке его карточки.
@@ -9,9 +10,10 @@ import RowActions from '@/shared/Panel/RowActions';
  * строки с шапкой в карточке выглядит тяжелее, чем сама информация.
  *
  * Плана и факта здесь нет намеренно — они считаются по партнёру. Строка показывает
- * то, что у юрлица своё: реквизиты, долг из 1С и объём переписки.
+ * то, что у юрлица своё: реквизиты, долг из 1С, объём переписки и налоговый режим —
+ * его менеджер заполняет прямо здесь, звоня партнёру про все юрлица сразу.
  */
-export default function PartnerContractors({ contractors = [] }) {
+export default function PartnerContractors({ contractors = [], taxRegimeOptions = null, canEditTaxRegime = false }) {
     if (!contractors.length) {
         return (
             <Text fontSize="sm" color="fg.muted" py={4}>
@@ -83,6 +85,18 @@ export default function PartnerContractors({ contractors = [] }) {
                                 <RowActions size="xs" view={{ href: route('crm.contractors.show', contractor.id) }} />
                             </HStack>
                         </SimpleGrid>
+
+                        {contractor.tax_regime && (
+                            <Box mt={3} pt={3} borderTopWidth="1px">
+                                <ContractorTaxRegime
+                                    contractorId={contractor.id}
+                                    contractorName={contractor.name}
+                                    regime={contractor.tax_regime}
+                                    options={taxRegimeOptions}
+                                    canEdit={canEditTaxRegime}
+                                />
+                            </Box>
+                        )}
                     </Card.Body>
                 </Card.Root>
             ))}
