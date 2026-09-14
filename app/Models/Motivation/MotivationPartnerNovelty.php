@@ -3,6 +3,7 @@
 namespace App\Models\Motivation;
 
 use App\Models\User;
+use App\Services\Motivation\NoveltyCalculator;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -102,8 +103,13 @@ class MotivationPartnerNovelty extends Model
         $start = CarbonImmutable::instance($month)->startOfMonth();
         $end = CarbonImmutable::instance($month)->endOfMonth();
 
+        // Новизна признаётся только с периода ввода системы: партнёр, закупавшийся
+        // раньше, — старый, даже если кэш посчитан прежними правилами.
+        $recognized = NoveltyCalculator::recognizedFrom();
+
         return $query
             ->whereNotNull('novelty_started_on')
+            ->when($recognized !== null, fn (Builder $q): Builder => $q->whereDate('novelty_started_on', '>=', $recognized))
             ->whereDate('novelty_started_on', '<=', $end)
             ->whereDate('novelty_ends_on', '>=', $start)
             // Партнёр, чей перерыв подтвердить нечем, Новым не признаётся:

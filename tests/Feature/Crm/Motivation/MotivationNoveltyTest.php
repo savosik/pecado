@@ -210,6 +210,50 @@ class MotivationNoveltyTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('Новизна признаётся только с даты ввода системы: прежние партнёры остаются старыми')]
+    public function novelty_is_recognized_only_from_the_launch_period(): void
+    {
+        config(['motivation.novelty.recognized_from' => '2026-09-01']);
+
+        $old = $this->partner('Покупал в августе');
+        $this->shipment($old, '2026-08-10');
+        $fresh = $this->partner('Пришёл в сентябре');
+        $this->shipment($fresh, '2026-09-05');
+
+        app(NoveltyCalculator::class)->rebuild();
+
+        $oldRow = $this->novelty($old);
+        $this->assertSame('2026-08-01', $oldRow->first_shipment_on?->toDateString(), 'Первая покупка остаётся справочно');
+        $this->assertNull($oldRow->novelty_started_on, 'Период новизны не начинается');
+        $this->assertFalse($oldRow->isNewOn(Carbon::parse('2026-09-01')));
+
+        $freshRow = $this->novelty($fresh);
+        $this->assertSame('2026-09-01', $freshRow->novelty_started_on?->toDateString());
+        $this->assertSame('2027-02-28', $freshRow->novelty_ends_on?->toDateString());
+
+        // Именно этой выборкой пользуются П2 и медиана Личного плана.
+        $new = MotivationPartnerNovelty::query()->newInMonth(Carbon::parse('2026-09-01'))->pluck('user_id')->all();
+        $this->assertSame([$fresh->id], $new, 'Старый партнёр в П2 и из плана не исключается');
+    }
+
+    #[Test]
+    #[TestDox('Кэш, посчитанный прежними правилами, новизну до даты ввода не даёт')]
+    public function stale_cache_rows_are_ignored_before_the_launch_period(): void
+    {
+        config(['motivation.novelty.recognized_from' => '2026-09-01']);
+
+        $partner = $this->partner('Старый по прежним правилам');
+        MotivationPartnerNovelty::factory()->create([
+            'user_id' => $partner->id,
+            'first_shipment_on' => '2026-07-05',
+            'novelty_started_on' => '2026-07-01',
+            'novelty_ends_on' => '2026-12-31',
+        ]);
+
+        $this->assertSame([], MotivationPartnerNovelty::query()->newInMonth(Carbon::parse('2026-09-01'))->pluck('user_id')->all());
+    }
+
+    #[Test]
     #[TestDox('Пересчёт не задваивает строки и обновляет прежние')]
     public function rebuild_is_idempotent(): void
     {

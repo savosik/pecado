@@ -18,6 +18,9 @@
         </include>
     </source>
     <php>
+        <!-- Новизна в тестах не ограничена датой ввода системы: случаи признания
+             с 01.09.2026 задают ключ явно (MotivationNoveltyTest). -->
+        <env name="MOTIVATION_NOVELTY_RECOGNIZED_FROM" value=""/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

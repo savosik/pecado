@@ -24,6 +24,11 @@ use Illuminate\Support\Facades\DB;
  * Такие строки помечаются флагом history_incomplete. На начисление флаг
  * не влияет — система обязана различать знание и его отсутствие, а не
  * подменять одно другим.
+ *
+ * Новизна признаётся только с периода `motivation.novelty.recognized_from`
+ * (решение заказчика от 14.09.2026): все партнёры, закупавшиеся до этой даты, —
+ * старые. Первая покупка и перерыв у них сохраняются справочно, но Период
+ * новизны не начинается: их отгрузки идут в П1 и в медиану Личного плана.
  */
 class NoveltyCalculator
 {
@@ -105,18 +110,34 @@ class NoveltyCalculator
             }
         }
 
+        // Новизна до даты ввода системы не признаётся: такой партнёр — старый,
+        // а его первая покупка и перерыв остаются в строке справочно.
+        $recognized = $this->recognizedFrom();
+        $countsAsNew = $recognized === null || $start->greaterThanOrEqualTo($recognized);
+
         return array_replace($base, [
             'first_shipment_on' => $first->toDateString(),
             'last_shipment_before_gap_on' => $lastBeforeGap?->toDateString(),
             'gap_days' => $gapDays,
-            'novelty_started_on' => $start->toDateString(),
-            'novelty_ends_on' => $start->addMonths($noveltyMonths)->subDay()->toDateString(),
+            'novelty_started_on' => $countsAsNew ? $start->toDateString() : null,
+            'novelty_ends_on' => $countsAsNew ? $start->addMonths($noveltyMonths)->subDay()->toDateString() : null,
             // Перерыв подтвердить нельзя, если Период новизны начат первой
             // покупкой, пришедшейся на первый месяц доступной истории.
-            'history_incomplete' => $lastBeforeGap === null
+            'history_incomplete' => $countsAsNew
+                && $lastBeforeGap === null
                 && $historyStart !== null
                 && $start->lessThanOrEqualTo($historyStart),
         ]);
+    }
+
+    /**
+     * С какого периода признаётся новизна; null — ограничения нет.
+     */
+    public static function recognizedFrom(): ?CarbonImmutable
+    {
+        $raw = (string) config('motivation.novelty.recognized_from', '');
+
+        return $raw === '' ? null : CarbonImmutable::parse($raw)->startOfMonth();
     }
 
     /**
