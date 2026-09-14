@@ -70,6 +70,10 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
+            // Файл пишут разные пользователи: php-fpm (www-data) и воркеры с планировщиком
+            // (laravel). С умолчанием 0644 создатель суточного файла запирал его для
+            // остальных, и Log::* бросал исключение — 500 в вебе, падения в очередях.
+            'permission' => 0666,
             'replace_placeholders' => true,
         ],
 
@@ -86,6 +90,7 @@ return [
             'path' => storage_path('logs/bi-queries.log'),
             'level' => 'info',
             'days' => env('LOG_BI_DAYS', 90),
+            'permission' => 0666,
             'replace_placeholders' => true,
         ],
 
@@ -102,6 +107,7 @@ return [
             'path' => storage_path('logs/crm-agent.log'),
             'level' => 'info',
             'days' => env('LOG_CRM_AGENT_DAYS', 180),
+            'permission' => 0666,
             'replace_placeholders' => true,
         ],
 
@@ -110,6 +116,7 @@ return [
             'path' => storage_path('logs/purchasing-agent.log'),
             'level' => 'info',
             'days' => env('LOG_PURCHASING_AGENT_DAYS', 180),
+            'permission' => 0666,
             'replace_placeholders' => true,
         ],
 
