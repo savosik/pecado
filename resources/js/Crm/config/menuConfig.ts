@@ -203,20 +203,16 @@ export const menuConfig: MenuGroup[] = [
     {
         // Своё право, а не crm-salary — раздел не показывается менеджерам до ввода
         // Положения в действие, иначе они увидят две разные цифры дохода.
-        // Три пункта у работника; остальные экраны — вкладками внутри (components/hubs.js).
-        title: "Мотивация",
+        // Одна группа на всех: первые три пункта — работнику (crm-motivation.view),
+        // остальные четыре — руководителю (crm-motivation.edit), менеджер их не
+        // видит — пункты отсеиваются по праву. Прочие экраны — вкладками внутри
+        // (components/hubs.js).
+        title: "Мотивация v2",
         icon: LuSparkles,
         items: [
             { label: "Мой месяц", icon: LuSparkles, path: "/crm/motivation", permission: "crm-motivation.view" },
             { label: "Мои клиенты", icon: LuUsers, path: "/crm/motivation/base", permission: "crm-motivation.view", match: ["/crm/motivation/rhythm", "/crm/motivation/debts", "/crm/motivation/wake", "/crm/motivation/new-partners", "/crm/motivation/pool", "/crm/motivation/focus"] },
             { label: "Расчётный лист", icon: LuReceipt, path: "/crm/motivation/payslip", permission: "crm-motivation.view", match: ["/crm/motivation/plan", "/crm/motivation/quarter"] },
-        ],
-    },
-    {
-        // Рабочее место руководителя: четыре пункта, внутри вкладки.
-        title: "Мотивация · руководитель",
-        icon: LuClipboardCheck,
-        items: [
             { label: "Параметры и планы", icon: LuSlidersHorizontal, path: "/crm/motivation/settings", permission: "crm-motivation.edit", match: ["/crm/motivation/plans"] },
             { label: "Ведомость", icon: LuClipboardCheck, path: "/crm/motivation/team", permission: "crm-motivation.edit", match: ["/crm/motivation/approval", "/crm/motivation/quarter/admin", "/crm/motivation/forecast"] },
             { label: "Клиенты отдела", icon: LuPackage, path: "/crm/motivation/pool/admin", permission: "crm-motivation.edit", match: ["/crm/motivation/focus-list", "/crm/motivation/health"] },
