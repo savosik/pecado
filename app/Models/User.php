@@ -844,6 +844,26 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
+     * Чью карточку сотрудник может открыть.
+     *
+     * Граница {@see scopeVisibleInCrm()} плюс Пул: свободных партнёров (без
+     * менеджера) раздел «Мотивация» показывает менеджеру как кандидатов на
+     * закрепление, и карточку такого партнёра он должен открыть — иначе
+     * «посмотреть, кого беру» упирается в 404. В списки партнёров Пул при этом
+     * не попадает: это доступ к одной карточке, а не расширение базы.
+     */
+    public function scopeOpenableInCrm(\Illuminate\Database\Eloquent\Builder $query, self $actor): \Illuminate\Database\Eloquent\Builder
+    {
+        if (! $actor->can('crm-motivation.view')) {
+            return $query->visibleInCrm($actor);
+        }
+
+        return $query->clients()->where(fn (\Illuminate\Database\Eloquent\Builder $q) => $q
+            ->whereNull('personal_manager_id')
+            ->orWhereIn('id', self::query()->select('id')->visibleInCrm($actor)));
+    }
+
+    /**
      * Сузить видимых клиентов до выбранного разреза.
      *
      * Надстройка над {@see scopeVisibleInCrm()}, а не замена: право задаёт

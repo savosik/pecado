@@ -194,6 +194,38 @@ class CrmClientVisibilityTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page->where('clients.total', 2));
     }
 
+    /**
+     * Свободный партнёр из Пула («Мотивация → Свободные клиенты») — кандидат на
+     * закрепление: его карточку открывает тот, кто видит раздел, а в списки
+     * партнёров он при этом не попадает.
+     */
+    #[Test]
+    public function pool_partner_card_opens_for_those_who_see_motivation(): void
+    {
+        $this->clientsOf($this->profileA, 1);
+        $free = User::factory()->create(['personal_manager_id' => null]);
+
+        $this->actingAs($this->managerA)
+            ->get(route('crm.clients.show', $free->id))
+            ->assertNotFound();
+
+        $this->managerA->givePermissionTo('crm-motivation.view');
+
+        $this->actingAs($this->managerA->fresh())
+            ->get(route('crm.clients.show', $free->id))
+            ->assertOk();
+
+        $this->actingAs($this->managerA->fresh())
+            ->get(route('crm.clients.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('clients.total', 1));
+
+        // РОП без галочки «Нераспределённые» карточку из Пула тоже открывает.
+        $this->actingAs($this->salesHead())
+            ->get(route('crm.clients.show', $free->id))
+            ->assertOk();
+    }
+
     #[Test]
     public function checkbox_on_leaves_only_clients_without_manager(): void
     {

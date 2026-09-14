@@ -175,9 +175,10 @@ class ClientController extends CrmController
         ContractorListService $contractors,
         ContractListService $contractList,
     ): Response {
-        // Резолвим через тот же scope: чужой партнёр — 404, а не 403.
+        // Резолвим через scope: чужой партнёр — 404, а не 403. Свободный
+        // партнёр из Пула открывается тем, кто видит «Мотивацию».
         $user = User::query()
-            ->visibleInCrm($this->crmActor($request))
+            ->openableInCrm($this->crmActor($request))
             ->with(['personalManager:id,name', 'clientStatus:id,name,color'])
             ->findOrFail($client);
 
