@@ -2,7 +2,6 @@
 
 namespace Tests\Unit\Support;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -27,10 +26,13 @@ class LogWritabilityConfigTest extends TestCase
         }
     }
 
-    #[DataProvider('supervisorConfigDirs')]
-    public function test_supervisor_programs_do_not_run_as_root(string $dir): void
+    /**
+     * Только conf.d: conf.d.local генерируется из него (`make worker-slim`)
+     * и лежит в .gitignore — в CI этой папки нет.
+     */
+    public function test_supervisor_programs_do_not_run_as_root(): void
     {
-        $files = glob(base_path("docker/supervisor/{$dir}/*.conf"));
+        $files = glob(base_path('docker/supervisor/conf.d/*.conf'));
 
         $this->assertNotEmpty($files);
 
@@ -49,13 +51,5 @@ class LogWritabilityConfigTest extends TestCase
                 );
             }
         }
-    }
-
-    public static function supervisorConfigDirs(): array
-    {
-        return [
-            'dev и прод' => ['conf.d'],
-            'локальный профиль' => ['conf.d.local'],
-        ];
     }
 }
