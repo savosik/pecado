@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Crm\Api;
+namespace App\Support\OperationApi;
 
 use Illuminate\Validation\Rule;
 
