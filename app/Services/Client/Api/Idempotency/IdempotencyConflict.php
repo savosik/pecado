@@ -14,7 +14,7 @@ class IdempotencyConflict extends RuntimeException
      * @param  array<string, mixed>  $meta
      */
     public function __construct(
-        public readonly string $code,
+        public readonly string $errorCode,
         string $message,
         public readonly int $status = 422,
         public readonly array $meta = [],

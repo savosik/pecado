@@ -127,7 +127,7 @@ class ClientApiController extends Controller
         } catch (ValidationException $e) {
             return response()->json(Envelope::validation($e->errors()), 422);
         } catch (IdempotencyConflict $e) {
-            return response()->json(Envelope::error($e->code, $e->getMessage(), null, $e->meta), $e->status);
+            return response()->json(Envelope::error($e->errorCode, $e->getMessage(), null, $e->meta), $e->status);
         } catch (ModelNotFoundException) {
             return $this->error('not_found', 'Запись не найдена или недоступна этому клиенту.', 404);
         } catch (ReserveActionException $e) {

@@ -3,6 +3,8 @@
 namespace App\Services\Client\Api;
 
 use App\Models\User;
+use App\Services\Client\Api\Idempotency\IdempotencyConflict;
+use App\Services\Client\Api\Idempotency\IdempotencyStore;
 use App\Support\Client\ClientApiSource;
 use App\Support\OperationApi\OperationDenied;
 use App\Support\OperationApi\OperationInput;
@@ -17,8 +19,9 @@ use Throwable;
  * Через неё проходят оба канала — REST `/api/client/v1/*` и MCP `/mcp/client`, —
  * поэтому гейт, проверка аргументов, контекст юрлица и аудит написаны один раз.
  *
- * Порядок: доступность → гейт раздела → валидация → юрлицо → обработчик → аудит.
- * Идемпотентность (capi-03) встраивается вокруг обработчика.
+ * Порядок: доступность → гейт раздела → валидация → юрлицо → ключ идемпотентности
+ * → обработчик → сохранение ответа → аудит. Ключ занимается до обработчика, чтобы
+ * два параллельных повтора не прошли оба; провал обработчика ключ освобождает.
  */
 class OperationRunner
 {
@@ -31,6 +34,7 @@ class OperationRunner
     public function __construct(
         private readonly Container $container,
         private readonly CompanyContext $companies,
+        private readonly IdempotencyStore $idempotency,
     ) {}
 
     /**
@@ -62,15 +66,37 @@ class OperationRunner
             );
         }
 
+        $useKey = $operation->idempotent && $idempotencyKey !== null;
+
+        if ($operation->idempotencyRequired && $idempotencyKey === null) {
+            throw IdempotencyConflict::required('Idempotency-Key');
+        }
+
+        if ($useKey) {
+            $replay = $this->idempotency->begin($actor, $operation, $idempotencyKey, $validated);
+
+            if ($replay !== null) {
+                return $replay;
+            }
+        }
+
         $handler = $this->container->make($operation->handler[0]);
         $method = $operation->handler[1];
 
         try {
             $result = $handler->{$method}($actor, new OperationInput($validated));
         } catch (Throwable $e) {
+            if ($useKey) {
+                $this->idempotency->fail($actor, $operation, $idempotencyKey);
+            }
+
             $this->audit($operation, $actor, $validated, $idempotencyKey, $e);
 
             throw $e;
+        }
+
+        if ($useKey) {
+            $this->idempotency->complete($actor, $operation, $idempotencyKey, $result);
         }
 
         $this->audit($operation, $actor, $validated, $idempotencyKey);
