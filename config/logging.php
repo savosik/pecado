@@ -111,6 +111,22 @@ return [
             'replace_placeholders' => true,
         ],
 
+        /*
+         * Аудит клиентского API v1 и MCP клиента (/api/client/v1, /mcp/client).
+         *
+         * Только пишущие операции: заказ, оформленный агентом клиента, нужно уметь
+         * найти по имени токена и ключу идемпотентности, когда клиент спросит
+         * «кто это заказал».
+         */
+        'client-agent' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/client-agent.log'),
+            'level' => 'info',
+            'days' => env('LOG_CLIENT_AGENT_DAYS', 180),
+            'permission' => 0666,
+            'replace_placeholders' => true,
+        ],
+
         'purchasing-agent' => [
             'driver' => 'daily',
             'path' => storage_path('logs/purchasing-agent.log'),

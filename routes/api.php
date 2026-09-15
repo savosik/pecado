@@ -186,6 +186,34 @@ Route::prefix('client-api/{token}')
     });
 
 // ──────────────────────────────────────────────────────────────
+// Клиентский API v1 — для ИИ-агентов клиентов (эпик capi-00)
+//
+// Маршруты собраны обходом реестра операций: реестр — единственный источник
+// для адресов, discovery `/me`, OpenAPI-документа и каталога инструментов
+// MCP `/mcp/client`. Токен — тот же api_tokens, но в заголовке Bearer;
+// legacy `/api/client-api/{token}/*` выше остаётся без изменений и навсегда.
+// ──────────────────────────────────────────────────────────────
+Route::prefix('client/v1')
+    ->middleware([\App\Http\Middleware\AuthenticateClientApi::class, 'throttle:client-api'])
+    ->name(\App\Http\Controllers\Api\Client\ClientApiController::ROUTE_PREFIX)
+    ->group(function () {
+        Route::get('me', [\App\Http\Controllers\Api\Client\ClientApiController::class, 'me'])->name('me');
+
+        foreach (app(\App\Services\Client\Api\OperationRegistry::class)->callable() as $operation) {
+            $route = Route::match([$operation->method], $operation->uri, [
+                \App\Http\Controllers\Api\Client\ClientApiController::class, 'run',
+            ])->name($operation->id);
+
+            // Ограничения параметров пути из реестра: числовые id — цифры,
+            // идентификаторы — безопасный набор, иначе `orders/changes` ушло
+            // бы в карточку заказа.
+            foreach ($operation->routeConstraints() as $param => $pattern) {
+                $route->where($param, $pattern);
+            }
+        }
+    });
+
+// ──────────────────────────────────────────────────────────────
 // Agent Hub — совместная работа ИИ-агентов (сайт ↔ 1С) по токену
 // Самоописываемая точка входа: GET по ссылке отдаёт задачу и правила
 // ──────────────────────────────────────────────────────────────

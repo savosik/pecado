@@ -305,6 +305,12 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by('crm-api:'.($request->user()?->id ?: $request->ip()));
         });
 
+        // Клиентский API v1 и MCP клиента: лимит жёстче менеджерского и тоже
+        // по владельцу токена — несколько клиентов могут сидеть за одним NAT.
+        RateLimiter::for('client-api', function (Request $request) {
+            return Limit::perMinute(60)->by('client-api:'.($request->user()?->id ?: $request->ip()));
+        });
+
         // Scramble: спека API (/docs/api, /docs/api.json) публично доступна.
         // По умолчанию RestrictedDocsAccess пускает только в local; открываем всем,
         // чтобы ИИ-агент мог скачать OpenAPI-контракт по URL на dev/prod.

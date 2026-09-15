@@ -6,8 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Payments\PaymentOrder;
 use App\Services\Payments\PaymentOrderService;
-use App\Support\Cabinet\CabinetFinance;
-use App\Support\Debt\DebtControl;
+use App\Support\Cabinet\PaymentOrdersGate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,7 +52,7 @@ class PaymentOrderController extends Controller
      */
     public static function availableFor(User $user): bool
     {
-        return CabinetFinance::enabledFor($user) || DebtControl::live(DebtControl::ACTION_CABINET);
+        return PaymentOrdersGate::availableFor($user);
     }
 
     public function download(Request $request): Response
