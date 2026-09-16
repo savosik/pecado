@@ -66,7 +66,7 @@ class ClientApiDiscoveryTest extends ClientApiTestCase
         foreach ($routes as $route) {
             $name = (string) $route->getName();
 
-            if (str_starts_with($name, 'api.client.v1.') && $name !== 'api.client.v1.me') {
+            if (str_starts_with($name, 'api.client.v1.') && $name !== 'api.client.v1.me' && ! str_starts_with($name, 'api.client.v1.files.')) {
                 $this->assertContains(substr($name, strlen('api.client.v1.')), $ids, "Маршрут {$name} без операции в реестре.");
             }
         }

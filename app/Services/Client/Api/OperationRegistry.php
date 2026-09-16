@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Services\Client\Api\Operations\CartOperations;
 use App\Services\Client\Api\Operations\CatalogOperations;
 use App\Services\Client\Api\Operations\CheckoutOperations;
+use App\Services\Client\Api\Operations\ContractOperations;
+use App\Services\Client\Api\Operations\DocumentOperations;
 use App\Services\Client\Api\Operations\OrderOperations;
 use App\Services\Client\Api\Operations\ProfileOperations;
 use App\Services\Client\Api\Operations\ReserveOperations;
@@ -39,6 +41,8 @@ class OperationRegistry
         OrderOperations::class,
         ShipmentOperations::class,
         ReserveOperations::class,
+        DocumentOperations::class,
+        ContractOperations::class,
     ];
 
     /** @var list<Operation>|null */
