@@ -11,7 +11,7 @@ import {
     LuShieldCheck, LuCode, LuArrowRight, LuPackage,
     LuDollarSign, LuWarehouse, LuShoppingCart, LuKey,
     LuTriangleAlert, LuClock, LuGlobe, LuArrowRightLeft,
-    LuTruck, LuFileText, LuBookOpen, LuExternalLink, LuRocket,
+    LuTruck, LuFileText, LuBookOpen, LuExternalLink, LuRocket, LuBot,
     LuArchive,
 } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
@@ -545,6 +545,15 @@ export default function Index({ tokens: initialTokens, docs = {} }) {
 
     // Быстрый старт подставляет первый ключ; без ключей — заглушка.
     const sampleKey = tokens[0]?.token ?? '<ВАШ_КЛЮЧ>';
+
+    const copyToClipboard = async (text, title) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            toaster.create({ title, type: 'success' });
+        } catch (err) {
+            toaster.create({ title: 'Не удалось скопировать', type: 'error' });
+        }
+    };
     const v1Base = tokens[0]?.v1_base_url ?? `${window.location.origin}/api/client/v1`;
     const quickStart = [
         {
@@ -558,6 +567,34 @@ export default function Index({ tokens: initialTokens, docs = {} }) {
         {
             title: 'Создать заказ (с ключом идемпотентности)',
             code: `curl -X POST ${v1Base}/orders \\\n  -H "Authorization: Bearer ${sampleKey}" \\\n  -H "Idempotency-Key: <уникальный-ключ>" \\\n  -H "Content-Type: application/json" \\\n  -d '{"products":[{"identifier":"АРТИКУЛ","quantity":1}]}'`,
+        },
+    ];
+
+    // Подключение ИИ-агента к MCP-серверу кабинета: те же ключ и токен, что у REST v1.
+    const mcpUrl = docs.mcp || `${window.location.origin}/mcp/client`;
+    const mcpSnippets = [
+        {
+            title: 'Claude Desktop / Claude Code (claude_desktop_config.json, .mcp.json)',
+            code: JSON.stringify({
+                mcpServers: {
+                    'pecado-client': {
+                        type: 'http',
+                        url: mcpUrl,
+                        headers: { Authorization: `Bearer ${sampleKey}` },
+                    },
+                },
+            }, null, 2),
+        },
+        {
+            title: 'Cursor (.cursor/mcp.json)',
+            code: JSON.stringify({
+                mcpServers: {
+                    'pecado-client': {
+                        url: mcpUrl,
+                        headers: { Authorization: `Bearer ${sampleKey}` },
+                    },
+                },
+            }, null, 2),
         },
     ];
 
@@ -746,6 +783,53 @@ export default function Index({ tokens: initialTokens, docs = {} }) {
                                     Заголовок <Code size="xs">Idempotency-Key</Code> на создании заказа обязателен —
                                     повтор с тем же ключом не создаст второй заказ.
                                 </Text>
+                            </VStack>
+                        </Card.Body>
+                    </Card.Root>
+
+                    {/* Подключить ИИ-агента */}
+                    <Card.Root
+                        bg="bg" borderRadius="xl"
+                        border="1px solid" borderColor="border.muted"
+                        overflow="hidden"
+                    >
+                        <Card.Body p="5">
+                            <HStack mb="3" justify="space-between" flexWrap="wrap" gap="2">
+                                <HStack>
+                                    <LuBot size={18} style={{ color: 'var(--chakra-colors-purple-500)' }} />
+                                    <Text fontWeight="700" fontSize="sm">Подключить ИИ-агента (MCP)</Text>
+                                </HStack>
+                                <HStack gap="2">
+                                    <Code size="xs">{mcpUrl}</Code>
+                                    <Button size="xs" variant="ghost" onClick={() => copyToClipboard(mcpUrl, 'Адрес MCP-сервера скопирован')}>
+                                        <LuCopy />
+                                    </Button>
+                                </HStack>
+                            </HStack>
+                            <Text fontSize="sm" color="gray.500" lineHeight="1.7" mb="3">
+                                Ваш агент (Claude, Cursor и другие клиенты MCP) подключается к серверу кабинета и работает
+                                от вашего имени: цены и остатки, корзина и заказы, статусы, документы, оплаты, вопрос менеджеру.
+                                Ключ — тот же, что для API v1. Заказ через агента уходит в 1С так же, как из кабинета;
+                                чего API не решает, агент спросит у менеджера.
+                            </Text>
+                            <VStack align="stretch" gap="3">
+                                {mcpSnippets.map((snippet, i) => (
+                                    <Box key={i}>
+                                        <HStack justify="space-between" mb="1.5">
+                                            <Text fontSize="2xs" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="0.05em">
+                                                {snippet.title}
+                                            </Text>
+                                            <Button size="xs" variant="ghost" onClick={() => copyToClipboard(snippet.code, 'Конфигурация скопирована')}>
+                                                <LuCopy /> Скопировать
+                                            </Button>
+                                        </HStack>
+                                        <Box bg="gray.900" _dark={{ bg: 'gray.950' }} borderRadius="lg" p="3" overflowX="auto">
+                                            <Text as="pre" fontSize="xs" color="green.300" fontFamily="mono" whiteSpace="pre-wrap">
+                                                {snippet.code}
+                                            </Text>
+                                        </Box>
+                                    </Box>
+                                ))}
                             </VStack>
                         </Card.Body>
                     </Card.Root>
