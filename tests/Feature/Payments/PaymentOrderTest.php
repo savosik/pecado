@@ -246,6 +246,27 @@ class PaymentOrderTest extends TestCase
             ->assertJsonCount(2, 'pairs.0.documents');
     }
 
+    #[Test]
+    public function options_do_not_fail_when_there_are_facts_but_no_outstanding_lines(): void
+    {
+        // Клиент всё оплатил: строк графика к оплате нет, а проводки есть.
+        SettlementEntry::query()->where('user_id', $this->client->id)->delete();
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'user_id' => $this->client->id,
+            'company_id' => $this->company->id,
+            'organization_id' => $this->organization->id,
+            'amount' => -1500,
+            'amount_rub' => -1500,
+        ]);
+
+        $options = $this->service()->options($this->client);
+
+        $this->assertCount(1, $options['pairs']);
+        $this->assertSame(1500.0, $options['pairs'][0]['debt']);
+        $this->assertSame([], $options['pairs'][0]['documents']);
+    }
+
     private function plan(float $amount, string $due, string $number, string $date): void
     {
         SettlementEntry::factory()->create([

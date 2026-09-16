@@ -77,7 +77,10 @@ class PaymentOrderService
             ->get()
             ->keyBy(fn (object $row): string => $row->company_id.':'.$row->organization_id);
 
-        $pairKeys = $lines->map(fn (SettlementEntry $line): string => $line->company_id.':'.$line->organization_id)
+        // toBase(): у пустой Eloquent-коллекции map() остаётся Eloquent-коллекцией, и merge()
+        // строковых ключей падает на getKey() — клиент с проводками, но без
+        // непогашенных строк графика, получал 500 вместо списка пар.
+        $pairKeys = $lines->toBase()->map(fn (SettlementEntry $line): string => $line->company_id.':'.$line->organization_id)
             ->merge($balances->keys())
             ->unique()
             ->values();
