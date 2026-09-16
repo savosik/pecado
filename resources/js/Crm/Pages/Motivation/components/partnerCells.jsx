@@ -5,6 +5,12 @@ import { fmtDay, fmtRub0, plural } from '../../Salary/components/format';
 /**
  * Ячейки, общие для списков партнёров: имя с пометками, деньги, дата с «молчит».
  */
+const ABC_PALETTE = { A: 'green', B: 'blue', C: 'gray' };
+
+/**
+ * Партнёр и группа: имя ссылкой, группа ABC цветным бейджем (A — зелёный,
+ * B — синий, C — серый) и «новый», пока партнёр в Периоде новизны.
+ */
 export function PartnerName({ row }) {
     return (
         <VStack align="start" gap={0.5}>
@@ -12,9 +18,9 @@ export function PartnerName({ row }) {
                 <Text fontWeight="600" fontSize="sm" _hover={{ textDecoration: 'underline' }}>{row.name}</Text>
             </Link>
             <HStack gap={1} flexWrap="wrap">
-                {row.in_novelty && <Badge size="xs" colorPalette="blue" variant="subtle">новый партнёр · П2</Badge>}
-                {!row.ever_bought && <Badge size="xs" colorPalette="gray" variant="subtle">ни разу не покупал</Badge>}
-                {row.abc && <Badge size="xs" variant="outline">{row.abc}</Badge>}
+                {row.abc && <Badge size="xs" variant="solid" colorPalette={ABC_PALETTE[row.abc] ?? 'gray'} title={`Группа ${row.abc} по обороту за год`}>{row.abc}</Badge>}
+                {row.in_novelty && <Badge size="xs" variant="solid" colorPalette="purple" title="В периоде новизны — отгрузки идут по ставке П2">новый</Badge>}
+                {!row.ever_bought && !row.in_novelty && <Badge size="xs" variant="subtle" colorPalette="gray">не покупал</Badge>}
             </HStack>
         </VStack>
     );

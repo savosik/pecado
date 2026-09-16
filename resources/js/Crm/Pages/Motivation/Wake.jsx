@@ -54,7 +54,7 @@ export default function MotivationWake({ tab_counts: tabCounts = null, month, mo
 
     const columns = tab === 'silent'
         ? [
-            { key: 'name', label: 'Партнёр', sortable: true, render: (row) => <PartnerName row={row} /> },
+            { key: 'name', label: 'Партнёр и группа', sortable: true, render: (row) => <PartnerName row={row} /> },
             { key: 'last_purchase_on', label: 'Последняя покупка', sortable: true, render: (row) => <LastPurchase row={row} /> },
             { key: 'silent_days', label: 'Не покупает', align: 'right', sortable: true, render: (row) => <Text fontSize="sm">{row.silent_months} {plural(row.silent_months, 'месяц', 'месяца', 'месяцев')}</Text> },
             { key: 'best_month', label: 'Раньше брал', align: 'right', sortable: true, render: (row) => <BestMonth value={row.best_month} /> },
@@ -68,7 +68,7 @@ export default function MotivationWake({ tab_counts: tabCounts = null, month, mo
             { key: 'actions', label: 'Действия', align: 'right', render: (row) => <PartnerActions row={row} onTask={setTaskFor} onCall={setCallFor} /> },
         ]
         : [
-            { key: 'name', label: 'Партнёр', sortable: true, render: (row) => <PartnerName row={row} /> },
+            { key: 'name', label: 'Партнёр и группа', sortable: true, render: (row) => <PartnerName row={row} /> },
             { key: 'debt', label: 'Долг', align: 'right', sortable: true, render: (row) => <Money value={row.debt?.amount} muted /> },
             { key: 'contact', label: 'Контакт', render: contact },
             { key: 'actions', label: 'Действия', align: 'right', render: (row) => <PartnerActions row={row} onTask={setTaskFor} onCall={setCallFor} /> },

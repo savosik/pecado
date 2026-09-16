@@ -53,7 +53,7 @@ export default function MotivationRhythm({ tab_counts: tabCounts = null, month, 
     });
 
     const columns = [
-        { key: 'name', label: 'Партнёр', sortable: true, render: (row) => <PartnerName row={row} /> },
+        { key: 'name', label: 'Партнёр и группа', sortable: true, render: (row) => <PartnerName row={row} /> },
         { key: 'usual_monthly', label: 'Обычно берёт в месяц', align: 'right', sortable: true, render: (row) => <Money value={row.usual_monthly} /> },
         { key: 'current_month', label: 'Взял в этом месяце', align: 'right', sortable: true, render: (row) => <Money value={row.current_month} /> },
         { key: 'shortfall', label: 'Не добрал', align: 'right', sortable: true, render: (row) => <Money value={row.shortfall} /> },
