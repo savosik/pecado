@@ -46,6 +46,7 @@ class MotivationDebtExclusion extends Model
 
     protected $fillable = [
         'shipment_id',
+        'company_id',
         'user_id',
         'reason',
         'excluded_from',
@@ -81,6 +82,16 @@ class MotivationDebtExclusion extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_id');
+    }
+
+    /**
+     * Контрагент партнёра, если исключение по юрлицу целиком.
+     *
+     * @return BelongsTo<\App\Models\Company, $this>
+     */
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Company::class);
     }
 
     /**

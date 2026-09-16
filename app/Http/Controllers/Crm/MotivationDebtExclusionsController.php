@@ -40,6 +40,7 @@ class MotivationDebtExclusionsController extends CrmController
             'excluded_until' => ['nullable', 'date'],
             'document_ref' => ['required', 'string', 'max:255'],
             'shipment_id' => ['nullable', 'integer'],
+            'company_id' => ['nullable', 'integer', 'exists:companies,id'],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
             'amount' => ['nullable', 'numeric', 'min:0'],
             'comment' => ['nullable', 'string', 'max:500'],

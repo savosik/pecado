@@ -72,7 +72,8 @@ class DebtExclusionService
             $contractors = \App\Models\Shipment::query()
                 ->whereIn('shipments.id', array_map(fn (array $r): int => (int) $r['shipment_id'], $result['rows']))
                 ->leftJoin('companies', 'companies.id', '=', 'shipments.company_id')
-                ->pluck('companies.name', 'shipments.id');
+                ->get(['shipments.id', 'shipments.company_id', 'companies.name'])
+                ->keyBy('id');
 
             foreach ($result['rows'] as $row) {
                 $graceEnds = CarbonImmutable::parse((string) $row['grace_ends_on']);
@@ -94,7 +95,8 @@ class DebtExclusionService
                     'number' => (string) $row['number'],
                     'partner_id' => (int) $row['partner_id'],
                     'partner_name' => (string) $row['partner_name'],
-                    'contractor_name' => $contractors[(int) $row['shipment_id']] ?? null,
+                    'company_id' => isset($contractors[(int) $row['shipment_id']]) && $contractors[(int) $row['shipment_id']]->company_id !== null ? (int) $contractors[(int) $row['shipment_id']]->company_id : null,
+                    'contractor_name' => $contractors[(int) $row['shipment_id']]->name ?? null,
                     'manager' => ['id' => (int) $manager->getKey(), 'name' => (string) $manager->name],
                     'amount' => (float) $row['amount'],
                     'balance' => Money::round($balance),
@@ -127,9 +129,9 @@ class DebtExclusionService
     }
 
     /**
-     * Исключить долг: по документу или по партнёру целиком.
+     * Исключить долг: по документу, по контрагенту или по партнёру целиком.
      *
-     * @param  array<string, mixed>  $data  reason, excluded_from, document_ref, shipment_id?, user_id?, amount?, comment?
+     * @param  array<string, mixed>  $data  reason, excluded_from, document_ref, shipment_id?, company_id?, user_id?, amount?, comment?
      *
      * @throws \InvalidArgumentException
      */
@@ -147,6 +149,7 @@ class DebtExclusionService
         }
 
         $shipmentId = empty($data['shipment_id']) ? null : (int) $data['shipment_id'];
+        $companyId = $shipmentId === null && ! empty($data['company_id']) ? (int) $data['company_id'] : null;
         $userId = empty($data['user_id']) ? null : (int) $data['user_id'];
 
         if ($shipmentId !== null) {
@@ -157,13 +160,22 @@ class DebtExclusionService
             $userId = (int) $invoice->user_id;
         }
 
+        if ($companyId !== null) {
+            $company = \App\Models\Company::query()->find($companyId, ['id', 'user_id']);
+            if ($company === null || $company->user_id === null) {
+                throw new \InvalidArgumentException('Контрагент не найден или не привязан к партнёру.');
+            }
+            $userId = (int) $company->user_id;
+        }
+
         if ($userId === null) {
-            throw new \InvalidArgumentException('Укажите накладную или партнёра.');
+            throw new \InvalidArgumentException('Укажите накладную, контрагента или партнёра.');
         }
 
         $duplicate = MotivationDebtExclusion::query()
             ->where('user_id', $userId)
             ->where(fn ($q) => $shipmentId === null ? $q->whereNull('shipment_id') : $q->where('shipment_id', $shipmentId))
+            ->where(fn ($q) => $companyId === null ? $q->whereNull('company_id') : $q->where('company_id', $companyId))
             ->where(fn ($q) => $q->whereNull('excluded_until')->orWhereDate('excluded_until', '>=', $from))
             ->exists();
         if ($duplicate) {
@@ -172,6 +184,7 @@ class DebtExclusionService
 
         $exclusion = MotivationDebtExclusion::query()->create([
             'shipment_id' => $shipmentId,
+            'company_id' => $companyId,
             'user_id' => $userId,
             'reason' => $reason,
             'excluded_from' => $from->toDateString(),
@@ -214,7 +227,7 @@ class DebtExclusionService
         $today = CarbonImmutable::today();
 
         return MotivationDebtExclusion::query()
-            ->with(['partner:id,name,erp_name', 'shipment:id,erp_number,company_id', 'shipment.company:id,name', 'author:id,name'])
+            ->with(['partner:id,name,erp_name', 'shipment:id,erp_number,company_id', 'shipment.company:id,name', 'company:id,name', 'author:id,name'])
             ->orderByDesc('excluded_from')->orderByDesc('id')
             ->limit(200)
             ->get()
@@ -227,7 +240,8 @@ class DebtExclusionService
                     'partner_name' => $row->partner === null ? '' : (string) $row->partner->display_name,
                     'shipment_id' => $row->shipment_id === null ? null : (int) $row->shipment_id,
                     'number' => $row->shipment === null ? null : (string) $row->shipment->erp_number,
-                    'contractor_name' => $row->shipment?->company?->name,
+                    'company_id' => $row->company_id === null ? null : (int) $row->company_id,
+                    'contractor_name' => $row->company !== null ? (string) $row->company->name : $row->shipment?->company?->name,
                     'reason' => $row->reason,
                     'reason_label' => self::REASONS[$row->reason] ?? $row->reason,
                     'excluded_from' => $row->excluded_from->toDateString(),

@@ -181,13 +181,15 @@ class OverdueDebtIntegrator
                 'payroll_invoice_settlements.due_on', 'payroll_invoice_settlements.settled_on', 'payroll_invoice_settlements.settled_source',
                 'payroll_invoice_settlements.payments', 'payroll_invoice_settlements.needs_review',
                 'shipments.paid_amount as registry_paid_amount',
+                // Юрлицо накладной — из отгрузки: исключение по контрагенту сверяется с ним.
+                'shipments.company_id',
             ]);
     }
 
     /**
      * Сырой остаток документа по дням просрочки внутри периода (без потолка).
      *
-     * @param  list<array{shipment_id: int|null, from: CarbonImmutable, until: CarbonImmutable|null, reason: string}>  $exclusions
+     * @param  list<array{shipment_id: int|null, company_id: int|null, from: CarbonImmutable, until: CarbonImmutable|null, reason: string}>  $exclusions
      * @return array{invoice: PayrollInvoiceSettlement, partner_id: int, daily: array<string, float>, balance_end: float, registry_paid: float, grace_ends_on: string, excluded_days: int, exclusion_reason: string|null}|null
      */
     private function prepare(PayrollInvoiceSettlement $invoice, CarbonImmutable $period, CarbonImmutable $asOf, int $graceWorkingDays, array $exclusions): ?array
@@ -217,7 +219,7 @@ class OverdueDebtIntegrator
                 continue;
             }
 
-            $reason = $this->exclusionReason($exclusions, (int) ($invoice->shipment_id ?? 0), $day);
+            $reason = $this->exclusionReason($exclusions, (int) ($invoice->shipment_id ?? 0), $invoice->company_id === null ? null : (int) $invoice->company_id, $day);
 
             if ($reason !== null) {
                 $excludedDays++;
@@ -372,7 +374,7 @@ class OverdueDebtIntegrator
      * Действующие в периоде исключения задолженности.
      *
      * @param  list<int>  $partnerIds
-     * @return list<array{shipment_id: int|null, from: CarbonImmutable, until: CarbonImmutable|null, reason: string}>
+     * @return list<array{shipment_id: int|null, company_id: int|null, from: CarbonImmutable, until: CarbonImmutable|null, reason: string}>
      */
     private function exclusions(array $partnerIds, CarbonImmutable $period, CarbonImmutable $asOf): array
     {
@@ -380,9 +382,10 @@ class OverdueDebtIntegrator
             ->whereIn('user_id', $partnerIds)
             ->whereDate('excluded_from', '<=', $asOf)
             ->where(fn ($q) => $q->whereNull('excluded_until')->orWhereDate('excluded_until', '>=', $period))
-            ->get(['shipment_id', 'excluded_from', 'excluded_until', 'reason'])
+            ->get(['shipment_id', 'company_id', 'excluded_from', 'excluded_until', 'reason'])
             ->map(fn (MotivationDebtExclusion $row): array => [
                 'shipment_id' => $row->shipment_id === null ? null : (int) $row->shipment_id,
+                'company_id' => $row->company_id === null ? null : (int) $row->company_id,
                 'from' => CarbonImmutable::instance($row->excluded_from)->startOfDay(),
                 'until' => $row->excluded_until === null ? null : CarbonImmutable::instance($row->excluded_until)->startOfDay(),
                 'reason' => (string) $row->reason,
@@ -393,13 +396,17 @@ class OverdueDebtIntegrator
     /**
      * Основание, по которому день выведен из базы начисления; null — день считается.
      *
-     * @param  list<array{shipment_id: int|null, from: CarbonImmutable, until: CarbonImmutable|null, reason: string}>  $exclusions
+     * @param  list<array{shipment_id: int|null, company_id: int|null, from: CarbonImmutable, until: CarbonImmutable|null, reason: string}>  $exclusions
      */
-    private function exclusionReason(array $exclusions, int $shipmentId, CarbonImmutable $day): ?string
+    private function exclusionReason(array $exclusions, int $shipmentId, ?int $companyId, CarbonImmutable $day): ?string
     {
         foreach ($exclusions as $exclusion) {
-            // shipment_id = null — исключение по партнёру целиком.
+            // Три уровня: накладная → контрагент → партнёр целиком (оба null).
             if ($exclusion['shipment_id'] !== null && $exclusion['shipment_id'] !== $shipmentId) {
+                continue;
+            }
+
+            if ($exclusion['shipment_id'] === null && $exclusion['company_id'] !== null && $exclusion['company_id'] !== $companyId) {
                 continue;
             }
 

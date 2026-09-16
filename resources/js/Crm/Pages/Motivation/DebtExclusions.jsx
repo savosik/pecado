@@ -60,13 +60,19 @@ export default function MotivationDebtExclusions(props) {
         }
     };
 
-    const startExclude = (c, wholePartner) => {
-        setTarget({ ...c, whole: wholePartner });
+    // Три уровня исключения: накладная, контрагент (все накладные юрлица), партнёр целиком.
+    const startExclude = (c, level) => {
+        setTarget({ ...c, level });
         setForm({ ...EMPTY_FORM, excluded_from: new Date().toISOString().slice(0, 10) });
     };
 
     const submit = async () => {
-        const payload = { ...form, shipment_id: target.whole ? null : target.shipment_id, user_id: target.partner_id };
+        const payload = {
+            ...form,
+            shipment_id: target.level === 'invoice' ? target.shipment_id : null,
+            company_id: target.level === 'company' ? target.company_id : null,
+            user_id: target.partner_id,
+        };
         if (await call('post', '/crm/motivation/debt-exclusions', payload)) { setTarget(null); setForm(EMPTY_FORM); }
     };
 
@@ -100,7 +106,11 @@ export default function MotivationDebtExclusions(props) {
                 {target && data.can_edit && (
                     <Box bg="bg.panel" borderWidth="2px" borderColor="orange.solid" borderRadius="xl" p={4}>
                         <Text fontWeight="700" mb={2}>
-                            Исключить {target.whole ? `все долги партнёра «${target.partner_name}»` : `накладную ${target.number} партнёра «${target.partner_name}»`}
+                            Исключить {target.level === 'partner'
+                                ? `все долги партнёра «${target.partner_name}»`
+                                : (target.level === 'company'
+                                    ? `все накладные контрагента «${target.contractor_name}» партнёра «${target.partner_name}»`
+                                    : `накладную ${target.number} партнёра «${target.partner_name}»`)}
                         </Text>
                         <SimpleGrid columns={{ base: 1, md: 5 }} gap={3}>
                             <label style={{ fontSize: '0.75rem' }}>Основание<br />
@@ -132,7 +142,7 @@ export default function MotivationDebtExclusions(props) {
                                     <Table.ColumnHeader textAlign="right">Остаток</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Просрочка</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Стоит менеджеру в месяц</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Действия</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Исключить</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
@@ -150,8 +160,9 @@ export default function MotivationDebtExclusions(props) {
                                         <Table.Cell textAlign="right">
                                             {data.can_edit && (
                                                 <HStack justify="flex-end" gap={1}>
-                                                    <Button size="xs" variant="outline" onClick={() => startExclude(c, false)}>Накладную</Button>
-                                                    <Button size="xs" variant="ghost" onClick={() => startExclude(c, true)}>Партнёра целиком</Button>
+                                                    <Button size="xs" variant="outline" onClick={() => startExclude(c, 'invoice')}>Накладную</Button>
+                                                    {c.company_id && <Button size="xs" variant="outline" onClick={() => startExclude(c, 'company')}>Контрагента</Button>}
+                                                    <Button size="xs" variant="ghost" onClick={() => startExclude(c, 'partner')}>Партнёра</Button>
                                                 </HStack>
                                             )}
                                         </Table.Cell>
@@ -203,7 +214,7 @@ function ExclusionsTable({ rows, canEdit, closing = {}, setClosing = () => {}, b
                             <Text fontSize="sm" fontWeight="600">{r.partner_name}</Text>
                             {r.contractor_name && r.contractor_name !== r.partner_name && <Text fontSize="xs" color="fg.muted">{r.contractor_name}</Text>}
                         </Table.Cell>
-                        <Table.Cell><Text fontSize="sm">{r.number ?? 'все долги партнёра'}</Text></Table.Cell>
+                        <Table.Cell><Text fontSize="sm">{r.number ?? (r.company_id ? 'все накладные контрагента' : 'все долги партнёра')}</Text></Table.Cell>
                         <Table.Cell>
                             <HStack gap={2}><Badge size="xs" variant="subtle" colorPalette={r.active ? 'orange' : 'gray'}>{r.reason_label}</Badge><Text fontSize="xs" color="fg.muted">{r.document_ref}</Text></HStack>
                             {r.comment && <Text fontSize="xs" color="fg.subtle">{r.comment}</Text>}

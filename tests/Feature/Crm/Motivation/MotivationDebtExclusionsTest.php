@@ -163,6 +163,48 @@ class MotivationDebtExclusionsTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('Исключение по контрагенту снимает вычет только по накладным этого юрлица')]
+    public function exclusion_by_contractor_covers_only_that_company(): void
+    {
+        Event::fake([PayrollInputsChanged::class]);
+        $partner = User::factory()->create(['personal_manager_id' => $this->profile->id, 'name' => 'Сеть']);
+        $first = \App\Models\Company::factory()->create(['user_id' => $partner->id, 'name' => 'Первое юрлицо']);
+        $second = \App\Models\Company::factory()->create(['user_id' => $partner->id, 'name' => 'Второе юрлицо']);
+
+        $a = $this->overdueInvoice($partner, 100_000);
+        $b = $this->overdueInvoice($partner, 300_000);
+        Shipment::query()->whereKey($a->shipment_id)->update(['company_id' => $first->id]);
+        Shipment::query()->whereKey($b->shipment_id)->update(['company_id' => $second->id]);
+        $a->forceFill(['company_id' => $first->id])->save();
+        $b->forceFill(['company_id' => $second->id])->save();
+
+        $calculations = app(PayrollCalculationService::class);
+        $before = app(DebtListService::class)->build($calculations->recalculateDraft($this->profile->id, $this->month, 'test'));
+
+        $candidates = app(DebtExclusionService::class)->overview(90)['candidates'];
+        $this->assertSame('Первое юрлицо', collect($candidates)->firstWhere('shipment_id', $a->shipment_id)['contractor_name']);
+        $this->assertSame($first->id, collect($candidates)->firstWhere('shipment_id', $a->shipment_id)['company_id']);
+
+        $exclusion = app(DebtExclusionService::class)->create([
+            'reason' => 'legal',
+            'excluded_from' => $this->month->toDateString(),
+            'document_ref' => 'Претензия по первому юрлицу',
+            'company_id' => $first->id,
+        ], $this->head);
+
+        $this->assertSame($partner->id, (int) $exclusion->user_id, 'Партнёр взят из контрагента');
+        $this->assertNull($exclusion->shipment_id);
+
+        $after = app(DebtListService::class)->build($calculations->recalculateDraft($this->profile->id, $this->month, 'test'));
+        $this->assertGreaterThan(0, $after['summary']['deducted_this_month'], 'Второе юрлицо по-прежнему в расчёте');
+        $this->assertEqualsWithDelta($before['summary']['deducted_this_month'] * 0.75, $after['summary']['deducted_this_month'], 1.0, 'Снята ровно доля первого юрлица (100 из 400 тыс.)');
+
+        $listed = collect(app(DebtExclusionService::class)->overview(90)['exclusions'])->firstWhere('id', $exclusion->id);
+        $this->assertSame('Первое юрлицо', $listed['contractor_name']);
+        $this->assertSame($first->id, $listed['company_id']);
+    }
+
+    #[Test]
     #[TestDox('Очередь разметки: сумма оплат без даты, сортировка по ней, простановка даты через проектор')]
     public function review_queue_prices_invoices(): void
     {
