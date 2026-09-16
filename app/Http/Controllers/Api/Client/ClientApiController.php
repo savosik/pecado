@@ -26,6 +26,7 @@ use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use LogicException;
 use RuntimeException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * REST-вход клиентского API v1: `/api/client/v1/*`.
@@ -142,6 +143,18 @@ class ClientApiController extends Controller
             return response()->json(Envelope::error('debt_restricted', $e->getMessage(), null, [
                 'debt' => $e->toPayload(),
             ]), 422);
+        } catch (HttpException $e) {
+            // abort_if/abort_unless внутри сервисов кабинета (например, «Доступно к
+            // возврату: N») — переводим в конверт, код по статусу.
+            $status = $e->getStatusCode();
+            $code = match ($status) {
+                403 => 'forbidden',
+                404 => 'not_found',
+                422 => 'business_rule',
+                default => 'http_'.$status,
+            };
+
+            return $this->error($code, $e->getMessage() !== '' ? $e->getMessage() : 'Запрос отклонён.', $status);
         } catch (InvalidArgumentException|RuntimeException|LogicException $e) {
             // Отказ бизнес-правила — не 500: агенту нужно понять, что делать дальше.
             return $this->error('business_rule', $e->getMessage(), 422);
