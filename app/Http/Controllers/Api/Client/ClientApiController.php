@@ -24,6 +24,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
+use LogicException;
 use RuntimeException;
 
 /**
@@ -141,7 +142,7 @@ class ClientApiController extends Controller
             return response()->json(Envelope::error('debt_restricted', $e->getMessage(), null, [
                 'debt' => $e->toPayload(),
             ]), 422);
-        } catch (InvalidArgumentException|RuntimeException $e) {
+        } catch (InvalidArgumentException|RuntimeException|LogicException $e) {
             // Отказ бизнес-правила — не 500: агенту нужно понять, что делать дальше.
             return $this->error('business_rule', $e->getMessage(), 422);
         }
