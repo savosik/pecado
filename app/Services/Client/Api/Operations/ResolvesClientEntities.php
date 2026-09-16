@@ -51,7 +51,7 @@ trait ResolvesClientEntities
         } elseif (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $identifier)) {
             $query->where('uuid', $identifier);
         } else {
-            $query->where('order_number', $identifier);
+            $query->where('number', $identifier);
         }
 
         return $query->firstOrFail();
@@ -79,7 +79,8 @@ trait ResolvesClientEntities
             ->where(function ($q) use ($identifier, $normalized) {
                 $q->where('erp_number', $identifier)
                     ->orWhere('number', $identifier)
-                    ->orWhereRaw("REPLACE(number, '-', '') = ?", [$normalized]);
+                    ->orWhereRaw("REPLACE(number, '-', '') = ?", [$normalized])
+                    ->orWhereRaw("REPLACE(COALESCE(erp_number, ''), '-', '') = ?", [$normalized]);
             })
             ->firstOrFail();
     }

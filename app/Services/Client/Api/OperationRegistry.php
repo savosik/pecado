@@ -5,7 +5,11 @@ namespace App\Services\Client\Api;
 use App\Models\User;
 use App\Services\Client\Api\Operations\CartOperations;
 use App\Services\Client\Api\Operations\CatalogOperations;
+use App\Services\Client\Api\Operations\OrderOperations;
 use App\Services\Client\Api\Operations\ProfileOperations;
+use App\Services\Client\Api\Operations\ReserveOperations;
+use App\Services\Client\Api\Operations\ReturnOperations;
+use App\Services\Client\Api\Operations\ShipmentOperations;
 
 /**
  * Каталог операций клиентского API v1.
@@ -28,7 +32,11 @@ class OperationRegistry
     private const PROVIDERS = [
         CatalogOperations::class,
         CartOperations::class,
+        ReturnOperations::class,
         ProfileOperations::class,
+        OrderOperations::class,
+        ShipmentOperations::class,
+        ReserveOperations::class,
     ];
 
     /** @var list<Operation>|null */

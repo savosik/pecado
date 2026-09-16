@@ -15,11 +15,13 @@ use App\Models\Product;
 use App\Models\Shipment;
 use App\Services\Catalog\ProductIdentifierResolver;
 use App\Services\Order\OrderAssembler;
-use App\Services\Order\OrderChangeAggregator;
+use App\Services\Order\OrderChangeFeed;
 use App\Services\Order\OrderChangeLogger;
 use App\Services\Order\OrderDraft;
 use App\Services\Order\OrderLine;
 use App\Services\Promotion\ClientApiPromotions;
+use App\Services\Shipment\ClientShipmentPresenter;
+use App\Services\Shipment\ClientShipmentQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,10 +32,12 @@ class ClientApiController extends Controller
         protected PriceServiceInterface $priceService,
         protected StockServiceInterface $stockService,
         protected UserCurrencyResolverInterface $currencyResolver,
-        protected OrderChangeAggregator $changeAggregator,
+        protected OrderChangeFeed $changeFeed,
         protected OrderChangeLogger $changeLogger,
         protected OrderAssembler $assembler,
         protected ClientApiPromotions $promotions,
+        protected ClientShipmentQuery $shipmentQuery,
+        protected ClientShipmentPresenter $shipmentPresenter,
     ) {}
 
     /**
@@ -363,41 +367,17 @@ class ClientApiController extends Controller
         $apiToken = $this->resolveToken($token);
         $user = $apiToken->user;
 
-        $type = $request->query('type');
-        $type = in_array($type, ['added', 'removed', 'changed', 'not_accepted', 'partial'], true) ? $type : null;
-        $dateFrom = $request->query('date_from');
-        $dateTo = $request->query('date_to');
-
-        $orders = Order::query()
-            ->where('user_id', $user->id)
-            ->whereHas('changeLogs', fn ($q) => $q->whereIn('type', ['items_updated', 'api_shortfall']))
-            ->get();
-
-        $rows = $this->changeAggregator->flatten($orders);
-
-        $rows = array_values(array_filter($rows, function (array $r) use ($type, $dateFrom, $dateTo) {
-            if ($type && $r['type'] !== $type) {
-                return false;
-            }
-            $date = $r['changed_at']?->toDateString();
-            if ($dateFrom && (! $date || $date < $dateFrom)) {
-                return false;
-            }
-            if ($dateTo && (! $date || $date > $dateTo)) {
-                return false;
-            }
-
-            return true;
-        }));
-
-        // Новые изменения — первыми.
-        usort($rows, fn ($a, $b) => ($b['changed_at']?->getTimestamp() ?? 0) <=> ($a['changed_at']?->getTimestamp() ?? 0));
+        $rows = $this->changeFeed->rows($user, [
+            'type' => $request->query('type'),
+            'date_from' => $request->query('date_from'),
+            'date_to' => $request->query('date_to'),
+        ]);
 
         $perPage = min((int) $request->input('per_page', 500), 1000);
         $perPage = max($perPage, 1);
         $page = max((int) $request->input('page', 1), 1);
         $total = count($rows);
-        $slice = array_slice($rows, ($page - 1) * $perPage, $perPage);
+        $slice = OrderChangeFeed::slice($rows, $page, $perPage);
 
         $data = array_map(fn (array $r) => [
             'order_number' => $r['order_number'],
@@ -448,7 +428,7 @@ class ClientApiController extends Controller
 
         $request->validate([
             // status / payment_status принимаем и скаляром, и массивом —
-            // нормализация ниже, здесь только ограничение на тип элементов.
+            // нормализация в сервисе, здесь только ограничение на тип элементов.
             'status' => 'nullable',
             'status.*' => 'string|max:30',
             'payment_status' => 'nullable',
@@ -472,78 +452,24 @@ class ClientApiController extends Controller
         $financeEnabled = \App\Support\Cabinet\CabinetFinance::enabledFor($user);
         $withItems = $request->boolean('with_items');
 
-        // Реализации внутренних юрлиц («Реклама») в интеграцию клиента не отдаём —
-        // та же граница, что в кабинете.
-        $query = Shipment::query()
-            ->where('user_id', $user->id)
-            ->withoutInternalOrganizations()
-            ->with(['company:id,name,legal_name,tax_id'])
-            ->withCount('items');
-
-        if ($withItems) {
-            $query->with($this->shipmentItemsEagerLoad());
-        }
-
-        // Статус: принимаем и скаляр (status=completed), и массив (status[]=…).
-        $statuses = array_values(array_filter(
-            array_map('strval', (array) $request->input('status', [])),
-            static fn (string $v): bool => $v !== '',
-        ));
-        if ($statuses !== []) {
-            $query->whereIn('status', $statuses);
-        }
-
         // Статус оплаты фильтрует только тогда, когда сами суммы клиенту открыты:
-        // иначе фильтр стал бы обходным путём к скрытым цифрам долга.
-        if ($financeEnabled) {
-            $paymentStatuses = array_values(array_intersect(
-                array_map('strval', (array) $request->input('payment_status', [])),
-                Shipment::PAYMENT_STATUSES,
-            ));
-            if ($paymentStatuses !== []) {
-                $query->whereIn('payment_status', $paymentStatuses);
-            }
-        }
-
-        if ($dateFrom = $request->query('date_from')) {
-            $query->whereDate('date', '>=', $dateFrom);
-        }
-        if ($dateTo = $request->query('date_to')) {
-            $query->whereDate('date', '<=', $dateTo);
-        }
-
-        // Инкрементальная выгрузка: «что изменилось с прошлой синхронизации».
-        if ($updatedSince = $request->query('updated_since')) {
-            $query->where('updated_at', '>=', \Illuminate\Support\Carbon::parse($updatedSince));
-        }
-
-        if ($inn = $request->query('inn')) {
-            $query->where(fn ($q) => $q->where('tax_id', $inn)
-                ->orWhereHas('company', fn ($c) => $c->where('tax_id', $inn)));
-        }
-
-        if ($orderUuid = $request->query('order_uuid')) {
-            $query->whereHas('items', fn ($q) => $q->where('order_uuid', $orderUuid));
-        }
-
-        // Номер ищем и как есть, и в нормализованном виде: 29УТ-003413 ≡ 29УТ003413.
-        if ($number = trim((string) $request->query('number', ''))) {
-            $normalized = preg_replace('/[\s\-]+/u', '', $number);
-            $query->where(function ($q) use ($number, $normalized) {
-                $q->where('number', 'like', "%{$number}%")
-                    ->orWhere('erp_number', 'like', "%{$number}%");
-
-                // Нормализуем именно колонку: клиент может прислать номер и с
-                // дефисом, и без — искать надо в обеих формах.
-                if ($normalized !== '') {
-                    $q->orWhereRaw("REPLACE(REPLACE(number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"])
-                        ->orWhereRaw("REPLACE(REPLACE(erp_number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
-                }
-            });
-        }
-
-        // Свежие документы первыми; id — тай-брейк, дата хранится без времени.
-        $query->orderByDesc('date')->orderByDesc('id');
+        // иначе фильтр стал бы обходным путём к скрытым цифрам долга (сервис
+        // применяет его лишь при $finance = true). Свежие документы первыми.
+        $query = $this->shipmentQuery
+            ->builder($user, [
+                'status' => $request->input('status', []),
+                'payment_status' => $request->input('payment_status', []),
+                'date_from' => $request->query('date_from'),
+                'date_to' => $request->query('date_to'),
+                'updated_since' => $request->query('updated_since'),
+                'inn' => $request->query('inn'),
+                'order_uuid' => $request->query('order_uuid'),
+                'number' => $request->query('number'),
+                'sort_by' => 'date',
+                'sort_order' => 'desc',
+            ], $financeEnabled)
+            ->with($this->shipmentQuery->eagerLoads($withItems))
+            ->withCount('items');
 
         // Состав раздувает ответ на порядок, поэтому с ним страница короче.
         $maxPerPage = $withItems ? 100 : 500;
@@ -552,7 +478,7 @@ class ClientApiController extends Controller
         $shipments = $query->paginate($perPage);
 
         $data = $shipments->getCollection()
-            ->map(fn (Shipment $shipment) => $this->shipmentPayload($shipment, $financeEnabled, $withItems))
+            ->map(fn (Shipment $shipment) => $this->shipmentPresenter->payload($shipment, $financeEnabled, $withItems))
             ->values();
 
         return response()->json([
@@ -585,140 +511,14 @@ class ClientApiController extends Controller
 
         $financeEnabled = \App\Support\Cabinet\CabinetFinance::enabledFor($user);
 
-        $found = $this->resolveShipment($shipment, $user->id);
+        $found = $this->shipmentQuery->find($user, $shipment);
+
+        abort_if(! $found, 404, 'Реализация не найдена.');
 
         $found->loadCount('items');
-        $found->load(array_merge(
-            ['company:id,name,legal_name,tax_id'],
-            $this->shipmentItemsEagerLoad(),
-            [],
-        ));
+        $found->load($this->shipmentQuery->eagerLoads(withItems: true));
 
-        $payload = $this->shipmentPayload($found, $financeEnabled, withItems: true);
-
-        // Заказы, по которым собрана реализация: 1С может собрать документ
-        // из нескольких заказов, и клиенту нужно сопоставление с его номерами.
-        $payload['orders'] = $found->getRelatedOrders()
-            ->map(fn (Order $order) => [
-                'id' => $order->id,
-                'uuid' => $order->uuid,
-                'number' => $order->erp_number ?? $order->number ?? ('#'.$order->id),
-                'type' => $order->type?->value,
-                'status' => $order->status?->value,
-                'status_label' => $order->status?->label(),
-            ])->values()->all();
-
-        if ($financeEnabled) {
-            $payload['payment_schedule'] = \App\Support\Payments\PaymentSchedulePresenter::forShipment($found);
-        }
-
-        return response()->json(['data' => $payload]);
-    }
-
-    /**
-     * Реализация владельца ключа по id / uuid / номеру.
-     */
-    protected function resolveShipment(string $identifier, int $userId): Shipment
-    {
-        $base = fn () => Shipment::query()->where('user_id', $userId)->withoutInternalOrganizations();
-
-        $shipment = (ctype_digit($identifier) ? $base()->whereKey((int) $identifier)->first() : null)
-            ?? $base()->where('uuid', $identifier)->first()
-            ?? $base()->where('erp_number', $identifier)->first()
-            ?? $base()->where('number', $identifier)->first();
-
-        abort_if(! $shipment, 404, 'Реализация не найдена.');
-
-        return $shipment;
-    }
-
-    /**
-     * Состав реализации с товарами.
-     *
-     * HiddenScope снимается намеренно: скрытый на витрине товар всё равно
-     * отгружен, и без этого его строка приехала бы клиенту без артикулов.
-     *
-     * @return array<string, \Closure>
-     */
-    protected function shipmentItemsEagerLoad(): array
-    {
-        return [
-            'items.product' => fn ($q) => $q->withoutGlobalScopes()
-                ->select('id', 'external_id', 'code', 'sku', 'barcode', 'name'),
-        ];
-    }
-
-    /**
-     * Представление реализации для клиентского API.
-     *
-     * @return array<string, mixed>
-     */
-    protected function shipmentPayload(Shipment $shipment, bool $financeEnabled, bool $withItems): array
-    {
-        $payload = [
-            'id' => $shipment->id,
-            'uuid' => $shipment->uuid,
-            'number' => $shipment->erp_number ?? $shipment->number ?? ('#'.$shipment->id),
-            'erp_number' => $shipment->erp_number,
-            'date' => $shipment->date?->toDateString(),
-            'status' => $shipment->status,
-            'status_label' => $shipment->status_label,
-            'currency_code' => $shipment->currency_code ?? 'RUB',
-            'total_amount' => round((float) $shipment->total_amount, 2),
-            'items_count' => (int) ($shipment->items_count ?? $shipment->items->count()),
-            // Печатный номер счёта-фактуры: клиент сверяет документ по бумаге.
-            'invoice_number' => $shipment->invoice_number_display ?: $shipment->invoice_number,
-            'invoice_date' => $shipment->invoice_date?->toDateString(),
-            'tax_id' => $shipment->tax_id,
-            'company' => $shipment->company ? [
-                'id' => $shipment->company->id,
-                'name' => $shipment->company->name,
-                'legal_name' => $shipment->company->legal_name,
-                'inn' => $shipment->company->tax_id,
-            ] : null,
-            // updated_at — время последнего изменения на сайте, по нему же
-            // работает фильтр updated_since; erp_updated_at — время из 1С.
-            'updated_at' => $shipment->updated_at?->toIso8601String(),
-            'erp_updated_at' => $shipment->erp_updated_at?->toIso8601String(),
-        ];
-
-        if ($financeEnabled) {
-            $payload += [
-                'payment_status' => $shipment->payment_status,
-                'payment_status_label' => $shipment->payment_status_label,
-                'paid_amount' => round((float) $shipment->paid_amount, 2),
-                'unpaid_amount' => $shipment->unpaid_amount,
-                'payment_due_date' => $shipment->payment_due_date?->toDateString(),
-                'is_payment_overdue' => $shipment->is_payment_overdue,
-            ];
-        }
-
-        if ($withItems) {
-            $payload['items'] = $shipment->items
-                ->map(fn (\App\Models\ShipmentItem $item) => [
-                    'id' => $item->id,
-                    'product' => [
-                        // Товар мог быть удалён с сайта — тогда остаются снимки
-                        // названия и бренда, сделанные при приёме документа.
-                        'uuid' => $item->product?->external_id,
-                        'code' => $item->product?->code,
-                        'sku' => $item->product?->sku,
-                        'barcode' => $item->product?->barcode,
-                        'name' => $item->product?->name ?? $item->product_name_snapshot,
-                        'brand' => $item->brand_name_snapshot,
-                    ],
-                    'order_uuid' => $item->order_uuid,
-                    'quantity' => (int) $item->quantity,
-                    'price' => round((float) $item->price, 2),
-                    'auto_discount_percent' => round((float) $item->auto_discount_percent, 2),
-                    'manual_discount_percent' => round((float) $item->manual_discount_percent, 2),
-                    'subtotal' => round((float) $item->subtotal, 2),
-                    'total' => round((float) $item->total, 2),
-                    'vat_rate' => $item->vat_rate,
-                ])->values()->all();
-        }
-
-        return $payload;
+        return response()->json(['data' => $this->shipmentPresenter->legacyCard($found, $financeEnabled)]);
     }
 
     /**
