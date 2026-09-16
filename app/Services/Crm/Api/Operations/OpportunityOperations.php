@@ -6,9 +6,9 @@ use App\Enums\Crm\OpportunityPreset;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\User;
-use App\Services\Crm\Api\OperationInput;
 use App\Services\Crm\OpportunityService;
 use App\Services\Crm\PlanScopeResolver;
+use App\Support\OperationApi\OperationInput;
 
 /**
  * Возможности: ранжированный список «кому звонить и почему».
