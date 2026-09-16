@@ -69,7 +69,7 @@ export default function MotivationBase({ tab_counts: tabCounts = null, month, mo
         ) },
         { key: 'best_month', label: 'Лучший месяц', align: 'right', sortable: true, render: (row) => <BestMonth value={row.best_month} /> },
         { key: 'potential', label: 'Потенциал', align: 'right', sortable: true, render: (row) => <Money value={row.potential} /> },
-        { key: 'your_gain', label: 'Даст вам', align: 'right', sortable: true, render: (row) => <Text fontSize="sm" fontWeight="700" color={row.your_gain > 0 ? 'green.fg' : 'fg.subtle'} fontVariantNumeric="tabular-nums">{row.your_gain > 0 ? `+${Math.round(row.your_gain).toLocaleString('ru-RU')} ₽` : '—'}</Text> },
+        { key: 'your_gain', label: 'Может дать', align: 'right', sortable: true, render: (row) => <Text fontSize="sm" fontWeight="700" color={row.your_gain > 0 ? 'green.fg' : 'fg.subtle'} fontVariantNumeric="tabular-nums">{row.your_gain > 0 ? `+${Math.round(row.your_gain).toLocaleString('ru-RU')} ₽` : '—'}</Text> },
         { key: 'assortment', label: 'Ассортимент', align: 'right', sortable: true, render: (row) => <Assortment value={row.assortment} /> },
         { key: 'last_purchase_on', label: 'Последняя покупка', sortable: true, render: (row) => <LastPurchase row={row} /> },
         { key: 'debt', label: 'Долг', align: 'right', sortable: true, render: (row) => <Debt value={row.debt} /> },
