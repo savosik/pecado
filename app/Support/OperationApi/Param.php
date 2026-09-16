@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Crm\Api;
+namespace App\Support\OperationApi;
 
 use Illuminate\Validation\Rule;
 
@@ -47,9 +47,9 @@ final class Param
         return new self($name, 'boolean', $description, $required, nullable: $nullable);
     }
 
-    public static function list(string $name, string $description, string $itemType = 'string', bool $required = false): self
+    public static function list(string $name, string $description, string $itemType = 'string', bool $required = false, array $rules = []): self
     {
-        return new self($name, 'array', $description, $required, itemType: $itemType);
+        return new self($name, 'array', $description, $required, rules: $rules, itemType: $itemType);
     }
 
     /**

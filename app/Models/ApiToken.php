@@ -16,6 +16,7 @@ use Illuminate\Support\Str;
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read string $base_url
+ * @property-read string $v1_base_url
  * @property-read \App\Models\User $user
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ApiToken newModelQuery()
@@ -50,7 +51,7 @@ class ApiToken extends Model
         ];
     }
 
-    protected $appends = ['base_url'];
+    protected $appends = ['base_url', 'v1_base_url'];
 
     /**
      * Boot the model — auto-generate token on creation.
@@ -99,6 +100,14 @@ class ApiToken extends Model
     public function getBaseUrlAttribute(): string
     {
         return url("/api/client-api/{$this->token}");
+    }
+
+    /**
+     * Базовый адрес клиентского API v1: ключ передаётся в заголовке Bearer, а не в адресе.
+     */
+    public function getV1BaseUrlAttribute(): string
+    {
+        return url('/api/client/v1');
     }
 
     /**

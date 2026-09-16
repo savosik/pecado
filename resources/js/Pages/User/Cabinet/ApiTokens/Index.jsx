@@ -6,15 +6,66 @@ import {
 } from '@chakra-ui/react';
 import { Head, usePage } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
+import AgentChatBanner from './AgentChatBanner';
 import {
     LuPlus, LuCopy, LuCheck, LuTrash2, LuRefreshCw,
     LuShieldCheck, LuCode, LuArrowRight, LuPackage,
     LuDollarSign, LuWarehouse, LuShoppingCart, LuKey,
     LuTriangleAlert, LuClock, LuGlobe, LuArrowRightLeft,
-    LuTruck, LuFileText,
+    LuTruck, LuFileText, LuBookOpen, LuExternalLink, LuRocket,
+    LuArchive,
 } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
+import {
+    AccordionRoot, AccordionItem, AccordionItemTrigger, AccordionItemContent,
+} from '@/components/ui/accordion';
 import axios from 'axios';
+
+/* ──────────────────────────────────────────────── */
+/*  Компонент: строка адреса с кнопкой копирования  */
+/* ──────────────────────────────────────────────── */
+function CopyableUrl({ label, value, icon: Icon = LuGlobe, caption }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(value);
+        setCopied(true);
+        toaster.create({ title: 'Скопировано', type: 'success', duration: 1500 });
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <Box>
+            {label && (
+                <Text fontSize="2xs" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="0.05em" mb="1">
+                    {label}
+                </Text>
+            )}
+            <HStack
+                bg="bg.subtle"
+                borderRadius="lg" px="3" py="2.5"
+                border="1px solid" borderColor="border"
+            >
+                <Icon size={14} style={{ flexShrink: 0, color: 'var(--chakra-colors-gray-400)' }} />
+                <Text fontSize="xs" color="gray.600" _dark={{ color: 'gray.300' }} flex="1" truncate fontFamily="mono">
+                    {value}
+                </Text>
+                <IconButton
+                    size="2xs" variant="ghost" colorPalette={copied ? 'green' : 'gray'}
+                    onClick={handleCopy}
+                    aria-label="Скопировать адрес"
+                >
+                    {copied ? <LuCheck /> : <LuCopy />}
+                </IconButton>
+            </HStack>
+            {caption && (
+                <Text fontSize="2xs" color="gray.400" mt="1">
+                    {caption}
+                </Text>
+            )}
+        </Box>
+    );
+}
 
 /* ──────────────────────────────────────────────── */
 /*  Компонент: карточка API-ключа                  */
@@ -81,24 +132,44 @@ function TokenCard({ token, onRegenerate, onDelete }) {
                         </Badge>
                     </HStack>
 
-                    {/* Base URL */}
+                    {/* API v1: адрес общий, ключ — в заголовке */}
+                    <CopyableUrl
+                        label="Адрес API v1"
+                        value={token.v1_base_url}
+                        icon={LuRocket}
+                        caption={
+                            <>
+                                Токен передаётся в заголовке{' '}
+                                <Code size="xs" colorPalette="purple">Authorization: Bearer {'<ключ>'}</Code>
+                            </>
+                        }
+                    />
+
+                    {/* Ключ: копируется отдельно, чтобы подставить в заголовок */}
                     <HStack
                         bg="bg.subtle"
                         borderRadius="lg" px="3" py="2.5"
                         border="1px solid" borderColor="border"
                     >
-                        <LuGlobe size={14} style={{ flexShrink: 0, color: 'var(--chakra-colors-gray-400)' }} />
+                        <LuKey size={14} style={{ flexShrink: 0, color: 'var(--chakra-colors-gray-400)' }} />
                         <Text fontSize="xs" color="gray.600" _dark={{ color: 'gray.300' }} flex="1" truncate fontFamily="mono">
-                            {token.base_url}
+                            {token.token}
                         </Text>
                         <IconButton
                             size="2xs" variant="ghost" colorPalette={copied ? 'green' : 'gray'}
-                            onClick={() => handleCopy(token.base_url)}
-                            aria-label="Скопировать URL"
+                            onClick={() => handleCopy(token.token)}
+                            aria-label="Скопировать ключ"
                         >
                             {copied ? <LuCheck /> : <LuCopy />}
                         </IconButton>
                     </HStack>
+
+                    {/* Legacy base URL: ключ в адресе */}
+                    <CopyableUrl
+                        label="Адрес legacy API"
+                        value={token.base_url}
+                        caption="Прежний формат: ключ в адресе. Поддерживается, но не развивается."
+                    />
 
                     {/* Last used */}
                     {token.last_used_at && (
@@ -469,9 +540,39 @@ const apiMethods = [
 /* ──────────────────────────────────────────────── */
 /*  Главная страница                                */
 /* ──────────────────────────────────────────────── */
-export default function Index({ tokens: initialTokens }) {
+export default function Index({ tokens: initialTokens, docs = {} }) {
     const [tokens, setTokens] = useState(initialTokens);
     const [creating, setCreating] = useState(false);
+
+    // Быстрый старт подставляет первый ключ; без ключей — заглушка.
+    const sampleKey = tokens[0]?.token ?? '<ВАШ_КЛЮЧ>';
+
+    const copyToClipboard = async (text, title) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            toaster.create({ title, type: 'success' });
+        } catch (err) {
+            toaster.create({ title: 'Не удалось скопировать', type: 'error' });
+        }
+    };
+    const v1Base = tokens[0]?.v1_base_url ?? `${window.location.origin}/api/client/v1`;
+    const quickStart = [
+        {
+            title: 'Кто я и что мне доступно',
+            code: `curl -H "Authorization: Bearer ${sampleKey}" \\\n  ${v1Base}/me`,
+        },
+        {
+            title: 'Цены по артикулам',
+            code: `curl -H "Authorization: Bearer ${sampleKey}" \\\n  "${v1Base}/catalog/prices?identifiers[]=АРТИКУЛ"`,
+        },
+        {
+            title: 'Создать заказ (с ключом идемпотентности)',
+            code: `curl -X POST ${v1Base}/orders \\\n  -H "Authorization: Bearer ${sampleKey}" \\\n  -H "Idempotency-Key: <уникальный-ключ>" \\\n  -H "Content-Type: application/json" \\\n  -d '{"products":[{"identifier":"АРТИКУЛ","quantity":1}]}'`,
+        },
+    ];
+
+    // Подключение ИИ-агента к MCP-серверу кабинета: те же ключ и токен, что у REST v1.
+    const mcpUrl = docs.mcp || `${window.location.origin}/mcp/client`;
 
     // Методы резерва показываем только участнику режима «Заказы в резерве» —
     // как и раздел кабинета: неучастнику они всё равно вернут 403.
@@ -522,10 +623,9 @@ export default function Index({ tokens: initialTokens }) {
             {/* Intro */}
             <VStack align="stretch" gap="2" mb="6">
                 <Text fontSize="sm" color="gray.500" lineHeight="1.7">
-                    Подключите вашу систему к каталогу Pecado через простой REST API.
-                    Без авторизации — в URL используется уникальный ключ доступа.
-                    Получайте актуальные цены, остатки по вашему региону, отгрузочные документы
-                    (реализации) и создавайте заказы программно.
+                    Подключите вашу систему или ИИ-агента к кабинету Pecado через REST API.
+                    Ключ доступа передаётся в заголовке запроса. Получайте актуальные цены,
+                    остатки по вашему региону, отгрузочные документы (реализации) и создавайте заказы программно.
                 </Text>
                 <HStack
                     bg="amber.50" _dark={{ bg: 'amber.900/20' }}
@@ -595,7 +695,103 @@ export default function Index({ tokens: initialTokens }) {
 
             <Separator mb="10" borderColor="border" />
 
-            {/* ── Section 2: API Documentation ── */}
+            {/* ── Section 2: API v1 — основной ── */}
+            <Box mb="10">
+                <VStack align="stretch" gap="4">
+                    <HStack>
+                        <Flex
+                            align="center" justify="center" w="10" h="10" borderRadius="lg"
+                            bg="purple.50" _dark={{ bg: 'purple.900/30' }}
+                        >
+                            <LuBookOpen size={20} color="var(--chakra-colors-purple-500)" />
+                        </Flex>
+                        <Heading size="lg" fontWeight="700">Документация API v1</Heading>
+                    </HStack>
+
+                    <Text fontSize="sm" color="gray.500" lineHeight="1.7">
+                        API v1 — основной и развивающийся интерфейс: каталог с вашими ценами и остатками,
+                        корзины, заказы, реализации, документы и оплаты. Ключ передаётся в заголовке
+                        {' '}<Code size="xs">Authorization: Bearer</Code>, ответы приходят в едином конверте
+                        {' '}<Code size="xs">{'{data, meta}'}</Code>. Ниже — legacy-версия с ключом в адресе:
+                        она продолжает работать, но не развивается.
+                    </Text>
+
+                    <HStack gap="3" flexWrap="wrap">
+                        <Button asChild size="sm" bg="#9e1b32" color="white" _hover={{ bg: '#7a1527' }}>
+                            <a href={docs.ui} target="_blank" rel="noopener noreferrer">
+                                <LuExternalLink /> Открыть документацию
+                            </a>
+                        </Button>
+                        <Button asChild size="sm" variant="outline">
+                            <a href={docs.openapi} target="_blank" rel="noopener noreferrer">
+                                <LuCode /> OpenAPI JSON для агентов
+                            </a>
+                        </Button>
+                    </HStack>
+
+                    {/* Быстрый старт */}
+                    <Card.Root
+                        bg="bg" borderRadius="xl"
+                        border="1px solid" borderColor="border.muted"
+                        overflow="hidden"
+                    >
+                        <Card.Body p="5">
+                            <HStack mb="3">
+                                <LuRocket size={18} style={{ color: 'var(--chakra-colors-purple-500)' }} />
+                                <Text fontWeight="700" fontSize="sm">Быстрый старт</Text>
+                            </HStack>
+                            <VStack align="stretch" gap="3">
+                                {quickStart.map((step, i) => (
+                                    <Box key={i}>
+                                        <Text fontSize="2xs" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">
+                                            {i + 1}. {step.title}
+                                        </Text>
+                                        <Box bg="gray.900" _dark={{ bg: 'gray.950' }} borderRadius="lg" p="3" overflowX="auto">
+                                            <Text as="pre" fontSize="xs" color="green.300" fontFamily="mono" whiteSpace="pre-wrap">
+                                                {step.code}
+                                            </Text>
+                                        </Box>
+                                    </Box>
+                                ))}
+                                <Text fontSize="2xs" color="gray.400">
+                                    Начните с <Code size="xs">/me</Code>: он отдаёт ваши юрлица, состояние разделов
+                                    и полный каталог операций с флагом <Code size="xs">allowed</Code>.
+                                    Заголовок <Code size="xs">Idempotency-Key</Code> на создании заказа обязателен —
+                                    повтор с тем же ключом не создаст второй заказ.
+                                </Text>
+                            </VStack>
+                        </Card.Body>
+                    </Card.Root>
+
+                    {/* Подключить ИИ-агента */}
+                    <AgentChatBanner
+                        url={mcpUrl}
+                        apiKey={sampleKey}
+                        docsUrl={docs.ui}
+                        openapiUrl={docs.openapi}
+                        onCopy={copyToClipboard}
+                    />
+                </VStack>
+            </Box>
+
+            {/* ── Section 3: Legacy API — свёрнуто по умолчанию ── */}
+            <AccordionRoot collapsible variant="enclosed" defaultValue={[]}>
+                <AccordionItem value="legacy" borderRadius="xl" border="1px solid" borderColor="border.muted" bg="bg">
+                    <AccordionItemTrigger px="5" py="4" cursor="pointer">
+                        <Flex
+                            align="center" justify="center" w="9" h="9" borderRadius="lg"
+                            bg="gray.100" _dark={{ bg: 'gray.800' }} flexShrink="0"
+                        >
+                            <LuArchive size={18} color="var(--chakra-colors-gray-500)" />
+                        </Flex>
+                        <Box>
+                            <Text fontWeight="700" fontSize="sm">Legacy API (поддерживается, не развивается)</Text>
+                            <Text fontSize="2xs" color="gray.400">Прежний формат с ключом в адресе — для уже настроенных интеграций</Text>
+                        </Box>
+                    </AccordionItemTrigger>
+                    <AccordionItemContent px="5" pb="5">
+
+            {/* ── Legacy API Documentation ── */}
             <Box>
                 <VStack align="stretch" gap="2" mb="6">
                     <HStack>
@@ -813,6 +1009,10 @@ export default function Index({ tokens: initialTokens }) {
                     </Card.Body>
                 </Card.Root>
             </Box>
+
+                    </AccordionItemContent>
+                </AccordionItem>
+            </AccordionRoot>
         </CabinetLayout>
     );
 }

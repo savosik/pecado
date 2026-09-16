@@ -4,10 +4,10 @@ namespace App\Services\Crm\Api\Operations;
 
 use App\Models\CrmSalesPlan;
 use App\Models\User;
-use App\Services\Crm\Api\OperationInput;
 use App\Services\Crm\PlanProgressService;
 use App\Services\Crm\PlanScopeResolver;
 use App\Services\Crm\SalesPlanService;
+use App\Support\OperationApi\OperationInput;
 use Illuminate\Support\Facades\Gate;
 
 /**

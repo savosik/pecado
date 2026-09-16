@@ -4,9 +4,9 @@ namespace App\Services\Crm\Api\Operations;
 
 use App\Models\CrmComment;
 use App\Models\User;
-use App\Services\Crm\Api\OperationInput;
 use App\Services\Crm\ClientTimelineService;
 use App\Services\Crm\CrmEntityResolver;
+use App\Support\OperationApi\OperationInput;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Gate;
 

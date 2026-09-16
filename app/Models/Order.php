@@ -214,7 +214,7 @@ class Order extends Model implements HasMedia
                 'old_status' => null,
                 'new_status' => $order->status,
                 'user_id' => auth()->id(),
-                'comment' => request()->input('status_comment'),
+                'comment' => \App\Support\Order\StatusCommentContext::current(),
             ]);
         });
 
@@ -230,7 +230,7 @@ class Order extends Model implements HasMedia
                     'old_status' => $original,
                     'new_status' => $order->status,
                     'user_id' => auth()->id(),
-                    'comment' => request()->input('status_comment'),
+                    'comment' => \App\Support\Order\StatusCommentContext::current(),
                 ]);
             }
         });

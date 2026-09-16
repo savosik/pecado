@@ -101,6 +101,9 @@ class BiSyncGrants extends Command
     private const CONFIDENTIAL_TABLE_PREFIXES = [
         'payroll_',
         'motivation_',
+        // Служебные ключи идемпотентности клиентского API: аналитической
+        // ценности нет, а в ответах — заказы клиентов целиком.
+        'client_api_idempotency',
     ];
 
     public function handle(): int

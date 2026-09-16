@@ -16,6 +16,7 @@ Schedule::command('documents:relink')->everyTenMinutes()->withoutOverlapping();
 Schedule::command('documents:reconcile')->hourly()->withoutOverlapping();
 Schedule::command('documents:clean-exchange')->dailyAt('04:10')->withoutOverlapping();
 Schedule::command('documents:prune')->dailyAt('04:20')->withoutOverlapping();
+Schedule::command('model:prune', ['--model' => [\App\Models\ClientApiIdempotencyKey::class]])->hourly()->withoutOverlapping();
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
 // v16.9.0 (режим «Заказы в резерве», res-09): основной таймер снятия просроченных
 // резервов — у сайта; страховка 1С (+6 ч) в норме не срабатывает

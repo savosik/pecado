@@ -24,6 +24,7 @@ class ApiTokenController extends Controller
                 'name' => $token->name,
                 'token' => $token->token,
                 'base_url' => $token->base_url,
+                'v1_base_url' => $token->v1_base_url,
                 'is_active' => $token->is_active,
                 'last_used_at' => $token->last_used_at?->toISOString(),
                 'created_at' => $token->created_at?->toISOString(),
@@ -31,6 +32,11 @@ class ApiTokenController extends Controller
 
         return Inertia::render('User/Cabinet/ApiTokens/Index', [
             'tokens' => $tokens,
+            'docs' => [
+                'ui' => url('/docs/client-api'),
+                'openapi' => url('/docs/client-api.json'),
+                'mcp' => url('/mcp/client'),
+            ],
         ]);
     }
 
@@ -55,6 +61,7 @@ class ApiTokenController extends Controller
             'name' => $token->name,
             'token' => $token->token,
             'base_url' => $token->base_url,
+            'v1_base_url' => $token->v1_base_url,
             'is_active' => $token->is_active,
             'last_used_at' => null,
             'created_at' => $token->created_at?->toISOString(),

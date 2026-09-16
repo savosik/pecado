@@ -5,14 +5,10 @@ namespace App\Http\Controllers\User;
 use App\Enums\Country;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
-use App\Models\Scopes\CompanyScope;
-use App\Rules\TaxId;
+use App\Services\Company\CompanyClaimService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class CompanyController extends Controller
@@ -96,34 +92,8 @@ class CompanyController extends Controller
      */
     public function apiStore(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'country' => ['required', 'string'],
-            'name' => ['required', 'string', 'max:255'],
-            'legal_name' => ['required', 'string', 'max:255'],
-            'tax_id' => [
-                'required',
-                'string',
-                'max:255',
-                new TaxId($request->input('country')),
-            ],
-            'registration_number' => ['nullable', 'string', 'max:255'],
-            'tax_code' => ['nullable', 'string', 'max:255'],
-            'okpo_code' => ['nullable', 'string', 'max:255'],
-            'legal_address' => ['nullable', 'string'],
-            'legal_address_data' => ['nullable', 'array'],
-            'actual_address' => ['nullable', 'string'],
-            'actual_address_data' => ['nullable', 'array'],
-            'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
-            'email' => ['nullable', 'email', 'max:255'],
-        ], [
-            'country.required' => 'Выберите страну.',
-            'name.required' => 'Название обязательно.',
-            'name.max' => 'Название не должно превышать 255 символов.',
-            'legal_name.required' => 'Юридическое название обязательно.',
-            'tax_id.required' => 'ИНН обязателен.',
-            'phone.regex' => 'Введите корректный номер телефона.',
-            'email.email' => 'Введите корректный email.',
-        ]);
+        $service = app(CompanyClaimService::class);
+        $validated = $request->validate($service->rules($request->input('country'), legalNameRequired: true), $service->messages());
 
         $validated['user_id'] = Auth::id();
 
@@ -146,11 +116,7 @@ class CompanyController extends Controller
 
         $newValue = ! $company->is_default;
 
-        Company::where('user_id', Auth::id())->update(['is_default' => false]);
-
-        if ($newValue) {
-            $company->update(['is_default' => true]);
-        }
+        app(CompanyClaimService::class)->setDefault(Auth::user(), $company, $newValue);
 
         return response()->json([
             'is_default' => $newValue,
@@ -165,85 +131,15 @@ class CompanyController extends Controller
 
     private function validateCompany(Request $request, ?int $companyId = null): array
     {
-        $taxIdRules = [
-            'required',
-            'string',
-            'max:255',
-            new TaxId($request->input('country')),
-        ];
+        $service = app(CompanyClaimService::class);
 
-        // На редактировании tax_id меняется редко, но если меняют — должна быть проверка
-        // от наезда на чужую привязанную компанию. На создании ту же роль выполняет
-        // claimOrCreateCompany() — там логика «забрать осиротевшую / отказать чужой».
-        if ($companyId !== null) {
-            $taxIdRules[] = Rule::unique('companies', 'tax_id')
-                ->whereNull('deleted_at')
-                ->ignore($companyId);
-        }
-
-        return $request->validate([
-            'country' => ['required', 'string'],
-            'name' => ['required', 'string', 'max:255'],
-            'legal_name' => ['nullable', 'string', 'max:255'],
-            'tax_id' => $taxIdRules,
-            'registration_number' => ['nullable', 'string', 'max:255'],
-            'tax_code' => ['nullable', 'string', 'max:255'],
-            'okpo_code' => ['nullable', 'string', 'max:255'],
-            'legal_address' => ['nullable', 'string'],
-            'legal_address_data' => ['nullable', 'array'],
-            'actual_address' => ['nullable', 'string'],
-            'actual_address_data' => ['nullable', 'array'],
-            'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
-            'email' => ['nullable', 'email', 'max:255'],
-        ], [
-            'country.required' => 'Выберите страну.',
-            'name.required' => 'Название обязательно.',
-            'name.max' => 'Название не должно превышать 255 символов.',
-            'tax_id.required' => 'ИНН обязателен.',
-            'tax_id.unique' => 'Компания с таким ИНН уже зарегистрирована в системе.',
-            'phone.regex' => 'Введите корректный номер телефона.',
-            'email.email' => 'Введите корректный email.',
-        ]);
+        return $request->validate($service->rules($request->input('country'), $companyId), $service->messages());
     }
 
-    /**
-     * Создать компанию или «забрать» уже существующую.
-     *
-     * Из 1С/админки в `companies` могут попадать «осиротевшие» записи
-     * (`user_id IS NULL`). При попытке регистрации с таким же ИНН раньше
-     * валидатор просто отвечал «уже зарегистрирована», и юзер не мог
-     * привязать свою компанию. Теперь:
-     *
-     *  - запись с этим ИНН не существует → создаём;
-     *  - есть и `user_id IS NULL` → привязываем к текущему юзеру, обновляем поля;
-     *  - есть и принадлежит текущему юзеру → обновляем (idempotent);
-     *  - есть и привязана к другому → ValidationException с понятным текстом.
-     */
     private function claimOrCreateCompany(array $validated): Company
     {
-        return DB::transaction(function () use ($validated) {
-            // Обходим CompanyScope (он ограничивает выборку текущим юзером),
-            // чтобы увидеть и осиротевшие записи, и принадлежащие другим.
-            $existing = Company::withoutGlobalScope(CompanyScope::class)
-                ->where('tax_id', $validated['tax_id'])
-                ->lockForUpdate()
-                ->first();
+        unset($validated['user_id']);
 
-            if ($existing === null) {
-                return Company::create($validated);
-            }
-
-            if ($existing->user_id !== null && $existing->user_id !== $validated['user_id']) {
-                throw ValidationException::withMessages([
-                    'tax_id' => 'Этот ИНН уже привязан к другому аккаунту. Если это ваша компания — обратитесь к менеджеру.',
-                ]);
-            }
-
-            $existing->fill($validated);
-            $existing->user_id = $validated['user_id'];
-            $existing->save();
-
-            return $existing;
-        });
+        return app(CompanyClaimService::class)->claimOrCreate(Auth::user(), $validated);
     }
 }

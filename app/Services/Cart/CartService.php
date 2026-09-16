@@ -11,6 +11,7 @@ use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\ProductDefect;
 use App\Models\User;
+use App\Services\Catalog\ProductIdentifierResolver;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -123,6 +124,56 @@ class CartService implements CartServiceInterface
         $newTotalQty = $currentQty + $qty;
 
         return $this->setProductQuantity($user, $cart, $product, $newTotalQty);
+    }
+
+    /**
+     * Добавить товар по штрихкоду со статусом результата — общий для кабинета и API v1.
+     *
+     * Статусы: not_found — штрихкод неизвестен; warning — ничего не добавлено,
+     * достигнут максимум; partial — добавлено меньше запрошенного (урезано по
+     * остатку); success — добавлено полностью.
+     *
+     * @return array{status: string, message: string, product_id?: int, product_name?: string, instock?: int, preorder?: int, clamped?: int, max_total?: int, cart_totals?: array}
+     */
+    public function addByBarcode(User $user, Cart $cart, string $barcode, int $qty = 1): array
+    {
+        $product = app(ProductIdentifierResolver::class)->resolveBarcode($barcode);
+
+        if (! $product) {
+            return ['status' => 'not_found', 'message' => 'Товар с таким штрихкодом не найден.'];
+        }
+
+        // Сколько было — чтобы понять, добавилось ли хоть что-то
+        $previousQty = (int) $cart->items()
+            ->where('product_id', $product->id)
+            ->excludingDefect()
+            ->sum('quantity');
+
+        $result = $this->addProduct($user, $cart, $product, $qty);
+        $actualTotal = $result['instock'] + $result['preorder'];
+        $identity = ['product_id' => $product->id, 'product_name' => $product->name];
+
+        if ($actualTotal <= $previousQty) {
+            return [
+                'status' => 'warning',
+                'message' => "Достигнут максимум для «{$product->name}» ({$result['max_total']} шт.)",
+                ...$identity,
+                ...$result,
+            ];
+        }
+
+        $addedQty = $actualTotal - $previousQty;
+
+        if ($addedQty < $qty) {
+            return [
+                'status' => 'partial',
+                'message' => "Добавлено {$addedQty} из {$qty} шт. «{$product->name}» (макс. {$result['max_total']} шт.)",
+                ...$identity,
+                ...$result,
+            ];
+        }
+
+        return ['status' => 'success', 'message' => 'Товар добавлен в корзину.', ...$identity, ...$result];
     }
 
     /**
