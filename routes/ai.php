@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Middleware\AuthenticateAnalyticsMcp;
+use App\Http\Middleware\AuthenticateClientApi;
 use App\Http\Middleware\AuthenticateCrmAgent;
 use App\Http\Middleware\AuthenticatePurchasingAgent;
 use App\Mcp\Servers\AnalyticsServer;
+use App\Mcp\Servers\ClientServer;
 use App\Mcp\Servers\CrmServer;
 use App\Mcp\Servers\PurchasingServer;
 use Laravel\Mcp\Facades\Mcp;
@@ -65,3 +67,17 @@ Mcp::web('/mcp/crm', CrmServer::class)
  */
 Mcp::web('/mcp/purchasing', PurchasingServer::class)
     ->middleware([AuthenticatePurchasingAgent::class, 'throttle:60,1']);
+
+/*
+ * Кабинет клиента глазами его ИИ-агента — витрина над реестром операций
+ * клиентского API v1 (эпик capi-00).
+ *
+ * Отдельный сервер и отдельные токены (api_tokens клиента, тот же Bearer, что у
+ * REST /api/client/v1): токен клиента не должен открывать CRM и аналитику, а
+ * токены сотрудников — кабинет клиента. Лимит — по владельцу токена, не по IP:
+ * несколько клиентов могут сидеть за одним NAT.
+ *
+ * URL для агента клиента: https://pecado.ru/mcp/client
+ */
+Mcp::web('/mcp/client', ClientServer::class)
+    ->middleware([AuthenticateClientApi::class, 'throttle:client-api']);
