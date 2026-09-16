@@ -15,6 +15,7 @@ use App\Services\Client\Api\Idempotency\IdempotencyConflict;
 use App\Services\Client\Api\Operation;
 use App\Services\Client\Api\OperationRegistry;
 use App\Services\Client\Api\OperationRunner;
+use App\Services\Order\NothingToCheckoutException;
 use App\Services\Order\NothingToPlaceException;
 use App\Services\Order\ReserveActionException;
 use App\Support\OperationApi\OperationDenied;
@@ -133,6 +134,8 @@ class ClientApiController extends Controller
             return response()->json(Envelope::error($e->errorCode, $e->getMessage(), null, $e->meta), $e->status);
         } catch (ModelNotFoundException) {
             return $this->error('not_found', 'Запись не найдена или недоступна этому клиенту.', 404);
+        } catch (NothingToCheckoutException $e) {
+            return $this->error('nothing_to_checkout', $e->getMessage(), 422);
         } catch (NothingToPlaceException $e) {
             return response()->json(Envelope::error('nothing_to_place', $e->getMessage(), 'products', [
                 'not_accepted' => $e->notAccepted,

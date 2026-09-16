@@ -5,6 +5,7 @@ namespace App\Services\Client\Api;
 use App\Models\User;
 use App\Services\Client\Api\Operations\CartOperations;
 use App\Services\Client\Api\Operations\CatalogOperations;
+use App\Services\Client\Api\Operations\CheckoutOperations;
 use App\Services\Client\Api\Operations\OrderOperations;
 use App\Services\Client\Api\Operations\ProfileOperations;
 use App\Services\Client\Api\Operations\ReserveOperations;
@@ -32,6 +33,7 @@ class OperationRegistry
     private const PROVIDERS = [
         CatalogOperations::class,
         CartOperations::class,
+        CheckoutOperations::class,
         ReturnOperations::class,
         ProfileOperations::class,
         OrderOperations::class,

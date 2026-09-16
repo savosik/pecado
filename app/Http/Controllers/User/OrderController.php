@@ -12,6 +12,7 @@ use App\Services\Currency\CabinetAmountConverter;
 use App\Services\Order\ClientOrderPresenter;
 use App\Services\Order\ClientOrderQuery;
 use App\Services\Order\OrderChangeAggregator;
+use App\Services\Order\OrderRepeater;
 use App\Services\SimpleCsvExporter;
 use App\Services\SimpleXlsxExporter;
 use App\Support\Search\EmptyResultSuggestion;
@@ -438,42 +439,8 @@ class OrderController extends Controller
         ]);
         $mode = $validated['mode'] ?? 'merge';
 
-        $order->load(['items:id,order_id,product_id,name,quantity']);
-
-        // Суммируем количество по товару; отсекаем позиции без привязки к каталогу.
-        $orderQuantities = [];
-        $skipped = 0;
-        foreach ($order->items as $item) {
-            $pid = (int) ($item->product_id ?? 0);
-            $qty = (int) $item->quantity;
-            if ($pid <= 0 || $qty <= 0) {
-                $skipped++;
-
-                continue;
-            }
-            $orderQuantities[$pid] = ($orderQuantities[$pid] ?? 0) + $qty;
-        }
-
-        $cart = $cartService->getOrCreateActiveCart($user);
-
-        if ($mode === 'replace') {
-            $cart->clear();
-        }
-
-        $cartTotals = null;
-        if (! empty($orderQuantities)) {
-            // Аддитивно: к текущему количеству каждого товара прибавляем количество из заказа.
-            $targets = [];
-            foreach ($orderQuantities as $pid => $qty) {
-                $current = (int) $cart->items()->where('product_id', $pid)->sum('quantity');
-                $targets[$pid] = $current + $qty;
-            }
-
-            $result = $cartService->setProductsQuantity($user, $cart, $targets);
-            $cartTotals = $result['cart_totals'] ?? null;
-        }
-
-        $addedCount = count($orderQuantities);
+        $result = app(OrderRepeater::class)->repeat($user, $order, $mode);
+        $addedCount = $result['added_count'];
 
         return response()->json([
             'status' => $addedCount > 0 ? 'success' : 'warning',
@@ -482,8 +449,8 @@ class OrderController extends Controller
                 : 'В заказе нет позиций, доступных для повтора.',
             'mode' => $mode,
             'added_count' => $addedCount,
-            'skipped_count' => $skipped,
-            'cart_totals' => $cartTotals,
+            'skipped_count' => $result['skipped_count'],
+            'cart_totals' => $result['cart_totals'],
         ], $addedCount > 0 ? 200 : 422);
     }
 }

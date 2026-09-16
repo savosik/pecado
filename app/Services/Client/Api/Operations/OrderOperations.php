@@ -18,6 +18,7 @@ use App\Services\Order\ClientOrderActions;
 use App\Services\Order\ClientOrderPresenter;
 use App\Services\Order\ClientOrderQuery;
 use App\Services\Order\OrderChangeFeed;
+use App\Services\Order\OrderRepeater;
 use App\Services\Order\PlacementRequest;
 use App\Support\Client\ClientApiSource;
 use App\Support\OperationApi\OperationInput;
@@ -43,6 +44,7 @@ class OrderOperations implements OperationProvider
         private readonly ApiOrderPlacement $placement,
         private readonly ClientOrderActions $actions,
         private readonly OrderReservePublisher $publisher,
+        private readonly OrderRepeater $repeater,
     ) {}
 
     public static function section(): array
@@ -150,6 +152,22 @@ class OrderOperations implements OperationProvider
                 handler: [self::class, 'cancel'],
                 mutating: true,
                 gate: FeatureGate::ORDER_CANCEL,
+            ),
+            new Operation(
+                id: 'orders.repeat',
+                section: 'orders',
+                method: 'POST',
+                uri: 'orders/{order}/repeat',
+                summary: 'Повторить заказ — положить его позиции в корзину',
+                description: 'mode=merge (по умолчанию) прибавляет к текущему количеству в активной корзине, '
+                    .'mode=replace очищает её и кладёт только позиции заказа. Количества урезаются по доступному остатку. '
+                    .'Оформление — checkout.submit.',
+                params: [
+                    Param::string('order', 'Заказ: id, номер или uuid', required: true),
+                    Param::string('mode', 'merge — прибавить, replace — заменить состав корзины', enum: ['merge', 'replace']),
+                ],
+                handler: [self::class, 'repeat'],
+                mutating: true,
             ),
         ];
     }
@@ -301,5 +319,15 @@ class OrderOperations implements OperationProvider
             'status' => $order->status?->value,
             'cancelled' => true,
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function repeat(User $actor, OperationInput $input): array
+    {
+        $order = $this->orderOf($actor, (string) $input->get('order'), withTrashed: true);
+
+        return Envelope::data($this->repeater->repeat($actor, $order, $input->string('mode') ?? OrderRepeater::MODE_MERGE));
     }
 }
