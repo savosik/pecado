@@ -48,7 +48,7 @@ class PartnerListService
 
     /** Колонки, по которым можно сортировать с сервера. */
     private const SORTABLE = [
-        'rate',
+        'rate', 'usual_gain',
         'name', 'usual_monthly', 'current_month', 'best_month', 'potential', 'your_gain',
         'assortment', 'last_purchase_on', 'silent_days', 'debt', 'shortfall', 'cost',
     ];
@@ -311,6 +311,8 @@ class PartnerListService
                 // Ставка вознаграждения с выручки этого партнёра: П2 в периоде новизны, иначе П1.
                 // Порог оплаты здесь не учитывается — это ставка, а не факт начисления.
                 'rate' => in_array($id, $novelty, true) ? $rateP2 : $rateP1,
+                // Обычная закупка × ставка: сколько партнёр приносит работнику в обычный месяц.
+                'usual_gain' => Money::round($usual * (in_array($id, $novelty, true) ? $rateP2 : $rateP1)),
                 'shortfall' => $shortfall,
                 'cost' => Money::round($shortfall * $rateP1),
                 'assortment' => $assortment['by_partner'][$id] ?? ['taken' => 0, 'total' => $assortment['total']],

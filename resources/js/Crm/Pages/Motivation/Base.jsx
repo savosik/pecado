@@ -52,6 +52,7 @@ export default function MotivationBase({ tab_counts: tabCounts = null, month, mo
             <Text fontSize="sm" fontWeight="700" color={row.in_novelty ? 'purple.fg' : undefined} fontVariantNumeric="tabular-nums">{(Number(row.rate ?? 0) * 100).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} %</Text>
         ) },
         { key: 'usual_monthly', label: 'Обычно берёт в месяц', align: 'right', sortable: true, render: (row) => <Money value={row.usual_monthly} /> },
+        { key: 'usual_gain', label: 'Обычно приносит денег', align: 'right', sortable: true, hint: 'Обычная закупка партнёра × ваша ставка с него. Столько партнёр приносит вам в обычный месяц.', render: (row) => <Text fontSize="sm" fontWeight="700" color={row.usual_gain > 0 ? 'green.fg' : 'fg.subtle'} fontVariantNumeric="tabular-nums">{row.usual_gain > 0 ? `${Math.round(row.usual_gain).toLocaleString('ru-RU')} ₽` : '—'}</Text> },
         { key: 'current_month', label: 'Взял в этом месяце', align: 'right', sortable: true, render: (row) => <Money value={row.current_month} strong /> },
         { key: 'best_month', label: 'Лучший месяц', align: 'right', sortable: true, render: (row) => <BestMonth value={row.best_month} /> },
         { key: 'potential', label: 'Потенциал', align: 'right', sortable: true, render: (row) => <Money value={row.potential} /> },
