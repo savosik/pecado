@@ -13,7 +13,6 @@ export const HUBS = {
             { key: 'wake', label: 'Разбудить', path: '/crm/motivation/wake' },
             { key: 'new', label: 'Новые', path: '/crm/motivation/new-partners' },
             { key: 'packages', label: 'Выданные', path: '/crm/motivation/packages' },
-            { key: 'focus', label: 'Фокус-товары', path: '/crm/motivation/focus' },
         ],
     },
     payslip: {
@@ -22,6 +21,8 @@ export const HUBS = {
             { key: 'payslip', label: 'Лист', path: '/crm/motivation/payslip' },
             { key: 'plan', label: 'Откуда план', path: '/crm/motivation/plan' },
             { key: 'quarter', label: 'Премия отдела', path: '/crm/motivation/quarter' },
+            // Фокус-товары — про то, что продавать за П3, а не про клиентов: живут рядом с расчётом.
+            { key: 'focus', label: 'Фокус-товары', path: '/crm/motivation/focus' },
             { key: 'rates', label: 'Ставки', path: '/crm/motivation/settings', permission: 'view-only' },
         ],
     },
@@ -30,6 +31,8 @@ export const HUBS = {
         tabs: [
             { key: 'settings', label: 'Параметры', path: '/crm/motivation/settings' },
             { key: 'plans', label: 'Планы на квартал', path: '/crm/motivation/plans' },
+            // Фокус-перечень — приказ с периодом действия, как параметры и планы.
+            { key: 'focus', label: 'Фокус-перечень', path: '/crm/motivation/focus-list' },
         ],
     },
     ledger: {
@@ -45,7 +48,6 @@ export const HUBS = {
         title: 'Клиенты отдела',
         tabs: [
             { key: 'pool', label: 'Пул и раздача', path: '/crm/motivation/pool/admin' },
-            { key: 'focus', label: 'Фокус-перечень', path: '/crm/motivation/focus-list' },
             { key: 'health', label: 'Здоровье базы', path: '/crm/motivation/health' },
         ],
     },
