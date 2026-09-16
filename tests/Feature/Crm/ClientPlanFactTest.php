@@ -175,7 +175,7 @@ class ClientPlanFactTest extends TestCase
         $this->assertArrayHasKey($client->id, $rows);
         $this->assertArrayNotHasKey('plan_fact', $rows[$client->id]);
         $this->assertArrayNotHasKey('plan_state', $props['filters']);
-        $this->assertSame('id', $props['filters']['sort_by']);
+        $this->assertSame(\App\Support\Crm\ClientListFilters::DEFAULT_SORT, $props['filters']['sort_by'], 'Неизвестная сортировка молча заменяется умолчанием');
         $this->assertArrayNotHasKey('canSeePlans', $props);
     }
 }
