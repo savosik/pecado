@@ -10,6 +10,7 @@ import { BestMonth, Competitor, Contacts, Money } from './components/partnerCell
 import { fmtDay, fmtRub0 } from '../Salary/components/format';
 import MotivationTabs from './components/MotivationTabs';
 import { hubBreadcrumbs } from './components/hubs';
+import FilterChip from './components/FilterChip';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -31,13 +32,13 @@ const monthLabel = (iso) => {
  *
  * В общем списке шесть сотен партнёров, покупали когда-либо единицы. Экран
  * не выдаёт холодную базу за спящих клиентов: «даст вам» есть только у тех,
- * у кого есть история, и фильтр по умолчанию оставляет только их.
+ * у кого есть история; чип «с историей покупок» включается явно.
  */
 export default function MotivationPool({ month, month_label: monthLabelRu, manager, scope_options: scopeOptions, can_see_all: canSeeAll, query, list }) {
     const { dialogs, setTaskFor, setCallFor } = usePartnerDialogs();
     const summary = list?.summary ?? {};
     const tap = list?.tap;
-    const historyOnly = list?.history_only ?? true;
+    const historyOnly = list?.history_only ?? false;
 
     const navigate = (changes) => {
         const params = { month, ...query, ...changes };
@@ -124,21 +125,12 @@ export default function MotivationPool({ month, month_label: monthLabelRu, manag
                         )}
 
                         <HStack gap={3} flexWrap="wrap" fontSize="sm">
-                            <Box
-                                as="button"
-                                type="button"
-                                px={3}
-                                py={1.5}
-                                borderRadius="full"
-                                borderWidth="1px"
-                                borderColor={historyOnly ? 'blue.solid' : 'border'}
-                                bg={historyOnly ? 'blue.subtle' : 'bg.panel'}
-                                cursor="pointer"
-                                onClick={() => navigate({ history: historyOnly ? 0 : 1, page: undefined })}
-                                aria-pressed={historyOnly}
-                            >
-                                Только с историей покупок · {summary.with_history ?? 0}
-                            </Box>
+                            <FilterChip
+                                label="С историей покупок"
+                                count={summary.with_history ?? 0}
+                                active={historyOnly}
+                                onToggle={() => navigate({ history: historyOnly ? undefined : 1, page: undefined })}
+                            />
                             <HStack gap={1} fontSize="xs" color="fg.muted">
                                 <Text>{monthLabelRu} · в списке {list.rows.total}</Text>
                                 <MetricHint text={list.hint} />

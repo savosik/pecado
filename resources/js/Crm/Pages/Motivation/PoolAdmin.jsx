@@ -15,6 +15,7 @@ import MotivationTabs from './components/MotivationTabs';
 import { hubBreadcrumbs } from './components/hubs';
 import FoldSection from './components/FoldSection';
 import { Competitor, Contacts } from './components/partnerCells';
+import FilterChip from './components/FilterChip';
 
 const selectStyle = {
     padding: '0.45rem 0.6rem',
@@ -208,14 +209,24 @@ export default function MotivationPoolAdmin(props) {
                             </HStack>
                         </HStack>
 
-                        <HStack gap={2} flexWrap="wrap" mb={2}>
-                            <Box as="button" type="button" px={3} py={1} borderRadius="full" borderWidth="1px" borderColor={data.candidates.history_only && !Number(data.query.lost ?? 0) ? 'blue.solid' : 'border'} bg={data.candidates.history_only && !Number(data.query.lost ?? 0) ? 'blue.subtle' : 'bg.panel'} fontSize="sm" cursor="pointer" onClick={() => navigate({ history: data.candidates.history_only ? 0 : 1, lost: undefined, page: undefined })}>
-                                Только с историей покупок · {data.candidates.summary.with_history}
-                            </Box>
-                            <Box as="button" type="button" px={3} py={1} borderRadius="full" borderWidth="1px" borderColor={Number(data.query.lost ?? 0) ? 'gray.solid' : 'border'} bg={Number(data.query.lost ?? 0) ? 'gray.subtle' : 'bg.panel'} fontSize="sm" cursor="pointer" onClick={() => navigate({ lost: Number(data.query.lost ?? 0) ? undefined : 1, page: undefined })}>
-                                Ушедшие · {data.candidates.summary.lost}
-                            </Box>
+                        <HStack gap={2} flexWrap="wrap" mb={2} align="center">
+                            <FilterChip
+                                label="С историей покупок"
+                                count={data.candidates.summary.with_history}
+                                active={data.candidates.history_only && !data.candidates.lost_only}
+                                onToggle={() => navigate({ history: data.candidates.history_only ? undefined : 1, lost: undefined, page: undefined })}
+                            />
+                            <FilterChip
+                                label="Ушедшие"
+                                count={data.candidates.summary.lost}
+                                active={data.candidates.lost_only}
+                                palette="gray"
+                                onToggle={() => navigate({ lost: data.candidates.lost_only ? undefined : 1, history: undefined, page: undefined })}
+                            />
                             <input type="search" aria-label="Поиск" placeholder="Название или город…" style={selectStyle} defaultValue={data.query.search ?? ''} onKeyDown={(e) => { if (e.key === 'Enter') navigate({ search: e.target.value, page: undefined }); }} />
+                            <Text fontSize="xs" color="fg.muted">
+                                Показаны: {data.candidates.lost_only ? 'ушедшие' : (data.candidates.history_only ? 'только с историей покупок' : 'все свободные партнёры')} · {data.candidates.rows.total}
+                            </Text>
                         </HStack>
 
                         {candidates.length === 0 ? <Text fontSize="sm" color="fg.muted">По этому фильтру партнёров нет.</Text> : (
