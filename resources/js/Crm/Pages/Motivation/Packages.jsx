@@ -70,7 +70,7 @@ export default function MotivationPackages({ manager, scope_options: scopeOption
                                 <Rule n="1" title={`Контакт — за ${rules.contact_working_days} рабочих дней`} text="Звонок, письмо или задача по партнёру, записанные в CRM. Засчитывается автоматически, отдельно отмечать не нужно." />
                                 <Rule n="2" title={`Первая отгрузка — за ${rules.shipment_days} дней`} text="Партнёр должен купить. Не купил в срок — карточка возвращается в общий список, и её может получить другой работник." />
                                 <Rule n="3" title={`Что это даёт: ${rules.rate_p2_percent} % вместо базовой ставки`} text={`Партнёр из общего списка при первой отгрузке становится новым: ${rules.novelty_periods} месяцев с его отгрузок платят ${rules.rate_p2_percent} %, и он идёт в зачёт квартальной премии отдела.`} />
-                                <Rule n="4" title="Кран" text={`Новый пакет не выдаётся, если отгрузки вашей базы ${rules.tap_periods} месяца подряд ниже порога оплаты. Пакет — до ${rules.package_size} партнёров.`} />
+                                <Rule n="4" title="Когда дают пакет" text={`Если вы ${rules.tap_periods} месяца подряд выполняете не меньше ${rules.threshold_percent} % плана. Пакет — до ${rules.package_size} партнёров.`} />
                             </SimpleGrid>
                         </Box>
 

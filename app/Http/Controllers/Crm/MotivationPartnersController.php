@@ -96,7 +96,9 @@ class MotivationPartnersController extends CrmController
         }
 
         $managerId = (int) $manager->getKey();
-        $rateP2 = (float) ($this->params->effective($managerId, $month)->for('motivation_variable')['rate_p2'] ?? $defaults['rate_p2'] ?? 0);
+        $effective = $this->params->effective($managerId, $month)->for('motivation_variable');
+        $rateP2 = (float) ($effective['rate_p2'] ?? $defaults['rate_p2'] ?? 0);
+        $threshold = (float) ($effective['payment_threshold'] ?? $defaults['payment_threshold'] ?? 0.6);
 
         $payload['rules'] = [
             'package_size' => (int) ($defaults['pool_package_size'] ?? 20),
@@ -105,6 +107,7 @@ class MotivationPartnersController extends CrmController
             'tap_periods' => (int) ($defaults['pool_tap_periods'] ?? 2),
             'novelty_periods' => (int) ($defaults['novelty_periods'] ?? 6),
             'rate_p2_percent' => rtrim(rtrim(number_format($rateP2 * 100, 2, ',', ''), '0'), ','),
+            'threshold_percent' => (int) round($threshold * 100),
         ];
         $payload['tap'] = $this->pool->tap($managerId, $month);
         $payload['packages'] = $this->packages->forManager($managerId);
