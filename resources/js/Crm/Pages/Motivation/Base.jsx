@@ -6,7 +6,7 @@ import { Alert } from '@/components/ui/alert';
 import MetricHint from '@/Crm/Components/MetricHint';
 import PartnerTable from './components/PartnerTable';
 import PartnerActions, { usePartnerDialogs } from './components/PartnerActions';
-import { Assortment, BestMonth, Debt, LastPurchase, Money, PartnerName } from './components/partnerCells';
+import { Assortment, Debt, LastPurchase, Money, PartnerName } from './components/partnerCells';
 import MotivationTabs from './components/MotivationTabs';
 import { hubBreadcrumbs } from './components/hubs';
 
@@ -81,9 +81,12 @@ export default function MotivationBase({ tab_counts: tabCounts = null, month, mo
                 </HStack>
             </VStack>
         ) },
-        { key: 'best_month', label: 'Лучший месяц', sub: 'потенциал · может дать', align: 'right', sortable: true, hint: 'Верхняя строка — лучший месяц партнёра за два года. Ниже: потенциал (лучший месяц минус закупка в этом месяце) и сколько это вам по ставке.', render: (row) => (
+        { key: 'best_month', label: 'Лучший месяц', sub: 'потенциал · может дать', align: 'right', sortable: true, hint: 'Верхняя строка — лучший месяц партнёра за два года и когда он был. Ниже: потенциал (лучший месяц минус закупка в этом месяце) и сколько это вам по ставке.', render: (row) => (
             <VStack align="end" gap={0}>
-                <BestMonth value={row.best_month} />
+                <HStack gap={1.5} fontSize="sm" fontVariantNumeric="tabular-nums">
+                    <Text>{row.best_month?.amount ? rub(row.best_month.amount) : '—'}</Text>
+                    {row.best_month?.period && <Text fontSize="xs" color="fg.subtle">{String(row.best_month.period).split('-').reverse().join('.')}</Text>}
+                </HStack>
                 <HStack gap={1.5} fontSize="xs" fontVariantNumeric="tabular-nums">
                     <Text color="fg.muted">{row.potential > 0 ? rub(row.potential) : '—'}</Text>
                     <Text fontWeight="600" color={row.your_gain > 0 ? 'green.fg' : 'fg.subtle'}>{row.your_gain > 0 ? `+${rub(row.your_gain)}` : ''}</Text>
