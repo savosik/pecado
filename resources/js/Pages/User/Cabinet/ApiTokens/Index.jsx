@@ -6,6 +6,7 @@ import {
 } from '@chakra-ui/react';
 import { Head, usePage } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
+import AgentChatBanner from './AgentChatBanner';
 import {
     LuPlus, LuCopy, LuCheck, LuTrash2, LuRefreshCw,
     LuShieldCheck, LuCode, LuArrowRight, LuPackage,
@@ -794,6 +795,9 @@ export default function Index({ tokens: initialTokens, docs = {} }) {
                         overflow="hidden"
                     >
                         <Card.Body p="5">
+                            <Box mb="5">
+                                <AgentChatBanner />
+                            </Box>
                             <HStack mb="3" justify="space-between" flexWrap="wrap" gap="2">
                                 <HStack>
                                     <LuBot size={18} style={{ color: 'var(--chakra-colors-purple-500)' }} />
