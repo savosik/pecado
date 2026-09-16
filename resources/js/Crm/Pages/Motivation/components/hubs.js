@@ -21,8 +21,6 @@ export const HUBS = {
             { key: 'payslip', label: 'Лист', path: '/crm/motivation/payslip' },
             { key: 'plan', label: 'Откуда план', path: '/crm/motivation/plan' },
             { key: 'quarter', label: 'Премия отдела', path: '/crm/motivation/quarter' },
-            // Фокус-товары — про то, что продавать за П3, а не про клиентов: живут рядом с расчётом.
-            { key: 'focus', label: 'Фокус-товары', path: '/crm/motivation/focus' },
             { key: 'rates', label: 'Ставки', path: '/crm/motivation/settings', permission: 'view-only' },
         ],
     },
@@ -31,8 +29,6 @@ export const HUBS = {
         tabs: [
             { key: 'settings', label: 'Параметры', path: '/crm/motivation/settings' },
             { key: 'plans', label: 'Планы на квартал', path: '/crm/motivation/plans' },
-            // Фокус-перечень — приказ с периодом действия, как параметры и планы.
-            { key: 'focus', label: 'Фокус-перечень', path: '/crm/motivation/focus-list' },
         ],
     },
     ledger: {
@@ -42,6 +38,15 @@ export const HUBS = {
             { key: 'approval', label: 'К утверждению', path: '/crm/motivation/approval' },
             { key: 'quarter', label: 'Квартальная премия', path: '/crm/motivation/quarter/admin' },
             { key: 'forecast', label: 'Прогноз фонда', path: '/crm/motivation/forecast' },
+        ],
+    },
+    focus: {
+        // Свой пункт меню: товары, а не клиенты. Первая вкладка — работнику,
+        // вторая — руководителю (по праву edit).
+        title: 'Фокус-товары',
+        tabs: [
+            { key: 'mine', label: 'Кому предложить', path: '/crm/motivation/focus' },
+            { key: 'list', label: 'Фокус-перечень', path: '/crm/motivation/focus-list', permission: 'edit-only' },
         ],
     },
     department: {

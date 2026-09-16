@@ -92,10 +92,10 @@ export default function MotivationFocusAdmin(props) {
     }
 
     return (
-        <CrmLayout breadcrumbs={hubBreadcrumbs('rules', 'focus')}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('focus', 'list')}>
             <Head title="Фокус-перечень — CRM" />
             <PageHeader title="Фокус-перечень" description="Что сейчас в перечне и что изменить. Изменение правила не меняет состав в утверждённых периодах." />
-            <MotivationTabs hub="rules" current="focus" />
+            <MotivationTabs hub="focus" current="list" />
 
             <VStack align="stretch" gap={4}>
                 <Alert status="info" title="Цена показателя">{data.note}</Alert>

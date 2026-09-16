@@ -43,7 +43,7 @@ export default function MotivationFocus({ month, month_label: monthLabel, manage
     };
 
     return (
-        <CrmLayout breadcrumbs={hubBreadcrumbs('payslip', 'focus')}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('focus', 'mine')}>
             <Head title="Фокус-товары — CRM" />
             <PageHeader
                 title="Фокус-товары"
@@ -55,7 +55,7 @@ export default function MotivationFocus({ month, month_label: monthLabel, manage
                     </select>
                 ) : null}
             />
-            <MotivationTabs hub="payslip" current="focus" />
+            <MotivationTabs hub="focus" current="mine" />
 
             <VStack align="stretch" gap={4}>
                 {manager === null && (
