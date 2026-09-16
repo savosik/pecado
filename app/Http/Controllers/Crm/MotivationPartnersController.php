@@ -28,6 +28,7 @@ class MotivationPartnersController extends CrmController
         private readonly PayrollScopeResolver $scopes,
         private readonly PartnerListService $partners,
         private readonly PoolListService $pool,
+        private readonly \App\Services\Motivation\PoolPackageService $packages,
     ) {}
 
     public function base(Request $request): Response
@@ -113,6 +114,11 @@ class MotivationPartnersController extends CrmController
             'pool' => $this->pool->list($managerId, $month, $query),
             default => $this->partners->base($managerId, $month, $query),
         };
+
+        if ($list === 'pool') {
+            // Что уже выдано этому работнику и в какие сроки уложиться.
+            $payload['my_packages'] = $this->packages->forManager($managerId);
+        }
 
         return $payload;
     }

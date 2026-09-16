@@ -186,6 +186,30 @@ class MotivationPoolPackagesTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('Работник видит выданные ему пакеты со сроками на «Свободных клиентах»')]
+    public function manager_sees_own_packages_with_deadlines(): void
+    {
+        [$a, $b] = $this->poolPartners(2);
+        $package = app(PoolPackageService::class)->issue($this->profile->id, [$a->id, $b->id], $this->head, 'Октябрьский пакет');
+
+        CrmCall::query()->create([
+            'user_id' => $this->head->id, 'client_user_id' => $a->id, 'direction' => 'outgoing', 'result' => 'talked',
+            'started_at' => now(), 'provider' => CrmCall::PROVIDER_MANUAL,
+        ]);
+
+        $this->actingAs($this->head)
+            ->get('/crm/motivation/pool?manager='.$this->profile->id)
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('my_packages', 1)
+                ->where('my_packages.0.id', $package->id)
+                ->where('my_packages.0.count', 2)
+                ->where('my_packages.0.contacted_in_time', 1)
+                ->where('my_packages.0.comment', 'Октябрьский пакет')
+                ->has('my_packages.0.items', 2));
+    }
+
+    #[Test]
     #[TestDox('Удалённая карточка выпадает из Пула сразу, даже при открытой записи реестра')]
     public function deleted_partner_leaves_the_pool(): void
     {

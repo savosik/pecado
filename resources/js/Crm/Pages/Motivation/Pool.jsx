@@ -34,7 +34,7 @@ const monthLabel = (iso) => {
  * не выдаёт холодную базу за спящих клиентов: «даст вам» есть только у тех,
  * у кого есть история; чип «с историей покупок» включается явно.
  */
-export default function MotivationPool({ month, month_label: monthLabelRu, manager, scope_options: scopeOptions, can_see_all: canSeeAll, query, list }) {
+export default function MotivationPool({ month, month_label: monthLabelRu, manager, scope_options: scopeOptions, can_see_all: canSeeAll, query, list, my_packages: myPackages = [] }) {
     const { dialogs, setTaskFor, setCallFor } = usePartnerDialogs();
     const summary = list?.summary ?? {};
     const tap = list?.tap;
@@ -109,6 +109,43 @@ export default function MotivationPool({ month, month_label: monthLabelRu, manag
                             <Stat label="Из них покупали когда-либо" value={String(summary.with_history ?? 0)} hint="Только по ним можно оценить, что даст закрепление. Остальные — холодная база: их не разбудить, их надо привлечь." />
                             <Stat label="Могу получить пакет" value={tap?.blocked ? 'нет' : 'да'} tone={tap?.blocked ? 'red' : 'green'} hint={`Пакет — до ${summary.package_size ?? 20} партнёров. Выдача останавливается, если отгрузки базы два периода подряд ниже порога оплаты (п. 8.4).`} />
                         </SimpleGrid>
+
+                        {myPackages.length > 0 && (
+                            <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" p={4}>
+                                <HStack gap={1} mb={1}>
+                                    <Text fontWeight="700">Выданные мне пакеты</Text>
+                                    <MetricHint text="Партнёры, переданные вам руководителем. По каждому нужен зафиксированный в CRM контакт (звонок, письмо или задача) до первого срока и первая отгрузка до второго — иначе партнёр возвращается в общий список. Контакт засчитывается автоматически по записям в CRM." />
+                                </HStack>
+                                <VStack align="stretch" gap={3} mt={2}>
+                                    {myPackages.map((p) => (
+                                        <Box key={p.id}>
+                                            <HStack gap={2} flexWrap="wrap" fontSize="sm" mb={1}>
+                                                <Text fontWeight="600">Пакет № {p.id} от {fmtDay(p.issued_on)}</Text>
+                                                <Text color="fg.muted">контакт до {fmtDay(p.contact_due_on)} · отгрузка до {fmtDay(p.shipment_due_on)}</Text>
+                                                <Badge size="xs" variant="subtle" colorPalette={p.overdue > 0 ? 'red' : 'green'}>{p.count} партнёров · контакт в срок {p.contacted_in_time} · отгружено {p.shipped}{p.overdue > 0 ? ` · просрочено ${p.overdue}` : ''}</Badge>
+                                                {p.comment && <Text color="fg.subtle" fontSize="xs">{p.comment}</Text>}
+                                            </HStack>
+                                            <VStack align="stretch" gap={1}>
+                                                {p.items.map((it) => (
+                                                    <HStack key={it.id} justify="space-between" gap={3} fontSize="sm" flexWrap="wrap" px={2} py={1} borderRadius="md" bg={it.late ? 'red.subtle' : (it.outcome === 'converted' ? 'green.subtle' : 'transparent')}>
+                                                        <HStack gap={2} flexWrap="wrap">
+                                                            <Text fontWeight="600">{it.partner_name}</Text>
+                                                            <Text fontSize="xs" color="fg.muted">{[it.phone, it.email].filter(Boolean).join(' · ')}</Text>
+                                                        </HStack>
+                                                        <HStack gap={3} fontSize="xs" flexWrap="wrap">
+                                                            <Text color={it.first_contact_at ? 'green.fg' : (it.late ? 'red.fg' : 'fg.muted')}>{it.first_contact_at ? `контакт ${fmtDay(it.first_contact_at)}` : `контакта нет — до ${fmtDay(p.contact_due_on)}`}</Text>
+                                                            <Text color={it.first_shipment_at ? 'green.fg' : 'fg.muted'}>{it.first_shipment_at ? `отгрузка ${fmtDay(it.first_shipment_at)}` : `отгрузки нет — до ${fmtDay(p.shipment_due_on)}`}</Text>
+                                                            {it.outcome === 'returned' && <Badge size="xs" variant="subtle" colorPalette="gray">возвращён в список</Badge>}
+                                                            <PartnerActions row={{ id: it.partner_id, name: it.partner_name }} onTask={setTaskFor} onCall={setCallFor} />
+                                                        </HStack>
+                                                    </HStack>
+                                                ))}
+                                            </VStack>
+                                        </Box>
+                                    ))}
+                                </VStack>
+                            </Box>
+                        )}
 
                         {tap && (tap.blocked || tap.note) && (
                             <Alert status={tap.blocked ? 'warning' : 'info'} title={tap.blocked ? 'Выдача пакетов приостановлена' : 'Правило крана'}>

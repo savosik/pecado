@@ -227,6 +227,34 @@ class PoolPackageService
     /**
      * @return array<string, mixed>
      */
+    /**
+     * Пакеты работника — для его страницы «Свободные клиенты».
+     *
+     * Открытые пакеты перед показом обновляются: работник должен видеть, что
+     * контакт уже засчитан, не дожидаясь кнопки руководителя.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function forManager(int $managerId): array
+    {
+        $packages = MotivationPoolPackage::query()
+            ->where('personal_manager_id', $managerId)
+            ->orderByDesc('issued_on')
+            ->orderByDesc('id')
+            ->limit(20)
+            ->get();
+
+        foreach ($packages as $package) {
+            if ($package->items()->where('outcome', MotivationPoolPackageItem::OUTCOME_IN_PROGRESS)->exists()) {
+                $this->refresh($package);
+            }
+        }
+
+        $packages->load(['manager:id,name', 'items.partner:id,name,erp_name,phone,email']);
+
+        return $packages->map(fn (MotivationPoolPackage $p): array => $this->packageRow($p))->all();
+    }
+
     private function packageRow(MotivationPoolPackage $package): array
     {
         $today = CarbonImmutable::today();
@@ -255,6 +283,8 @@ class PoolPackageService
                 'id' => (int) $item->getKey(),
                 'partner_id' => (int) $item->user_id,
                 'partner_name' => (string) ($item->partner->display_name ?? $item->partner->name ?? ('#'.$item->user_id)),
+                'phone' => $item->partner?->phone,
+                'email' => $item->partner?->email,
                 'first_contact_at' => $item->first_contact_at?->toIso8601String(),
                 'contact_in_time' => $contactInTime,
                 'first_shipment_at' => $item->first_shipment_at?->toIso8601String(),
