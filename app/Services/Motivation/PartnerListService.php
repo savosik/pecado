@@ -44,14 +44,14 @@ class PartnerListService
     public const WAKE_SILENT_DAYS = 90;
 
     /** Поднимать при изменении состава полей строки — сбрасывает кэш набора. */
-    private const DATASET_VERSION = 2;
+    private const DATASET_VERSION = 3;
 
     /** Сколько ключевых позиций показывать в «что брал». */
     private const TOP_PRODUCTS = 3;
 
     /** Колонки, по которым можно сортировать с сервера. */
     private const SORTABLE = [
-        'rate', 'usual_gain',
+        'rate', 'usual_gain', 'current_gain',
         'name', 'usual_monthly', 'current_month', 'best_month', 'potential', 'your_gain',
         'assortment', 'last_purchase_on', 'silent_days', 'debt', 'shortfall', 'cost',
     ];
@@ -79,6 +79,8 @@ class PartnerListService
             'silent' => count(array_filter($rows, fn (array $r): bool => $r['current_month'] <= 0 && $r['ever_bought'])),
             'never_bought' => count(array_filter($rows, fn (array $r): bool => ! $r['ever_bought'])),
             'in_novelty' => count(array_filter($rows, fn (array $r): bool => $r['in_novelty'])),
+            // Дошла ли база работника до порога оплаты: пока нет, «принёс в этом месяце» — ноль.
+            'threshold' => $this->thresholdState($managerId, $month),
         ];
 
         // Вкладка называется «Все»: без отбора показываем всю базу, включая ни разу не покупавших.
@@ -318,6 +320,7 @@ class PartnerListService
                 'rate' => in_array($id, $novelty, true) ? $rateP2 : $rateP1,
                 // Обычная закупка × ставка: сколько партнёр приносит работнику в обычный месяц.
                 'usual_gain' => Money::round($usual * (in_array($id, $novelty, true) ? $rateP2 : $rateP1)),
+                'current_gain' => Money::round($current * (in_array($id, $novelty, true) ? $rateP2 : $rateP1)),
                 'shortfall' => $shortfall,
                 'cost' => Money::round($shortfall * $rateP1),
                 'assortment' => $assortment['by_partner'][$id] ?? ['taken' => 0, 'total' => $assortment['total']],
@@ -348,6 +351,47 @@ class PartnerListService
      * @param  array<string, mixed>  $summary
      * @return array<string, mixed>
      */
+    /**
+     * Порог оплаты по черновику расчёта работника за месяц: план, отгрузки базы,
+     * доля порога и достигнут ли он. Без расчёта по новой схеме — null.
+     *
+     * @return array{reached: bool, percent: int, plan: float|null, shipped: float}|null
+     */
+    private function thresholdState(int $managerId, CarbonInterface $month): ?array
+    {
+        $calculation = \App\Models\PayrollCalculation::latestFor($managerId, CarbonImmutable::instance($month)->startOfMonth());
+
+        if ($calculation === null) {
+            return null;
+        }
+
+        $inputs = \App\Services\Payroll\Dto\PayrollInputs::fromArray((array) $calculation->inputs);
+        $shipped = $inputs->motivation === null ? 0.0 : (float) $inputs->motivation->baseRevenue;
+        $threshold = null;
+        $plan = null;
+
+        foreach ((array) data_get($calculation->breakdown, 'components', []) as $component) {
+            if (is_array($component) && ($component['key'] ?? null) === 'motivation_variable') {
+                $threshold = isset($component['meta']['threshold']) ? (float) $component['meta']['threshold'] : null;
+                $plan = isset($component['meta']['plan']) ? (float) $component['meta']['plan'] : null;
+            }
+        }
+
+        if ($threshold === null) {
+            return null;
+        }
+
+        $share = (float) ($this->motivationParams($managerId, CarbonImmutable::instance($month)->startOfMonth())['payment_threshold']
+            ?? config('motivation.default_parameters.payment_threshold', 0.6));
+
+        return [
+            'reached' => $shipped >= $threshold,
+            'percent' => (int) round($share * 100),
+            'plan' => $plan,
+            'shipped' => Money::round($shipped),
+        ];
+    }
+
     private function page(array $rows, array $query, string $defaultSort, string $defaultDirection, CarbonInterface $month, array $summary, mixed $filter, string $hint): array
     {
         $search = mb_strtolower(trim((string) ($query['search'] ?? '')));

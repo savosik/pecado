@@ -46,6 +46,13 @@ export default function MotivationBase({ tab_counts: tabCounts = null, month, mo
         router.get('/crm/motivation/base', params, { preserveState: true, preserveScroll: true, replace: true });
     };
 
+    // «Принёс» начисляется только после порога оплаты: пока база ниже M % плана — сноска «пока 0».
+    const threshold = summary?.threshold ?? null;
+    const thresholdReached = threshold ? threshold.reached : true;
+    const thresholdHint = threshold
+        ? `Отгрузки партнёра в этом месяце × ваша ставка. Начисляется, когда отгрузки всей базы дойдут до ${threshold.percent} % плана${threshold.plan ? ` (${Math.round(threshold.plan * threshold.percent / 100).toLocaleString('ru-RU')} ₽ из ${Math.round(threshold.plan).toLocaleString('ru-RU')} ₽)` : ''}: сейчас ${Math.round(threshold.shipped).toLocaleString('ru-RU')} ₽ — ${threshold.reached ? 'порог пройден' : 'порог не пройден, пока 0'}.`
+        : 'Отгрузки партнёра в этом месяце × ваша ставка. Начисляется после порога оплаты; расчёта за месяц ещё нет.';
+
     const columns = [
         { key: 'name', label: 'Партнёр и группа', sortable: true, render: (row) => <PartnerName row={row} /> },
         { key: 'rate', label: '% от выручки', align: 'right', sortable: true, hint: 'Ставка вашего вознаграждения с выручки этого партнёра: П2 в периоде новизны, иначе П1. Порог оплаты (60 % плана) здесь не учитывается — это ставка, а не факт начисления.', render: (row) => (
@@ -54,6 +61,12 @@ export default function MotivationBase({ tab_counts: tabCounts = null, month, mo
         { key: 'usual_monthly', label: 'Обычно берёт в месяц', align: 'right', sortable: true, render: (row) => <Money value={row.usual_monthly} /> },
         { key: 'usual_gain', label: 'Обычно приносит денег', align: 'right', sortable: true, hint: 'Обычная закупка партнёра × ваша ставка с него. Столько партнёр приносит вам в обычный месяц.', render: (row) => <Text fontSize="sm" fontWeight="700" color={row.usual_gain > 0 ? 'green.fg' : 'fg.subtle'} fontVariantNumeric="tabular-nums">{row.usual_gain > 0 ? `${Math.round(row.usual_gain).toLocaleString('ru-RU')} ₽` : '—'}</Text> },
         { key: 'current_month', label: 'Взял в этом месяце', align: 'right', sortable: true, render: (row) => <Money value={row.current_month} strong /> },
+        { key: 'current_gain', label: 'Принёс в этом месяце', align: 'right', sortable: true, hint: thresholdHint, render: (row) => (
+            <VStack align="end" gap={0}>
+                <Text fontSize="sm" fontWeight="700" color={row.current_gain > 0 ? (thresholdReached ? 'green.fg' : 'fg.muted') : 'fg.subtle'} fontVariantNumeric="tabular-nums">{row.current_gain > 0 ? `${Math.round(row.current_gain).toLocaleString('ru-RU')} ₽` : '—'}</Text>
+                {row.current_gain > 0 && !thresholdReached && <Text fontSize="xs" color="orange.fg">пока 0</Text>}
+            </VStack>
+        ) },
         { key: 'best_month', label: 'Лучший месяц', align: 'right', sortable: true, render: (row) => <BestMonth value={row.best_month} /> },
         { key: 'potential', label: 'Потенциал', align: 'right', sortable: true, render: (row) => <Money value={row.potential} /> },
         { key: 'your_gain', label: 'Даст вам', align: 'right', sortable: true, render: (row) => <Text fontSize="sm" fontWeight="700" color={row.your_gain > 0 ? 'green.fg' : 'fg.subtle'} fontVariantNumeric="tabular-nums">{row.your_gain > 0 ? `+${Math.round(row.your_gain).toLocaleString('ru-RU')} ₽` : '—'}</Text> },
