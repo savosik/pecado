@@ -5,6 +5,7 @@ namespace App\Services\Order;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Services\Erp\OrderReservePublisher;
+use App\Support\Order\StatusCommentContext;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -41,16 +42,17 @@ class ClientOrderActions
         $publisher->publishDeleted($order, OrderReservePublisher::REASON_CLIENT_CANCELLED);
 
         // Комментарий уходит в OrderStatusHistory (booted::updating) — менеджер
-        // видит, что отмена клиентская (и через какой канал), а не 1С-овская
-        request()->merge(['status_comment' => $historyComment]);
-
-        $order->status = OrderStatus::CLOSED;
-        if ($order->reserve) {
-            $order->reserve = false;
-            // Исход для метрик злоупотреблений (res-11)
-            $order->reserve_outcome = 'cancelled';
-        }
-        $order->save();
+        // видит, что отмена клиентская (и через какой канал), а не 1С-овская.
+        // Контекст, а не request(): сервис вызывается и из MCP, где запроса нет.
+        StatusCommentContext::with($historyComment, function () use ($order): void {
+            $order->status = OrderStatus::CLOSED;
+            if ($order->reserve) {
+                $order->reserve = false;
+                // Исход для метрик злоупотреблений (res-11)
+                $order->reserve_outcome = 'cancelled';
+            }
+            $order->save();
+        });
         $order->deleteQuietly();
     }
 

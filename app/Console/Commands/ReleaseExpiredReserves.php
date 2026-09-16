@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Services\Crm\Mail\MailStream;
 use App\Services\Erp\OrderReservePublisher;
 use App\Support\Notifications\Occasion;
+use App\Support\Order\StatusCommentContext;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -56,13 +57,14 @@ class ReleaseExpiredReserves extends Command
 
                 // Комментарий уходит в OrderStatusHistory (booted::updating) —
                 // менеджер и клиент видят, что снятие автоматическое.
-                request()->merge(['status_comment' => 'Резерв истёк — заказ снят автоматически']);
+                StatusCommentContext::set('Резерв истёк — заказ снят автоматически');
 
                 $fresh->reserve = false;
                 // Исход для метрик злоупотреблений (res-11)
                 $fresh->reserve_outcome = 'expired';
                 $fresh->status = OrderStatus::CLOSED;
                 $fresh->save();
+                StatusCommentContext::reset();
                 $fresh->deleteQuietly();
 
                 return true;
