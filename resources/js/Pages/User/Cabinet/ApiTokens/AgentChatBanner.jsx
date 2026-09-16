@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Box, Flex, HStack, Text, VStack } from '@chakra-ui/react';
-import { AI_AGENT_GROUPS } from './aiAgentLogos';
+import { LuCopy, LuChevronDown } from 'react-icons/lu';
+import { AI_AGENT_GROUPS, AI_AGENT_LINKS } from './aiAgentLogos';
 
 /**
  * Баннер раздела подключения MCP: живой чат клиента с его ИИ-агентом.
@@ -69,12 +70,23 @@ function usePrefersReducedMotion() {
     return reduced;
 }
 
+const isLinux = () => typeof navigator !== 'undefined'
+    && /linux/i.test(navigator.userAgentData?.platform ?? navigator.userAgent)
+    && !/android/i.test(navigator.userAgent);
+
 function AgentLogo({ item }) {
+    const link = AI_AGENT_LINKS[item.name];
+    const href = link ? ((isLinux() && link.linux) || link.url) : undefined;
+
     return (
         <HStack
+            as={href ? 'a' : 'div'} href={href} target="_blank" rel="noopener noreferrer"
+            title={link?.title} aria-label={link?.title ?? item.name}
             gap="1.5" px="2.5" py="1.5" borderRadius="full"
             bg="rgba(255,255,255,0.06)" border="1px solid rgba(255,255,255,0.10)"
-            flexShrink={0}
+            flexShrink={0} cursor={href ? 'pointer' : 'default'}
+            transition="background .15s, border-color .15s, transform .15s"
+            _hover={href ? { bg: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.28)', transform: 'translateY(-1px)' } : undefined}
         >
             {item.path ? (
                 <Box as="svg" viewBox="0 0 24 24" w="16px" h="16px" aria-hidden="true">
@@ -93,6 +105,22 @@ function AgentLogo({ item }) {
     );
 }
 
+/**
+ * Сообщение, которое клиент отправляет своему агенту: агенты с доступом к своим
+ * настройкам (Claude Code, Codex, Cursor, Gemini CLI, Qwen Code, Kimi Code)
+ * добавляют подключение сами — клиенту не нужно искать, какой файл править.
+ */
+function setupMessage({ url, apiKey, docsUrl, openapiUrl }) {
+    return 'Вот MCP-сервер Pecado — настрой подключение и запомни его:\n' + JSON.stringify({
+        name: 'pecado',
+        transport: 'streamable-http',
+        url,
+        headers: { Authorization: `Bearer ${apiKey}` },
+        docs: docsUrl,
+        openapi: openapiUrl,
+    }, null, 2);
+}
+
 function TypingDots() {
     return (
         <HStack gap="1" px="3.5" py="3" borderRadius="16px" borderTopLeftRadius="4px" bg="rgba(255,255,255,0.08)">
@@ -106,12 +134,20 @@ function TypingDots() {
     );
 }
 
-export default function AgentChatBanner() {
+export default function AgentChatBanner({
+    url = 'https://pecado.ru/mcp/client',
+    apiKey = '<ВАШ_КЛЮЧ>',
+    docsUrl = 'https://pecado.ru/docs/client-api',
+    openapiUrl = 'https://pecado.ru/docs/client-api.json',
+    onCopy,
+    defaultSetupOpen = false,
+}) {
     const rootRef = useRef(null);
     const reduced = usePrefersReducedMotion();
     const [visible, setVisible] = useState(true);
     const [pageVisible, setPageVisible] = useState(true);
     const [state, setState] = useState({ index: 0, t: 0 });
+    const [setupOpen, setSetupOpen] = useState(defaultSetupOpen);
 
     useEffect(() => {
         const node = rootRef.current;
@@ -261,21 +297,53 @@ export default function AgentChatBanner() {
                 })}
             </HStack>
 
-            {/* Логотипы агентов */}
+            {/* Логотипы агентов: клик — страница загрузки */}
             <Box px={{ base: 4, md: 5 }} py="4" bg="rgba(0,0,0,0.22)" borderTop="1px solid rgba(255,255,255,0.07)">
                 <Text fontSize="2xs" fontWeight="700" letterSpacing="0.08em" textTransform="uppercase" color="whiteAlpha.600" mb="3">
-                    Подключается к агентам с поддержкой MCP
+                    Подключается к агентам с поддержкой MCP · нажмите, чтобы скачать
                 </Text>
-                <Flex gap={{ base: 3, md: 5 }} flexWrap="wrap">
-                    {AI_AGENT_GROUPS.map((group) => (
-                        <Box key={group.region}>
-                            <Text fontSize="2xs" color="whiteAlpha.500" mb="1.5">{group.region}</Text>
-                            <Flex gap="1.5" flexWrap="wrap">
-                                {group.items.map((item) => <AgentLogo key={item.name} item={item} />)}
-                            </Flex>
-                        </Box>
-                    ))}
+                <Flex gap="1.5" flexWrap="wrap">
+                    {AI_AGENT_GROUPS.flatMap((group) => group.items).map((item) => <AgentLogo key={item.name} item={item} />)}
                 </Flex>
+
+                {/* Как подключить */}
+                <Box mt="4" borderRadius="xl" border="1px solid rgba(255,255,255,0.10)" bg="rgba(255,255,255,0.04)">
+                    <Flex
+                        as="button" type="button" w="full" px="3.5" py="2.5"
+                        align="center" justify="space-between"
+                        onClick={() => setSetupOpen((v) => !v)} aria-expanded={setupOpen}
+                        _hover={{ bg: 'rgba(255,255,255,0.04)' }} borderRadius="xl"
+                    >
+                        <Text fontSize="sm" fontWeight="700">Как подключить</Text>
+                        <Box as="span" display="inline-flex" transform={setupOpen ? 'rotate(180deg)' : 'none'} transition="transform .2s">
+                            <LuChevronDown size={16} />
+                        </Box>
+                    </Flex>
+
+                    {setupOpen && (
+                        <Box px="3.5" pb="3.5">
+                            <Text fontSize="sm" color="whiteAlpha.800" lineHeight="1.6" mb="2.5">
+                                Отправьте это сообщение своему агенту — он сам добавит подключение и запомнит его.
+                            </Text>
+                            <Box position="relative" bg="rgba(0,0,0,0.45)" borderRadius="lg" p="3" pr="10" overflowX="auto">
+                                <Text as="pre" fontSize="xs" color="#9be7b4" fontFamily="mono" whiteSpace="pre-wrap" overflowWrap="anywhere">
+                                    {setupMessage({ url, apiKey, docsUrl, openapiUrl })}
+                                </Text>
+                                <Box
+                                    as="button" type="button" position="absolute" top="2" right="2"
+                                    p="1.5" borderRadius="md" color="whiteAlpha.700" _hover={{ color: 'white', bg: 'whiteAlpha.200' }}
+                                    onClick={() => onCopy?.(setupMessage({ url, apiKey, docsUrl, openapiUrl }), 'Сообщение для агента скопировано')}
+                                    aria-label="Скопировать сообщение"
+                                >
+                                    <LuCopy size={14} />
+                                </Box>
+                            </Box>
+                            <Text fontSize="2xs" color="whiteAlpha.600" mt="2" lineHeight="1.5">
+                                Ключ открывает доступ к вашему кабинету — отправляйте его только своему агенту.
+                            </Text>
+                        </Box>
+                    )}
+                </Box>
             </Box>
 
             {/* Слоган */}

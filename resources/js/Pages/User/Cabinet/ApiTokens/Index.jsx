@@ -7,13 +7,12 @@ import {
 import { Head, usePage } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
 import AgentChatBanner from './AgentChatBanner';
-import AgentConnectGuide from './AgentConnectGuide';
 import {
     LuPlus, LuCopy, LuCheck, LuTrash2, LuRefreshCw,
     LuShieldCheck, LuCode, LuArrowRight, LuPackage,
     LuDollarSign, LuWarehouse, LuShoppingCart, LuKey,
     LuTriangleAlert, LuClock, LuGlobe, LuArrowRightLeft,
-    LuTruck, LuFileText, LuBookOpen, LuExternalLink, LuRocket, LuBot,
+    LuTruck, LuFileText, LuBookOpen, LuExternalLink, LuRocket,
     LuArchive,
 } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
@@ -765,36 +764,13 @@ export default function Index({ tokens: initialTokens, docs = {} }) {
                     </Card.Root>
 
                     {/* Подключить ИИ-агента */}
-                    <Card.Root
-                        bg="bg" borderRadius="xl"
-                        border="1px solid" borderColor="border.muted"
-                        overflow="hidden"
-                    >
-                        <Card.Body p="5">
-                            <Box mb="5">
-                                <AgentChatBanner />
-                            </Box>
-                            <HStack mb="3" justify="space-between" flexWrap="wrap" gap="2">
-                                <HStack>
-                                    <LuBot size={18} style={{ color: 'var(--chakra-colors-purple-500)' }} />
-                                    <Text fontWeight="700" fontSize="sm">Подключить ИИ-агента (MCP)</Text>
-                                </HStack>
-                                <HStack gap="2">
-                                    <Code size="xs">{mcpUrl}</Code>
-                                    <Button size="xs" variant="ghost" onClick={() => copyToClipboard(mcpUrl, 'Адрес MCP-сервера скопирован')}>
-                                        <LuCopy />
-                                    </Button>
-                                </HStack>
-                            </HStack>
-                            <Text fontSize="sm" color="gray.500" lineHeight="1.7" mb="3">
-                                Ваш агент (ChatGPT, Claude, Cursor и другие клиенты MCP) подключается к серверу кабинета и работает
-                                от вашего имени: цены и остатки, корзина и заказы, статусы, документы, оплаты, вопрос менеджеру.
-                                Ключ — тот же, что для API v1. Заказ через агента уходит в 1С так же, как из кабинета;
-                                чего API не решает, агент спросит у менеджера.
-                            </Text>
-                            <AgentConnectGuide url={mcpUrl} apiKey={sampleKey} onCopy={copyToClipboard} />
-                        </Card.Body>
-                    </Card.Root>
+                    <AgentChatBanner
+                        url={mcpUrl}
+                        apiKey={sampleKey}
+                        docsUrl={docs.ui}
+                        openapiUrl={docs.openapi}
+                        onCopy={copyToClipboard}
+                    />
                 </VStack>
             </Box>
 

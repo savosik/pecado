@@ -84,3 +84,25 @@ export const AI_AGENT_GROUPS = [
     { region: "Россия", items: [AI_AGENT_ICONS["Yandex AI Studio"]] },
     { region: "Китай", items: [AI_AGENT_ICONS["Qwen"], AI_AGENT_ICONS["Kimi"]] },
 ];
+
+/**
+ * Куда ведёт клик по логотипу: официальная страница загрузки агента, который умеет
+ * подключать MCP-сервер со статическим ключом (проверено по документации вендоров
+ * 16.09.2026). Для Gemini, Qwen и Kimi это их агенты для терминала — мобильные
+ * приложения этих вендоров подключать свой сервер не умеют. `linux` — отдельная
+ * страница, если у вендора она своя.
+ */
+export const AI_AGENT_LINKS = {
+    Claude: { url: 'https://claude.com/download', title: 'Скачать Claude и Claude Code' },
+    ChatGPT: {
+        url: 'https://chatgpt.com/download/',
+        linux: 'https://learn.chatgpt.com/docs/linux/linux-app',
+        title: 'Скачать ChatGPT для компьютера',
+    },
+    Gemini: { url: 'https://github.com/google-gemini/gemini-cli', title: 'Установить Gemini CLI' },
+    Copilot: { url: 'https://code.visualstudio.com/download', title: 'Скачать VS Code с GitHub Copilot' },
+    Cursor: { url: 'https://cursor.com/download', title: 'Скачать Cursor' },
+    'Yandex AI Studio': { url: 'https://aistudio.yandex.ru', title: 'Открыть Yandex AI Studio' },
+    Qwen: { url: 'https://github.com/QwenLM/qwen-code', title: 'Установить Qwen Code' },
+    Kimi: { url: 'https://github.com/MoonshotAI/kimi-code', title: 'Установить Kimi Code' },
+};
