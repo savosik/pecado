@@ -53,24 +53,43 @@ export default function MotivationBase({ tab_counts: tabCounts = null, month, mo
         ? `Отгрузки партнёра в этом месяце × ваша ставка. Начисляется, когда отгрузки всей базы дойдут до ${threshold.percent} % плана${threshold.plan ? ` (${Math.round(threshold.plan * threshold.percent / 100).toLocaleString('ru-RU')} ₽ из ${Math.round(threshold.plan).toLocaleString('ru-RU')} ₽)` : ''}: сейчас ${Math.round(threshold.shipped).toLocaleString('ru-RU')} ₽ — ${threshold.reached ? 'порог пройден' : 'порог не пройден, пока 0'}.`
         : 'Отгрузки партнёра в этом месяце × ваша ставка. Начисляется после порога оплаты; расчёта за месяц ещё нет.';
 
+    const rub = (v) => `${Math.round(v).toLocaleString('ru-RU')} ₽`;
+    const ratePercent = (row) => `${(Number(row.rate ?? 0) * 100).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} %`;
+
+    // Колонки сгруппированы парами «сколько взял → сколько это вам»: верхняя строка —
+    // деньги партнёра, нижняя — ваши. Сортировка — по верхней строке группы.
     const columns = [
-        { key: 'name', label: 'Партнёр и группа', sortable: true, render: (row) => <PartnerName row={row} /> },
-        { key: 'rate', label: '% от выручки', align: 'right', sortable: true, hint: 'Ставка вашего вознаграждения с выручки этого партнёра: П2 в периоде новизны, иначе П1. Порог оплаты (60 % плана) здесь не учитывается — это ставка, а не факт начисления.', render: (row) => (
-            <Text fontSize="sm" fontWeight="700" color={row.in_novelty ? 'purple.fg' : undefined} fontVariantNumeric="tabular-nums">{(Number(row.rate ?? 0) * 100).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} %</Text>
-        ) },
-        { key: 'usual_monthly', label: 'Обычно берёт в месяц', align: 'right', sortable: true, render: (row) => <Money value={row.usual_monthly} /> },
-        { key: 'usual_gain', label: 'Обычно приносит денег', align: 'right', sortable: true, hint: 'Обычная закупка партнёра × ваша ставка с него. Столько партнёр приносит вам в обычный месяц.', render: (row) => <Text fontSize="sm" fontWeight="700" color={row.usual_gain > 0 ? 'green.fg' : 'fg.subtle'} fontVariantNumeric="tabular-nums">{row.usual_gain > 0 ? `${Math.round(row.usual_gain).toLocaleString('ru-RU')} ₽` : '—'}</Text> },
-        { key: 'current_month', label: 'Взял в этом месяце', align: 'right', sortable: true, render: (row) => <Money value={row.current_month} strong /> },
-        { key: 'current_gain', label: 'Принёс в этом месяце', align: 'right', sortable: true, hint: thresholdHint, render: (row) => (
-            <VStack align="end" gap={0}>
-                <Text fontSize="sm" fontWeight="700" color={row.current_gain > 0 ? (thresholdReached ? 'green.fg' : 'fg.muted') : 'fg.subtle'} fontVariantNumeric="tabular-nums">{row.current_gain > 0 ? `${Math.round(row.current_gain).toLocaleString('ru-RU')} ₽` : '—'}</Text>
-                {row.current_gain > 0 && !thresholdReached && <Text fontSize="xs" color="orange.fg">пока 0</Text>}
+        { key: 'name', label: 'Партнёр и группа', sortable: true, hint: 'Под именем — ставка вашего вознаграждения с выручки этого партнёра: П2 в периоде новизны, иначе П1. Порог оплаты здесь не учитывается.', render: (row) => (
+            <VStack align="start" gap={0.5}>
+                <PartnerName row={row} />
+                <Text fontSize="xs" color={row.in_novelty ? 'purple.fg' : 'fg.muted'}>ставка {ratePercent(row)}</Text>
             </VStack>
         ) },
-        { key: 'k1_deduction', label: 'Отнял в этом месяце', align: 'right', sortable: true, hint: 'Вычет К1 за просроченный долг этого партнёра в этом месяце: остаток долга × ставка в день × дни просрочки. Снимается с переменной части независимо от порога оплаты.', render: (row) => <Text fontSize="sm" fontWeight="700" color={row.k1_deduction > 0 ? 'red.fg' : 'fg.subtle'} fontVariantNumeric="tabular-nums">{row.k1_deduction > 0 ? `−${Math.round(row.k1_deduction).toLocaleString('ru-RU')} ₽` : '—'}</Text> },
-        { key: 'best_month', label: 'Лучший месяц', align: 'right', sortable: true, render: (row) => <BestMonth value={row.best_month} /> },
-        { key: 'potential', label: 'Потенциал', align: 'right', sortable: true, render: (row) => <Money value={row.potential} /> },
-        { key: 'your_gain', label: 'Может дать', align: 'right', sortable: true, render: (row) => <Text fontSize="sm" fontWeight="700" color={row.your_gain > 0 ? 'green.fg' : 'fg.subtle'} fontVariantNumeric="tabular-nums">{row.your_gain > 0 ? `+${Math.round(row.your_gain).toLocaleString('ru-RU')} ₽` : '—'}</Text> },
+        { key: 'usual_monthly', label: 'Обычно берёт в месяц', sub: 'обычно приносит вам', align: 'right', sortable: true, hint: 'Верхняя строка — обычная закупка партнёра в месяц. Нижняя — она же × ваша ставка: столько партнёр приносит вам в обычный месяц.', render: (row) => (
+            <VStack align="end" gap={0}>
+                <Money value={row.usual_monthly} />
+                <Text fontSize="xs" fontWeight="600" color={row.usual_gain > 0 ? 'green.fg' : 'fg.subtle'} fontVariantNumeric="tabular-nums">{row.usual_gain > 0 ? rub(row.usual_gain) : '—'}</Text>
+            </VStack>
+        ) },
+        { key: 'current_month', label: 'Взял в этом месяце', sub: 'принёс · отнял', align: 'right', sortable: true, hint: `Верхняя строка — отгрузки партнёра в этом месяце. Ниже: сколько это вам (${thresholdHint}) и сколько снял его просроченный долг (вычет К1: остаток × ставка в день × дни просрочки, независимо от порога).`, render: (row) => (
+            <VStack align="end" gap={0}>
+                <Money value={row.current_month} strong />
+                <HStack gap={1.5} fontSize="xs" fontVariantNumeric="tabular-nums">
+                    <Text fontWeight="600" color={row.current_gain > 0 ? (thresholdReached ? 'green.fg' : 'fg.muted') : 'fg.subtle'}>{row.current_gain > 0 ? `+${rub(row.current_gain)}` : '—'}</Text>
+                    {row.current_gain > 0 && !thresholdReached && <Text color="orange.fg">(пока 0)</Text>}
+                    {row.k1_deduction > 0 && <Text fontWeight="600" color="red.fg">−{rub(row.k1_deduction)}</Text>}
+                </HStack>
+            </VStack>
+        ) },
+        { key: 'best_month', label: 'Лучший месяц', sub: 'потенциал · может дать', align: 'right', sortable: true, hint: 'Верхняя строка — лучший месяц партнёра за два года. Ниже: потенциал (лучший месяц минус закупка в этом месяце) и сколько это вам по ставке.', render: (row) => (
+            <VStack align="end" gap={0}>
+                <BestMonth value={row.best_month} />
+                <HStack gap={1.5} fontSize="xs" fontVariantNumeric="tabular-nums">
+                    <Text color="fg.muted">{row.potential > 0 ? rub(row.potential) : '—'}</Text>
+                    <Text fontWeight="600" color={row.your_gain > 0 ? 'green.fg' : 'fg.subtle'}>{row.your_gain > 0 ? `+${rub(row.your_gain)}` : ''}</Text>
+                </HStack>
+            </VStack>
+        ) },
         { key: 'assortment', label: 'Ассортимент', align: 'right', sortable: true, render: (row) => <Assortment value={row.assortment} /> },
         { key: 'last_purchase_on', label: 'Последняя покупка', sortable: true, render: (row) => <LastPurchase row={row} /> },
         { key: 'debt', label: 'Долг', align: 'right', sortable: true, render: (row) => <Debt value={row.debt} /> },

@@ -1,4 +1,4 @@
-import { Box, HStack, Table, Text } from '@chakra-ui/react';
+import { Box, HStack, Table, Text, VStack } from '@chakra-ui/react';
 import { LuArrowDown, LuArrowUp } from 'react-icons/lu';
 import { Pagination } from '@/Admin/Components/Pagination';
 import { Alert } from '@/components/ui/alert';
@@ -7,7 +7,8 @@ import MetricHint from '@/Crm/Components/MetricHint';
 /**
  * Таблица списка партнёров с серверной сортировкой и страницей.
  *
- * Колонки описывает страница: `{ key, label, align, sortable, hint, render }`.
+ * Колонки описывает страница: `{ key, label, sub, align, sortable, hint, render }` —
+ * `sub` подписывает вторую строку сгруппированной колонки.
  * Клик по заголовку меняет сортировку в адресе; клик по строке ничего
  * не делает — переходы только через действия строки.
  */
@@ -24,12 +25,14 @@ export default function PartnerTable({ list, columns, onSort, onPage, emptyTitle
         const Icon = active && sort.direction === 'asc' ? LuArrowUp : LuArrowDown;
 
         const hint = column.hint ? <MetricHint text={column.hint} /> : null;
+        const sub = column.sub ? <Text fontSize="xs" fontWeight="400" color="fg.subtle" textAlign={column.align === 'right' ? 'right' : 'left'}>{column.sub}</Text> : null;
 
         if (!column.sortable) {
             return hint ? <HStack gap={1} justify={column.align === 'right' ? 'flex-end' : 'flex-start'}><Text>{column.label}</Text>{hint}</HStack> : column.label;
         }
 
         return (
+            <VStack align={column.align === 'right' ? 'end' : 'start'} gap={0} w="100%">
             <HStack gap={1} justify={column.align === 'right' ? 'flex-end' : 'flex-start'} w="100%">
                 <HStack
                     as="button"
@@ -45,6 +48,8 @@ export default function PartnerTable({ list, columns, onSort, onPage, emptyTitle
                 </HStack>
                 {hint}
             </HStack>
+            {sub}
+            </VStack>
         );
     };
 
