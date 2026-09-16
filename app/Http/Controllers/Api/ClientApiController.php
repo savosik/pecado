@@ -13,6 +13,7 @@ use App\Models\ApiToken;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shipment;
+use App\Services\Catalog\ProductIdentifierResolver;
 use App\Services\Order\OrderAssembler;
 use App\Services\Order\OrderChangeAggregator;
 use App\Services\Order\OrderChangeLogger;
@@ -1057,21 +1058,10 @@ class ClientApiController extends Controller
     }
 
     /**
-     * Найти товар по идентификатору (uuid, code, sku, barcode).
+     * Найти товар по идентификатору (uuid, code, sku, barcode) — общим резолвером.
      */
     protected function resolveProduct(string $identifier): ?Product
     {
-        // UUID формат: 8-4-4-4-12 hex chars
-        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $identifier)) {
-            $product = Product::where('external_id', $identifier)->first();
-            if ($product) {
-                return $product;
-            }
-        }
-
-        // Попробовать по code, sku, barcode — в этом порядке
-        return Product::where('code', $identifier)->first()
-            ?? Product::where('sku', $identifier)->first()
-            ?? Product::where('barcode', $identifier)->first();
+        return app(ProductIdentifierResolver::class)->resolve($identifier);
     }
 }
