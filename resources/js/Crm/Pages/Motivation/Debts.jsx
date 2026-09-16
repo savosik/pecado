@@ -35,7 +35,7 @@ const LEVEL = {
  * Партнёр сверху, накладные внутри. Отдельный раздел — выведенные из расчёта:
  * работник должен понимать, почему долг виден, а вычета по нему нет.
  */
-export default function MotivationDebts({ month, month_label: monthLabel, manager, scope_options: scopeOptions, can_see_all: canSeeAll, focus_partner: focusPartner, debts }) {
+export default function MotivationDebts({ tab_counts: tabCounts = null, month, month_label: monthLabel, manager, scope_options: scopeOptions, can_see_all: canSeeAll, focus_partner: focusPartner, debts }) {
     const [taskFor, setTaskFor] = useState(null);
     const [open, setOpen] = useState(() => new Set(focusPartner ? [Number(focusPartner)] : []));
 
@@ -73,7 +73,7 @@ export default function MotivationDebts({ month, month_label: monthLabel, manage
                     </select>
                 ) : null}
             />
-            <MotivationTabs hub="clients" current="debts" />
+            <MotivationTabs hub="clients" current="debts" counts={tabCounts} />
 
             <VStack align="stretch" gap={4}>
                 {manager === null && (

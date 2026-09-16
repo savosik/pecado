@@ -7,12 +7,12 @@ export const HUBS = {
     clients: {
         title: 'Мои клиенты',
         tabs: [
-            { key: 'base', label: 'База', path: '/crm/motivation/base' },
+            { key: 'base', label: 'Все', path: '/crm/motivation/base' },
+            { key: 'packages', label: 'Выданные', path: '/crm/motivation/packages' },
+            { key: 'new', label: 'Новые', path: '/crm/motivation/new-partners' },
             { key: 'rhythm', label: 'Выпали из ритма', path: '/crm/motivation/rhythm' },
             { key: 'debts', label: 'Долги', path: '/crm/motivation/debts' },
             { key: 'wake', label: 'Разбудить', path: '/crm/motivation/wake' },
-            { key: 'new', label: 'Новые', path: '/crm/motivation/new-partners' },
-            { key: 'packages', label: 'Выданные', path: '/crm/motivation/packages' },
         ],
     },
     payslip: {

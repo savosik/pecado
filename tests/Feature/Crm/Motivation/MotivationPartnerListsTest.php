@@ -93,8 +93,11 @@ class MotivationPartnerListsTest extends TestCase
         $list = app(PartnerListService::class)->base($this->profile->id, $this->month);
 
         $this->assertSame(['total' => 2, 'active' => 1, 'silent' => 0, 'never_bought' => 1, 'in_novelty' => 0], $list['summary']);
-        $this->assertCount(1, $list['rows']['data'], 'Рабочий список по умолчанию — только покупавшие');
-        $this->assertSame('Покупатель', $list['rows']['data'][0]['name']);
+        $this->assertCount(2, $list['rows']['data'], 'Вкладка «Все» по умолчанию показывает всю базу');
+        $this->assertSame('Покупатель', $list['rows']['data'][0]['name'], 'Покупавшие — первыми');
+
+        $bought = app(PartnerListService::class)->base($this->profile->id, $this->month, ['filter' => 'bought']);
+        $this->assertCount(1, $bought['rows']['data'], 'Чип «покупали хоть раз» оставляет только покупавших');
 
         $never = app(PartnerListService::class)->base($this->profile->id, $this->month, ['filter' => 'never']);
         $this->assertSame('Молчун', $never['rows']['data'][0]['name']);

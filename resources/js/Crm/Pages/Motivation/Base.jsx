@@ -20,6 +20,7 @@ const selectStyle = {
 };
 
 const FILTERS = [
+    { key: 'all', label: 'Все', field: 'total' },
     { key: 'bought', label: 'Покупали хоть раз', field: null },
     { key: 'active', label: 'Покупали в этом месяце', field: 'active' },
     { key: 'silent', label: 'Не покупали в этом месяце', field: 'silent' },
@@ -33,10 +34,10 @@ const FILTERS = [
  * у одного работника их 58 из 113, у другого 50 из 103, и смешивать их
  * с работающими значит превратить рабочий список в справочник.
  */
-export default function MotivationBase({ month, month_label: monthLabel, manager, scope_options: scopeOptions, can_see_all: canSeeAll, query, list }) {
+export default function MotivationBase({ tab_counts: tabCounts = null, month, month_label: monthLabel, manager, scope_options: scopeOptions, can_see_all: canSeeAll, query, list }) {
     const { dialogs, setTaskFor, setCallFor } = usePartnerDialogs();
     const summary = list?.summary ?? {};
-    const filter = list?.filter ?? 'bought';
+    const filter = list?.filter ?? 'all';
 
     const navigate = (changes) => {
         const params = { month, ...query, ...changes };
@@ -83,7 +84,7 @@ export default function MotivationBase({ month, month_label: monthLabel, manager
                     </HStack>
                 )}
             />
-            <MotivationTabs hub="clients" current="base" />
+            <MotivationTabs hub="clients" current="base" counts={tabCounts} />
 
             <VStack align="stretch" gap={4}>
                 {manager === null && (

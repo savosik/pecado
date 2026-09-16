@@ -29,7 +29,7 @@ const monthLabel = (iso) => {
  * обработки, сроки по каждому и кран. Общий список свободных партнёров работнику
  * не показывается: брать из него он не может, пакеты выдаёт руководитель.
  */
-export default function MotivationPackages({ manager, scope_options: scopeOptions, can_see_all: canSeeAll, rules, tap, packages = [] }) {
+export default function MotivationPackages({ tab_counts: tabCounts = null, manager, scope_options: scopeOptions, can_see_all: canSeeAll, rules, tap, packages = [] }) {
     const { dialogs, setTaskFor, setCallFor } = usePartnerDialogs();
 
     const navigate = (changes) => {
@@ -55,7 +55,7 @@ export default function MotivationPackages({ manager, scope_options: scopeOption
                     </select>
                 ) : undefined}
             />
-            <MotivationTabs hub="clients" current="packages" />
+            <MotivationTabs hub="clients" current="packages" counts={tabCounts} />
 
             <VStack align="stretch" gap={4}>
                 {manager === null && (

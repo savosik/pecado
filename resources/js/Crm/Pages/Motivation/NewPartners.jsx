@@ -26,7 +26,7 @@ const selectStyle = {
  * отдельно и на месячный доход работника не влияет. Без неё колонка читается как
  * «премия не положена, пока не дойдёт».
  */
-export default function MotivationNewPartners({ month, month_label: monthLabel, manager, scope_options: scopeOptions, can_see_all: canSeeAll, list }) {
+export default function MotivationNewPartners({ tab_counts: tabCounts = null, month, month_label: monthLabel, manager, scope_options: scopeOptions, can_see_all: canSeeAll, list }) {
     const { dialogs, setTaskFor, setCallFor } = usePartnerDialogs();
     const rows = list?.rows ?? [];
     const summary = list?.summary ?? {};
@@ -51,7 +51,7 @@ export default function MotivationNewPartners({ month, month_label: monthLabel, 
                     </select>
                 ) : null}
             />
-            <MotivationTabs hub="clients" current="new" />
+            <MotivationTabs hub="clients" current="new" counts={tabCounts} />
 
             <VStack align="stretch" gap={4}>
                 {manager === null && (

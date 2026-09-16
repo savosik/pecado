@@ -41,7 +41,7 @@ class PartnerListService
     private const ASSORTMENT_MONTHS = 12;
 
     /** Молчание дольше этого срока выводит партнёра во вкладку «молчат» экрана «Кого разбудить». */
-    private const WAKE_SILENT_DAYS = 90;
+    public const WAKE_SILENT_DAYS = 90;
 
     /** Сколько ключевых позиций показывать в «что брал». */
     private const TOP_PRODUCTS = 3;
@@ -77,7 +77,8 @@ class PartnerListService
             'in_novelty' => count(array_filter($rows, fn (array $r): bool => $r['in_novelty'])),
         ];
 
-        $filter = (string) ($query['filter'] ?? 'bought');
+        // Вкладка называется «Все»: без отбора показываем всю базу, включая ни разу не покупавших.
+        $filter = (string) ($query['filter'] ?? 'all');
         $rows = array_values(array_filter($rows, fn (array $r): bool => match ($filter) {
             'active' => $r['current_month'] > 0,
             'silent' => $r['current_month'] <= 0 && $r['ever_bought'],

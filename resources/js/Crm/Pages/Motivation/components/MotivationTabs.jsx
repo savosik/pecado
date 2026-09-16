@@ -8,7 +8,7 @@ import { HUBS } from './hubs';
  * работника и месяца. Заменяет одиннадцать пунктов меню у работника
  * и двенадцать у руководителя.
  */
-export default function MotivationTabs({ hub, current }) {
+export default function MotivationTabs({ hub, current, counts = null }) {
     const { url } = usePage();
     const { can } = usePermission();
     const canEdit = can('crm-motivation.edit');
@@ -35,6 +35,11 @@ export default function MotivationTabs({ hub, current }) {
                             _hover={{ bg: 'bg.subtle', color: 'fg' }}
                         >
                             {t.label}
+                            {counts && counts[t.key] !== undefined && counts[t.key] !== null && (
+                                <Box as="span" ml={1.5} px={1.5} borderRadius="full" fontSize="xs" fontWeight="600" bg={active ? 'bg.panel' : 'bg.muted'} color={counts[t.key] > 0 ? 'fg' : 'fg.subtle'}>
+                                    {counts[t.key]}
+                                </Box>
+                            )}
                         </Box>
                     </Link>
                 );

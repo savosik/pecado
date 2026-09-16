@@ -30,6 +30,7 @@ class MotivationPartnersController extends CrmController
         private readonly PoolListService $pool,
         private readonly \App\Services\Motivation\PoolPackageService $packages,
         private readonly \App\Services\Payroll\PayrollParamsResolver $params,
+        private readonly \App\Services\Motivation\ClientTabCounts $tabCounts,
     ) {}
 
     public function base(Request $request): Response
@@ -111,6 +112,7 @@ class MotivationPartnersController extends CrmController
         ];
         $payload['tap'] = $this->pool->tap($managerId, $month);
         $payload['packages'] = $this->packages->forManager($managerId);
+        $payload['tab_counts'] = $this->tabCounts->forManager($managerId, $month);
 
         return Inertia::render('Crm/Pages/Motivation/Packages', $payload);
     }
@@ -147,6 +149,7 @@ class MotivationPartnersController extends CrmController
             'newcomers' => $this->partners->newcomers($managerId, $month),
             default => $this->partners->base($managerId, $month, $query),
         };
+        $payload['tab_counts'] = $this->tabCounts->forManager($managerId, $month);
 
         return $payload;
     }

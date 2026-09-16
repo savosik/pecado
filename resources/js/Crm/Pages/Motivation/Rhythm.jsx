@@ -32,7 +32,7 @@ const FLAGS = [
  * Сортировка по умолчанию — «что это стоит вам»: список отвечает на вопрос,
  * кому звонить первым, а не кто больше всех просел в процентах.
  */
-export default function MotivationRhythm({ month, month_label: monthLabel, manager, scope_options: scopeOptions, can_see_all: canSeeAll, query, list }) {
+export default function MotivationRhythm({ tab_counts: tabCounts = null, month, month_label: monthLabel, manager, scope_options: scopeOptions, can_see_all: canSeeAll, query, list }) {
     const { dialogs, setTaskFor, setCallFor } = usePartnerDialogs();
     const summary = list?.summary ?? {};
     const flags = list?.filter ?? { drop: true, stopped: true, silent: true };
@@ -81,7 +81,7 @@ export default function MotivationRhythm({ month, month_label: monthLabel, manag
                     </select>
                 ) : null}
             />
-            <MotivationTabs hub="clients" current="rhythm" />
+            <MotivationTabs hub="clients" current="rhythm" counts={tabCounts} />
 
             <VStack align="stretch" gap={4}>
                 {manager === null && (

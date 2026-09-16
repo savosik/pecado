@@ -25,6 +25,7 @@ class MotivationDebtsController extends CrmController
         private readonly PayrollScopeResolver $scopes,
         private readonly PayrollCalculationService $calculations,
         private readonly DebtListService $debts,
+        private readonly \App\Services\Motivation\ClientTabCounts $tabCounts,
     ) {}
 
     public function index(Request $request): Response
@@ -62,6 +63,7 @@ class MotivationDebtsController extends CrmController
 
         $calculation = $this->calculations->ensureDraft((int) $manager->getKey(), $month);
         $payload['debts'] = $this->debts->build($calculation);
+        $payload['tab_counts'] = $this->tabCounts->forManager((int) $manager->getKey(), $month);
 
         return $payload;
     }

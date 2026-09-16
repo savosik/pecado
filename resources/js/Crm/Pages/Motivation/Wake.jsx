@@ -32,7 +32,7 @@ const TABS = [
  * это работа с чистого листа и повышенная ставка; молчащие — возврат
  * к обычным закупкам по обычной ставке.
  */
-export default function MotivationWake({ month, month_label: monthLabel, manager, scope_options: scopeOptions, can_see_all: canSeeAll, query, list }) {
+export default function MotivationWake({ tab_counts: tabCounts = null, month, month_label: monthLabel, manager, scope_options: scopeOptions, can_see_all: canSeeAll, query, list }) {
     const { dialogs, setTaskFor, setCallFor } = usePartnerDialogs();
     const tab = list?.filter ?? 'never';
     const summary = list?.summary ?? {};
@@ -92,7 +92,7 @@ export default function MotivationWake({ month, month_label: monthLabel, manager
                     </HStack>
                 )}
             />
-            <MotivationTabs hub="clients" current="wake" />
+            <MotivationTabs hub="clients" current="wake" counts={tabCounts} />
 
             <VStack align="stretch" gap={4}>
                 {manager === null && (
