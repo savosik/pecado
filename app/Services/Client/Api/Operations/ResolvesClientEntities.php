@@ -51,7 +51,16 @@ trait ResolvesClientEntities
         } elseif (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $identifier)) {
             $query->where('uuid', $identifier);
         } else {
-            $query->where('number', $identifier);
+            // Агент видит номер 1С (карточка отдаёт erp_number ?: number), а клиент
+            // диктует его как угодно — «29УТ-014379» или «29УТ014379».
+            $normalized = str_replace('-', '', $identifier);
+
+            $query->where(function ($q) use ($identifier, $normalized) {
+                $q->where('erp_number', $identifier)
+                    ->orWhere('number', $identifier)
+                    ->orWhereRaw("REPLACE(COALESCE(erp_number, ''), '-', '') = ?", [$normalized])
+                    ->orWhereRaw("REPLACE(number, '-', '') = ?", [$normalized]);
+            });
         }
 
         return $query->firstOrFail();

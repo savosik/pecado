@@ -47,10 +47,11 @@ class ClientApiOrdersReadTest extends ClientApiTestCase
     public function card_by_any_identifier(): void
     {
         $product = Product::factory()->create(['cost_price' => 777.77]);
-        $order = $this->order(['number' => 'ORD-2026-0001']);
+        $order = $this->order(['number' => 'ORD-2026-0001', 'erp_number' => '29УТ-014379']);
         OrderItem::factory()->create(['order_id' => $order->id, 'product_id' => $product->id, 'quantity' => 2]);
 
-        foreach ([$order->id, 'ORD-2026-0001', $order->uuid] as $identifier) {
+        // Номер сайта, номер 1С (так его показывает список) и номер 1С без дефиса.
+        foreach ([$order->id, 'ORD-2026-0001', '29УТ-014379', '29УТ014379', $order->uuid] as $identifier) {
             $response = $this->api('GET', '/orders/'.$identifier)->assertOk()
                 ->assertJsonPath('data.id', $order->id)
                 ->assertJsonPath('data.company.inn', '7707083893')
