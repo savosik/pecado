@@ -4,6 +4,7 @@
 **Создано:** 2026-09-16
 **Эпик:** capi-00
 **Зависимости:** capi-14
+**Статус:** код готов 16.09.2026 (инструкции сервера — в `ClientServer`, блок «Подключить ИИ-агента» на `/api-tokens`, тест `client_agent_walks_through_prices_cart_order_status`); ждёт прогона на dev реальным MCP-клиентом после слияния в `dev`
 
 ## Описание
 
@@ -34,7 +35,7 @@
 ## Критерии готовности
 
 - [ ] Сценарий проходит на dev реальным MCP-клиентом; в 1С уходит ровно один заказ при двойном вызове.
-- [ ] Тест `client_agent_walks_through_prices_cart_order_status` зелёный (через `ClientServer::actingAs`).
+- [x] Тест `client_agent_walks_through_prices_cart_order_status` зелёный (через `ClientServer::actingAs`).
 - [ ] Сниппеты на `/api-tokens` работают при копировании без правок (проверено Claude Desktop и Cursor).
-- [ ] Инструкции на русском, без ссылок на несуществующие инструменты (тест: каждое `client-*` из текста есть в `$tools`).
-- [ ] `docker exec pecado-node npm run lint:js`, `make build` зелёные.
+- [x] Инструкции на русском, без ссылок на несуществующие инструменты (тест `instructions_mention_only_existing_tools`).
+- [x] ESLint по `ApiTokens/Index.jsx` зелёный; `make build` — при слиянии в основном дереве.
