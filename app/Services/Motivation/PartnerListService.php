@@ -44,7 +44,7 @@ class PartnerListService
     public const WAKE_SILENT_DAYS = 90;
 
     /** Поднимать при изменении состава полей строки — сбрасывает кэш набора. */
-    private const DATASET_VERSION = 4;
+    private const DATASET_VERSION = 6;
 
     /** Сколько ключевых позиций показывать в «что брал». */
     private const TOP_PRODUCTS = 3;
@@ -327,7 +327,9 @@ class PartnerListService
                 'usual_gain' => Money::round($usual * (in_array($id, $novelty, true) ? $rateP2 : $rateP1)),
                 'current_gain' => Money::round($current * (in_array($id, $novelty, true) ? $rateP2 : $rateP1)),
                 // Сколько просроченный долг этого партнёра снял с переменной части в этом месяце (К1).
-                'k1_deduction' => Money::round($deductions[$id] ?? 0.0),
+                'k1_deduction' => Money::round($deductions[$id]['deducted'] ?? 0.0),
+                // Σ остатков по дням просрочки в этом месяце — база вычета; текущий долг может быть уже меньше.
+                'k1_integral' => Money::round($deductions[$id]['integral'] ?? 0.0),
                 'shortfall' => $shortfall,
                 'cost' => Money::round($shortfall * $rateP1),
                 'assortment' => $assortment['by_partner'][$id] ?? ['taken' => 0, 'total' => $assortment['total']],
@@ -367,7 +369,7 @@ class PartnerListService
     /**
      * Вычет К1 по партнёрам за месяц — из того же списка долгов, что и вкладка «Долги».
      *
-     * @return array<int, float> partner_id → рублей вычета за месяц
+     * @return array<int, array{deducted: float, integral: float}> partner_id → вычет за месяц и его база
      */
     private function deductions(int $managerId, CarbonImmutable $period): array
     {
@@ -377,9 +379,17 @@ class PartnerListService
             return [];
         }
 
+        $list = $this->debtList->build($calculation);
+        $rate = (float) ($list['rate_per_day'] ?? 0);
+
         $result = [];
-        foreach ($this->debtList->build($calculation)['partners'] as $partner) {
-            $result[(int) $partner['id']] = (float) $partner['deducted_this_month'];
+        foreach ($list['partners'] as $partner) {
+            $deducted = (float) $partner['deducted_this_month'];
+            $result[(int) $partner['id']] = [
+                'deducted' => $deducted,
+                // База вычета (Σ остатков по дням) — обратно из суммы: список долгов её не отдаёт.
+                'integral' => $rate > 0 ? $deducted / $rate : 0.0,
+            ];
         }
 
         return $result;

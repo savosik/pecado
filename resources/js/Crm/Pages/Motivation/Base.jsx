@@ -59,7 +59,7 @@ export default function MotivationBase({ tab_counts: tabCounts = null, month, mo
     // Расшифровка каждой «вашей» цифры прямо в строке: формула с числами партнёра.
     const explainUsual = (row) => `${rub(row.usual_monthly)} (обычная закупка) × ${ratePercent(row)} (ваша ставка) = ${rub(row.usual_gain)}`;
     const explainCurrent = (row) => `${rub(row.current_month)} (взял в этом месяце) × ${ratePercent(row)} = ${rub(row.current_gain)}${thresholdReached ? '' : `. Начислится, когда отгрузки всей базы дойдут до ${threshold?.percent ?? 60} % плана — сейчас ${threshold ? rub(threshold.shipped) : '—'}${threshold?.plan ? ` из ${rub(threshold.plan * threshold.percent / 100)}` : ''}.`}`;
-    const explainK1 = (row) => `Вычет К1: остаток просроченного долга ${row.debt?.amount ? rub(row.debt.amount) : '—'} × ${k1Percent} в день × дни просрочки в этом месяце = −${rub(row.k1_deduction)}. Снимается независимо от порога оплаты.`;
+    const explainK1 = (row) => `Вычет К1 = сумма остатков просроченного долга за каждый день этого месяца (${Math.round(row.k1_integral ?? 0).toLocaleString('ru-RU')} ₽·дн.) × ${k1Percent} в день = −${rub(row.k1_deduction)}. Сейчас просрочено ${row.debt?.amount ? rub(row.debt.amount) : '0 ₽'}${row.debt?.amount && row.k1_integral > row.debt.amount ? ' — долг уже гасился, но дни с большим остатком уже посчитаны' : ''}. Снимается независимо от порога оплаты.`;
     const explainPotential = (row) => `Потенциал: лучший месяц ${row.best_month?.amount ? rub(row.best_month.amount) : '—'} − взял в этом месяце ${rub(row.current_month)} = ${rub(row.potential)}; × ${ratePercent(row)} = +${rub(row.your_gain)}`;
 
     // Колонки сгруппированы парами «сколько взял → сколько это вам»: верхняя строка —
