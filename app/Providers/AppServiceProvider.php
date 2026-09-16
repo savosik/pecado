@@ -378,6 +378,36 @@ class AppServiceProvider extends ServiceProvider
         Scramble::registerJsonSpecificationRoute(path: 'docs/kanban-api.json', api: 'kanban');
 
         $this->registerCrmApiDocs();
+        $this->registerClientApiDocs();
+    }
+
+    /**
+     * Документация клиентского API v1 (`/api/client/v1/*`).
+     *
+     * Та же конструкция, что у CRM: спецификация строится из OperationRegistry
+     * клиента, а не сканируется из единственного контроллера; интерфейс — общий
+     * Scramble. Конфиг берётся внутри замыкания (см. оговорку про route:cache ниже).
+     */
+    private function registerClientApiDocs(): void
+    {
+        Scramble::registerApi('client', [
+            'api_path' => 'api/client/v1',
+            'info' => [
+                'title' => 'Pecado Client API',
+                'version' => '1.0',
+            ],
+        ]);
+
+        \Illuminate\Support\Facades\Route::get('docs/client-api', function (\App\Services\Client\Api\ClientApiDocument $document) {
+            return view('scramble::docs', [
+                'spec' => $document->build(),
+                'config' => Scramble::getGeneratorConfig('client'),
+            ]);
+        })->middleware(\Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess::class);
+
+        \Illuminate\Support\Facades\Route::get('docs/client-api.json', function (\App\Services\Client\Api\ClientApiDocument $document) {
+            return response()->json($document->build(), options: JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        })->middleware(\Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess::class);
     }
 
     /**
