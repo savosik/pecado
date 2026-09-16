@@ -49,7 +49,7 @@
 | `GET /crm/motivation/wake` | «Кого разбудить» | по действию |
 | `GET /crm/motivation/new-partners` | «Мои новые клиенты» | по действию |
 | `GET /crm/motivation/focus` | «Фокус-товары» | по действию |
-| `GET /crm/motivation/pool` | «Свободные клиенты» | по действию |
+| `GET /crm/motivation/packages` | «Выданные» — пакеты работника, правила, кран (общий список работнику не показывается с 16.09.2026; `/crm/motivation/pool` → редирект) | по действию |
 | `GET /crm/motivation/plan` | «Откуда мой план» | по действию |
 | `GET /crm/motivation/quarter` | «Премия отдела за квартал» | по действию |
 | `GET /crm/motivation/payslip` | расчётный лист | по действию |

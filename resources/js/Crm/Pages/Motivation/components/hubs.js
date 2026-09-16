@@ -12,7 +12,7 @@ export const HUBS = {
             { key: 'debts', label: 'Долги', path: '/crm/motivation/debts' },
             { key: 'wake', label: 'Разбудить', path: '/crm/motivation/wake' },
             { key: 'new', label: 'Новые', path: '/crm/motivation/new-partners' },
-            { key: 'pool', label: 'Свободные', path: '/crm/motivation/pool' },
+            { key: 'packages', label: 'Выданные', path: '/crm/motivation/packages' },
             { key: 'focus', label: 'Фокус-товары', path: '/crm/motivation/focus' },
         ],
     },

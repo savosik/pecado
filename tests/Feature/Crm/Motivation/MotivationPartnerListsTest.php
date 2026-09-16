@@ -262,8 +262,8 @@ class MotivationPartnerListsTest extends TestCase
     }
 
     #[Test]
-    #[TestDox('Пул: по умолчанию только с историей, «даст вам» есть лишь у покупавших, кран открыт без данных')]
-    public function pool_defaults_to_partners_with_history(): void
+    #[TestDox('Пул: по умолчанию все, чип «с историей» включается явно, «даст вам» есть лишь у покупавших, кран открыт без данных')]
+    public function pool_opens_without_filters(): void
     {
         $cold = User::factory()->create(['personal_manager_id' => null, 'name' => 'Холодный']);
         $warm = User::factory()->create(['personal_manager_id' => null, 'name' => 'Покупал', 'city' => 'Тула']);
@@ -272,19 +272,20 @@ class MotivationPartnerListsTest extends TestCase
 
         $service = app(\App\Services\Motivation\PoolListService::class);
 
-        $list = $service->list($this->profile->id, $this->month);
-        $this->assertSame(3, $list['summary']['total']);
-        $this->assertSame(1, $list['summary']['with_history']);
+        $all = $service->list($this->profile->id, $this->month);
+        $this->assertSame(3, $all['summary']['total']);
+        $this->assertSame(1, $all['summary']['with_history']);
+        $this->assertFalse($all['history_only'], 'Раздел открывается без фильтров');
+        $this->assertSame(3, $all['rows']['total']);
+        $this->assertSame('Покупал', $all['rows']['data'][0]['name'], 'С историей — первыми при любой сортировке');
+        $this->assertNull($all['rows']['data'][0]['estimate'], 'Одна покупка за полгода — обычная закупка ноль, оценки нет');
+        $this->assertFalse($all['tap']['blocked']);
+        $this->assertNotNull($all['tap']['note'], 'Без расчётов по новой схеме кран честно помечен как непроверяемый');
+
+        $list = $service->list($this->profile->id, $this->month, ['history' => 1]);
         $this->assertTrue($list['history_only']);
         $this->assertCount(1, $list['rows']['data']);
         $this->assertSame('Покупал', $list['rows']['data'][0]['name']);
-        $this->assertNull($list['rows']['data'][0]['estimate'], 'Одна покупка за полгода — обычная закупка ноль, оценки нет');
-        $this->assertFalse($list['tap']['blocked']);
-        $this->assertNotNull($list['tap']['note'], 'Без расчётов по новой схеме кран честно помечен как непроверяемый');
-
-        $all = $service->list($this->profile->id, $this->month, ['history' => 0]);
-        $this->assertSame(3, $all['rows']['total']);
-        $this->assertSame('Покупал', $all['rows']['data'][0]['name'], 'С историей — первыми при любой сортировке');
         $this->assertNotNull($cold);
     }
 
@@ -316,11 +317,14 @@ class MotivationPartnerListsTest extends TestCase
                 ->has('list.summary.reward_total'));
 
         $this->actingAs($this->head)
-            ->get('/crm/motivation/pool')
+            ->get('/crm/motivation/packages')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('Crm/Pages/Motivation/Pool')
-                ->has('list.tap.blocked'));
+                ->component('Crm/Pages/Motivation/Packages')
+                ->has('tap.blocked')
+                ->has('rules.package_size'));
+
+        $this->actingAs($this->head)->get('/crm/motivation/pool')->assertRedirect('/crm/motivation/packages');
 
         $this->actingAs($this->head)
             ->get('/crm/motivation/rhythm?drop=1&stopped=0&silent=0')

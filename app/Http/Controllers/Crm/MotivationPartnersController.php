@@ -29,6 +29,7 @@ class MotivationPartnersController extends CrmController
         private readonly PartnerListService $partners,
         private readonly PoolListService $pool,
         private readonly \App\Services\Motivation\PoolPackageService $packages,
+        private readonly \App\Services\Payroll\PayrollParamsResolver $params,
     ) {}
 
     public function base(Request $request): Response
@@ -71,14 +72,44 @@ class MotivationPartnersController extends CrmController
         return response()->json($this->payload($request, 'newcomers'));
     }
 
-    public function pool(Request $request): Response
+    /**
+     * «Выданные»: пакеты работника, правила обработки и кран.
+     */
+    public function packages(Request $request): Response
     {
-        return Inertia::render('Crm/Pages/Motivation/Pool', $this->payload($request, 'pool'));
-    }
+        $actor = $this->crmActor($request);
+        $month = $this->month($request);
+        $manager = $this->scopes->manager($actor, $request->integer('manager') ?: null);
+        $defaults = (array) config('motivation.default_parameters', []);
 
-    public function poolData(Request $request): JsonResponse
-    {
-        return response()->json($this->payload($request, 'pool'));
+        $payload = [
+            'manager' => $manager === null ? null : ['id' => (int) $manager->getKey(), 'name' => (string) $manager->name],
+            'scope_options' => $this->scopes->options($actor),
+            'can_see_all' => $this->scopes->seesAll($actor),
+            'rules' => null,
+            'tap' => null,
+            'packages' => [],
+        ];
+
+        if ($manager === null) {
+            return Inertia::render('Crm/Pages/Motivation/Packages', $payload);
+        }
+
+        $managerId = (int) $manager->getKey();
+        $rateP2 = (float) ($this->params->effective($managerId, $month)->for('motivation_variable')['rate_p2'] ?? $defaults['rate_p2'] ?? 0);
+
+        $payload['rules'] = [
+            'package_size' => (int) ($defaults['pool_package_size'] ?? 20),
+            'contact_working_days' => (int) ($defaults['pool_contact_working_days'] ?? 10),
+            'shipment_days' => (int) ($defaults['pool_shipment_days'] ?? 90),
+            'tap_periods' => (int) ($defaults['pool_tap_periods'] ?? 2),
+            'novelty_periods' => (int) ($defaults['novelty_periods'] ?? 6),
+            'rate_p2_percent' => rtrim(rtrim(number_format($rateP2 * 100, 2, ',', ''), '0'), ','),
+        ];
+        $payload['tap'] = $this->pool->tap($managerId, $month);
+        $payload['packages'] = $this->packages->forManager($managerId);
+
+        return Inertia::render('Crm/Pages/Motivation/Packages', $payload);
     }
 
     /**
@@ -111,14 +142,8 @@ class MotivationPartnersController extends CrmController
             'rhythm' => $this->partners->rhythm($managerId, $month, $query),
             'wake' => $this->partners->wake($managerId, $month, $query),
             'newcomers' => $this->partners->newcomers($managerId, $month),
-            'pool' => $this->pool->list($managerId, $month, $query),
             default => $this->partners->base($managerId, $month, $query),
         };
-
-        if ($list === 'pool') {
-            // Что уже выдано этому работнику и в какие сроки уложиться.
-            $payload['my_packages'] = $this->packages->forManager($managerId);
-        }
 
         return $payload;
     }

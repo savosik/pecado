@@ -676,8 +676,10 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/motivation/wake/data', [MotivationPartnersController::class, 'wakeData'])->name('motivation.wake.data');
         Route::get('/motivation/new-partners', [MotivationPartnersController::class, 'newPartners'])->name('motivation.new-partners');
         Route::get('/motivation/new-partners/data', [MotivationPartnersController::class, 'newPartnersData'])->name('motivation.new-partners.data');
-        Route::get('/motivation/pool', [MotivationPartnersController::class, 'pool'])->name('motivation.pool');
-        Route::get('/motivation/pool/data', [MotivationPartnersController::class, 'poolData'])->name('motivation.pool.data');
+        // «Свободные» у работника заменены «Выданными»: общий список ему не показывается,
+        // пакеты выдаёт руководитель. Старый адрес переводит на новый.
+        Route::permanentRedirect('/motivation/pool', '/crm/motivation/packages');
+        Route::get('/motivation/packages', [MotivationPartnersController::class, 'packages'])->name('motivation.packages');
         Route::get('/motivation/focus', [MotivationReferenceController::class, 'focus'])->name('motivation.focus');
         Route::get('/motivation/focus/data', [MotivationReferenceController::class, 'focusData'])->name('motivation.focus.data');
         Route::get('/motivation/plan', [MotivationReferenceController::class, 'plan'])->name('motivation.plan');

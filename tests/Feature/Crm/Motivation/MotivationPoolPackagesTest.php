@@ -198,15 +198,18 @@ class MotivationPoolPackagesTest extends TestCase
         ]);
 
         $this->actingAs($this->head)
-            ->get('/crm/motivation/pool?manager='.$this->profile->id)
+            ->get('/crm/motivation/packages?manager='.$this->profile->id)
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('my_packages', 1)
-                ->where('my_packages.0.id', $package->id)
-                ->where('my_packages.0.count', 2)
-                ->where('my_packages.0.contacted_in_time', 1)
-                ->where('my_packages.0.comment', 'Октябрьский пакет')
-                ->has('my_packages.0.items', 2));
+                ->component('Crm/Pages/Motivation/Packages')
+                ->has('packages', 1)
+                ->where('packages.0.id', $package->id)
+                ->where('packages.0.count', 2)
+                ->where('packages.0.contacted_in_time', 1)
+                ->where('packages.0.comment', 'Октябрьский пакет')
+                ->has('packages.0.items', 2)
+                ->where('rules.contact_working_days', 10)
+                ->where('rules.shipment_days', 90));
     }
 
     #[Test]
