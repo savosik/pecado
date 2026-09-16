@@ -84,9 +84,6 @@ class MotivationPoolController extends CrmController
         $actor = $this->crmActor($request);
 
         $query = $request->only(['history', 'lost', 'sort', 'direction', 'page', 'search']);
-        if (! array_key_exists('history', $query)) {
-            $query['history'] = 1;
-        }
 
         $overview = $this->packages->overview($month);
 

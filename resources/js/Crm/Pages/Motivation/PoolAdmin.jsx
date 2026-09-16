@@ -209,7 +209,7 @@ export default function MotivationPoolAdmin(props) {
                         </HStack>
 
                         <HStack gap={2} flexWrap="wrap" mb={2}>
-                            <Box as="button" type="button" px={3} py={1} borderRadius="full" borderWidth="1px" borderColor={Number(data.query.history ?? 1) && !Number(data.query.lost ?? 0) ? 'blue.solid' : 'border'} bg={Number(data.query.history ?? 1) && !Number(data.query.lost ?? 0) ? 'blue.subtle' : 'bg.panel'} fontSize="sm" cursor="pointer" onClick={() => navigate({ history: Number(data.query.history ?? 1) ? 0 : 1, lost: undefined, page: undefined })}>
+                            <Box as="button" type="button" px={3} py={1} borderRadius="full" borderWidth="1px" borderColor={data.candidates.history_only && !Number(data.query.lost ?? 0) ? 'blue.solid' : 'border'} bg={data.candidates.history_only && !Number(data.query.lost ?? 0) ? 'blue.subtle' : 'bg.panel'} fontSize="sm" cursor="pointer" onClick={() => navigate({ history: data.candidates.history_only ? 0 : 1, lost: undefined, page: undefined })}>
                                 Только с историей покупок · {data.candidates.summary.with_history}
                             </Box>
                             <Box as="button" type="button" px={3} py={1} borderRadius="full" borderWidth="1px" borderColor={Number(data.query.lost ?? 0) ? 'gray.solid' : 'border'} bg={Number(data.query.lost ?? 0) ? 'gray.subtle' : 'bg.panel'} fontSize="sm" cursor="pointer" onClick={() => navigate({ lost: Number(data.query.lost ?? 0) ? undefined : 1, page: undefined })}>

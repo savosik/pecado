@@ -67,7 +67,11 @@ class PoolListService
             'package_size' => (int) config('motivation.default_parameters.pool_package_size', 20),
         ];
 
-        $historyOnly = ! array_key_exists('history', $query) || in_array($query['history'], [1, '1', true, 'true'], true);
+        // По умолчанию — только с историей покупок; если таких нет вовсе, пустой
+        // список с включённым чипом читался бы как «в Пуле никого» — показываем всех.
+        $historyOnly = array_key_exists('history', $query)
+            ? in_array($query['history'], [1, '1', true, 'true'], true)
+            : $withHistory !== [];
         $showLost = in_array($query['lost'] ?? 0, [1, '1', true, 'true'], true);
         $selected = $showLost ? $lost : ($historyOnly ? $withHistory : $working);
 
