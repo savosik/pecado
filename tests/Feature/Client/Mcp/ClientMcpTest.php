@@ -228,6 +228,12 @@ class ClientMcpTest extends TestCase
         ])->assertHasErrors();
         $this->assertSame(0, Order::count());
 
+        // Через client-call без ключа — подсказка про аргумент, а не про HTTP-заголовок.
+        ClientServer::actingAs($this->client)->tool(ClientCall::class, [
+            'operation' => 'orders.create',
+            'arguments' => ['products' => [['identifier' => 'A', 'quantity' => 1]]],
+        ])->assertHasErrors(['[idempotency_key_required] Для этой операции обязателен аргумент idempotency_key (например, UUID): повтор с тем же ключом не создаст дубль.']);
+
         $foreign = Order::factory()->create(['user_id' => User::factory()->create()->id]);
         ClientServer::actingAs($this->client)->tool(ClientOrderStatus::class, ['order' => (string) $foreign->id])->assertHasErrors(['[not_found] Запись не найдена или недоступна этому клиенту.']);
 

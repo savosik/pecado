@@ -100,7 +100,13 @@ trait InteractsWithClientOperations
             return Response::error("[company_required] {$e->getMessage()} Спросите у человека, от какого юрлица работать, и передайте company_id. Варианты: "
                 .json_encode($e->choices(), JSON_UNESCAPED_UNICODE));
         } catch (IdempotencyConflict $e) {
-            return Response::error("[{$e->errorCode}] {$e->getMessage()}");
+            // В REST ключ — заголовок Idempotency-Key, а в MCP — аргумент инструмента:
+            // агенту нужна подсказка на его языке, иначе он ищет, куда передать заголовок.
+            $message = $e->errorCode === 'idempotency_key_required'
+                ? 'Для этой операции обязателен аргумент idempotency_key (например, UUID): повтор с тем же ключом не создаст дубль.'
+                : $e->getMessage();
+
+            return Response::error("[{$e->errorCode}] {$message}");
         } catch (ValidationException $e) {
             $messages = [];
 
