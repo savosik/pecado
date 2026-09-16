@@ -186,6 +186,27 @@ class MotivationPoolPackagesTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('Удалённая карточка выпадает из Пула сразу, даже при открытой записи реестра')]
+    public function deleted_partner_leaves_the_pool(): void
+    {
+        [$alive, $gone] = $this->poolPartners(2);
+        $this->artisan('motivation:backfill-assignments')->assertSuccessful();
+        $gone->forceFill(['user_kind' => UserKind::DELETED])->save();
+
+        $pool = app(PartnerAttributionResolver::class)->poolPartnerIds(CarbonImmutable::now());
+        $this->assertContains($alive->id, $pool);
+        $this->assertNotContains($gone->id, $pool);
+
+        $ids = collect($this->actingAs($this->head)
+            ->get('/crm/motivation/pool/admin?history=0')
+            ->assertOk()
+            ->viewData('page')['props']['candidates']['rows']['data'])->pluck('id');
+
+        $this->assertTrue($ids->contains($alive->id));
+        $this->assertFalse($ids->contains($gone->id));
+    }
+
+    #[Test]
     #[TestDox('Ушедшие партнёры (банкрот, закрылся) в кандидаты пакета не попадают, но видны по чипу')]
     public function lost_partners_are_kept_out_of_packages(): void
     {

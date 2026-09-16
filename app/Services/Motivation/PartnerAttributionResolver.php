@@ -36,7 +36,9 @@ class PartnerAttributionResolver
             ->map('intval')
             ->all();
 
-        $query = User::query()->clients();
+        // Удалённая карточка («это не партнёр», дубль) из базы работника выпадает
+        // сразу, даже если запись в реестре закрепления ещё открыта.
+        $query = User::query()->clients()->whereNull('deleted_at');
 
         if ($fromRegistry !== []) {
             $query->whereIn('id', $fromRegistry);
@@ -105,14 +107,17 @@ class PartnerAttributionResolver
     {
         if ($this->registryFilled()) {
             return MotivationPartnerAssignment::query()
-                ->whereNull('personal_manager_id')
+                ->whereNull('motivation_partner_assignments.personal_manager_id')
                 ->activeOn(CarbonImmutable::instance($on)->startOfDay())
-                ->pluck('user_id')
+                // Удалённые карточки в Пул не попадают, пока запись реестра не закрыта.
+                ->join('users', 'users.id', '=', 'motivation_partner_assignments.user_id')
+                ->whereNull('users.deleted_at')
+                ->pluck('motivation_partner_assignments.user_id')
                 ->map('intval')
                 ->all();
         }
 
-        return User::query()->clients()->whereNull('personal_manager_id')->pluck('id')->map('intval')->all();
+        return User::query()->clients()->whereNull('deleted_at')->whereNull('personal_manager_id')->pluck('id')->map('intval')->all();
     }
 
     public function registryFilled(): bool
