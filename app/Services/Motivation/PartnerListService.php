@@ -43,6 +43,9 @@ class PartnerListService
     /** Молчание дольше этого срока выводит партнёра во вкладку «молчат» экрана «Кого разбудить». */
     public const WAKE_SILENT_DAYS = 90;
 
+    /** Поднимать при изменении состава полей строки — сбрасывает кэш набора. */
+    private const DATASET_VERSION = 2;
+
     /** Сколько ключевых позиций показывать в «что брал». */
     private const TOP_PRODUCTS = 3;
 
@@ -255,7 +258,9 @@ class PartnerListService
     private function dataset(int $managerId, CarbonInterface $month): array
     {
         $period = CarbonImmutable::instance($month)->startOfMonth();
-        $key = sprintf('motivation:partners:%d:%s', $managerId, $period->format('Y-m'));
+        // Версия в ключе: после выкатки с новыми полями строки не должны
+        // четверть часа приезжать из старого кэша без них.
+        $key = sprintf('motivation:partners:v%d:%d:%s', self::DATASET_VERSION, $managerId, $period->format('Y-m'));
 
         return Cache::remember($key, (int) config('crm.opportunities.cache_ttl', 900), fn (): array => $this->build($managerId, $period));
     }
