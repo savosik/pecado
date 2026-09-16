@@ -92,7 +92,7 @@ class MotivationPartnerListsTest extends TestCase
 
         $list = app(PartnerListService::class)->base($this->profile->id, $this->month);
 
-        $this->assertSame(['total' => 2, 'active' => 1, 'silent' => 0, 'never_bought' => 1, 'in_novelty' => 0], array_diff_key($list['summary'], ['threshold' => true]));
+        $this->assertSame(['total' => 2, 'active' => 1, 'silent' => 0, 'never_bought' => 1, 'in_novelty' => 0], array_diff_key($list['summary'], ['threshold' => true, 'rate_k1_per_day' => true]));
         $this->assertArrayHasKey('threshold', $list['summary'], 'Порог оплаты — в сводке, даже если расчёта ещё нет');
         $this->assertCount(2, $list['rows']['data'], 'Вкладка «Все» по умолчанию показывает всю базу');
         $this->assertSame('Покупатель', $list['rows']['data'][0]['name'], 'Покупавшие — первыми');

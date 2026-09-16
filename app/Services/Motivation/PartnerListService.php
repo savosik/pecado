@@ -82,6 +82,9 @@ class PartnerListService
             'in_novelty' => count(array_filter($rows, fn (array $r): bool => $r['in_novelty'])),
             // Дошла ли база работника до порога оплаты: пока нет, «принёс в этом месяце» — ноль.
             'threshold' => $this->thresholdState($managerId, $month),
+            // Ставка К1 в день — для расшифровки вычета в строке.
+            'rate_k1_per_day' => (float) ($this->motivationParams($managerId, CarbonImmutable::instance($month)->startOfMonth())['rate_k1_per_day']
+                ?? config('motivation.default_parameters.rate_k1_per_day', 0)),
         ];
 
         // Вкладка называется «Все»: без отбора показываем всю базу, включая ни разу не покупавших.

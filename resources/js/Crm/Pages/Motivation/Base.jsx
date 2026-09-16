@@ -55,6 +55,12 @@ export default function MotivationBase({ tab_counts: tabCounts = null, month, mo
 
     const rub = (v) => `${Math.round(v).toLocaleString('ru-RU')} ₽`;
     const ratePercent = (row) => `${(Number(row.rate ?? 0) * 100).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} %`;
+    const k1Percent = `${(Number(summary?.rate_k1_per_day ?? 0) * 100).toLocaleString('ru-RU', { maximumFractionDigits: 3 })} %`;
+    // Расшифровка каждой «вашей» цифры прямо в строке: формула с числами партнёра.
+    const explainUsual = (row) => `${rub(row.usual_monthly)} (обычная закупка) × ${ratePercent(row)} (ваша ставка) = ${rub(row.usual_gain)}`;
+    const explainCurrent = (row) => `${rub(row.current_month)} (взял в этом месяце) × ${ratePercent(row)} = ${rub(row.current_gain)}${thresholdReached ? '' : `. Начислится, когда отгрузки всей базы дойдут до ${threshold?.percent ?? 60} % плана — сейчас ${threshold ? rub(threshold.shipped) : '—'}${threshold?.plan ? ` из ${rub(threshold.plan * threshold.percent / 100)}` : ''}.`}`;
+    const explainK1 = (row) => `Вычет К1: остаток просроченного долга ${row.debt?.amount ? rub(row.debt.amount) : '—'} × ${k1Percent} в день × дни просрочки в этом месяце = −${rub(row.k1_deduction)}. Снимается независимо от порога оплаты.`;
+    const explainPotential = (row) => `Потенциал: лучший месяц ${row.best_month?.amount ? rub(row.best_month.amount) : '—'} − взял в этом месяце ${rub(row.current_month)} = ${rub(row.potential)}; × ${ratePercent(row)} = +${rub(row.your_gain)}`;
 
     // Колонки сгруппированы парами «сколько взял → сколько это вам»: верхняя строка —
     // деньги партнёра, нижняя — ваши. Сортировка — по верхней строке группы.
@@ -68,16 +74,21 @@ export default function MotivationBase({ tab_counts: tabCounts = null, month, mo
         { key: 'usual_monthly', label: 'Обычно берёт в месяц', sub: 'обычно приносит вам', align: 'right', sortable: true, hint: 'Верхняя строка — обычная закупка партнёра в месяц. Нижняя — она же × ваша ставка: столько партнёр приносит вам в обычный месяц.', render: (row) => (
             <VStack align="end" gap={0}>
                 <Money value={row.usual_monthly} />
-                <Text fontSize="xs" fontWeight="600" color={row.usual_gain > 0 ? 'green.fg' : 'fg.subtle'} fontVariantNumeric="tabular-nums">{row.usual_gain > 0 ? rub(row.usual_gain) : '—'}</Text>
+                <HStack gap={1} fontSize="xs" fontVariantNumeric="tabular-nums">
+                    <Text fontWeight="600" color={row.usual_gain > 0 ? 'green.fg' : 'fg.subtle'}>{row.usual_gain > 0 ? rub(row.usual_gain) : '—'}</Text>
+                    {row.usual_gain > 0 && <MetricHint text={explainUsual(row)} />}
+                </HStack>
             </VStack>
         ) },
         { key: 'current_month', label: 'Взял в этом месяце', sub: 'принёс · отнял', align: 'right', sortable: true, hint: `Верхняя строка — отгрузки партнёра в этом месяце. Ниже: сколько это вам (${thresholdHint}) и сколько снял его просроченный долг (вычет К1: остаток × ставка в день × дни просрочки, независимо от порога).`, render: (row) => (
             <VStack align="end" gap={0}>
                 <Money value={row.current_month} strong />
-                <HStack gap={1.5} fontSize="xs" fontVariantNumeric="tabular-nums">
+                <HStack gap={1} fontSize="xs" fontVariantNumeric="tabular-nums">
                     <Text fontWeight="600" color={row.current_gain > 0 ? (thresholdReached ? 'green.fg' : 'fg.muted') : 'fg.subtle'}>{row.current_gain > 0 ? `+${rub(row.current_gain)}` : '—'}</Text>
                     {row.current_gain > 0 && !thresholdReached && <Text color="orange.fg">(пока 0)</Text>}
-                    {row.k1_deduction > 0 && <Text fontWeight="600" color="red.fg">−{rub(row.k1_deduction)}</Text>}
+                    {row.current_gain > 0 && <MetricHint text={explainCurrent(row)} />}
+                    {row.k1_deduction > 0 && <Text fontWeight="600" color="red.fg" ml={1}>−{rub(row.k1_deduction)}</Text>}
+                    {row.k1_deduction > 0 && <MetricHint text={explainK1(row)} />}
                 </HStack>
             </VStack>
         ) },
@@ -87,9 +98,10 @@ export default function MotivationBase({ tab_counts: tabCounts = null, month, mo
                     <Text>{row.best_month?.amount ? rub(row.best_month.amount) : '—'}</Text>
                     {row.best_month?.period && <Text fontSize="xs" color="fg.subtle">{String(row.best_month.period).split('-').reverse().join('.')}</Text>}
                 </HStack>
-                <HStack gap={1.5} fontSize="xs" fontVariantNumeric="tabular-nums">
+                <HStack gap={1} fontSize="xs" fontVariantNumeric="tabular-nums">
                     <Text color="fg.muted">{row.potential > 0 ? rub(row.potential) : '—'}</Text>
                     <Text fontWeight="600" color={row.your_gain > 0 ? 'green.fg' : 'fg.subtle'}>{row.your_gain > 0 ? `+${rub(row.your_gain)}` : ''}</Text>
+                    {row.your_gain > 0 && <MetricHint text={explainPotential(row)} />}
                 </HStack>
             </VStack>
         ) },
