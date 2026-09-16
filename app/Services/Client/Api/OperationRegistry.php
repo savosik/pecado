@@ -11,10 +11,12 @@ use App\Services\Client\Api\Operations\ContractOperations;
 use App\Services\Client\Api\Operations\DeliveryAddressOperations;
 use App\Services\Client\Api\Operations\DocumentOperations;
 use App\Services\Client\Api\Operations\FinanceOperations;
+use App\Services\Client\Api\Operations\NotificationOperations;
 use App\Services\Client\Api\Operations\OrderOperations;
 use App\Services\Client\Api\Operations\PartnerContactOperations;
 use App\Services\Client\Api\Operations\PaymentOrderOperations;
 use App\Services\Client\Api\Operations\ProfileOperations;
+use App\Services\Client\Api\Operations\QuestionOperations;
 use App\Services\Client\Api\Operations\ReserveOperations;
 use App\Services\Client\Api\Operations\ReturnOperations;
 use App\Services\Client\Api\Operations\ShipmentOperations;
@@ -53,6 +55,8 @@ class OperationRegistry
         CompanyOperations::class,
         DeliveryAddressOperations::class,
         PartnerContactOperations::class,
+        QuestionOperations::class,
+        NotificationOperations::class,
     ];
 
     /** @var list<Operation>|null */

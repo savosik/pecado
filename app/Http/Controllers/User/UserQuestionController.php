@@ -2,17 +2,11 @@
 
 namespace App\Http\Controllers\User;
 
-use App\Enums\UserQuestionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreUserQuestionRequest;
-use App\Models\UserQuestion;
-use App\Notifications\UserQuestions\NewQuestionAdminNotification;
-use App\Notifications\UserQuestions\QuestionReceivedNotification;
-use App\Services\Crm\Mail\MailStream;
-use App\Support\Notifications\Occasion;
+use App\Services\Support\UserQuestionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Notification;
 
 class UserQuestionController extends Controller
 {
@@ -23,61 +17,16 @@ class UserQuestionController extends Controller
         $email = $user?->email ?? (string) $request->input('email');
         $name = $user?->name ?? $request->input('name');
 
-        $question = UserQuestion::create([
-            'user_id' => $user?->id,
-            'name' => $name,
+        app(UserQuestionService::class)->create($user, [
+            'subject' => (string) $request->string('subject'),
+            'body' => (string) $request->string('body'),
             'email' => $email,
-            'subject' => $request->string('subject'),
-            'body' => $request->string('body'),
-            'status' => UserQuestionStatus::NEW,
+            'name' => $name,
+        ], [
             'ip' => $request->ip(),
-            'user_agent' => substr((string) $request->userAgent(), 0, 500),
-        ]);
-
-        if ($request->hasFile('file')) {
-            $question->addMediaFromRequest('file')->toMediaCollection('attachment');
-        }
-
-        if ($user) {
-            $user->notify(new QuestionReceivedNotification($question));
-        } else {
-            Notification::route('mail', $email)
-                ->notify(new QuestionReceivedNotification($question));
-        }
-
-        // Сигнал пульту идёт всегда: в теневом режиме он только считает
-        // получателей для сверки со старой адресацией.
-        app(MailStream::class)->captureQuietly(new Occasion(
-            key: 'system.question_received',
-            clientUserId: $user?->id,
-            subject: $question,
-            data: [
-                'is_guest' => $user === null,
-                'question_id' => $question->id,
-            ],
-            view: [
-                'title' => 'Новый вопрос с сайта',
-                'body' => (string) $question->question,
-                'entity_label' => 'Вопрос №'.$question->id,
-            ],
-        ));
-
-        // Адресаты заданы явным списком, а не выборкой по ролям: роль раздаёт
-        // права, а не почту, и любая новая роль у сотрудника молча подписывала бы
-        // его на переписку с клиентами. Пустой список — письма не уходят, вопрос
-        // всё равно виден в админке.
-        $staff = app(\App\Services\Notifications\StaffNotifications::class);
-
-        foreach (config('notifications.mail.user_question_recipients', []) as $recipient) {
-            // Сотрудник может отписаться у себя в «Моих уведомлениях».
-            // Общий ящик отдела учётки не имеет — ему письмо уходит всегда.
-            if (! $staff->wantsByEmail($recipient, 'staff.question_received')) {
-                continue;
-            }
-
-            Notification::route('mail', $recipient)
-                ->notify(new NewQuestionAdminNotification($question));
-        }
+            'user_agent' => (string) $request->userAgent(),
+            'source' => 'web',
+        ], $request->hasFile('file') ? $request->file('file') : null);
 
         return back()
             ->with('success', 'Ваш вопрос отправлен. Мы ответим в течение 1 рабочего дня.');
