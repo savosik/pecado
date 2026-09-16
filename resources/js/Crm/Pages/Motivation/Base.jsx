@@ -67,6 +67,7 @@ export default function MotivationBase({ tab_counts: tabCounts = null, month, mo
                 {row.current_gain > 0 && !thresholdReached && <Text fontSize="xs" color="orange.fg">пока 0</Text>}
             </VStack>
         ) },
+        { key: 'k1_deduction', label: 'Отнял в этом месяце', align: 'right', sortable: true, hint: 'Вычет К1 за просроченный долг этого партнёра в этом месяце: остаток долга × ставка в день × дни просрочки. Снимается с переменной части независимо от порога оплаты.', render: (row) => <Text fontSize="sm" fontWeight="700" color={row.k1_deduction > 0 ? 'red.fg' : 'fg.subtle'} fontVariantNumeric="tabular-nums">{row.k1_deduction > 0 ? `−${Math.round(row.k1_deduction).toLocaleString('ru-RU')} ₽` : '—'}</Text> },
         { key: 'best_month', label: 'Лучший месяц', align: 'right', sortable: true, render: (row) => <BestMonth value={row.best_month} /> },
         { key: 'potential', label: 'Потенциал', align: 'right', sortable: true, render: (row) => <Money value={row.potential} /> },
         { key: 'your_gain', label: 'Может дать', align: 'right', sortable: true, render: (row) => <Text fontSize="sm" fontWeight="700" color={row.your_gain > 0 ? 'green.fg' : 'fg.subtle'} fontVariantNumeric="tabular-nums">{row.your_gain > 0 ? `+${Math.round(row.your_gain).toLocaleString('ru-RU')} ₽` : '—'}</Text> },

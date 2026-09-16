@@ -44,14 +44,14 @@ class PartnerListService
     public const WAKE_SILENT_DAYS = 90;
 
     /** Поднимать при изменении состава полей строки — сбрасывает кэш набора. */
-    private const DATASET_VERSION = 3;
+    private const DATASET_VERSION = 4;
 
     /** Сколько ключевых позиций показывать в «что брал». */
     private const TOP_PRODUCTS = 3;
 
     /** Колонки, по которым можно сортировать с сервера. */
     private const SORTABLE = [
-        'rate', 'usual_gain', 'current_gain',
+        'rate', 'usual_gain', 'current_gain', 'k1_deduction',
         'name', 'usual_monthly', 'current_month', 'best_month', 'potential', 'your_gain',
         'assortment', 'last_purchase_on', 'silent_days', 'debt', 'shortfall', 'cost',
     ];
@@ -61,6 +61,7 @@ class PartnerListService
         private readonly ShipmentAnalyticsService $analytics,
         private readonly PartnerAttributionResolver $attribution,
         private readonly PayrollParamsResolver $params,
+        private readonly DebtListService $debtList,
     ) {}
 
     /**
@@ -285,6 +286,7 @@ class PartnerListService
         $history = $this->monthlyHistory($ids, $period);
         $assortment = $this->assortment($ids, $period);
         $debts = $this->debts($ids);
+        $deductions = $this->deductions($managerId, $period);
         $touches = $this->lastTouches($ids);
         $novelty = $this->novelty($ids, $period);
         $rateP1 = $this->rateP1($managerId, $period);
@@ -321,6 +323,8 @@ class PartnerListService
                 // Обычная закупка × ставка: сколько партнёр приносит работнику в обычный месяц.
                 'usual_gain' => Money::round($usual * (in_array($id, $novelty, true) ? $rateP2 : $rateP1)),
                 'current_gain' => Money::round($current * (in_array($id, $novelty, true) ? $rateP2 : $rateP1)),
+                // Сколько просроченный долг этого партнёра снял с переменной части в этом месяце (К1).
+                'k1_deduction' => Money::round($deductions[$id] ?? 0.0),
                 'shortfall' => $shortfall,
                 'cost' => Money::round($shortfall * $rateP1),
                 'assortment' => $assortment['by_partner'][$id] ?? ['taken' => 0, 'total' => $assortment['total']],
@@ -357,6 +361,27 @@ class PartnerListService
      *
      * @return array{reached: bool, percent: int, plan: float|null, shipped: float}|null
      */
+    /**
+     * Вычет К1 по партнёрам за месяц — из того же списка долгов, что и вкладка «Долги».
+     *
+     * @return array<int, float> partner_id → рублей вычета за месяц
+     */
+    private function deductions(int $managerId, CarbonImmutable $period): array
+    {
+        $calculation = \App\Models\PayrollCalculation::latestFor($managerId, $period);
+
+        if ($calculation === null) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($this->debtList->build($calculation)['partners'] as $partner) {
+            $result[(int) $partner['id']] = (float) $partner['deducted_this_month'];
+        }
+
+        return $result;
+    }
+
     private function thresholdState(int $managerId, CarbonInterface $month): ?array
     {
         $calculation = \App\Models\PayrollCalculation::latestFor($managerId, CarbonImmutable::instance($month)->startOfMonth());
