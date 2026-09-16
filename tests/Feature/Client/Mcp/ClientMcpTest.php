@@ -132,7 +132,10 @@ class ClientMcpTest extends TestCase
     #[TestDox('Без токена, с чужим и с отозванным — 401; валидный токен пускает и помечает источник')]
     public function the_gate_requires_an_active_client_token(): void
     {
-        $this->callMcp()->assertStatus(401);
+        // Без ссылки на OAuth-метаданные: иначе Cursor и часть других клиентов уходят
+        // в OAuth и перестают отправлять наш статический Bearer-ключ.
+        $unauthorized = $this->callMcp()->assertStatus(401);
+        $this->assertStringNotContainsString('resource_metadata', (string) $unauthorized->headers->get('WWW-Authenticate'));
         $this->callMcp(['Authorization' => 'Bearer nope'])->assertStatus(401);
 
         $revoked = ApiToken::create(['user_id' => $this->client->id, 'name' => 'Отозван', 'is_active' => false]);

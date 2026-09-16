@@ -7,6 +7,7 @@ import {
 import { Head, usePage } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
 import AgentChatBanner from './AgentChatBanner';
+import AgentConnectGuide from './AgentConnectGuide';
 import {
     LuPlus, LuCopy, LuCheck, LuTrash2, LuRefreshCw,
     LuShieldCheck, LuCode, LuArrowRight, LuPackage,
@@ -573,31 +574,6 @@ export default function Index({ tokens: initialTokens, docs = {} }) {
 
     // Подключение ИИ-агента к MCP-серверу кабинета: те же ключ и токен, что у REST v1.
     const mcpUrl = docs.mcp || `${window.location.origin}/mcp/client`;
-    const mcpSnippets = [
-        {
-            title: 'Claude Desktop / Claude Code (claude_desktop_config.json, .mcp.json)',
-            code: JSON.stringify({
-                mcpServers: {
-                    'pecado-client': {
-                        type: 'http',
-                        url: mcpUrl,
-                        headers: { Authorization: `Bearer ${sampleKey}` },
-                    },
-                },
-            }, null, 2),
-        },
-        {
-            title: 'Cursor (.cursor/mcp.json)',
-            code: JSON.stringify({
-                mcpServers: {
-                    'pecado-client': {
-                        url: mcpUrl,
-                        headers: { Authorization: `Bearer ${sampleKey}` },
-                    },
-                },
-            }, null, 2),
-        },
-    ];
 
     // Методы резерва показываем только участнику режима «Заказы в резерве» —
     // как и раздел кабинета: неучастнику они всё равно вернут 403.
@@ -811,30 +787,12 @@ export default function Index({ tokens: initialTokens, docs = {} }) {
                                 </HStack>
                             </HStack>
                             <Text fontSize="sm" color="gray.500" lineHeight="1.7" mb="3">
-                                Ваш агент (Claude, Cursor и другие клиенты MCP) подключается к серверу кабинета и работает
+                                Ваш агент (ChatGPT, Claude, Cursor и другие клиенты MCP) подключается к серверу кабинета и работает
                                 от вашего имени: цены и остатки, корзина и заказы, статусы, документы, оплаты, вопрос менеджеру.
                                 Ключ — тот же, что для API v1. Заказ через агента уходит в 1С так же, как из кабинета;
                                 чего API не решает, агент спросит у менеджера.
                             </Text>
-                            <VStack align="stretch" gap="3">
-                                {mcpSnippets.map((snippet, i) => (
-                                    <Box key={i}>
-                                        <HStack justify="space-between" mb="1.5">
-                                            <Text fontSize="2xs" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="0.05em">
-                                                {snippet.title}
-                                            </Text>
-                                            <Button size="xs" variant="ghost" onClick={() => copyToClipboard(snippet.code, 'Конфигурация скопирована')}>
-                                                <LuCopy /> Скопировать
-                                            </Button>
-                                        </HStack>
-                                        <Box bg="gray.900" _dark={{ bg: 'gray.950' }} borderRadius="lg" p="3" overflowX="auto">
-                                            <Text as="pre" fontSize="xs" color="green.300" fontFamily="mono" whiteSpace="pre-wrap">
-                                                {snippet.code}
-                                            </Text>
-                                        </Box>
-                                    </Box>
-                                ))}
-                            </VStack>
+                            <AgentConnectGuide url={mcpUrl} apiKey={sampleKey} onCopy={copyToClipboard} />
                         </Card.Body>
                     </Card.Root>
                 </VStack>
