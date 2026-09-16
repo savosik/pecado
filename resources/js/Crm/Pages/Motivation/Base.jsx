@@ -60,7 +60,7 @@ export default function MotivationBase({ tab_counts: tabCounts = null, month, mo
     const explainUsual = (row) => `${rub(row.usual_monthly)} (обычная закупка) × ${ratePercent(row)} (ваша ставка) = ${rub(row.usual_gain)}`;
     const explainCurrent = (row) => `${rub(row.current_month)} (взял в этом месяце) × ${ratePercent(row)} = ${rub(row.current_gain)}${thresholdReached ? '' : `. Начислится, когда отгрузки всей базы дойдут до ${threshold?.percent ?? 60} % плана — сейчас ${threshold ? rub(threshold.shipped) : '—'}${threshold?.plan ? ` из ${rub(threshold.plan * threshold.percent / 100)}` : ''}.`}`;
     const explainK1 = (row) => `Вычет К1 = сумма остатков просроченного долга за каждый день этого месяца (${Math.round(row.k1_integral ?? 0).toLocaleString('ru-RU')} ₽·дн.) × ${k1Percent} в день = −${rub(row.k1_deduction)}. Сейчас просрочено ${row.debt?.amount ? rub(row.debt.amount) : '0 ₽'}${row.debt?.amount && row.k1_integral > row.debt.amount ? ' — долг уже гасился, но дни с большим остатком уже посчитаны' : ''}. Снимается независимо от порога оплаты.`;
-    const explainPotential = (row) => `Потенциал: лучший месяц ${row.best_month?.amount ? rub(row.best_month.amount) : '—'} − взял в этом месяце ${rub(row.current_month)} = ${rub(row.potential)}; × ${ratePercent(row)} = +${rub(row.your_gain)}`;
+    const explainPotential = (row) => `Ещё может добрать: лучший месяц ${row.best_month?.amount ? rub(row.best_month.amount) : '—'} − взял в этом месяце ${rub(row.current_month)} = ${rub(row.potential)}; × ${ratePercent(row)} = +${rub(row.your_gain)}`;
 
     // Колонки сгруппированы парами «сколько взял → сколько это вам»: верхняя строка —
     // деньги партнёра, нижняя — ваши. Сортировка — по верхней строке группы.
@@ -92,7 +92,7 @@ export default function MotivationBase({ tab_counts: tabCounts = null, month, mo
                 </HStack>
             </VStack>
         ) },
-        { key: 'best_month', label: 'Лучший месяц', sub: 'потенциал · может дать', align: 'right', sortable: true, hint: 'Верхняя строка — лучший месяц партнёра за два года и когда он был. Ниже: потенциал (лучший месяц минус закупка в этом месяце) и сколько это вам по ставке.', render: (row) => (
+        { key: 'best_month', label: 'Лучший месяц', sub: 'ещё может добрать · это вам', align: 'right', sortable: true, hint: 'Верхняя строка — лучший месяц партнёра за два года и когда он был. Ниже: сколько он ещё может добрать в этом месяце до своего лучшего (лучший месяц минус уже взятое) и сколько это вам по ставке. Чем больше партнёр уже взял, тем меньше эта цифра.', render: (row) => (
             <VStack align="end" gap={0}>
                 <HStack gap={1.5} fontSize="sm" fontVariantNumeric="tabular-nums">
                     <Text>{row.best_month?.amount ? rub(row.best_month.amount) : '—'}</Text>
