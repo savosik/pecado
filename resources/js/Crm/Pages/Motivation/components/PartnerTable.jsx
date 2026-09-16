@@ -2,11 +2,12 @@ import { Box, HStack, Table, Text } from '@chakra-ui/react';
 import { LuArrowDown, LuArrowUp } from 'react-icons/lu';
 import { Pagination } from '@/Admin/Components/Pagination';
 import { Alert } from '@/components/ui/alert';
+import MetricHint from '@/Crm/Components/MetricHint';
 
 /**
  * Таблица списка партнёров с серверной сортировкой и страницей.
  *
- * Колонки описывает страница: `{ key, label, align, sortable, render }`.
+ * Колонки описывает страница: `{ key, label, align, sortable, hint, render }`.
  * Клик по заголовку меняет сортировку в адресе; клик по строке ничего
  * не делает — переходы только через действия строки.
  */
@@ -22,24 +23,27 @@ export default function PartnerTable({ list, columns, onSort, onPage, emptyTitle
         const active = sort.column === column.key;
         const Icon = active && sort.direction === 'asc' ? LuArrowUp : LuArrowDown;
 
+        const hint = column.hint ? <MetricHint text={column.hint} /> : null;
+
         if (!column.sortable) {
-            return column.label;
+            return hint ? <HStack gap={1} justify={column.align === 'right' ? 'flex-end' : 'flex-start'}><Text>{column.label}</Text>{hint}</HStack> : column.label;
         }
 
         return (
-            <HStack
-                as="button"
-                type="button"
-                gap={1}
-                justify={column.align === 'right' ? 'flex-end' : 'flex-start'}
-                w="100%"
-                cursor="pointer"
-                color={active ? 'fg' : 'fg.muted'}
-                onClick={() => onSort(column.key, active && sort.direction === 'desc' ? 'asc' : 'desc')}
-                aria-label={`Сортировать по: ${column.label}`}
-            >
-                <Text>{column.label}</Text>
-                {active && <Icon size={12} />}
+            <HStack gap={1} justify={column.align === 'right' ? 'flex-end' : 'flex-start'} w="100%">
+                <HStack
+                    as="button"
+                    type="button"
+                    gap={1}
+                    cursor="pointer"
+                    color={active ? 'fg' : 'fg.muted'}
+                    onClick={() => onSort(column.key, active && sort.direction === 'desc' ? 'asc' : 'desc')}
+                    aria-label={`Сортировать по: ${column.label}`}
+                >
+                    <Text>{column.label}</Text>
+                    {active && <Icon size={12} />}
+                </HStack>
+                {hint}
             </HStack>
         );
     };

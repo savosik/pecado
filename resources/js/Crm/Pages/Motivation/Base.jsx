@@ -48,6 +48,9 @@ export default function MotivationBase({ tab_counts: tabCounts = null, month, mo
 
     const columns = [
         { key: 'name', label: 'Партнёр и группа', sortable: true, render: (row) => <PartnerName row={row} /> },
+        { key: 'rate', label: '% от выручки', align: 'right', sortable: true, hint: 'Ставка вашего вознаграждения с выручки этого партнёра: П2 в периоде новизны, иначе П1. Порог оплаты (60 % плана) здесь не учитывается — это ставка, а не факт начисления.', render: (row) => (
+            <Text fontSize="sm" fontWeight="700" color={row.in_novelty ? 'purple.fg' : undefined} fontVariantNumeric="tabular-nums">{(Number(row.rate ?? 0) * 100).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} %</Text>
+        ) },
         { key: 'usual_monthly', label: 'Обычно берёт в месяц', align: 'right', sortable: true, render: (row) => <Money value={row.usual_monthly} /> },
         { key: 'current_month', label: 'Взял в этом месяце', align: 'right', sortable: true, render: (row) => <Money value={row.current_month} strong /> },
         { key: 'best_month', label: 'Лучший месяц', align: 'right', sortable: true, render: (row) => <BestMonth value={row.best_month} /> },

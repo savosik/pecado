@@ -48,6 +48,7 @@ class PartnerListService
 
     /** Колонки, по которым можно сортировать с сервера. */
     private const SORTABLE = [
+        'rate',
         'name', 'usual_monthly', 'current_month', 'best_month', 'potential', 'your_gain',
         'assortment', 'last_purchase_on', 'silent_days', 'debt', 'shortfall', 'cost',
     ];
@@ -280,6 +281,7 @@ class PartnerListService
         $touches = $this->lastTouches($ids);
         $novelty = $this->novelty($ids, $period);
         $rateP1 = $this->rateP1($managerId, $period);
+        $rateP2 = (float) ($this->motivationParams($managerId, $period)['rate_p2'] ?? config('motivation.default_parameters.rate_p2', 0));
         $dropThreshold = (int) config('crm.opportunities.drop_threshold_percent', 25) / 100;
 
         $rows = [];
@@ -306,6 +308,9 @@ class PartnerListService
                 'best_month' => $best,
                 'potential' => $potential,
                 'your_gain' => Money::round($potential * $rateP1),
+                // Ставка вознаграждения с выручки этого партнёра: П2 в периоде новизны, иначе П1.
+                // Порог оплаты здесь не учитывается — это ставка, а не факт начисления.
+                'rate' => in_array($id, $novelty, true) ? $rateP2 : $rateP1,
                 'shortfall' => $shortfall,
                 'cost' => Money::round($shortfall * $rateP1),
                 'assortment' => $assortment['by_partner'][$id] ?? ['taken' => 0, 'total' => $assortment['total']],
