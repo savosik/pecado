@@ -67,6 +67,13 @@ class DebtExclusionService
 
             $result = $this->integrator->forMonth(array_keys($names), $month, $names, $grace);
 
+            // Юрлицо накладной — у партнёра их бывает несколько, и в 1С долг висит
+            // на контрагенте, а не на партнёре: без него строку не найти в учёте.
+            $contractors = \App\Models\Shipment::query()
+                ->whereIn('shipments.id', array_map(fn (array $r): int => (int) $r['shipment_id'], $result['rows']))
+                ->leftJoin('companies', 'companies.id', '=', 'shipments.company_id')
+                ->pluck('companies.name', 'shipments.id');
+
             foreach ($result['rows'] as $row) {
                 $graceEnds = CarbonImmutable::parse((string) $row['grace_ends_on']);
                 $overdueDays = $graceEnds->lessThan($today) ? (int) $graceEnds->diffInDays($today) : 0;
@@ -87,6 +94,7 @@ class DebtExclusionService
                     'number' => (string) $row['number'],
                     'partner_id' => (int) $row['partner_id'],
                     'partner_name' => (string) $row['partner_name'],
+                    'contractor_name' => $contractors[(int) $row['shipment_id']] ?? null,
                     'manager' => ['id' => (int) $manager->getKey(), 'name' => (string) $manager->name],
                     'amount' => (float) $row['amount'],
                     'balance' => Money::round($balance),
@@ -206,7 +214,7 @@ class DebtExclusionService
         $today = CarbonImmutable::today();
 
         return MotivationDebtExclusion::query()
-            ->with(['partner:id,name,erp_name', 'shipment:id,erp_number', 'author:id,name'])
+            ->with(['partner:id,name,erp_name', 'shipment:id,erp_number,company_id', 'shipment.company:id,name', 'author:id,name'])
             ->orderByDesc('excluded_from')->orderByDesc('id')
             ->limit(200)
             ->get()
@@ -219,6 +227,7 @@ class DebtExclusionService
                     'partner_name' => $row->partner === null ? '' : (string) $row->partner->display_name,
                     'shipment_id' => $row->shipment_id === null ? null : (int) $row->shipment_id,
                     'number' => $row->shipment === null ? null : (string) $row->shipment->erp_number,
+                    'contractor_name' => $row->shipment?->company?->name,
                     'reason' => $row->reason,
                     'reason_label' => self::REASONS[$row->reason] ?? $row->reason,
                     'excluded_from' => $row->excluded_from->toDateString(),

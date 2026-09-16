@@ -121,24 +121,27 @@ export default function MotivationDebtExclusions(props) {
                 )}
 
                 <Box bg="bg.panel" borderWidth="1px" borderColor="border" borderRadius="xl" overflowX="auto">
-                    <HStack px={4} pt={3} gap={1}><Text fontWeight="700">Кандидаты на расчистку</Text><MetricHint text="Открытые накладные, просроченные дольше выбранного срока, без действующего исключения. «В месяц» — остаток × ставка К1 × дни текущего месяца: столько накладная снимает с переменной части работника, пока висит." /></HStack>
+                    <HStack px={4} pt={3} gap={1}><Text fontWeight="700">Кандидаты на расчистку</Text><MetricHint text="Открытые накладные, просроченные дольше выбранного срока, без действующего исключения. «Стоит менеджеру в месяц» — остаток × ставка К1 × дни текущего месяца: столько накладная снимает с переменной части работника, пока висит." /></HStack>
                     {data.candidates.length === 0 ? <Text px={4} pb={4} pt={2} fontSize="sm" color="fg.muted">Долгов старше {data.older_than_days} дней без исключения нет.</Text> : (
                         <Table.Root size="sm" mt={2}>
                             <Table.Header>
                                 <Table.Row>
-                                    <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
+                                    <Table.ColumnHeader>Партнёр / контрагент</Table.ColumnHeader>
                                     <Table.ColumnHeader>Накладная</Table.ColumnHeader>
                                     <Table.ColumnHeader>Работник</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Остаток</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Просрочка</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">В месяц</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Стоит менеджеру в месяц</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Действия</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
                                 {data.candidates.map((c) => (
                                     <Table.Row key={c.invoice_id}>
-                                        <Table.Cell><Text fontSize="sm" fontWeight="600">{c.partner_name}</Text></Table.Cell>
+                                        <Table.Cell>
+                                            <Text fontSize="sm" fontWeight="600">{c.partner_name}</Text>
+                                            {c.contractor_name && c.contractor_name !== c.partner_name && <Text fontSize="xs" color="fg.muted">{c.contractor_name}</Text>}
+                                        </Table.Cell>
                                         <Table.Cell><Text fontSize="sm">{c.number}</Text><Text fontSize="xs" color="fg.subtle">отгружена {fmtDay(c.shipped_on)} · срок {fmtDay(c.due_on)}{c.needs_review ? ' · дата оплаты не восстановлена' : ''}</Text></Table.Cell>
                                         <Table.Cell><Text fontSize="sm">{c.manager.name}</Text></Table.Cell>
                                         <Table.Cell textAlign="right"><Text fontSize="sm">{fmtRub0(c.balance)}</Text></Table.Cell>
@@ -184,7 +187,7 @@ function ExclusionsTable({ rows, canEdit, closing = {}, setClosing = () => {}, b
         <Table.Root size="sm" mt={2}>
             <Table.Header>
                 <Table.Row>
-                    <Table.ColumnHeader>Партнёр</Table.ColumnHeader>
+                    <Table.ColumnHeader>Партнёр / контрагент</Table.ColumnHeader>
                     <Table.ColumnHeader>Документ</Table.ColumnHeader>
                     <Table.ColumnHeader>Основание</Table.ColumnHeader>
                     <Table.ColumnHeader>Период</Table.ColumnHeader>
@@ -196,7 +199,10 @@ function ExclusionsTable({ rows, canEdit, closing = {}, setClosing = () => {}, b
             <Table.Body>
                 {rows.map((r) => (
                     <Table.Row key={r.id}>
-                        <Table.Cell><Text fontSize="sm" fontWeight="600">{r.partner_name}</Text></Table.Cell>
+                        <Table.Cell>
+                            <Text fontSize="sm" fontWeight="600">{r.partner_name}</Text>
+                            {r.contractor_name && r.contractor_name !== r.partner_name && <Text fontSize="xs" color="fg.muted">{r.contractor_name}</Text>}
+                        </Table.Cell>
                         <Table.Cell><Text fontSize="sm">{r.number ?? 'все долги партнёра'}</Text></Table.Cell>
                         <Table.Cell>
                             <HStack gap={2}><Badge size="xs" variant="subtle" colorPalette={r.active ? 'orange' : 'gray'}>{r.reason_label}</Badge><Text fontSize="xs" color="fg.muted">{r.document_ref}</Text></HStack>
