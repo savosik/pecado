@@ -8,7 +8,9 @@ use App\Services\Client\Api\Operations\CatalogOperations;
 use App\Services\Client\Api\Operations\CheckoutOperations;
 use App\Services\Client\Api\Operations\ContractOperations;
 use App\Services\Client\Api\Operations\DocumentOperations;
+use App\Services\Client\Api\Operations\FinanceOperations;
 use App\Services\Client\Api\Operations\OrderOperations;
+use App\Services\Client\Api\Operations\PaymentOrderOperations;
 use App\Services\Client\Api\Operations\ProfileOperations;
 use App\Services\Client\Api\Operations\ReserveOperations;
 use App\Services\Client\Api\Operations\ReturnOperations;
@@ -43,6 +45,8 @@ class OperationRegistry
         ReserveOperations::class,
         DocumentOperations::class,
         ContractOperations::class,
+        FinanceOperations::class,
+        PaymentOrderOperations::class,
     ];
 
     /** @var list<Operation>|null */
