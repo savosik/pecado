@@ -245,7 +245,6 @@ export default function MotivationPoolAdmin(props) {
                                             </Table.ColumnHeader>
                                             <Table.ColumnHeader>Связь</Table.ColumnHeader>
                                             <Table.ColumnHeader>Стадия</Table.ColumnHeader>
-                                            <Table.ColumnHeader>Приоритет</Table.ColumnHeader>
                                         </Table.Row>
                                     </Table.Header>
                                     <Table.Body>
@@ -265,7 +264,6 @@ export default function MotivationPoolAdmin(props) {
                                                         {!c.has_company && <Badge size="xs" variant="outline" colorPalette="orange">без юрлица</Badge>}
                                                     </HStack>
                                                 </Table.Cell>
-                                                <Table.Cell><Badge size="xs" variant="subtle" colorPalette={c.ever_bought ? 'green' : 'gray'}>{c.ever_bought ? 'есть история' : 'холодный'}</Badge></Table.Cell>
                                             </Table.Row>
                                         ))}
                                     </Table.Body>
