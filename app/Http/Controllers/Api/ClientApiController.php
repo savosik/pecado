@@ -6,25 +6,23 @@ use App\Contracts\Currency\UserCurrencyResolverInterface;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Enums\DeliveryMethod;
-use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Http\Controllers\Controller;
 use App\Models\ApiToken;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shipment;
 use App\Services\Catalog\ProductIdentifierResolver;
+use App\Services\Order\ApiOrderPlacement;
+use App\Services\Order\NothingToPlaceException;
 use App\Services\Order\OrderAssembler;
 use App\Services\Order\OrderChangeFeed;
 use App\Services\Order\OrderChangeLogger;
-use App\Services\Order\OrderDraft;
-use App\Services\Order\OrderLine;
+use App\Services\Order\PlacementRequest;
 use App\Services\Promotion\ClientApiPromotions;
 use App\Services\Shipment\ClientShipmentPresenter;
 use App\Services\Shipment\ClientShipmentQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ClientApiController extends Controller
 {
@@ -598,244 +596,28 @@ class ClientApiController extends Controller
             ], 403);
         }
 
-        // Резолвим товары и раскладываем на выполнимую часть.
-        // Дружественная логика: заказ принимается даже если часть позиций
-        // недоступна. Недостающее не блокирует заказ, а попадает в
-        // информационный ответ (not_accepted — не попали в заказ вовсе,
-        // partial — приняты не в полном объёме). Каждая запись несёт `line`
-        // (номер строки запроса) для сопоставления при дублях identifier.
-        $instockItems = [];
-        $preorderItems = [];
-        $notAccepted = [];
-        $partial = [];
-
-        foreach ($validated['products'] as $idx => $item) {
-            $requestedQty = $item['quantity'];
-            $line = $idx + 1; // 1-based номер строки запроса — для сопоставления дублей identifier
-
-            $product = $this->resolveProduct($item['identifier']);
-            if (! $product) {
-                $notAccepted[] = [
-                    'line' => $line,
-                    'identifier' => $item['identifier'],
-                    'product_id' => null,
-                    'slug' => null,
-                    'name' => $item['identifier'],
-                    'requested' => $requestedQty,
-                    'reason' => 'not_found',
-                    'message' => 'Товар не найден',
-                ];
-
-                continue;
-            }
-
-            $stock = $this->stockService->getStock($product, $user);
-            $available = $stock['available'];
-            $preorder = $stock['preorder'];
-            $totalAvailable = $available + $preorder;
-
-            if ($totalAvailable <= 0) {
-                $notAccepted[] = [
-                    'line' => $line,
-                    'identifier' => $item['identifier'],
-                    'product_id' => $product->id,
-                    'slug' => $product->slug,
-                    'name' => $product->name,
-                    'requested' => $requestedQty,
-                    'reason' => 'out_of_stock',
-                    'message' => 'Нет в наличии',
-                ];
-
-                continue;
-            }
-
-            // Отгружаем столько, сколько реально доступно; остаток запроса — в shortfall.
-            $fulfillQty = min($requestedQty, $totalAvailable);
-            $instockQty = min($fulfillQty, $available);
-            $preorderQty = $fulfillQty - $instockQty;
-
-            if ($instockQty > 0) {
-                $instockItems[] = ['product' => $product, 'quantity' => $instockQty];
-            }
-            if ($preorderQty > 0) {
-                $preorderItems[] = ['product' => $product, 'quantity' => $preorderQty];
-            }
-
-            if ($fulfillQty < $requestedQty) {
-                $partial[] = [
-                    'line' => $line,
-                    'identifier' => $item['identifier'],
-                    'product_id' => $product->id,
-                    'slug' => $product->slug,
-                    'name' => $product->name,
-                    'requested' => $requestedQty,
-                    'fulfilled' => $fulfillQty,
-                    'shortfall' => $requestedQty - $fulfillQty,
-                ];
-            }
-        }
-
-        // Совсем нечего отгружать — заказ не создаём.
-        if (empty($instockItems) && empty($preorderItems)) {
+        // Размещение — общим сервисом с API v1: раскладка на наличие/предзаказ,
+        // «дружественное урезание», промо, запись недостачи. Ответ — прежний.
+        try {
+            $result = app(ApiOrderPlacement::class)->place($user, $company, new PlacementRequest(
+                products: array_map(fn (array $item) => [
+                    'identifier' => (string) $item['identifier'],
+                    'quantity' => (int) $item['quantity'],
+                ], $validated['products']),
+                deliveryMethod: DeliveryMethod::from($validated['delivery_method'] ?? DeliveryMethod::DELIVERY->value),
+                address: $validated['address'] ?? null,
+                comment: $validated['comment'] ?? null,
+                applyPromotions: $request->boolean('apply_promotions'),
+                reserve: $reserve,
+            ));
+        } catch (NothingToPlaceException $e) {
             return response()->json([
-                'error' => 'Ни одна из позиций недоступна для заказа',
-                'not_accepted' => $notAccepted,
+                'error' => $e->getMessage(),
+                'not_accepted' => $e->notAccepted,
             ], 422);
         }
 
-        // Валюта пользователя (как в CheckoutService)
-        $currency = $this->currencyResolver->resolve($user);
-
-        // Дополняем комментарий системной пометкой о недоступных/частичных
-        // позициях, чтобы менеджер и 1С видели, что клиент запрашивал больше.
-        $comment = $validated['comment'] ?? null;
-        if ($note = $this->buildFulfillmentNote($notAccepted, $partial)) {
-            $comment = $comment !== null && $comment !== '' ? ($comment."\n\n".$note) : $note;
-        }
-
-        // Способ доставки (v15.3): delivery по умолчанию; при самовывозе адрес не хранится
-        $deliveryMethod = $validated['delivery_method'] ?? DeliveryMethod::DELIVERY->value;
-
-        // Акции считаются по принятым позициям, а не по запрошенным: иначе подарок
-        // уедет за товар, которого не отгрузили. По умолчанию расчёта нет —
-        // клиент, который не просил подарков, не должен получить лишний заказ
-        $applyPromotions = $request->boolean('apply_promotions');
-
-        $promoResult = $applyPromotions
-            ? $this->promotions->resolve(array_merge($instockItems, $preorderItems), $user)
-            : null;
-
-        $draft = new OrderDraft(
-            user: $user,
-            company: $company,
-            deliveryMethod: DeliveryMethod::from($deliveryMethod),
-            groups: [
-                OrderType::ORDER->value => $this->linesFromApiItems($instockItems),
-                OrderType::PREORDER->value => $this->linesFromApiItems($preorderItems),
-                OrderType::PROMO->value => $promoResult?->groups[OrderType::PROMO->value] ?? [],
-                OrderType::PROMO_SAMPLE->value => $promoResult?->groups[OrderType::PROMO_SAMPLE->value] ?? [],
-            ],
-            deliveryAddress: $validated['address'] ?? null,
-            comment: $comment,
-            currency: $currency,
-            // Лист отбора промо-позиций — та же пометка складу, что и в чекауте
-            warehouseComments: $promoResult !== null ? $promoResult->warehouseComments : [],
-            reserve: $reserve,
-            reservedUntil: $reserve
-                ? app(\App\Services\Order\ReservePolicy::class)->requestedReservedUntil($user)
-                : null,
-        );
-
-        // Заказы и запись о недостаче — одной транзакцией. OrderCreated сборщик
-        // выпустит после коммита, одинаково с чекаутом
-        $createdOrders = DB::transaction(function () use ($draft, $notAccepted, $partial) {
-            $orders = $this->assembler->assemble($draft);
-
-            // Логируем недостачу при приёме как структурную запись в общий workflow
-            // изменений (недостача видна в «Изменениях заказов», значке и API).
-            // Текстовая пометка в комментарии сохраняется отдельно — её видит 1С.
-            if (! empty($notAccepted) || ! empty($partial)) {
-                $this->changeLogger->logApiShortfall(
-                    $orders->first(),
-                    array_map(fn (array $u) => [
-                        'product_id' => $u['product_id'] ?? null,
-                        'slug' => $u['slug'] ?? null,
-                        'product_name' => $u['name'] ?? $u['identifier'],
-                        'requested' => $u['requested'],
-                        'reason' => $u['reason'] ?? null,
-                        'message' => $u['message'] ?? null,
-                    ], $notAccepted),
-                    array_map(fn (array $p) => [
-                        'product_id' => $p['product_id'] ?? null,
-                        'slug' => $p['slug'] ?? null,
-                        'product_name' => $p['name'] ?? $p['identifier'],
-                        'requested' => $p['requested'],
-                        'fulfilled' => $p['fulfilled'],
-                    ], $partial),
-                );
-            }
-
-            return $orders->all();
-        });
-
-        // Формируем ответ
-        $responseOrders = array_map(fn (Order $order) => [
-            'order_id' => $order->id,
-            'order_number' => $order->number,
-            'type' => $order->type?->value ?? 'order',
-            'delivery_method' => $order->delivery_method?->value ?? DeliveryMethod::DELIVERY->value,
-            'total_amount' => round((float) $order->total_amount, 2),
-            'items_count' => $order->items()->count(),
-            'status' => $order->status?->value ?? OrderStatus::PENDING_APPROVAL->value,
-            // v16.9.0: запрошенный срок удержания; фактический (возможно, урезанный
-            // 1С) виден в GET /reserves после эха
-            ...($order->reserve ? ['reserve' => true, 'reserved_until' => $order->reserved_until?->toIso8601String()] : []),
-        ], $createdOrders);
-
-        $response = [
-            'orders' => $responseOrders,
-            'total_orders' => count($createdOrders),
-            'fully_fulfilled' => empty($notAccepted) && empty($partial),
-        ];
-
-        if (! empty($notAccepted) || ! empty($partial)) {
-            $response['warnings'] = [
-                'message' => 'Заказ принят. Часть позиций недоступна или отгружена не в полном объёме.',
-                'not_accepted' => $notAccepted,
-                'partial' => $partial,
-            ];
-        }
-
-        // Блок появляется только при apply_promotions=true — даже пустым ключом
-        // ответ раздувать нельзя, некоторые клиентские парсеры строгие
-        if ($promoResult !== null) {
-            $response['promotions'] = $promoResult->toResponse($createdOrders);
-        }
-
-        return response()->json($response, 201);
-    }
-
-    /**
-     * Собрать текстовую пометку о недоступных/частичных позициях для комментария заказа.
-     * Возвращает null, если заказ выполнен полностью.
-     *
-     * @param  array<int, array<string, mixed>>  $notAccepted
-     * @param  array<int, array<string, mixed>>  $partial
-     */
-    protected function buildFulfillmentNote(array $notAccepted, array $partial): ?string
-    {
-        if (empty($notAccepted) && empty($partial)) {
-            return null;
-        }
-
-        $lines = ['[API] Заказ принят не в полном объёме:'];
-
-        foreach ($notAccepted as $u) {
-            $label = $u['name'] ?? $u['identifier'];
-            $lines[] = "— «{$label}» (запрошено {$u['requested']}): {$u['message']}";
-        }
-
-        foreach ($partial as $p) {
-            $lines[] = "— «{$p['name']}»: запрошено {$p['requested']}, отгружено {$p['fulfilled']}, не хватило {$p['shortfall']}";
-        }
-
-        return implode("\n", $lines);
-    }
-
-    /**
-     * Разрешённые к заказу позиции → строки для сборщика.
-     *
-     * Цену считает сборщик по прайсу клиента — так же, как в чекауте.
-     *
-     * @param  array<int, array{product: \App\Models\Product, quantity: int}>  $items
-     * @return list<OrderLine>
-     */
-    private function linesFromApiItems(array $items): array
-    {
-        return array_map(
-            static fn (array $item) => new OrderLine($item['product'], $item['quantity']),
-            array_values($items),
-        );
+        return response()->json($result->toLegacyResponse(), 201);
     }
 
     /**

@@ -15,6 +15,7 @@ use App\Services\Client\Api\Idempotency\IdempotencyConflict;
 use App\Services\Client\Api\Operation;
 use App\Services\Client\Api\OperationRegistry;
 use App\Services\Client\Api\OperationRunner;
+use App\Services\Order\NothingToPlaceException;
 use App\Services\Order\ReserveActionException;
 use App\Support\OperationApi\OperationDenied;
 use App\Support\Preorder\PreorderTerms;
@@ -132,6 +133,10 @@ class ClientApiController extends Controller
             return response()->json(Envelope::error($e->errorCode, $e->getMessage(), null, $e->meta), $e->status);
         } catch (ModelNotFoundException) {
             return $this->error('not_found', 'Запись не найдена или недоступна этому клиенту.', 404);
+        } catch (NothingToPlaceException $e) {
+            return response()->json(Envelope::error('nothing_to_place', $e->getMessage(), 'products', [
+                'not_accepted' => $e->notAccepted,
+            ]), 422);
         } catch (ReserveActionException $e) {
             // Коды legacy сохраняются: stale_items_version (409), not_cancellable и т. д.
             return $this->error($e->errorCode, $e->getMessage(), $e->status);
