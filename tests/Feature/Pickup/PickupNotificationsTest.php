@@ -109,8 +109,20 @@ class PickupNotificationsTest extends TestCase
     }
 
     #[Test]
+    public function reminders_refuse_to_run_without_history_cutoff(): void
+    {
+        // Старые самовывозы не имеют отметки «выдан» — без даты отсечения письма ушли бы по всей истории.
+        config(['pickup.handover_since' => null]);
+        $this->goodsIssueFor($this->pickupOrder($this->client), GoodsIssue::STATUS_SHIPPED, ['status_changed_at' => now()->subDays(40)]);
+
+        $this->artisan('pickup:remind-waiting')->assertFailed();
+        $this->assertSame(0, $this->emails('orders.pickup_waiting'));
+    }
+
+    #[Test]
     public function long_waiting_set_is_reminded_once_per_step(): void
     {
+        config(['pickup.handover_since' => now()->subDays(10)->format('Y-m-d H:i')]);
         $this->goodsIssueFor($this->pickupOrder($this->client), GoodsIssue::STATUS_SHIPPED, ['status_changed_at' => now()->subDays(4)]);
         $this->goodsIssueFor($this->pickupOrder($this->client), GoodsIssue::STATUS_SHIPPED, ['status_changed_at' => now()->subDay()]);
 

@@ -34,7 +34,15 @@ class PickupRemindWaiting extends Command
             return self::SUCCESS;
         }
 
+        // Без даты отсечения «не забранными» считались бы все самовывозы за всю историю: у них нет отметки
+        // «выдан», потому что экрана выдачи раньше не было. Массовое письмо клиентам о давно забранных заказах
+        // недопустимо — без PICKUP_HANDOVER_SINCE команда не работает.
         $since = $resolver->handoverSince();
+        if ($since === null) {
+            $this->error('Не задан PICKUP_HANDOVER_SINCE — напоминания не отправляются, чтобы не разослать письма по старым заказам.');
+
+            return self::FAILURE;
+        }
         $issues = GoodsIssue::query()
             ->where('status', GoodsIssue::STATUS_SHIPPED)
             ->where('status_changed_at', '<=', now()->subDays($steps->first()))
