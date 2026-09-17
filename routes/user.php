@@ -81,6 +81,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/checkout/normalize-stock', [CheckoutController::class, 'normalizeStock'])->name('checkout.normalize-stock');
 
     // Заказы пользователя
+    // pick-09: раздел «Самовывоз» — готовое к выдаче и пропуска курьерам (рубильник pickup.enabled)
+    Route::get('/pickup', [\App\Http\Controllers\User\PickupController::class, 'index'])->name('pickup.index');
+    Route::post('/pickup/passes', [\App\Http\Controllers\User\PickupController::class, 'store'])->name('pickup.passes.store')->middleware('throttle:20,1');
+    Route::post('/pickup/passes/{pass}/revoke', [\App\Http\Controllers\User\PickupController::class, 'revoke'])->name('pickup.passes.revoke');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 });
 

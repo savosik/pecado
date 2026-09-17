@@ -23,6 +23,8 @@ class HandleWmsInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => $this->panelAuthProps($request->user()),
             'flash' => $this->panelFlashProps($request),
+            // Флаги для меню панели: пункт с `feature` виден только при включённой функции.
+            'config' => ['pickup' => (bool) config('pickup.wms_enabled')],
         ];
     }
 }

@@ -21,7 +21,7 @@ class RoleController extends Controller
         'Склады' => ['warehouses', 'regions'],
         'Продажи' => ['orders', 'carts', 'returns', 'shipments', 'supplier-preorders', 'favorites', 'wishlist', 'defects', 'defect-types'],
         'CRM' => ['crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-department', 'crm-leads', 'crm-lead-stages', 'crm-contractors', 'crm-team', 'crm-absences', 'crm-timesheet', 'crm-analytics', 'crm-profile', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-finance', 'crm-shortages', 'crm-shortage-reasons', 'crm-reserves', 'crm-contacts', 'crm-contracts', 'crm-agent-tokens', 'crm-impersonate', 'crm-salary', 'crm-motivation'],
-        'Склад (WMS)' => ['wms-dashboard', 'wms-defects', 'wms-defect-types', 'wms-goods-issues', 'wms-deliveries', 'wms-delivery-settings', 'wms-stock-buffers'],
+        'Склад (WMS)' => ['wms-dashboard', 'wms-defects', 'wms-defect-types', 'wms-goods-issues', 'wms-deliveries', 'wms-delivery-settings', 'wms-stock-buffers', 'wms-pickups'],
         'Маркетинг' => ['promotions', 'promotion-rules', 'product-selections'],
         'Пользователи' => ['users', 'user-questionnaires', 'client-statuses', 'personal-managers', 'companies', 'company-bank-accounts', 'delivery-addresses'],
         'Финансы' => ['organizations', 'currencies', 'contractor-balances', 'payments', 'individual-prices'],
@@ -56,6 +56,7 @@ class RoleController extends Controller
         'wms-deliveries' => 'Склад: Отправки в ТК',
         'wms-delivery-settings' => 'Склад: Настройки доставки',
         'wms-stock-buffers' => 'Склад: Страховой запас',
+        'wms-pickups' => 'Склад: Выдача заказов',
         'defects' => 'Уценка', 'defect-types' => 'Справочник дефектов',
         'users' => 'Пользователи', 'user-questionnaires' => 'Анкеты',
         'client-statuses' => 'Статусы клиентов', 'personal-managers' => 'Персональные менеджеры',
@@ -79,7 +80,7 @@ class RoleController extends Controller
         'price' => 'Установка цены', 'publish' => 'Публикация',
         'send' => 'Отправка', 'export' => 'Выгрузка',
         'submit' => 'Передача в ТК', 'cancel' => 'Отмена заявки',
-        'use' => 'Использование',
+        'use' => 'Использование', 'issue' => 'Выдача',
     ];
 
     public function index(Request $request)

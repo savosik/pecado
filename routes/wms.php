@@ -7,6 +7,7 @@ use App\Http\Controllers\Wms\DeliveryCandidateController;
 use App\Http\Controllers\Wms\DeliveryController;
 use App\Http\Controllers\Wms\DeliverySettingsController;
 use App\Http\Controllers\Wms\GoodsIssueController;
+use App\Http\Controllers\Wms\PickupController;
 use App\Http\Controllers\Wms\StockBufferController;
 use Illuminate\Support\Facades\Route;
 
@@ -80,6 +81,27 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
 
         // Ниже export — иначе «export» попал бы в {goodsIssue} как id.
         Route::get('/goods-issues/{goodsIssue}', [GoodsIssueController::class, 'show'])->name('goods-issues.show');
+    });
+
+    // Выдача заказов самовывоза (эпик pick-00). Документ сайта: в 1С статуса «выдан» нет.
+    // Экран под телефон — действия отвечают JSON. Рубильник — config('pickup.wms_enabled').
+    Route::middleware('permission:wms-pickups.view')->prefix('pickups')->name('pickups.')->group(function () {
+        Route::get('/', [PickupController::class, 'index'])->name('index');
+        Route::get('/data', [PickupController::class, 'data'])->name('data');
+        Route::get('/search', [PickupController::class, 'search'])->name('search');
+        Route::get('/passes/{pass}', [PickupController::class, 'pass'])->name('pass');
+        Route::post('/resolve', [PickupController::class, 'resolve'])->name('resolve')->middleware('throttle:120,1');
+
+        Route::middleware('permission:wms-pickups.issue')->group(function () {
+            Route::post('/passes/{pass}/issue-all', [PickupController::class, 'issueAll'])->name('issue-all');
+            Route::post('/{goodsIssue}/issue', [PickupController::class, 'issue'])->name('issue');
+        });
+
+        Route::middleware('permission:wms-pickups.cancel')->group(function () {
+            Route::post('/handovers/{handover}/cancel', [PickupController::class, 'cancel'])->name('cancel');
+            Route::post('/handovers/{handover}/review', [PickupController::class, 'review'])->name('review');
+            Route::post('/{goodsIssue}/close', [PickupController::class, 'close'])->name('close');
+        });
     });
 
     // Реализации к доставке — рабочий стол склада перед созданием отправки:

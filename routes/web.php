@@ -37,6 +37,13 @@ Route::get('/crm/tasks/feed/{token}.ics', [\App\Http\Controllers\Crm\CalendarFee
     ->middleware('throttle:60,1')
     ->name('crm.tasks.feed');
 
+// Пропуск на самовывоз для курьера (эпик pick-00): курьер не клиент и в кабинет не входит —
+// доступ охраняет только секретный токен ссылки (отзывается клиентом в кабинете).
+Route::get('/p/{token}', \App\Http\Controllers\PickupPassPageController::class)
+    ->where('token', '[A-Za-z0-9_-]{20,128}')
+    ->middleware('throttle:30,1')
+    ->name('pickup.pass');
+
 // ──────────────────────────────────────────────
 // Authenticated routes
 // ──────────────────────────────────────────────

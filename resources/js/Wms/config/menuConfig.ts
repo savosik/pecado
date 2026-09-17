@@ -4,6 +4,7 @@ import {
     LuPackageX,
     LuShieldCheck,
     LuTruck,
+    LuPackageCheck,
     LuScanBarcode,
     LuListOrdered,
     LuPackageSearch,
@@ -16,6 +17,8 @@ export interface MenuItem {
     icon: React.ElementType;
     path: string;
     permission?: string;
+    /** Ключ из общего пропа `config`: пункт виден только при включённой функции. */
+    feature?: string;
 }
 
 export interface MenuGroup {
@@ -55,6 +58,7 @@ export const menuConfig: MenuGroup[] = [
         title: "Отгрузка",
         icon: LuTruck,
         items: [
+            { label: "Выдача заказов", icon: LuPackageCheck, path: "/wms/pickups", permission: "wms-pickups.view", feature: "pickup" },
             { label: "Расходные ордера", icon: LuClipboardList, path: "/wms/goods-issues", permission: "wms-goods-issues.view" },
         ],
     },

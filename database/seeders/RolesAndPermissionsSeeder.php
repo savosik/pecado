@@ -197,6 +197,9 @@ class RolesAndPermissionsSeeder extends Seeder
         // Страховой запас (эпик buf-00): рисковые SKU с занижением показа
         // и ручные пометки склада «придержи N шт».
         'wms-stock-buffers' => ['view', 'edit'],
+        // Выдача заказов самовывоза (эпик pick-00): issue — отметить «выдан», cancel — отменить
+        // ошибочную выдачу и закрыть хвост без выдачи (только начальник склада).
+        'wms-pickups' => ['view', 'issue', 'cancel'],
 
         // Уценка глазами закупщика — админский ресурс (без `wms-` префикса):
         // цену и публикацию задаёт buyer-manager в /admin, а не кладовщик.
@@ -294,6 +297,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'wms-defect-types' => 'Склад: Справочник дефектов',
         'wms-goods-issues' => 'Склад: Расходные ордера',
         'wms-stock-buffers' => 'Склад: Страховой запас',
+        'wms-pickups' => 'Склад: Выдача заказов',
         'defects' => 'Уценка (цены и публикация)',
         'defect-types' => 'Справочник дефектов',
         'supplier-preorders' => 'Предзаказы поставщику',
@@ -370,7 +374,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 // Только WMS: в /admin роль намеренно не пускает.
                 // Справочник дефектов ведёт начальник склада — у кладовщика его нет.
                 'wms-dashboard', 'wms-defects', 'wms-defect-types', 'wms-goods-issues',
-                'wms-deliveries', 'wms-delivery-settings', 'wms-stock-buffers',
+                'wms-deliveries', 'wms-delivery-settings', 'wms-stock-buffers', 'wms-pickups',
             ],
         ],
         'storekeeper' => [
@@ -381,6 +385,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 // Отправки собирает и передаёт в ТК кладовщик, но отменить
                 // уже принятую перевозчиком заявку может только начальник склада.
                 'wms-deliveries' => ['view', 'create', 'edit', 'submit'],
+                // Кладовщик выдаёт, отмену ошибочной выдачи делает начальник склада.
+                'wms-pickups' => ['view', 'issue'],
             ],
         ],
         // Роль buyer-manager (закупщик) намеренно не описана здесь: она заведена
