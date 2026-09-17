@@ -12,14 +12,12 @@ use Inertia\Inertia;
 class ApiTokenController extends Controller
 {
     /**
-     * Страница управления API-ключами с документацией.
+     * Страница управления API-ключами и документацией API v1.
      */
     public function index()
     {
-        $tokens = ApiToken::where('user_id', Auth::id())
-            ->latest()
-            ->get()
-            ->map(fn (ApiToken $token) => [
+        return Inertia::render('User/Cabinet/ApiTokens/Index', [
+            'tokens' => $this->tokens()->map(fn (ApiToken $token) => [
                 'id' => $token->id,
                 'name' => $token->name,
                 'token' => $token->token,
@@ -28,16 +26,52 @@ class ApiTokenController extends Controller
                 'is_active' => $token->is_active,
                 'last_used_at' => $token->last_used_at?->toISOString(),
                 'created_at' => $token->created_at?->toISOString(),
-            ]);
-
-        return Inertia::render('User/Cabinet/ApiTokens/Index', [
-            'tokens' => $tokens,
-            'docs' => [
-                'ui' => url('/docs/client-api'),
-                'openapi' => url('/docs/client-api.json'),
-                'mcp' => url('/mcp/client'),
-            ],
+            ]),
+            'docs' => $this->docs(),
         ]);
+    }
+
+    /**
+     * Подключение ИИ-агента к MCP-серверу: тот же ключ, что у API v1.
+     */
+    public function mcp()
+    {
+        $token = $this->tokens()->firstWhere('is_active', true);
+
+        return Inertia::render('User/Cabinet/ApiTokens/Mcp', [
+            'apiKey' => $token?->token,
+            'docs' => $this->docs(),
+        ]);
+    }
+
+    /**
+     * Описание прежнего API с ключом в адресе — только адреса ключей и методы.
+     */
+    public function legacy()
+    {
+        return Inertia::render('User/Cabinet/ApiTokens/Legacy', [
+            'tokens' => $this->tokens()->map(fn (ApiToken $token) => [
+                'id' => $token->id,
+                'name' => $token->name,
+                'base_url' => $token->base_url,
+            ]),
+        ]);
+    }
+
+    /** @return \Illuminate\Support\Collection<int, ApiToken> */
+    private function tokens()
+    {
+        return ApiToken::where('user_id', Auth::id())->latest()->get();
+    }
+
+    /** @return array<string, string> */
+    private function docs(): array
+    {
+        return [
+            'ui' => url('/docs/client-api'),
+            'openapi' => url('/docs/client-api.json'),
+            'mcp' => url('/mcp/client'),
+        ];
     }
 
     /**

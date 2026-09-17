@@ -250,6 +250,8 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
 
     // API-токены
     Route::get('/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'index'])->name('api-tokens.index');
+    Route::get('/mcp', [\App\Http\Controllers\User\ApiTokenController::class, 'mcp'])->name('api-tokens.mcp');
+    Route::get('/api-legacy', [\App\Http\Controllers\User\ApiTokenController::class, 'legacy'])->name('api-tokens.legacy');
     Route::post('/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'store'])->name('api-tokens.store');
     Route::post('/api-tokens/{apiToken}/regenerate', [\App\Http\Controllers\User\ApiTokenController::class, 'regenerate'])->name('api-tokens.regenerate');
     Route::delete('/api-tokens/{apiToken}', [\App\Http\Controllers\User\ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');

@@ -12,7 +12,7 @@ import {
     LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin, LuContact,
     LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuReceipt, LuLayoutGrid, LuWrench, LuCode,
     LuChartPie, LuMessageSquare, LuArrowRightLeft, LuFileText, LuBell, LuFilePen, LuClock3,
-    LuHourglass, LuBanknote,
+    LuHourglass, LuBanknote, LuBot, LuArchive,
 } from 'react-icons/lu';
 
 // Меню кабинета группируется по сущностям, а не по стадиям заказа: стадия —
@@ -78,7 +78,14 @@ const menuGroups = [
         items: [
             { href: '/cabinet/export-presets', label: 'Стандартные выгрузки', icon: LuLayoutGrid },
             { href: '/cabinet/product-exports', label: 'Конструктор выгрузок', icon: LuWrench },
+        ],
+    },
+    {
+        title: 'Интеграции',
+        items: [
             { href: '/cabinet/api-tokens', label: 'API', icon: LuCode },
+            { href: '/cabinet/mcp', label: 'ИИ-агенты (MCP)', icon: LuBot },
+            { href: '/cabinet/api-legacy', label: 'Legacy API', icon: LuArchive },
         ],
     },
     {

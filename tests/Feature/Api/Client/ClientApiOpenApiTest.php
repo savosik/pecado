@@ -122,6 +122,47 @@ class ClientApiOpenApiTest extends ClientApiTestCase
                 ->has('docs.mcp'));
     }
 
+    #[Test]
+    #[TestDox('Страница документации грузит Stoplight со своего домена: CSP прода не пускает unpkg.com')]
+    public function docs_page_uses_self_hosted_assets(): void
+    {
+        $this->get('/docs/client-api')
+            ->assertOk()
+            ->assertSee(asset('vendor/stoplight-elements/8.4.2/web-components.min.js'), false)
+            ->assertDontSee('unpkg.com', false);
+
+        $this->assertFileExists(public_path('vendor/stoplight-elements/8.4.2/web-components.min.js'));
+        $this->assertFileExists(public_path('vendor/stoplight-elements/8.4.2/styles.min.css'));
+    }
+
+    #[Test]
+    #[TestDox('Раздел «ИИ-агенты (MCP)» отдаёт адрес сервера и активный ключ клиента')]
+    public function mcp_screen_shows_server_and_key(): void
+    {
+        $this->actingAs($this->client)
+            ->get('/cabinet/mcp')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('User/Cabinet/ApiTokens/Mcp')
+                ->where('apiKey', $this->token->token)
+                ->where('docs.mcp', url('/mcp/client'))
+                ->where('docs.ui', url('/docs/client-api')));
+    }
+
+    #[Test]
+    #[TestDox('Раздел «Legacy API» показывает адреса с ключом только своих ключей')]
+    public function legacy_screen_shows_own_legacy_urls(): void
+    {
+        $this->actingAs($this->client)
+            ->get('/cabinet/api-legacy')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('User/Cabinet/ApiTokens/Legacy')
+                ->has('tokens', 1)
+                ->where('tokens.0.base_url', url('/api/client-api/'.$this->token->token))
+                ->missing('tokens.0.token'));
+    }
+
     /**
      * @param  array<string, mixed>  $entry
      */
