@@ -2,7 +2,7 @@
 
 **Приоритет:** средний
 **Создано:** 2026-09-17
-**Эпик:** [pick-00](2026-09-17_pick-00-epic.md)
+**Эпик:** [pick-00](../in-progress/2026-09-17_pick-00-epic.md)
 **Зависимости:** pick-03, pick-09
 **Волна:** 3
 
@@ -24,6 +24,14 @@
 - Legacy `/api/client-api/{token}`: только добавить `fulfilment` в выдачу заказов, аддитивно;
   существующие тесты — контракт неизменности.
 - Описания операций на русском, для ИИ-агента: когда звать `pickup.ready`, что пропуск нужен курьеру.
+
+## Ход работ
+
+- **17.09.2026** — `FeatureGate::PICKUP`, `PickupOperations` (`pickup.schedule`, `pickup.ready`, `pickup.passes.list`,
+  `pickup.passes.create` — идемпотентна по ключу, `pickup.passes.revoke`), блок `fulfilment` в `orders.list` и `orders.get`
+  через общий презентер, отказы `PickupPassException` в REST и MCP. Тесты `ClientApiPickupTest` (4); `ClientApiDiscoveryTest`
+  и `ClientApiOpenApiTest` зелёные.
+- Не сделано: `fulfilment` в legacy `/api/client-api/{token}` и ручная проверка диалога с агентом через MCP.
 
 ## Критерии готовности
 

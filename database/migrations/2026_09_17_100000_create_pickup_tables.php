@@ -30,7 +30,8 @@ return new class extends Migration
             $table->string('source', 16)->default('cabinet')->comment("Откуда выпущен: 'cabinet' — кабинет, 'api' — клиентский API или MCP");
             $table->timestamp('used_at')->nullable()->comment('Когда по пропуску выдан последний комплект');
             $table->timestamp('revoked_at')->nullable()->comment('Когда клиент отозвал пропуск');
-            $table->timestamps();
+            $table->timestamp('created_at')->nullable()->comment('Дата создания записи');
+            $table->timestamp('updated_at')->nullable()->comment('Дата последнего изменения записи');
             $table->index(['user_id', 'status']);
         });
 
@@ -39,7 +40,8 @@ return new class extends Migration
             $table->id()->comment('Первичный ключ');
             $table->foreignId('pickup_pass_id')->comment('Пропуск (pickup_passes.id)')->constrained()->cascadeOnDelete();
             $table->foreignId('goods_issue_id')->comment('Расходный ордер (goods_issues.id)')->constrained()->cascadeOnDelete();
-            $table->timestamps();
+            $table->timestamp('created_at')->nullable()->comment('Дата создания записи');
+            $table->timestamp('updated_at')->nullable()->comment('Дата последнего изменения записи');
             $table->unique(['pickup_pass_id', 'goods_issue_id']);
         });
 
@@ -64,7 +66,8 @@ return new class extends Migration
             // Генерируемая колонка: уникальность только среди неотменённых выдач — защита от двойной выдачи.
             $table->unsignedBigInteger('active_key')->nullable()
                 ->virtualAs('CASE WHEN cancelled_at IS NULL THEN goods_issue_id ELSE NULL END');
-            $table->timestamps();
+            $table->timestamp('created_at')->nullable()->comment('Дата создания записи');
+            $table->timestamp('updated_at')->nullable()->comment('Дата последнего изменения записи');
             $table->unique('active_key');
             $table->index('issued_at');
         });

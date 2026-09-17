@@ -2,7 +2,7 @@
 
 **Приоритет:** высокий
 **Создано:** 2026-09-17
-**Эпик:** [pick-00](2026-09-17_pick-00-epic.md)
+**Эпик:** [pick-00](../in-progress/2026-09-17_pick-00-epic.md)
 **Зависимости:** —
 **Волна:** 1
 
@@ -32,9 +32,21 @@
   `Admin\RoleController` (группа «Склад (WMS)»), пункт меню. Страж — `PermissionNamingTest`.
 - После миграций: `db:comments:audit`, `bi:sync-grants`.
 
+## Ход работ
+
+- **17.09.2026** — миграция `2026_09_17_100000_create_pickup_tables` (четыре таблицы `pickup_*`, комментарии на русском,
+  генерируемая `active_key` с уникальным индексом), модели `App\Models\Pickup\*`, `HandoverService` (`issue`, `cancel`,
+  `closeWithoutHandover`, `flagRollback`, `resolveReview`), `HandoverException` с кодами, события `GoodsIssueHandedOver` и
+  `GoodsIssueReadyChanged`, наблюдатель `PickupGoodsIssueStatusObserver` (слушает журнал статусов РО, код ERP не тронут).
+  Права `wms-pickups.view/issue/cancel` в трёх реестрах: начальнику склада всё, кладовщику без `cancel`.
+  Тесты `HandoverServiceTest` (8), `PermissionNamingTest` зелёный.
+- Проверено на локальном MySQL: миграция проходит, вторая активная выдача отбивается ошибкой 1062, после отмены выдать
+  снова можно; `db:comments:audit` по таблицам `pickup_*` без пробелов.
+- После выкладки: `bi:sync-grants` (таблицы `pickup_*` — решить, открывать ли их BI-агенту).
+
 ## Критерии готовности
 
-- [ ] Тесты: выдача, повторная выдача, гонка двух запросов, выдача не-`shipped`, отмена в окне и
+- [x] Тесты: выдача, повторная выдача, гонка двух запросов, выдача не-`shipped`, отмена в окне и
       вне окна, отмена без причины, откат выданного РО → `needs_review`.
-- [ ] `PermissionNamingTest` зелёный.
-- [ ] `db:comments:audit --strict` без пробелов по новым таблицам.
+- [x] `PermissionNamingTest` зелёный.
+- [x] `db:comments:audit --strict` без пробелов по новым таблицам.
