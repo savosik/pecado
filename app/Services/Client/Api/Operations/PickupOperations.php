@@ -97,6 +97,8 @@ class PickupOperations implements OperationProvider
                 ],
                 handler: [self::class, 'create'],
                 mutating: true,
+                // Создание, как и у адресов и возвратов: повтор с тем же ключом не плодит пропуска.
+                idempotent: true,
                 gate: FeatureGate::PICKUP,
             ),
             new Operation(
