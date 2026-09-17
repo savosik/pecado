@@ -13,8 +13,10 @@ use App\Mcp\Tools\Client\ClientCall;
 use App\Mcp\Tools\Client\ClientCatalog;
 use App\Mcp\Tools\Client\ClientCreateOrder;
 use App\Mcp\Tools\Client\ClientDescribe;
+use App\Mcp\Tools\Client\ClientFaq;
 use App\Mcp\Tools\Client\ClientOrderStatus;
 use App\Mcp\Tools\Client\ClientPrices;
+use App\Mcp\Tools\Client\ClientPromotions;
 use App\Models\ApiToken;
 use App\Models\Company;
 use App\Models\CrmAgentToken;
@@ -158,6 +160,30 @@ class ClientMcpTest extends TestCase
 
         $this->postJson('/mcp/crm', self::INIT, ['Accept' => 'application/json, text/event-stream', 'Authorization' => 'Bearer '.$this->token->token])->assertStatus(401);
         $this->callMcp(['Authorization' => 'Bearer '.$crmToken->token])->assertStatus(401);
+    }
+
+    #[Test]
+    #[TestDox('Ярлыки контента: client-promotions отдаёт действующие акции, client-faq — ответы и страницы')]
+    public function content_shortcuts(): void
+    {
+        \App\Models\Promotion::factory()->create(['name' => 'Осенний подарок', 'slug' => 'osen', 'description' => 'Подарок к заказу']);
+        \App\Models\Faq::factory()->create(['title' => 'Как вернуть брак?', 'content' => 'Через кабинет']);
+        \App\Models\Page::factory()->create(['title' => 'Доставка', 'slug' => 'dostavka']);
+
+        $list = ClientServer::actingAs($this->client)->tool(ClientPromotions::class);
+        $list->assertOk();
+        $list->assertSee('Осенний подарок');
+
+        $one = ClientServer::actingAs($this->client)->tool(ClientPromotions::class, ['slug' => 'osen']);
+        $one->assertOk();
+        $one->assertSee('Подарок к заказу');
+
+        ClientServer::actingAs($this->client)->tool(ClientPromotions::class, ['slug' => 'net-takoi'])->assertHasErrors();
+
+        $faq = ClientServer::actingAs($this->client)->tool(ClientFaq::class, ['q' => 'брак']);
+        $faq->assertOk();
+        $faq->assertSee('Через кабинет');
+        $faq->assertSee('dostavka');
     }
 
     #[Test]

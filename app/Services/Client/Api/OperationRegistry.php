@@ -7,6 +7,7 @@ use App\Services\Client\Api\Operations\CartOperations;
 use App\Services\Client\Api\Operations\CatalogOperations;
 use App\Services\Client\Api\Operations\CheckoutOperations;
 use App\Services\Client\Api\Operations\CompanyOperations;
+use App\Services\Client\Api\Operations\ContentOperations;
 use App\Services\Client\Api\Operations\ContractOperations;
 use App\Services\Client\Api\Operations\DeliveryAddressOperations;
 use App\Services\Client\Api\Operations\DocumentOperations;
@@ -57,6 +58,7 @@ class OperationRegistry
         PartnerContactOperations::class,
         QuestionOperations::class,
         NotificationOperations::class,
+        ContentOperations::class,
     ];
 
     /** @var list<Operation>|null */
