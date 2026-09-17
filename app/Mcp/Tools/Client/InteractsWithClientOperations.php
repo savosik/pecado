@@ -122,6 +122,8 @@ trait InteractsWithClientOperations
             return Response::error('[nothing_to_place] '.$e->getMessage().' Причины: '.json_encode($e->notAccepted, JSON_UNESCAPED_UNICODE));
         } catch (ReserveActionException $e) {
             return Response::error("[{$e->errorCode}] {$e->getMessage()}");
+        } catch (\App\Services\Pickup\PickupPassException $e) {
+            return Response::error("[{$e->reason}] {$e->getMessage()}");
         } catch (InsufficientStockException $e) {
             return Response::error('[stock_changed] '.$e->getMessage().' Выполните checkout.normalize и повторите. Конфликты: '
                 .json_encode($e->getItems(), JSON_UNESCAPED_UNICODE));

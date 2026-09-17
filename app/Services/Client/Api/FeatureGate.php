@@ -24,6 +24,7 @@ enum FeatureGate: string
     case RESERVE = 'reserve';
     case ORDER_CANCEL = 'order_cancel';
     case PAYMENT_ORDERS = 'payment_orders';
+    case PICKUP = 'pickup';
 
     /**
      * Открыт ли раздел для этого клиента прямо сейчас.
@@ -38,6 +39,7 @@ enum FeatureGate: string
             self::RESERVE => $user !== null && app(ReservePolicy::class)->availableFor($user),
             self::ORDER_CANCEL => (bool) config('order_reserve.enabled'),
             self::PAYMENT_ORDERS => PaymentOrdersGate::availableFor($user),
+            self::PICKUP => (bool) config('pickup.enabled'),
         };
     }
 
@@ -54,6 +56,7 @@ enum FeatureGate: string
             self::RESERVE => 'reserve_unavailable',
             self::ORDER_CANCEL => 'order_cancel_unavailable',
             self::PAYMENT_ORDERS => 'payment_orders_unavailable',
+            self::PICKUP => 'pickup_unavailable',
         };
     }
 
@@ -70,6 +73,7 @@ enum FeatureGate: string
             self::RESERVE => 'Режим «Заказы в резерве» вам недоступен.',
             self::ORDER_CANCEL => 'Отмена заказа из кабинета пока недоступна. Отмену оформляет менеджер.',
             self::PAYMENT_ORDERS => 'Платёжное поручение недоступно: раздел оплат закрыт, а ограничений по долгу нет.',
+            self::PICKUP => 'Раздел «Самовывоз» пока закрыт. Готовность заказа и выдачу уточняйте у менеджера.',
         };
     }
 }

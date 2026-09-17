@@ -16,6 +16,7 @@ use App\Services\Client\Api\Operations\NotificationOperations;
 use App\Services\Client\Api\Operations\OrderOperations;
 use App\Services\Client\Api\Operations\PartnerContactOperations;
 use App\Services\Client\Api\Operations\PaymentOrderOperations;
+use App\Services\Client\Api\Operations\PickupOperations;
 use App\Services\Client\Api\Operations\ProfileOperations;
 use App\Services\Client\Api\Operations\QuestionOperations;
 use App\Services\Client\Api\Operations\ReserveOperations;
@@ -49,6 +50,7 @@ class OperationRegistry
         OrderOperations::class,
         ShipmentOperations::class,
         ReserveOperations::class,
+        PickupOperations::class,
         DocumentOperations::class,
         ContractOperations::class,
         FinanceOperations::class,

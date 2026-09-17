@@ -143,6 +143,8 @@ class ClientApiController extends Controller
         } catch (ReserveActionException $e) {
             // Коды legacy сохраняются: stale_items_version (409), not_cancellable и т. д.
             return $this->error($e->errorCode, $e->getMessage(), $e->status);
+        } catch (\App\Services\Pickup\PickupPassException $e) {
+            return $this->error($e->reason, $e->getMessage(), 422);
         } catch (InsufficientStockException $e) {
             return response()->json(Envelope::error('stock_changed', $e->getMessage(), null, [
                 'conflicts' => $e->getItems(),
