@@ -256,6 +256,12 @@ class MailStream
             $parts[] = 's'.$data['shipment_number'];
         }
 
+        // Повод, который может законно повториться по тому же заказу (pick-12: заказ собран, откатился
+        // в сборку и собран снова), различается суффиксом — моментом события.
+        if (filled($data['origin_suffix'] ?? null)) {
+            $parts[] = 'x'.$data['origin_suffix'];
+        }
+
         if (str_starts_with($occasion->key, 'finance.overdue')) {
             $parts[] = 'step'.$this->overdueStep((int) ($data['days_overdue'] ?? 0));
         }

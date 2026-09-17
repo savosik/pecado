@@ -36,6 +36,8 @@ class MailTagBuilder
         'orders.shortfall' => ['заказ', 'недобор'],
         'orders.substitution_offered' => ['заказ', 'замена'],
         'orders.shipped' => ['заказ', 'отгрузка'],
+        'orders.ready_for_pickup' => ['заказ', 'самовывоз', 'собран'],
+        'orders.handed_over' => ['заказ', 'самовывоз', 'выдан'],
         'documents.published' => ['документы'],
         'documents.deleted' => ['документы', 'документ-отозван'],
         'finance.payment_due_soon' => ['оплата', 'срок-подходит'],

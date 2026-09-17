@@ -83,6 +83,23 @@ return [
         'default_enabled' => true,
         'client_visible' => true,
     ],
+    // Самовывоз (эпик pick-00, pick-12). «Собран» включён умолчанием по той же логике, что резервы:
+    // повод есть только у заказов с самовывозом, а без письма клиент узнает о готовности, лишь открыв
+    // кабинет, — и курьер поедет наугад. Партнёр может отключить у себя в матрице.
+    'orders.ready_for_pickup' => [
+        'label' => 'Заказ собран и ждёт выдачи',
+        'subject' => 'Заказ {{order_number}} собран — можно отправлять курьера',
+        'default_destinations' => [['type' => 'login']],
+        'default_enabled' => true,
+        'client_visible' => true,
+    ],
+    'orders.handed_over' => [
+        'label' => 'Заказ выдан курьеру',
+        'subject' => 'Заказ {{order_number}} выдан на складе',
+        'default_destinations' => [['type' => 'login']],
+        'default_enabled' => false,
+        'client_visible' => true,
+    ],
     'orders.shortfall' => [
         'label' => 'Недобор по заказу',
         'subject' => 'Заказ {{order_number}}: часть позиций не набралась',

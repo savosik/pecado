@@ -200,6 +200,16 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\Pickup\ClosePassAfterHandover::class,
         );
 
+        // pick-12: письма клиенту «собран, ждёт выдачи» и «выдан курьеру» — через матрицу уведомлений.
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\Pickup\GoodsIssueReadyChanged::class,
+            [\App\Listeners\Pickup\NotifyClientAboutPickup::class, 'ready'],
+        );
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\Pickup\GoodsIssueHandedOver::class,
+            [\App\Listeners\Pickup\NotifyClientAboutPickup::class, 'handedOver'],
+        );
+
         // pick-06: откат «отгружен» после выдачи и сигнал «ордер собран» — по журналу статусов РО.
         \App\Models\GoodsIssueStatusHistory::observe(\App\Observers\PickupGoodsIssueStatusObserver::class);
         \App\Models\Shipment::observe(\App\Observers\PayrollShipmentObserver::class);
