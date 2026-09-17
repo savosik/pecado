@@ -9,8 +9,10 @@ use App\Mcp\Tools\Client\ClientCatalog;
 use App\Mcp\Tools\Client\ClientCreateOrder;
 use App\Mcp\Tools\Client\ClientDescribe;
 use App\Mcp\Tools\Client\ClientDocuments;
+use App\Mcp\Tools\Client\ClientFaq;
 use App\Mcp\Tools\Client\ClientOrderStatus;
 use App\Mcp\Tools\Client\ClientPrices;
+use App\Mcp\Tools\Client\ClientPromotions;
 use Laravel\Mcp\Server;
 
 /**
@@ -30,7 +32,8 @@ class ClientServer extends Server
     protected string $instructions = <<<'MARKDOWN'
     Работа в личном кабинете оптового покупателя Pecado от имени клиента: цены и остатки,
     корзины и оформление заказов, статусы заказов и реализаций, резервы, возвраты,
-    документы, оплаты и платёжки, реквизиты, вопросы менеджеру и настройки уведомлений.
+    документы, оплаты и платёжки, реквизиты, вопросы менеджеру и настройки уведомлений,
+    а также контент сайта: акции, новости, подборки, информационные страницы и FAQ.
 
     ## Порядок работы
 
@@ -42,7 +45,17 @@ class ClientServer extends Server
 
     Для частых сценариев есть ярлыки, они дешевле трёх вызовов: `client-prices`,
     `client-order-status`, `client-create-order`, `client-balance`, `client-documents`,
-    `client-ask-manager`.
+    `client-promotions`, `client-faq`, `client-ask-manager`.
+
+    ## Акции, новости и FAQ — отвечайте по сайту
+
+    Об акциях, скидках, подарках, доставке, оплате и условиях работы **не отвечайте по
+    памяти**: сначала `client-promotions` (действующие для этого клиента акции с периодом
+    и условиями) или `client-faq` (вопросы-ответы и список страниц). Новости —
+    `news.list`/`news.get`, подборки — `collections.list`/`collections.products`, текст
+    страницы — `pages.get`. Всё отобрано по региону клиента, как на сайте. Если на сайте
+    ответа нет — `client-ask-manager`, а не догадка. Промо-позицию с `how_applied: manager`
+    добавит менеджер после оформления — не обещайте её в заказе сразу.
 
     ## Записи необратимы и идут от имени клиента
 
@@ -112,6 +125,8 @@ class ClientServer extends Server
         ClientCreateOrder::class,
         ClientBalance::class,
         ClientDocuments::class,
+        ClientPromotions::class,
+        ClientFaq::class,
         ClientAskManager::class,
     ];
 }
