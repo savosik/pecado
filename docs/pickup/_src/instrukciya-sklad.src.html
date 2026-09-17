@@ -1,0 +1,114 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>Выдача заказов на складе — инструкция кладовщика</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body { font-size:13.5pt; } .page { gap:5mm; } .small { font-size:12pt; } table.data { font-size:12pt; } ol.steps.big li { font-size:14pt; } .lead { font-size:14pt !important; }
+  .hero { background:var(--accent); color:#fff; border-radius:3mm; padding:6mm 7mm; display:grid; grid-template-columns:repeat(3,1fr); gap:5mm; }
+  .hero .v { font-size:22pt; font-weight:700; line-height:1.05; white-space:nowrap; } .hero .l { font-size:10.5pt; color:#f6dfe3; }
+  .tabs { display:flex; gap:1mm; } .tabs span { flex:1; text-align:center; font-size:6.6pt; font-weight:600; padding:1.2mm .5mm; border-radius:1.4mm; background:#eeeae5; } .tabs span.on { background:#1d1d1f; color:#fff; }
+  .ui .big { font-size:9.5pt; font-weight:700; }
+  .scan { background:#1d1d1f; border-radius:2mm; height:44mm; display:flex; align-items:center; justify-content:center; position:relative; }
+  .scan::before { content:''; width:30mm; height:30mm; border:.6mm solid #fff; border-radius:2mm; opacity:.9; } .scan::after { content:''; position:absolute; left:18%; right:18%; top:50%; height:.5mm; background:#ff4d5e; }
+  table.cases td:first-child { width:36%; font-weight:600; }
+</style></head><body>
+
+<section class="page">
+  <div class="eyebrow">Pecado · склад · инструкция кладовщика</div>
+  <h1 style="font-size:32pt">Выдача заказов курьерам: новый график и новый экран</h1>
+  <p class="lead">Клиенты — интернет-магазины — теперь сами отправляют заказы на склад и присылают курьеров. Менеджеры в этом не участвуют. Ваша задача — собрать вовремя и отдать правильный заказ правильному курьеру.</p>
+  <div class="hero">
+    <div><div class="v">Пн–сб, 9–21</div><div class="l">график склада</div></div>
+    <div><div class="v">30–40 минут</div><div class="l">на сборку заказа после поступления</div></div>
+    <div><div class="v">до 20:00</div><div class="l">заказы принимаются к сборке «на сегодня»</div></div>
+  </div>
+  <div class="cols-2">
+    <div class="panel good"><h3>Что остаётся как было</h3><ul class="tight small"><li>Сборка в 1С: задание, проверка, «к отгрузке», «отгружен».</li><li>Расходный лист печатается и кладётся к заказу.</li><li>Документы для клиента выдаются вместе с товаром.</li></ul></div>
+    <div class="panel accent"><h3>Что нового</h3><ul class="tight small"><li>Экран <span class="b">«Выдача заказов»</span> на телефоне: список, кто что забирает.</li><li>Курьер показывает <span class="b">пропуск с QR-кодом</span>.</li><li>Вы отмечаете <span class="b">«Выдан»</span> — клиент видит это у себя сразу.</li></ul></div>
+  </div>
+  <h3>Три правила смены</h3>
+  <ol class="steps big">
+    <li><span class="b">Собрали — сразу ставьте «Отгружен» в 1С.</span> Только после этого клиент видит «Собран» и посылает курьера.</li>
+    <li><span class="b">Отдали — сразу отмечайте «Выдан» на экране.</span> Не вечером и не «потом разом»: клиент смотрит в кабинет.</li>
+    <li><span class="b">В 21:00 склад закрыт.</span> Клиенты предупреждены, что после 20:00 заказ собирается на следующий день. Задерживаться ради опоздавшего курьера не нужно.</li>
+  </ol>
+  <div class="foot"><img src="img/logo.png" alt=""><span>стр. 1 / 4</span></div>
+</section>
+
+<section class="page">
+  <div class="head"><h2>Экран «Выдача заказов»</h2><span class="step">Где смотреть</span></div>
+  <div class="shots">
+    <figure><div class="phone"><div class="screen"><div class="ui">
+      <div class="bar"><span class="big">Выдача заказов</span><span class="badge gray">Склад</span></div>
+      <div class="btn dark" style="padding:2.4mm">▣ Сканировать пропуск</div>
+      <div class="tabs"><span class="on">Ждут 6</span><span>Собираются 3</span><span>Выдано 14</span></div>
+      <div class="card"><div class="row"><span class="big">ИП Соколова А. В.</span><span class="muted">3 места</span></div><div>ORD-2026-9024, ORD-2026-9022</div><div class="row"><span class="muted">ждёт 35 мин</span><span class="badge good">можно выдавать</span></div></div>
+      <div class="card"><div class="row"><span class="big">ООО «Лаванда»</span><span class="muted">1 место</span></div><div>ORD-2026-9017</div><div class="row"><span class="muted">ждёт 2 ч 10 мин</span><span class="badge good">можно выдавать</span></div></div>
+      <div class="card"><div class="row"><span class="big">ИП Громов Д. С.</span><span class="muted">5 мест</span></div><div>ORD-2026-9011 и ещё 3</div><div class="row"><span class="muted">ждёт со вчера</span><span class="badge good">можно выдавать</span></div></div>
+    </div></div></div><span class="mock-note">макет экрана</span></figure>
+    <div style="display:flex;flex-direction:column;gap:4mm">
+      <p>Откройте на телефоне <span class="b">pecado.ru/wms</span> → меню «Отгрузка» → <span class="b">«Выдача заказов»</span>. Экран можно добавить значком на главный экран телефона.</p>
+      <table class="data">
+        <tr><th>Вкладка</th><th>Что в ней</th></tr>
+        <tr><td class="b">Ждут выдачи</td><td>Собранные заказы самовывоза. Их можно отдавать курьеру.</td></tr>
+        <tr><td class="b">Собираются</td><td>Заказы в работе с таймером. <span style="color:var(--accent)" class="b">Красный таймер</span> — 40 минут прошли, заказ в приоритет.</td></tr>
+        <tr><td class="b">Выдано сегодня</td><td>Кто выдал, кому и когда. Здесь же исправляется ошибка.</td></tr>
+        <tr><td class="b">Зависшие</td><td>Лежат дольше трёх дней. Раз в день сообщайте о них заведующему складом.</td></tr>
+      </table>
+      <div class="panel"><p class="small">Сверху — поиск: название клиента, номер заказа или номер расходного ордера. Список обновляется сам.</p></div>
+    </div>
+  </div>
+  <div class="panel warn"><h3>Заказа нет в списке «Ждут выдачи»?</h3><p class="small">Значит, в 1С у расходного ордера ещё не стоит статус <span class="b">«Отгружен»</span>. Поставьте его в рабочем месте упаковщика — через минуту заказ появится в списке, а клиент получит письмо «Собран».</p></div>
+  <div class="foot"><img src="img/logo.png" alt=""><span>стр. 2 / 4</span></div>
+</section>
+
+<section class="page">
+  <div class="head"><h2>Пришёл курьер: выдача по пропуску</h2><span class="step">Главный сценарий</span></div>
+  <div class="shots">
+    <figure><div class="phone"><div class="screen"><div class="ui">
+      <div class="bar"><span class="big">Сканирование</span><span class="muted">✕</span></div>
+      <div class="scan"></div><div class="muted" style="text-align:center">Наведите камеру на QR-код на телефоне курьера</div>
+      <div class="btn line">Ввести 6 цифр вручную</div><div class="btn line">Найти по клиенту или номеру</div>
+    </div></div></div><span class="mock-note">макет экрана</span></figure>
+    <figure><div class="phone"><div class="screen"><div class="ui">
+      <div class="bar"><span class="big">Пропуск 482 913</span><span class="badge good">действует</span></div>
+      <div class="card" style="background:var(--good-soft);border-color:#c2e2cf"><div class="big">ИП Соколова А. В.</div><div>Отдать: 2 комплекта · 3 места</div></div>
+      <div class="card"><div class="row"><span class="mono">ORD-2026-9024</span><span class="muted">2 места</span></div><div class="muted">ордер УТ-00009512</div><div class="btn green">Выдать</div></div>
+      <div class="card"><div class="row"><span class="mono">ORD-2026-9022</span><span class="muted">1 место</span></div><div class="muted">ордер УТ-00009507</div><div class="btn green">Выдать</div></div>
+      <div class="card" style="opacity:.6"><div class="row"><span class="mono">ORD-2026-9023</span><span class="badge warn">ещё собирается</span></div></div>
+      <div class="btn dark" style="padding:2.4mm">Выдать всё · 3 места</div>
+    </div></div></div><span class="mock-note">макет экрана</span></figure>
+    <ol class="steps" style="gap:3.5mm">
+      <li>Нажмите <span class="b">«Сканировать пропуск»</span> и наведите камеру на QR-код у курьера.</li>
+      <li>Нет QR — попросите <span class="b">шесть цифр</span> и введите их.</li>
+      <li>На экране — клиент и <span class="b">что именно отдать</span>. Принесите эти комплекты.</li>
+      <li>Сверьте номера заказов на расходных листах с экраном.</li>
+      <li>Отдайте товар и документы, получите подпись.</li>
+      <li>Нажмите <span class="b">«Выдать всё»</span> — или «Выдать» у каждого комплекта.</li>
+    </ol>
+  </div>
+  <div class="cols-2">
+    <div class="panel accent"><h3>Отдаём только то, что в пропуске</h3><p class="small">У клиента на полке может лежать больше. Остальное заберёт другой курьер по другому пропуску. Если курьер просит «отдайте всё» — пусть магазин пришлёт ему новый пропуск, это минута.</p></div>
+    <div class="panel"><h3>Штрихкод на расходном листе</h3><p class="small">Его можно «пикнуть» той же камерой: экран отметит комплект галочкой «коробка проверена». Если лист не из этого пропуска — телефон подаст сигнал ошибки. Сканировать лист не обязательно, но так надёжнее.</p></div>
+  </div>
+  <div class="foot"><img src="img/logo.png" alt=""><span>стр. 3 / 4</span></div>
+</section>
+
+<section class="page">
+  <div class="head"><h2>Если что-то пошло не так</h2><span class="step">Шпаргалка</span></div>
+  <table class="data cases">
+    <tr><th>Ситуация</th><th>Что делать</th></tr>
+    <tr><td>Курьер без пропуска</td><td>Попросите его написать в магазин: пропуск присылают за минуту. Если никак — найдите клиента поиском, <span class="b">позвоните в магазин по телефону из карточки</span>, и только после подтверждения выдайте вручную. Впишите имя курьера.</td></tr>
+    <tr><td>Пропуск «отозван» или «истёк»</td><td>Не выдавать. Магазин отменил этот пропуск — пусть пришлёт курьеру новый.</td></tr>
+    <tr><td>В пропуске заказ «ещё собирается»</td><td>Отдайте готовое, отметьте выдачу. Курьер может подождать — время готовности видно на экране.</td></tr>
+    <tr><td>Экран пишет «уже выдан»</td><td>Заказ отметил другой кладовщик — на экране видно кто и когда. Коробка на полке? Зовите заведующего складом: разбираться нужно сразу.</td></tr>
+    <tr><td>Отметили «Выдан» по ошибке</td><td>Вкладка «Выдано сегодня» → отмена выдачи с причиной. Право отмены — у заведующего складом, в течение суток.</td></tr>
+    <tr><td>Курьер опоздал, склад закрыт</td><td>Не выдаём. Заказ никуда не денется и будет ждать завтра с 9:00.</td></tr>
+    <tr><td>Не хватило товара при сборке</td><td>Собирайте как обычно в 1С. Клиенту уйдёт сообщение автоматически, менеджер увидит утром. Звонить менеджеру вечером и в субботу не нужно.</td></tr>
+    <tr><td>Не работает экран или интернет</td><td>Выдавайте по расходному листу под подпись, листы откладывайте отдельно. Когда экран заработает — отметьте выдачу по каждому листу.</td></tr>
+  </table>
+  <div class="cols-2">
+    <div class="panel good"><h3>Закрытие смены в 21:00</h3><ul class="tight small"><li>Во вкладке «Собираются» нет красных таймеров.</li><li>Всё отданное за день отмечено «Выдан».</li><li>Неотмеченные листы без интернета — внесены.</li></ul></div>
+    <div class="panel"><h3>Кого звать</h3><p class="small"><span class="b">Спорная выдача, недостача на полке</span> — заведующий складом.<br><span class="b">Экран не работает</span> — руководитель отдела продаж, в рабочее время.<br><span class="b">Менеджеров вечером и в субботу не беспокоим</span> — только форс-мажор.</p></div>
+  </div>
+  <div class="foot"><img src="img/logo.png" alt=""><span>стр. 4 / 4</span></div>
+</section>
+</body></html>
