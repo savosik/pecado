@@ -81,10 +81,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/checkout/normalize-stock', [CheckoutController::class, 'normalizeStock'])->name('checkout.normalize-stock');
 
     // Заказы пользователя
-    // pick-09: раздел «Самовывоз» — готовое к выдаче и пропуска курьерам (рубильник pickup.enabled)
-    Route::get('/pickup', [\App\Http\Controllers\User\PickupController::class, 'index'])->name('pickup.index');
-    Route::post('/pickup/passes', [\App\Http\Controllers\User\PickupController::class, 'store'])->name('pickup.passes.store')->middleware('throttle:20,1');
-    Route::post('/pickup/passes/{pass}/revoke', [\App\Http\Controllers\User\PickupController::class, 'revoke'])->name('pickup.passes.revoke');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 });
 
@@ -206,6 +202,10 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::post('/orders/{order}/confirm-reserve', [\App\Http\Controllers\User\ReserveOrderController::class, 'confirm'])->name('orders.confirm-reserve');
     // v16.9.0 (res-08): правка состава резервного заказа (v1 — только уменьшение)
     Route::post('/orders/{order}/reserve-items', [\App\Http\Controllers\User\ReserveOrderController::class, 'updateItems'])->name('orders.reserve-items');
+    // pick-09: раздел «Самовывоз» — готовое к выдаче и пропуска курьерам (рубильник pickup.enabled)
+    Route::get('/pickup', [\App\Http\Controllers\User\PickupController::class, 'index'])->name('pickup.index');
+    Route::post('/pickup/passes', [\App\Http\Controllers\User\PickupController::class, 'store'])->name('pickup.passes.store')->middleware('throttle:20,1');
+    Route::post('/pickup/passes/{pass}/revoke', [\App\Http\Controllers\User\PickupController::class, 'revoke'])->name('pickup.passes.revoke');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
     // Изменения заказов (сводная лента)

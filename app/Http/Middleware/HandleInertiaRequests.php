@@ -130,6 +130,7 @@ class HandleInertiaRequests extends Middleware
                 // чекауте видны только участнику режима (рубильник ∧ флаг 1С ∧ не
                 // отключён точечно); счётчик — бейдж на пункте меню.
                 ...($this->reserveProps($request)),
+                ...($this->pickupProps($request)),
                 // Бейджи разделов кабинета (предзаказы, корзины).
                 ...($this->cabinetCounts($request)),
             ],
@@ -188,6 +189,27 @@ class HandleInertiaRequests extends Middleware
             // Срок резерва для подписи radio в чекауте (индивидуальный или умолчание)
             'reserve_hours' => $enabled
                 ? app(\App\Services\Order\ReservePolicy::class)->hoursFor($user)
+                : 0,
+        ];
+    }
+
+    /**
+     * Самовывоз (эпик pick-00): флаг раздела и число комплектов, готовых к выдаче.
+     *
+     * Счётчик считается только на страницах кабинета — там он и показывается; при выключенном
+     * рубильнике и для гостя — без запросов к БД.
+     *
+     * @return array{pickup_enabled: bool, pickup_ready_count: int}
+     */
+    private function pickupProps(\Illuminate\Http\Request $request): array
+    {
+        $user = $request->user();
+        $enabled = $user !== null && (bool) config('pickup.enabled');
+
+        return [
+            'pickup_enabled' => $enabled,
+            'pickup_ready_count' => $enabled && str_starts_with($request->path(), 'cabinet')
+                ? app(\App\Services\Pickup\OrderFulfilmentResolver::class)->readyForUser($user)->count()
                 : 0,
         ];
     }

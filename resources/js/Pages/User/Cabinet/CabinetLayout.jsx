@@ -12,7 +12,7 @@ import {
     LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin, LuContact,
     LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuReceipt, LuLayoutGrid, LuWrench, LuCode,
     LuChartPie, LuMessageSquare, LuArrowRightLeft, LuFileText, LuBell, LuFilePen, LuClock3,
-    LuHourglass, LuBanknote, LuBot, LuArchive,
+    LuHourglass, LuBanknote, LuBot, LuArchive, LuPackageCheck,
 } from 'react-icons/lu';
 
 // Меню кабинета группируется по сущностям, а не по стадиям заказа: стадия —
@@ -40,6 +40,8 @@ const menuGroups = [
             // Режим «Заказы в резерве» (v16.9.0): пункт виден только участнику режима
             // (config.reserves_enabled), бейдж — количество активных резервов.
             { href: '/cabinet/reserves', label: 'Заказы в резерве', icon: LuClock3, feature: 'reserves', badge: 'reserve_count' },
+            // Самовывоз (pick-09): что собрано и ждёт курьера, пропуска с QR. Бейдж — число готовых комплектов.
+            { href: '/cabinet/pickup', label: 'Самовывоз', icon: LuPackageCheck, feature: 'pickup', badge: 'pickup_ready_count' },
             { href: '/cabinet/carts', label: 'Корзины', icon: LuShoppingCart, badge: 'cart_count' },
             { href: '/cabinet/order-changes', label: 'Изменения заказов', icon: LuArrowRightLeft },
         ],
@@ -155,6 +157,8 @@ function SidebarContent({ currentPath }) {
         contracts: !!config?.contracts_cabinet_enabled,
         // Режим «Заказы в резерве»: рубильник ∧ флаг участника из 1С (считает бэк)
         reserves: !!config?.reserves_enabled,
+        // Самовывоз: стадии сборки и пропуска курьерам (рубильник pickup.enabled)
+        pickup: !!config?.pickup_enabled,
     };
 
     const visibleGroups = menuGroups
