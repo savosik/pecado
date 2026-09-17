@@ -99,6 +99,47 @@ class ClientApiCartsTest extends ClientApiTestCase
     }
 
     #[Test]
+    #[TestDox('Количества строки: quantity — лежит, requested — просили, trimmed — урезано; clamped наружу не выходит')]
+    public function line_quantities_are_explicit(): void
+    {
+        $a = $this->product('A');
+        $b = $this->product('B');
+        ProductBarcode::create(['product_id' => $b->id, 'barcode' => '4602222222222']);
+
+        // Просили 1 — легла 1, урезать нечего
+        $this->api('POST', '/carts/active/items', ['identifier' => 'A', 'quantity' => 1])->assertOk()
+            ->assertJsonPath('data.quantity', 1)
+            ->assertJsonPath('data.requested', 1)
+            ->assertJsonPath('data.trimmed', 0)
+            ->assertJsonMissingPath('data.clamped');
+
+        // Добавка к лежащему: 1 + 16 = 17 при максимуме 15 → урезано 2
+        $this->api('POST', '/carts/active/items', ['identifier' => 'A', 'quantity' => 16])->assertOk()
+            ->assertJsonPath('data.quantity', 15)
+            ->assertJsonPath('data.requested', 17)
+            ->assertJsonPath('data.trimmed', 2)
+            ->assertJsonPath('data.instock', 10)
+            ->assertJsonPath('data.preorder', 5);
+
+        $this->api('PUT', '/carts/active/items', ['identifier' => 'A', 'quantity' => 4])->assertOk()
+            ->assertJsonPath('data.quantity', 4)
+            ->assertJsonPath('data.requested', 4)
+            ->assertJsonPath('data.trimmed', 0);
+
+        $this->api('POST', '/carts/active/barcode', ['barcode' => '4602222222222', 'quantity' => 20])->assertOk()
+            ->assertJsonPath('data.status', 'partial')
+            ->assertJsonPath('data.quantity', 15)
+            ->assertJsonPath('data.trimmed', 5)
+            ->assertJsonMissingPath('data.clamped');
+
+        $bulk = $this->api('PUT', '/carts/active/items/bulk', ['rows' => [['identifier' => 'A', 'quantity' => 30]]])->assertOk();
+        $bulk->assertJsonPath('data.items.0.product_id', $a->id);
+        $line = $bulk->json('data.items.0');
+        $this->assertSame(['quantity' => 15, 'requested' => 30, 'trimmed' => 15], array_intersect_key($line, array_flip(['quantity', 'requested', 'trimmed'])));
+        $this->assertArrayNotHasKey('clamped', $line);
+    }
+
+    #[Test]
     #[TestDox('Пакетные количества: применяются найденные, ненайденные в meta; режим replace очищает корзину')]
     public function bulk_quantities_and_replace_import(): void
     {

@@ -96,7 +96,9 @@ class CartOperations implements OperationProvider
                 id: 'carts.add', section: 'carts', method: 'POST', uri: 'carts/{cart}/items',
                 summary: 'Добавить товар (к текущему количеству)',
                 description: 'Количество прибавляется к уже лежащему в корзине и урезается по доступному остатку '
-                    .'(наличие + предзаказ); в ответе — сколько лежит и сколько урезано.',
+                    .'(наличие + предзаказ). В ответе quantity — сколько теперь лежит, из них instock и preorder; '
+                    .'requested — сколько должно было лечь (лежало + добавка); trimmed — сколько урезано (0 — легло всё); '
+                    .'max_total — больше этого положить нельзя.',
                 params: [
                     $cart,
                     Param::string('identifier', 'uuid 1С, код, артикул или штрихкод товара', true, ['max:255']),
@@ -108,7 +110,8 @@ class CartOperations implements OperationProvider
             new Operation(
                 id: 'carts.set-quantity', section: 'carts', method: 'PUT', uri: 'carts/{cart}/items',
                 summary: 'Задать количество товара (0 — убрать)',
-                description: 'Целевое количество, а не прибавка. Урезается по доступному остатку.',
+                description: 'Целевое количество, а не прибавка. Урезается по доступному остатку. Ответ — как у carts.add: '
+                    .'quantity (лежит), requested (запрошено), trimmed (урезано), instock/preorder, max_total.',
                 params: [
                     $cart,
                     Param::string('identifier', 'uuid 1С, код, артикул или штрихкод товара', true, ['max:255']),
@@ -121,7 +124,8 @@ class CartOperations implements OperationProvider
                 id: 'carts.set-quantities', section: 'carts', method: 'PUT', uri: 'carts/{cart}/items/bulk',
                 summary: 'Задать количества нескольких товаров одним вызовом',
                 description: 'rows — список {identifier, quantity}; целевые количества. Ненайденные и неоднозначные '
-                    .'идентификаторы перечислены в meta.unresolved, остальное применяется.',
+                    .'идентификаторы перечислены в meta.unresolved, остальное применяется. data.items — список строк с product_id, как ответ '
+                    .'carts.set-quantity: quantity, requested, trimmed, instock/preorder, max_total.',
                 params: [
                     $cart,
                     Param::list('rows', 'Строки {identifier, quantity}', 'object', true, ['min:1', 'max:500']),
@@ -133,7 +137,8 @@ class CartOperations implements OperationProvider
                 id: 'carts.add-by-barcode', section: 'carts', method: 'POST', uri: 'carts/{cart}/barcode',
                 summary: 'Добавить товар по штрихкоду (сценарий сканера)',
                 description: 'Статусы в ответе: success — добавлено; partial — добавлено меньше запрошенного; warning — '
-                    .'достигнут максимум, ничего не добавлено. Неизвестный штрихкод — 404.',
+                    .'достигнут максимум, ничего не добавлено. Неизвестный штрихкод — 404. Количества — как у carts.add: '
+                    .'quantity, requested, trimmed, instock/preorder, max_total.',
                 params: [$cart, Param::string('barcode', 'Штрихкод', true, ['max:64']), Param::integer('quantity', 'Сколько добавить', rules: ['min:1'])],
                 handler: [self::class, 'addByBarcode'],
                 mutating: true,
@@ -250,9 +255,10 @@ class CartOperations implements OperationProvider
     {
         $cart = $this->cart($actor, $input);
         $product = $this->product((string) $input->string('identifier'));
+        $requested = $this->lying($cart, $product->id) + (int) $input->int('quantity');
         $result = $this->carts->addProduct($actor, $cart, $product, (int) $input->int('quantity'));
 
-        return Envelope::data($this->lineResult($product->id, $product->name, $result));
+        return Envelope::data($this->lineResult($product->id, $product->name, $result, $requested));
     }
 
     /** @return array<string, mixed> */
@@ -262,7 +268,7 @@ class CartOperations implements OperationProvider
         $product = $this->product((string) $input->string('identifier'));
         $result = $this->carts->setProductQuantity($actor, $cart, $product, (int) $input->int('quantity'));
 
-        return Envelope::data($this->lineResult($product->id, $product->name, $result));
+        return Envelope::data($this->lineResult($product->id, $product->name, $result, max(0, (int) $input->int('quantity'))));
     }
 
     /** @return array<string, mixed> */
@@ -273,8 +279,16 @@ class CartOperations implements OperationProvider
 
         $result = $this->carts->setProductsQuantity($actor, $cart, $targets);
 
+        $items = array_values(array_map(
+            fn (array $item) => [
+                'product_id' => (int) $item['product_id'],
+                ...$this->quantities($item, max(0, (int) ($targets[$item['product_id']] ?? 0))),
+            ],
+            $result['items'] ?? [],
+        ));
+
         return Envelope::data([
-            'items' => $result['items'] ?? [],
+            'items' => $items,
             'cart_totals' => $result['cart_totals'] ?? null,
         ], ['applied' => count($targets), 'unresolved' => $unresolved]);
     }
@@ -283,13 +297,25 @@ class CartOperations implements OperationProvider
     public function addByBarcode(User $actor, OperationInput $input): array
     {
         $cart = $this->cart($actor, $input);
-        $result = $this->carts->addByBarcode($actor, $cart, (string) $input->string('barcode'), max(1, $input->int('quantity', 1)));
+        $barcode = (string) $input->string('barcode');
+        $qty = max(1, $input->int('quantity', 1));
+        $known = $this->identifiers->resolveBarcode($barcode);
+        $requested = $known ? $this->lying($cart, $known->id) + $qty : $qty;
+
+        $result = $this->carts->addByBarcode($actor, $cart, $barcode, $qty);
 
         if ($result['status'] === 'not_found') {
             throw (new ModelNotFoundException)->setModel(\App\Models\Product::class);
         }
 
-        return Envelope::data($result);
+        return Envelope::data([
+            'status' => $result['status'],
+            'message' => $result['message'],
+            'product_id' => $result['product_id'],
+            'product_name' => $result['product_name'],
+            ...$this->quantities($result, $requested),
+            'cart_totals' => $result['cart_totals'] ?? null,
+        ]);
     }
 
     /** @return array<string, mixed> */
@@ -479,16 +505,44 @@ class CartOperations implements OperationProvider
      * @param  array<string, mixed>  $result
      * @return array<string, mixed>
      */
-    private function lineResult(int $productId, string $name, array $result): array
+    private function lineResult(int $productId, string $name, array $result, int $requested): array
     {
         return [
             'product_id' => $productId,
             'product_name' => $name,
-            'instock' => $result['instock'] ?? 0,
-            'preorder' => $result['preorder'] ?? 0,
-            'clamped' => $result['clamped'] ?? 0,
-            'max_total' => $result['max_total'] ?? 0,
+            ...$this->quantities($result, $requested),
             'cart_totals' => $result['cart_totals'] ?? null,
         ];
+    }
+
+    /**
+     * Количества строки в терминах клиента.
+     *
+     * CartService отдаёт `clamped` — итог после ограничения остатком, а не
+     * «сколько урезано», и агенты читали его как флаг. Наружу он не выходит:
+     * вместо него лежит (quantity), просили (requested) и разница (trimmed).
+     *
+     * @param  array<string, mixed>  $result
+     * @return array{quantity: int, requested: int, trimmed: int, instock: int, preorder: int, max_total: int}
+     */
+    private function quantities(array $result, int $requested): array
+    {
+        $instock = (int) ($result['instock'] ?? 0);
+        $preorder = (int) ($result['preorder'] ?? 0);
+
+        return [
+            'quantity' => $instock + $preorder,
+            'requested' => $requested,
+            'trimmed' => max(0, $requested - $instock - $preorder),
+            'instock' => $instock,
+            'preorder' => $preorder,
+            'max_total' => (int) ($result['max_total'] ?? 0),
+        ];
+    }
+
+    /** Сколько товара уже лежит в корзине (без уценки — у неё свой учёт по партии). */
+    private function lying(Cart $cart, int $productId): int
+    {
+        return (int) $cart->items()->where('product_id', $productId)->excludingDefect()->sum('quantity');
     }
 }
