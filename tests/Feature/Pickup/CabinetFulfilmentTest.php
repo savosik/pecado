@@ -39,6 +39,26 @@ class CabinetFulfilmentTest extends TestCase
     }
 
     #[Test]
+    public function order_card_tells_warehouse_story(): void
+    {
+        config(['pickup.enabled' => true, 'pickup.handover_since' => null]);
+        $client = $this->pickupClient();
+        $order = $this->pickupOrder($client);
+        $issue = $this->goodsIssueFor($order, GoodsIssue::STATUS_PREPARED);
+
+        $this->moveIssue($issue, GoodsIssue::STATUS_TO_PICK);
+        $this->travel(20)->minutes();
+        $this->moveIssue($issue, GoodsIssue::STATUS_TO_SHIP);
+        $this->moveIssue($issue, GoodsIssue::STATUS_SHIPPED);
+        $this->travel(40)->minutes();
+        app(\App\Services\Pickup\HandoverService::class)->issue($issue, \App\Models\User::factory()->create(), 'qr', null, ['recipient_name' => 'Олег']);
+
+        $this->actingAs($client)->get("/cabinet/orders/{$order->id}")->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('order.fulfilment.events', fn ($events) => collect($events)->pluck('label')->all() === ['Выдан курьеру: Олег', 'Собран', 'Склад начал сборку']));
+    }
+
+    #[Test]
     public function switched_off_cabinet_looks_as_before(): void
     {
         config(['pickup.enabled' => false]);

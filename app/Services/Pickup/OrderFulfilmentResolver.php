@@ -89,6 +89,57 @@ class OrderFulfilmentResolver
     }
 
     /**
+     * Складская история заказа для карточки (pick-05): начали сборку, собран, возвращён в сборку,
+     * выдан, выдача отменена. Считается только для одного заказа — в списках не нужна.
+     *
+     * @return list<array{at: string, label: string, tone: string}>
+     */
+    public function timeline(Order $order): array
+    {
+        $issueIds = GoodsIssueItem::query()->where('order_uuid', $order->uuid)->distinct()->pluck('goods_issue_id');
+        if ($issueIds->isEmpty()) {
+            return [];
+        }
+
+        $numbers = GoodsIssue::withTrashed()->whereIn('id', $issueIds)->pluck('number', 'id');
+        $several = $numbers->count() > 1;
+        $suffix = fn (int $id): string => $several ? ' (ордер '.$numbers->get($id).')' : '';
+        $events = [];
+
+        $histories = \App\Models\GoodsIssueStatusHistory::query()->whereIn('goods_issue_id', $issueIds)->orderBy('changed_at')->get();
+        $started = [];
+        foreach ($histories as $h) {
+            $label = match (true) {
+                $h->to_status === GoodsIssue::STATUS_SHIPPED => 'Собран',
+                $h->to_status === \App\Models\GoodsIssueStatusHistory::STATUS_CANCELLED => 'Сборка отменена складом',
+                $h->from_status === GoodsIssue::STATUS_SHIPPED => 'Возвращён в сборку',
+                ! isset($started[$h->goods_issue_id]) => 'Склад начал сборку',
+                default => null,
+            };
+            $started[$h->goods_issue_id] = true;
+
+            if ($label !== null && $h->changed_at !== null) {
+                $events[] = ['at' => $h->changed_at->toIso8601String(), 'label' => $label.$suffix($h->goods_issue_id), 'tone' => $label === 'Собран' ? 'good' : 'neutral'];
+            }
+        }
+
+        foreach (PickupHandover::query()->whereIn('goods_issue_id', $issueIds)->where('method', '!=', PickupHandover::METHOD_BACKFILL)->get() as $handover) {
+            $events[] = [
+                'at' => $handover->issued_at->toIso8601String(),
+                'label' => 'Выдан курьеру'.($handover->recipient_name ? ': '.$handover->recipient_name : '').$suffix($handover->goods_issue_id),
+                'tone' => 'good',
+            ];
+            if ($handover->cancelled_at !== null) {
+                $events[] = ['at' => $handover->cancelled_at->toIso8601String(), 'label' => 'Отметка о выдаче снята складом'.$suffix($handover->goods_issue_id), 'tone' => 'neutral'];
+            }
+        }
+
+        usort($events, fn (array $a, array $b) => strcmp($b['at'], $a['at']));
+
+        return $events;
+    }
+
+    /**
      * Стадия одного расходного ордера.
      *
      * Выдача важнее статуса; «ждёт выдачи» — только самовывоз, собранный после даты отсечения,

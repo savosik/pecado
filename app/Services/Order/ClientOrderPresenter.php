@@ -57,6 +57,18 @@ class ClientOrderPresenter
     }
 
     /**
+     * То же для карточки заказа — со складской историей (в списках она не считается).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function fulfilmentCard(Order $order): ?array
+    {
+        $view = $this->fulfilment($order);
+
+        return $view === null ? null : $view + ['events' => $this->fulfilmentResolver->timeline($order)];
+    }
+
+    /**
      * Связи для кабинетной карточки заказа.
      */
     public function loadCabinetCard(Order $order): void
@@ -155,7 +167,7 @@ class ClientOrderPresenter
             'status' => $order->status?->value,
             'status_label' => $this->statusLabel($order->status),
             // pick-03: стадия исполнения поверх статуса 1С (null, пока рубильник pickup.enabled выключен)
-            'fulfilment' => $this->fulfilment($order),
+            'fulfilment' => $this->fulfilmentCard($order),
             // v16.9.0 (res-04): кнопка «Отменить заказ» — за глобальным рубильником
             // и только пока 1С не начала сборку (или заказ в окне резерва)
             'can_cancel' => $this->canCancel($order),
@@ -309,6 +321,8 @@ class ClientOrderPresenter
     public function card(Order $order, User $user): array
     {
         $payload = array_merge($this->row($order), [
+            // Карточка — со складской историей (pick-05): начали сборку, собран, выдан.
+            'fulfilment' => $this->fulfilmentCard($order),
             'comment' => $order->comment,
             'manager_comment' => $order->manager_comment,
             'warehouse_comment' => $order->warehouse_comment,

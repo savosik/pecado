@@ -85,6 +85,17 @@ export default function FulfilmentPanel({ fulfilment }) {
                         );
                     })}
                 </Flex>
+                {fulfilment.events?.length > 0 && (
+                    <Box mt="4" pt="3" borderTopWidth="1px">
+                        <Text fontSize="xs" fontWeight="700" color="fg.muted" mb="1" textTransform="uppercase" letterSpacing="0.06em">История склада</Text>
+                        {fulfilment.events.map((event) => (
+                            <Flex key={`${event.at}-${event.label}`} justify="space-between" gap="3" fontSize="sm" py="0.5">
+                                <Text color={event.tone === 'good' ? 'green.fg' : 'fg'}>{event.label}</Text>
+                                <Text color="fg.muted" flexShrink={0}>{timeText(event.at).replace('сегодня в ', '')}</Text>
+                            </Flex>
+                        ))}
+                    </Box>
+                )}
             </Card.Body>
         </Card.Root>
     );
