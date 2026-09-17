@@ -38,6 +38,8 @@ class MailTagBuilder
         'orders.shipped' => ['заказ', 'отгрузка'],
         'orders.ready_for_pickup' => ['заказ', 'самовывоз', 'собран'],
         'orders.handed_over' => ['заказ', 'самовывоз', 'выдан'],
+        'orders.items_unavailable' => ['заказ', 'недобор', 'клиенту'],
+        'orders.pickup_waiting' => ['заказ', 'самовывоз', 'не-забран'],
         'documents.published' => ['документы'],
         'documents.deleted' => ['документы', 'документ-отозван'],
         'finance.payment_due_soon' => ['оплата', 'срок-подходит'],

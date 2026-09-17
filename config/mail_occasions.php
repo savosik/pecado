@@ -100,6 +100,25 @@ return [
         'default_enabled' => false,
         'client_visible' => true,
     ],
+    // Недобор при сборке — клиенту (решение заказчика 18.09.2026): склад собирает вечером и в субботу без
+    // менеджера, замену никто не подбирает, клиент должен сам узнать и дозаказать. `orders.shortfall` ниже —
+    // про другое: его адресат менеджер.
+    'orders.items_unavailable' => [
+        'label' => 'Товара не хватило при сборке',
+        'subject' => 'Заказ {{order_number}}: части товара не хватило',
+        'default_destinations' => [['type' => 'login']],
+        'default_enabled' => true,
+        'client_visible' => true,
+    ],
+    // Собранный заказ давно не забирают. Храним сколько угодно, но напоминаем: на 3, 7, 14 и 30-й день.
+    // Периодичность — свойство этого типа (команда pickup:remind-waiting), а не условие в матрице.
+    'orders.pickup_waiting' => [
+        'label' => 'Собранный заказ давно ждёт на складе',
+        'subject' => '{{order_number}}: заказ ждёт вас на складе',
+        'default_destinations' => [['type' => 'login']],
+        'default_enabled' => true,
+        'client_visible' => true,
+    ],
     'orders.shortfall' => [
         'label' => 'Недобор по заказу',
         'subject' => 'Заказ {{order_number}}: часть позиций не набралась',

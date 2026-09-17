@@ -82,6 +82,34 @@ class OffhoursDigestTest extends TestCase
     }
 
     #[Test]
+    public function sales_head_gets_department_digest_including_unassigned_clients(): void
+    {
+        Notification::fake();
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+        $head = User::factory()->create(['email' => 'rop@pecado.test']);
+        $head->assignRole('sales-head');
+
+        Carbon::setTestNow($this->monday()->copy()->subDays(2)->setTime(12, 0));
+        $mine = $this->goodsIssueFor($this->pickupOrder($this->client, ['erp_number' => '29УТ-021001']), GoodsIssue::STATUS_TO_SHIP);
+        $this->moveIssue($mine, GoodsIssue::STATUS_SHIPPED);
+        $orphan = $this->goodsIssueFor($this->pickupOrder($this->pickupClient(), ['erp_number' => '29УТ-021002']), GoodsIssue::STATUS_TO_SHIP);
+        $this->moveIssue($orphan, GoodsIssue::STATUS_SHIPPED);
+
+        Carbon::setTestNow($this->monday());
+        $this->artisan('pickup:offhours-digest')->assertSuccessful();
+
+        Notification::assertSentTo($head, OffhoursDigestNotification::class, function (OffhoursDigestNotification $n) {
+            $numbers = array_column($n->sections['not_picked'], 'number');
+            sort($numbers);
+
+            return $n->department && $numbers === ['29УТ-021001', '29УТ-021002']
+                && str_contains(collect($n->sections['not_picked'])->firstWhere('number', '29УТ-021002')['note'], 'без менеджера');
+        });
+        Notification::assertSentTo($this->manager, OffhoursDigestNotification::class, fn (OffhoursDigestNotification $n) => ! $n->department
+            && array_column($n->sections['not_picked'], 'number') === ['29УТ-021001']); // чужой ничейный клиент менеджеру не попал
+    }
+
+    #[Test]
     public function command_sends_once_and_stays_silent_when_nothing_happened(): void
     {
         Notification::fake();

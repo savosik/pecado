@@ -34,6 +34,7 @@ class OffhoursDigestNotification extends Notification implements ShouldQueue
         public int $total,
         public string $periodLabel,
         public ?string $onBehalfOf = null,
+        public bool $department = false,
     ) {}
 
     /** @return array<int, string> */
@@ -52,11 +53,14 @@ class OffhoursDigestNotification extends Notification implements ShouldQueue
         }
 
         return (new MailMessage)
-            ->subject('Пока вас не было: самовывоз и резервы ваших клиентов — Pecado.ru')
+            ->subject($this->department
+                ? 'Пока отдел не работал: самовывоз и резервы клиентов — Pecado.ru'
+                : 'Пока вас не было: самовывоз и резервы ваших клиентов — Pecado.ru')
             ->markdown('mail.pickup.offhours-digest', [
                 'sections' => $ordered,
                 'periodLabel' => $this->periodLabel,
                 'onBehalfOf' => $this->onBehalfOf,
+                'department' => $this->department,
                 'notPicked' => count($this->sections['not_picked'] ?? []),
             ]);
     }

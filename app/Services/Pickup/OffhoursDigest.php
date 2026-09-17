@@ -47,7 +47,7 @@ class OffhoursDigest
     /**
      * @return list<array{recipient: User, on_behalf_of: ?PersonalManager, sections: array<string, array<int, array<string, mixed>>>, total: int}>
      */
-    public function build(CarbonInterface $now): array
+    public function build(CarbonInterface $now, bool $withUnassigned = false): array
     {
         [$from, $to] = $this->window($now);
         $events = collect();
@@ -97,7 +97,31 @@ class OffhoursDigest
             }
         }
 
-        return $this->group($events, $now);
+        return $this->group($events, $now, $withUnassigned);
+    }
+
+    /**
+     * Сводка по отделу для руководителя отдела продаж (решение заказчика 18.09.2026): те же события по всем
+     * клиентам, включая ничейных, с именем менеджера в строке. Одна на всех получателей.
+     *
+     * @return array{sections: array<string, array<int, array<string, mixed>>>, total: int}
+     */
+    public function department(CarbonInterface $now): array
+    {
+        $sections = [];
+        $total = 0;
+
+        foreach ($this->build($now, withUnassigned: true) as $group) {
+            $who = $group['manager_name'];
+            foreach ($group['sections'] as $section => $rows) {
+                foreach ($rows as $row) {
+                    $sections[$section][] = ['note' => trim($row['note'].' · '.$who, ' ·')] + $row;
+                    $total++;
+                }
+            }
+        }
+
+        return ['sections' => $sections, 'total' => $total];
     }
 
     /**
@@ -124,7 +148,7 @@ class OffhoursDigest
      * @param  Collection<int, array{0: string, 1: Order, 2: string}>  $events
      * @return list<array<string, mixed>>
      */
-    private function group(Collection $events, CarbonInterface $now): array
+    private function group(Collection $events, CarbonInterface $now, bool $withUnassigned = false): array
     {
         $clients = User::query()->whereIn('id', $events->map(fn ($e) => $e[1]->user_id)->filter()->unique())
             ->get(['id', 'name', 'erp_name', 'personal_manager_id'])->keyBy('id');
@@ -135,37 +159,38 @@ class OffhoursDigest
         foreach ($events as [$section, $order, $note]) {
             $client = $clients->get($order->user_id);
             $manager = $client ? $managers->get($client->personal_manager_id) : null;
-            if ($manager === null) {
+            $effective = $manager ? $this->absences->effectiveManager($manager, $now) : null;
+            $recipient = $effective?->user;
+            $reachable = $recipient !== null && filled($recipient->email);
+
+            // Менеджеру письмо шлём только если есть кому; в сводку отдела попадают и ничейные клиенты.
+            if (! $reachable && (! $withUnassigned || $client === null)) {
                 continue;
             }
 
-            $effective = $this->absences->effectiveManager($manager, $now);
-            $recipient = $effective->user;
-            if ($recipient === null || blank($recipient->email)) {
-                continue;
-            }
-
-            $groups[$recipient->id] ??= [
-                'recipient' => $recipient,
-                'on_behalf_of' => $effective->id === $manager->id ? null : $manager,
+            $groupKey = $reachable ? $recipient->id : 0;
+            $groups[$groupKey] ??= [
+                'recipient' => $reachable ? $recipient : null,
+                'manager_name' => $reachable ? (string) $effective->name : 'без менеджера',
+                'on_behalf_of' => $reachable && $effective->id !== $manager->id ? $manager : null,
                 'sections' => [],
                 'total' => 0,
             ];
 
             // Один заказ в одном разделе — одной строкой (ордеров у заказа может быть два).
             $key = $section.':'.$order->id;
-            if (isset($groups[$recipient->id]['seen'][$key])) {
+            if (isset($groups[$groupKey]['seen'][$key])) {
                 continue;
             }
-            $groups[$recipient->id]['seen'][$key] = true;
-            $groups[$recipient->id]['sections'][$section][] = [
+            $groups[$groupKey]['seen'][$key] = true;
+            $groups[$groupKey]['sections'][$section][] = [
                 'order_id' => $order->id,
                 'number' => $order->erp_number ?: $order->number,
                 'client' => $client->erp_name ?: $client->name,
                 'amount' => (float) $order->total_amount,
                 'note' => $note,
             ];
-            $groups[$recipient->id]['total']++;
+            $groups[$groupKey]['total']++;
         }
 
         return array_values(array_map(function (array $group) {

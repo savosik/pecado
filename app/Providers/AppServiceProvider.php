@@ -210,6 +210,11 @@ class AppServiceProvider extends ServiceProvider
             [\App\Listeners\Pickup\NotifyClientAboutPickup::class, 'handedOver'],
         );
 
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\Order\OrderItemsCancelled::class,
+            [\App\Listeners\Pickup\NotifyClientAboutPickup::class, 'shortfall'],
+        );
+
         // pick-06: откат «отгружен» после выдачи и сигнал «ордер собран» — по журналу статусов РО.
         \App\Models\GoodsIssueStatusHistory::observe(\App\Observers\PickupGoodsIssueStatusObserver::class);
         \App\Models\Shipment::observe(\App\Observers\PayrollShipmentObserver::class);

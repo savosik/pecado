@@ -40,7 +40,7 @@ class PickupOffhoursDigest extends Command
         [$from, $to] = $digest->window(now());
         $groups = $digest->build(now());
 
-        if ($groups === []) {
+        if ($groups === [] && $digest->department(now())['total'] === 0) {
             $this->info('Событий за окно нет — писем не будет.');
 
             return self::SUCCESS;
@@ -70,7 +70,28 @@ class PickupOffhoursDigest extends Command
             $sent++;
         }
 
-        $this->info($dryRun ? sprintf('Ушло бы %d писем. (dry-run)', count($groups)) : "Отправлено писем: {$sent}.");
+        // Руководителю отдела продаж — сводка по всему отделу, включая клиентов без менеджера.
+        $department = $digest->department(now());
+        $heads = \Spatie\Permission\Models\Role::query()->where('name', 'sales-head')->exists()
+            ? \App\Models\User::role('sales-head')->whereNotNull('email')->get()
+            : collect();
+        foreach ($heads as $head) {
+            $this->line(sprintf('%s — сводка отдела, событий: %d', $head->email, $department['total']));
+
+            if ($dryRun || $department['total'] === 0 || ! $staff->wants($head, 'staff.pickup_offhours_digest')) {
+                continue;
+            }
+
+            $head->notify(new OffhoursDigestNotification(
+                sections: $department['sections'],
+                total: $department['total'],
+                periodLabel: 'с '.$from->format('d.m H:i').' по '.$to->format('d.m H:i'),
+                department: true,
+            ));
+            $sent++;
+        }
+
+        $this->info($dryRun ? sprintf('Ушло бы %d писем. (dry-run)', count($groups) + $heads->count()) : "Отправлено писем: {$sent}.");
 
         return self::SUCCESS;
     }
