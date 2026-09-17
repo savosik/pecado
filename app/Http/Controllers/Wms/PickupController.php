@@ -32,9 +32,13 @@ class PickupController extends WmsController
         private readonly WarehouseSchedule $schedule,
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request): Response|\Illuminate\Http\RedirectResponse
     {
-        $this->ensureEnabled();
+        // Экран — стартовая страница установленного на телефон приложения склада (manifest-wms.json):
+        // при выключенном рубильнике уводим на рабочий стол, а не показываем 404.
+        if (! config('pickup.wms_enabled')) {
+            return redirect()->route('wms.dashboard');
+        }
 
         return Inertia::render('Wms/Pages/Pickups/Index', $this->payload());
     }

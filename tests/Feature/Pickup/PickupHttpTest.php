@@ -43,7 +43,10 @@ class PickupHttpTest extends TestCase
         $this->actingAs($this->client)->get('/wms/pickups')->assertRedirect(); // не сотрудник склада — в панель не пускает
 
         config(['pickup.wms_enabled' => false]);
-        $this->actingAs($this->staff('storekeeper'))->get('/wms/pickups')->assertNotFound();
+        $keeper = $this->staff('storekeeper');
+        $this->actingAs($keeper)->get('/wms/pickups')->assertRedirect('/wms');
+        $this->actingAs($keeper)->getJson('/wms/pickups/data')->assertNotFound();
+        $this->actingAs($keeper)->get('/wms')->assertOk()->assertInertia(fn (Assert $page) => $page->where('pickups', null));
     }
 
     #[Test]
