@@ -20,7 +20,41 @@ use App\Support\Cabinet\CabinetFinance;
  */
 class ClientOrderPresenter
 {
-    public function __construct(private readonly CabinetAmountConverter $amounts) {}
+    /** @var array<int, array<string, mixed>> Стадии исполнения, посчитанные пакетом для текущего списка. */
+    private array $fulfilment = [];
+
+    public function __construct(
+        private readonly CabinetAmountConverter $amounts,
+        private readonly \App\Services\Pickup\OrderFulfilmentResolver $fulfilmentResolver,
+    ) {}
+
+    /**
+     * Посчитать стадии исполнения (pick-03) сразу для всего списка — тремя запросами, без N+1.
+     * Вызывается перед отрисовкой строк; карточка одного заказа считается лениво.
+     *
+     * @param  iterable<Order>  $orders
+     */
+    public function primeFulfilment(iterable $orders): void
+    {
+        if (config('pickup.enabled')) {
+            $this->fulfilment = $this->fulfilmentResolver->forOrders($orders) + $this->fulfilment;
+        }
+    }
+
+    /**
+     * Стадия исполнения глазами клиента: резерв → на складе → собирается → собран → выдан.
+     * null при выключенном рубильнике `pickup.enabled` — фронт и агент живут по статусу 1С.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function fulfilment(Order $order): ?array
+    {
+        if (! config('pickup.enabled')) {
+            return null;
+        }
+
+        return $this->fulfilment[$order->id] ??= $this->fulfilmentResolver->forOrder($order);
+    }
 
     /**
      * Связи для кабинетной карточки заказа.
@@ -77,6 +111,8 @@ class ClientOrderPresenter
             'uuid' => $order->uuid,
             'status' => $order->status?->value,
             'status_label' => $this->statusLabel($order->status),
+            // pick-03: стадия исполнения поверх статуса 1С (null, пока рубильник pickup.enabled выключен)
+            'fulfilment' => $this->fulfilment($order),
             'type' => $order->type?->value,
             'delivery_method' => $order->delivery_method?->value ?? 'delivery',
             'delivery_method_label' => $order->delivery_method?->label() ?? 'Доставка',
@@ -118,6 +154,8 @@ class ClientOrderPresenter
             'uuid' => $order->uuid,
             'status' => $order->status?->value,
             'status_label' => $this->statusLabel($order->status),
+            // pick-03: стадия исполнения поверх статуса 1С (null, пока рубильник pickup.enabled выключен)
+            'fulfilment' => $this->fulfilment($order),
             // v16.9.0 (res-04): кнопка «Отменить заказ» — за глобальным рубильником
             // и только пока 1С не начала сборку (или заказ в окне резерва)
             'can_cancel' => $this->canCancel($order),
@@ -234,6 +272,8 @@ class ClientOrderPresenter
             'type_label' => $order->type?->label(),
             'status' => $order->status?->value,
             'status_label' => $this->statusLabel($order->status),
+            // pick-03: стадия исполнения поверх статуса 1С (null, пока рубильник pickup.enabled выключен)
+            'fulfilment' => $this->fulfilment($order),
             'delivery_method' => $order->delivery_method?->value ?? 'delivery',
             'delivery_method_label' => $order->delivery_method?->label() ?? 'Доставка',
             'currency_code' => $order->currency_code ?? 'RUB',

@@ -1721,6 +1721,13 @@ function OrderSummaryTicket({
                                                     <Text fontSize="xs" fontWeight="400" color="fg.muted">
                                                         Заказ направляется на склад для сборки. Внести изменения или отменить не получится.
                                                     </Text>
+                                                    {/* pick-04: обещание времени сборки по графику склада (отсечка 20:00) */}
+                                                    {pageConfig?.pickup_promise && (
+                                                        <Text fontSize="xs" fontWeight="600" color={pageConfig.pickup_promise.same_day ? 'green.fg' : 'orange.fg'}>
+                                                            {pageConfig.pickup_promise.text}
+                                                            {data.delivery_method === 'pickup' && pageConfig.pickup_promise.deadline_text ? `, ${pageConfig.pickup_promise.deadline_text}` : ''}
+                                                        </Text>
+                                                    )}
                                                 </VStack>
                                             </Radio>
                                         </Box>

@@ -196,6 +196,8 @@ class OrderOperations implements OperationProvider
             ->builder($actor, $filters, preorders: null)
             ->cursorPaginate(Envelope::perPage($input->get('per_page')), ['*'], 'cursor', $input->string('cursor'));
 
+        $this->presenter->primeFulfilment($paginator->items());
+
         return Envelope::cursor($paginator, fn (Order $order) => $this->presenter->row($order));
     }
 

@@ -16,6 +16,7 @@ import {
     LuSend, LuPencil, LuUndo2,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
+import FulfilmentPanel, { FulfilmentBadge } from '@/components/cabinet/FulfilmentPanel';
 import { TaxSurveyInvite } from '../../TaxSurvey/TaxSurvey';
 import ReserveCountdown from '@/components/cabinet/ReserveCountdown';
 import { NumberInputRoot, NumberInputField } from '@/components/ui/number-input';
@@ -278,7 +279,7 @@ export default function OrderShow({ order }) {
                 onClose={() => setConfirmReserveOpen(false)}
                 onConfirm={doConfirmReserve}
                 title="Отправить в отгрузку?"
-                description={`Заказ ${order.number} уйдёт в сборку и отгрузку — изменить или отменить его после подтверждения будет нельзя.`}
+                description={`Заказ ${order.number} уйдёт в сборку и отгрузку — изменить или отменить его после подтверждения будет нельзя.${config?.pickup_promise ? ` ${config.pickup_promise.text}${order.delivery_method === 'pickup' && config.pickup_promise.deadline_text ? `, ${config.pickup_promise.deadline_text}` : ''}.` : ''}`}
                 confirmLabel="В отгрузку"
                 cancelLabel="Ещё подумаю"
                 colorPalette="green"
@@ -286,6 +287,9 @@ export default function OrderShow({ order }) {
             />
 
             <Stack gap="5">
+                {/* ═══ Сборка и выдача (эпик pick-00): шкала, обещанное время, пропуск курьеру ═══ */}
+                {!order.reserve && <FulfilmentPanel fulfilment={order.fulfilment} />}
+
                 {/* ═══ Плашка резерва: таймер + подтверждение (v16.9.0, res-07) ═══ */}
                 {order.reserve && (
                     <Card.Root borderColor="purple.300" borderWidth="1px" bg="purple.50" _dark={{ bg: 'purple.900/20', borderColor: 'purple.700' }}>
@@ -479,6 +483,10 @@ export default function OrderShow({ order }) {
                         <Badge colorPalette="purple" variant="solid" fontSize="sm" px="3" py="1" borderRadius="full">
                             В резерве
                         </Badge>
+                    ) : order.fulfilment && order.fulfilment.stage !== 'none' ? (
+                        // pick-05: тот же приём для сборки — «Собирается / Собран, ждёт выдачи / Выдан»
+                        // понятнее клиенту, чем статус 1С, который для самовывоза от них не зависит.
+                        <FulfilmentBadge fulfilment={order.fulfilment} size="sm" />
                     ) : (
                         <Badge
                             colorPalette={STATUS_COLORS[order.status] ?? 'gray'}

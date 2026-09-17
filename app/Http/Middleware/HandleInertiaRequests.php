@@ -199,7 +199,7 @@ class HandleInertiaRequests extends Middleware
      * Счётчик считается только на страницах кабинета — там он и показывается; при выключенном
      * рубильнике и для гостя — без запросов к БД.
      *
-     * @return array{pickup_enabled: bool, pickup_ready_count: int}
+     * @return array{pickup_enabled: bool, pickup_ready_count: int, pickup_promise: ?array<string, mixed>}
      */
     private function pickupProps(\Illuminate\Http\Request $request): array
     {
@@ -211,6 +211,11 @@ class HandleInertiaRequests extends Middleware
             'pickup_ready_count' => $enabled && str_starts_with($request->path(), 'cabinet')
                 ? app(\App\Services\Pickup\OrderFulfilmentResolver::class)->readyForUser($user)->count()
                 : 0,
+            // pick-04: честное обещание «когда соберём» с учётом графика и отсечки 20:00 — клиент видит его
+            // ДО кнопки «В отгрузку». Считает сервер: фронт время сам не вычисляет.
+            'pickup_promise' => $enabled && ($request->is('cabinet*') || $request->is('checkout*'))
+                ? app(\App\Services\Warehouse\WarehouseSchedule::class)->describe(now())
+                : null,
         ];
     }
 }

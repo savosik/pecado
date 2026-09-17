@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import {
     Box, Flex, Text, Button, Card, HStack, VStack, SimpleGrid, Badge,
 } from '@chakra-ui/react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { LuClock3, LuEye, LuSend, LuPackage, LuBan } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
@@ -19,6 +19,8 @@ import { toastSuccess, toastError } from '@/utils/toast';
  * с телефона решает судьбу резерва.
  */
 export default function ReservesIndex({ reserves }) {
+    // pick-04: обещание «когда соберём» по графику склада — показываем до подтверждения
+    const promise = usePage().props.config?.pickup_promise;
     const [confirmTarget, setConfirmTarget] = useState(null);
     const [confirming, setConfirming] = useState(false);
 
@@ -66,7 +68,7 @@ export default function ReservesIndex({ reserves }) {
                 onConfirm={doConfirm}
                 title="Отправить в отгрузку?"
                 description={confirmTarget
-                    ? `Заказ ${confirmTarget.number} уйдёт в сборку и отгрузку — изменить или отменить его после подтверждения будет нельзя.`
+                    ? `Заказ ${confirmTarget.number} уйдёт в сборку и отгрузку — изменить или отменить его после подтверждения будет нельзя.${promise ? ` ${promise.text}.` : ''}`
                     : ''}
                 confirmLabel="В отгрузку"
                 cancelLabel="Ещё подумаю"

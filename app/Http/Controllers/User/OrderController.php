@@ -67,6 +67,8 @@ class OrderController extends Controller
         $compositionByOrder = $this->changeAggregator->groupedByOrder($orders->getCollection());
 
         // Трансформация данных
+        $this->presenter->primeFulfilment($orders->getCollection());
+
         $orders->getCollection()->transform(function ($order) use ($currency, $search, $compositionByOrder) {
             $match = MatchSourceResolver::resolve(
                 $order,
