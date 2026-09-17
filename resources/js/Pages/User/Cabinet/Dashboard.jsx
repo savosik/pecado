@@ -6,7 +6,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import CabinetLayout from './CabinetLayout';
-import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuPhone, LuMail, LuUserRound, LuInfo, LuBuilding2, LuReceipt, LuHourglass } from 'react-icons/lu';
+import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuPhone, LuMail, LuUserRound, LuInfo, LuBuilding2, LuReceipt, LuHourglass, LuPackageCheck } from 'react-icons/lu';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import PaymentOrderDialog from '@/shared/PaymentOrderDialog';
@@ -54,7 +54,9 @@ export default function Dashboard({ ordersCount = 0, preordersCount = 0, favorit
     // подпись («К оплате» / «Аванс»), а минус клиент читает как ошибку сайта.
     const money = (value) => Math.abs(parseFloat(value || 0)).toLocaleString('ru-RU', { minimumFractionDigits: 2 });
 
-    const { auth } = usePage().props;
+    const { auth, config } = usePage().props;
+    // pick-05: собранные заказы самовывоза — главный повод зайти в кабинет вечером
+    const pickupReady = Number(config?.pickup_ready_count || 0);
     const user = auth?.user;
     const name = user?.name || user?.name || 'Пользователь';
 
@@ -105,6 +107,25 @@ export default function Dashboard({ ordersCount = 0, preordersCount = 0, favorit
     return (
         <CabinetLayout title="Дашборд">
             <Head title="Личный кабинет — Pecado" />
+
+            {pickupReady > 0 && (
+                <Link href="/cabinet/pickup">
+                    <Card.Root mb="4" borderRadius="xl" borderWidth="1px" borderColor="green.300" bg="green.50" _dark={{ bg: 'green.900/20', borderColor: 'green.700' }}>
+                        <Card.Body py="4">
+                            <Flex align="center" justify="space-between" gap="3" wrap="wrap">
+                                <Flex align="center" gap="3">
+                                    <Box color="green.600"><LuPackageCheck size={24} /></Box>
+                                    <Box>
+                                        <Text fontWeight="700">Готово к выдаче: {pickupReady}</Text>
+                                        <Text fontSize="sm" color="fg.muted">Заказы собраны и ждут курьера. Выпустите пропуск и перешлите его курьеру.</Text>
+                                    </Box>
+                                </Flex>
+                                <Text fontWeight="600" color="green.fg">Открыть «Самовывоз» →</Text>
+                            </Flex>
+                        </Card.Body>
+                    </Card.Root>
+                </Link>
+            )}
 
             {/* Welcome Card */}
             <Card.Root bg="bg" mb="6" borderRadius="xl" overflow="hidden" border="1px solid" borderColor="border.muted">
