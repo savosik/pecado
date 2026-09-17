@@ -56,7 +56,8 @@ export default function IssueCard({ row, canIssue, onIssue, busy = false, extra 
                     <VStack align="stretch" gap="2" p="3" bg="bg.muted" borderRadius="md">
                         <Text fontSize="sm">
                             Без пропуска сначала убедитесь, что курьер от этого клиента
-                            {row.client_phone ? `: позвоните ${row.client_phone}` : ''}.
+                            {row.client_phone ? ` (телефон клиента ${row.client_phone})` : ''} — любым способом.
+                            Затем попросите курьера <b>расписаться в расходном листе</b>.
                         </Text>
                         <Input size="lg" placeholder="Имя курьера" value={recipient} onChange={(e) => setRecipient(e.target.value)} />
                         <Textarea rows={2} placeholder="Комментарий (необязательно)" value={comment} onChange={(e) => setComment(e.target.value)} />

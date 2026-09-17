@@ -26,7 +26,7 @@ export default function PassView({ pass, via, verified, canIssue, busyId, onIssu
                     <Text fontSize="sm" color="fg.muted">Пропуск {pass.code}</Text>
                     <Text fontSize="xl" fontWeight="700">{pass.client}</Text>
                     {pass.is_usable
-                        ? <Text>Отдать: {toIssue.length} компл. · {placesText(pass.packages_to_issue)}</Text>
+                        ? <Text>Отдать: {toIssue.length} компл. · {placesText(pass.packages_to_issue)}. Подпись не нужна — пропуск и есть подтверждение.</Text>
                         : <Text fontWeight="600">Не выдавать. Попросите магазин прислать курьеру новый пропуск.</Text>}
                     {pass.note && <Text fontSize="sm">Комментарий клиента: {pass.note}</Text>}
                 </Card.Body>
