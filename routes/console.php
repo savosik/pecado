@@ -73,7 +73,8 @@ Schedule::command('contacts:birthday-tasks')->dailyAt('06:20')->withoutOverlappi
 // ответ устаревает за 90 дней, ежедневный прогон только дёргал бы менеджера.
 Schedule::command('crm:tax-regime-tasks')->mondays()->at('06:25')->withoutOverlapping();
 Schedule::command('crm:tasks-remind')->dailyAt('08:30')->withoutOverlapping(); // напоминания о завтрашних дедлайнах и о просрочке за сутки (за флагом MAIL_FEATURE_CRM_TASKS)
-Schedule::command('shortages:daily-notice')->weekdays()->at('17:00')->withoutOverlapping(); // вечерняя сводка неразнесённых недоборов менеджеру (за флагом MAIL_FEATURE_SHORTAGE_NOTICE); в выходные склад не собирает
+Schedule::command('shortages:daily-notice')->weekdays()->at('17:00')->withoutOverlapping(); // вечерняя сводка неразнесённых недоборов менеджеру (за флагом MAIL_FEATURE_SHORTAGE_NOTICE); склад собирает до 21:00 и в субботу — окно сводки тянется от прошлой рассылки
+Schedule::command('pickup:offhours-digest')->weekdays()->at('09:00')->withoutOverlapping(); // pick-13: утром менеджеру — что произошло по его клиентам вечером и в субботу (самовывоз, резервы); за рубильником PICKUP_ENABLED
 Schedule::command('crm:tasks-push')->everyTenMinutes()->withoutOverlapping(); // push-напоминания подписанным браузерам (за флагом CRM_PUSH_ENABLED; без VAPID молчит)
 Schedule::command('crm:tasks-weekly-report')->fridays()->at('17:00')->withoutOverlapping(); // недельный отчёт по задачам менеджерам и РОПу (за флагом MAIL_FEATURE_CRM_TASKS)
 Schedule::command('crm:leads-remind-stale')->dailyAt('05:50')->withoutOverlapping(); // задачи по залежавшимся лидам; до материализации повторов и утренних напоминаний
