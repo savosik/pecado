@@ -12,7 +12,7 @@ import {
     LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin, LuContact,
     LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuReceipt, LuLayoutGrid, LuWrench, LuCode,
     LuChartPie, LuMessageSquare, LuArrowRightLeft, LuFileText, LuBell, LuFilePen, LuClock3,
-    LuHourglass, LuBanknote, LuBot, LuArchive, LuPackageCheck,
+    LuHourglass, LuBanknote, LuBot, LuArchive, LuPackageCheck, LuBookOpen,
 } from 'react-icons/lu';
 
 // Меню кабинета группируется по сущностям, а не по стадиям заказа: стадия —
@@ -100,6 +100,8 @@ const menuGroups = [
         title: 'Поддержка',
         items: [
             { href: '/cabinet/questions', label: 'Мои вопросы', icon: LuMessageSquare },
+            // Инструкции из админки: текст, PDF или видео для клиентов.
+            { href: '/cabinet/instructions', label: 'Инструкции', icon: LuBookOpen },
         ],
     },
     {

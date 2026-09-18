@@ -8,6 +8,7 @@ use App\Http\Controllers\Wms\DeliveryCandidateController;
 use App\Http\Controllers\Wms\DeliveryController;
 use App\Http\Controllers\Wms\DeliverySettingsController;
 use App\Http\Controllers\Wms\GoodsIssueController;
+use App\Http\Controllers\Wms\InstructionController;
 use App\Http\Controllers\Wms\PickupController;
 use App\Http\Controllers\Wms\StockBufferController;
 use Illuminate\Support\Facades\Route;
@@ -189,4 +190,10 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
         Route::delete('/defect-types/{defectType}', [DefectTypeController::class, 'destroy'])
             ->name('defect-types.destroy')->middleware('permission:wms-defect-types.delete');
     });
+
+    // Инструкции для склада. Без отдельного права: читает каждый, кто попал в WMS.
+    Route::get('/instructions', [InstructionController::class, 'index'])->name('instructions.index');
+    Route::get('/instructions/{instruction}', [InstructionController::class, 'show'])
+        ->name('instructions.show')
+        ->whereNumber('instruction');
 });

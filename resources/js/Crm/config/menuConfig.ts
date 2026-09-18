@@ -44,6 +44,7 @@ import {
     LuStar,
     LuSlidersHorizontal,
     LuCoins,
+    LuBookOpen,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -242,6 +243,15 @@ export const menuConfig: MenuGroup[] = [
             // Отсутствия видит весь отдел: кто кого замещает — рабочая информация.
             { label: "Отсутствия", icon: LuCalendarOff, path: "/crm/absences", permission: "crm-absences.view" },
             { label: "Табель", icon: LuCalendarCheck, path: "/crm/timesheet", permission: "crm-timesheet.view" },
+        ],
+    },
+    {
+        // Инструкции для отдела: текст, PDF или видео из админки. Без права —
+        // читает каждый, кто попал в CRM.
+        title: "Справка",
+        icon: LuBookOpen,
+        items: [
+            { label: "Инструкции", icon: LuBookOpen, path: "/crm/instructions" },
         ],
     },
     {
