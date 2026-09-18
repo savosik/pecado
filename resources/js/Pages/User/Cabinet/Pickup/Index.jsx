@@ -99,19 +99,24 @@ export default function PickupIndex({ ready, picking, handed, passes, schedule, 
 
             <Card.Root mb="4" bg="bg.muted">
                 <Card.Body>
-                    <Flex gap="4" wrap="wrap" justify="space-between">
+                    <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
                         <Box>
+                            <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="0.06em">Склад</Text>
                             <Text fontWeight="700">{schedule.address}</Text>
                             <Text fontSize="sm" color="fg.muted">{schedule.how_to_find}</Text>
                         </Box>
-                        <Box textAlign={{ base: 'left', md: 'right' }}>
+                        <Box>
+                            <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="0.06em">Выдача</Text>
                             <Text fontWeight="700">{schedule.week_text}</Text>
                             <Text fontSize="sm" color="fg.muted">
-                                {schedule.is_open ? `Сегодня выдаём до ${schedule.closes_at}` : 'Сейчас склад закрыт'}
-                                {schedule.cutoff_at ? ` · к сборке на сегодня принимаем до ${schedule.cutoff_at}` : ''}
+                                {schedule.is_open
+                                    ? `Сегодня выдаём до ${schedule.closes_at}${schedule.cutoff_at ? `, к сборке на сегодня принимаем до ${schedule.cutoff_at}` : ''}`
+                                    : schedule.opens_at
+                                        ? `Сейчас склад закрыт, откроется в ${schedule.opens_at}`
+                                        : 'Сегодня склад не работает'}
                             </Text>
                         </Box>
-                    </Flex>
+                    </SimpleGrid>
                 </Card.Body>
             </Card.Root>
 
