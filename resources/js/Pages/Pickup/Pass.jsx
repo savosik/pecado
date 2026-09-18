@@ -44,7 +44,7 @@ export default function PickupPass({ pass, schedule }) {
                             <Text fontSize="sm" color="fg.muted">Покажите QR-код кладовщику или назовите шесть цифр</Text>
 
                             <Box mt="4" textAlign="left" borderTopWidth="1px" pt="3">
-                                {pass.ready_sets > 0 && <Text fontWeight="700">Забрать: {pass.ready_sets} компл. · {places(pass.ready_packages)}</Text>}
+                                {pass.ready_sets > 0 && <Text fontWeight="700">Забрать: {pass.ready_sets} компл.{pass.ready_packages > 0 ? ` · ${places(pass.ready_packages)}` : ''}</Text>}
                                 {pass.picking_sets > 0 && <Text color="fg.warning">Ещё собирается: {pass.picking_sets} компл. — их выдадут, когда будут готовы</Text>}
                                 {pass.orders.length > 0 && (
                                     <Text fontSize="sm" color="fg.muted" mt="1">Заказы: {pass.orders.map((order) => order.number).join(', ')}</Text>

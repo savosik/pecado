@@ -31,7 +31,14 @@ class PickupPassService
      */
     public function issueAll(User $user, array $details = [], string $source = 'cabinet'): array
     {
-        if ($this->resolver->readyForUser($user)->isEmpty()) {
+        // Один комплект — один пропуск: второй пропуск «на всё» пересекался бы с первым целиком.
+        $existing = $this->activeAllPass($user);
+        if ($existing !== null) {
+            throw PickupPassException::allPassExists($existing->code_display);
+        }
+
+        $covered = $this->coveredBySelected($user);
+        if ($this->resolver->readyForUser($user)->reject(fn (GoodsIssue $gi) => $covered->has($gi->id))->isEmpty()) {
             throw PickupPassException::nothingReady();
         }
 
@@ -51,9 +58,16 @@ class PickupPassService
         }
 
         // Принадлежность проверяется через заказы клиента, а не через шапку ордера.
-        $ready = $this->resolver->readyForUser($user)->pluck('id');
-        if ($ids->diff($ready)->isNotEmpty()) {
+        $ready = $this->resolver->readyForUser($user)->keyBy('id');
+        if ($ids->diff($ready->keys())->isNotEmpty()) {
             throw PickupPassException::notYours();
+        }
+
+        // Комплект, уже отданный другому пропуску «на выбранное», второму курьеру не достаётся.
+        $covered = $this->coveredBySelected($user);
+        $taken = $ids->filter(fn (int $id) => $covered->has($id));
+        if ($taken->isNotEmpty()) {
+            throw PickupPassException::overlap($taken->map(fn (int $id) => $this->issueLabel($ready->get($id)))->all());
         }
 
         return $this->create($user, PickupPass::SCOPE_SELECTED, $ids->all(), $details, $source);
@@ -106,8 +120,10 @@ class PickupPassService
     public function contents(PickupPass $pass): Collection
     {
         $user = $pass->user;
+        // «На всё готовое» — всё, что не отдано другим пропускам на выбранные заказы: без пересечений.
+        $covered = $pass->scope === PickupPass::SCOPE_ALL ? $this->coveredBySelected($user, exceptPassId: $pass->id) : collect();
         $issues = $pass->scope === PickupPass::SCOPE_ALL
-            ? $this->resolver->readyForUser($user)
+            ? $this->resolver->readyForUser($user)->reject(fn (GoodsIssue $gi) => $covered->has($gi->id))->values()
             : $this->selectedIssues($pass, $user);
 
         return $issues->map(function (GoodsIssue $gi) {
@@ -151,6 +167,40 @@ class PickupPassService
         if ($left === 0) {
             $pass->update(['status' => PickupPass::STATUS_USED, 'used_at' => now()]);
         }
+    }
+
+    /** Действующий пропуск клиента «на всё готовое», если есть. */
+    public function activeAllPass(User $user): ?PickupPass
+    {
+        return PickupPass::query()->where('user_id', $user->id)->usable()->where('scope', PickupPass::SCOPE_ALL)->latest()->first();
+    }
+
+    /**
+     * Комплекты, занятые действующими пропусками «на выбранное»: goods_issue_id → пропуск.
+     *
+     * @return Collection<int, PickupPass>
+     */
+    public function coveredBySelected(User $user, ?int $exceptPassId = null): Collection
+    {
+        $passes = PickupPass::query()->where('user_id', $user->id)->usable()->where('scope', PickupPass::SCOPE_SELECTED)
+            ->when($exceptPassId, fn ($q) => $q->where('id', '!=', $exceptPassId))
+            ->with('items')->get();
+
+        $map = collect();
+        foreach ($passes as $pass) {
+            foreach ($pass->items as $item) {
+                $map->put($item->goods_issue_id, $pass);
+            }
+        }
+
+        return $map;
+    }
+
+    private function issueLabel(GoodsIssue $gi): string
+    {
+        $numbers = collect($gi->getRelation('pickupOrders'))->map(fn ($o) => $o->erp_number ?: $o->number);
+
+        return $numbers->isNotEmpty() ? $numbers->join(', ') : 'ордер '.$gi->number;
     }
 
     /** @return Collection<int, GoodsIssue> */

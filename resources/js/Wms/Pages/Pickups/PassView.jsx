@@ -26,7 +26,7 @@ export default function PassView({ pass, via, verified, canIssue, busyId, onIssu
                     <Text fontSize="sm" color="fg.muted">Пропуск {pass.code}</Text>
                     <Text fontSize="xl" fontWeight="700">{pass.client}</Text>
                     {pass.is_usable
-                        ? <Text>Отдать: {toIssue.length} компл. · {placesText(pass.packages_to_issue)}. Подпись не нужна — пропуск и есть подтверждение.</Text>
+                        ? <Text>Отдать: {toIssue.length} компл.{pass.packages_to_issue > 0 ? ` · ${placesText(pass.packages_to_issue)}` : ''}. Подпись не нужна — пропуск и есть подтверждение.</Text>
                         : <Text fontWeight="600">Не выдавать. Попросите магазин прислать курьеру новый пропуск.</Text>}
                     {pass.note && <Text fontSize="sm">Комментарий клиента: {pass.note}</Text>}
                 </Card.Body>
@@ -61,7 +61,7 @@ export default function PassView({ pass, via, verified, canIssue, busyId, onIssu
                         <Button size="lg" variant="outline" onClick={onScanBox}><LuScanBarcode /> Лист</Button>
                         <Button flex="1" size="lg" colorPalette="green" loading={busyId === 'all'}
                             onClick={() => onIssueAll({ recipient_name: recipient, via, verified })}>
-                            Выдать всё · {placesText(pass.packages_to_issue)}
+                            Выдать всё{pass.packages_to_issue > 0 ? ` · ${placesText(pass.packages_to_issue)}` : ` · ${toIssue.length} компл.`}
                         </Button>
                     </HStack>
                 </VStack>

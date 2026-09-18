@@ -125,12 +125,20 @@ class PickupHttpTest extends TestCase
 
         $this->actingAs($this->client)->get('/cabinet/pickup')->assertOk()
             ->assertInertia(fn (Assert $page) => $page->component('User/Cabinet/Pickup/Index')
-                ->has('ready', 1)->where('ready.0.id', $ready->id)->has('picking', 1)->has('passes', 0));
+                ->has('ready', 1)->where('ready.0.id', $ready->id)->where('ready.0.pass_code', null)->has('picking', 1)->has('passes', 0)->where('hasAllPass', false));
 
         $this->actingAs($this->client)->postJson('/cabinet/pickup/passes', ['scope' => 'selected', 'goods_issue_ids' => [$foreign->id]])
             ->assertStatus(422)->assertJsonPath('reason', 'not_available');
 
         $response = $this->actingAs($this->client)->postJson('/cabinet/pickup/passes', ['scope' => 'all', 'courier_name' => 'Олег'])->assertOk();
+        $this->assertCount(1, $response->json('pass.orders'));
+
+        // В кабинете видно, каким пропуском покрыт комплект, а второй «на всё» не выпустить.
+        $this->actingAs($this->client)->get('/cabinet/pickup')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('ready.0.pass_scope', 'all')->where('hasAllPass', true)
+                ->where('passes.0.orders', fn ($orders) => count($orders) === 1));
+        $this->actingAs($this->client)->postJson('/cabinet/pickup/passes', ['scope' => 'all'])
+            ->assertStatus(422)->assertJsonPath('reason', 'all_pass_exists');
         $this->assertStringStartsWith('data:image/svg+xml;base64,', $response->json('pass.qr'));
         $this->assertStringContainsString('/p/', $response->json('pass.url'));
 

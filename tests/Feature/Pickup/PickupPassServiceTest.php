@@ -98,6 +98,54 @@ class PickupPassServiceTest extends TestCase
     }
 
     #[Test]
+    public function one_set_belongs_to_one_pass_only(): void
+    {
+        $a = $this->goodsIssueFor($this->pickupOrder($this->client, ['erp_number' => '29УТ-040001']));
+        $b = $this->goodsIssueFor($this->pickupOrder($this->client, ['erp_number' => '29УТ-040002']));
+        [$passA] = $this->passes->issueSelected($this->client, [$a->id]);
+
+        // Второй пропуск на тот же комплект — отказ с номером заказа.
+        try {
+            $this->passes->issueSelected($this->client, [$a->id, $b->id]);
+            $this->fail('пересечение пропусков должно быть запрещено');
+        } catch (PickupPassException $e) {
+            $this->assertSame('already_in_pass', $e->reason);
+            $this->assertStringContainsString('29УТ-040001', $e->getMessage());
+        }
+
+        // «На всё готовое» — только то, что не отдано другим: комплект A в него не входит.
+        [$all] = $this->passes->issueAll($this->client);
+        $this->assertSame([$b->id], $this->passes->contents($all)->pluck('goods_issue_id')->all());
+        $this->assertSame([$a->id], $this->passes->contents($passA)->pluck('goods_issue_id')->all());
+
+        // Второй пропуск «на всё» — отказ; после отзыва первого — можно.
+        try {
+            $this->passes->issueAll($this->client);
+            $this->fail();
+        } catch (PickupPassException $e) {
+            $this->assertSame('all_pass_exists', $e->reason);
+        }
+        $this->passes->revoke($all);
+        $this->passes->issueAll($this->client);
+        $this->addToAssertionCount(1);
+
+        // Карта покрытия для кабинета: A — у выбранного пропуска, B — нет.
+        $covered = $this->passes->coveredBySelected($this->client);
+        $this->assertSame($passA->id, $covered->get($a->id)?->id);
+        $this->assertNull($covered->get($b->id));
+    }
+
+    #[Test]
+    public function all_pass_is_refused_when_everything_ready_is_already_assigned(): void
+    {
+        $a = $this->goodsIssueFor($this->pickupOrder($this->client));
+        $this->passes->issueSelected($this->client, [$a->id]);
+
+        $this->expectException(PickupPassException::class);
+        $this->passes->issueAll($this->client);
+    }
+
+    #[Test]
     public function selected_pass_shows_why_a_set_cannot_be_issued(): void
     {
         $rolled = $this->goodsIssueFor($this->pickupOrder($this->client));

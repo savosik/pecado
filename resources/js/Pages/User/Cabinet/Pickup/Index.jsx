@@ -29,7 +29,7 @@ const timeText = (iso) => {
  * пропуска с QR-кодом. Сценарий мобильный: клиент выпускает пропуск и тут же пересылает
  * ссылку курьеру в мессенджер.
  */
-export default function PickupIndex({ ready, picking, handed, passes, schedule, multiCompany }) {
+export default function PickupIndex({ ready, picking, handed, passes, schedule, multiCompany, hasAllPass = false }) {
     const [selected, setSelected] = useState([]);
     const [courier, setCourier] = useState('');
     const [busy, setBusy] = useState(false);
@@ -133,7 +133,10 @@ export default function PickupIndex({ ready, picking, handed, passes, schedule, 
                                         <VStack align="flex-start" gap="1" minW="0">
                                             <Text fontSize="2xl" fontWeight="800" letterSpacing="0.12em" fontVariantNumeric="tabular-nums">{pass.code}</Text>
                                             <Text fontSize="sm">
-                                                {pass.scope === 'all' ? 'На всё готовое' : 'На выбранные заказы'} · {pass.to_issue} компл. · {places(pass.packages_to_issue)}
+                                                {pass.scope === 'all' ? 'На всё готовое' : 'На выбранные заказы'} · {pass.to_issue} компл.{pass.packages_to_issue > 0 ? ` · ${places(pass.packages_to_issue)}` : ''}
+                                            </Text>
+                                            <Text fontSize="sm" fontWeight="600" lineClamp="2">
+                                                {pass.orders?.length ? `Заказы: ${pass.orders.join(', ')}` : 'Сейчас по пропуску выдавать нечего'}
                                             </Text>
                                             <Text fontSize="xs" color="fg.muted">Действует {pass.expires_text}{pass.courier_name ? ` · курьер: ${pass.courier_name}` : ''}</Text>
                                         </VStack>
@@ -163,19 +166,25 @@ export default function PickupIndex({ ready, picking, handed, passes, schedule, 
                 <Box mb="6">
                     <VStack align="stretch" gap="2" mb="3">
                         {ready.map((row) => (
-                            <Card.Root key={row.id} size="sm" borderColor={selected.includes(row.id) ? 'green.solid' : undefined}>
+                            <Card.Root key={row.id} size="sm" borderColor={selected.includes(row.id) ? 'green.solid' : undefined} opacity={row.pass_scope === 'selected' ? 0.75 : 1}>
                                 <Card.Body>
                                     <HStack gap="3" align="flex-start">
-                                        <Checkbox mt="1" checked={selected.includes(row.id)} onCheckedChange={() => toggle(row.id)} aria-label="Выбрать для пропуска" />
+                                        {/* Один комплект — один пропуск: занятый другим пропуском выбрать нельзя */}
+                                        <Checkbox mt="1" checked={selected.includes(row.id)} disabled={row.pass_scope === 'selected'} onCheckedChange={() => toggle(row.id)} aria-label="Выбрать для пропуска" />
                                         <Box flex="1" minW="0">
                                             <Text>{orderLinks(row)}</Text>
                                             <Text fontSize="sm" color="fg.muted">
-                                                {places(row.packages_count)} · ждёт с {timeText(row.ready_since).replace('сегодня в ', '')}
+                                                {row.packages_count > 0 ? `${places(row.packages_count)} · ` : ''}ждёт с {timeText(row.ready_since).replace('сегодня в ', '')}
                                                 {multiCompany && row.company ? ` · ${row.company}` : ''}
                                             </Text>
                                             {row.orders.length > 1 && <Text fontSize="xs" color="fg.muted">Собраны вместе — выдаются одним комплектом</Text>}
                                         </Box>
-                                        <Badge colorPalette="green" flexShrink={0}>собран</Badge>
+                                        <VStack gap="1" align="flex-end" flexShrink={0}>
+                                            <Badge colorPalette="green">собран</Badge>
+                                            {row.pass_code
+                                                ? <Badge colorPalette={row.pass_scope === 'selected' ? 'purple' : 'gray'} variant="subtle">пропуск {row.pass_code}</Badge>
+                                                : <Badge colorPalette="orange" variant="subtle">без пропуска</Badge>}
+                                        </VStack>
                                     </HStack>
                                 </Card.Body>
                             </Card.Root>
@@ -183,13 +192,16 @@ export default function PickupIndex({ ready, picking, handed, passes, schedule, 
                     </VStack>
                     <Input mb="2" placeholder="Имя курьера (необязательно)" value={courier} onChange={(e) => setCourier(e.target.value)} maxLength={120} />
                     <Flex gap="2" direction={{ base: 'column', sm: 'row' }}>
-                        <Button colorPalette="green" flex="1" loading={busy} onClick={() => createPass('all')}><LuQrCode size={16} /> Пропуск на всё готовое</Button>
+                        <Button colorPalette="green" flex="1" loading={busy} disabled={hasAllPass} onClick={() => createPass('all')}>
+                            <LuQrCode size={16} /> {hasAllPass ? 'Пропуск на всё готовое уже выпущен' : 'Пропуск на всё готовое'}
+                        </Button>
                         <Button variant="outline" flex="1" loading={busy} disabled={selected.length === 0} onClick={() => createPass('selected')}>
                             Пропуск на выбранное{selected.length > 0 ? ` · ${places(selectedPlaces)}` : ''}
                         </Button>
                     </Flex>
                     <Text mt="2" fontSize="xs" color="fg.muted">
-                        Заказы, не вошедшие в пропуск, останутся на складе и дождутся другого курьера. Курьеру по ссылке видны только адрес, часы и номера заказов.
+                        Один комплект — один пропуск. Пропуск на выбранное закрепляет заказы за своим курьером, пропуск на всё готовое забирает остальное.
+                        Курьеру по ссылке видны только адрес, часы и номера заказов.
                     </Text>
                 </Box>
             )}

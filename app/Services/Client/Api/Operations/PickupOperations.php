@@ -87,7 +87,9 @@ class PickupOperations implements OperationProvider
                 description: '`scope=all` — на всё, что готово на момент приезда курьера (подхватит и дособранное позже); '
                     .'`scope=selected` — только на комплекты из `goods_issue_ids` (id из `pickup.ready`), остальные дождутся '
                     .'другого курьера. В ответе `url` — ссылку нужно переслать курьеру; по ней не видно ни клиента, ни сумм. '
-                    .'Пропуск действует три рабочих дня склада. Если готового нет — 422 nothing_ready.',
+                    .'Пропуск действует три рабочих дня склада. Один комплект — один пропуск: занятый другим пропуском комплект '
+                    .'отклоняется (422 already_in_pass), второй пропуск «на всё» не выпускается (422 all_pass_exists), а `all` '
+                    .'покрывает только комплекты, не отданные пропускам на выбранное. Если готового нет — 422 nothing_ready.',
                 params: [
                     Param::string('scope', 'Охват пропуска', required: true, enum: [PickupPass::SCOPE_ALL, PickupPass::SCOPE_SELECTED]),
                     Param::list('goods_issue_ids', 'Комплекты для scope=selected (id из pickup.ready)', 'integer'),

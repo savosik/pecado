@@ -37,15 +37,24 @@ class PickupController extends Controller
         $issues = $this->resolver->issuesForUser($user);
         $companies = Company::query()->where('user_id', $user->id)->pluck('name', 'id');
 
-        $rows = $issues->map(function (GoodsIssue $gi) use ($companies) {
+        $covered = $this->passes->coveredBySelected($user);
+        $allPass = $this->passes->activeAllPass($user);
+
+        $rows = $issues->map(function (GoodsIssue $gi) use ($companies, $covered, $allPass) {
             $handover = $gi->activeHandover;
             $stage = $this->resolver->issueStage($gi, true, $handover !== null);
             $orders = collect($gi->getRelation('pickupOrders'));
             $promised = $stage === Stage::PICKING ? $this->schedule->promisedReadyAt($gi->created_at) : null;
 
+            // Какой пропуск покрывает комплект: свой «на выбранное» либо общий «на всё готовое».
+            $pass = $covered->get($gi->id) ?? ($stage === Stage::READY ? $allPass : null);
+
             return [
                 'id' => $gi->id,
                 'number' => $gi->number,
+                'pass_id' => $pass?->id,
+                'pass_code' => $pass?->code_display,
+                'pass_scope' => $pass?->scope,
                 'stage' => $stage->value,
                 'stage_label' => $stage->label(),
                 'packages_count' => (int) $gi->packages_count,
@@ -74,6 +83,7 @@ class PickupController extends Controller
                 ->map(fn (PickupPass $pass) => $this->presentPass($pass))->values(),
             'schedule' => $this->schedule->today(now()),
             'multiCompany' => $companies->count() > 1,
+            'hasAllPass' => $allPass !== null,
         ]);
     }
 
@@ -134,6 +144,7 @@ class PickupController extends Controller
             'expires_text' => 'до '.$pass->expires_at->timezone($this->schedule->timezone())->format('d.m H:i'),
             'courier_name' => $pass->courier_name,
             'items' => $items->all(),
+            'orders' => $items->flatMap(fn (array $row) => collect($row['orders'])->pluck('number'))->unique()->values()->all(),
             'to_issue' => $items->where('can_issue', true)->count(),
             'packages_to_issue' => (int) $items->where('can_issue', true)->sum('packages_count'),
         ];
