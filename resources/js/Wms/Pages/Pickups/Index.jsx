@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import { Badge, Box, Card, HStack, Input, Text, Textarea, VStack } from '@chakra-ui/react';
-import { LuScanQrCode, LuSearch, LuX } from 'react-icons/lu';
+import { LuCamera, LuScanQrCode, LuSearch, LuX } from 'react-icons/lu';
 import WmsLayout from '@/Wms/Layouts/WmsLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,6 @@ export default function PickupsIndex() {
     const [resolving, setResolving] = useState(false);
     const [query, setQuery] = useState('');
     const [found, setFound] = useState(null);
-    const [manual, setManual] = useState('');
     const [reasons, setReasons] = useState({});
 
     const stateRef = useRef({ view, pass });
@@ -56,8 +55,28 @@ export default function PickupsIndex() {
         return () => clearInterval(timer);
     }, [reload]);
 
-    // USB/Bluetooth-сканер печатает в активное поле и жмёт Enter — держим фокус в поле скана.
-    useEffect(() => { if (view === 'scan') scanInputRef.current?.focus(); }, [view]);
+    // Экран работает и на стационарном компьютере с USB/Bluetooth-сканером: он печатает в активное поле
+    // и жмёт Enter. Поэтому поле скана есть на каждом экране и держит фокус — возвращаем его после каждого
+    // скана и действия, если кладовщик не печатает в другом поле (поиск, имя курьера, причина).
+    const [scanValue, setScanValue] = useState('');
+    const focusScanner = useCallback(() => {
+        const active = document.activeElement;
+        const tag = active?.tagName;
+        const busyElsewhere = active && active !== scanInputRef.current && (tag === 'INPUT' || tag === 'TEXTAREA' || active.isContentEditable);
+        if (!busyElsewhere) scanInputRef.current?.focus();
+    }, []);
+    useEffect(() => { focusScanner(); }, [view, pass, focusScanner]);
+    useEffect(() => { if (!resolving && !busyId) focusScanner(); }, [resolving, busyId, focusScanner]);
+
+    const submitScan = () => { const v = scanValue.trim(); setScanValue(''); if (v) handleScan(v); };
+
+    const scannerField = (placeholder) => (
+        <HStack>
+            <Input ref={scanInputRef} size="lg" value={scanValue} placeholder={placeholder} autoComplete="off"
+                onChange={(e) => setScanValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitScan(); } }} />
+            <Button size="lg" variant="outline" loading={resolving} onClick={submitScan}>Найти</Button>
+        </HStack>
+    );
 
     const fail = (message) => { beep('error'); toaster.create({ description: message, type: 'error' }); };
     const done = (message) => { beep('ok'); toaster.create({ description: message, type: 'success' }); };
@@ -97,7 +116,6 @@ export default function PickupsIndex() {
             fail(errorMessage(error, 'Не распознано'));
         } finally {
             setResolving(false);
-            setManual('');
         }
     }, [resolving]);
 
@@ -214,6 +232,7 @@ export default function PickupsIndex() {
             {view === 'pass' && pass && (
                 <PassView pass={pass} via={via} verified={verified} canIssue={canIssue} busyId={busyId}
                     onIssue={issue} onIssueAll={issueAll} onScanBox={() => setView('scan')}
+                    scannerField={scannerField('Штрихкод расходного листа')}
                     onBack={() => { setPass(null); setView('list'); reload(); }} />
             )}
 
@@ -229,13 +248,7 @@ export default function PickupsIndex() {
                     <Text fontSize="sm" color="fg.muted" textAlign="center">
                         {pass ? 'Наведите камеру на штрихкод расходного листа' : 'Наведите камеру на QR-код на телефоне курьера'}
                     </Text>
-                    <HStack>
-                        <Input ref={scanInputRef} size="lg" inputMode={pass ? 'text' : 'numeric'} value={manual}
-                            placeholder={pass ? 'Штрихкод или номер документа' : 'Шесть цифр пропуска'}
-                            onChange={(e) => setManual(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleScan(manual); }} />
-                        <Button size="lg" loading={resolving} onClick={() => handleScan(manual)}>Найти</Button>
-                    </HStack>
+                    {scannerField(pass ? 'Штрихкод или номер документа' : 'Шесть цифр пропуска или скан')}
                 </VStack>
             )}
 
@@ -247,9 +260,13 @@ export default function PickupsIndex() {
                     {/* pick-17: значок на главный экран — Android предложит сам, iPhone получит подсказку */}
                     <PwaInstallBanner />
 
-                    <Button size="xl" colorPalette="green" onClick={() => { setFound(null); setView('scan'); }}>
-                        <LuScanQrCode /> Сканировать пропуск
-                    </Button>
+                    <Box p="3" bg="green.subtle" borderRadius="lg" borderWidth="1px" borderColor="green.muted">
+                        <HStack gap="2" mb="2"><LuScanQrCode /><Text fontWeight="700">Сканируйте пропуск</Text></HStack>
+                        {scannerField('Наведите сканер на QR-код курьера или введите шесть цифр')}
+                        <Button mt="2" size="sm" variant="ghost" onClick={() => { setFound(null); setView('scan'); }}>
+                            <LuCamera /> Нет сканера — снять камерой телефона
+                        </Button>
+                    </Box>
 
                     <HStack>
                         <Input size="lg" placeholder="Клиент, номер заказа или ордера" value={query}

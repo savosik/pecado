@@ -10,7 +10,7 @@ const STATE_COLORS = { ready: 'green', picking: 'orange', handed: 'gray', cancel
  * Экран пропуска (pick-11): кому отдаём и что именно. Отдаём только то, что в пропуске, —
  * остальное заберёт другой курьер по своему пропуску.
  */
-export default function PassView({ pass, via, verified, canIssue, busyId, onIssue, onIssueAll, onScanBox, onBack }) {
+export default function PassView({ pass, via, verified, canIssue, busyId, onIssue, onIssueAll, onScanBox, onBack, scannerField = null }) {
     const [recipient, setRecipient] = useState(pass.courier_name || '');
     const toIssue = pass.items.filter((item) => item.can_issue);
 
@@ -63,6 +63,12 @@ export default function PassView({ pass, via, verified, canIssue, busyId, onIssu
 
             {pass.is_usable && toIssue.length > 0 && canIssue && (
                 <VStack align="stretch" gap="2" position="sticky" bottom="0" bg="bg" py="2">
+                    {scannerField && (
+                        <Box>
+                            <Text fontSize="xs" color="fg.muted" mb="1">Проверка коробки: отсканируйте штрихкод расходного листа</Text>
+                            {scannerField}
+                        </Box>
+                    )}
                     <Input size="lg" placeholder="Имя курьера (необязательно)" value={recipient} onChange={(e) => setRecipient(e.target.value)} />
                     <HStack>
                         <Button size="lg" variant="outline" onClick={onScanBox}><LuScanBarcode /> Лист</Button>
