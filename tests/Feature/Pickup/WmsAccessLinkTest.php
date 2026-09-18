@@ -130,6 +130,29 @@ class WmsAccessLinkTest extends TestCase
     }
 
     #[Test]
+    public function head_sees_load_statistics_and_handover_journal_per_link(): void
+    {
+        [$link, $token] = app(AccessLinkService::class)->create('Стойка А', $this->head);
+        $client = \App\Models\User::factory()->create();
+        \App\Models\Company::factory()->create(['user_id' => $client->id]);
+        $order = \App\Models\Order::factory()->create(['user_id' => $client->id, 'company_id' => $client->companies()->value('id'), 'type' => \App\Enums\OrderType::ORDER, 'status' => \App\Enums\OrderStatus::READY_FOR_SHIPMENT, 'delivery_method' => \App\Enums\DeliveryMethod::PICKUP, 'reserve' => false, 'erp_number' => '29УТ-050001']);
+        $issue = \App\Models\GoodsIssue::factory()->create(['status' => \App\Models\GoodsIssue::STATUS_SHIPPED, 'status_changed_at' => now(), 'packages_count' => 2]);
+        \App\Models\GoodsIssueItem::factory()->create(['goods_issue_id' => $issue->id, 'order_uuid' => $order->uuid, 'order_id' => null]);
+
+        // Кладовщик по ссылке выдал комплект.
+        app(\App\Services\Pickup\HandoverService::class)->issue($issue, $link->user, 'code', null, ['recipient_name' => 'Олег']);
+
+        $this->actingAs($this->head)->get('/wms/access-links')->assertOk()
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->where('links.0.stats.today', 1)->where('links.0.stats.total', 1)->where('links.0.stats.cancelled', 0));
+
+        $this->actingAs($this->head)->getJson("/wms/access-links/{$link->id}/handovers?days=7")->assertOk()
+            ->assertJsonPath('rows.0.orders.0', '29УТ-050001')
+            ->assertJsonPath('rows.0.recipient_name', 'Олег')
+            ->assertJsonPath('rows.0.packages_count', 2);
+    }
+
+    #[Test]
     public function storekeeper_cannot_manage_links(): void
     {
         $keeper = User::factory()->create();

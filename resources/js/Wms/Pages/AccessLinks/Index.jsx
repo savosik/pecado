@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import { Badge, Box, Card, HStack, Image, Input, Text, VStack } from '@chakra-ui/react';
-import { LuCopy, LuLink, LuQrCode, LuRefreshCw, LuShare2 } from 'react-icons/lu';
+import { LuClipboardList, LuCopy, LuLink, LuQrCode, LuRefreshCw, LuShare2 } from 'react-icons/lu';
 import WmsLayout from '@/Wms/Layouts/WmsLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,41 @@ export default function AccessLinksIndex() {
     const [busy, setBusy] = useState(null);
     const [qrFor, setQrFor] = useState(null);
     const [confirm, setConfirm] = useState(null); // { kind: 'regenerate' | 'revoke', link }
+    const [journal, setJournal] = useState({}); // link.id → { rows, days, loading }
+
+    const loadJournal = async (link, days = 30) => {
+        if (journal[link.id] && !journal[link.id].loading && journal[link.id].days === days) { setJournal((j) => ({ ...j, [link.id]: null })); return; }
+        setJournal((j) => ({ ...j, [link.id]: { rows: [], days, loading: true } }));
+        try {
+            const { data } = await window.axios.get(`/wms/access-links/${link.id}/handovers`, { params: { days } });
+            setJournal((j) => ({ ...j, [link.id]: { rows: data.rows, days: data.days, loading: false } }));
+        } catch {
+            toaster.create({ description: 'Журнал не загрузился', type: 'error' });
+            setJournal((j) => ({ ...j, [link.id]: null }));
+        }
+    };
+
+    const timeText = (iso) => {
+        const d = new Date(iso);
+        return `${d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })} ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+    };
+
+    /** Полоски по часам 9–20 за 30 дней: видно, когда стойка работает, а когда простаивает. */
+    const HoursBar = ({ hours }) => {
+        const entries = Object.entries(hours || {});
+        const max = Math.max(1, ...entries.map(([, v]) => v));
+        if (entries.every(([, v]) => v === 0)) return null;
+        return (
+            <HStack gap="0.5" align="flex-end" h="28px" title="Выдачи по часам за 30 дней">
+                {entries.map(([h, v]) => (
+                    <VStack key={h} gap="0" w="14px" align="center">
+                        <Box w="10px" h={`${Math.max(2, Math.round((v / max) * 20))}px`} bg={v > 0 ? 'green.solid' : 'bg.emphasized'} borderRadius="1px" title={`${h}:00 — ${v}`} />
+                        <Text fontSize="8px" color="fg.muted">{h}</Text>
+                    </VStack>
+                ))}
+            </HStack>
+        );
+    };
 
     const post = async (url, payload, key) => {
         setBusy(key);
@@ -109,12 +144,55 @@ export default function AccessLinksIndex() {
                                         delete={{ label: 'Отключить', onClick: () => setConfirm({ kind: 'revoke', link }) }} />
                                 )}
                             </HStack>
+                            {/* Ответственность и загрузка: выдачи с этого телефона */}
+                            <HStack wrap="wrap" gap="4" align="center">
+                                <HStack gap="3" fontSize="sm">
+                                    <Text><b>{link.stats.today}</b> <Text as="span" color="fg.muted">сегодня</Text></Text>
+                                    <Text><b>{link.stats.week}</b> <Text as="span" color="fg.muted">за 7 дн.</Text></Text>
+                                    <Text><b>{link.stats.month}</b> <Text as="span" color="fg.muted">за 30 дн.</Text></Text>
+                                    <Text><b>{link.stats.total}</b> <Text as="span" color="fg.muted">всего</Text></Text>
+                                    {link.stats.cancelled > 0 && <Text color="fg.error">{link.stats.cancelled} отменено</Text>}
+                                    {link.stats.last_at && <Text color="fg.muted">последняя {timeText(link.stats.last_at)}</Text>}
+                                </HStack>
+                                <HoursBar hours={link.stats.hours} />
+                            </HStack>
+
                             {link.is_active && (
                                 <HStack wrap="wrap" gap="2">
                                     <Button colorPalette="green" onClick={() => share(link)}><LuShare2 /> Переслать кладовщику</Button>
                                     <Button variant="outline" onClick={() => navigator.clipboard?.writeText(link.url).then(() => toaster.create({ description: 'Ссылка скопирована', type: 'success' }))}><LuCopy /> Скопировать</Button>
                                     <Button variant="outline" onClick={() => setQrFor(qrFor === link.id ? null : link.id)}><LuQrCode /> QR-код</Button>
+                                    <Button variant="outline" onClick={() => loadJournal(link)} loading={journal[link.id]?.loading}><LuClipboardList /> Журнал выдач</Button>
                                 </HStack>
+                            )}
+                            {!link.is_active && link.stats.total > 0 && (
+                                <Button variant="outline" size="sm" alignSelf="flex-start" onClick={() => loadJournal(link)} loading={journal[link.id]?.loading}><LuClipboardList /> Журнал выдач</Button>
+                            )}
+                            {journal[link.id] && !journal[link.id].loading && (
+                                <Box borderTopWidth="1px" pt="2">
+                                    <HStack justify="space-between" mb="1">
+                                        <Text fontSize="sm" fontWeight="600">Выдачи за {journal[link.id].days} дн.: {journal[link.id].rows.length}</Text>
+                                        <HStack gap="1">
+                                            {[7, 30, 90].map((d) => <Button key={d} size="xs" variant={journal[link.id].days === d ? 'solid' : 'ghost'} onClick={() => loadJournal(link, d)}>{d} дн.</Button>)}
+                                        </HStack>
+                                    </HStack>
+                                    {journal[link.id].rows.length === 0 && <Text fontSize="sm" color="fg.muted">Выдач с этого телефона не было.</Text>}
+                                    <VStack align="stretch" gap="1">
+                                        {journal[link.id].rows.map((h) => (
+                                            <HStack key={h.id} justify="space-between" fontSize="sm" gap="3" opacity={h.is_cancelled ? 0.6 : 1} align="flex-start">
+                                                <Text color="fg.muted" flexShrink={0} w="88px">{timeText(h.issued_at)}</Text>
+                                                <Box flex="1" minW="0">
+                                                    <Text lineClamp="1"><b>{h.client}</b>{h.company && h.company !== h.client ? ` · ${h.company}` : ''}</Text>
+                                                    <Text color="fg.muted" lineClamp="1">
+                                                        {h.orders.join(', ') || `ордер ${h.goods_issue}`}{h.packages_count > 0 ? ` · ${h.packages_count} мест` : ''}
+                                                        {h.recipient_name ? ` · курьер ${h.recipient_name}` : ''} · {h.method_label}{h.pass_code ? ` ${h.pass_code}` : ''}
+                                                        {h.is_cancelled ? ` · отменена (${h.cancelled_by}: ${h.cancel_reason})` : ''}{h.needs_review ? ' · разбор' : ''}
+                                                    </Text>
+                                                </Box>
+                                            </HStack>
+                                        ))}
+                                    </VStack>
+                                </Box>
                             )}
                             {qrFor === link.id && link.qr && (
                                 <VStack gap="1" align="flex-start">

@@ -88,6 +88,7 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
     // Ссылки для кладовщиков (pick-17): вход в кабинет склада без пароля. Только начальник склада.
     Route::middleware('permission:wms-access.view')->prefix('access-links')->name('access-links.')->group(function () {
         Route::get('/', [AccessLinkController::class, 'index'])->name('index');
+        Route::get('/{link}/handovers', [AccessLinkController::class, 'handovers'])->name('handovers');
         Route::middleware('permission:wms-access.edit')->group(function () {
             Route::post('/', [AccessLinkController::class, 'store'])->name('store');
             Route::post('/{link}/regenerate', [AccessLinkController::class, 'regenerate'])->name('regenerate');
