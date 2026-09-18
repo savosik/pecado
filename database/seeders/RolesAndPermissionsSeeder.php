@@ -200,6 +200,8 @@ class RolesAndPermissionsSeeder extends Seeder
         // Выдача заказов самовывоза (эпик pick-00): issue — отметить «выдан», cancel — отменить
         // ошибочную выдачу и закрыть хвост без выдачи (только начальник склада).
         'wms-pickups' => ['view', 'issue', 'cancel'],
+        // Ссылки для входа кладовщиков без пароля (pick-17) — только начальнику склада.
+        'wms-access' => ['view', 'edit'],
 
         // Уценка глазами закупщика — админский ресурс (без `wms-` префикса):
         // цену и публикацию задаёт buyer-manager в /admin, а не кладовщик.
@@ -298,6 +300,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'wms-goods-issues' => 'Склад: Расходные ордера',
         'wms-stock-buffers' => 'Склад: Страховой запас',
         'wms-pickups' => 'Склад: Выдача заказов',
+        'wms-access' => 'Склад: Ссылки для кладовщиков',
         'defects' => 'Уценка (цены и публикация)',
         'defect-types' => 'Справочник дефектов',
         'supplier-preorders' => 'Предзаказы поставщику',
@@ -374,7 +377,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 // Только WMS: в /admin роль намеренно не пускает.
                 // Справочник дефектов ведёт начальник склада — у кладовщика его нет.
                 'wms-dashboard', 'wms-defects', 'wms-defect-types', 'wms-goods-issues',
-                'wms-deliveries', 'wms-delivery-settings', 'wms-stock-buffers', 'wms-pickups',
+                'wms-deliveries', 'wms-delivery-settings', 'wms-stock-buffers', 'wms-pickups', 'wms-access',
             ],
         ],
         'storekeeper' => [

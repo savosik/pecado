@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Wms\AccessLinkController;
 use App\Http\Controllers\Wms\DashboardController;
 use App\Http\Controllers\Wms\DefectController;
 use App\Http\Controllers\Wms\DefectTypeController;
@@ -81,6 +82,16 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
 
         // Ниже export — иначе «export» попал бы в {goodsIssue} как id.
         Route::get('/goods-issues/{goodsIssue}', [GoodsIssueController::class, 'show'])->name('goods-issues.show');
+    });
+
+    // Ссылки для кладовщиков (pick-17): вход в кабинет склада без пароля. Только начальник склада.
+    Route::middleware('permission:wms-access.view')->prefix('access-links')->name('access-links.')->group(function () {
+        Route::get('/', [AccessLinkController::class, 'index'])->name('index');
+        Route::middleware('permission:wms-access.edit')->group(function () {
+            Route::post('/', [AccessLinkController::class, 'store'])->name('store');
+            Route::post('/{link}/regenerate', [AccessLinkController::class, 'regenerate'])->name('regenerate');
+            Route::post('/{link}/revoke', [AccessLinkController::class, 'revoke'])->name('revoke');
+        });
     });
 
     // Выдача заказов самовывоза (эпик pick-00). Документ сайта: в 1С статуса «выдан» нет.

@@ -147,7 +147,7 @@ php artisan pickup:remind-waiting --dry-run    # кандидаты на нап�
 <section>
   <div class="role"><div><div class="who">Роль 3</div><h2>Кладовщик</h2></div></div>
   <div class="meta"><div>Тестировщик:</div><div>Дата:</div><div>Телефон и браузер:</div></div>
-  <p>Только с телефона, стоя у стойки выдачи. Войдите на <span class="key">dev.pecado.ru/wms</span>, меню «Отгрузка» → «Выдача заказов».</p>
+  <p>Только с телефона, стоя у стойки выдачи. Вход — по ссылке от начальника склада (строка Н-08) либо логином на <span class="key">dev.pecado.ru/wms</span>, меню «Отгрузка» → «Выдача заказов».</p>
   <table class="t"><thead><tr><th></th><th>Что сделать</th><th>Что должно получиться</th><th>Итог</th><th>Замечание</th></tr></thead>
     <tr><td class="id">С-01 <span class="crit">★</span></td><td>Открыть «Выдачу заказов»</td><td>Сверху часы склада, зелёная кнопка «Сканировать пропуск», поиск, вкладки «Ждут», «Собираются», «Выдано», «Зависшие» с цифрами</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
     <tr><td class="id">С-02</td><td>Добавить сайт на главный экран телефона и открыть значком</td><td>Значок «Склад Pecado», открывается сразу на «Выдаче заказов», без адресной строки</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
@@ -182,6 +182,9 @@ php artisan pickup:remind-waiting --dry-run    # кандидаты на нап�
     <tr><td class="id">Н-04</td><td>Вкладка «Зависшие»: «Уже забрали раньше — закрыть без выдачи»</td><td>Заказ ушёл из списка, во «Выдано» способ «Закрыто без выдачи». Клиенту письмо «выдан» не уходит</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
     <tr><td class="id">Н-05 <span class="crit">★</span></td><td>Ведущий откатывает в сборку уже <span class="key">выданный</span> ордер</td><td>Появилась вкладка «Разбор» с этой выдачей и пояснением, в какой статус ушёл ордер. Выдача не пропала. Вписать итог, «Разобрано» — вкладка исчезла</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
     <tr><td class="id">Н-06</td><td>Админка → роли → «Кладовщик» и «Начальник склада»</td><td>В группе «Склад (WMS)» есть «Склад: Выдача заказов» с действиями «Просмотр», «Выдача», «Отмена заявки». У кладовщика отмена выключена</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Н-08 <span class="crit">★</span></td><td>Меню «Сотрудники» → «Ссылки для кладовщиков»: выпустить ссылку «Стойка выдачи», переслать её на телефон кладовщика</td><td>Кладовщик открыл ссылку — без логина и пароля попал на «Выдачу заказов», сверху предложение добавить на главный экран</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Н-09</td><td>«Перевыпустить» ту же ссылку</td><td>Телефон кладовщика при следующем нажатии выходит на страницу входа с подсказкой «попросите новую»; старая ссылка не входит; новая — входит</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Н-10</td><td>Показать QR-код ссылки, кладовщик наводит камеру</td><td>Вход по QR так же, как по ссылке; во «Выдано» выдача записана на учётную запись этой ссылки</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
     <tr><td class="id">Н-07</td><td>Открыть глазом расходный ордер из карточки выдачи</td><td>Открылась карточка ордера в журнале расходных ордеров</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
   </table>
 
@@ -232,7 +235,7 @@ php artisan pickup:remind-waiting --dry-run    # кандидаты на нап�
     <tr><td class="key">1. Клиент</td><td>20</td><td>9</td><td></td><td></td><td></td></tr>
     <tr><td class="key">2. Курьер</td><td>10</td><td>3</td><td></td><td></td><td></td></tr>
     <tr><td class="key">3. Кладовщик</td><td>20</td><td>8</td><td></td><td></td><td></td></tr>
-    <tr><td class="key">4. Начальник склада</td><td>7</td><td>2</td><td></td><td></td><td></td></tr>
+    <tr><td class="key">4. Начальник склада</td><td>10</td><td>3</td><td></td><td></td><td></td></tr>
     <tr><td class="key">5. Менеджер</td><td>7</td><td>3</td><td></td><td></td><td></td></tr>
     <tr><td class="key">6. Руководитель ОП</td><td>6</td><td>2</td><td></td><td></td><td></td></tr>
     <tr><td class="key">7. Интегратор</td><td>9</td><td>3</td><td></td><td></td><td></td></tr>

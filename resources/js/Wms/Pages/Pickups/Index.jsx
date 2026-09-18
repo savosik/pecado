@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { toaster } from '@/components/ui/toaster';
 import { usePermission } from '@/shared/Panel/usePermission';
 import BarcodeCameraView from '@/components/common/BarcodeCameraView';
+import PwaInstallBanner from '@/components/PwaInstallBanner';
 import IssueCard from './IssueCard';
 import PassView from './PassView';
 import { beep, errorMessage, placesText, timeText } from './pickupUtils';
@@ -242,6 +243,9 @@ export default function PickupsIndex() {
                 <VStack align="stretch" gap="3">
                     <PageHeader title="Выдача заказов"
                         description={`Склад ${data.schedule.week_text}. Сегодня ${data.schedule.is_open ? `открыт до ${data.schedule.closes_at}` : 'закрыт'}${data.schedule.cutoff_at ? `, приём к сборке до ${data.schedule.cutoff_at}` : ''}.`} />
+
+                    {/* pick-17: значок на главный экран — Android предложит сам, iPhone получит подсказку */}
+                    <PwaInstallBanner />
 
                     <Button size="xl" colorPalette="green" onClick={() => { setFound(null); setView('scan'); }}>
                         <LuScanQrCode /> Сканировать пропуск

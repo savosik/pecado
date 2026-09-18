@@ -5,6 +5,7 @@ import {
     LuShieldCheck,
     LuTruck,
     LuPackageCheck,
+    LuLink,
     LuScanBarcode,
     LuListOrdered,
     LuPackageSearch,
@@ -69,6 +70,13 @@ export const menuConfig: MenuGroup[] = [
             { label: "Реализации к доставке", icon: LuPackageSearch, path: "/wms/delivery-candidates", permission: "wms-deliveries.view" },
             { label: "Отправки", icon: LuTruck, path: "/wms/deliveries", permission: "wms-deliveries.view" },
             { label: "Настройки ApiShip", icon: LuSettings, path: "/wms/delivery-settings", permission: "wms-delivery-settings.view" },
+        ],
+    },
+    {
+        title: "Сотрудники",
+        icon: LuLink,
+        items: [
+            { label: "Ссылки для кладовщиков", icon: LuLink, path: "/wms/access-links", permission: "wms-access.view" },
         ],
     },
     // Разделы приёмки, отбора и инвентаризации добавятся сюда позже.

@@ -68,6 +68,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->group('wms', [
             \App\Http\Middleware\EnsureUserIsWms::class,
+            \App\Http\Middleware\EnsureWmsLinkSessionValid::class, // pick-17: вход по ссылке гаснет при её перевыпуске
             \App\Http\Middleware\HandleWmsInertiaRequests::class,
         ]);
     })

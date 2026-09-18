@@ -37,6 +37,13 @@ Route::get('/crm/tasks/feed/{token}.ics', [\App\Http\Controllers\Crm\CalendarFee
     ->middleware('throttle:60,1')
     ->name('crm.tasks.feed');
 
+// Вход кладовщика по ссылке (pick-17): ссылку выпускает начальник склада в /wms/access-links и
+// пересылает в мессенджер; логина и пароля у кладовщика нет. Перевыпуск отключает старые телефоны.
+Route::get('/wms/join/{token}', \App\Http\Controllers\WmsJoinController::class)
+    ->where('token', '[A-Za-z0-9_-]{20,128}')
+    ->middleware(['web', 'throttle:20,1'])
+    ->name('wms.join');
+
 // Пропуск на самовывоз для курьера (эпик pick-00): курьер не клиент и в кабинет не входит —
 // доступ охраняет только секретный токен ссылки (отзывается клиентом в кабинете).
 Route::get('/p/{token}', \App\Http\Controllers\PickupPassPageController::class)
