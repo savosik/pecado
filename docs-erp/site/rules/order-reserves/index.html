@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#v1690-v1691-reserve-v1692" class="md-skip">
+        <a href="#v1690-v1691-reserve-v1692-v16110" class="md-skip">
           Перейти к содержанию
         </a>
       
@@ -728,7 +728,46 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v16110" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Совместная отгрузка резервов (v16.11.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Совместная отгрузка резервов (v16.11.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Контракт
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Правила
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         События протокола
@@ -2075,7 +2114,46 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v16110" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Совместная отгрузка резервов (v16.11.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Совместная отгрузка резервов (v16.11.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Контракт
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Правила
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         События протокола
@@ -2102,7 +2180,7 @@
 
 
 
-<h1 id="v1690-v1691-reserve-v1692">Заказы в резерве (v16.9.0; ключ строки — v16.9.1; авторитетность reserve — v16.9.2)<a class="headerlink" href="#v1690-v1691-reserve-v1692" title="Permanent link">&para;</a></h1>
+<h1 id="v1690-v1691-reserve-v1692-v16110">Заказы в резерве (v16.9.0; ключ строки — v16.9.1; авторитетность reserve — v16.9.2; совместная отгрузка — v16.11.0)<a class="headerlink" href="#v1690-v1691-reserve-v1692-v16110" title="Permanent link">&para;</a></h1>
 <p>Режим самообслуживания для клиентов-интернет-магазинов: заказ сразу создаётся в 1С
 с удержанием товара, а окно между «зарезервировал» и «подтвердил» клиент обслуживает
 сам — правит состав, отменяет или отправляет в отгрузку из кабинета сайта или через
@@ -2256,7 +2334,87 @@
     свои uuid партнёров-интернетчиков, 1С размечает <code>reserve_allowed</code> и возвращает
     фактический состав через <code>partner.updated</code>.</li>
 </ol>
-<h2 id="_3">События протокола<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<h2 id="v16110">Совместная отгрузка резервов (v16.11.0)<a class="headerlink" href="#v16110" title="Permanent link">&para;</a></h2>
+<p>Согласовано в топике №7 Agent Hub (resolution 18.09.2026). Интернет-магазины держат
+по нескольку резервов и отправляют их в отгрузку сразу, одним курьером; клиент хочет
+<strong>одну реализацию</strong>, склад — <strong>один расходный ордер</strong>. Слить заказы средствами сайта
+нельзя (правка резерва только на уменьшение, «новый заказ + отмена резервов» даёт гонку
+за остаток), поэтому <strong>объединяется отгрузка, а не заказы</strong>: заказы остаются отдельными
+документами, 1С оформляет по группе минимальный комплект реализаций и расходных ордеров.</p>
+<h3 id="_3">Контракт<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Событие</th>
+<th>Поля</th>
+<th>Смысл</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>order.confirmed</code> (Сайт → 1С)</td>
+<td><code>ship_together_key</code>, <code>ship_together_order_uuids</code></td>
+<td>ключ группы и манифест — все заказы группы</td>
+</tr>
+<tr>
+<td><code>order.updated</code> (1С → Сайт)</td>
+<td><code>ship_together_key</code>, <code>ship_together_status</code>, <code>ship_together_conflict</code></td>
+<td>терминальный итог группы</td>
+</tr>
+</tbody>
+</table>
+<p>Поля необязательны и <strong>аддитивны</strong>: без них <code>order.confirmed</code> работает по-прежнему,
+по одному заказу. Пара полей в <code>order.confirmed</code> присутствует только вместе.
+<code>ship_together_size</code> и срок ожидания в контракт <strong>не входят</strong> (счётчик не позволяет
+понять, какой заказ потерян; абсолютный срок истекал бы при отставании потребителя).</p>
+<h3 id="_4">Правила<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Манифест</strong> — UUID всех заказов группы: уникальные, минимум 2, одинаковый состав
+   и порядок во всех сообщениях группы, <code>uuid</code> текущего заказа входит в массив.
+   Все <code>order.confirmed</code> группы сайт публикует в одной транзакции.</li>
+<li><strong>Проверки сайта до публикации</strong> (то, что сайт знает о заказе): один партнёр, один
+   контрагент, одна валюта, <strong>ровно один склад</strong> (расходный ордер живёт на одном складе),
+   один способ доставки, один адрес доставки (при самовывозе — все самовывоз), все заказы —
+   действующие резервы, ранее не подтверждённые и не отменённые. Не прошло — группа
+   не отправляется, клиенту предлагается разбить её.</li>
+<li><strong>Предконтроль 1С</strong> (то, чего сайт не знает): заказ действительно в резерве в 1С,
+   организация, соглашение, договор, флаги запрета объединения у партнёра и соглашения,
+   получатель, дата отгрузки, складская операция, транспортное назначение, доступность
+   остатков. Проверяется под одной групповой блокировкой по полному составу.</li>
+<li><strong>Состояния группы в 1С</strong> — <code>collecting → confirmed | conflict</code>. До полного состава
+   1С ничего не меняет и наружу не шлёт. <strong>Тайм-аут — 15 минут с момента, когда 1С впервые
+   сохранила валидное сообщение группы</strong>; задержка доставки до 1С на срок не влияет.
+   Полная группа обрабатывается сразу, ждать 15 минут не нужно.</li>
+<li><strong>Успех</strong> — 1С подтверждает все заказы группы и передаёт их <strong>одним групповым вызовом</strong>
+   в движки реализации и ордеров (поштучный автоордер для группы подавлен). Успех = создан
+   и проведён <strong>минимальный</strong> комплект документов по всем заказам. Несколько реализаций
+   (разные владельцы товара, налоговый режим) или несколько ордеров (складские ключи) —
+   <strong>не конфликт</strong>; фактические документы сайт получает обычными <code>shipment.created</code> /
+   <code>goods_issue.created</code> (заказ — в строке, <code>items[].order_uuid</code>).</li>
+<li><strong>Отказ — по всей группе.</strong> Резервы и статусы всех заказов остаются без изменений,
+   частичного оформления нет. Ошибка или частичный результат ордерного движка откатывает
+   изменения всей группы; наружу частичные <code>goods_issue.*</code> / <code>shipment.*</code> не публикуются.</li>
+<li><strong>Итог</strong> приходит в <code>order.updated</code>: на успех — по каждому заказу группы <code>reserve: false</code>,
+   статус «К отгрузке», <code>ship_together_status: confirmed</code>; на отказ — по каждому разрешимому
+   заказу опорного (первого валидного) манифеста и по текущему конфликтующему заказу: прежний
+   <code>reserve: true</code>, <code>ship_together_status: conflict</code>, обязательный <code>ship_together_conflict
+   {reason, message, order_uuid}</code>. <code>order_uuid</code> заполняется только при одном однозначном
+   виновном заказе. Коды <code>reason</code>: <code>timeout</code>, <code>manifest_mismatch</code>, <code>not_reserved</code>,
+   <code>incompatible</code>, <code>merge_forbidden</code>, <code>shortage</code>, <code>processing_error</code>.</li>
+<li><strong>Окончательность и идемпотентность</strong> — на один <code>ship_together_key</code> 1С публикует один
+   терминальный итог; поздние сообщения с тем же ключом группу не открывают и получают тот
+   же итог; повторная доставка входящих не создаёт повторных документов. Повтор после
+   отказа — <strong>новый ключ и новые <code>message_id</code></strong>. При <code>manifest_mismatch</code> опорным считается
+   первый валидный манифест.</li>
+<li><strong>Поведение сайта</strong> — после отправки группы сайт <strong>не снимает резерв локально</strong>,
+   показывает клиенту «отправлено, ждём подтверждения склада» и закрывает правки и отмену
+   заказов группы до итога. Итог применяется по <code>order.updated</code> (<code>reserve</code> авторитетен).
+   После отказа клиент видит причину, заказы снова в резерве, можно повторить группу или
+   отправить заказы по одному прежним способом.</li>
+<li><strong>Включение</strong> — за флагами обеих сторон, по отдельному решению владельцев после
+    совместных испытаний на dev с реальными сообщениями обеих сторон.</li>
+</ol>
+<h2 id="_5">События протокола<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -2287,9 +2445,19 @@
 <td>отправить резерв в отгрузку</td>
 </tr>
 <tr>
+<td><code>order.confirmed</code> + <code>ship_together_key</code>, <code>ship_together_order_uuids</code></td>
+<td>Сайт → 1С</td>
+<td>совместная отгрузка группы резервов (v16.11.0)</td>
+</tr>
+<tr>
 <td><code>order.created</code>/<code>order.updated</code> + <code>reserve</code>, <code>reserved_until</code>, <code>items_version</code>, <code>conflict</code></td>
 <td>1С → Сайт</td>
 <td>состояние резерва, фактический срок, версия состава, отказ правки</td>
+</tr>
+<tr>
+<td><code>order.updated</code> + <code>ship_together_key</code>, <code>ship_together_status</code>, <code>ship_together_conflict</code></td>
+<td>1С → Сайт</td>
+<td>итог группы совместной отгрузки (v16.11.0)</td>
 </tr>
 <tr>
 <td><code>partner.created</code>/<code>partner.updated</code> + <code>reserve_allowed</code></td>
