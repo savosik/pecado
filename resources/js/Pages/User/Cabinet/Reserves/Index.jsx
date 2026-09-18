@@ -6,6 +6,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { LuClock3, LuEye, LuSend, LuPackage, LuBan } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
+import { orderTitle, orderNumberHint } from '../components/OrderNumber';
 import ReserveCountdown from '@/components/cabinet/ReserveCountdown';
 import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
 import { toastSuccess, toastError } from '@/utils/toast';
@@ -68,7 +69,7 @@ export default function ReservesIndex({ reserves }) {
                 onConfirm={doConfirm}
                 title="Отправить в отгрузку?"
                 description={confirmTarget
-                    ? `Заказ ${confirmTarget.number} уйдёт в сборку и отгрузку — изменить или отменить его после подтверждения будет нельзя.${promise ? ` ${promise.text}.` : ''}`
+                    ? `${orderTitle(confirmTarget)} уйдёт в сборку и отгрузку — изменить или отменить его после подтверждения будет нельзя.${promise ? ` ${promise.text}.` : ''}`
                     : ''}
                 confirmLabel="В отгрузку"
                 cancelLabel="Ещё подумаю"
@@ -82,7 +83,7 @@ export default function ReservesIndex({ reserves }) {
                 onConfirm={doCancel}
                 title="Отменить заказ?"
                 description={cancelTarget
-                    ? `Заказ ${cancelTarget.number} будет отменён, товар вернётся в свободный остаток. Действие необратимо.`
+                    ? `${orderTitle(cancelTarget)} будет отменён, товар вернётся в свободный остаток. Действие необратимо.`
                     : ''}
                 confirmLabel="Отменить заказ"
                 cancelLabel="Не отменять"
@@ -110,9 +111,12 @@ export default function ReservesIndex({ reserves }) {
                                 <Flex justify="space-between" align="flex-start" gap="3" wrap="wrap">
                                     <VStack align="flex-start" gap="1">
                                         <HStack gap="2">
-                                            <Text fontWeight="700">Заказ {order.number}</Text>
+                                            <Text fontWeight="700">{orderTitle(order)}</Text>
                                             <Badge colorPalette="purple">резерв</Badge>
                                         </HStack>
+                                        {!order.number && (
+                                            <Text fontSize="xs" color="fg.muted">{orderNumberHint(order)}</Text>
+                                        )}
                                         <HStack gap="1" color="fg.muted" fontSize="sm">
                                             <LuPackage size={14} />
                                             <Text>

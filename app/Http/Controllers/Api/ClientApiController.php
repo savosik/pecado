@@ -70,7 +70,7 @@ class ClientApiController extends Controller
         return response()->json([
             'reserves' => $orders->map(fn (Order $order) => [
                 'order_id' => $order->id,
-                'number' => $order->erp_number ?? $order->number,
+                ...$order->clientNumberPayload(),
                 'uuid' => $order->uuid,
                 'total_amount' => (float) $order->total_amount,
                 'currency_code' => $order->currency_code,
@@ -379,6 +379,7 @@ class ClientApiController extends Controller
 
         $data = array_map(fn (array $r) => [
             'order_number' => $r['order_number'],
+            'order_label' => $r['order_label'],
             'order_id' => $r['order_id'],
             'changed_at' => $r['changed_at']?->toIso8601String(),
             'kind' => $r['kind'], // 'edit' — правка состава, 'api' — недостача при приёме

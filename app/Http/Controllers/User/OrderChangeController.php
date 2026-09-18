@@ -73,7 +73,7 @@ class OrderChangeController extends Controller
             foreach ($rows as $r) {
                 yield [
                     $r['changed_at']?->format('d.m.Y H:i') ?? '',
-                    $r['order_number'],
+                    $r['order_number'] ?? $r['order_label'],
                     OrderChangeFeed::TYPE_LABELS[$r['type']] ?? $r['type'],
                     $r['product_name'],
                     $r['from'],
@@ -129,6 +129,7 @@ class OrderChangeController extends Controller
         return [
             'order_id' => $r['order_id'],
             'order_number' => $r['order_number'],
+            'order_label' => $r['order_label'],
             'changed_at' => $r['changed_at']?->format('d.m.Y H:i'),
             'kind' => $r['kind'],
             'type' => $r['type'],

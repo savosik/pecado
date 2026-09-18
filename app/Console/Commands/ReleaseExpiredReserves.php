@@ -76,7 +76,7 @@ class ReleaseExpiredReserves extends Command
 
             $released++;
 
-            $number = $order->erp_number ?: $order->number ?: ('#'.$order->id);
+            $number = $order->clientLabel();
             $mailStream->captureQuietly(new Occasion(
                 key: 'orders.reserve_released',
                 clientUserId: $order->user_id,
@@ -123,7 +123,7 @@ class ReleaseExpiredReserves extends Command
             ->get();
 
         foreach ($expiring as $order) {
-            $number = $order->erp_number ?: $order->number ?: ('#'.$order->id);
+            $number = $order->clientLabel();
             $until = $order->reserved_until?->timezone(config('app.timezone'));
 
             $mailStream->captureQuietly(new Occasion(

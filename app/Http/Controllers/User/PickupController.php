@@ -73,7 +73,7 @@ class PickupController extends Controller
                 'company' => $companies->get($orders->first()?->company_id),
                 'orders' => $orders->map(fn ($o) => [
                     'id' => $o->id,
-                    'number' => $o->erp_number ?: $o->number,
+                    'number' => $o->clientLabel(),
                     'total_amount' => (float) $o->total_amount,
                     'items' => ($itemsByOrder->get($o->id) ?? collect())->map(fn ($item) => [
                         'name' => $item->product?->name ?: $item->name,

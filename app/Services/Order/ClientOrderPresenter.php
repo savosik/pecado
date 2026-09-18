@@ -119,7 +119,8 @@ class ClientOrderPresenter
 
         return [
             'id' => $order->id,
-            'number' => $this->number($order),
+            // Только номер 1С; пока его нет — null и подсказка, временный ORD-… клиенту не показываем
+            ...$order->clientNumberPayload(),
             'uuid' => $order->uuid,
             'status' => $order->status?->value,
             'status_label' => $this->statusLabel($order->status),
@@ -162,7 +163,7 @@ class ClientOrderPresenter
 
         return [
             'id' => $order->id,
-            'number' => $this->number($order),
+            ...$order->clientNumberPayload(),
             'uuid' => $order->uuid,
             'status' => $order->status?->value,
             'status_label' => $this->statusLabel($order->status),
@@ -398,9 +399,12 @@ class ClientOrderPresenter
         return $payload;
     }
 
+    /**
+     * Подпись заказа для текстов и выгрузок: номер 1С либо «от даты (номер присваивается)».
+     */
     public function number(Order $order): string
     {
-        return $order->erp_number ?? $order->number ?? ('#'.$order->id);
+        return $order->clientLabel();
     }
 
     public function statusLabel(?OrderStatus $status): string

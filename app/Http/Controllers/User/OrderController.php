@@ -379,10 +379,11 @@ class OrderController extends Controller
             ];
         });
 
-        $orderNumber = $order->erp_number ?? $order->number ?? (string) $order->id;
-        $filename = "order-{$orderNumber}-items";
+        // Клиенту — только номер 1С; без него файл и лист называем по id заказа
+        $orderNumber = $order->clientNumber();
+        $filename = 'order-'.($orderNumber ?? $order->id).'-items';
 
-        return $exporter->stream($filename, $headers, $rows, "Заказ {$orderNumber}");
+        return $exporter->stream($filename, $headers, $rows, 'Заказ '.($orderNumber ?? $order->clientLabel()));
     }
 
     /**

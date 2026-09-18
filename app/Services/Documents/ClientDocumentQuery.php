@@ -165,7 +165,7 @@ class ClientDocumentQuery
 
         if ($document->order) {
             return [
-                'label' => 'Заказ '.($document->order->erp_number ?: $document->order->number),
+                'label' => 'Заказ '.$document->order->clientLabel(),
                 'url' => route('cabinet.orders.show', $document->order->id),
             ];
         }

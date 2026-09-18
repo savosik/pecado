@@ -177,10 +177,10 @@ class CheckoutController extends Controller
         $lead = PreorderTerms::leadLabel();
 
         if ($orders->count() === 1) {
-            return "Предзаказ {$preorder->number} оформлен. Товар заказываем у поставщика, ориентировочная поставка — {$lead}.";
+            return "Предзаказ оформлен. Товар заказываем у поставщика, ориентировочная поставка — {$lead}. ".Order::pendingNumberHint();
         }
 
-        return "Оформлено документов: {$orders->count()}. Предзаказ {$preorder->number} — отдельно, ориентировочная поставка {$lead}.";
+        return "Оформлено документов: {$orders->count()}. Предзаказ — отдельно, ориентировочная поставка {$lead}. ".Order::pendingNumberHint();
     }
 
     /**
