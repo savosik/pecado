@@ -1,5 +1,6 @@
 import {
     LuLayoutDashboard,
+    LuBot,
     LuUsers,
     LuUsersRound,
     LuBuilding2,
@@ -135,6 +136,8 @@ export const menuConfig: MenuGroup[] = [
         icon: LuChartLine,
         items: [
             { label: "Отчёты продаж", icon: LuChartLine, path: "/crm/analytics", permission: "crm-analytics.view" },
+            // Пользуются ли партнёры своим ИИ-агентом (MCP /mcp/client и REST v1): кто, как часто, для чего.
+            { label: "ИИ-агенты клиентов", icon: LuBot, path: "/crm/agent-usage", permission: "crm-agent-usage.view" },
             // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
             // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
             { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", counter: "shortages" },

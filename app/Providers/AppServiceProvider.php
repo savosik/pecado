@@ -19,6 +19,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Журнал вызовов агентов клиентов: контекст одного вызова общий для
+        // OperationRunner (отмечает операцию) и того, кто пишет строку (сервер
+        // MCP, middleware REST). Без единого экземпляра операция терялась бы.
+        $this->app->scoped(\App\Services\Client\Api\Usage\UsageContext::class);
+
         $this->app->bind(
             \App\Contracts\Pricing\PriceServiceInterface::class,
             \App\Services\Pricing\PriceService::class

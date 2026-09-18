@@ -11,6 +11,7 @@ use App\Services\Client\Api\Idempotency\IdempotencyConflict;
 use App\Services\Client\Api\Operation;
 use App\Services\Client\Api\OperationRegistry;
 use App\Services\Client\Api\OperationRunner;
+use App\Services\Client\Api\Usage\UsageContext;
 use App\Services\Order\NothingToPlaceException;
 use App\Services\Order\ReserveActionException;
 use App\Support\OperationApi\OperationDenied;
@@ -79,13 +80,13 @@ trait InteractsWithClientOperations
         $actor = $this->actor();
 
         if ($actor === null) {
-            return Response::error('Не удалось определить клиента по токену. Проверьте ключ на странице /api-tokens в кабинете.');
+            return $this->refuse('unauthorized', 'Не удалось определить клиента по токену. Проверьте ключ на странице /api-tokens в кабинете.');
         }
 
         $operation = app(OperationRegistry::class)->find($operationId);
 
         if (! $operation instanceof Operation) {
-            return Response::error("Операции «{$operationId}» нет. Полный список — в client-catalog.");
+            return $this->refuse('unknown_operation', "Операции «{$operationId}» нет. Полный список — в client-catalog.");
         }
 
         $key = is_string($idempotencyKey) && trim($idempotencyKey) !== '' ? trim($idempotencyKey) : null;
@@ -93,11 +94,11 @@ trait InteractsWithClientOperations
         try {
             $result = app(OperationRunner::class)->run($operation, $actor, $args, $key);
         } catch (GateClosed $e) {
-            return Response::error("[{$e->code()}] {$e->getMessage()} Раздел отмечен allowed=false в client-catalog — не повторяйте вызов.");
+            return $this->refuse($e->code(), "[{$e->code()}] {$e->getMessage()} Раздел отмечен allowed=false в client-catalog — не повторяйте вызов.");
         } catch (OperationDenied $e) {
-            return Response::error($e->getMessage());
+            return $this->refuse('operation_denied', $e->getMessage());
         } catch (CompanyRequired $e) {
-            return Response::error("[company_required] {$e->getMessage()} Спросите у человека, от какого юрлица работать, и передайте company_id. Варианты: "
+            return $this->refuse('company_required', "[company_required] {$e->getMessage()} Спросите у человека, от какого юрлица работать, и передайте company_id. Варианты: "
                 .json_encode($e->choices(), JSON_UNESCAPED_UNICODE));
         } catch (IdempotencyConflict $e) {
             // В REST ключ — заголовок Idempotency-Key, а в MCP — аргумент инструмента:
@@ -106,7 +107,7 @@ trait InteractsWithClientOperations
                 ? 'Для этой операции обязателен аргумент idempotency_key (например, UUID): повтор с тем же ключом не создаст дубль.'
                 : $e->getMessage();
 
-            return Response::error("[{$e->errorCode}] {$message}");
+            return $this->refuse($e->errorCode, "[{$e->errorCode}] {$message}");
         } catch (ValidationException $e) {
             $messages = [];
 
@@ -114,27 +115,39 @@ trait InteractsWithClientOperations
                 $messages[] = $field.': '.implode(' ', $errors);
             }
 
-            return Response::error('Аргументы не приняты. '.implode('; ', $messages)
+            return $this->refuse('validation', 'Аргументы не приняты. '.implode('; ', $messages)
                 ."\nСхема аргументов — в client-describe для операции «{$operationId}».");
         } catch (ModelNotFoundException) {
-            return Response::error('[not_found] Запись не найдена или недоступна этому клиенту.');
+            return $this->refuse('not_found', '[not_found] Запись не найдена или недоступна этому клиенту.');
         } catch (NothingToPlaceException $e) {
-            return Response::error('[nothing_to_place] '.$e->getMessage().' Причины: '.json_encode($e->notAccepted, JSON_UNESCAPED_UNICODE));
+            return $this->refuse('nothing_to_place', '[nothing_to_place] '.$e->getMessage().' Причины: '.json_encode($e->notAccepted, JSON_UNESCAPED_UNICODE));
         } catch (ReserveActionException $e) {
-            return Response::error("[{$e->errorCode}] {$e->getMessage()}");
+            return $this->refuse($e->errorCode, "[{$e->errorCode}] {$e->getMessage()}");
         } catch (\App\Services\Pickup\PickupPassException $e) {
-            return Response::error("[{$e->reason}] {$e->getMessage()}");
+            return $this->refuse($e->reason, "[{$e->reason}] {$e->getMessage()}");
         } catch (InsufficientStockException $e) {
-            return Response::error('[stock_changed] '.$e->getMessage().' Выполните checkout.normalize и повторите. Конфликты: '
+            return $this->refuse('stock_changed', '[stock_changed] '.$e->getMessage().' Выполните checkout.normalize и повторите. Конфликты: '
                 .json_encode($e->getItems(), JSON_UNESCAPED_UNICODE));
         } catch (DebtRestrictionException $e) {
-            return Response::error('[debt_restricted] '.$e->getMessage().' Ограничение по долгу снимает менеджер после оплаты.');
+            return $this->refuse('debt_restricted', '[debt_restricted] '.$e->getMessage().' Ограничение по долгу снимает менеджер после оплаты.');
         } catch (HttpException $e) {
-            return Response::error($e->getMessage() !== '' ? $e->getMessage() : 'Запрос отклонён.');
+            return $this->refuse('http_'.$e->getStatusCode(), $e->getMessage() !== '' ? $e->getMessage() : 'Запрос отклонён.');
         } catch (InvalidArgumentException|RuntimeException|LogicException $e) {
-            return Response::error($e->getMessage());
+            return $this->refuse('rejected', $e->getMessage());
         }
 
         return $result;
+    }
+
+    /**
+     * Отказ агенту с кодом для журнала вызовов: текст — агенту, код — в
+     * `client_agent_calls.error_code`, чтобы частые отказы было видно на экране
+     * «ИИ-агенты клиентов», а не только в тексте ответов.
+     */
+    protected function refuse(string $code, string $message): Response
+    {
+        app(UsageContext::class)->fail($code);
+
+        return Response::error($message);
     }
 }

@@ -13,7 +13,15 @@ use App\Mcp\Tools\Client\ClientFaq;
 use App\Mcp\Tools\Client\ClientOrderStatus;
 use App\Mcp\Tools\Client\ClientPrices;
 use App\Mcp\Tools\Client\ClientPromotions;
+use App\Models\User;
+use App\Services\Client\Api\Usage\UsageContext;
+use App\Services\Client\Api\Usage\UsageRecorder;
+use Illuminate\Support\Facades\Auth;
 use Laravel\Mcp\Server;
+use Laravel\Mcp\Server\ServerContext;
+use Laravel\Mcp\Server\Transport\JsonRpcRequest;
+use Laravel\Mcp\Server\Transport\JsonRpcResponse;
+use Throwable;
 
 /**
  * MCP-сервер клиента: кабинет покупателя глазами его ИИ-агента.
@@ -129,4 +137,94 @@ class ClientServer extends Server
         ClientFaq::class,
         ClientAskManager::class,
     ];
+
+    /** Идентификатор сессии, выданный в текущем `initialize` (см. generateSessionId). */
+    private ?string $issuedSessionId = null;
+
+    /**
+     * Подключение агента: ответ штатный, а clientInfo («claude-code 2.1.0»)
+     * уходит в журнал вызовов и запоминается по сессии — каждая следующая
+     * строка инструмента будет знать, чей это агент.
+     */
+    protected function handleInitializeMessage(JsonRpcRequest $request, ServerContext $context): void
+    {
+        $this->issuedSessionId = null;
+
+        parent::handleInitializeMessage($request, $context);
+
+        $actor = Auth::user();
+
+        if ($actor instanceof User) {
+            $clientInfo = $request->params['clientInfo'] ?? null;
+
+            app(UsageRecorder::class)->mcpConnected(
+                $actor,
+                $this->issuedSessionId,
+                is_array($clientInfo) ? $clientInfo : null,
+            );
+        }
+    }
+
+    protected function generateSessionId(): string
+    {
+        return $this->issuedSessionId = parent::generateSessionId();
+    }
+
+    /**
+     * Вызов инструмента — строка журнала: инструмент, операция реестра (её
+     * отмечает OperationRunner через UsageContext), исход и длительность.
+     * Журнал не вмешивается в ответ: исключение уходит дальше как было.
+     */
+    protected function runMethodHandle(JsonRpcRequest $request, ServerContext $context): iterable|JsonRpcResponse
+    {
+        if ($request->method !== 'tools/call') {
+            return parent::runMethodHandle($request, $context);
+        }
+
+        $usage = app(UsageContext::class);
+        $usage->begin();
+        $started = hrtime(true);
+
+        try {
+            $response = parent::runMethodHandle($request, $context);
+        } catch (Throwable $e) {
+            $this->recordToolCall($request, false, $usage->errorCode() ?? 'exception', $started);
+
+            throw $e;
+        }
+
+        // Потоковый ответ (генератор) исхода не сообщает — считаем успехом:
+        // ошибки инструментов кабинета приходят обычным ответом с isError.
+        $ok = true;
+
+        if ($response instanceof JsonRpcResponse) {
+            $payload = $response->toArray();
+            $result = $payload['result'] ?? null;
+            $ok = ! isset($payload['error']) && ! (is_array($result) && ($result['isError'] ?? false) === true);
+        }
+
+        $this->recordToolCall($request, $ok, $usage->errorCode(), $started);
+
+        return $response;
+    }
+
+    private function recordToolCall(JsonRpcRequest $request, bool $ok, ?string $errorCode, int $startedAt): void
+    {
+        $actor = Auth::user();
+
+        if (! $actor instanceof User) {
+            return;
+        }
+
+        $tool = (string) ($request->params['name'] ?? '');
+
+        app(UsageRecorder::class)->mcpToolCalled(
+            $actor,
+            $request->sessionId,
+            mb_substr($tool !== '' ? $tool : 'unknown', 0, 64),
+            $ok,
+            $errorCode,
+            (int) round((hrtime(true) - $startedAt) / 1_000_000),
+        );
+    }
 }

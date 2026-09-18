@@ -194,7 +194,7 @@ Route::prefix('client-api/{token}')
 // legacy `/api/client-api/{token}/*` выше остаётся без изменений и навсегда.
 // ──────────────────────────────────────────────────────────────
 Route::prefix('client/v1')
-    ->middleware([\App\Http\Middleware\AuthenticateClientApi::class, 'throttle:client-api'])
+    ->middleware([\App\Http\Middleware\AuthenticateClientApi::class, 'throttle:client-api', \App\Http\Middleware\RecordClientApiUsage::class])
     ->name(\App\Http\Controllers\Api\Client\ClientApiController::ROUTE_PREFIX)
     ->group(function () {
         Route::get('me', [\App\Http\Controllers\Api\Client\ClientApiController::class, 'me'])->name('me');

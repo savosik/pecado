@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Crm\AbsenceController;
 use App\Http\Controllers\Crm\AgentTokenController;
+use App\Http\Controllers\Crm\AgentUsageController;
 use App\Http\Controllers\Crm\AnalyticsController;
 use App\Http\Controllers\Crm\AttachmentController;
 use App\Http\Controllers\Crm\CalendarFeedController;
@@ -855,6 +856,15 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
 
     // Токены ИИ-агентов (crm-13). Только у РОПа: токен даёт запись в CRM
     // от имени сотрудника, и выдавать его себе сотрудник не должен.
+    // ИИ-агенты клиентов: пользуются ли партнёры MCP `/mcp/client` и REST v1 —
+    // наблюдение по журналу вызовов, разрез «мои / отдел» как у остальных разделов.
+    Route::middleware('permission:crm-agent-usage.view')->group(function () {
+        Route::get('/agent-usage', [AgentUsageController::class, 'index'])->name('agent-usage.index');
+        Route::get('/agent-usage/{client}', [AgentUsageController::class, 'show'])
+            ->name('agent-usage.show')
+            ->whereNumber('client');
+    });
+
     Route::middleware('permission:crm-agent-tokens.view')->group(function () {
         Route::get('/agent-tokens', [AgentTokenController::class, 'index'])->name('agent-tokens.index');
     });
