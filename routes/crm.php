@@ -44,6 +44,7 @@ use App\Http\Controllers\Crm\NotificationPreferenceController;
 use App\Http\Controllers\Crm\PaymentOrderController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
+use App\Http\Controllers\Crm\QuestionController;
 use App\Http\Controllers\Crm\SalaryAdjustmentController;
 use App\Http\Controllers\Crm\SalaryApprovalController;
 use App\Http\Controllers\Crm\SalaryController;
@@ -924,6 +925,26 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
 
     // степень удовлетворения, edit — причина недобора и комментарий к строке.
     // Замен сайт не предлагает: отмену делает и склад при сборке, и клиент.
+    // Вопросы клиентов менеджеру. Граница карточки — по праву (свои партнёры
+    // или отдел), разрез списка — по фокусу экрана; см. UserQuestionCrmQuery.
+    Route::middleware('permission:crm-questions.view')->group(function () {
+        Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
+        Route::get('/questions/{question}', [QuestionController::class, 'show'])
+            ->name('questions.show')
+            ->whereNumber('question');
+        Route::get('/questions/{question}/attachment', [QuestionController::class, 'downloadAttachment'])
+            ->name('questions.attachment')
+            ->whereNumber('question');
+    });
+    Route::middleware('permission:crm-questions.edit')->group(function () {
+        Route::post('/questions/{question}/answer', [QuestionController::class, 'answer'])
+            ->name('questions.answer')
+            ->whereNumber('question');
+        Route::post('/questions/{question}/reject', [QuestionController::class, 'reject'])
+            ->name('questions.reject')
+            ->whereNumber('question');
+    });
+
     Route::middleware('permission:crm-shortages.view')->group(function () {
         Route::get('/shortages', [ShortageController::class, 'index'])->name('shortages.index');
     });

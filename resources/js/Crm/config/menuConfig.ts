@@ -44,6 +44,7 @@ import {
     LuStar,
     LuSlidersHorizontal,
     LuCoins,
+    LuMessageCircleQuestion,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -72,6 +73,9 @@ export const menuConfig: MenuGroup[] = [
         items: [
             { label: "Рабочий стол", icon: LuLayoutDashboard, path: "/crm", permission: "crm-dashboard.view" },
             { label: "Задачи", icon: LuListChecks, path: "/crm/tasks", permission: "crm-tasks.view", counter: "tasks" },
+            // Вопросы партнёров с сайта, из кабинета и через API — очередь на ответ,
+            // а не справочник, поэтому рядом с задачами. Счётчик — ждущие ответа.
+            { label: "Вопросы клиентов", icon: LuMessageCircleQuestion, path: "/crm/questions", permission: "crm-questions.view", counter: "questions" },
         ],
     },
     {
