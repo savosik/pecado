@@ -334,6 +334,10 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/questions/{question}', [CabinetQuestionsController::class, 'show'])->name('questions.show');
     Route::get('/questions/{question}/attachment', [CabinetQuestionsController::class, 'downloadAttachment'])->name('questions.attachment');
 
+    // Инструкции для клиентов (текст, PDF, видео) — ведутся в админке.
+    Route::get('/instructions', [\App\Http\Controllers\User\CabinetInstructionController::class, 'index'])->name('instructions.index');
+    Route::get('/instructions/{instruction}', [\App\Http\Controllers\User\CabinetInstructionController::class, 'show'])->name('instructions.show')->whereNumber('instruction');
+
     // Медиатека
     Route::get('/media', [MediaController::class, 'index'])->name('media.index');
     Route::get('/media/api', [MediaController::class, 'api'])->name('media.api');

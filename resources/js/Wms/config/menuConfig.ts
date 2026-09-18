@@ -11,6 +11,7 @@ import {
     LuPackageSearch,
     LuSettings,
     LuTriangleAlert,
+    LuBookOpen,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -77,6 +78,14 @@ export const menuConfig: MenuGroup[] = [
         icon: LuLink,
         items: [
             { label: "Ссылки для кладовщиков", icon: LuLink, path: "/wms/access-links", permission: "wms-access.view" },
+        ],
+    },
+    {
+        // Инструкции для склада из админки: текст, PDF или видео. Без права.
+        title: "Справка",
+        icon: LuBookOpen,
+        items: [
+            { label: "Инструкции", icon: LuBookOpen, path: "/wms/instructions" },
         ],
     },
     // Разделы приёмки, отбора и инвентаризации добавятся сюда позже.

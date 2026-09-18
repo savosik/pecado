@@ -79,6 +79,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'stories' => ['view', 'create', 'edit', 'delete'],
         'menu-items' => ['view', 'create', 'edit', 'delete'],
         'user-questions' => ['view', 'edit', 'delete'],
+        // Инструкции для клиентов, CRM и WMS: ведёт контент-менеджер в админке,
+        // читальные разделы панелей отдельного права не требуют.
+        'instructions' => ['view', 'create', 'edit', 'delete'],
 
         // Теги
         'tags' => ['view', 'create', 'edit', 'delete'],
@@ -275,6 +278,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'stories' => 'Истории',
         'menu-items' => 'Меню',
         'user-questions' => 'Вопросы пользователей',
+        'instructions' => 'Инструкции',
         'tags' => 'Теги',
         'crm-dashboard' => 'CRM: Рабочий стол',
         'crm-clients' => 'CRM: Мои партнёры',
@@ -330,7 +334,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 'articles', 'brand-stories', 'news', 'faqs',
                 'banners', 'pages', 'stories', 'tags', 'media',
-                'menu-items', 'user-questions',
+                'menu-items', 'user-questions', 'instructions',
                 // Механику акций контент-менеджер только смотрит
                 'promotion-rules' => ['view'],
             ],

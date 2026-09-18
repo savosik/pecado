@@ -25,7 +25,7 @@ class RoleController extends Controller
         'Маркетинг' => ['promotions', 'promotion-rules', 'product-selections'],
         'Пользователи' => ['users', 'user-questionnaires', 'client-statuses', 'personal-managers', 'companies', 'company-bank-accounts', 'delivery-addresses'],
         'Финансы' => ['organizations', 'currencies', 'contractor-balances', 'payments', 'individual-prices'],
-        'Контент' => ['articles', 'brand-stories', 'news', 'faqs', 'banners', 'pages', 'stories', 'menu-items', 'user-questions'],
+        'Контент' => ['articles', 'brand-stories', 'news', 'faqs', 'banners', 'pages', 'stories', 'menu-items', 'user-questions', 'instructions'],
         'Теги' => ['tags'],
         'Система' => ['erp-bus', 'agent-topics', 'media', 'settings', 'roles'],
     ];
@@ -61,7 +61,7 @@ class RoleController extends Controller
         'defects' => 'Уценка', 'defect-types' => 'Справочник дефектов',
         'users' => 'Пользователи', 'user-questionnaires' => 'Анкеты',
         'client-statuses' => 'Статусы клиентов', 'personal-managers' => 'Персональные менеджеры',
-        'menu-items' => 'Меню', 'user-questions' => 'Вопросы пользователей',
+        'menu-items' => 'Меню', 'user-questions' => 'Вопросы пользователей', 'instructions' => 'Инструкции',
         'companies' => 'Компании', 'company-bank-accounts' => 'Банк. счета',
         'delivery-addresses' => 'Адреса доставки',
         'organizations' => 'Организации (наши юрлица)', 'currencies' => 'Валюты',

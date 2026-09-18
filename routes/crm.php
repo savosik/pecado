@@ -21,6 +21,7 @@ use App\Http\Controllers\Crm\DocumentController;
 use App\Http\Controllers\Crm\EmailController;
 use App\Http\Controllers\Crm\FinanceController;
 use App\Http\Controllers\Crm\ImpersonationController;
+use App\Http\Controllers\Crm\InstructionController;
 use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\MailSuppressionController;
@@ -970,4 +971,11 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
             ->name('shortage-reasons.destroy')
             ->whereNumber('reason');
     });
+
+    // Инструкции для менеджеров. Без отдельного права — как «Мои уведомления»:
+    // читает каждый, кто вообще попал в CRM.
+    Route::get('/instructions', [InstructionController::class, 'index'])->name('instructions.index');
+    Route::get('/instructions/{instruction}', [InstructionController::class, 'show'])
+        ->name('instructions.show')
+        ->whereNumber('instruction');
 });
