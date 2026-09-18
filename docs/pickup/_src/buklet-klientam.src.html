@@ -99,20 +99,8 @@
 <section class="page">
   <div class="head"><h2>Следите за сборкой, не звоня на склад</h2><span class="step">Шаг 3</span></div>
   <div class="shots">
-    <figure><div class="phone"><div class="screen"><div class="ui">
-      <div class="bar"><img src="img/logo.png" alt=""><span class="muted">☰</span></div><div class="title">Заказы</div>
-      <div class="card"><div class="row"><span class="mono">ORD-2026-9024</span><span class="badge good">Собран, ждёт выдачи</span></div><div class="muted">2 места · ждёт с 18:12</div></div>
-      <div class="card"><div class="row"><span class="mono">ORD-2026-9023</span><span class="badge warn">Собирается</span></div><div class="muted">будет готов к ~18:50</div></div>
-      <div class="card"><div class="row"><span class="mono">ORD-2026-9021</span><span class="badge purple">В резерве</span></div><div class="muted">ещё 21:40:12</div></div>
-      <div class="card"><div class="row"><span class="mono">ORD-2026-9019</span><span class="badge done">Выдан курьеру</span></div><div class="muted">сегодня в 16:05</div></div>
-      <div class="card"><div class="row"><span class="mono">ORD-2026-9012</span><span class="badge gray">Передан на склад</span></div><div class="muted">начнём сборку в пн в 9:00</div></div>
-    </div></div></div><span class="mock-note">макет экрана</span><figcaption>В списке заказов сразу видно, за чем можно посылать курьера.</figcaption></figure>
-    <figure><div class="phone"><div class="screen"><div class="ui">
-      <div class="bar"><img src="img/logo.png" alt=""><span class="muted">☰</span></div><div class="title">Заказ ORD-2026-9024</div>
-      <div class="card" style="background:var(--good-soft);border-color:#c2e2cf"><div class="b" style="font-size:8.6pt">Собран, ждёт выдачи</div><div>2 места. Отправляйте курьера — выдаём сегодня до 21:00.</div><div class="btn green">Пропуск курьеру</div></div>
-      <div class="card"><div class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div><div class="row muted"><span>На складе</span><span>Сборка</span><span class="b" style="color:var(--good)">Собран</span><span>Выдан</span></div></div>
-      <div class="card"><div class="b">История</div><div class="row"><span>Собран</span><span class="muted">18:12</span></div><div class="row"><span>Склад начал сборку</span><span class="muted">17:41</span></div><div class="row"><span>Отправлен в отгрузку</span><span class="muted">17:36</span></div><div class="row"><span>Поставлен в резерв</span><span class="muted">14:02</span></div></div>
-    </div></div></div><span class="mock-note">макет экрана</span><figcaption>В карточке заказа — шкала, число мест и история по минутам.</figcaption></figure>
+    <figure><div class="phone"><div class="screen"><img src="img/orders-stages.jpg" alt="" style="object-position:top"></div></div><figcaption>В списке заказов сразу видно, за чем можно посылать курьера: «Собран, ждёт выдачи», «Собирается», «В резерве».</figcaption></figure>
+    <figure><div class="phone"><div class="screen"><img src="img/order-ready.jpg" alt="" style="object-position:top"></div></div><figcaption>В карточке заказа — шкала, число мест, кнопка «Пропуск курьеру» и история склада по минутам.</figcaption></figure>
     <div style="display:flex;flex-direction:column;gap:4mm">
       <div class="panel accent"><h3>Главный вопрос — «можно ли слать курьера?»</h3><p class="small">Ответ теперь виден в списке заказов: зелёная метка «Собран, ждёт выдачи». Рядом — сколько мест и с какого времени заказ ждёт.</p></div>
       <div class="panel"><h3>Видно, когда забрали</h3><p class="small">После выдачи в заказе появится время и отметка склада. Удобно, когда покупатель спрашивает «где мой заказ», а курьер не берёт трубку.</p></div>
@@ -139,23 +127,8 @@
 <section class="page">
   <div class="head"><h2>Отправьте курьера с пропуском</h2><span class="step">Шаг 4</span></div>
   <div class="shots">
-    <figure><div class="phone"><div class="screen"><div class="ui">
-      <div class="bar"><img src="img/logo.png" alt=""><span class="muted">☰</span></div><div class="title">Самовывоз</div>
-      <div class="b">Готово к выдаче</div>
-      <div class="card"><div class="row"><div class="row" style="justify-content:flex-start"><i class="chk on"></i><span class="mono">ORD-2026-9024</span></div><span class="muted">2 места</span></div><div class="muted">ждёт с 18:12</div></div>
-      <div class="card"><div class="row"><div class="row" style="justify-content:flex-start"><i class="chk on"></i><span class="mono">ORD-2026-9022</span></div><span class="muted">1 место</span></div><div class="muted">ждёт с 17:55</div></div>
-      <div class="card"><div class="row"><div class="row" style="justify-content:flex-start"><i class="chk"></i><span class="mono">ORD-2026-9018</span></div><span class="muted">3 места</span></div><div class="muted">заберёт другой курьер</div></div>
-      <div class="btn dark">Пропуск на всё готовое</div><div class="btn line">Пропуск на выбранное (2)</div>
-      <div class="b" style="margin-top:1mm">Собираются</div>
-      <div class="card"><div class="row"><span class="mono">ORD-2026-9023</span><span class="badge warn">к ~18:50</span></div></div>
-    </div></div></div><span class="mock-note">макет экрана</span><figcaption>Кабинет → «Самовывоз»: отметьте заказы, которые заберёт этот курьер.</figcaption></figure>
-    <figure><div class="phone"><div class="screen"><div class="ui" style="align-items:stretch">
-      <div class="bar"><img src="img/logo.png" alt=""><span class="badge good">действует</span></div>
-      <div class="title" style="text-align:center">Пропуск на выдачу</div>
-      <div class="card" style="align-items:center"><img src="img/qr-demo.svg" alt="" style="width:34mm;height:34mm"><div class="code">482 913</div><div class="muted" style="text-align:center">Покажите на складе QR-код или назовите цифры</div></div>
-      <div class="card"><div class="row"><span>Забрать</span><span class="b">2 заказа · 3 места</span></div><div class="row"><span>Склад</span><span class="b">до 21:00, пн–сб</span></div><div>Москва, ул. Дубнинская, 75с1А</div></div>
-      <div class="btn dark">Переслать курьеру</div><div class="btn red">Отозвать пропуск</div>
-    </div></div></div><span class="mock-note">макет экрана</span><figcaption>Пропуск — это ссылка. Перешлите её курьеру в любой мессенджер.</figcaption></figure>
+    <figure><div class="phone"><div class="screen"><img src="img/pickup-ready.jpg" alt="" style="object-position:top"></div></div><figcaption>Кабинет → «Самовывоз»: отметьте заказы, которые заберёт этот курьер, или выпустите пропуск на всё готовое.</figcaption></figure>
+    <figure><div class="phone"><div class="screen"><img src="img/pickup-pass.jpg" alt="" style="object-position:top"></div></div><figcaption>Пропуск — это ссылка с QR-кодом и шестью цифрами. Перешлите её курьеру в любой мессенджер.</figcaption></figure>
     <div style="display:flex;flex-direction:column;gap:4mm">
       <ol class="steps">
         <li>Откройте в кабинете раздел <span class="b">«Самовывоз»</span>.</li>
@@ -181,13 +154,16 @@
     <div class="panel accent"><div class="small muted">Адрес</div><div class="addr">Москва, ул. Дубнинская, 75с1А</div><p class="small" style="margin-top:2mm">Заезд через территорию института ВИСТИ. Ориентир — голубые двери и вывеска «ВИСТИ» на здании.</p></div>
     <div class="panel accent"><div class="small muted">Выдача заказов</div><div class="addr">Пн–сб, 9:00–21:00</div><p class="small" style="margin-top:2mm">Воскресенье — выходной. Приезжайте до 21:00: после закрытия заказы не выдаём. Телефон склада: +7 (991) 584-33-90.</p></div>
   </div>
-  <ol class="steps big">
+  <div class="shots" style="align-items:flex-start">
+    <figure><div class="phone"><div class="screen"><img src="img/courier-page.jpg" alt="" style="object-position:top"></div></div><figcaption>Так выглядит пропуск на телефоне курьера.</figcaption></figure>
+    <ol class="steps big" style="flex:1">
     <li><span class="b">Откройте ссылку-пропуск</span>, которую прислал магазин. На экране — QR-код и шесть цифр.</li>
     <li><span class="b">Проверьте статус на этой же странице.</span> «Можно забирать» — поезжайте. «Ещё собирается» — там указано, к какому времени будет готово.</li>
     <li><span class="b">На складе покажите QR-код кладовщику.</span> Нет интернета — назовите шесть цифр.</li>
     <li><span class="b">Получите заказы и сверьте число мест</span> с тем, что написано в пропуске.</li>
     <li><span class="b">Подписывать ничего не нужно.</span> QR-код и есть подтверждение: кладовщик отметит выдачу, магазин увидит её у себя.</li>
   </ol>
+  </div>
   <div class="cols-2">
     <div class="panel"><h3>Вам выдадут только то, что в пропуске</h3><p class="small">Если у магазина на складе лежат и другие заказы, они останутся ждать другого курьера. Так и задумано, спорить с кладовщиком не нужно — вопрос к магазину.</p></div>
     <div class="panel warn"><h3>Пропуска нет или он не открывается</h3><p class="small">Попросите магазин прислать ссылку заново — это минута. Без пропуска кладовщик сначала убедится, что вы от этого магазина, а вы распишетесь в расходном листе. Это дольше.</p></div>
