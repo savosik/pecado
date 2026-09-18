@@ -141,6 +141,19 @@ class HandleOrderUpdated
             $order->items_version = (int) $payload['items_version'];
         }
 
+        // v16.11.0 (совместная отгрузка): терминальный итог группы. Пока итога нет,
+        // 1С ничего не шлёт, а сайт держит pending. Успех/отказ переопределяют
+        // резерв поверх поля reserve — они и есть источник истины по группе.
+        $shipTogetherOutcome = isset($payload['ship_together_status']);
+        if ($shipTogetherOutcome) {
+            app(\App\Services\Order\ShipTogetherService::class)->applyOutcome($order, $payload);
+        } elseif ($reserveExplicit && ! $order->reserve && $order->shipTogetherPending()) {
+            // 1С сняла резерв без полей группы (старая версия обработчика или ручной
+            // перевод менеджером): ожидание группы снимаем, заказ ушёл в отгрузку по одному
+            $order->ship_together_status = null;
+            $order->reserve_outcome = 'confirmed';
+        }
+
         // v13.7: аудит-метки 1С. array_key_exists, чтобы передача null
         // тоже считалась явной операцией; отсутствие ключа — не трогаем БД.
         // TZ-нормализация — в App\Casts\ErpDatetime.
@@ -165,6 +178,10 @@ class HandleOrderUpdated
         }
 
         $order->save();
+
+        if ($shipTogetherOutcome && $order->ship_together_status === \App\Enums\ShipTogetherStatus::CONFLICT) {
+            $this->notifyShipTogetherConflict($order);
+        }
 
         // soft-delete после save — чтобы статус 'closed' уже был зафиксирован
         if ($shouldSoftDelete && ! $order->trashed()) {
@@ -290,6 +307,50 @@ class HandleOrderUpdated
      * складывала позиции в массив с ключом product_uuid — из-за чего две строки
      * на один товар (недобор) схлопывались в одну, и побеждала последняя.
      */
+    /**
+     * Письмо клиенту об отказе группы совместной отгрузки (v16.11.0) — одно на группу:
+     * origin_key строится по ключу группы, а не по номеру заказа, поэтому итог по
+     * каждому заказу группы склеивается в одно письмо. Заказы перечислены в теле.
+     */
+    private function notifyShipTogetherConflict(Order $order): void
+    {
+        $conflict = is_array($order->ship_together_conflict) ? $order->ship_together_conflict : [];
+        $reason = \App\Enums\ShipTogetherConflictReason::labelFor($conflict['reason'] ?? null);
+
+        $numbers = Order::query()
+            ->where('ship_together_key', $order->ship_together_key)
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Order $o) => $o->erp_number ?: $o->number ?: ('#'.$o->id))
+            ->implode(', ');
+
+        app(\App\Services\Crm\Mail\MailStream::class)->captureQuietly(new \App\Support\Notifications\Occasion(
+            key: 'orders.ship_together_rejected',
+            clientUserId: $order->user_id,
+            companyId: $order->company_id,
+            subject: $order,
+            data: [
+                'ship_together_key' => $order->ship_together_key,
+                // Ключ группы в origin_key: итог по каждому заказу группы склеивается в одно письмо
+                'origin_suffix' => $order->ship_together_key,
+                'reason' => $conflict['reason'] ?? null,
+                // Перечень номеров — в тему письма через подстановку {{order_number}}
+                'order_number' => $numbers,
+            ],
+            view: [
+                'title' => 'Заказы не удалось отправить в отгрузку вместе',
+                'body' => sprintf(
+                    'Склад не смог оформить заказы %s одной отгрузкой: %s. Заказы остались в резерве — отправьте их снова вместе или по одному.%s',
+                    $numbers,
+                    mb_strtolower($reason),
+                    filled($conflict['message'] ?? null) ? ' Пояснение склада: '.$conflict['message'] : '',
+                ),
+                'url' => url('/cabinet/reserves'),
+                'entity_label' => 'Заказы '.$numbers,
+            ],
+        ));
+    }
+
     private function syncItemsWithHistory(Order $order, array $newItems): void
     {
         $oldSnapshot = $this->changeLogger->snapshotItems($order);

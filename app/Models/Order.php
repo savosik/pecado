@@ -131,6 +131,10 @@ class Order extends Model implements HasMedia
         'reserved_until',
         'items_version',
         'reserve_outcome',
+        'ship_together_key',
+        'ship_together_status',
+        'ship_together_conflict',
+        'ship_together_sent_at',
         'erp_created_at',
         'erp_updated_at',
     ];
@@ -157,6 +161,10 @@ class Order extends Model implements HasMedia
             'reserve' => 'boolean',
             'reserved_until' => \App\Casts\ErpDatetime::class,
             'items_version' => 'integer',
+            // v16.11.0: совместная отгрузка — состояние группы и причина отказа из 1С
+            'ship_together_status' => \App\Enums\ShipTogetherStatus::class,
+            'ship_together_conflict' => 'array',
+            'ship_together_sent_at' => 'datetime',
             'erp_created_at' => \App\Casts\ErpDatetime::class,
             'erp_updated_at' => \App\Casts\ErpDatetime::class,
         ];
@@ -177,7 +185,9 @@ class Order extends Model implements HasMedia
         }
 
         if ($this->reserve) {
-            return true;
+            // v16.11.0: группа ушла в 1С и ждёт итога — отмена закрыта до ответа,
+            // иначе 1С подтвердит уже отменённый на сайте заказ
+            return ! $this->shipTogetherPending();
         }
 
         return in_array($this->status, [
@@ -187,6 +197,15 @@ class Order extends Model implements HasMedia
             OrderStatus::PENDING_PAYMENT_BEFORE_SHIPMENT,
             OrderStatus::AWAITING_PROVISION,
         ], true);
+    }
+
+    /**
+     * Группа совместной отгрузки отправлена в 1С, итога ещё нет (v16.11.0):
+     * резерв держится локально, правки, отмена и повторная отправка закрыты.
+     */
+    public function shipTogetherPending(): bool
+    {
+        return $this->ship_together_status === \App\Enums\ShipTogetherStatus::PENDING;
     }
 
     /**

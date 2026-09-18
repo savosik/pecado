@@ -34,6 +34,8 @@ class ReserveOrderController extends Controller
             ->get();
 
         return Inertia::render('User/Cabinet/Reserves/Index', [
+            // v16.11.0: совместная отгрузка — галочки и кнопка «В отгрузку выбранное»
+            'ship_together_enabled' => \App\Services\Order\ShipTogetherService::enabled(),
             'reserves' => $orders->map(fn (Order $order) => [
                 'id' => $order->id,
                 'number' => $order->erp_number ?? $order->number ?? ('#'.$order->id),
@@ -45,6 +47,8 @@ class ReserveOrderController extends Controller
                 // ISO для живого таймера на клиенте; фактический срок из 1С
                 'reserved_until' => $order->reserved_until?->toIso8601String(),
                 'reserved_until_formatted' => $order->reserved_until?->timezone(config('app.timezone'))->format('d.m.Y H:i'),
+                // v16.11.0: состояние группы — «ждём склад» блокирует действия, «отказ» показывает причину
+                'ship_together' => \App\Services\Order\ShipTogetherService::present($order),
             ])->values(),
         ]);
     }
@@ -121,6 +125,41 @@ class ReserveOrderController extends Controller
 
         return response()->json([
             'message' => 'Заказ отправлен в отгрузку — дальше он идёт по обычному конвейеру.',
+        ]);
+    }
+
+    /**
+     * Совместная отгрузка группы резервов (v16.11.0, топик №7 Agent Hub).
+     * POST /cabinet/reserves/ship-together {order_ids: [..]}
+     *
+     * По каждому заказу в 1С уходит order.confirmed с ключом группы и манифестом;
+     * 1С оформляет по группе минимальный комплект реализаций и расходных ордеров.
+     * Резерв локально не снимается — заказы ждут итога группы из 1С.
+     */
+    public function shipTogether(Request $request, \App\Services\Order\ShipTogetherService $service): JsonResponse
+    {
+        abort_unless(\App\Services\Order\ShipTogetherService::enabled(), 404);
+
+        $validated = $request->validate([
+            'order_ids' => ['required', 'array', 'min:2'],
+            'order_ids.*' => ['required', 'integer', 'distinct'],
+        ], [
+            'order_ids.required' => 'Отметьте заказы, которые нужно отправить вместе.',
+            'order_ids.min' => 'Для совместной отгрузки отметьте хотя бы два заказа.',
+        ]);
+
+        try {
+            $result = $service->confirmGroup($request->user(), $validated['order_ids']);
+        } catch (\App\Services\Order\ReserveActionException $e) {
+            return response()->json(['message' => $e->getMessage(), 'code' => $e->errorCode], $e->status);
+        }
+
+        return response()->json([
+            'message' => sprintf(
+                'Заказы отправлены в отгрузку вместе (%d шт.). Склад подтвердит группу в течение нескольких минут — до этого заказы остаются в резерве.',
+                $result['orders']->count(),
+            ),
+            'ship_together_key' => $result['key'],
         ]);
     }
 }

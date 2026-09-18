@@ -91,15 +91,40 @@ class OrderReservePublisher
      */
     public function publishConfirmed(Order $order, ?CarbonInterface $confirmedAt = null): void
     {
-        $payload = [
+        PublishOrderToErpJob::dispatch($this->confirmedPayload($order, $confirmedAt));
+    }
+
+    /**
+     * Подтверждение заказа в составе группы совместной отгрузки (v16.11.0).
+     *
+     * Те же поля, что у одиночного подтверждения, плюс ключ группы и манифест —
+     * UUID всех заказов группы в одном и том же порядке в каждом сообщении.
+     * 1С копит группу по манифесту и оформляет по ней минимальный комплект
+     * реализаций и расходных ордеров; неполная группа частично не оформляется.
+     *
+     * @param  list<string>  $orderUuids  манифест группы, включая uuid этого заказа
+     */
+    public function publishConfirmedInGroup(Order $order, string $shipTogetherKey, array $orderUuids, ?CarbonInterface $confirmedAt = null): void
+    {
+        $payload = $this->confirmedPayload($order, $confirmedAt);
+        $payload['ship_together_key'] = $shipTogetherKey;
+        $payload['ship_together_order_uuids'] = array_values($orderUuids);
+
+        PublishOrderToErpJob::dispatch($payload);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function confirmedPayload(Order $order, ?CarbonInterface $confirmedAt): array
+    {
+        return [
             'event' => 'order.confirmed',
             'message_id' => $this->newMessageId(),
             'uuid' => $order->uuid,
             'confirmed_at' => ($confirmedAt ?? now())->toIso8601String(),
             'timestamp' => now()->toIso8601String(),
         ];
-
-        PublishOrderToErpJob::dispatch($payload);
     }
 
     private function newMessageId(): string

@@ -11,6 +11,7 @@ use App\Services\Client\Api\OperationProvider;
 use App\Services\Erp\OrderReservePublisher;
 use App\Services\Order\ClientOrderActions;
 use App\Services\Order\OrderChangeLogger;
+use App\Services\Order\ShipTogetherService;
 use App\Support\OperationApi\OperationInput;
 use App\Support\OperationApi\Param;
 use Illuminate\Validation\ValidationException;
@@ -69,6 +70,28 @@ class ReserveOperations implements OperationProvider
                 gate: FeatureGate::RESERVE,
             ),
             new Operation(
+                id: 'reserves.confirm_group',
+                section: 'reserves',
+                method: 'POST',
+                uri: 'reserves/ship-together',
+                summary: 'Отправить несколько резервов в отгрузку вместе — одной реализацией и одним расходным ордером',
+                description: 'Совместная отгрузка (протокол v16.11.0): по каждому заказу в 1С уходит order.confirmed с ключом '
+                    .'группы; склад оформляет по группе минимальный комплект документов (одна реализация и один ордер, если '
+                    .'позволяют реквизиты). Заказы остаются отдельными документами. Условия: минимум два заказа, одно юрлицо, '
+                    .'одна валюта, один склад, один способ и адрес доставки, все — в резерве. Резерв НЕ снимается сразу: '
+                    .'заказы ждут итог склада (ship_together.status = pending, правки и отмена закрыты), итог виден в '
+                    .'orders.get / reserves.list — confirmed либо conflict с причиной; после conflict заказы снова в резерве, '
+                    .'повторите группу или подтвердите по одному. Отказы до отправки: group_too_small, group_mixed_company, '
+                    .'group_mixed_currency, group_mixed_delivery, group_mixed_address, group_mixed_warehouse, '
+                    .'group_multi_warehouse, not_reserved, ship_together_pending (409).',
+                params: [
+                    Param::list('orders', 'Заказы: id, номера или uuid (минимум два)', 'string', true, ['min:2']),
+                ],
+                handler: [self::class, 'confirmGroup'],
+                mutating: true,
+                gate: FeatureGate::RESERVE,
+            ),
+            new Operation(
                 id: 'reserves.items',
                 section: 'reserves',
                 method: 'POST',
@@ -112,6 +135,8 @@ class ReserveOperations implements OperationProvider
             'currency_code' => $order->currency_code,
             'reserved_until' => $order->reserved_until?->toIso8601String(),
             'items_version' => (int) ($order->items_version ?? 0),
+            // v16.11.0: состояние группы совместной отгрузки (null — группой не отправлялся)
+            'ship_together' => ShipTogetherService::present($order),
             'created_at' => ($order->erp_created_at ?? $order->created_at)?->toIso8601String(),
             'items' => $order->items->map(fn ($item) => [
                 'item_id' => $item->id,
@@ -136,6 +161,25 @@ class ReserveOperations implements OperationProvider
         $this->actions->confirmReserve($order, $this->publisher);
 
         return Envelope::data(['order_id' => $order->id, 'confirmed' => true]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function confirmGroup(User $actor, OperationInput $input): array
+    {
+        $ids = array_map(
+            fn ($identifier) => $this->orderOf($actor, (string) $identifier, withTrashed: true)->id,
+            $input->array('orders'),
+        );
+
+        $result = app(ShipTogetherService::class)->confirmGroup($actor, $ids);
+
+        return Envelope::data([
+            'ship_together_key' => $result['key'],
+            'status' => 'pending',
+            'order_ids' => $result['orders']->pluck('id')->values()->all(),
+        ]);
     }
 
     /**

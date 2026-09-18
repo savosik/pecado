@@ -181,6 +181,8 @@ class ClientOrderPresenter
             'reserved_until_formatted' => $order->reserve
                 ? $order->reserved_until?->timezone(config('app.timezone'))->format('d.m.Y H:i')
                 : null,
+            // v16.11.0: совместная отгрузка — «ждём склад» закрывает действия, отказ показывает причину
+            'ship_together' => ShipTogetherService::present($order),
             'type' => $order->type?->value,
             'comment' => $order->comment,
             'manager_comment' => $order->manager_comment,
@@ -304,6 +306,7 @@ class ClientOrderPresenter
             'reserve' => (bool) $order->reserve,
             'reserved_until' => $order->reserve ? $order->reserved_until?->toIso8601String() : null,
             'items_version' => (int) ($order->items_version ?? 0),
+            'ship_together' => ShipTogetherService::present($order),
             'is_synced_with_erp' => $order->erp_created_at !== null,
             // created_at — дата документа (из 1С, если заказ уже проведён); placed_at — оформление на сайте.
             'created_at' => ($order->erp_created_at ?? $order->created_at)?->toIso8601String(),

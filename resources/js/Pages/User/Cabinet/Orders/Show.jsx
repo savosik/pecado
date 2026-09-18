@@ -290,8 +290,26 @@ export default function OrderShow({ order }) {
                 {/* ═══ Сборка и выдача (эпик pick-00): шкала, обещанное время, пропуск курьеру ═══ */}
                 {!order.reserve && <FulfilmentPanel fulfilment={order.fulfilment} />}
 
+                {/* ═══ Совместная отгрузка (v16.11.0): группа ушла в 1С, ждём итог — действия закрыты ═══ */}
+                {order.reserve && order.ship_together?.status === 'pending' && (
+                    <Card.Root borderColor="orange.300" borderWidth="1px" bg="orange.50" _dark={{ bg: 'orange.900/20', borderColor: 'orange.700' }}>
+                        <Card.Body py="4">
+                            <HStack gap="3" align="flex-start">
+                                <Box color="orange.500" mt="1"><LuClock3 size={22} /></Box>
+                                <VStack align="flex-start" gap="0">
+                                    <Text fontWeight="700">Отправлен в отгрузку вместе с другими заказами — ждём подтверждения склада</Text>
+                                    <Text fontSize="sm" color="fg.muted">
+                                        Склад оформит группу одной отгрузкой и ответит в течение нескольких минут.
+                                        До ответа заказ остаётся в резерве, но изменить или отменить его нельзя.
+                                    </Text>
+                                </VStack>
+                            </HStack>
+                        </Card.Body>
+                    </Card.Root>
+                )}
+
                 {/* ═══ Плашка резерва: таймер + подтверждение (v16.9.0, res-07) ═══ */}
-                {order.reserve && (
+                {order.reserve && order.ship_together?.status !== 'pending' && (
                     <Card.Root borderColor="purple.300" borderWidth="1px" bg="purple.50" _dark={{ bg: 'purple.900/20', borderColor: 'purple.700' }}>
                         <Card.Body py="4">
                             <Flex
@@ -312,6 +330,12 @@ export default function OrderShow({ order }) {
                                             Товар удержан на складе. Не подтвердите до истечения срока —
                                             резерв снимется автоматически. Пока резерв активен, заказ можно отменить.
                                         </Text>
+                                        {order.ship_together?.status === 'conflict' && order.ship_together.conflict && (
+                                            <Text fontSize="sm" color="red.fg" mt="1">
+                                                Отправить вместе с другими не удалось: {order.ship_together.conflict.label.toLowerCase()}.
+                                                {order.ship_together.conflict.message ? ` ${order.ship_together.conflict.message}` : ''} Заказ снова в резерве.
+                                            </Text>
+                                        )}
                                     </VStack>
                                 </HStack>
                                 {/* Три действия резерва вместе: подтвердить, изменить, отменить.

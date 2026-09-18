@@ -200,6 +200,8 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     // v16.9.0 (res-07): раздел «Заказы в резерве» + подтверждение отгрузки
     Route::get('/reserves', [\App\Http\Controllers\User\ReserveOrderController::class, 'index'])->name('reserves.index');
     Route::post('/orders/{order}/confirm-reserve', [\App\Http\Controllers\User\ReserveOrderController::class, 'confirm'])->name('orders.confirm-reserve');
+    // v16.11.0: совместная отгрузка группы резервов (рубильник order_reserve.ship_together.enabled)
+    Route::post('/reserves/ship-together', [\App\Http\Controllers\User\ReserveOrderController::class, 'shipTogether'])->name('reserves.ship-together');
     // v16.9.0 (res-08): правка состава резервного заказа (v1 — только уменьшение)
     Route::post('/orders/{order}/reserve-items', [\App\Http\Controllers\User\ReserveOrderController::class, 'updateItems'])->name('orders.reserve-items');
     // pick-09: раздел «Самовывоз» — готовое к выдаче и пропуска курьерам (рубильник pickup.enabled)
