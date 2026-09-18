@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Container, Image, Text, VStack } from '@chakra-ui/react';
 import { Head } from '@inertiajs/react';
 import { LuMapPin, LuPhone } from 'react-icons/lu';
+import WarehouseMap from '@/components/common/WarehouseMap';
 
 const places = (n) => {
     const mod10 = n % 10; const mod100 = n % 100;
@@ -56,6 +57,7 @@ export default function PickupPass({ pass, schedule }) {
                     <Box bg="bg" borderRadius="xl" p="5">
                         <Text fontSize="lg" fontWeight="800">{schedule.address}</Text>
                         <Text fontSize="sm" color="fg.muted" mb="3">{schedule.how_to_find}</Text>
+                        <Box mb="4"><WarehouseMap coords={schedule.coords} title="Склад Pecado" /></Box>
                         <Text fontWeight="700">{schedule.week_text}</Text>
                         <Text fontSize="sm" color={schedule.is_open ? 'fg.muted' : 'fg.error'} mb="4">
                             {schedule.is_open ? `Сегодня выдаём до ${schedule.closes_at}. После закрытия заказы не выдаём.` : 'Сейчас склад закрыт.'}

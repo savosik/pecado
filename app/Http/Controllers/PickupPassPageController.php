@@ -71,6 +71,7 @@ class PickupPassPageController extends Controller
             'closes_at' => $today['closes_at'],
             'week_text' => $today['week_text'],
             'address' => $today['address'],
+            'coords' => array_values(array_map('floatval', (array) config('warehouse.pickup_coords', []))),
             'how_to_find' => $today['how_to_find'],
             'phone' => $today['phone'],
         ];

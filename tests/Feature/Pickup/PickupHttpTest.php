@@ -158,7 +158,8 @@ class PickupHttpTest extends TestCase
             ->assertHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
             ->assertHeader('Referrer-Policy', 'no-referrer')
             ->assertInertia(fn (Assert $page) => $page->component('Pickup/Pass')
-                ->where('pass.state', 'ready')->where('pass.ready_sets', 1)->where('pass.orders.0.number', '29УТ-016002'));
+                ->where('pass.state', 'ready')->where('pass.ready_sets', 1)->where('pass.orders.0.number', '29УТ-016002')
+                ->where('schedule.coords', fn ($c) => count($c) === 2 && $c[0] > 55 && $c[1] > 37));
 
         $body = $response->getContent();
         $this->assertStringNotContainsString($this->client->name, $body);
