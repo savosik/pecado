@@ -17,7 +17,11 @@ class NewQuestionAdminNotification extends Notification implements ShouldQueue
     /** @var array<int,int> */
     public array $backoff = [30, 120, 300];
 
-    public function __construct(public UserQuestion $question) {}
+    /**
+     * @param  string|null  $url  куда вести из письма: менеджеру — вопрос в CRM,
+     *                            общим адресатам — в админке (по умолчанию)
+     */
+    public function __construct(public UserQuestion $question, public ?string $url = null) {}
 
     /**
      * @return array<int, string>
@@ -33,7 +37,7 @@ class NewQuestionAdminNotification extends Notification implements ShouldQueue
             ->subject('Новый вопрос с сайта — Pecado.ru')
             ->markdown('mail.user-questions.manager-new', [
                 'question' => $this->question,
-                'adminUrl' => url(route('admin.user-questions.show', $this->question, false)),
+                'adminUrl' => $this->url ?? url(route('admin.user-questions.show', $this->question, false)),
                 'hasAttachment' => $this->question->getFirstMedia('attachment') !== null,
             ]);
     }

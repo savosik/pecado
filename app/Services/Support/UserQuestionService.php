@@ -6,6 +6,7 @@ use App\Enums\UserQuestionStatus;
 use App\Models\User;
 use App\Models\UserQuestion;
 use App\Notifications\UserQuestions\NewQuestionAdminNotification;
+use App\Notifications\UserQuestions\QuestionAnsweredNotification;
 use App\Notifications\UserQuestions\QuestionReceivedNotification;
 use App\Services\Crm\Mail\MailStream;
 use App\Services\Notifications\StaffNotifications;
@@ -16,9 +17,11 @@ use Illuminate\Support\Facades\Notification;
 /**
  * Вопрос клиента менеджеру — одна реализация для формы на сайте и API v1.
  *
- * Адресаты сотрудников заданы явным списком, а не выборкой по ролям: роль
- * раздаёт права, а не почту. Пустой список — письма не уходят, вопрос всё
- * равно виден в админке.
+ * Кому сообщать о новом вопросе, решают данные, а не роли: персональный
+ * менеджер клиента получает письмо со ссылкой в CRM, потому что клиент — его;
+ * остальные адресаты (общий ящик, дежурный) заданы явным списком в конфиге.
+ * Пустой список и клиент без менеджера — письма не уходят, вопрос всё равно
+ * виден в CRM (разрез «весь отдел») и в админке.
  */
 class UserQuestionService
 {
@@ -70,22 +73,85 @@ class UserQuestionService
             ],
             view: [
                 'title' => 'Новый вопрос с сайта',
-                'body' => (string) $question->question,
+                'body' => (string) $question->body,
                 'entity_label' => 'Вопрос №'.$question->id,
             ],
         ));
 
-        foreach (config('notifications.mail.user_question_recipients', []) as $recipient) {
+        $recipients = array_map(
+            fn ($email) => mb_strtolower(trim((string) $email)),
+            config('notifications.mail.user_question_recipients', []),
+        );
+
+        foreach ($recipients as $recipient) {
             // Сотрудник может отписаться у себя в «Моих уведомлениях».
             // Общий ящик отдела учётки не имеет — ему письмо уходит всегда.
-            if (! $this->staff->wantsByEmail($recipient, 'staff.question_received')) {
+            if ($recipient === '' || ! $this->staff->wantsByEmail($recipient, 'staff.question_received')) {
                 continue;
             }
 
             Notification::route('mail', $recipient)->notify(new NewQuestionAdminNotification($question));
         }
 
+        $this->notifyPersonalManager($question, $user, $recipients);
+
         return $question;
+    }
+
+    /**
+     * Персональному менеджеру клиента — письмо со ссылкой на вопрос в CRM.
+     *
+     * Адресат вычисляется из данных (users.personal_manager_id → карточка
+     * менеджера → учётка сотрудника), а не из списка в конфиге: клиент
+     * закреплён за человеком, и вопрос клиента — его вопрос. Если менеджер
+     * уже стоит в общем списке, второго письма не будет.
+     *
+     * @param  list<string>  $alreadySent  адреса, которым письмо уже ушло
+     */
+    private function notifyPersonalManager(UserQuestion $question, ?User $client, array $alreadySent): void
+    {
+        $manager = $client?->personalManager?->user;
+
+        if ($manager === null || ! $manager->can('crm-questions.view')) {
+            return;
+        }
+
+        if (in_array(mb_strtolower((string) $manager->email), $alreadySent, true)) {
+            return;
+        }
+
+        if (! $this->staff->wants($manager, 'staff.question_received')) {
+            return;
+        }
+
+        $manager->notify(new NewQuestionAdminNotification(
+            $question,
+            url(route('crm.questions.show', $question, false)),
+        ));
+    }
+
+    /**
+     * Ответ сотрудника: статус, автор, письмо клиенту (или гостю на его адрес).
+     */
+    public function answer(UserQuestion $question, User $manager, string $answer): void
+    {
+        $question->markAnswered($manager, $answer);
+
+        if ($question->user_id !== null && $question->user) {
+            $question->user->notify(new QuestionAnsweredNotification($question));
+
+            return;
+        }
+
+        Notification::route('mail', $question->email)->notify(new QuestionAnsweredNotification($question));
+    }
+
+    /**
+     * Отклонение (спам, оффтопик): клиенту письмо не уходит, причина — для истории.
+     */
+    public function reject(UserQuestion $question, User $manager, ?string $reason): void
+    {
+        $question->markRejected($manager, $reason);
     }
 
     /**
