@@ -29,7 +29,7 @@ export default function IssueCard({ row, canIssue, onIssue, busy = false, extra 
                         {row.company && <Text fontSize="sm" color="fg.muted" lineClamp="1">{row.company}</Text>}
                     </Box>
                     <HStack gap="1" flexShrink={0}>
-                        <Badge size="lg" variant="subtle">{placesText(row.packages_count)}</Badge>
+                        {row.packages_count > 0 && <Badge size="lg" variant="subtle">{placesText(row.packages_count)}</Badge>}
                         <RowActions view={{ href: `/wms/goods-issues/${row.id}`, permission: 'wms-goods-issues.view', label: 'Открыть ордер' }} />
                     </HStack>
                 </HStack>

@@ -148,6 +148,20 @@ class PickupHttpTest extends TestCase
     }
 
     #[Test]
+    public function cabinet_rows_carry_order_items_for_the_spoiler(): void
+    {
+        $order = $this->pickupOrder($this->client);
+        \App\Models\OrderItem::factory()->create(['order_id' => $order->id, 'name' => 'Массажное масло', 'quantity' => 3, 'cancelled' => false]);
+        \App\Models\OrderItem::factory()->create(['order_id' => $order->id, 'name' => 'Отменённая позиция', 'quantity' => 1, 'cancelled' => true]);
+        $this->goodsIssueFor($order);
+
+        $this->actingAs($this->client)->get('/cabinet/pickup')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('ready.0.orders.0.items', 1)
+                ->where('ready.0.orders.0.items.0.quantity', 3));
+    }
+
+    #[Test]
     public function cabinet_section_is_404_when_switch_is_off(): void
     {
         config(['pickup.enabled' => false]);

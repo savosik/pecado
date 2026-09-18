@@ -5,6 +5,7 @@ import axios from 'axios';
 import { LuClock3, LuCopy, LuPackageCheck, LuQrCode, LuShare2, LuTruck } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Checkbox } from '@/components/ui/checkbox';
+import { AccordionItem, AccordionItemContent, AccordionItemTrigger, AccordionRoot } from '@/components/ui/accordion';
 import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
 import { toastError, toastSuccess } from '@/utils/toast';
 
@@ -80,6 +81,36 @@ export default function PickupIndex({ ready, picking, handed, passes, schedule, 
         } catch {
             toastError('Не удалось скопировать', pass.url);
         }
+    };
+
+    // Состав заказов спойлером: клиент видит, за каким товаром шлёт курьера, не открывая карточку.
+    const itemsSpoiler = (row) => {
+        const total = row.orders.reduce((sum, o) => sum + (o.items?.length || 0), 0);
+        if (total === 0) return null;
+        return (
+            <AccordionRoot collapsible size="sm" mt="1">
+                <AccordionItem value="items" border="none">
+                    <AccordionItemTrigger py="1" fontSize="sm" color="fg.muted" cursor="pointer">
+                        Состав: {total} {total % 10 === 1 && total % 100 !== 11 ? 'позиция' : total % 10 >= 2 && total % 10 <= 4 && (total % 100 < 12 || total % 100 > 14) ? 'позиции' : 'позиций'}
+                    </AccordionItemTrigger>
+                    <AccordionItemContent pb="1">
+                        <VStack align="stretch" gap="1">
+                            {row.orders.map((o) => (
+                                <Box key={o.id}>
+                                    {row.orders.length > 1 && <Text fontSize="xs" fontWeight="700" color="fg.muted">{o.number}</Text>}
+                                    {o.items.map((item, i) => (
+                                        <HStack key={i} justify="space-between" fontSize="sm" gap="3">
+                                            <Text lineClamp="1" minW="0">{item.name}</Text>
+                                            <Text flexShrink={0} color="fg.muted">{item.quantity} шт.</Text>
+                                        </HStack>
+                                    ))}
+                                </Box>
+                            ))}
+                        </VStack>
+                    </AccordionItemContent>
+                </AccordionItem>
+            </AccordionRoot>
+        );
     };
 
     const orderLinks = (row) => row.orders.map((order, index) => (
@@ -178,6 +209,7 @@ export default function PickupIndex({ ready, picking, handed, passes, schedule, 
                                                 {multiCompany && row.company ? ` · ${row.company}` : ''}
                                             </Text>
                                             {row.orders.length > 1 && <Text fontSize="xs" color="fg.muted">Собраны вместе — выдаются одним комплектом</Text>}
+                                            {itemsSpoiler(row)}
                                         </Box>
                                         <VStack gap="1" align="flex-end" flexShrink={0}>
                                             <Badge colorPalette="green">собран</Badge>
@@ -216,6 +248,7 @@ export default function PickupIndex({ ready, picking, handed, passes, schedule, 
                                     <Text minW="0">{orderLinks(row)}</Text>
                                     <Badge colorPalette="orange" flexShrink={0}><LuClock3 size={12} /> {row.promised_text ? `к ~${row.promised_text}` : 'в работе'}</Badge>
                                 </HStack>
+                                {itemsSpoiler(row)}
                             </Card.Body></Card.Root>
                         ))}
                     </VStack>

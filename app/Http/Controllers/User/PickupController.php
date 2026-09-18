@@ -37,10 +37,18 @@ class PickupController extends Controller
         $issues = $this->resolver->issuesForUser($user);
         $companies = Company::query()->where('user_id', $user->id)->pluck('name', 'id');
 
+        // Состав заказов — сразу на экране, спойлером: клиент решает, за чем слать курьера, не открывая карточки.
+        $orderIds = $issues->flatMap(fn (GoodsIssue $gi) => collect($gi->getRelation('pickupOrders'))->pluck('id'))->unique()->values();
+        $itemsByOrder = $orderIds->isEmpty() ? collect() : \App\Models\OrderItem::query()
+            ->whereIn('order_id', $orderIds)->where('cancelled', false)
+            ->with('product:id,name,sku')
+            ->get(['id', 'order_id', 'product_id', 'name', 'quantity'])
+            ->groupBy('order_id');
+
         $covered = $this->passes->coveredBySelected($user);
         $allPass = $this->passes->activeAllPass($user);
 
-        $rows = $issues->map(function (GoodsIssue $gi) use ($companies, $covered, $allPass) {
+        $rows = $issues->map(function (GoodsIssue $gi) use ($companies, $covered, $allPass, $itemsByOrder) {
             $handover = $gi->activeHandover;
             $stage = $this->resolver->issueStage($gi, true, $handover !== null);
             $orders = collect($gi->getRelation('pickupOrders'));
@@ -67,6 +75,11 @@ class PickupController extends Controller
                     'id' => $o->id,
                     'number' => $o->erp_number ?: $o->number,
                     'total_amount' => (float) $o->total_amount,
+                    'items' => ($itemsByOrder->get($o->id) ?? collect())->map(fn ($item) => [
+                        'name' => $item->product?->name ?: $item->name,
+                        'sku' => $item->product?->sku,
+                        'quantity' => (float) $item->quantity,
+                    ])->values()->all(),
                 ])->values()->all(),
             ];
         });

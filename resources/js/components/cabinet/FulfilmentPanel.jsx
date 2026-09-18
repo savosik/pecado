@@ -55,7 +55,7 @@ export default function FulfilmentPanel({ fulfilment }) {
                         <Box>
                             <Text fontWeight="700">{fulfilment.label}</Text>
                             <Text fontSize="sm" color="fg.muted">
-                                {ready && `${places(fulfilment.packages_total)}${fulfilment.ready_since ? ` · ждёт с ${timeText(fulfilment.ready_since).replace('сегодня в ', '')}` : ''}. Отправляйте курьера с пропуском.`}
+                                {ready && `${fulfilment.packages_total > 0 ? `${places(fulfilment.packages_total)} · ` : ''}${fulfilment.ready_since ? `ждёт с ${timeText(fulfilment.ready_since).replace('сегодня в ', '')}` : 'собран'}. Отправляйте курьера с пропуском.`}
                                 {handed && `Выдан ${timeText(fulfilment.handed_at)}${fulfilment.packages_handed ? ` · ${places(fulfilment.packages_handed)}` : ''}.`}
                                 {!ready && !handed && (fulfilment.promise?.text || fulfilment.hint)}
                                 {fulfilment.promise?.is_overdue && ' Склад задерживается — заказ в приоритете.'}

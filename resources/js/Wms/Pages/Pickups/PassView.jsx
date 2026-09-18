@@ -21,13 +21,20 @@ export default function PassView({ pass, via, verified, canIssue, busyId, onIssu
                 <Badge size="lg" colorPalette={pass.is_usable ? 'green' : 'red'}>{pass.status_label}</Badge>
             </HStack>
 
-            <Card.Root size="sm" bg={pass.is_usable ? 'green.subtle' : 'red.subtle'}>
+            <Card.Root size="sm" bg={pass.is_usable ? 'green.subtle' : pass.status === 'used' ? 'green.subtle' : 'red.subtle'}>
                 <Card.Body gap="1">
                     <Text fontSize="sm" color="fg.muted">Пропуск {pass.code}</Text>
                     <Text fontSize="xl" fontWeight="700">{pass.client}</Text>
-                    {pass.is_usable
-                        ? <Text>Отдать: {toIssue.length} компл.{pass.packages_to_issue > 0 ? ` · ${placesText(pass.packages_to_issue)}` : ''}. Подпись не нужна — пропуск и есть подтверждение.</Text>
-                        : <Text fontWeight="600">Не выдавать. Попросите магазин прислать курьеру новый пропуск.</Text>}
+                    {pass.is_usable && (
+                        <Text>Отдать: {toIssue.length} компл.{pass.packages_to_issue > 0 ? ` · ${placesText(pass.packages_to_issue)}` : ''}. Подпись не нужна — пропуск и есть подтверждение.</Text>
+                    )}
+                    {/* Погашенный пропуск — всё выдано: это успех, а не запрет. Красное «не выдавать» кладовщик читал как «этому клиенту нельзя». */}
+                    {!pass.is_usable && pass.status === 'used' && (
+                        <Text fontWeight="600" color="green.fg"><LuCircleCheck style={{ display: 'inline', verticalAlign: '-2px' }} /> Заказы выданы, спасибо. Пропуск погашен — по нему больше ничего не отдаём.</Text>
+                    )}
+                    {!pass.is_usable && pass.status !== 'used' && (
+                        <Text fontWeight="600">Пропуск {pass.status === 'revoked' ? 'отозван магазином' : 'истёк'}. Не выдавать — попросите магазин прислать курьеру новый.</Text>
+                    )}
                     {pass.note && <Text fontSize="sm">Комментарий клиента: {pass.note}</Text>}
                 </Card.Body>
             </Card.Root>
@@ -38,7 +45,7 @@ export default function PassView({ pass, via, verified, canIssue, busyId, onIssu
                         <HStack justify="space-between" align="flex-start">
                             <Box minW="0">
                                 <Text fontWeight="700">{item.orders.map((o) => o.number).join(', ') || `Ордер ${item.number}`}</Text>
-                                <Text fontSize="sm" color="fg.muted">ордер {item.number} · {placesText(item.packages_count)}</Text>
+                                <Text fontSize="sm" color="fg.muted">ордер {item.number}{item.packages_count > 0 ? ` · ${placesText(item.packages_count)}` : ''}</Text>
                             </Box>
                             {verified.includes(item.goods_issue_id)
                                 ? <Badge colorPalette="green"><LuCircleCheck /> коробка проверена</Badge>
@@ -69,6 +76,15 @@ export default function PassView({ pass, via, verified, canIssue, busyId, onIssu
 
             {pass.is_usable && toIssue.length === 0 && (
                 <Card.Root size="sm"><Card.Body><Text>По этому пропуску сейчас выдавать нечего.</Text></Card.Body></Card.Root>
+            )}
+
+            {!pass.is_usable && pass.status === 'used' && pass.items.length > 0 && (
+                <Card.Root size="sm" variant="outline"><Card.Body gap="1">
+                    <Text fontSize="sm" color="fg.muted">Что было выдано</Text>
+                    {pass.items.map((item) => (
+                        <Text key={item.goods_issue_id} fontSize="sm">{item.orders.map((o) => o.number).join(', ') || `Ордер ${item.number}`} — {item.state_label}</Text>
+                    ))}
+                </Card.Body></Card.Root>
             )}
         </VStack>
     );
