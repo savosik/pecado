@@ -20,7 +20,7 @@ class WmsJoinController extends Controller
     {
         $link = $links->findActiveByToken($token);
 
-        if ($link === null || $link->user === null || ! $link->user->hasRole(AccessLinkService::ROLE)) {
+        if ($link === null || $link->user === null) {
             return redirect('/login')->with('error', 'Ссылка для входа на склад не действует. Попросите у начальника склада новую.');
         }
 
@@ -29,6 +29,10 @@ class WmsJoinController extends Controller
             Auth::logout();
             $request->session()->invalidate();
         }
+
+        // Учётка ссылки видит только экран выдачи: роль приводим к актуальной при каждом входе
+        // (ссылки, выпущенные до появления роли, получали «кладовщика»).
+        $link->user->syncRoles([AccessLinkService::ROLE]);
 
         Auth::login($link->user, remember: true);
         $request->session()->regenerate();

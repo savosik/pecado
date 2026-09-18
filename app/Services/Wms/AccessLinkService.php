@@ -20,7 +20,8 @@ use Illuminate\Support\Str;
  */
 class AccessLinkService
 {
-    public const ROLE = 'storekeeper';
+    /** Роль учётки ссылки: только экран выдачи (pick-17, «киоск»). */
+    public const ROLE = 'pickup-operator';
 
     /** @return array{0: WmsAccessLink, 1: string} ссылка и её секрет */
     public function create(string $name, ?User $by): array

@@ -29,6 +29,13 @@ class EnsureWmsLinkSessionValid
             && Auth::id() === $link->user_id;
 
         if ($valid) {
+            // «Киоск»: у вошедшего по ссылке нет ничего, кроме выдачи заказов, — остальные адреса
+            // кабинета склада уводят обратно на экран выдачи.
+            $route = (string) ($request->route()?->getName() ?? '');
+            if (! str_starts_with($route, 'wms.pickups.')) {
+                return redirect()->route('wms.pickups.index');
+            }
+
             return $next($request);
         }
 

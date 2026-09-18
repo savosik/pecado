@@ -16,8 +16,26 @@ import { Header } from './Header';
  * каркас общий для админки, CRM и склада, и появившаяся у всех троих полоска
  * присутствия клиентов на складе была бы шумом.
  */
-export const PanelLayout = ({ panel, children, breadcrumbs = [], extras = null, topBar = null }) => {
+export const PanelLayout = ({ panel, children, breadcrumbs = [], extras = null, topBar = null, kiosk = null }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    // «Киоск» (pick-17): один экран без навигации — для вошедших по ссылке кладовщика.
+    // Панель отдаёт свою шапку-заглушку, каркас не рисует ни меню, ни хлебных крошек.
+    if (kiosk) {
+        return (
+            <PanelProvider value={panel}>
+                <Box minH="100vh" bg="bg.subtle">
+                    {kiosk}
+                    {topBar}
+                    <Box as="main" p={{ base: 3, md: 6 }} maxW="720px" mx="auto">
+                        {children}
+                    </Box>
+                    <Toaster />
+                    {extras}
+                </Box>
+            </PanelProvider>
+        );
+    }
 
     return (
         <PanelProvider value={panel}>

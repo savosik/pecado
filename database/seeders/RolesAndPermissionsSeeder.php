@@ -390,6 +390,14 @@ class RolesAndPermissionsSeeder extends Seeder
                 'wms-deliveries', 'wms-delivery-settings', 'wms-stock-buffers', 'wms-pickups', 'wms-access',
             ],
         ],
+        // pick-17: учётки, в которые входят по ссылке кладовщика. Только экран выдачи — ни меню,
+        // ни других разделов склада; сама ссылка выдаётся начальником склада.
+        'pickup-operator' => [
+            'label' => 'Выдача по ссылке',
+            'resources' => [
+                'wms-pickups' => ['view', 'issue'],
+            ],
+        ],
         'storekeeper' => [
             'label' => 'Кладовщик',
             'resources' => [

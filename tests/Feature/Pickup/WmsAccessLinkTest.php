@@ -49,11 +49,16 @@ class WmsAccessLinkTest extends TestCase
         $this->otherPhone();
         $this->get($url)->assertRedirect(route('wms.pickups.index'));
         $this->assertAuthenticatedAs($link->user);
-        $this->assertTrue($link->user->hasRole('storekeeper'));
+        $this->assertTrue($link->user->hasRole('pickup-operator'));
         $this->assertTrue($link->user->can('wms-pickups.issue'));
-        $this->assertFalse($link->user->can('wms-access.view'), 'ссылка даёт права кладовщика, не начальника');
+        $this->assertFalse($link->user->can('wms-access.view'), 'ссылка даёт только выдачу, не права начальника');
+        $this->assertFalse($link->user->can('wms-goods-issues.view'), 'других разделов склада у учётки ссылки нет');
 
-        $this->get('/wms/pickups')->assertOk();
+        // «Киоск»: экран выдачи без меню, остальные адреса склада уводят обратно.
+        $this->get('/wms/pickups')->assertOk()
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page->where('kiosk', true));
+        $this->get('/wms')->assertRedirect(route('wms.pickups.index'));
+        $this->get('/wms/goods-issues')->assertRedirect(route('wms.pickups.index'));
         $this->assertSame(1, $link->fresh()->uses_count);
     }
 
@@ -98,6 +103,30 @@ class WmsAccessLinkTest extends TestCase
         $this->get(route('wms.join', ['token' => $token]))->assertRedirect('/login');
         $this->get('/wms/join/'.str_repeat('x', 43))->assertRedirect('/login');
         $this->assertGuest();
+    }
+
+    #[Test]
+    public function link_issued_before_kiosk_role_is_upgraded_on_next_login(): void
+    {
+        [$link, $token] = app(AccessLinkService::class)->create('Старая', $this->head);
+        $link->user->syncRoles(['storekeeper']); // так выпускались ссылки до появления роли
+
+        $this->otherPhone();
+        $this->get(route('wms.join', ['token' => $token]))->assertRedirect(route('wms.pickups.index'));
+
+        $this->assertTrue($link->user->fresh()->hasRole('pickup-operator'));
+        $this->assertFalse($link->user->fresh()->hasRole('storekeeper'));
+    }
+
+    #[Test]
+    public function ordinary_storekeeper_keeps_full_panel(): void
+    {
+        $keeper = User::factory()->create();
+        $keeper->assignRole('storekeeper');
+
+        $this->actingAs($keeper)->get('/wms/pickups')->assertOk()
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page->where('kiosk', false));
+        $this->actingAs($keeper)->get('/wms/goods-issues')->assertOk();
     }
 
     #[Test]
