@@ -5,6 +5,7 @@ namespace App\Services\Client\Api;
 use App\Models\User;
 use App\Services\Client\Api\Idempotency\IdempotencyConflict;
 use App\Services\Client\Api\Idempotency\IdempotencyStore;
+use App\Services\Client\Api\Usage\UsageContext;
 use App\Support\Client\ClientApiSource;
 use App\Support\OperationApi\OperationDenied;
 use App\Support\OperationApi\OperationInput;
@@ -35,6 +36,7 @@ class OperationRunner
         private readonly Container $container,
         private readonly CompanyContext $companies,
         private readonly IdempotencyStore $idempotency,
+        private readonly UsageContext $usage,
     ) {}
 
     /**
@@ -49,6 +51,10 @@ class OperationRunner
      */
     public function run(Operation $operation, User $actor, array $args, ?string $idempotencyKey = null): array
     {
+        // Журнал вызовов: операция отмечается до гейта — отказ по закрытому
+        // разделу тоже «задача», которую агент пытался решить.
+        $this->usage->operation($operation);
+
         $this->authorize($operation, $actor);
 
         $validated = Validator::make(
@@ -64,6 +70,8 @@ class OperationRunner
                 isset($validated['company_id']) ? (int) $validated['company_id'] : null,
                 isset($validated['inn']) ? (string) $validated['inn'] : null,
             );
+
+            $this->usage->operation($operation, $validated[self::COMPANY_ARG]);
         }
 
         $useKey = $operation->idempotent && $idempotencyKey !== null;
