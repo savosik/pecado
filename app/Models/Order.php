@@ -209,6 +209,70 @@ class Order extends Model implements HasMedia
     }
 
     /**
+     * Номер заказа глазами клиента — только номер учётной системы (1С).
+     *
+     * Сайтовый `number` (ORD-…) — внутренний временный ключ: в 1С его нет,
+     * клиенты не дожидались номера 1С, цитировали ORD менеджеру, а менеджер
+     * не знал, где его искать. Пока 1С не присвоила номер, клиенту отдаём null
+     * и подсказку «будет присвоен при передаче в учётную систему».
+     */
+    public function clientNumber(): ?string
+    {
+        return filled($this->erp_number) ? (string) $this->erp_number : null;
+    }
+
+    public function clientNumberPending(): bool
+    {
+        return $this->clientNumber() === null;
+    }
+
+    /**
+     * Подпись заказа для писем и текстов: «29УТ-003413» либо
+     * «от 18.09.2026 (номер присваивается)».
+     */
+    public function clientLabel(): string
+    {
+        $number = $this->clientNumber();
+
+        if ($number !== null) {
+            return $number;
+        }
+
+        $date = ($this->erp_created_at ?? $this->created_at)?->format('d.m.Y');
+
+        return $date ? "от {$date} (номер присваивается)" : '(номер присваивается)';
+    }
+
+    /**
+     * Поля номера для кабинета и клиентского API: `number` пуст, пока 1С
+     * не присвоила номер, `number_hint` объясняет клиенту, чего ждать.
+     *
+     * @return array{number: ?string, number_pending: bool, number_hint: ?string}
+     */
+    public function clientNumberPayload(): array
+    {
+        $number = $this->clientNumber();
+
+        return [
+            'number' => $number,
+            'number_pending' => $number === null,
+            'number_hint' => $number === null ? static::pendingNumberHint() : null,
+        ];
+    }
+
+    /**
+     * Подсказка клиенту вместо временного номера. Срок — из
+     * `cabinet.order_number_eta_minutes`; по боевой статистике 1С отвечает
+     * за минуту, 95 % заказов получают номер в пределах пяти минут.
+     */
+    public static function pendingNumberHint(): string
+    {
+        $minutes = max(1, (int) config('cabinet.order_number_eta_minutes', 5));
+
+        return "Номер будет присвоен при передаче в учётную систему, обычно в течение ~{$minutes} мин.";
+    }
+
+    /**
      * The "booted" method of the model.
      */
     protected static function booted(): void

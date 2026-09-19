@@ -129,7 +129,7 @@ class ReserveOperations implements OperationProvider
 
         return Envelope::data($orders->map(fn (Order $order) => [
             'order_id' => $order->id,
-            'number' => $order->erp_number ?? $order->number,
+            ...$order->clientNumberPayload(),
             'uuid' => $order->uuid,
             'total_amount' => (float) $order->total_amount,
             'currency_code' => $order->currency_code,

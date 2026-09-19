@@ -110,7 +110,7 @@ class ClientShipmentPresenter
             ->map(fn (Order $order) => [
                 'id' => $order->id,
                 'uuid' => $order->uuid,
-                'number' => $order->erp_number ?? $order->number ?? ('#'.$order->id),
+                ...$order->clientNumberPayload(),
                 'type' => $order->type?->value,
                 'status' => $order->status?->value,
                 'status_label' => $order->status?->label(),
@@ -249,7 +249,7 @@ class ClientShipmentPresenter
                 return [
                     'id' => $item->id,
                     'order_id' => $order?->id,
-                    'order_number' => $order ? ($order->erp_number ?? $order->number ?? ('#'.$order->id)) : null,
+                    'order_number' => $order?->clientLabel(),
                     'quantity' => $item->quantity,
                     'price' => $item->price,
                     'price_converted' => $this->amounts->convert((float) $item->price, null, $currency),
@@ -282,7 +282,7 @@ class ClientShipmentPresenter
 
         return [
             'id' => $order->id,
-            'number' => $order->erp_number ?? $order->number ?? ('#'.$order->id),
+            ...$order->clientNumberPayload(),
             'uuid' => $order->uuid,
             'type' => $order->type?->value,
             'status' => $order->status?->value,

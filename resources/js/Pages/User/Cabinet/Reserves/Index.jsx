@@ -6,6 +6,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { LuClock3, LuEye, LuSend, LuPackage, LuBan, LuHourglass, LuTriangleAlert, LuLayers } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
+import { orderTitle, orderNumberHint } from '../components/OrderNumber';
 import ReserveCountdown from '@/components/cabinet/ReserveCountdown';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
@@ -99,7 +100,7 @@ export default function ReservesIndex({ reserves, ship_together_enabled: shipTog
                 onConfirm={doConfirm}
                 title="Отправить в отгрузку?"
                 description={confirmTarget
-                    ? `Заказ ${confirmTarget.number} уйдёт в сборку и отгрузку — изменить или отменить его после подтверждения будет нельзя.${promise ? ` ${promise.text}.` : ''}`
+                    ? `${orderTitle(confirmTarget)} уйдёт в сборку и отгрузку — изменить или отменить его после подтверждения будет нельзя.${promise ? ` ${promise.text}.` : ''}`
                     : ''}
                 confirmLabel="В отгрузку"
                 cancelLabel="Ещё подумаю"
@@ -112,7 +113,7 @@ export default function ReservesIndex({ reserves, ship_together_enabled: shipTog
                 onClose={() => setGroupConfirmOpen(false)}
                 onConfirm={doShipTogether}
                 title="Отправить выбранные заказы вместе?"
-                description={`Заказы ${selectedOrders.map((o) => o.number).join(', ')} уйдут на склад одной группой: по ним оформят одну реализацию и один расходный ордер, если это возможно. Пока склад не подтвердит группу, заказы остаются в резерве, но изменить или отменить их будет нельзя.${promise ? ` ${promise.text}.` : ''}`}
+                description={`${selectedOrders.map((o) => orderTitle(o)).join(', ')} уйдут на склад одной группой: по ним оформят одну реализацию и один расходный ордер, если это возможно. Пока склад не подтвердит группу, заказы остаются в резерве, но изменить или отменить их будет нельзя.${promise ? ` ${promise.text}.` : ''}`}
                 confirmLabel={`В отгрузку вместе (${selected.length})`}
                 cancelLabel="Ещё подумаю"
                 colorPalette="green"
@@ -125,7 +126,7 @@ export default function ReservesIndex({ reserves, ship_together_enabled: shipTog
                 onConfirm={doCancel}
                 title="Отменить заказ?"
                 description={cancelTarget
-                    ? `Заказ ${cancelTarget.number} будет отменён, товар вернётся в свободный остаток. Действие необратимо.`
+                    ? `${orderTitle(cancelTarget)} будет отменён, товар вернётся в свободный остаток. Действие необратимо.`
                     : ''}
                 confirmLabel="Отменить заказ"
                 cancelLabel="Не отменять"
@@ -209,10 +210,10 @@ export default function ReservesIndex({ reserves, ship_together_enabled: shipTog
                                                     checked={checked}
                                                     onCheckedChange={() => toggleSelected(order.id)}
                                                     colorPalette="green"
-                                                    aria-label={`Отметить заказ ${order.number} для совместной отгрузки`}
+                                                    aria-label={`Отметить ${orderTitle(order)} для совместной отгрузки`}
                                                 />
                                             )}
-                                            <Text fontWeight="700">Заказ {order.number}</Text>
+                                            <Text fontWeight="700">{orderTitle(order)}</Text>
                                             <Badge colorPalette="purple">резерв</Badge>
                                             {pending && (
                                                 <Badge colorPalette="orange">
@@ -220,6 +221,9 @@ export default function ReservesIndex({ reserves, ship_together_enabled: shipTog
                                                 </Badge>
                                             )}
                                         </HStack>
+                                        {!order.number && (
+                                            <Text fontSize="xs" color="fg.muted">{orderNumberHint(order)}</Text>
+                                        )}
                                         <HStack gap="1" color="fg.muted" fontSize="sm">
                                             <LuPackage size={14} />
                                             <Text>

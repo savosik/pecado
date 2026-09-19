@@ -37,7 +37,10 @@ final readonly class PlacementResult
     {
         return array_map(fn (Order $order) => [
             'order_id' => $order->id,
-            'order_number' => $order->number,
+            // Номер присваивает 1С после передачи; временный сайтовый ORD-… клиенту не отдаём
+            'order_number' => $order->clientNumber(),
+            'number_pending' => $order->clientNumberPending(),
+            'number_hint' => $order->clientNumberPending() ? Order::pendingNumberHint() : null,
             'type' => $order->type?->value ?? 'order',
             'delivery_method' => $order->delivery_method?->value ?? DeliveryMethod::DELIVERY->value,
             'total_amount' => round((float) $order->total_amount, 2),

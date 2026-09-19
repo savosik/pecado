@@ -50,7 +50,9 @@ class CabinetController extends Controller
             ->get()
             ->map(fn ($order) => [
                 'id' => $order->id,
-                'order_number' => $order->erp_number ?? $order->number ?? ('#'.$order->id),
+                // Только номер 1С: временный ORD-… клиенту не показываем
+                'order_number' => $order->clientNumber(),
+                'order_label' => $order->clientLabel(),
                 'status' => $order->status instanceof \BackedEnum ? $order->status->value : (string) $order->status,
                 'type' => $order->type instanceof \BackedEnum ? $order->type->value : (string) $order->type,
                 'total' => $order->total_amount,

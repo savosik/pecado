@@ -815,7 +815,7 @@ export default function Dashboard({ ordersCount = 0, preordersCount = 0, favorit
                                                     textOverflow="ellipsis"
                                                     minW="0"
                                                 >
-                                                    №{order.order_number || order.id}
+                                                    {order.order_number ? `№${order.order_number}` : order.order_label}
                                                 </Text>
                                                 <HStack gap="1" flexShrink="0">
                                                     <Badge
@@ -865,7 +865,7 @@ export default function Dashboard({ ordersCount = 0, preordersCount = 0, favorit
                                             <VStack align="start" gap="0.5" flex="1" minW="0">
                                                 <HStack gap="1.5">
                                                     <Text fontSize="sm" fontWeight="700" color="gray.800" _dark={{ color: 'gray.100' }}>
-                                                        №{order.order_number || order.id}
+                                                        {order.order_number ? `№${order.order_number}` : order.order_label}
                                                     </Text>
                                                     <Badge
                                                         colorPalette={getOrderTypeColor(order.type)}

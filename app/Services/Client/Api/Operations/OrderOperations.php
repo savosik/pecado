@@ -231,6 +231,7 @@ class OrderOperations implements OperationProvider
         $data = array_map(fn (array $r) => [
             'order_id' => $r['order_id'],
             'order_number' => $r['order_number'],
+            'order_label' => $r['order_label'],
             'order_type' => $r['order_type'],
             'changed_at' => $r['changed_at']?->toIso8601String(),
             'kind' => $r['kind'],

@@ -321,7 +321,7 @@ class HandleOrderUpdated
             ->where('ship_together_key', $order->ship_together_key)
             ->orderBy('id')
             ->get()
-            ->map(fn (Order $o) => $o->erp_number ?: $o->number ?: ('#'.$o->id))
+            ->map(fn (Order $o) => $o->clientLabel())
             ->implode(', ');
 
         app(\App\Services\Crm\Mail\MailStream::class)->captureQuietly(new \App\Support\Notifications\Occasion(

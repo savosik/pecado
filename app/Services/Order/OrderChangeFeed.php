@@ -39,7 +39,7 @@ class OrderChangeFeed
      * Отфильтрованные строки, новые изменения первыми.
      *
      * @param  array<string, mixed>  $filters
-     * @return list<array{order_id:int, order_number:string, order_type:?string, changed_at:?Carbon, kind:string, type:string, product_id:?int, product_name:string, slug:?string, external_id:?string, from:int, to:int}>
+     * @return list<array{order_id:int, order_number:?string, order_label:string, order_type:?string, changed_at:?Carbon, kind:string, type:string, product_id:?int, product_name:string, slug:?string, external_id:?string, from:int, to:int}>
      */
     public function rows(User $user, array $filters = []): array
     {
@@ -63,7 +63,7 @@ class OrderChangeFeed
             }
 
             if ($searchLower !== ''
-                && mb_stripos($r['order_number'], $searchLower) === false
+                && mb_stripos($r['order_number'] ?? $r['order_label'], $searchLower) === false
                 && mb_stripos($r['product_name'], $searchLower) === false) {
                 return false;
             }

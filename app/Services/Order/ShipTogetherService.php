@@ -113,7 +113,7 @@ class ShipTogetherService
     private function assertGroupCompatible(Collection $orders): void
     {
         foreach ($orders as $order) {
-            $number = $order->erp_number ?: $order->number ?: ('#'.$order->id);
+            $number = $order->clientLabel();
 
             if (! $order->reserve || $order->trashed()) {
                 throw new ReserveActionException(

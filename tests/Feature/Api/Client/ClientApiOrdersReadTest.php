@@ -25,11 +25,12 @@ class ClientApiOrdersReadTest extends ClientApiTestCase
     #[TestDox('Список заказов: только свои, курсорная пагинация без повторов, фильтр по статусу')]
     public function list_is_own_and_cursor_paginated(): void
     {
+        // Клиенту отдаётся только номер 1С; временный ORD-… в ответе не появляется
         foreach (range(1, 3) as $i) {
-            $this->order(['number' => 'ORD-A-'.$i]);
+            $this->order(['number' => 'ORD-A-'.$i, 'erp_number' => '29УТ-00000'.$i]);
         }
-        $this->order(['number' => 'ORD-DONE', 'status' => OrderStatus::CLOSED]);
-        Order::factory()->create(['user_id' => User::factory()->create()->id, 'number' => 'ORD-FOREIGN']);
+        $this->order(['number' => 'ORD-DONE', 'status' => OrderStatus::CLOSED, 'erp_number' => '29УТ-DONE']);
+        Order::factory()->create(['user_id' => User::factory()->create()->id, 'number' => 'ORD-FOREIGN', 'erp_number' => '29УТ-FOREIGN']);
 
         $first = $this->api('GET', '/orders?per_page=2')->assertOk();
         $first->assertJsonCount(2, 'data')->assertJsonPath('meta.has_more', true);
@@ -37,9 +38,10 @@ class ClientApiOrdersReadTest extends ClientApiTestCase
 
         $numbers = array_merge(array_column($first->json('data'), 'number'), array_column($second->json('data'), 'number'));
         $this->assertCount(4, array_unique($numbers));
-        $this->assertNotContains('ORD-FOREIGN', $numbers);
+        $this->assertNotContains('29УТ-FOREIGN', $numbers);
+        $this->assertStringNotContainsString('ORD-', $first->getContent().$second->getContent());
 
-        $this->api('GET', '/orders?status[]=closed')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.number', 'ORD-DONE');
+        $this->api('GET', '/orders?status[]=closed')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.number', '29УТ-DONE');
     }
 
     #[Test]

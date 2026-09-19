@@ -244,8 +244,10 @@ class MailStream
     {
         $parts = [$occasion->key, 'c'.($occasion->clientUserId ?? 0)];
 
-        if (filled($data['order_number'] ?? null)) {
-            $parts[] = 'o'.$data['order_number'];
+        // Ключ склейки — внутренний номер заказа (order_key), а не подпись для клиента:
+        // у двух заказов без номера 1С подпись «от даты» одинаковая
+        if (filled($data['order_key'] ?? $data['order_number'] ?? null)) {
+            $parts[] = 'o'.($data['order_key'] ?? $data['order_number']);
         }
 
         if (filled($data['document_number'] ?? null)) {

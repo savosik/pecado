@@ -38,7 +38,7 @@ class ReserveOrderController extends Controller
             'ship_together_enabled' => \App\Services\Order\ShipTogetherService::enabled(),
             'reserves' => $orders->map(fn (Order $order) => [
                 'id' => $order->id,
-                'number' => $order->erp_number ?? $order->number ?? ('#'.$order->id),
+                ...$order->clientNumberPayload(),
                 'total_amount' => (float) $order->total_amount,
                 'currency_code' => $order->currency_code,
                 'items_count' => $order->items->count(),

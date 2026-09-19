@@ -169,7 +169,7 @@ class ProductExportPurchaseFiltersTest extends TestCase
 
     public function test_cabinet_filter_options_returns_only_own_orders(): void
     {
-        $own = Order::factory()->create(['user_id' => $this->client->id]);
+        $own = Order::factory()->create(['user_id' => $this->client->id, 'erp_number' => '29УТ-005810']);
         Order::factory()->create(['user_id' => $this->stranger->id]);
 
         $response = $this->actingAs($this->client)
@@ -177,7 +177,9 @@ class ProductExportPurchaseFiltersTest extends TestCase
 
         $response->assertOk();
         $this->assertEquals([$own->id], collect($response->json())->pluck('id')->all());
-        $this->assertStringContainsString($own->number, $response->json()[0]['name']);
+        // Клиенту — номер 1С, временный сайтовый ORD-… в подписи не показывается
+        $this->assertStringContainsString('29УТ-005810', $response->json()[0]['name']);
+        $this->assertStringNotContainsString($own->number, $response->json()[0]['name']);
     }
 
     public function test_cabinet_filter_options_returns_only_own_shipments(): void
