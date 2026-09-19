@@ -18,10 +18,23 @@ final class ClientApiSource
 
     private static ?string $tokenName = null;
 
+    private static ?string $tokenKind = null;
+
     public static function token(ApiToken $token): void
     {
         self::$tokenId = (int) $token->getKey();
         self::$tokenName = $token->name;
+        self::$tokenKind = $token->kind;
+    }
+
+    /**
+     * Запрос пришёл от чата-помощника (токен вида `assistant`), а не от
+     * собственного агента клиента: журнал помечает канал «web-assistant»,
+     * а необратимые операции требуют подтверждения кнопкой.
+     */
+    public static function isAssistant(): bool
+    {
+        return self::$tokenKind === ApiToken::KIND_ASSISTANT;
     }
 
     public static function isApi(): bool
@@ -54,5 +67,6 @@ final class ClientApiSource
     {
         self::$tokenId = null;
         self::$tokenName = null;
+        self::$tokenKind = null;
     }
 }

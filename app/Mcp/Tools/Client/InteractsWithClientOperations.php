@@ -97,6 +97,9 @@ trait InteractsWithClientOperations
             return $this->refuse($e->code(), "[{$e->code()}] {$e->getMessage()} Раздел отмечен allowed=false в client-catalog — не повторяйте вызов.");
         } catch (OperationDenied $e) {
             return $this->refuse('operation_denied', $e->getMessage());
+        } catch (\App\Services\Assistant\Confirmations\ConfirmationRequired $e) {
+            // Чат-помощник: карточка подтверждения уже показана клиенту.
+            return $this->refuse('confirmation_required', '[confirmation_required] '.$e->getMessage());
         } catch (CompanyRequired $e) {
             return $this->refuse('company_required', "[company_required] {$e->getMessage()} Спросите у человека, от какого юрлица работать, и передайте company_id. Варианты: "
                 .json_encode($e->choices(), JSON_UNESCAPED_UNICODE));

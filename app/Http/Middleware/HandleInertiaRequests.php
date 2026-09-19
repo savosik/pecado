@@ -112,6 +112,9 @@ class HandleInertiaRequests extends Middleware
             // просмотра его видит и менеджер — проходит за клиента во время звонка,
             // ответ записывается от имени менеджера (TaxSurveyController).
             'taxSurvey' => fn () => app(\App\Services\Crm\TaxRegime\ClientTaxSurvey::class)->forUser($request->user()),
+            // Помощник клиента (assist-00): иконка-консультант на всех страницах.
+            // null — не показывать вовсе (гость, выключен, кончился баланс).
+            'assistant' => fn () => app(\App\Support\Assistant\AssistantPresence::class)->forUser($request->user()),
             'config' => [
                 'yandex_maps_api_key' => (string) config('services.yandex_maps.api_key', ''),
                 // Показывать ли клиенту его долги. Флаг нужен и на фронте: пункт меню

@@ -364,3 +364,33 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::post('/search-presets', [\App\Http\Controllers\User\SearchPresetController::class, 'store'])->name('search-presets.store');
     Route::delete('/search-presets/{preset}', [\App\Http\Controllers\User\SearchPresetController::class, 'destroy'])->name('search-presets.destroy');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Помощник клиента (assist-00)
+|--------------------------------------------------------------------------
+| Виджет живёт на всех страницах сайта, эндпоинты — здесь. Пока помощник
+| недоступен (выключен, кончился баланс, исчерпан месячный предел) маршруты
+| отвечают 404: раздела как будто нет.
+*/
+Route::middleware(['auth', \App\Http\Middleware\EnsureAssistantAvailable::class])
+    ->prefix('cabinet/assistant')
+    ->name('cabinet.assistant.')
+    ->group(function () {
+        Route::get('/', [\App\Http\Controllers\User\AssistantController::class, 'index'])->name('index');
+        Route::get('/threads', [\App\Http\Controllers\User\AssistantController::class, 'threads'])->name('threads');
+        Route::post('/threads', [\App\Http\Controllers\User\AssistantController::class, 'open'])->name('open');
+        Route::get('/threads/{thread}', [\App\Http\Controllers\User\AssistantController::class, 'state'])->name('state');
+        Route::post('/threads/{thread}/messages', [\App\Http\Controllers\User\AssistantController::class, 'send'])
+            ->middleware('throttle:30,1')
+            ->name('send');
+        Route::post('/threads/{thread}/close', [\App\Http\Controllers\User\AssistantController::class, 'close'])->name('close');
+        Route::post('/threads/{thread}/attachments', [\App\Http\Controllers\User\AssistantController::class, 'upload'])
+            ->middleware('throttle:30,1')
+            ->name('upload');
+        Route::delete('/attachments/{attachment}', [\App\Http\Controllers\User\AssistantController::class, 'removeAttachment'])->name('attachments.remove');
+        Route::post('/confirmations/{confirmation}', [\App\Http\Controllers\User\AssistantController::class, 'decide'])->name('decide');
+        Route::post('/events', [\App\Http\Controllers\User\AssistantController::class, 'event'])
+            ->middleware('throttle:120,1')
+            ->name('event');
+    });

@@ -43,6 +43,12 @@ class AuthenticateClientApi
             return $this->unauthorized();
         }
 
+        // Токен чата-помощника живёт TTL и отзывается по закрытии треда;
+        // истёкший неотличим от отозванного — та же формулировка.
+        if ($token->isExpired()) {
+            return $this->unauthorized();
+        }
+
         // Как в legacy: отметка «когда пользовались» не чаще раза в минуту,
         // иначе каждый запрос агента — UPDATE.
         if ($token->last_used_at === null || $token->last_used_at->lt(now()->subMinute())) {

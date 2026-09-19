@@ -80,7 +80,9 @@ class ApiTokenController extends Controller
     /** @return \Illuminate\Support\Collection<int, ApiToken> */
     private function tokens()
     {
-        return ApiToken::where('user_id', Auth::id())->latest()->get();
+        // Токены чата-помощника (kind=assistant) клиенту не показываются: их
+        // выпускает и отзывает воркер, править их руками нечего.
+        return ApiToken::where('user_id', Auth::id())->personal()->latest()->get();
     }
 
     /** @return array<string, string> */

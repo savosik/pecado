@@ -10,8 +10,10 @@ use Illuminate\Support\Str;
  * @property int $id
  * @property int $user_id
  * @property string $name
+ * @property string $kind
  * @property string $token
  * @property bool $is_active
+ * @property \Illuminate\Support\Carbon|null $expires_at
  * @property \Illuminate\Support\Carbon|null $last_used_at
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -35,11 +37,19 @@ use Illuminate\Support\Str;
  */
 class ApiToken extends Model
 {
+    /** Личный ключ: клиент выдал в кабинете, бессрочный. */
+    public const KIND_PERSONAL = 'personal';
+
+    /** Токен чата-помощника: выпущен воркером на тред, с TTL, клиенту не показывается. */
+    public const KIND_ASSISTANT = 'assistant';
+
     protected $fillable = [
         'user_id',
         'name',
+        'kind',
         'token',
         'is_active',
+        'expires_at',
         'last_used_at',
     ];
 
@@ -47,8 +57,30 @@ class ApiToken extends Model
     {
         return [
             'is_active' => 'boolean',
+            'expires_at' => 'datetime',
             'last_used_at' => 'datetime',
         ];
+    }
+
+    public function isAssistant(): bool
+    {
+        return $this->kind === self::KIND_ASSISTANT;
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->expires_at !== null && $this->expires_at->isPast();
+    }
+
+    /**
+     * Токены, которые показываются клиенту в кабинете: только личные.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<ApiToken>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<ApiToken>
+     */
+    public function scopePersonal(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->where('kind', self::KIND_PERSONAL);
     }
 
     protected $appends = ['base_url', 'v1_base_url'];

@@ -37,6 +37,7 @@ class OperationRunner
         private readonly CompanyContext $companies,
         private readonly IdempotencyStore $idempotency,
         private readonly UsageContext $usage,
+        private readonly \App\Services\Assistant\Confirmations\ConfirmationGate $confirmations,
     ) {}
 
     /**
@@ -74,6 +75,16 @@ class OperationRunner
             $this->usage->operation($operation, $validated[self::COMPANY_ARG]);
         }
 
+        // Чат-помощник (assist-04): необратимая операция выполняется только по
+        // подтверждению клиента кнопкой; ключ идемпотентности — из подтверждения,
+        // чтобы повтор модели после кнопки не создал дубль.
+        $confirmation = null;
+
+        if ($this->confirmations->requires($operation)) {
+            $confirmation = $this->confirmations->pass($actor, $operation, $validated);
+            $idempotencyKey = $confirmation->idempotency_key;
+        }
+
         $useKey = $operation->idempotent && $idempotencyKey !== null;
 
         if ($operation->idempotencyRequired && $idempotencyKey === null) {
@@ -105,6 +116,10 @@ class OperationRunner
 
         if ($useKey) {
             $this->idempotency->complete($actor, $operation, $idempotencyKey, $result);
+        }
+
+        if ($confirmation !== null) {
+            $this->confirmations->consumed($confirmation, $result);
         }
 
         $this->audit($operation, $actor, $validated, $idempotencyKey);

@@ -24,6 +24,13 @@ class AppServiceProvider extends ServiceProvider
         // MCP, middleware REST). Без единого экземпляра операция терялась бы.
         $this->app->scoped(\App\Services\Client\Api\Usage\UsageContext::class);
 
+        // Помощник клиента (assist-00): единственная дверь к Anthropic. Тесты
+        // подменяют её фейком, реальный API в CI не вызывается.
+        $this->app->singleton(
+            \App\Services\Assistant\Gateway\AssistantGateway::class,
+            \App\Services\Assistant\Gateway\AnthropicGateway::class
+        );
+
         $this->app->bind(
             \App\Contracts\Pricing\PriceServiceInterface::class,
             \App\Services\Pricing\PriceService::class

@@ -21,6 +21,13 @@ final class UsageRecorder
     /** Сколько помнить «сессия → агент»: разговор в Claude Code живёт часами, не сутками. */
     private const AGENT_TTL_DAYS = 30;
 
+    /**
+     * Канал чата-помощника в кабинете. MCP-коннектор Anthropic представляется
+     * своим clientInfo, а отличить чат от Claude Code можно только по виду
+     * токена — поэтому метка ставится здесь, а не берётся из initialize.
+     */
+    public const AGENT_WEB_ASSISTANT = 'web-assistant';
+
     public function __construct(private readonly UsageContext $context) {}
 
     /**
@@ -101,6 +108,10 @@ final class UsageRecorder
      */
     private function write(array $row): void
     {
+        if (ClientApiSource::isAssistant() && $row['kind'] !== ClientAgentCall::KIND_REST) {
+            $row['agent'] = self::AGENT_WEB_ASSISTANT;
+        }
+
         try {
             ClientAgentCall::query()->create($row + [
                 'token_id' => ClientApiSource::tokenId(),
