@@ -27,6 +27,10 @@ class AuthenticateClientApi
             return $this->unauthorized();
         }
 
+        if (self::looksLikePlaceholder($bearer)) {
+            return $this->placeholder();
+        }
+
         $token = ApiToken::query()
             ->where('token', $bearer)
             ->where('is_active', true)
@@ -49,6 +53,31 @@ class AuthenticateClientApi
         ClientApiSource::token($token);
 
         return $next($request);
+    }
+
+    /**
+     * В заголовке остался образец из инструкции («<ВАШ_КЛЮЧ>», «YOUR_KEY»),
+     * а не ключ. Настоящий ключ — 64 hex-символа, так что угловые скобки и
+     * слова «ключ/key/token» в нём невозможны. Отдельная формулировка нужна,
+     * потому что агент передаёт её клиенту словами: «токен отозван» звучит
+     * как поломка сайта, а здесь ключ просто ещё не создан.
+     */
+    public static function looksLikePlaceholder(string $bearer): bool
+    {
+        return str_contains($bearer, '<')
+            || str_contains($bearer, '>')
+            || preg_match('/ключ|key|token/iu', $bearer) === 1;
+    }
+
+    private function placeholder(): Response
+    {
+        return response()->json([
+            'errors' => [[
+                'code' => 'key_placeholder',
+                'message' => 'В настройке вместо ключа остался образец. Создайте ключ в кабинете, '
+                    .'раздел «ИИ-агенты (MCP)»: '.url('/cabinet/mcp').' — и подставьте его в Authorization.',
+            ]],
+        ], 401);
     }
 
     private function unauthorized(): Response

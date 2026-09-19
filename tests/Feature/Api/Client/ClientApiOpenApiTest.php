@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Api\Client;
 
+use App\Models\ClientAgentCall;
+use App\Models\User;
 use App\Services\Client\Api\ClientApiDocument;
 use App\Services\Client\Api\Operation;
 use App\Services\Client\Api\OperationRegistry;
@@ -146,7 +148,57 @@ class ClientApiOpenApiTest extends ClientApiTestCase
                 ->component('User/Cabinet/ApiTokens/Mcp')
                 ->where('apiKey', $this->token->token)
                 ->where('docs.mcp', url('/mcp/client'))
-                ->where('docs.ui', url('/docs/client-api')));
+                ->where('docs.ui', url('/docs/client-api'))
+                ->where('connection.has_inactive_keys', false)
+                ->where('connection.last_connected_at', null)
+                ->where('connection.agent', null));
+    }
+
+    #[Test]
+    #[TestDox('Без активного ключа раздел MCP не отдаёт образец, а сообщает, что ключи отключены')]
+    public function mcp_screen_without_active_key_has_no_sample(): void
+    {
+        $this->token->update(['is_active' => false]);
+
+        $this->actingAs($this->client)
+            ->get('/cabinet/mcp')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('User/Cabinet/ApiTokens/Mcp')
+                ->where('apiKey', null)
+                ->where('connection.has_inactive_keys', true));
+
+        $this->token->delete();
+
+        $this->actingAs($this->client)
+            ->get('/cabinet/mcp')
+            ->assertInertia(fn ($page) => $page
+                ->where('apiKey', null)
+                ->where('connection.has_inactive_keys', false));
+    }
+
+    #[Test]
+    #[TestDox('Раздел MCP показывает последнее подключение агента по журналу вызовов')]
+    public function mcp_screen_shows_the_last_agent_connection(): void
+    {
+        ClientAgentCall::create([
+            'kind' => ClientAgentCall::KIND_MCP_CONNECT, 'user_id' => $this->client->id,
+            'agent' => 'cursor 1.0', 'ok' => true, 'created_at' => now()->subDays(3),
+        ]);
+        ClientAgentCall::create([
+            'kind' => ClientAgentCall::KIND_MCP_CONNECT, 'user_id' => $this->client->id,
+            'agent' => 'claude-code 2.1.0', 'ok' => true, 'created_at' => now()->subHour(),
+        ]);
+        ClientAgentCall::create([
+            'kind' => ClientAgentCall::KIND_MCP_CONNECT, 'user_id' => User::factory()->create()->id,
+            'agent' => 'чужой', 'ok' => true, 'created_at' => now(),
+        ]);
+
+        $this->actingAs($this->client)
+            ->get('/cabinet/mcp')
+            ->assertInertia(fn ($page) => $page
+                ->where('connection.agent', 'claude-code 2.1.0')
+                ->where('connection.last_connected_at', fn ($v) => now()->subHour()->diffInSeconds(\Carbon\Carbon::parse($v), true) < 5));
     }
 
     #[Test]

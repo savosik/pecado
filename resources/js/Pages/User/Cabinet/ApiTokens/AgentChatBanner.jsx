@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Box, Flex, HStack, Text, VStack } from '@chakra-ui/react';
-import { LuCopy, LuChevronDown } from 'react-icons/lu';
+import { LuCopy, LuChevronDown, LuKeyRound } from 'react-icons/lu';
 import { AI_AGENT_GROUPS, AI_AGENT_LINKS } from './aiAgentLogos';
 
 /**
@@ -134,20 +134,37 @@ function TypingDots() {
     );
 }
 
+/**
+ * apiKey = null — ключа у клиента нет: вместо сообщения с образцом показывается
+ * кнопка «Создать ключ и подключить» (onCreateKey). Образец «<ВАШ_КЛЮЧ>» не
+ * выводится никогда — его копировали как есть и получали отказ сервера.
+ * setupOpen / onSetupOpenChange делают спойлер управляемым: страница
+ * раскрывает его сама сразу после создания ключа.
+ */
 export default function AgentChatBanner({
     url = 'https://pecado.ru/mcp/client',
-    apiKey = '<ВАШ_КЛЮЧ>',
+    apiKey = null,
     docsUrl = 'https://pecado.ru/docs/client-api',
     openapiUrl = 'https://pecado.ru/docs/client-api.json',
     onCopy,
+    onCreateKey,
+    creatingKey = false,
     defaultSetupOpen = false,
+    setupOpen: controlledOpen,
+    onSetupOpenChange,
 }) {
     const rootRef = useRef(null);
     const reduced = usePrefersReducedMotion();
     const [visible, setVisible] = useState(true);
     const [pageVisible, setPageVisible] = useState(true);
     const [state, setState] = useState({ index: 0, t: 0 });
-    const [setupOpen, setSetupOpen] = useState(defaultSetupOpen);
+    const [internalOpen, setInternalOpen] = useState(defaultSetupOpen);
+    const setupOpen = controlledOpen ?? internalOpen;
+    const setSetupOpen = (next) => {
+        const value = typeof next === 'function' ? next(setupOpen) : next;
+        setInternalOpen(value);
+        onSetupOpenChange?.(value);
+    };
 
     useEffect(() => {
         const node = rootRef.current;
@@ -320,7 +337,24 @@ export default function AgentChatBanner({
                         </Box>
                     </Flex>
 
-                    {setupOpen && (
+                    {setupOpen && !apiKey && (
+                        <Box px="3.5" pb="3.5">
+                            <Text fontSize="sm" color="whiteAlpha.800" lineHeight="1.6" mb="3">
+                                Агенту нужен ключ доступа к вашему кабинету. Создайте его — и здесь появится
+                                готовое сообщение для агента с этим ключом.
+                            </Text>
+                            <Box
+                                as="button" type="button" display="inline-flex" alignItems="center" gap="2"
+                                px="3.5" py="2" borderRadius="lg" bg={BRAND} color="white" fontSize="sm" fontWeight="700"
+                                _hover={{ bg: '#7a1527' }} disabled={creatingKey} opacity={creatingKey ? 0.7 : 1}
+                                onClick={() => onCreateKey?.()}
+                            >
+                                <LuKeyRound size={14} /> {creatingKey ? 'Создаём…' : 'Создать ключ и подключить'}
+                            </Box>
+                        </Box>
+                    )}
+
+                    {setupOpen && apiKey && (
                         <Box px="3.5" pb="3.5">
                             <Text fontSize="sm" color="whiteAlpha.800" lineHeight="1.6" mb="2.5">
                                 Отправьте это сообщение своему агенту — он сам добавит подключение и запомнит его.
