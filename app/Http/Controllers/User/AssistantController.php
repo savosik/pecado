@@ -192,6 +192,26 @@ class AssistantController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /**
+     * Реплика иконки для текущей страницы: одна фраза по данным или null.
+     */
+    public function bubble(Request $request, \App\Services\Assistant\BubbleResolver $bubbles): JsonResponse
+    {
+        $user = $this->client($request);
+
+        if (! config('assistant.bubbles.enabled', true)) {
+            return response()->json(['bubble' => null]);
+        }
+
+        $page = \App\Services\Assistant\PageContext::sanitize($request->only(['type', 'id', 'title', 'url']))
+            ?? ['type' => 'other', 'id' => null, 'title' => null, 'url' => null];
+        $shown = array_values(array_filter(explode(',', (string) $request->query('shown', ''))));
+
+        return response()->json([
+            'bubble' => $bubbles->resolve($user, $page, $request->boolean('intro'), array_slice($shown, -20)),
+        ]);
+    }
+
     public function event(Request $request): JsonResponse
     {
         $user = $this->client($request);

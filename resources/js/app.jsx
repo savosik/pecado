@@ -8,6 +8,7 @@ import { Provider } from '@/components/ui/provider';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import ChangePasswordDialog from '@/components/common/ChangePasswordDialog';
 import ImpersonationBanner from '@/components/common/ImpersonationBanner';
+import AssistantLauncher from '@/components/assistant/AssistantLauncher';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Pecado';
 
@@ -22,6 +23,9 @@ function GlobalLayout({ children }) {
             {children}
             <ChangePasswordDialog />
             <ImpersonationBanner />
+            {/* Помощник клиента (assist-00): иконка-консультант на всех страницах;
+                сам не рендерится, пока сервер не дал prop `assistant`. */}
+            <AssistantLauncher />
         </>
     );
 }

@@ -85,6 +85,7 @@ const menuGroups = [
     {
         title: 'Интеграции',
         items: [
+            { href: '/cabinet/assistant', label: 'Помощник', icon: LuBot, feature: 'assistant' },
             { href: '/cabinet/api-tokens', label: 'API', icon: LuCode },
             { href: '/cabinet/mcp', label: 'ИИ-агенты (MCP)', icon: LuBot },
             { href: '/cabinet/api-legacy', label: 'Legacy API', icon: LuArchive },
@@ -147,7 +148,7 @@ function MenuItemRow({ item, isActive, badgeCount = 0 }) {
 }
 
 function SidebarContent({ currentPath }) {
-    const { config } = usePage().props;
+    const { config, assistant } = usePage().props;
 
     // Карта фиче-флагов: пункт с `feature` виден, только когда его флаг включён.
     // Раньше здесь был хардкод одного флага — второй раздел за флагом заставил бы
@@ -161,6 +162,8 @@ function SidebarContent({ currentPath }) {
         reserves: !!config?.reserves_enabled,
         // Самовывоз: стадии сборки и пропуска курьерам (рубильник pickup.enabled)
         pickup: !!config?.pickup_enabled,
+        // Помощник (assist-00): prop есть только у клиента с юрлицом при доступном сервисе.
+        assistant: !!assistant,
     };
 
     const visibleGroups = menuGroups

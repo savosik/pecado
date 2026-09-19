@@ -390,6 +390,9 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureAssistantAvailable::class]
             ->name('upload');
         Route::delete('/attachments/{attachment}', [\App\Http\Controllers\User\AssistantController::class, 'removeAttachment'])->name('attachments.remove');
         Route::post('/confirmations/{confirmation}', [\App\Http\Controllers\User\AssistantController::class, 'decide'])->name('decide');
+        Route::get('/bubble', [\App\Http\Controllers\User\AssistantController::class, 'bubble'])
+            ->middleware('throttle:120,1')
+            ->name('bubble');
         Route::post('/events', [\App\Http\Controllers\User\AssistantController::class, 'event'])
             ->middleware('throttle:120,1')
             ->name('event');
