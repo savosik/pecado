@@ -22,6 +22,22 @@ docker ps --format '{{.Names}}' 2>/dev/null | grep -qx pecado-app || {
   exit 0
 }
 
+# Из git worktree тесты гоняются по коду ветки, а не общего дерева: контейнер
+# смонтирован на основной каталог, поэтому worktree внутри проекта виден как
+# /var/www/<относительный путь>. artisan test там ловит второй автозагрузчик —
+# запускаем phpunit напрямую. Worktree вне проекта контейнеру не виден.
+TOP=$(git rev-parse --show-toplevel)
+MAIN=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+if [[ "$TOP" == "$MAIN" ]]; then
+  RUNNER=(docker exec pecado-app php artisan test)
+elif [[ "$TOP" == "$MAIN"/* && -d "$TOP/vendor" ]]; then
+  RUNNER=(docker exec -w "/var/www/${TOP#"$MAIN"/}" pecado-app php -d memory_limit=1G vendor/bin/phpunit)
+else
+  printf '%s▶%s Worktree %s контейнеру не виден или без vendor — тесты здесь не прогнать.\n' "$YEL" "$RST" "$TOP"
+  printf '  Положите worktree в %s.worktrees/<имя>%s и скопируйте vendor (%scp -al%s), либо push --no-verify под свою ответственность.\n' "$DIM" "$RST" "$DIM" "$RST"
+  exit 1
+fi
+
 # База сравнения: upstream ветки, иначе origin/dev, иначе последний коммит.
 BASE=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "origin/dev")
 git rev-parse --verify "$BASE" >/dev/null 2>&1 || BASE="HEAD~1"
@@ -68,7 +84,7 @@ COUNT=$(wc -l <<<"$TESTS")
 printf '%s▶%s Прогоняю %d тестовых файл(ов) по изменениям…\n' "$GRN" "$RST" "$COUNT"
 
 # shellcheck disable=SC2086
-if docker exec pecado-app php artisan test $(echo "$TESTS" | paste -sd' ' -); then
+if "${RUNNER[@]}" $(echo "$TESTS" | paste -sd' ' -); then
   printf '%s✓%s Тесты прошли\n' "$GRN" "$RST"
   exit 0
 fi
