@@ -37,6 +37,8 @@ class AgentUsageController extends CrmController
             'agents' => $this->report->agents($clients, $since),
             'errors' => $this->report->errors($clients, $since),
             'idleTokens' => $this->report->idleTokens($clients, $since),
+            // Помощник на сайте (assist-00): воронка «видели → открыли → написали → оформили».
+            'assistant' => app(\App\Services\Assistant\AssistantFunnel::class)->build($clients, $since),
             'filters' => [
                 'period' => $days,
                 'scope' => $scope->value,

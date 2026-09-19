@@ -20,7 +20,7 @@ const fmtInt = (v) => Number(v ?? 0).toLocaleString('ru-RU');
  */
 export default function Index({
     summary, daily = [], partners = [], operations = [], agents = [], errors = [], idleTokens = [],
-    filters = {}, periods = [], canSeeDepartment = false, endpoints = {},
+    assistant = null, filters = {}, periods = [], canSeeDepartment = false, endpoints = {},
 }) {
     const setPeriod = (period) => {
         router.get(route('crm.agent-usage.index'), { ...filters, period }, { preserveState: true, replace: true });
@@ -109,6 +109,51 @@ export default function Index({
                     <ErrorsList errors={errors} />
                 </VStack>
             </SimpleGrid>
+
+            {assistant && (
+                <Card.Root size="sm" mb={4}>
+                    <Card.Body>
+                        <Text fontWeight="600" mb={1}>Помощник на сайте</Text>
+                        <Text fontSize="xs" color="fg.muted" mb={3}>
+                            Иконка-консультант у клиентов кабинета: сколько человек её видели, открыли диалог, написали и подтвердили действие.
+                            Считается по клиентам, не по событиям.
+                        </Text>
+                        <SimpleGrid columns={{ base: 2, md: 4 }} gap={3} mb={3}>
+                            {assistant.funnel.map((step, i) => (
+                                <Box key={step.key} borderWidth="1px" borderColor="border.muted" borderRadius="md" p={3}>
+                                    <Text fontSize="xs" color="fg.muted">{step.label}</Text>
+                                    <HStack align="baseline" gap={2}>
+                                        <Text fontSize="xl" fontWeight="700">{step.value}</Text>
+                                        {i > 0 && assistant.funnel[0].value > 0 && (
+                                            <Text fontSize="xs" color="fg.muted">
+                                                {Math.round((step.value / assistant.funnel[0].value) * 100)}%
+                                            </Text>
+                                        )}
+                                    </HStack>
+                                </Box>
+                            ))}
+                        </SimpleGrid>
+                        <HStack gap={4} fontSize="sm" flexWrap="wrap" mb={assistant.bubbles.length ? 3 : 0}>
+                            <Text>Разговоров: <b>{assistant.threads}</b></Text>
+                            <Text>Ответов: <b>{assistant.turns}</b></Text>
+                            <Text>Заказов из чата: <b>{assistant.orders}</b></Text>
+                            <Text>Расход: <b>${assistant.cost_usd}</b>{assistant.cost_per_thread_usd > 0 && <Text as="span" color="fg.muted"> (${assistant.cost_per_thread_usd} на разговор)</Text>}</Text>
+                            <Text>Ушло менеджеру: <b>{assistant.escalated}</b>{assistant.escalation_share > 0 && <Text as="span" color="fg.muted"> ({assistant.escalation_share}% разговоров)</Text>}</Text>
+                        </HStack>
+                        {assistant.bubbles.length > 0 && (
+                            <VStack align="stretch" gap={1}>
+                                <Text fontSize="xs" color="fg.muted">Какие реплики иконки ведут в диалог</Text>
+                                {assistant.bubbles.map((b) => (
+                                    <HStack key={b.key} justify="space-between" fontSize="sm">
+                                        <Text fontFamily="mono" fontSize="xs">{b.key}</Text>
+                                        <Text color="fg.muted" fontSize="xs">показов {b.shown} · кликов {b.clicked} · {b.ctr}%</Text>
+                                    </HStack>
+                                ))}
+                            </VStack>
+                        )}
+                    </Card.Body>
+                </Card.Root>
+            )}
 
             <Card.Root size="sm">
                 <Card.Body>
