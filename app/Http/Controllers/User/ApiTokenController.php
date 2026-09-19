@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApiToken;
+use App\Models\ClientAgentCall;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,14 +34,32 @@ class ApiTokenController extends Controller
 
     /**
      * Подключение ИИ-агента к MCP-серверу: тот же ключ, что у API v1.
+     *
+     * Без активного ключа страница не показывает образец настройки — клиенты
+     * копировали «<ВАШ_КЛЮЧ>» как есть и получали 401. Вместо этого кнопка
+     * «Создать ключ и подключить» (тот же store) сразу раскрывает настройку с
+     * настоящим ключом. Состояние подключения — по журналу client_agent_calls
+     * (когда и какой агент подключался), чтобы клиент сам видел результат.
      */
     public function mcp()
     {
         $token = $this->tokens()->firstWhere('is_active', true);
 
+        $lastConnect = ClientAgentCall::query()
+            ->where('user_id', Auth::id())
+            ->where('kind', ClientAgentCall::KIND_MCP_CONNECT)
+            ->latest('id')
+            ->first();
+
         return Inertia::render('User/Cabinet/ApiTokens/Mcp', [
             'apiKey' => $token?->token,
             'docs' => $this->docs(),
+            'connection' => [
+                'has_inactive_keys' => $token === null && $this->tokens()->isNotEmpty(),
+                'last_connected_at' => $lastConnect?->created_at?->toISOString(),
+                'agent' => $lastConnect?->agent,
+                'last_used_at' => $token?->last_used_at?->toISOString(),
+            ],
         ]);
     }
 

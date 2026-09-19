@@ -23,6 +23,32 @@ class ClientApiAuthTest extends ClientApiTestCase
     }
 
     #[Test]
+    #[TestDox('Образец «<ВАШ_КЛЮЧ>» вместо ключа — отдельный отказ с адресом кабинета, на REST и на MCP')]
+    public function a_placeholder_instead_of_a_key_is_explained(): void
+    {
+        foreach (['<ВАШ_КЛЮЧ>', 'YOUR_KEY', 'Bearer-token-here'] as $sample) {
+            $this->api('GET', '/me', token: $sample)
+                ->assertStatus(401)
+                ->assertJsonPath('errors.0.code', 'key_placeholder')
+                ->assertJsonPath('errors.0.message', fn (string $m) => str_contains($m, url('/cabinet/mcp')));
+        }
+
+        $this->postJson('/mcp/client', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'initialize',
+            'params' => ['protocolVersion' => '2025-06-18', 'capabilities' => [], 'clientInfo' => ['name' => 'test', 'version' => '1']],
+        ], ['Authorization' => 'Bearer <ВАШ_КЛЮЧ>', 'Accept' => 'application/json, text/event-stream'])
+            ->assertStatus(401)
+            ->assertJsonPath('errors.0.code', 'key_placeholder');
+
+        // Настоящий, но чужой ключ — прежняя формулировка без подсказок.
+        $this->api('GET', '/me', token: hash('sha256', 'nope'))
+            ->assertStatus(401)
+            ->assertJsonPath('errors.0.code', 'unauthorized');
+    }
+
+    #[Test]
     #[TestDox('Токен без владельца не пускает')]
     public function a_token_without_owner_is_rejected(): void
     {
