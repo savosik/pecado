@@ -171,6 +171,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\PublishContractorToErp::class,
         );
 
+        // Помощник клиента (assist-00): пропал или вернулся → письмо РОПу.
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\AssistantAvailabilityChanged::class,
+            \App\Listeners\NotifyAssistantAvailability::class,
+        );
+
         // Лестница долга (debt-00 v2): переход ступени → письмо клиенту и задача
         // менеджеру; новые движения/баланс из 1С → пересчёт только вверх;
         // истёкшая разблокировка → задача поставившему.

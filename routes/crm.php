@@ -155,6 +155,17 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
             ->name('clients.notifications.marketing')
             ->whereNumber('client');
 
+        // Помощник клиента (assist-00): переписка партнёра с агентом на сайте —
+        // только чтение, право то же, что у раздела «ИИ-агенты клиентов».
+        Route::get('/partners/{client}/assistant', [\App\Http\Controllers\Crm\AssistantController::class, 'index'])
+            ->name('clients.assistant.index')
+            ->whereNumber('client');
+        Route::get('/partners/{client}/assistant/{thread}', [\App\Http\Controllers\Crm\AssistantController::class, 'thread'])
+            ->name('clients.assistant.thread')
+            ->whereNumber('client');
+        Route::get('/assistant/attachments/{attachment}/download', [\App\Http\Controllers\Crm\AssistantController::class, 'download'])
+            ->name('assistant.attachments.download');
+
         // Закупки партнёра для карточки — отдельным запросом, а не в пропсах
         // страницы: разрез по брендам и категориям нужен не при каждом открытии
         // карточки, а карточку открывают десятки раз за день. Право то же, что

@@ -19,6 +19,8 @@ Schedule::command('documents:prune')->dailyAt('04:20')->withoutOverlapping();
 // Помощник клиента (assist-00): пока спрятан из-за баланса или прокси, раз в 10 минут
 // пробуем Anthropic и возвращаем его сами; доступному помощнику проба ничего не стоит.
 Schedule::command('assistant:probe')->everyTenMinutes()->withoutOverlapping();
+// Треды помощника без активности сутки закрываются, модель дописывает заметку о клиенте.
+Schedule::command('assistant:close-idle')->hourlyAt(20)->withoutOverlapping();
 Schedule::command('model:prune', ['--model' => [\App\Models\ClientApiIdempotencyKey::class]])->hourly()->withoutOverlapping();
 Schedule::command('model:prune', ['--model' => [\App\Models\ClientAgentCall::class]])->dailyAt('05:15')->withoutOverlapping(); // журнал вызовов агентов клиентов: ретенция CLIENT_AGENT_CALLS_RETENTION_DAYS
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
