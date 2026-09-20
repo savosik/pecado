@@ -56,12 +56,44 @@ class AuthController extends Controller
                 $intended = $redirectTo;
             }
 
+            // Вход через попап на странице сайта: остаёмся там же, где авторизовались.
+            // Значение приходит от клиента, поэтому принимаем только локальный путь.
+            $returnTo = $this->safeReturnPath($request->input('return_to'));
+            if ($returnTo !== null) {
+                $intended = $returnTo;
+            }
+
             return redirect()->to($intended)->with('success', 'Вы успешно вошли в систему');
         }
 
         return back()->withErrors([
             'email' => 'Неверный email или пароль',
         ])->onlyInput('email');
+    }
+
+    /**
+     * Локальный путь для возврата после входа через попап или null, если
+     * возвращаться туда нельзя: чужой хост, protocol-relative URL, страницы
+     * самой авторизации (на них залогиненного всё равно перекинет) и API.
+     */
+    private function safeReturnPath(mixed $value): ?string
+    {
+        if (! is_string($value) || $value === '' || ! str_starts_with($value, '/') || str_starts_with($value, '//')) {
+            return null;
+        }
+
+        if (str_starts_with($value, '/\\') || preg_match('/[\x00-\x1f]/', $value)) {
+            return null;
+        }
+
+        $path = parse_url($value, PHP_URL_PATH) ?? '';
+        foreach (['/login', '/register', '/forgot-password', '/reset-password', '/logout', '/api/'] as $blocked) {
+            if ($path === rtrim($blocked, '/') || str_starts_with($path, rtrim($blocked, '/').'/')) {
+                return null;
+            }
+        }
+
+        return $value;
     }
 
     /**
