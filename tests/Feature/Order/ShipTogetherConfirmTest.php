@@ -141,6 +141,26 @@ class ShipTogetherConfirmTest extends TestCase
     }
 
     #[Test]
+    public function single_confirm_after_group_conflict_clears_stale_group_state(): void
+    {
+        $a = $this->reserveOrder();
+        $a->forceFill([
+            'ship_together_key' => (string) \Illuminate\Support\Str::uuid(),
+            'ship_together_status' => ShipTogetherStatus::CONFLICT,
+            'ship_together_conflict' => ['reason' => 'incompatible', 'message' => null, 'order_uuid' => null],
+        ])->save();
+
+        $this->actingAs($this->user)
+            ->postJson("/cabinet/orders/{$a->id}/confirm-reserve")
+            ->assertOk();
+
+        $a->refresh();
+        $this->assertFalse($a->reserve);
+        $this->assertNull($a->ship_together_status, 'старый отказ группы на карточке снят (S3)');
+        $this->assertNull($a->ship_together_conflict);
+    }
+
+    #[Test]
     public function group_requires_at_least_two_orders(): void
     {
         $a = $this->reserveOrder();

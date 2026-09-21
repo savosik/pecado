@@ -315,6 +315,18 @@ class HandleOrderUpdated
      */
     private function notifyShipTogetherConflict(Order $order): void
     {
+        // S2 (прогон 21.09.2026): итоги по заказам одной группы могут прийти с разрывом больше
+        // окна склейки (поздний order.confirmed после тайм-аута) — второе письмо по тому же
+        // ключу группы не пишем, клиент уже знает.
+        $alreadyTold = \App\Models\CrmEmail::query()
+            ->where('origin_event', 'orders.ship_together_rejected')
+            ->where('origin_key', 'like', '%x'.$order->ship_together_key)
+            ->exists();
+
+        if ($alreadyTold) {
+            return;
+        }
+
         $conflict = is_array($order->ship_together_conflict) ? $order->ship_together_conflict : [];
         $reason = \App\Enums\ShipTogetherConflictReason::labelFor($conflict['reason'] ?? null);
 

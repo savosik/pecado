@@ -73,6 +73,9 @@ class ClientOrderActions
         $order->reserve = false;
         // Исход для метрик злоупотреблений (res-11)
         $order->reserve_outcome = 'confirmed';
+        // S3 (прогон 21.09.2026): заказ ушёл по одному — старый отказ группы на карточке больше не к месту
+        $order->ship_together_status = null;
+        $order->ship_together_conflict = null;
         $order->save();
     }
 

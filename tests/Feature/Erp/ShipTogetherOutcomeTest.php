@@ -123,6 +123,25 @@ class ShipTogetherOutcomeTest extends TestCase
     }
 
     #[Test]
+    public function late_conflict_outcome_for_same_group_does_not_send_second_letter(): void
+    {
+        [$key, $a, $b] = $this->pendingGroup();
+        $outcome = fn (Order $o) => [
+            'event' => 'order.updated', 'uuid' => $o->uuid, 'reserve' => true,
+            'ship_together_key' => $key, 'ship_together_status' => 'conflict',
+            'ship_together_conflict' => ['reason' => 'timeout', 'message' => null, 'order_uuid' => null],
+        ];
+
+        app(HandleOrderUpdated::class)->handle($outcome($a));
+        // Поздний итог по второму заказу — через час, за окном склейки писем
+        $this->travel(61)->minutes();
+        app(HandleOrderUpdated::class)->handle($outcome($b));
+
+        $this->assertSame(1, CrmEmail::query()->where('origin_event', 'orders.ship_together_rejected')->count(), 'одно письмо на группу даже при разрыве итогов (S2)');
+        $this->assertSame(ShipTogetherStatus::CONFLICT, $b->refresh()->ship_together_status);
+    }
+
+    #[Test]
     public function reserve_false_without_group_fields_clears_pending_as_single_confirmation(): void
     {
         [, $a] = $this->pendingGroup();
