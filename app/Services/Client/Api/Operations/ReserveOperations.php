@@ -11,6 +11,7 @@ use App\Services\Client\Api\OperationProvider;
 use App\Services\Erp\OrderReservePublisher;
 use App\Services\Order\ClientOrderActions;
 use App\Services\Order\OrderChangeLogger;
+use App\Services\Order\ReserveActionException;
 use App\Services\Order\ShipTogetherService;
 use App\Support\OperationApi\OperationInput;
 use App\Support\OperationApi\Param;
@@ -168,6 +169,14 @@ class ReserveOperations implements OperationProvider
      */
     public function confirmGroup(User $actor, OperationInput $input): array
     {
+        if (! ShipTogetherService::enabledFor($actor)) {
+            throw new ReserveActionException(
+                'ship_together_unavailable',
+                'Совместная отгрузка вам пока недоступна. Подтверждайте резервы по одному.',
+                403,
+            );
+        }
+
         $ids = array_map(
             fn ($identifier) => $this->orderOf($actor, (string) $identifier, withTrashed: true)->id,
             $input->array('orders'),

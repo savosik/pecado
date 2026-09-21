@@ -103,13 +103,30 @@ class OrderReservePublisher
      * реализаций и расходных ордеров; неполная группа частично не оформляется.
      *
      * @param  list<string>  $orderUuids  манифест группы, включая uuid этого заказа
+     * @param  bool  $dispatch  false — только собрать payload (испытания: пропуск сообщения)
+     * @return array<string, mixed> отправленный (или собранный) payload
      */
-    public function publishConfirmedInGroup(Order $order, string $shipTogetherKey, array $orderUuids, ?CarbonInterface $confirmedAt = null): void
+    public function publishConfirmedInGroup(Order $order, string $shipTogetherKey, array $orderUuids, ?CarbonInterface $confirmedAt = null, bool $dispatch = true): array
     {
         $payload = $this->confirmedPayload($order, $confirmedAt);
         $payload['ship_together_key'] = $shipTogetherKey;
         $payload['ship_together_order_uuids'] = array_values($orderUuids);
 
+        if ($dispatch) {
+            PublishOrderToErpJob::dispatch($payload);
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Повторная публикация ранее собранного payload с тем же message_id (испытания
+     * Р-7.7/Р-7.8: повтор и поздняя доставка не должны менять итог группы в 1С).
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function republish(array $payload): void
+    {
         PublishOrderToErpJob::dispatch($payload);
     }
 

@@ -38,17 +38,40 @@ class ShipTogetherService
     }
 
     /**
+     * Доступна ли совместная отгрузка партнёру: глобальный рубильник плюс канарейка
+     * испытаний (список erp_id партнёров; пустой — доступно всем участникам резервов).
+     */
+    public static function enabledFor(?User $user): bool
+    {
+        if (! self::enabled() || $user === null) {
+            return false;
+        }
+
+        $canary = array_values(array_filter(array_map(
+            static fn (string $uuid): string => trim($uuid),
+            explode(',', (string) config('order_reserve.ship_together.canary', '')),
+        )));
+
+        return $canary === [] || in_array((string) $user->erp_id, $canary, true);
+    }
+
+    /**
      * Отправить группу резервов в отгрузку вместе.
      *
      * Заказы блокируются и помечаются `pending` в одной транзакции, сообщения в шину
      * уходят после её фиксации — все разом, с одинаковым ключом и манифестом.
      *
+     * $skipUuids — только для испытаний (команда reserve:ship-together-trial): сообщения
+     * по этим заказам в шину НЕ уходят, чтобы воспроизвести неполную группу (Р-7.3). Payload
+     * для них всё равно собирается и возвращается — досылка тем же message_id.
+     *
      * @param  list<int>  $orderIds
-     * @return array{key: string, orders: Collection<int, Order>}
+     * @param  list<string>  $skipUuids
+     * @return array{key: string, orders: Collection<int, Order>, payloads: list<array{payload: array<string, mixed>, sent: bool}>}
      *
      * @throws ReserveActionException
      */
-    public function confirmGroup(User $user, array $orderIds): array
+    public function confirmGroup(User $user, array $orderIds, array $skipUuids = []): array
     {
         $ids = array_values(array_unique(array_map('intval', $orderIds)));
 
@@ -94,12 +117,17 @@ class ShipTogetherService
 
         $manifest = $orders->pluck('uuid')->values()->all();
         $confirmedAt = now();
+        $payloads = [];
 
         foreach ($orders as $order) {
-            $this->publisher->publishConfirmedInGroup($order, $key, $manifest, $confirmedAt);
+            $sent = ! in_array((string) $order->uuid, $skipUuids, true);
+            $payloads[] = [
+                'payload' => $this->publisher->publishConfirmedInGroup($order, $key, $manifest, $confirmedAt, dispatch: $sent),
+                'sent' => $sent,
+            ];
         }
 
-        return ['key' => $key, 'orders' => $orders];
+        return ['key' => $key, 'orders' => $orders, 'payloads' => $payloads];
     }
 
     /**
@@ -214,9 +242,12 @@ class ShipTogetherService
             'message' => isset($conflict['message']) ? (string) $conflict['message'] : null,
             'order_uuid' => isset($conflict['order_uuid']) ? (string) $conflict['order_uuid'] : null,
         ];
-        // Отказ по всей группе: 1С резерв не трогала, заказ снова в окне резерва
-        $order->reserve = true;
-        $order->reserve_outcome = null;
+        // Отказ по всей группе: 1С резерв не трогала, заказ снова в окне резерва.
+        // Поле reserve уже применено из этого же сообщения и авторитетно: если заказ
+        // сняли с резерва руками до итога (причина not_reserved), он в резерв не вернётся.
+        if ($order->reserve) {
+            $order->reserve_outcome = null;
+        }
     }
 
     /**

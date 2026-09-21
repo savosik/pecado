@@ -35,7 +35,7 @@ class ReserveOrderController extends Controller
 
         return Inertia::render('User/Cabinet/Reserves/Index', [
             // v16.11.0: совместная отгрузка — галочки и кнопка «В отгрузку выбранное»
-            'ship_together_enabled' => \App\Services\Order\ShipTogetherService::enabled(),
+            'ship_together_enabled' => \App\Services\Order\ShipTogetherService::enabledFor($request->user()),
             'reserves' => $orders->map(fn (Order $order) => [
                 'id' => $order->id,
                 ...$order->clientNumberPayload(),
@@ -138,7 +138,7 @@ class ReserveOrderController extends Controller
      */
     public function shipTogether(Request $request, \App\Services\Order\ShipTogetherService $service): JsonResponse
     {
-        abort_unless(\App\Services\Order\ShipTogetherService::enabled(), 404);
+        abort_unless(\App\Services\Order\ShipTogetherService::enabledFor($request->user()), 404);
 
         $validated = $request->validate([
             'order_ids' => ['required', 'array', 'min:2'],
