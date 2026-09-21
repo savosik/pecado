@@ -136,7 +136,7 @@ class ShipTogetherOutcomeTest extends TestCase
         $a->refresh();
         $this->assertFalse($a->reserve);
         $this->assertNull($a->ship_together_status, 'старая 1С или ручной перевод — ожидание группы снято');
-        $this->assertSame('confirmed', $a->reserve_outcome);
+        $this->assertNull($a->reserve_outcome, 'исход по одному reserve=false не выдумываем (S1)');
     }
 
     #[Test]

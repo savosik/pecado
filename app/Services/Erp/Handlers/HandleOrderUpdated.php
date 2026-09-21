@@ -148,10 +148,11 @@ class HandleOrderUpdated
         if ($shipTogetherOutcome) {
             app(\App\Services\Order\ShipTogetherService::class)->applyOutcome($order, $payload);
         } elseif ($reserveExplicit && ! $order->reserve && $order->shipTogetherPending()) {
-            // 1С сняла резерв без полей группы (старая версия обработчика или ручной
-            // перевод менеджером): ожидание группы снимаем, заказ ушёл в отгрузку по одному
+            // 1С сняла резерв без полей группы (старая версия обработчика, ручной перевод
+            // менеджером или снятие резерва оператором): ожидание группы снимаем, а исход
+            // резерва не выдумываем — по одному лишь reserve=false не отличить «ушёл в
+            // отгрузку» от «снят с резерва» (S1 на прогоне Р-7.4, 21.09.2026).
             $order->ship_together_status = null;
-            $order->reserve_outcome = 'confirmed';
         }
 
         // v13.7: аудит-метки 1С. array_key_exists, чтобы передача null
