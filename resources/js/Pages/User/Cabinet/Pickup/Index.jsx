@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Badge, Box, Button, Card, Flex, HStack, Image, Input, SimpleGrid, Text, VStack } from '@chakra-ui/react';
 import { Head, Link, router } from '@inertiajs/react';
 import axios from 'axios';
-import { LuClock3, LuCopy, LuPackageCheck, LuQrCode, LuShare2, LuTruck } from 'react-icons/lu';
+import { LuClock3, LuCopy, LuPackageCheck, LuPhone, LuQrCode, LuShare2, LuTruck } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AccordionItem, AccordionItemContent, AccordionItemTrigger, AccordionRoot } from '@/components/ui/accordion';
@@ -30,7 +30,7 @@ const timeText = (iso) => {
  * пропуска с QR-кодом. Сценарий мобильный: клиент выпускает пропуск и тут же пересылает
  * ссылку курьеру в мессенджер.
  */
-export default function PickupIndex({ ready, picking, handed, passes, schedule, multiCompany, hasAllPass = false }) {
+export default function PickupIndex({ ready, picking, handed, passes, schedule, desk = null, multiCompany, hasAllPass = false }) {
     const [selected, setSelected] = useState([]);
     const [courier, setCourier] = useState('');
     const [busy, setBusy] = useState(false);
@@ -71,7 +71,9 @@ export default function PickupIndex({ ready, picking, handed, passes, schedule, 
     };
 
     const share = async (pass) => {
-        const text = `Пропуск на склад Pecado, код ${pass.code}. ${schedule.address}, ${schedule.week_text}.`;
+        // Курьеру в сообщение — сразу и перерывы, и телефон склада: чтобы не ехал впустую и знал, куда звонить.
+        const breaks = desk?.week_text ? ` Перерывы выдачи: ${desk.week_text}.` : '';
+        const text = `Пропуск на склад Pecado, код ${pass.code}. ${schedule.address}, ${schedule.week_text}.${breaks} Телефон склада ${schedule.phone}.`;
         if (navigator.share) {
             try { await navigator.share({ title: 'Пропуск на самовывоз', text, url: pass.url }); return; } catch { /* отменили — скопируем ниже */ }
         }
@@ -146,6 +148,15 @@ export default function PickupIndex({ ready, picking, handed, passes, schedule, 
                                         ? `Сейчас склад закрыт, откроется в ${schedule.opens_at}`
                                         : 'Сегодня склад не работает'}
                             </Text>
+                            {/* pick-18: перерывы стойки и статус «выдают сейчас» — чтобы курьер не простаивал у закрытой стойки */}
+                            {desk && (
+                                <Box mt="2">
+                                    <Badge colorPalette={desk.state === 'open' ? 'green' : desk.state === 'break' ? 'orange' : 'gray'}>{desk.text}</Badge>
+                                    <Text fontSize="sm" mt="1">{desk.today_text}{desk.state === 'open' && desk.next_break ? `. Следующий перерыв ${desk.next_break}` : ''}</Text>
+                                    {desk.week_text && <Text fontSize="sm" color="fg.muted">Перерывы выдачи: {desk.week_text}. Посылайте курьера так, чтобы он приехал вне перерыва.</Text>}
+                                    <HStack fontSize="sm" mt="1" gap="1"><LuPhone size={14} /><Text as="a" href={`tel:${schedule.phone.replace(/[^+\d]/g, '')}`} fontWeight="600">{schedule.phone}</Text><Text color="fg.muted">— телефон склада, он же в пропуске курьера</Text></HStack>
+                                </Box>
+                            )}
                         </Box>
                     </SimpleGrid>
                 </Card.Body>

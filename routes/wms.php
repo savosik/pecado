@@ -10,6 +10,7 @@ use App\Http\Controllers\Wms\DeliverySettingsController;
 use App\Http\Controllers\Wms\GoodsIssueController;
 use App\Http\Controllers\Wms\InstructionController;
 use App\Http\Controllers\Wms\PickupController;
+use App\Http\Controllers\Wms\PickupDeskController;
 use App\Http\Controllers\Wms\StockBufferController;
 use Illuminate\Support\Facades\Route;
 
@@ -104,6 +105,22 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
         Route::get('/search', [PickupController::class, 'search'])->name('search');
         Route::get('/passes/{pass}', [PickupController::class, 'pass'])->name('pass');
         Route::post('/resolve', [PickupController::class, 'resolve'])->name('resolve')->middleware('throttle:120,1');
+
+        // Стойка выдачи (pick-18): выдают ли сейчас, «Отойти»/«Вернулся», смена и плановые перерывы.
+        Route::get('/desk', [PickupDeskController::class, 'status'])->name('desk.status');
+        Route::middleware('permission:wms-pickups.issue')->group(function () {
+            Route::post('/desk/pause', [PickupDeskController::class, 'pause'])->name('desk.pause');
+            Route::post('/desk/resume', [PickupDeskController::class, 'resume'])->name('desk.resume');
+        });
+        Route::middleware('permission:wms-pickups.schedule')->prefix('schedule')->name('schedule.')->group(function () {
+            Route::get('/', [PickupDeskController::class, 'schedule'])->name('index');
+            Route::post('/staff', [PickupDeskController::class, 'storeStaff'])->name('staff.store');
+            Route::put('/staff/{staff}', [PickupDeskController::class, 'updateStaff'])->name('staff.update');
+            Route::delete('/staff/{staff}', [PickupDeskController::class, 'destroyStaff'])->name('staff.destroy');
+            Route::post('/staff/{staff}/breaks', [PickupDeskController::class, 'storeBreak'])->name('breaks.store');
+            Route::put('/breaks/{break}', [PickupDeskController::class, 'updateBreak'])->name('breaks.update');
+            Route::delete('/breaks/{break}', [PickupDeskController::class, 'destroyBreak'])->name('breaks.destroy');
+        });
 
         Route::middleware('permission:wms-pickups.issue')->group(function () {
             Route::post('/passes/{pass}/issue-all', [PickupController::class, 'issueAll'])->name('issue-all');

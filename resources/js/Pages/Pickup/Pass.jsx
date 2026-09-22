@@ -1,7 +1,16 @@
-import { Badge, Box, Button, Container, Image, Text, VStack } from '@chakra-ui/react';
+import { useEffect, useState } from 'react';
+import { Badge, Box, Button, Container, HStack, Image, Text, VStack } from '@chakra-ui/react';
 import { Head } from '@inertiajs/react';
-import { LuMapPin, LuPhone } from 'react-icons/lu';
+import { LuClock3, LuMapPin, LuPhone } from 'react-icons/lu';
 import WarehouseMap from '@/components/common/WarehouseMap';
+
+const DESK_REFRESH_MS = 60000;
+
+const DESK_STYLE = {
+    open: { bg: 'green.solid', color: 'white' },
+    break: { bg: 'orange.solid', color: 'white' },
+    closed: { bg: 'gray.solid', color: 'white' },
+};
 
 const places = (n) => {
     const mod10 = n % 10; const mod100 = n % 100;
@@ -15,8 +24,27 @@ const places = (n) => {
  * страницу открывают с телефона у склада, возможно на плохой связи. Ни клиента, ни сумм,
  * ни состава здесь нет — ссылка могла уйти куда угодно.
  */
-export default function PickupPass({ pass, schedule }) {
+export default function PickupPass({ pass, schedule, desk: initialDesk = null }) {
     const mapUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(schedule.address)}`;
+    const phoneHref = `tel:${schedule.phone.replace(/[^+\d]/g, '')}`;
+
+    // pick-18: курьер держит страницу открытой в дороге — раз в минуту переспрашиваем, выдают ли сейчас.
+    const [desk, setDesk] = useState(initialDesk);
+    useEffect(() => {
+        if (!pass || typeof window === 'undefined') return undefined;
+        const refresh = async () => {
+            try {
+                const response = await fetch(`${window.location.pathname}/desk`, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+                if (response.ok) setDesk((await response.json()).desk);
+            } catch { /* нет связи — покажем прошлое состояние */ }
+        };
+        const timer = setInterval(refresh, DESK_REFRESH_MS);
+        const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
+    }, [pass]);
+
+    const deskStyle = DESK_STYLE[desk?.state] || DESK_STYLE.closed;
 
     return (
         <Box minH="100vh" bg="bg.muted" py="6">
@@ -26,6 +54,25 @@ export default function PickupPass({ pass, schedule }) {
             <Container maxW="md">
                 <VStack align="stretch" gap="4">
                     <Image src="/logo.png" alt="Pecado" h="40px" objectFit="contain" alignSelf="center" />
+
+                    {/* Первое, что видит курьер: выдают ли прямо сейчас и куда звонить. Перерывы — чтобы не приехать впустую. */}
+                    {pass && desk && (
+                        <Box bg={deskStyle.bg} color={deskStyle.color} borderRadius="xl" p="4">
+                            <HStack gap="2" align="center">
+                                <LuClock3 size={22} />
+                                <Text fontSize="xl" fontWeight="800" lineHeight="1.2">{desk.text}</Text>
+                            </HStack>
+                            <Text fontSize="sm" opacity="0.92" mt="1">
+                                {desk.today_text}
+                                {desk.state === 'open' && desk.next_break ? `. Следующий перерыв ${desk.next_break}` : ''}
+                                {desk.state === 'open' && desk.closes_at ? `. Выдаём до ${desk.closes_at}` : ''}
+                            </Text>
+                            {desk.state === 'break' && <Text fontSize="sm" opacity="0.92">Подождите или позвоните — если на складе кто-то есть, вам откроют.</Text>}
+                            <Button asChild mt="3" size="lg" width="100%" bg="white" color="gray.900" _hover={{ bg: 'gray.100' }}>
+                                <a href={phoneHref}><LuPhone /> Склад: {schedule.phone}</a>
+                            </Button>
+                        </Box>
+                    )}
 
                     {!pass ? (
                         <Box bg="bg" borderRadius="xl" p="6" textAlign="center">
@@ -64,7 +111,7 @@ export default function PickupPass({ pass, schedule }) {
                         </Text>
                         <VStack align="stretch" gap="2">
                             <Button asChild colorPalette="green" size="lg"><a href={mapUrl} target="_blank" rel="noreferrer noopener"><LuMapPin /> Построить маршрут</a></Button>
-                            <Button asChild variant="outline" size="lg"><a href={`tel:${schedule.phone.replace(/[^+\d]/g, '')}`}><LuPhone /> Позвонить на склад</a></Button>
+                            <Button asChild variant="outline" size="lg"><a href={phoneHref}><LuPhone /> Позвонить на склад {schedule.phone}</a></Button>
                         </VStack>
                     </Box>
 

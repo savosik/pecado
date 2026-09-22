@@ -82,6 +82,7 @@ class RoleController extends Controller
         'send' => 'Отправка', 'export' => 'Выгрузка',
         'submit' => 'Передача в ТК', 'cancel' => 'Отмена заявки',
         'use' => 'Использование', 'issue' => 'Выдача',
+        'schedule' => 'График перерывов',
     ];
 
     public function index(Request $request)

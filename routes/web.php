@@ -50,6 +50,11 @@ Route::get('/p/{token}', \App\Http\Controllers\PickupPassPageController::class)
     ->where('token', '[A-Za-z0-9_-]{20,128}')
     ->middleware('throttle:30,1')
     ->name('pickup.pass');
+// Курьер держит пропуск открытым в дороге: раз в минуту страница сама спрашивает, выдают ли сейчас (pick-18).
+Route::get('/p/{token}/desk', [\App\Http\Controllers\PickupPassPageController::class, 'desk'])
+    ->where('token', '[A-Za-z0-9_-]{20,128}')
+    ->middleware('throttle:60,1')
+    ->name('pickup.pass.desk');
 
 // ──────────────────────────────────────────────
 // Authenticated routes

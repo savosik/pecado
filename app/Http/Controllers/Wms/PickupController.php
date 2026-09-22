@@ -7,6 +7,7 @@ use App\Models\Pickup\PickupHandover;
 use App\Models\Pickup\PickupPass;
 use App\Services\Pickup\HandoverException;
 use App\Services\Pickup\HandoverService;
+use App\Services\Pickup\PickupDeskSchedule;
 use App\Services\Pickup\PickupPassService;
 use App\Services\Pickup\PickupQueue;
 use App\Services\Pickup\ScanResolver;
@@ -30,6 +31,7 @@ class PickupController extends WmsController
         private readonly PickupPassService $passes,
         private readonly ScanResolver $scans,
         private readonly WarehouseSchedule $schedule,
+        private readonly PickupDeskSchedule $desk,
     ) {}
 
     public function index(Request $request): Response|\Illuminate\Http\RedirectResponse
@@ -209,6 +211,7 @@ class PickupController extends WmsController
             'stale' => $this->strip($this->queue->stale()),
             'review' => $this->queue->needsReview()->map(fn (array $h) => $this->stripHandover($h))->all(),
             'schedule' => $this->schedule->today(now()),
+            'desk' => $this->desk->summary(now()),
             'staleDays' => (int) config('pickup.stale_days', 3),
         ];
     }

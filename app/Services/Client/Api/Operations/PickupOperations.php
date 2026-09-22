@@ -11,6 +11,7 @@ use App\Services\Client\Api\FeatureGate;
 use App\Services\Client\Api\Operation;
 use App\Services\Client\Api\OperationProvider;
 use App\Services\Pickup\OrderFulfilmentResolver;
+use App\Services\Pickup\PickupDeskSchedule;
 use App\Services\Pickup\PickupPassService;
 use App\Services\Warehouse\WarehouseSchedule;
 use App\Support\OperationApi\OperationInput;
@@ -30,6 +31,7 @@ class PickupOperations implements OperationProvider
         private readonly OrderFulfilmentResolver $resolver,
         private readonly PickupPassService $passes,
         private readonly WarehouseSchedule $schedule,
+        private readonly PickupDeskSchedule $desk,
     ) {}
 
     public static function section(): array
@@ -45,10 +47,13 @@ class PickupOperations implements OperationProvider
                 section: 'pickup',
                 method: 'GET',
                 uri: 'pickup/schedule',
-                summary: 'График склада, адрес выдачи и обещание времени сборки на сейчас',
+                summary: 'График склада, адрес выдачи, перерывы стойки выдачи и обещание времени сборки на сейчас',
                 description: 'Часы работы склада, отсечка приёма к сборке «на сегодня» и честное обещание: к какому '
                     .'времени будет собран заказ, отправленный в отгрузку прямо сейчас (`promise`). После отсечки сборка '
-                    .'переносится на следующее открытие склада. Спрашивайте перед тем, как обещать покупателю срок.',
+                    .'переносится на следующее открытие склада. Спрашивайте перед тем, как обещать покупателю срок. '
+                    .'Блок `desk` — стойка выдачи: выдают ли прямо сейчас (`state`: open — выдают, break — технический перерыв '
+                    .'до `until`, closed — склад закрыт), перерывы на сегодня (`today_closed`), недельный план перерывов '
+                    .'(`week_text`) и телефон склада (`phone`). Посылайте курьера так, чтобы он приехал вне перерыва.',
                 params: [],
                 handler: [self::class, 'schedule'],
                 gate: FeatureGate::PICKUP,
@@ -121,7 +126,7 @@ class PickupOperations implements OperationProvider
     /** @return array<string, mixed> */
     public function schedule(User $actor, OperationInput $input): array
     {
-        return Envelope::data($this->schedule->today(now()));
+        return Envelope::data([...$this->schedule->today(now()), 'desk' => $this->desk->publicSummary(now())]);
     }
 
     /** @return array<string, mixed> */
@@ -146,7 +151,7 @@ class PickupOperations implements OperationProvider
         return Envelope::data([
             'ready' => $rows->where('stage', Stage::READY->value)->values()->all(),
             'picking' => $rows->where('stage', Stage::PICKING->value)->values()->all(),
-        ], ['schedule' => $this->schedule->today(now())]);
+        ], ['schedule' => $this->schedule->today(now()), 'desk' => $this->desk->publicSummary(now())]);
     }
 
     /** @return array<string, mixed> */

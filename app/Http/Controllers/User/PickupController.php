@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\GoodsIssue;
 use App\Models\Pickup\PickupPass;
 use App\Services\Pickup\OrderFulfilmentResolver;
+use App\Services\Pickup\PickupDeskSchedule;
 use App\Services\Pickup\PickupPassException;
 use App\Services\Pickup\PickupPassService;
 use App\Services\Warehouse\WarehouseSchedule;
@@ -27,6 +28,7 @@ class PickupController extends Controller
         private readonly OrderFulfilmentResolver $resolver,
         private readonly PickupPassService $passes,
         private readonly WarehouseSchedule $schedule,
+        private readonly PickupDeskSchedule $desk,
     ) {}
 
     public function index(Request $request): InertiaResponse
@@ -95,6 +97,7 @@ class PickupController extends Controller
             'passes' => PickupPass::query()->where('user_id', $user->id)->usable()->latest()->get()
                 ->map(fn (PickupPass $pass) => $this->presentPass($pass))->values(),
             'schedule' => $this->schedule->today(now()),
+            'desk' => $this->desk->publicSummary(now()),
             'multiCompany' => $companies->count() > 1,
             'hasAllPass' => $allPass !== null,
         ]);

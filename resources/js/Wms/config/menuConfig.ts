@@ -11,8 +11,7 @@ import {
     LuPackageSearch,
     LuSettings,
     LuTriangleAlert,
-    LuBookOpen,
-} from "react-icons/lu";
+    LuBookOpen, LuCalendarClock } from "react-icons/lu";
 
 export interface MenuItem {
     label: string;
@@ -61,6 +60,7 @@ export const menuConfig: MenuGroup[] = [
         icon: LuTruck,
         items: [
             { label: "Выдача заказов", icon: LuPackageCheck, path: "/wms/pickups", permission: "wms-pickups.view", feature: "pickup" },
+            { label: "График выдачи", icon: LuCalendarClock, path: "/wms/pickups/schedule", permission: "wms-pickups.schedule", feature: "pickup" },
             { label: "Расходные ордера", icon: LuClipboardList, path: "/wms/goods-issues", permission: "wms-goods-issues.view" },
         ],
     },

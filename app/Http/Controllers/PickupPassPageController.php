@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\User\PickupController;
+use App\Services\Pickup\PickupDeskSchedule;
 use App\Services\Pickup\PickupPassService;
 use App\Services\Warehouse\WarehouseSchedule;
+use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -16,14 +18,14 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class PickupPassPageController extends Controller
 {
-    public function __invoke(string $token, PickupPassService $passes, WarehouseSchedule $schedule): Response
+    public function __invoke(string $token, PickupPassService $passes, WarehouseSchedule $schedule, PickupDeskSchedule $desk): Response
     {
         abort_unless((bool) config('pickup.enabled'), 404);
 
         $pass = $passes->findByToken($token);
         $usable = $pass !== null && $pass->isUsable();
 
-        $props = ['schedule' => $this->publicSchedule($schedule), 'pass' => null];
+        $props = ['schedule' => $this->publicSchedule($schedule), 'desk' => $usable ? $desk->publicSummary(now()) : null, 'pass' => null];
 
         if ($usable) {
             $items = $passes->contents($pass);
@@ -59,6 +61,16 @@ class PickupPassPageController extends Controller
                 'Referrer-Policy' => 'no-referrer',
                 'Cache-Control' => 'no-store, private',
             ]);
+    }
+
+    /** Выдают ли сейчас — для автообновления открытой страницы пропуска. Недействующий токен — те же 404. */
+    public function desk(string $token, PickupPassService $passes, PickupDeskSchedule $desk): JsonResponse
+    {
+        abort_unless((bool) config('pickup.enabled'), 404);
+        $pass = $passes->findByToken($token);
+        abort_unless($pass !== null && $pass->isUsable(), 404);
+
+        return response()->json(['desk' => $desk->publicSummary(now())])->withHeaders(['Cache-Control' => 'no-store, private']);
     }
 
     /** @return array<string, mixed> */

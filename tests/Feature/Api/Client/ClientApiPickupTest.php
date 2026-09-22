@@ -41,7 +41,14 @@ class ClientApiPickupTest extends ClientApiTestCase
             ->assertJsonCount(1, 'data.ready')->assertJsonCount(1, 'data.picking')
             ->assertJsonPath('data.ready.0.goods_issue_id', $ready->id)
             ->assertJsonPath('data.ready.0.orders.0.number', '29УТ-017001')
-            ->assertJsonPath('meta.schedule.week_text', 'пн–сб, 9:00–21:00');
+            ->assertJsonPath('meta.schedule.week_text', 'пн–сб, 9:00–21:00')
+            ->assertJsonPath('meta.desk.state', fn ($state) => in_array($state, ['open', 'break', 'closed'], true));
+
+        // pick-18: блок стойки выдачи — выдают ли сейчас, перерывы, телефон; имён смены наружу нет.
+        $this->api('GET', '/pickup/schedule')->assertOk()
+            ->assertJsonPath('data.desk.today_text', fn ($text) => is_string($text) && $text !== '')
+            ->assertJsonPath('data.desk.phone', config('warehouse.pickup_phone'))
+            ->assertJsonMissingPath('data.desk.roster');
 
         $created = $this->api('POST', '/pickup/passes', ['scope' => 'selected', 'goods_issue_ids' => [$ready->id], 'courier_name' => 'Олег'], ['Idempotency-Key' => 'pass-1'])
             ->assertSuccessful()->assertJsonPath('data.to_issue', 1)->assertJsonPath('data.courier_name', 'Олег');
