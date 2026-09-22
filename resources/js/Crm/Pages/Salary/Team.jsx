@@ -5,6 +5,7 @@ import { Badge, Box, HStack, SimpleGrid, Table, Text, VStack } from '@chakra-ui/
 import { LuBanknote, LuCheck, LuFileDown, LuRefreshCw, LuUndo2 } from 'react-icons/lu';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
+import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import MetricHint from '@/Crm/Components/MetricHint';
 import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
@@ -99,6 +100,10 @@ export default function SalaryTeam(props) {
                     </HStack>
                 )}
             />
+
+            {data.legacy_notice && (
+                <Alert status="warning" title="Оплата идёт по новой системе">{data.legacy_notice}</Alert>
+            )}
 
             <VStack align="stretch" gap={5}>
                 <SimpleGrid columns={{ base: 2, md: 4 }} gap={3}>

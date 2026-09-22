@@ -51,15 +51,25 @@ class MotivationAdvisor
         $gain = $this->gain($params, $inputs, $current, ['base_revenue' => $motivation->baseRevenue + $step]);
 
         if ($gain > 0) {
+            // Брутто по П1 и то, что съест вычет: «+1 168 ₽» без пояснения, что 8 332 ₽
+            // ушли на покрытие К1, выглядит как насмешка, а не как совет.
+            $rateP1 = (float) ($params->for('motivation_variable')['rate_p1'] ?? 0);
+            $gross = Money::round(self::PLAN_STEP * $rateP1);
+            $eaten = Money::round(max(0.0, $gross - $gain));
+            $hint = $gap > 0
+                ? sprintf('До порога не хватает %s — ниже него П1 не начисляется. Сверх порога каждые %s дают %s по П1', Money::rub($gap), Money::rub(self::PLAN_STEP), Money::rub($gross))
+                : sprintf('Каждые %s сверх порога — %s по П1', Money::rub(self::PLAN_STEP), Money::rub($gross));
+            if ($eaten > 0) {
+                $hint .= sprintf('; %s из них уйдут на покрытие вычета К1 — чистыми %s', Money::rub($eaten), Money::rub($gain));
+            }
+
             $levers[] = [
                 'key' => 'plan',
                 'title' => $gap > 0
                     ? sprintf('Дойти до порога оплаты и отгрузить ещё %s', Money::rub(self::PLAN_STEP))
                     : sprintf('Отгрузить базе ещё %s', Money::rub(self::PLAN_STEP)),
                 'value' => $gain,
-                'hint' => $gap > 0
-                    ? sprintf('До порога не хватает %s — ниже него П1 не начисляется', Money::rub($gap))
-                    : sprintf('Каждые %s сверх порога — плюс %s', Money::rub(self::PLAN_STEP), Money::rub($gain)),
+                'hint' => $hint,
                 'href' => '/crm/motivation/base',
             ];
         }

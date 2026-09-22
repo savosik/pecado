@@ -38,6 +38,16 @@ class PlanOrderService
         $start = CarbonImmutable::instance($quarter)->startOfQuarter()->startOfDay();
         $result = $this->calculator->calculate($managerId, $start, $params, $waiveReason !== null);
 
+        // Закрытый месяц не пересчитывается: если квартал утверждается с опозданием,
+        // прошедшие месяцы остаются с тем планом, по которому люди уже работали.
+        $today = CarbonImmutable::today();
+        foreach ($result['values'] as $month => $value) {
+            $existing = $result['previous_values'][$month] ?? null;
+            if ($existing !== null && CarbonImmutable::parse((string) $month)->endOfMonth()->lt($today)) {
+                $result['values'][$month] = (float) $existing;
+            }
+        }
+
         $draft = MotivationPlanOrder::query()
             ->forQuarter($start)
             ->where('personal_manager_id', $managerId)

@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Crm\Motivation;
 
+use App\Enums\Crm\PlanTarget;
 use App\Enums\UserKind;
+use App\Models\CrmSalesPlan;
 use App\Models\Motivation\MotivationObjection;
 use App\Models\PersonalManager;
 use App\Models\Product;
@@ -81,6 +83,36 @@ class MotivationPayslipTest extends TestCase
             'total' => $amount,
             'subtotal' => $amount,
         ]);
+    }
+
+    #[Test]
+    #[TestDox('В перечень П1 попадают только отгрузки сверх порога оплаты; документ на границе — частично')]
+    public function payslip_lists_only_base_shipments_above_the_threshold(): void
+    {
+        // План 200 000 → порог 60 % = 120 000. Первый документ (100 000) целиком ниже порога,
+        // второй (50 000) переваливает через него на 30 000.
+        CrmSalesPlan::query()->create([
+            'period_month' => $this->month->toDateString(),
+            'target_type' => PlanTarget::MANAGER->value,
+            'target_id' => $this->profile->id,
+            'amount' => 200_000,
+        ]);
+        $partner = User::factory()->create(['personal_manager_id' => $this->profile->id, 'name' => 'Альфа']);
+        $this->ship($partner, 100_000, $this->month->addDays(1));
+        $this->ship($partner, 50_000, $this->month->addDays(3));
+
+        $calculation = app(PayrollCalculationService::class)->ensureDraft($this->profile->id, $this->month);
+        $slip = app(PayslipService::class)->build($calculation);
+
+        $this->assertSame(2, $slip['shipments']['documents_count']);
+        $this->assertSame(120_000.0, $slip['shipments']['base_threshold']);
+        $this->assertSame(150_000.0, $slip['shipments']['base_total']);
+        $this->assertSame(30_000.0, $slip['shipments']['base_over_threshold']);
+        $this->assertCount(1, $slip['shipments']['base']);
+        $this->assertSame(30_000.0, $slip['shipments']['base'][0]['amount']);
+        $this->assertCount(1, $slip['shipments']['base'][0]['documents'], 'Документ ниже порога в перечень не попадает');
+        $this->assertSame(50_000.0, $slip['shipments']['base'][0]['documents'][0]['partial']);
+        $this->assertSame($slip['shipments']['base_accrued'], $slip['shipments']['base'][0]['accrued'], 'Начислено по перечню = П1 из расчёта');
     }
 
     #[Test]
