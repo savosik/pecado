@@ -85,13 +85,15 @@ return [
 
     /*
      * Потолки расходов (в дополнение к лимиту workspace в консоли Anthropic).
-     * Персональная квота юрлица видна одному клиенту («помощник отдыхает»),
-     * месячный предел организации прячет помощника у всех.
+     * Считаются в деньгах по стоимости ходов, а не в токенах: чтение кеша даёт
+     * десятки тысяч токенов за ход по десятой цене, и токенная квота кончалась
+     * за десяток ходов. Персональная квота юрлица видна одному клиенту
+     * («помощник отдыхает»), месячный предел организации прячет помощника у всех.
      */
     'quotas' => [
-        'company_daily_turns' => (int) env('CLIENT_ASSISTANT_COMPANY_DAILY_TURNS', 120),
-        'company_daily_tokens' => (int) env('CLIENT_ASSISTANT_COMPANY_DAILY_TOKENS', 600000),
-        'thread_max_tokens' => (int) env('CLIENT_ASSISTANT_THREAD_MAX_TOKENS', 400000),
+        'company_daily_turns' => (int) env('CLIENT_ASSISTANT_COMPANY_DAILY_TURNS', 300),
+        'company_daily_usd' => (float) env('CLIENT_ASSISTANT_COMPANY_DAILY_USD', 3.0),
+        'thread_max_usd' => (float) env('CLIENT_ASSISTANT_THREAD_MAX_USD', 5.0),
         'org_monthly_usd' => (float) env('CLIENT_ASSISTANT_ORG_MONTHLY_USD', 300),
     ],
 

@@ -5,7 +5,6 @@ namespace App\Services\Assistant;
 use App\Models\ChatMessage;
 use App\Models\ChatThread;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Потолки расходов, кроме лимита в консоли Anthropic.
@@ -28,9 +27,9 @@ final class AssistantQuotas
     {
         $quotas = (array) config('assistant.quotas', []);
 
-        $threadMax = (int) ($quotas['thread_max_tokens'] ?? 0);
+        $threadMax = (float) ($quotas['thread_max_usd'] ?? 0);
 
-        if ($threadMax > 0 && $thread->totalTokens() >= $threadMax) {
+        if ($threadMax > 0 && (float) $thread->cost >= $threadMax) {
             return [
                 'code' => 'thread_limit',
                 'message' => 'Этот разговор стал слишком длинным. Начните новый — я помню, о чём мы говорили.',
@@ -38,9 +37,9 @@ final class AssistantQuotas
         }
 
         $dailyTurns = (int) ($quotas['company_daily_turns'] ?? 0);
-        $dailyTokens = (int) ($quotas['company_daily_tokens'] ?? 0);
+        $dailyUsd = (float) ($quotas['company_daily_usd'] ?? 0);
 
-        if ($dailyTurns > 0 || $dailyTokens > 0) {
+        if ($dailyTurns > 0 || $dailyUsd > 0) {
             $today = $this->todayUsage($thread->user_id);
 
             if ($dailyTurns > 0 && $today['turns'] >= $dailyTurns) {
@@ -50,9 +49,9 @@ final class AssistantQuotas
                 ];
             }
 
-            if ($dailyTokens > 0 && $today['tokens'] >= $dailyTokens) {
+            if ($dailyUsd > 0 && $today['usd'] >= $dailyUsd) {
                 return [
-                    'code' => 'daily_tokens',
+                    'code' => 'daily_budget',
                     'message' => 'На сегодня лимит помощника исчерпан, завтра он снова на связи. Срочное — задайте вопрос менеджеру.',
                 ];
             }
@@ -92,7 +91,7 @@ final class AssistantQuotas
     }
 
     /**
-     * @return array{turns: int, tokens: int}
+     * @return array{turns: int, usd: float}
      */
     private function todayUsage(int $userId): array
     {
@@ -100,15 +99,11 @@ final class AssistantQuotas
             ->join('chat_threads', 'chat_threads.id', '=', 'chat_messages.thread_id')
             ->where('chat_threads.user_id', $userId)
             ->where('chat_messages.role', ChatMessage::ROLE_ASSISTANT)
+            ->where('chat_messages.status', ChatMessage::STATUS_DONE)
             ->where('chat_messages.created_at', '>=', now()->startOfDay())
-            ->selectRaw('COUNT(*) as turns')
+            ->selectRaw('COUNT(*) as turns, COALESCE(SUM(chat_messages.cost), 0) as usd')
             ->first();
 
-        $tokens = (int) ChatThread::query()
-            ->where('user_id', $userId)
-            ->where('last_message_at', '>=', now()->startOfDay())
-            ->sum(DB::raw('input_tokens + output_tokens + cache_read_tokens + cache_write_tokens'));
-
-        return ['turns' => (int) ($row->turns ?? 0), 'tokens' => $tokens];
+        return ['turns' => (int) ($row->turns ?? 0), 'usd' => (float) ($row->usd ?? 0)];
     }
 }

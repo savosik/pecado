@@ -108,6 +108,44 @@ class ThreadApiTest extends AssistantTestCase
     }
 
     #[Test]
+    public function дневной_бюджет_юрлица_считается_в_деньгах_а_не_в_токенах_кеша(): void
+    {
+        config()->set('assistant.quotas.company_daily_usd', 1.0);
+        config()->set('assistant.quotas.company_daily_turns', 0);
+        $thread = app(ThreadService::class)->open($this->client);
+
+        // Дорогие по токенам, но дешёвые по деньгам ходы (чтение кеша) квоту не выбирают.
+        ChatMessage::create(['thread_id' => $thread->id, 'role' => 'assistant', 'content' => [['type' => 'text', 'text' => 'a']], 'text' => 'a', 'status' => 'done', 'cost' => 0.4, 'usage' => ['cache_read_input_tokens' => 900000]]);
+        $thread->forceFill(['cache_read_tokens' => 900000, 'cost' => 0.4])->save();
+
+        $this->actingAs($this->client)
+            ->postJson("/cabinet/assistant/threads/{$thread->id}/messages", ['text' => 'Ещё'])
+            ->assertOk();
+
+        ChatMessage::create(['thread_id' => $thread->id, 'role' => 'assistant', 'content' => [['type' => 'text', 'text' => 'b']], 'text' => 'b', 'status' => 'done', 'cost' => 0.7]);
+        ChatMessage::query()->where('thread_id', $thread->id)->where('status', 'pending')->delete();
+
+        $this->actingAs($this->client)
+            ->postJson("/cabinet/assistant/threads/{$thread->id}/messages", ['text' => 'И ещё'])
+            ->assertStatus(409)
+            ->assertJsonPath('refused', 'daily_budget');
+    }
+
+    #[Test]
+    public function предел_треда_в_деньгах_просит_начать_новый(): void
+    {
+        config()->set('assistant.quotas.thread_max_usd', 0.5);
+        $thread = app(ThreadService::class)->open($this->client);
+        $thread->forceFill(['cost' => 0.5])->save();
+
+        $this->actingAs($this->client)
+            ->postJson("/cabinet/assistant/threads/{$thread->id}/messages", ['text' => 'Ещё'])
+            ->assertStatus(409)
+            ->assertJsonPath('refused', 'thread_limit')
+            ->assertJsonPath('message', 'Этот разговор стал слишком длинным. Начните новый — я помню, о чём мы говорили.');
+    }
+
+    #[Test]
     public function вложение_разрешённого_формата_принимается_а_чужого_отклоняется_по_русски(): void
     {
         $thread = app(ThreadService::class)->open($this->client);
