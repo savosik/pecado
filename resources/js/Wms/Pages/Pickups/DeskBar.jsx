@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from '@inertiajs/react';
 import { Box, Dialog, HStack, Input, Portal, Text, VStack } from '@chakra-ui/react';
 import { LuCalendarClock, LuCoffee, LuDoorOpen, LuUndo2 } from 'react-icons/lu';
@@ -17,12 +17,25 @@ const STATE_STYLE = {
     closed: { bg: 'bg.muted', border: 'border', color: 'fg.muted' },
 };
 
+const mmss = (seconds) => {
+    const s = Math.max(0, Math.floor(seconds));
+    const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); const sec = s % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
+};
+
+/** Секундомер отлучки: тикает от момента «Отойти» до «Вернулся» — видно, сколько стойка стоит. */
+function Elapsed({ since }) {
+    const [now, setNow] = useState(Date.now());
+    useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+    return <Text as="span" fontVariantNumeric="tabular-nums" fontWeight="700">{mmss((now - new Date(since).getTime()) / 1000)}</Text>;
+}
+
 /**
- * Стойка выдачи на экране склада (pick-18): выдают сейчас или нет, «Отойти» и «Вернулся».
+ * Стойка выдачи на экране склада (pick-18): одна компактная полоса — экран нужен для выдачи, не для неё.
  *
- * То же самое в этот момент видят курьер на странице пропуска и клиент в кабинете, поэтому
- * кладовщик, уходя на почту или обедать, нажимает «Отойти» — и к нему никто не «припрётся».
- * Если на смене двое, отлучка одного выдачу не закрывает: об этом говорит текст под статусом.
+ * Открыто: «Сейчас выдают» + перерывы сегодня + «Отойти». Отошёл: «Перерыв до …» + тикающий секундомер
+ * + «Вернулся». То же в этот момент видят курьер в пропуске и клиент в кабинете.
  */
 export default function DeskBar({ desk, canIssue, onChange }) {
     const { can } = usePermission();
@@ -32,12 +45,7 @@ export default function DeskBar({ desk, canIssue, onChange }) {
 
     if (!desk) return null;
     const style = STATE_STYLE[desk.state] || STATE_STYLE.closed;
-    const pauses = desk.pauses || [];
-
-    const openDialog = () => {
-        setForm({ minutes: 20, until_close: false, reason: 'обед', custom: '' });
-        setOpen(true);
-    };
+    const pause = (desk.pauses || [])[0] || null;
 
     const post = async (url, payload) => {
         setBusy(true);
@@ -57,43 +65,33 @@ export default function DeskBar({ desk, canIssue, onChange }) {
     const submitPause = async () => {
         const reason = form.reason === 'другое' ? form.custom.trim() : form.reason;
         if (!reason) { toaster.create({ description: 'Укажите причину', type: 'info' }); return; }
-        const ok = await post('/wms/pickups/desk/pause', {
-            minutes: form.until_close ? null : form.minutes,
-            until_close: form.until_close,
-            reason,
-        });
+        const ok = await post('/wms/pickups/desk/pause', { minutes: form.until_close ? null : form.minutes, until_close: form.until_close, reason });
         if (ok) setOpen(false);
     };
 
-    const resume = () => post('/wms/pickups/desk/resume', {});
-
     return (
-        <Box p="3" bg={style.bg} borderRadius="lg" borderWidth="1px" borderColor={style.border}>
-            <HStack justify="space-between" align="flex-start" gap="3" flexWrap="wrap">
+        <Box px="3" py="2" bg={style.bg} borderRadius="lg" borderWidth="1px" borderColor={style.border}>
+            <HStack justify="space-between" align="center" gap="2">
                 <Box minW="0" flex="1">
-                    <HStack gap="2" color={style.color}>
+                    <HStack gap="2" color={style.color} align="center">
                         <LuDoorOpen />
-                        <Text fontWeight="800" fontSize="lg">{desk.text}</Text>
+                        <Text fontWeight="800" lineClamp="1">{desk.text}</Text>
                     </HStack>
-                    <Text fontSize="sm" color="fg.muted">
-                        {desk.today_text}
-                        {desk.state === 'open' && desk.next_break ? `. Следующий перерыв ${desk.next_break}` : ''}
+                    <Text fontSize="xs" color="fg.muted" lineClamp="1">
+                        {pause
+                            ? <>Отошёл{pause.user_name ? ` ${pause.user_name}` : ''} · {pause.reason} · уже <Elapsed since={pause.started_at} /></>
+                            : <>{desk.today_text}{desk.state === 'open' && desk.next_break ? `. Следующий ${desk.next_break}` : ''}</>}
                     </Text>
-                    {pauses.map((p) => (
-                        <HStack key={p.id} fontSize="sm" mt="1" gap="2" flexWrap="wrap">
-                            <Text>Отошёл{p.user_name ? ` ${p.user_name}` : ''}: {p.reason}, до {p.until}</Text>
-                            {canIssue && <Button size="xs" variant="outline" loading={busy} onClick={resume}><LuUndo2 /> Вернулся</Button>}
-                        </HStack>
-                    ))}
                 </Box>
-                <HStack gap="2">
-                    {canIssue && desk.state !== 'closed' && (
-                        <Button size="sm" variant={desk.state === 'open' ? 'solid' : 'outline'} colorPalette="orange" onClick={openDialog}>
-                            <LuCoffee /> Отойти
-                        </Button>
+                <HStack gap="1" flexShrink={0}>
+                    {canIssue && pause && (
+                        <Button size="sm" colorPalette="green" loading={busy} onClick={() => post('/wms/pickups/desk/resume', {})}><LuUndo2 /> Вернулся</Button>
+                    )}
+                    {canIssue && !pause && desk.state !== 'closed' && (
+                        <Button size="sm" variant="outline" colorPalette="orange" onClick={() => { setForm({ minutes: 20, until_close: false, reason: 'обед', custom: '' }); setOpen(true); }}><LuCoffee /> Отойти</Button>
                     )}
                     {can('wms-pickups.schedule') && (
-                        <Button asChild size="sm" variant="ghost"><Link href="/wms/pickups/schedule"><LuCalendarClock /> График</Link></Button>
+                        <Button asChild size="sm" variant="ghost" aria-label="График выдачи"><Link href="/wms/pickups/schedule"><LuCalendarClock /></Link></Button>
                     )}
                 </HStack>
             </HStack>

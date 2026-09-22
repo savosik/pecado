@@ -165,6 +165,7 @@ class PickupDeskSchedule
                 ->map(fn (PickupDeskPause $p) => [
                     'id' => $p->id,
                     'reason' => $p->reason,
+                    'started_at' => $p->started_at->toIso8601String(),
                     'until' => $p->until_at->setTimezone($tz)->format('H:i'),
                     'user_id' => $p->user_id,
                     'user_name' => $p->user?->name,
