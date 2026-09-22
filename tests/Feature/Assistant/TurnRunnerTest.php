@@ -63,8 +63,8 @@ class TurnRunnerTest extends AssistantTestCase
         $this->assertSame(['type' => 'ephemeral'], $request['system'][0]['cache_control']);
         $this->assertStringContainsString('Ты заменяешь менеджера', $request['system'][0]['text']);
         // Список операций — в кешируемом блоке, вместо вызова client-catalog.
-        $this->assertStringContainsString('- catalog.search — ', $request['system'][0]['text']);
-        $this->assertStringContainsString('- orders.create — ', $request['system'][0]['text']);
+        $this->assertStringContainsString('- catalog.search (q*', $request['system'][0]['text']);
+        $this->assertStringContainsString('- orders.create (', $request['system'][0]['text']);
         $this->assertStringContainsString('idempotency_key обязателен', $request['system'][0]['text']);
         $this->assertStringContainsString('client-catalog не вызывай', $request['system'][0]['text']);
         $this->assertStringContainsString('вакуумный стимулятор', $request['system'][0]['text']);

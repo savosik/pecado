@@ -59,7 +59,12 @@ final class SystemPrompt
             $bySection[$operation->section][] = $operation;
         }
 
-        $lines = ['## Операции кабинета (вызывай через client-call, схема аргументов — client-describe)', ''];
+        $lines = [
+            '## Операции кабинета',
+            '',
+            'Вызывай через client-call: operation и arguments по списку ниже; в скобках — аргументы, звёздочка — обязательный. Ссылки: товар — https://pecado.ru/products/{slug}, акция — https://pecado.ru/promotions/{slug}. Цены в рублях, если meta не говорит иное.',
+            '',
+        ];
 
         foreach ($sections as $key => $label) {
             if (empty($bySection[$key])) {
@@ -86,7 +91,14 @@ final class SystemPrompt
                     $marks[] = 'запись';
                 }
 
-                $lines[] = '- '.$operation->id.' — '.$operation->summary.($marks !== [] ? ' ['.implode('; ', $marks).']' : '');
+                $params = [];
+
+                foreach ($operation->params as $param) {
+                    $params[] = $param->name.($param->required ? '*' : '');
+                }
+
+                $lines[] = '- '.$operation->id.($params !== [] ? ' ('.implode(', ', $params).')' : '')
+                    .' — '.$operation->summary.($marks !== [] ? ' ['.implode('; ', $marks).']' : '');
             }
 
             $lines[] = '';

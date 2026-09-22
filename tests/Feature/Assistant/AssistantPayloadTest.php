@@ -32,12 +32,12 @@ class AssistantPayloadTest extends AssistantTestCase
     public function slim_убирает_служебные_ключи_и_null_сохраняя_списки(): void
     {
         $data = ['data' => [
-            ['uuid' => 'b3d7', 'code' => 'УТ-1', 'sku' => 'LE-13', 'barcode' => null, 'name' => 'Товар', 'price' => 1200, 'nested' => ['erp_id' => 'x', 'qty' => 2, 'empty' => null]],
+            ['uuid' => 'b3d7', 'code' => 'УТ-1', 'sku' => 'LE-13', 'barcode' => null, 'name' => 'Товар', 'slug' => 'tovar', 'url' => 'https://pecado.ru/products/tovar', 'currency_code' => 'RUB', 'price' => 1200, 'nested' => ['erp_id' => 'x', 'qty' => 2, 'empty' => null]],
         ], 'meta' => ['has_more' => false, 'next_cursor' => null]];
 
         $slim = \App\Support\Client\AssistantPayload::slim($data);
 
-        $this->assertSame(['sku' => 'LE-13', 'name' => 'Товар', 'price' => 1200, 'nested' => ['qty' => 2]], $slim['data'][0]);
+        $this->assertSame(['sku' => 'LE-13', 'name' => 'Товар', 'slug' => 'tovar', 'price' => 1200, 'nested' => ['qty' => 2]], $slim['data'][0]);
         $this->assertSame(['has_more' => false], $slim['meta']);
         $this->assertTrue(array_is_list($slim['data']));
     }
@@ -64,12 +64,14 @@ class AssistantPayloadTest extends AssistantTestCase
         $block = $prompt->operationsBlock();
 
         foreach (app(OperationRegistry::class)->all() as $operation) {
-            $this->assertStringContainsString('- '.$operation->id.' — ', $block, "операция {$operation->id} есть в промпте");
+            $this->assertMatchesRegularExpression('/^- '.preg_quote($operation->id, '/').'( \\(|( —))/mu', $block, "операция {$operation->id} есть в промпте");
         }
 
         $this->assertStringContainsString('### ', $block);
+        $this->assertStringContainsString('- catalog.search (q*, page, per_page', $block, 'аргументы подписаны, обязательные со звёздочкой');
+        $this->assertStringContainsString('/products/{slug}', $block);
         $this->assertStringContainsString('[раздел «документы и акты сверки»]', $block);
         $this->assertSame($block, $prompt->operationsBlock(), 'блок детерминирован — иначе кеш промпта не сходится');
-        $this->assertLessThan(9000, mb_strlen($block), 'список операций должен оставаться компактным');
+        $this->assertLessThan(30000, mb_strlen($block), 'список операций с аргументами — около 8 тыс. токенов в кешируемом блоке');
     }
 }

@@ -14,8 +14,12 @@ final class AssistantPayload
     /** Страница по умолчанию и потолок для чата: клиенту в чате нужно 10–20 строк. */
     public const PER_PAGE = 25;
 
-    /** Служебные поля, которые модели в чате не нужны. */
-    public const STRIP_KEYS = ['uuid', 'code', 'barcode', 'erp_id', 'erp_uuid'];
+    /**
+     * Поля, которые модели в чате не нужны: uuid и коды 1С — служебные, url
+     * восстанавливается из slug по правилу из промпта, валюта строки дублирует
+     * meta. Вместе это до половины строки товара.
+     */
+    public const STRIP_KEYS = ['uuid', 'code', 'barcode', 'erp_id', 'erp_uuid', 'url', 'currency_code'];
 
     /**
      * Убрать служебные ключи и null рекурсивно; списки остаются списками.
