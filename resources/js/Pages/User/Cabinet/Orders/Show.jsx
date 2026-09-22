@@ -293,15 +293,15 @@ export default function OrderShow({ order }) {
 
                 {/* ═══ Совместная отгрузка (v16.11.0): группа ушла в 1С, ждём итог — действия закрыты ═══ */}
                 {order.reserve && order.ship_together?.status === 'pending' && (
-                    <Card.Root borderColor="orange.300" borderWidth="1px" bg="orange.50" _dark={{ bg: 'orange.900/20', borderColor: 'orange.700' }}>
+                    <Card.Root borderColor="blue.200" borderWidth="1px" bg="blue.50" _dark={{ bg: 'blue.900/20', borderColor: 'blue.700' }}>
                         <Card.Body py="4">
                             <HStack gap="3" align="flex-start">
-                                <Box color="orange.500" mt="1"><LuClock3 size={22} /></Box>
+                                <Box color="blue.500" mt="1"><LuSend size={22} /></Box>
                                 <VStack align="flex-start" gap="0">
-                                    <Text fontWeight="700">Отправлен в отгрузку вместе с другими заказами — ждём подтверждения склада</Text>
+                                    <Text fontWeight="700">Отправлен на склад вместе с другими заказами — подтверждаем</Text>
                                     <Text fontSize="sm" color="fg.muted">
-                                        Склад оформит группу одной отгрузкой и ответит в течение нескольких минут.
-                                        До ответа заказ остаётся в резерве, но изменить или отменить его нельзя.
+                                        Всё в порядке: склад соберёт группу в одно место и выпишет одну накладную, подтверждение обычно
+                                        занимает минуту. До него заказ числится в резерве, делать ничего не нужно.
                                     </Text>
                                 </VStack>
                             </HStack>

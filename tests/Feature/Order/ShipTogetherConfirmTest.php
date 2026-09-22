@@ -263,6 +263,35 @@ class ShipTogetherConfirmTest extends TestCase
     }
 
     #[Test]
+    public function reserves_index_lists_recently_shipped_groups_and_singles(): void
+    {
+        $key = (string) \Illuminate\Support\Str::uuid();
+        $a = $this->reserveOrder(['reserve' => false, 'reserve_outcome' => 'confirmed', 'ship_together_key' => $key, 'ship_together_status' => ShipTogetherStatus::CONFIRMED, 'ship_together_sent_at' => now()->subMinutes(5), 'erp_number' => '29УТ-1']);
+        $b = $this->reserveOrder(['reserve' => false, 'reserve_outcome' => 'confirmed', 'ship_together_key' => $key, 'ship_together_status' => ShipTogetherStatus::CONFIRMED, 'ship_together_sent_at' => now()->subMinutes(5), 'erp_number' => '29УТ-2']);
+        $single = $this->reserveOrder(['reserve' => false, 'reserve_outcome' => 'confirmed', 'erp_number' => '29УТ-3']);
+        $this->reserveOrder(['reserve' => false, 'reserve_outcome' => 'cancelled']); // отменённый — не показываем
+        Order::query()->whereKey($this->reserveOrder(['reserve' => false, 'reserve_outcome' => 'confirmed'])->id)
+            ->update(['updated_at' => now()->subDays(3)]); // старый — не показываем
+
+        $this->actingAs($this->user)
+            ->get('/cabinet/reserves')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('recent_shipments', 2)
+                ->where('recent_shipments.0.together', fn ($v) => is_bool($v))
+                ->where('recent_shipments', function ($items) use ($key, $a, $b, $single) {
+                    $items = collect($items);
+                    $group = $items->firstWhere('key', $key);
+                    $one = $items->firstWhere('key', null);
+
+                    return $group && $group['together'] === true
+                        && collect($group['order_ids'])->sort()->values()->all() === [$a->id, $b->id]
+                        && $group['numbers'] === ['29УТ-1', '29УТ-2']
+                        && $one && $one['together'] === false && $one['order_ids'] === [$single->id];
+                }));
+    }
+
+    #[Test]
     public function reserves_index_exposes_group_state(): void
     {
         $a = $this->reserveOrder();

@@ -1,10 +1,10 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
     Box, Flex, Text, Button, Card, HStack, VStack, SimpleGrid, Badge,
 } from '@chakra-ui/react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import { LuClock3, LuEye, LuSend, LuPackage, LuBan, LuHourglass, LuTriangleAlert, LuLayers } from 'react-icons/lu';
+import { LuClock3, LuEye, LuSend, LuPackage, LuBan, LuHourglass, LuTriangleAlert, LuLayers, LuPackageCheck, LuArrowRight } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { orderTitle, orderNumberHint } from '../components/OrderNumber';
 import ReserveCountdown from '@/components/cabinet/ReserveCountdown';
@@ -20,7 +20,7 @@ import { toastSuccess, toastError } from '@/utils/toast';
  * заказа. Основной сценарий мобильный: клиент звонит своему покупателю и сразу
  * с телефона решает судьбу резерва.
  */
-export default function ReservesIndex({ reserves, ship_together_enabled: shipTogetherEnabled = false }) {
+export default function ReservesIndex({ reserves, ship_together_enabled: shipTogetherEnabled = false, recent_shipments: recentShipments = [], pickup_enabled: pickupEnabled = false }) {
     // pick-04: обещание «когда соберём» по графику склада — показываем до подтверждения
     const promise = usePage().props.config?.pickup_promise;
     const [confirmTarget, setConfirmTarget] = useState(null);
@@ -39,6 +39,15 @@ export default function ReservesIndex({ reserves, ship_together_enabled: shipTog
         setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
     }, []);
     const selectedOrders = reserves.filter((o) => selected.includes(o.id));
+    const pendingCount = reserves.filter((o) => o.ship_together?.status === 'pending').length;
+
+    // Пока склад подтверждает группу, страница сама подтягивает итог: клиенту не нужно жать F5,
+    // чтобы увидеть, что заказы ушли в сборку (обычно это минута).
+    useEffect(() => {
+        if (pendingCount === 0) return undefined;
+        const timer = setInterval(() => router.reload({ only: ['reserves', 'recent_shipments'] }), 10000);
+        return () => clearInterval(timer);
+    }, [pendingCount]);
 
     const doShipTogether = useCallback(async () => {
         if (selected.length < 2) return;
@@ -113,7 +122,7 @@ export default function ReservesIndex({ reserves, ship_together_enabled: shipTog
                 onClose={() => setGroupConfirmOpen(false)}
                 onConfirm={doShipTogether}
                 title="Отправить выбранные заказы вместе?"
-                description={`${selectedOrders.map((o) => orderTitle(o)).join(', ')} уйдут на склад одной группой: по ним оформят одну реализацию и один расходный ордер, если это возможно. Пока склад не подтвердит группу, заказы остаются в резерве, но изменить или отменить их будет нельзя.${promise ? ` ${promise.text}.` : ''}`}
+                description={`Заказы ${selectedOrders.map((o) => o.number || orderTitle(o).replace(/^Заказ /, '')).join(', ')} уйдут на склад вместе: их соберут в одно место и выпишут одну накладную. Склад подтвердит за минуту — до этого заказы остаются здесь, в резерве.${promise ? ` ${promise.text}.` : ''}`}
                 confirmLabel={`В отгрузку вместе (${selected.length})`}
                 cancelLabel="Ещё подумаю"
                 colorPalette="green"
@@ -138,55 +147,62 @@ export default function ReservesIndex({ reserves, ship_together_enabled: shipTog
                     <Card.Body>
                         <VStack py="8" gap="2" color="fg.muted">
                             <LuClock3 size={32} />
-                            <Text fontWeight="600">Резервов нет</Text>
+                            <Text fontWeight="600">В резерве ничего нет</Text>
                             <Text fontSize="sm" textAlign="center">
-                                Оформите заказ с пометкой «Поставьте в резерв» — он появится здесь,
-                                и у вас будет время подтвердить его или изменить.
+                                {recentShipments.length > 0
+                                    ? 'Отправленные в отгрузку заказы — ниже: они уже на складе, следить за сборкой можно в разделе «Заказы».'
+                                    : 'Оформите заказ с пометкой «Поставьте в резерв» — он появится здесь, и у вас будет время подтвердить его или изменить.'}
                             </Text>
                         </VStack>
                     </Card.Body>
                 </Card.Root>
             ) : (
                 <>
-                {/* Панель совместной отгрузки: одна строка над карточками, без отдельного блока.
-                    Выбор галочками на карточках, кнопка активна от двух заказов. */}
+                {/* Баннер «Соберём одним заказом» (просьба заказчика 22.09.2026): объясняет, зачем галочки,
+                    и держит кнопку группы. Показывается, когда объединять есть что. */}
                 {shipTogetherEnabled && selectable.length >= 2 && (
-                    <Flex
-                        mb="4"
-                        gap="3"
-                        align="center"
-                        justify="space-between"
-                        wrap="wrap"
-                        position="sticky"
-                        top="0"
-                        zIndex="1"
-                        bg="bg"
-                        py="2"
-                    >
-                        <HStack gap="2" color="fg.muted" fontSize="sm">
-                            <LuLayers size={16} />
-                            <Text>
-                                {selected.length === 0
-                                    ? 'Отметьте заказы, которые заберёт один курьер, — склад оформит их одной отгрузкой.'
-                                    : `Выбрано: ${selected.length}`}
-                            </Text>
-                        </HStack>
-                        <HStack gap="2">
-                            {selected.length > 0 && (
-                                <Button variant="ghost" size="sm" onClick={() => setSelected([])}>
-                                    Снять выбор
-                                </Button>
-                            )}
-                            <Button
-                                colorPalette="green"
-                                size="sm"
-                                disabled={selected.length < 2}
-                                onClick={() => setGroupConfirmOpen(true)}
-                            >
-                                <LuSend size={16} />
-                                В отгрузку вместе{selected.length > 0 ? ` (${selected.length})` : ''}
-                            </Button>
-                        </HStack>
+                    <Card.Root mb="4" bg="green.50" borderColor="green.200" borderWidth="1px" _dark={{ bg: 'green.900/20', borderColor: 'green.700' }}>
+                        <Card.Body py="4">
+                            <Flex gap="4" align={{ base: 'stretch', md: 'center' }} justify="space-between" direction={{ base: 'column', md: 'row' }}>
+                                <HStack gap="3" align="flex-start">
+                                    <Box color="green.600" mt="0.5" flexShrink="0"><LuLayers size={26} /></Box>
+                                    <VStack align="flex-start" gap="0.5">
+                                        <Text fontWeight="700" fontSize="md">Соберём одним заказом</Text>
+                                        <Text fontSize="sm" color="fg.muted">
+                                            Выделите несколько резервов галочками и нажмите «В отгрузку вместе»:
+                                            объединённые заказы соберут в одно место и выпишут одну накладную.
+                                        </Text>
+                                    </VStack>
+                                </HStack>
+                                <HStack gap="2" flexShrink="0" justify={{ base: 'flex-end', md: 'flex-start' }}>
+                                    {selected.length > 0 && (
+                                        <Button variant="ghost" size="sm" onClick={() => setSelected([])}>
+                                            Снять выбор
+                                        </Button>
+                                    )}
+                                    <Button
+                                        colorPalette="green"
+                                        size="md"
+                                        disabled={selected.length < 2}
+                                        onClick={() => setGroupConfirmOpen(true)}
+                                    >
+                                        <LuSend size={16} />
+                                        {selected.length > 0 ? `В отгрузку вместе (${selected.length})` : 'Выберите заказы'}
+                                    </Button>
+                                </HStack>
+                            </Flex>
+                        </Card.Body>
+                    </Card.Root>
+                )}
+                {/* На телефоне кнопка группы уезжает вверх вместе с баннером — дублируем её липкой полоской,
+                    когда что-то выбрано, чтобы не прокручивать обратно. */}
+                {shipTogetherEnabled && selected.length > 0 && (
+                    <Flex mb="3" gap="3" align="center" justify="space-between" position="sticky" top="0" zIndex="1" bg="bg" py="2" display={{ base: 'flex', md: 'none' }}>
+                        <Text fontSize="sm" color="fg.muted">Выбрано: {selected.length}</Text>
+                        <Button colorPalette="green" size="sm" disabled={selected.length < 2} onClick={() => setGroupConfirmOpen(true)}>
+                            <LuSend size={16} />
+                            В отгрузку вместе ({selected.length})
+                        </Button>
                     </Flex>
                 )}
                 <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
@@ -197,9 +213,10 @@ export default function ReservesIndex({ reserves, ship_together_enabled: shipTog
                         return (
                         <Card.Root
                             key={order.id}
-                            borderColor={checked ? 'green.400' : undefined}
+                            borderColor={checked ? 'green.400' : pending ? 'blue.200' : undefined}
                             borderWidth={checked ? '2px' : undefined}
-                            opacity={pending ? 0.85 : 1}
+                            bg={pending ? 'blue.50' : undefined}
+                            _dark={pending ? { bg: 'blue.900/20', borderColor: 'blue.700' } : undefined}
                         >
                             <Card.Body>
                                 <Flex justify="space-between" align="flex-start" gap="3" wrap="wrap">
@@ -214,11 +231,12 @@ export default function ReservesIndex({ reserves, ship_together_enabled: shipTog
                                                 />
                                             )}
                                             <Text fontWeight="700">{orderTitle(order)}</Text>
-                                            <Badge colorPalette="purple">резерв</Badge>
-                                            {pending && (
-                                                <Badge colorPalette="orange">
-                                                    <LuHourglass size={12} /> ждём склад
+                                            {pending ? (
+                                                <Badge colorPalette="blue">
+                                                    <LuSend size={12} /> отправлен на склад
                                                 </Badge>
+                                            ) : (
+                                                <Badge colorPalette="purple">резерв</Badge>
                                             )}
                                         </HStack>
                                         {!order.number && (
@@ -232,32 +250,37 @@ export default function ReservesIndex({ reserves, ship_together_enabled: shipTog
                                         </HStack>
                                         <Text fontSize="xs" color="fg.muted">от {order.created_at_formatted}</Text>
                                     </VStack>
-                                    <VStack align="flex-end" gap="0">
-                                        <HStack gap="1">
-                                            <LuClock3 size={16} />
-                                            <ReserveCountdown until={order.reserved_until} fontSize="lg" fontWeight="700" />
-                                        </HStack>
-                                        <Text fontSize="xs" color="fg.muted">до {order.reserved_until_formatted}</Text>
-                                    </VStack>
+                                    {pending ? (
+                                        <VStack align="flex-end" gap="0" color="blue.fg">
+                                            <HStack gap="1"><LuHourglass size={16} /><Text fontWeight="700">подтверждаем</Text></HStack>
+                                            <Text fontSize="xs" color="fg.muted">обычно это минута</Text>
+                                        </VStack>
+                                    ) : (
+                                        <VStack align="flex-end" gap="0">
+                                            <HStack gap="1">
+                                                <LuClock3 size={16} />
+                                                <ReserveCountdown until={order.reserved_until} fontSize="lg" fontWeight="700" />
+                                            </HStack>
+                                            <Text fontSize="xs" color="fg.muted">до {order.reserved_until_formatted}</Text>
+                                        </VStack>
+                                    )}
                                 </Flex>
 
                                 {/* Итог группы (v16.11.0): ожидание — действия закрыты, отказ — причина и совет */}
                                 {pending && (
-                                    <HStack mt="3" gap="2" fontSize="sm" color="orange.fg" align="flex-start">
-                                        <Box mt="0.5"><LuHourglass size={14} /></Box>
-                                        <Text>
-                                            Отправлен в отгрузку вместе с другими заказами — ждём подтверждения склада.
-                                            Пока ответа нет, изменить или отменить заказ нельзя; товар остаётся удержанным.
-                                        </Text>
-                                    </HStack>
+                                    <Text mt="3" fontSize="sm" color="fg.muted">
+                                        Всё в порядке: заказ уже на складе вместе с остальными из группы, ждём короткое подтверждение.
+                                        Как только оно придёт, заказ перейдёт в раздел «Заказы» и начнёт собираться одной накладной.
+                                        Делать ничего не нужно.
+                                    </Text>
                                 )}
                                 {conflict && (
-                                    <HStack mt="3" gap="2" fontSize="sm" color="red.fg" align="flex-start">
+                                    <HStack mt="3" gap="2" fontSize="sm" color="orange.fg" align="flex-start">
                                         <Box mt="0.5"><LuTriangleAlert size={14} /></Box>
                                         <Text>
-                                            Отправить вместе не удалось: {conflict.label.toLowerCase()}.
-                                            {conflict.message ? ` ${conflict.message}` : ''} Заказ снова в резерве —
-                                            отправьте его вместе с другими ещё раз или по одному.
+                                            Склад не смог собрать эти заказы вместе: {conflict.label.toLowerCase()}.
+                                            {conflict.message ? ` ${conflict.message}` : ''} Ничего не потеряно — заказ по-прежнему
+                                            в резерве, отправьте его снова вместе или по одному.
                                         </Text>
                                     </HStack>
                                 )}
@@ -301,6 +324,46 @@ export default function ReservesIndex({ reserves, ship_together_enabled: shipTog
                     })}
                 </SimpleGrid>
                 </>
+            )}
+
+            {recentShipments.length > 0 && (
+                <Card.Root mt="5">
+                    <Card.Body>
+                        <HStack gap="2" mb="3">
+                            <Box color="green.600"><LuPackageCheck size={20} /></Box>
+                            <Text fontWeight="700">Отправлено на склад</Text>
+                            <Text fontSize="sm" color="fg.muted">за последние двое суток</Text>
+                        </HStack>
+                        <VStack align="stretch" gap="2">
+                            {recentShipments.map((g) => (
+                                <Flex key={g.key || g.order_ids[0]} gap="3" align="center" justify="space-between" wrap="wrap" py="1.5" borderTop="1px solid" borderColor="border.muted">
+                                    <VStack align="flex-start" gap="0">
+                                        <Text fontSize="sm" fontWeight="600">
+                                            {g.numbers.length === 1 ? `Заказ ${g.numbers[0]}` : `Заказы ${g.numbers.join(', ')}`}
+                                        </Text>
+                                        <Text fontSize="xs" color="fg.muted">
+                                            {g.together
+                                                ? `отправлены вместе ${g.sent_at_formatted} — соберут в одно место, одна накладная`
+                                                : `отправлен ${g.sent_at_formatted} — собирается на складе`}
+                                        </Text>
+                                    </VStack>
+                                    <HStack gap="2">
+                                        <Button asChild size="xs" variant="outline">
+                                            <Link href={g.order_ids.length === 1 ? `/cabinet/orders/${g.order_ids[0]}` : '/cabinet/orders'}>
+                                                {g.order_ids.length === 1 ? 'Открыть заказ' : 'К заказам'} <LuArrowRight size={12} />
+                                            </Link>
+                                        </Button>
+                                        {pickupEnabled && (
+                                            <Button asChild size="xs" variant="ghost">
+                                                <Link href="/cabinet/pickup">Самовывоз</Link>
+                                            </Button>
+                                        )}
+                                    </HStack>
+                                </Flex>
+                            ))}
+                        </VStack>
+                    </Card.Body>
+                </Card.Root>
             )}
 
             <Box mt="4">

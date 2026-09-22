@@ -36,6 +36,10 @@ class ReserveOrderController extends Controller
         return Inertia::render('User/Cabinet/Reserves/Index', [
             // v16.11.0: совместная отгрузка — галочки и кнопка «В отгрузку выбранное»
             'ship_together_enabled' => \App\Services\Order\ShipTogetherService::enabledFor($request->user()),
+            'pickup_enabled' => (bool) config('pickup.enabled'),
+            // Куда делись заказы после «В отгрузку»: последние подтверждённые за двое суток, группы —
+            // одной строкой. Без этого раздел после отправки пустеет, и клиент гадает, что произошло.
+            'recent_shipments' => $this->recentShipments($request->user()->id),
             'reserves' => $orders->map(fn (Order $order) => [
                 'id' => $order->id,
                 ...$order->clientNumberPayload(),
@@ -51,6 +55,48 @@ class ReserveOrderController extends Controller
                 'ship_together' => \App\Services\Order\ShipTogetherService::present($order),
             ])->values(),
         ]);
+    }
+
+    /**
+     * Недавно отправленные в отгрузку резервы: подтверждённые за последние 48 часов,
+     * сгруппированные по ключу совместной отгрузки (одиночные — по одному).
+     *
+     * @return list<array{key: string|null, together: bool, order_ids: list<int>, numbers: list<string>, sent_at: string|null, sent_at_formatted: string|null}>
+     */
+    private function recentShipments(int $userId): array
+    {
+        $orders = Order::query()
+            ->where('user_id', $userId)
+            ->where('reserve', false)
+            ->where('reserve_outcome', 'confirmed')
+            ->where('updated_at', '>=', now()->subHours(48))
+            ->orderByDesc('updated_at')
+            ->limit(30)
+            ->get();
+
+        return $orders
+            ->groupBy(fn (Order $o) => $o->ship_together_key && $o->ship_together_status === \App\Enums\ShipTogetherStatus::CONFIRMED
+                ? $o->ship_together_key
+                : 'single-'.$o->id)
+            ->map(function ($group, string $key) {
+                /** @var \Illuminate\Support\Collection<int, Order> $group */
+                $together = ! str_starts_with($key, 'single-');
+                $sentAt = $together
+                    ? $group->max('ship_together_sent_at')
+                    : $group->first()->updated_at;
+
+                return [
+                    'key' => $together ? $key : null,
+                    'together' => $together,
+                    'order_ids' => $group->pluck('id')->values()->all(),
+                    'numbers' => $group->map(fn (Order $o) => $o->clientLabel())->values()->all(),
+                    'sent_at' => $sentAt?->toIso8601String(),
+                    'sent_at_formatted' => $sentAt?->timezone(config('app.timezone'))->format('d.m H:i'),
+                ];
+            })
+            ->sortByDesc('sent_at')
+            ->values()
+            ->all();
     }
 
     /**
