@@ -69,9 +69,21 @@ class AssistantController extends Controller
         $data = $request->validate(['page' => ['nullable', 'array']]);
 
         // Открытый тред продолжается, новый заводится по явной кнопке «Новый разговор».
-        $thread = $request->boolean('fresh')
-            ? null
-            : ChatThread::query()->forUser($user)->open()->orderByDesc('last_message_at')->first();
+        // Прежний при этом закрывается сразу, с резюме и заметкой: иначе «я помню,
+        // о чём мы говорили» не сбывается до закрытия по бездействию через сутки.
+        if ($request->boolean('fresh')) {
+            $closer = app(\App\Services\Assistant\ThreadCloser::class);
+
+            foreach (ChatThread::query()->forUser($user)->open()->get() as $previous) {
+                if (! $this->threads->isBusy($previous)) {
+                    $closer->close($previous);
+                }
+            }
+
+            $thread = null;
+        } else {
+            $thread = ChatThread::query()->forUser($user)->open()->orderByDesc('last_message_at')->first();
+        }
 
         $thread ??= $this->threads->open($user, $data['page'] ?? null);
 

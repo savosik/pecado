@@ -10,6 +10,7 @@ use App\Mcp\Tools\Client\ClientCreateOrder;
 use App\Mcp\Tools\Client\ClientDescribe;
 use App\Mcp\Tools\Client\ClientDocuments;
 use App\Mcp\Tools\Client\ClientFaq;
+use App\Mcp\Tools\Client\ClientMemory;
 use App\Mcp\Tools\Client\ClientOrderStatus;
 use App\Mcp\Tools\Client\ClientPrices;
 use App\Mcp\Tools\Client\ClientPromotions;
@@ -136,6 +137,8 @@ class ClientServer extends Server
         ClientPromotions::class,
         ClientFaq::class,
         ClientAskManager::class,
+        // Память помощника в кабинете (assist-00): прошлые разговоры клиента; личным токенам отказывает.
+        ClientMemory::class,
     ];
 
     /** Идентификатор сессии, выданный в текущем `initialize` (см. generateSessionId). */
