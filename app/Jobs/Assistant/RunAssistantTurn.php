@@ -23,7 +23,14 @@ class RunAssistantTurn implements ShouldQueue
 
     public int $timeout = 600;
 
-    public function __construct(public readonly int $threadId, public readonly int $messageId) {}
+    public function __construct(public readonly int $threadId, public readonly int $messageId)
+    {
+        // Очередь по умолчанию на проде — RabbitMQ (шина 1С), а ходы помощника
+        // обслуживает Horizon: соединение задаётся явно, иначе job ляжет в
+        // очередь, которую никто не слушает. В тестах — sync.
+        $this->onConnection((string) config('assistant.queue_connection', 'redis'))
+            ->onQueue(\App\Services\Assistant\ThreadService::QUEUE);
+    }
 
     public function handle(TurnRunner $runner): void
     {

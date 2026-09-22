@@ -140,7 +140,7 @@ final class ThreadService
         });
 
         // После коммита: воркер очереди не должен взять ход раньше, чем он записан.
-        RunAssistantTurn::dispatch($thread->id, $placeholder->id)->onQueue(self::QUEUE);
+        RunAssistantTurn::dispatch($thread->id, $placeholder->id);
 
         return $placeholder;
     }
@@ -204,7 +204,7 @@ final class ThreadService
             return $placeholder;
         });
 
-        RunAssistantTurn::dispatch($thread->id, $placeholder->id)->onQueue(self::QUEUE);
+        RunAssistantTurn::dispatch($thread->id, $placeholder->id);
 
         return $placeholder;
     }

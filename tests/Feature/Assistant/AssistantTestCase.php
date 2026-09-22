@@ -35,6 +35,7 @@ abstract class AssistantTestCase extends TestCase
         config()->set('assistant.api_key', 'sk-ant-test');
         config()->set('assistant.model', 'claude-opus-5');
         config()->set('assistant.attachments.disk', 'local');
+        config()->set('assistant.queue_connection', 'sync');
         Cache::forget(AssistantAvailability::KEY);
 
         $this->gateway = new FakeGateway;
