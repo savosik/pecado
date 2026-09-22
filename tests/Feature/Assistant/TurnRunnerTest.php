@@ -50,6 +50,7 @@ class TurnRunnerTest extends AssistantTestCase
         $this->assertContains('mcp-client-2025-11-20', $request['betas']);
         $this->assertContains('compact-2026-01-12', $request['betas']);
         $this->assertSame(['type' => 'adaptive'], $request['thinking']);
+        $this->assertSame(['type' => 'ephemeral'], $request['cacheControl'], 'история кешируется до последнего блока');
         $this->assertSame('low', $request['outputConfig']['effort']);
 
         // Токен запроса — токен вида assistant, привязанный к треду.

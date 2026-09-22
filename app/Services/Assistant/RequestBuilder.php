@@ -40,6 +40,11 @@ final class RequestBuilder
                 'type' => 'mcp_toolset',
                 'mcp_server_name' => (string) config('assistant.mcp.name', 'pecado'),
             ]],
+            // Маркер кеша на последний блок истории: без него кешируется только
+            // системная часть, а вся переписка с результатами инструментов
+            // (каталог, акции — десятки тысяч токенов) оплачивается каждым ходом
+            // по полной цене. С маркером следующий ход читает её за десятую часть.
+            'cacheControl' => ['type' => 'ephemeral'],
             'thinking' => ['type' => 'adaptive'],
             'outputConfig' => ['effort' => (string) config('assistant.effort', 'low')],
             'contextManagement' => ['edits' => [['type' => 'compact_20260112']]],
