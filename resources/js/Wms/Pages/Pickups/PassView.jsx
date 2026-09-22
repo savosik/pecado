@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Badge, Box, Card, HStack, Input, Text, VStack } from '@chakra-ui/react';
-import { LuArrowLeft, LuCircleCheck, LuPackageCheck, LuScanBarcode } from 'react-icons/lu';
+import { LuArrowLeft, LuCamera, LuCircleCheck, LuPackageCheck } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { placesText } from './pickupUtils';
 
@@ -10,7 +10,7 @@ const STATE_COLORS = { ready: 'green', picking: 'orange', handed: 'gray', cancel
  * Экран пропуска (pick-11): кому отдаём и что именно. Отдаём только то, что в пропуске, —
  * остальное заберёт другой курьер по своему пропуску.
  */
-export default function PassView({ pass, via, verified, canIssue, busyId, onIssue, onIssueAll, onScanBox, onBack, scannerField = null }) {
+export default function PassView({ pass, via, verified, canIssue, busyId, onIssue, onIssueAll, onScanBox, onBack, scannerField = null, scanMode = 'scanner', modeSwitch = null }) {
     const [recipient, setRecipient] = useState(pass.courier_name || '');
     const toIssue = pass.items.filter((item) => item.can_issue);
 
@@ -63,20 +63,21 @@ export default function PassView({ pass, via, verified, canIssue, busyId, onIssu
 
             {pass.is_usable && toIssue.length > 0 && canIssue && (
                 <VStack align="stretch" gap="2" position="sticky" bottom="0" bg="bg" py="2">
-                    {scannerField && (
-                        <Box>
-                            <Text fontSize="xs" color="fg.muted" mb="1">Проверка коробки: отсканируйте штрихкод расходного листа</Text>
-                            {scannerField}
-                        </Box>
-                    )}
+                    {/* Проверка коробки тем же способом, что и пропуск: сканером — в поле с фокусом, телефоном — камерой по кнопке. */}
+                    <Box>
+                        <HStack justify="space-between" mb="1" gap="2" flexWrap="wrap">
+                            <Text fontSize="xs" color="fg.muted">Проверка коробки: штрихкод расходного листа</Text>
+                            {modeSwitch}
+                        </HStack>
+                        {scanMode === 'camera' || !scannerField
+                            ? <Button size="lg" width="100%" variant="outline" onClick={onScanBox}><LuCamera /> Снять штрихкод листа камерой</Button>
+                            : scannerField}
+                    </Box>
                     <Input size="lg" placeholder="Имя курьера (необязательно)" value={recipient} onChange={(e) => setRecipient(e.target.value)} />
-                    <HStack>
-                        <Button size="lg" variant="outline" onClick={onScanBox}><LuScanBarcode /> Лист</Button>
-                        <Button flex="1" size="lg" colorPalette="green" loading={busyId === 'all'}
-                            onClick={() => onIssueAll({ recipient_name: recipient, via, verified })}>
-                            Выдать всё{pass.packages_to_issue > 0 ? ` · ${placesText(pass.packages_to_issue)}` : ` · ${toIssue.length} компл.`}
-                        </Button>
-                    </HStack>
+                    <Button size="lg" colorPalette="green" loading={busyId === 'all'}
+                        onClick={() => onIssueAll({ recipient_name: recipient, via, verified })}>
+                        Выдать всё{pass.packages_to_issue > 0 ? ` · ${placesText(pass.packages_to_issue)}` : ` · ${toIssue.length} компл.`}
+                    </Button>
                 </VStack>
             )}
 

@@ -1,19 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import { Badge, Box, Card, HStack, Input, Text, Textarea, VStack } from '@chakra-ui/react';
-import { LuCamera, LuScanQrCode, LuSearch, LuX } from 'react-icons/lu';
+import { LuCamera, LuScanBarcode, LuScanQrCode, LuSearch, LuX } from 'react-icons/lu';
 import WmsLayout from '@/Wms/Layouts/WmsLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { toaster } from '@/components/ui/toaster';
 import { usePermission } from '@/shared/Panel/usePermission';
 import BarcodeCameraView from '@/components/common/BarcodeCameraView';
 import PwaInstallBanner from '@/components/PwaInstallBanner';
+import DeskBar from './DeskBar';
 import IssueCard from './IssueCard';
 import PassView from './PassView';
 import { beep, errorMessage, placesText, timeText } from './pickupUtils';
 
 const REFRESH_MS = 30000;
+const SCAN_MODE_KEY = 'wms.pickups.scanMode';
+
+/**
+ * Чем читать код по умолчанию: телефон (сенсорный экран без мыши) — камерой, компьютер — USB/Bluetooth-сканером.
+ * Выбор кладовщика запоминается на устройстве и переживает перезагрузку страницы.
+ */
+function initialScanMode() {
+    try {
+        const saved = window.localStorage.getItem(SCAN_MODE_KEY);
+        if (saved === 'camera' || saved === 'scanner') return saved;
+    } catch { /* приватный режим — просто не запоминаем */ }
+    const touchOnly = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+    return touchOnly ? 'camera' : 'scanner';
+}
 
 /**
  * Выдача заказов самовывоза (эпик pick-00). Один экран под телефон: список → скан → пропуск.
@@ -36,6 +52,11 @@ export default function PickupsIndex() {
     const [query, setQuery] = useState('');
     const [found, setFound] = useState(null);
     const [reasons, setReasons] = useState({});
+    const [scanMode, setScanMode] = useState(initialScanMode); // camera | scanner
+    const changeScanMode = (mode) => {
+        setScanMode(mode);
+        try { window.localStorage.setItem(SCAN_MODE_KEY, mode); } catch { /* см. initialScanMode */ }
+    };
 
     const stateRef = useRef({ view, pass });
     stateRef.current = { view, pass };
@@ -59,12 +80,14 @@ export default function PickupsIndex() {
     // и жмёт Enter. Поэтому поле скана есть на каждом экране и держит фокус — возвращаем его после каждого
     // скана и действия, если кладовщик не печатает в другом поле (поиск, имя курьера, причина).
     const [scanValue, setScanValue] = useState('');
+    // В режиме камеры фокус не держим: на телефоне фокус в поле поднимает клавиатуру поверх видоискателя.
     const focusScanner = useCallback(() => {
+        if (scanMode !== 'scanner') return;
         const active = document.activeElement;
         const tag = active?.tagName;
         const busyElsewhere = active && active !== scanInputRef.current && (tag === 'INPUT' || tag === 'TEXTAREA' || active.isContentEditable);
         if (!busyElsewhere) scanInputRef.current?.focus();
-    }, []);
+    }, [scanMode]);
     useEffect(() => { focusScanner(); }, [view, pass, focusScanner]);
     useEffect(() => { if (!resolving && !busyId) focusScanner(); }, [resolving, busyId, focusScanner]);
 
@@ -76,6 +99,14 @@ export default function PickupsIndex() {
                 onChange={(e) => setScanValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitScan(); } }} />
             <Button size="lg" variant="outline" loading={resolving} onClick={submitScan}>Найти</Button>
         </HStack>
+    );
+
+    const modeSwitch = (
+        <SegmentedControl size="sm" value={scanMode} onValueChange={(e) => changeScanMode(e.value)}
+            items={[
+                { value: 'scanner', label: <HStack gap="1"><LuScanBarcode /> <span>Сканер</span></HStack> },
+                { value: 'camera', label: <HStack gap="1"><LuCamera /> <span>Камера</span></HStack> },
+            ]} />
     );
 
     const fail = (message) => { beep('error'); toaster.create({ description: message, type: 'error' }); };
@@ -118,6 +149,13 @@ export default function PickupsIndex() {
             setResolving(false);
         }
     }, [resolving]);
+
+    // Видоискатель уже квадрата во всю ширину: на телефоне он занимал почти весь экран и список под ним не было видно.
+    const cameraBox = (
+        <Box borderRadius="lg" overflow="hidden" bg="black" w="100%" maxW="420px" mx="auto">
+            <BarcodeCameraView onScan={handleScan} paused={resolving} aspectRatio={3 / 2} />
+        </Box>
+    );
 
     const issue = async (row, details) => {
         const id = row.goods_issue_id ?? row.id;
@@ -232,6 +270,7 @@ export default function PickupsIndex() {
             {view === 'pass' && pass && (
                 <PassView pass={pass} via={via} verified={verified} canIssue={canIssue} busyId={busyId}
                     onIssue={issue} onIssueAll={issueAll} onScanBox={() => setView('scan')}
+                    scanMode={scanMode} modeSwitch={modeSwitch}
                     scannerField={scannerField('Штрихкод расходного листа')}
                     onBack={() => { setPass(null); setView('list'); reload(); }} />
             )}
@@ -242,13 +281,11 @@ export default function PickupsIndex() {
                         <Text fontSize="lg" fontWeight="700">{pass ? 'Скан расходного листа' : 'Скан пропуска'}</Text>
                         <Button variant="ghost" onClick={() => setView(pass ? 'pass' : 'list')}><LuX /> Закрыть</Button>
                     </HStack>
-                    <Box borderRadius="lg" overflow="hidden" bg="black">
-                        <BarcodeCameraView onScan={handleScan} paused={resolving} aspectRatio={1} />
-                    </Box>
+                    {cameraBox}
                     <Text fontSize="sm" color="fg.muted" textAlign="center">
                         {pass ? 'Наведите камеру на штрихкод расходного листа' : 'Наведите камеру на QR-код на телефоне курьера'}
                     </Text>
-                    {scannerField(pass ? 'Штрихкод или номер документа' : 'Шесть цифр пропуска или скан')}
+                    {scannerField(pass ? 'Или введите номер документа' : 'Или введите шесть цифр пропуска')}
                 </VStack>
             )}
 
@@ -260,12 +297,23 @@ export default function PickupsIndex() {
                     {/* pick-17: значок на главный экран — Android предложит сам, iPhone получит подсказку */}
                     <PwaInstallBanner />
 
+                    {/* pick-18: выдают ли сейчас — то же видят курьер и клиент; «Отойти» перед обедом или почтой */}
+                    <DeskBar desk={data.desk} canIssue={canIssue} onChange={(desk) => setData((d) => ({ ...d, desk }))} />
+
+                    {/* Телефон читает пропуск камерой сразу, без лишнего нажатия; компьютер — USB-сканером в поле с фокусом.
+                        Переключатель на виду: у стойки может оказаться и планшет со сканером, и ноутбук без него. */}
                     <Box p="3" bg="green.subtle" borderRadius="lg" borderWidth="1px" borderColor="green.muted">
-                        <HStack gap="2" mb="2"><LuScanQrCode /><Text fontWeight="700">Сканируйте пропуск</Text></HStack>
-                        {scannerField('Наведите сканер на QR-код курьера или введите шесть цифр')}
-                        <Button mt="2" size="sm" variant="ghost" onClick={() => { setFound(null); setView('scan'); }}>
-                            <LuCamera /> Нет сканера — снять камерой телефона
-                        </Button>
+                        <HStack justify="space-between" mb="2" gap="2" flexWrap="wrap">
+                            <HStack gap="2"><LuScanQrCode /><Text fontWeight="700">Сканируйте пропуск</Text></HStack>
+                            {modeSwitch}
+                        </HStack>
+                        {scanMode === 'camera' ? (
+                            <VStack align="stretch" gap="2">
+                                {cameraBox}
+                                <Text fontSize="sm" color="fg.muted" textAlign="center">Наведите камеру на QR-код на телефоне курьера</Text>
+                                {scannerField('Или введите шесть цифр пропуска')}
+                            </VStack>
+                        ) : scannerField('Наведите сканер на QR-код курьера или введите шесть цифр')}
                     </Box>
 
                     <HStack>
