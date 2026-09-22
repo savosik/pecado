@@ -77,10 +77,11 @@ return Application::configure(basePath: dirname(__DIR__))
             // Подписанная ссылка на файл из чата-помощника устарела, а человек
             // открыл её в браузере: вместо JSON «Доступ запрещён» — в раздел
             // кабинета с объяснением, где документ лежит постоянно.
+            // Признак браузера — явный text/html в Accept: агенты и curl шлют
+            // application/json или */* и получают прежний JSON 403.
             if ($response->getStatusCode() === 403
                 && $request->is('api/client/v1/files/*')
-                && ! $request->expectsJson()
-                && $request->user() !== null) {
+                && str_contains((string) $request->header('Accept', ''), 'text/html')) {
                 $target = str_contains($request->path(), 'payment-orders') ? '/cabinet/payment-orders' : '/cabinet/documents';
 
                 return redirect($target)->with('error', 'Ссылка из чата устарела: она действует час. Документ можно скачать здесь или попросить помощника дать новую ссылку.');
