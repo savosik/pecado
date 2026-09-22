@@ -65,6 +65,11 @@ export default function FulfilmentPanel({ fulfilment }) {
                                     Заказ собирается частями: готово {fulfilment.issues_done} из {fulfilment.issues_total}.
                                 </Text>
                             )}
+                            {fulfilment.is_pickup && !ready && !handed && (
+                                <Text fontSize="xs" color="orange.fg" fontWeight="600" mt="1">
+                                    Когда соберём — выпустите курьеру пропуск в кабинете. Без пропуска выдача дольше.
+                                </Text>
+                            )}
                         </Box>
                     </HStack>
                     {ready && (

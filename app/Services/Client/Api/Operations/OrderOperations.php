@@ -305,6 +305,11 @@ class OrderOperations implements OperationProvider
             $meta['promotions'] = $result->promotions->toResponse($result->orders);
         }
 
+        // Правило выдачи самовывоза — и агенту тоже: курьер без пропуска ждёт проверки на складе
+        if ((bool) config('pickup.enabled') && $input->string('delivery_method') === DeliveryMethod::PICKUP->value) {
+            $meta['pickup_notice'] = 'Самовывоз: когда заказ соберут, придёт письмо и стадия «Собран». Курьера отправляйте с пропуском из кабинета (операции pickup.*): без пропуска склад выдаёт только после проверки и с подписью — дольше.';
+        }
+
         return Envelope::data($result->orderRows(), $meta);
     }
 

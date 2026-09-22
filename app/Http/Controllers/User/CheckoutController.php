@@ -169,9 +169,13 @@ class CheckoutController extends Controller
     private function successMessage(Collection $orders): string
     {
         $preorder = $orders->first(fn (Order $o) => $o->type === OrderType::PREORDER);
+        // Правило выдачи самовывоза — в каждом сообщении об оформлении: курьеры ездят без пропуска
+        $pickupNote = (bool) config('pickup.enabled') && $orders->contains(fn (Order $o) => $o->delivery_method === \App\Enums\DeliveryMethod::PICKUP)
+            ? ' Самовывоз: когда соберём — напишем, курьера отправляйте с пропуском из кабинета.'
+            : '';
 
         if ($preorder === null) {
-            return $orders->count() > 1 ? 'Заказы успешно оформлены!' : 'Заказ успешно оформлен!';
+            return ($orders->count() > 1 ? 'Заказы успешно оформлены!' : 'Заказ успешно оформлен!').$pickupNote;
         }
 
         $lead = PreorderTerms::leadLabel();

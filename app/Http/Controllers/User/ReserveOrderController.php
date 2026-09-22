@@ -47,6 +47,7 @@ class ReserveOrderController extends Controller
                 'currency_code' => $order->currency_code,
                 'items_count' => $order->items->count(),
                 'quantity' => (float) $order->items->sum('quantity'),
+                'delivery_method' => $order->delivery_method?->value,
                 'created_at_formatted' => ($order->erp_created_at ?? $order->created_at)?->format('d.m.Y H:i'),
                 // ISO для живого таймера на клиенте; фактический срок из 1С
                 'reserved_until' => $order->reserved_until?->toIso8601String(),

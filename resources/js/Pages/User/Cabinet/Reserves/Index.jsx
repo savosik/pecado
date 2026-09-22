@@ -109,7 +109,7 @@ export default function ReservesIndex({ reserves, ship_together_enabled: shipTog
                 onConfirm={doConfirm}
                 title="Отправить в отгрузку?"
                 description={confirmTarget
-                    ? `${orderTitle(confirmTarget)} уйдёт в сборку и отгрузку — изменить или отменить его после подтверждения будет нельзя.${promise ? ` ${promise.text}.` : ''}`
+                    ? `${orderTitle(confirmTarget)} уйдёт в сборку и отгрузку — изменить или отменить его после подтверждения будет нельзя.${promise ? ` ${promise.text}.` : ''}${confirmTarget.delivery_method === 'pickup' ? ' Когда соберём — напишем; курьера отправляйте с пропуском из кабинета.' : ''}`
                     : ''}
                 confirmLabel="В отгрузку"
                 cancelLabel="Ещё подумаю"
@@ -122,7 +122,7 @@ export default function ReservesIndex({ reserves, ship_together_enabled: shipTog
                 onClose={() => setGroupConfirmOpen(false)}
                 onConfirm={doShipTogether}
                 title="Отправить выбранные заказы вместе?"
-                description={`Заказы ${selectedOrders.map((o) => o.number || orderTitle(o).replace(/^Заказ /, '')).join(', ')} уйдут на склад вместе: их соберут в одно место и выпишут одну накладную. Склад подтвердит за минуту — до этого заказы остаются здесь, в резерве.${promise ? ` ${promise.text}.` : ''}`}
+                description={`Заказы ${selectedOrders.map((o) => o.number || orderTitle(o).replace(/^Заказ /, '')).join(', ')} уйдут на склад вместе: их соберут в одно место и выпишут одну накладную. Склад подтвердит за минуту — до этого заказы остаются здесь, в резерве.${promise ? ` ${promise.text}.` : ''}${selectedOrders.some((o) => o.delivery_method === 'pickup') ? ' Когда соберём — напишем; курьера отправляйте с пропуском из кабинета.' : ''}`}
                 confirmLabel={`В отгрузку вместе (${selected.length})`}
                 cancelLabel="Ещё подумаю"
                 colorPalette="green"
