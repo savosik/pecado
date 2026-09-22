@@ -9,6 +9,7 @@ use App\Services\Client\Api\Operations\CheckoutOperations;
 use App\Services\Client\Api\Operations\CompanyOperations;
 use App\Services\Client\Api\Operations\ContentOperations;
 use App\Services\Client\Api\Operations\ContractOperations;
+use App\Services\Client\Api\Operations\DefectOperations;
 use App\Services\Client\Api\Operations\DeliveryAddressOperations;
 use App\Services\Client\Api\Operations\DocumentOperations;
 use App\Services\Client\Api\Operations\FinanceOperations;
@@ -43,6 +44,7 @@ class OperationRegistry
      */
     private const PROVIDERS = [
         CatalogOperations::class,
+        DefectOperations::class,
         CartOperations::class,
         CheckoutOperations::class,
         ReturnOperations::class,

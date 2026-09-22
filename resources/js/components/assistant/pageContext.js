@@ -8,7 +8,7 @@
 
 const RULES = [
     { match: /^User\/Products\/Show$/, type: 'product', id: (p) => p.product?.id, title: (p) => p.product?.name },
-    { match: /^User\/Products\/Index$/, type: 'catalog', id: (p) => p.category?.id, title: (p) => p.category?.name },
+    { match: /^User\/Products\/Index$/, type: 'catalog', id: (p) => p.category?.id, title: (p) => p.category?.name, url: /^\/products\/utsenka/, urlType: 'defects' },
     { match: /^User\/Search/, type: 'search', title: (p) => p.query || p.q },
     { match: /^User\/Cart/, type: 'cart' },
     { match: /^User\/Checkout/, type: 'checkout' },
@@ -47,7 +47,8 @@ export function pageContextFrom(component, props) {
     }
 
     return {
-        type: rule.type,
+        // Раздел «Уценка» — тот же компонент каталога, отличается только адресом.
+        type: rule.url && url && rule.url.test(url) ? rule.urlType : rule.type,
         id: clip(rule.id ? rule.id(props || {}) : null, 64),
         title: clip(rule.title ? rule.title(props || {}) : null, 160),
         url: clip(url, 300),

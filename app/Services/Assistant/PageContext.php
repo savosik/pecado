@@ -12,7 +12,7 @@ namespace App\Services\Assistant;
  */
 final class PageContext
 {
-    public const TYPES = ['home', 'catalog', 'category', 'product', 'search', 'cart', 'checkout', 'cabinet', 'order', 'orders', 'reserves', 'shipments', 'documents', 'finance', 'returns', 'promotions', 'faq', 'other'];
+    public const TYPES = ['home', 'catalog', 'category', 'product', 'defects', 'search', 'cart', 'checkout', 'cabinet', 'order', 'orders', 'reserves', 'shipments', 'documents', 'finance', 'returns', 'promotions', 'faq', 'other'];
 
     /**
      * @param  array<string, mixed>|null  $raw
@@ -58,6 +58,7 @@ final class PageContext
             'catalog' => 'каталог',
             'category' => 'категория каталога',
             'product' => 'карточка товара',
+            'defects' => 'раздел «Уценка»',
             'search' => 'поиск по каталогу',
             'cart' => 'корзина',
             'checkout' => 'оформление заказа',
