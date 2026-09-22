@@ -554,6 +554,14 @@ class PaymentOrderService
 
         $fallbackId = (int) config('mail_stream.fallback_author_id', 0);
 
-        return $fallbackId > 0 ? User::query()->find($fallbackId) : null;
+        if ($fallbackId > 0) {
+            return User::query()->find($fallbackId);
+        }
+
+        // Партнёр без закреплённого менеджера (лид, тестовая учётка) — письмо
+        // от РОПа, как в MailStream: он и отвечает за нераспределённых. Раньше
+        // здесь был отказ «некому отправить», и помощник в чате упирался в него.
+        return User::query()->role('sales-head')->whereNotNull('email')->orderBy('id')->first()
+            ?? User::query()->role('sales-manager')->whereNotNull('email')->orderBy('id')->first();
     }
 }

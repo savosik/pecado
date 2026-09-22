@@ -216,6 +216,35 @@ class PaymentOrderTest extends TestCase
         $this->assertSame('accountant', $contact->links()->sole()->role->value);
     }
 
+    /**
+     * Партнёр без менеджера (лид, тестовая учётка): письмо уходит от РОПа, а не
+     * отказом «некому отправить» — иначе помощник в чате не может выслать платёжку.
+     */
+    #[Test]
+    public function without_manager_the_letter_is_sent_by_sales_head(): void
+    {
+        Queue::fake();
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+        $head = User::factory()->create(['email' => 'rop@pecado.ru', 'name' => 'РОП']);
+        $head->assignRole('sales-head');
+        $this->client->forceFill(['personal_manager_id' => null])->save();
+
+        $this->actingAs($this->client)
+            ->post('/cabinet/payment-orders/send', [
+                'company_id' => $this->company->id,
+                'organization_id' => $this->organization->id,
+                'scenario' => 'overdue',
+                'email' => 'buh@romashka.ru',
+                'save_contact' => false,
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $letter = CrmEmail::query()->sole();
+        $this->assertSame('rop@pecado.ru', $letter->reply_to);
+        $this->assertSame($head->id, $letter->user_id);
+    }
+
     #[Test]
     public function cabinet_is_closed_when_client_sees_no_money(): void
     {
