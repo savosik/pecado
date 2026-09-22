@@ -44,10 +44,20 @@ trait InteractsWithClientOperations
      * JSON-ответ с читаемой кириллицей: штатный Response::json() экранирует
      * русский текст, и агент платит втрое больше токенов за те же слова.
      *
+     * Чату-помощнику (токен вида assistant) — компактный JSON без служебных
+     * полей и пустых значений: отступы и uuid давали до 40 % объёма ответа.
+     *
      * @param  array<string, mixed>  $data
      */
     protected function payload(array $data): Response
     {
+        if (\App\Support\Client\ClientApiSource::isAssistant()) {
+            return Response::text(json_encode(
+                \App\Support\Client\AssistantPayload::slim($data),
+                JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+            ));
+        }
+
         return Response::text(json_encode(
             $data,
             JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
@@ -90,6 +100,12 @@ trait InteractsWithClientOperations
         }
 
         $key = is_string($idempotencyKey) && trim($idempotencyKey) !== '' ? trim($idempotencyKey) : null;
+
+        // Чат-помощник: страницы не больше 25 строк — модель попросит следующую,
+        // если клиенту нужно больше; ярлыки просят по 100, это для CLI-агентов.
+        if (\App\Support\Client\ClientApiSource::isAssistant() && isset($args['per_page']) && (int) $args['per_page'] > \App\Support\Client\AssistantPayload::PER_PAGE) {
+            $args['per_page'] = \App\Support\Client\AssistantPayload::PER_PAGE;
+        }
 
         try {
             $result = app(OperationRunner::class)->run($operation, $actor, $args, $key);

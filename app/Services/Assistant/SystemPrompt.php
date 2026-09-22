@@ -5,6 +5,9 @@ namespace App\Services\Assistant;
 use App\Models\ChatThread;
 use App\Models\ClientAssistantNote;
 use App\Models\User;
+use App\Services\Client\Api\FeatureGate;
+use App\Services\Client\Api\Operation;
+use App\Services\Client\Api\OperationRegistry;
 
 /**
  * Системная часть запроса: заморожена, без дат и идентификаторов.
@@ -16,15 +19,80 @@ use App\Models\User;
  */
 final class SystemPrompt
 {
+    /** Названия выключаемых разделов — для блока клиента. */
+    private const GATE_LABELS = [
+        'documents' => 'документы и акты сверки',
+        'finance' => 'оплаты и долг',
+        'contracts' => 'договоры',
+        'reserve' => 'резервы',
+        'order_cancel' => 'отмена заказа',
+        'payment_orders' => 'платёжки',
+        'pickup' => 'самовывоз и пропуска',
+    ];
+
+    public function __construct(private readonly OperationRegistry $registry) {}
+
     /**
      * @return list<array<string, mixed>> блоки `system` в wire-формате
      */
     public function blocks(ChatThread $thread): array
     {
+        // Инструкции и список операций — один блок, одинаковый для всех клиентов:
+        // кешируется один раз на всех. Список операций здесь, а не ответом
+        // client-catalog: тот ответ весил 13 тысяч токенов на каждый тред.
         return [
-            ['type' => 'text', 'text' => self::instructions(), 'cache_control' => ['type' => 'ephemeral']],
+            ['type' => 'text', 'text' => self::instructions()."\n\n".$this->operationsBlock(), 'cache_control' => ['type' => 'ephemeral']],
             ['type' => 'text', 'text' => $this->clientBlock($thread), 'cache_control' => ['type' => 'ephemeral']],
         ];
+    }
+
+    /**
+     * Компактный список операций по разделам: «id — назначение [пометки]».
+     * Порядок — как в реестре, детерминирован: иначе кеш промпта не сходится.
+     */
+    public function operationsBlock(): string
+    {
+        $sections = $this->registry->sections();
+        $bySection = [];
+
+        foreach ($this->registry->all() as $operation) {
+            $bySection[$operation->section][] = $operation;
+        }
+
+        $lines = ['## Операции кабинета (вызывай через client-call, схема аргументов — client-describe)', ''];
+
+        foreach ($sections as $key => $label) {
+            if (empty($bySection[$key])) {
+                continue;
+            }
+
+            $lines[] = '### '.$label.' ('.$key.')';
+
+            /** @var Operation $operation */
+            foreach ($bySection[$key] as $operation) {
+                $marks = [];
+
+                if (! $operation->agentAllowed) {
+                    $marks[] = 'недоступно агенту';
+                }
+
+                if ($operation->gate !== FeatureGate::NONE) {
+                    $marks[] = 'раздел «'.(self::GATE_LABELS[$operation->gate->value] ?? $operation->gate->value).'»';
+                }
+
+                if ($operation->idempotencyRequired) {
+                    $marks[] = 'idempotency_key обязателен';
+                } elseif ($operation->mutating) {
+                    $marks[] = 'запись';
+                }
+
+                $lines[] = '- '.$operation->id.' — '.$operation->summary.($marks !== [] ? ' ['.implode('; ', $marks).']' : '');
+            }
+
+            $lines[] = '';
+        }
+
+        return trim(implode("\n", $lines));
     }
 
     public static function instructions(): string
@@ -47,10 +115,15 @@ final class SystemPrompt
 
 ## Порядок работы с инструментами
 
-1. В начале разговора один раз вызови client-catalog: юрлица клиента, включённые разделы и операции с флагом allowed. Помеченное недоступным не вызывай и не спорь с отказом — раздел выключен для клиента.
-2. Ярлыки дешевле трёх вызовов: client-prices, client-order-status, client-create-order, client-balance, client-documents, client-promotions, client-faq, client-ask-manager. Для остального — client-describe и client-call.
+1. Список операций и юрлица клиента уже даны ниже — client-catalog не вызывай, он повторяет то же самое. Операции из выключенных для клиента разделов (см. блок «Клиент») не вызывай и не спорь с отказом.
+2. Ярлыки дешевле трёх вызовов: client-prices, client-order-status, client-create-order, client-balance, client-documents, client-promotions, client-faq, client-ask-manager. Для остального — client-call; схему аргументов уточняй через client-describe только когда не уверен.
 3. Если у клиента несколько юрлиц и ни одно не основное, спроси, от какого работать, — сам не выбирай.
 4. Отказ инструмента с кодом — это ответ, а не сбой: объясни клиенту по-человечески и предложи следующий шаг.
+5. Списки приходят по 25 строк; нужно больше — попроси следующую страницу, а не весь каталог.
+
+## Поиск товаров
+
+Ищи через catalog.search по словам из названий и описаний. Клиенты пишут на сленге отрасли — переводи его в термины каталога, а не в бытовые: «вакуумник» — вакуумный стимулятор, «пробка» — анальная пробка, «фалик» — фаллоимитатор, «страпон» — страпон, «смазка» — лубрикант, «кольцо» — эрекционное кольцо, «яйцо» — виброяйцо, «машина» — секс-машина, «БАДы» — возбуждающие средства и капсулы, «резинки» — презервативы. Пустая или мусорная выдача — попробуй синоним, бренд или категорию, два-три запроса подряд нормально. Показывай сначала то, что в наличии, потом предзаказ, и всегда с ценой клиента.
 
 ## Необратимые действия — только с подтверждения клиента
 
@@ -95,6 +168,19 @@ TEXT;
                 );
             }
         }
+
+        $closed = [];
+
+        foreach (FeatureGate::cases() as $gate) {
+            if ($gate !== FeatureGate::NONE && ! $gate->allows($user)) {
+                $closed[] = self::GATE_LABELS[$gate->value] ?? $gate->value;
+            }
+        }
+
+        $lines[] = '';
+        $lines[] = $closed === []
+            ? 'Все разделы кабинета открыты.'
+            : 'Выключенные для клиента разделы: '.implode(', ', $closed).' — их операции не вызывай, скажи, что раздел не подключён.';
 
         $note = ClientAssistantNote::query()->where('user_id', $user->getKey())->value('content');
 
