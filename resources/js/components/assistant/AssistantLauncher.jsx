@@ -94,14 +94,8 @@ export default function AssistantLauncher() {
                         fontSize="sm"
                         cursor="pointer"
                         gap="2"
-                        css={{
-                            animation: 'assistantBubbleIn 220ms ease-out',
-                            '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
-                            '@keyframes assistantBubbleIn': {
-                                from: { opacity: 0, transform: 'translateY(6px)' },
-                                to: { opacity: 1, transform: 'translateY(0)' },
-                            },
-                        }}
+                        className="assistant-mascot"
+                        style={{ animation: 'assistantBubbleIn 220ms ease-out' }}
                         _hover={{ borderColor: 'pecado.300' }}
                     >
                         <Text flex="1">{bubble.text}</Text>

@@ -5,45 +5,17 @@ import { Box } from '@chakra-ui/react';
  * когда есть что сказать. Живой элемент угла страницы, а не статичная иконка.
  *
  * Только дешёвые анимации (transform и opacity), без перерисовки вёрстки;
- * при prefers-reduced-motion всё замирает.
+ * keyframes — в resources/css/app.css, при prefers-reduced-motion всё замирает.
  */
-const keyframes = {
-    '@keyframes assistantFloat': {
-        '0%, 100%': { transform: 'translateY(0)' },
-        '50%': { transform: 'translateY(-3px)' },
-    },
-    '@keyframes assistantBlink': {
-        '0%, 91%, 100%': { transform: 'scaleY(1)' },
-        '94%': { transform: 'scaleY(0.08)' },
-    },
-    '@keyframes assistantNod': {
-        '0%, 100%': { transform: 'rotate(0deg)' },
-        '20%': { transform: 'rotate(-10deg)' },
-        '45%': { transform: 'rotate(9deg)' },
-        '70%': { transform: 'rotate(-5deg)' },
-    },
-    '@keyframes assistantGlow': {
-        '0%': { transform: 'scale(1)', opacity: 0.55 },
-        '100%': { transform: 'scale(1.9)', opacity: 0 },
-    },
-    '@keyframes assistantAntenna': {
-        '0%, 100%': { opacity: 0.6, transform: 'scale(1)' },
-        '50%': { opacity: 1, transform: 'scale(1.25)' },
-    },
-};
-
 export default function AssistantMascot({ talking = false, size = 56 }) {
     return (
         <Box
+            className="assistant-mascot"
             position="relative"
             w={`${size}px`}
             h={`${size}px`}
-            css={{
-                ...keyframes,
-                '@media (prefers-reduced-motion: reduce)': {
-                    '& *': { animation: 'none !important' },
-                },
-            }}
+            transition="transform 160ms ease"
+            _groupHover={{ transform: 'scale(1.06)' }}
         >
             {/* Расходящееся кольцо, когда персонаж «заговорил» */}
             {talking && (
@@ -52,7 +24,7 @@ export default function AssistantMascot({ talking = false, size = 56 }) {
                     inset="0"
                     borderRadius="full"
                     bg="pecado.400"
-                    css={{ animation: 'assistantGlow 1.4s ease-out 2', transformOrigin: 'center' }}
+                    style={{ animation: 'assistantGlow 1.4s ease-out 2', transformOrigin: 'center' }}
                     pointerEvents="none"
                 />
             )}
@@ -62,13 +34,11 @@ export default function AssistantMascot({ talking = false, size = 56 }) {
                 borderRadius="full"
                 bg="pecado.500"
                 boxShadow="0 8px 22px rgba(190, 30, 45, 0.35)"
-                css={{
+                style={{
                     animation: talking
                         ? 'assistantNod 1.1s ease-in-out 2, assistantFloat 3.4s ease-in-out infinite'
                         : 'assistantFloat 3.4s ease-in-out infinite',
                     transformOrigin: '50% 70%',
-                    transition: 'transform 160ms ease',
-                    '.group:hover &': { transform: 'scale(1.06)' },
                 }}
             >
                 <svg viewBox="0 0 56 56" width={size} height={size} aria-hidden="true">

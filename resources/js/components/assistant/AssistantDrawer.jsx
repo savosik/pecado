@@ -2,7 +2,6 @@ import { HStack, IconButton, Text } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
 import { LuBot, LuHistory, LuMessageSquarePlus } from 'react-icons/lu';
 import {
-    DrawerBackdrop,
     DrawerBody,
     DrawerCloseTrigger,
     DrawerContent,
@@ -26,9 +25,20 @@ export default function AssistantDrawer({ voice, attachments }) {
     const newThread = useAssistantStore((s) => s.newThread);
 
     return (
-        <DrawerRoot open={open} onOpenChange={(e) => { if (!e.open) closeDialog(); }} placement="end" size={{ base: 'full', md: 'md' }}>
-            <DrawerBackdrop />
-            <DrawerContent>
+        // Немодальный: без затемнения, фокус не заперт, страница под ним живая —
+        // клиент кликает по товару из ответа, быстрый просмотр открывается поверх
+        // и его крестик работает. Закрывается только крестиком или Esc.
+        <DrawerRoot
+            open={open}
+            onOpenChange={(e) => { if (!e.open) closeDialog(); }}
+            placement="end"
+            size={{ base: 'full', md: 'lg' }}
+            modal={false}
+            closeOnInteractOutside={false}
+            trapFocus={false}
+            preventScroll={false}
+        >
+            <DrawerContent boxShadow="2xl">
                 <DrawerHeader py="3" borderBottomWidth="1px" borderColor="border.muted">
                     <HStack justify="space-between" pr="8">
                         <HStack gap="2">
