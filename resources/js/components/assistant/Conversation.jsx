@@ -29,8 +29,10 @@ export default function Conversation({ prefill = null, voice = true, attachments
     }, [lastText, confirmations.length]);
 
     return (
-        <Stack gap="0" h="100%" minH={minH}>
-            <Stack flex="1" overflowY="auto" px="3" py="3" gap="3">
+        <Stack gap="0" h="100%" minH={minH} overflow="hidden">
+            {/* Прокручивается только лента, не панель целиком: minH=0 нужен flex-элементу,
+                иначе он растёт по содержимому и полоса уезжает на родителя. */}
+            <Stack flex="1" minH="0" overflowY="auto" px="3" py="3" gap="3">
                 {visible.length === 0 && !loading && (
                     <Stack align="center" justify="center" flex="1" color="fg.subtle" gap="2" py="8" textAlign="center">
                         <LuBot size={28} />

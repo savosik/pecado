@@ -62,7 +62,7 @@ export default function AssistantDrawer({ voice, attachments }) {
                         </HStack>
                     </HStack>
                 </DrawerHeader>
-                <DrawerBody p="0" display="flex" flexDirection="column">
+                <DrawerBody p="0" display="flex" flexDirection="column" flex="1" minH="0" overflow="hidden">
                     <Conversation prefill={prefill} voice={voice} attachments={attachments} minH="0" />
                 </DrawerBody>
                 <DrawerCloseTrigger />
