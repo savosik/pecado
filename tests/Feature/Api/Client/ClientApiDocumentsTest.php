@@ -71,10 +71,13 @@ class ClientApiDocumentsTest extends ClientApiTestCase
         $this->assertStringContainsString('signature=', $url);
 
         $this->get($url)->assertOk()->assertHeader('content-disposition');
-        $this->get(str_replace('signature=', 'signature=x', $url))->assertStatus(403);
+        // Агенту (Accept: application/json) — 403; браузеру с протухшей ссылкой из чата
+        // помощника — редирект в раздел кабинета (см. bootstrap/app.php).
+        $this->getJson(str_replace('signature=', 'signature=x', $url))->assertStatus(403);
 
         $this->travel(6)->minutes();
-        $this->get($url)->assertStatus(403);
+        $this->getJson($url)->assertStatus(403);
+        $this->actingAs($this->client)->get($url)->assertRedirect('/cabinet/documents');
 
         config(['documents.enabled' => false]);
         $this->travelBack();
