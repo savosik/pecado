@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { Box, HStack, IconButton, Text } from '@chakra-ui/react';
+import AssistantMascot from './AssistantMascot';
 import { router, usePage } from '@inertiajs/react';
-import { LuBot, LuX } from 'react-icons/lu';
+import { LuX } from 'react-icons/lu';
 import { useAssistantStore } from '@/stores/useAssistantStore';
 import { isStaffPanel, pageContextFrom } from './pageContext';
 import AssistantDrawer from './AssistantDrawer';
@@ -114,20 +115,24 @@ export default function AssistantLauncher() {
                         </IconButton>
                     </HStack>
                 )}
-                <Box position="relative" pointerEvents="auto">
-                    <IconButton
-                        aria-label="Помощник"
-                        title="Помощник: цены, заказы, документы, долг"
-                        colorPalette="pecado"
-                        borderRadius="full"
-                        size="lg"
-                        boxShadow="lg"
-                        onClick={openFromIcon}
-                    >
-                        <LuBot />
-                    </IconButton>
+                <Box
+                    as="button"
+                    type="button"
+                    className="group"
+                    position="relative"
+                    pointerEvents="auto"
+                    aria-label="Помощник"
+                    title="Помощник: цены, заказы, документы, долг"
+                    onClick={openFromIcon}
+                    cursor="pointer"
+                    bg="transparent"
+                    border="none"
+                    p="0"
+                    _focusVisible={{ outline: '2px solid', outlineColor: 'pecado.300', outlineOffset: '3px', borderRadius: 'full' }}
+                >
+                    <AssistantMascot talking={Boolean(bubble) && !open} />
                     {unread > 0 && !open && (
-                        <Box position="absolute" top="-1px" right="-1px" w="10px" h="10px" bg="red.500" borderRadius="full" borderWidth="2px" borderColor="bg" />
+                        <Box position="absolute" top="2px" right="2px" w="12px" h="12px" bg="green.400" borderRadius="full" borderWidth="2px" borderColor="bg" />
                     )}
                 </Box>
             </Box>
