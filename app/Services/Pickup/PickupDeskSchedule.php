@@ -2,9 +2,8 @@
 
 namespace App\Services\Pickup;
 
-use App\Models\Pickup\PickupDeskBreak;
+use App\Models\Pickup\PickupDeskDay;
 use App\Models\Pickup\PickupDeskPause;
-use App\Models\Pickup\PickupDeskStaff;
 use App\Services\Warehouse\WarehouseSchedule;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -13,12 +12,10 @@ use Illuminate\Support\Collection;
 /**
  * Стойка выдачи самовывоза (pick-18): выдают ли сейчас и когда перерывы.
  *
- * Правило одно: выдача закрыта, только когда на стойке никого. Смена — сотрудники, у которых
- * этот день недели рабочий; у каждого из часов склада вычитаются его плановые перерывы и живые
- * отлучки («Отойти» на экране выдачи), затем доступности складываются. Два человека, обедающие
- * по очереди, выдачу не останавливают; один — останавливает на время обеда. Если смена не
- * заведена, стойка считается открытой все часы склада, и закрыть её могут только отлучки
- * «стойка целиком» (без сотрудника).
+ * Источник — одна таблица pickup_desk_days: на каждый день недели часы выдачи и технические перерывы,
+ * ровно то, что видят курьер и клиент (решение заказчика 22.09.2026: внутренняя кухня со сменами
+ * никому не нужна). Поверх плана — живые отлучки «Отойти» с экрана выдачи: нажал — стойка закрыта
+ * до срока, «Вернулся» — открыта.
  *
  * Все интервалы — минуты от полуночи дня склада: интервальная арифметика проще и без ошибок на
  * границах, чем сравнение дат.
@@ -33,15 +30,18 @@ class PickupDeskSchedule
 
     public function __construct(private readonly WarehouseSchedule $warehouse) {}
 
-    /** @return Collection<int, PickupDeskStaff> Смена на дату: активные сотрудники с этим днём недели. */
-    public function roster(CarbonInterface $date): Collection
+    /**
+     * Плановые перерывы на день недели, как записаны в таблице.
+     *
+     * @return list<array{from: string, to: string, label: string}>
+     */
+    public function plannedBreaks(int $isoWeekday): array
     {
-        $iso = $this->local($date)->isoWeekday();
+        $day = PickupDeskDay::query()->where('iso_weekday', $isoWeekday)->first();
 
-        return PickupDeskStaff::query()->where('active', true)->with('breaks')
-            ->orderBy('sort_order')->orderBy('id')->get()
-            ->filter(fn (PickupDeskStaff $staff) => $staff->worksOn($iso))
-            ->values();
+        return $day ? array_values(array_map(fn (array $b) => [
+            'from' => (string) $b['from'], 'to' => (string) $b['to'], 'label' => (string) ($b['label'] ?? ''),
+        ], (array) $day->breaks)) : [];
     }
 
     /**
@@ -58,47 +58,30 @@ class PickupDeskSchedule
         }
 
         [$open, $close] = [$this->minutes($hours[0]), $this->minutes($hours[1])];
-        $roster = $this->roster($day);
-        $pauses = $withPauses ? $this->pausesOn($day) : collect();
-        $unavailable = []; // [from, to, label] — всё, что кого-то снимает со стойки; для подписей окон
+        $cuts = []; // [from, to, label]
 
-        // Доступность стойки = объединение доступностей людей смены (или все часы, если смены нет).
-        if ($roster->isEmpty()) {
-            $available = [[$open, $close]];
-        } else {
-            $available = [];
-            foreach ($roster as $staff) {
-                $own = [[$open, $close]];
-                foreach ($staff->breaks as $break) {
-                    if (! $break->appliesOn($day->isoWeekday())) {
-                        continue;
-                    }
-                    $cut = [$this->hm($break->starts_at), $this->hm($break->ends_at), $break->label];
-                    $own = $this->subtract($own, $cut);
-                    $unavailable[] = $cut;
-                }
-                foreach ($pauses->where('staff_id', $staff->id) as $pause) {
-                    $cut = $this->pauseInterval($pause, $day);
-                    $own = $this->subtract($own, $cut);
-                    $unavailable[] = $cut;
-                }
-                $available = $this->union(array_merge($available, $own));
+        foreach ($this->plannedBreaks($day->isoWeekday()) as $break) {
+            $cuts[] = [$this->hm($break['from']), $this->hm($break['to']), $break['label']];
+        }
+        if ($withPauses) {
+            foreach ($this->pausesOn($day) as $pause) {
+                $cuts[] = $this->pauseInterval($pause, $day);
             }
         }
 
-        // Отлучки «стойка целиком» закрывают выдачу независимо от смены.
-        foreach ($pauses->whereNull('staff_id') as $pause) {
-            $cut = $this->pauseInterval($pause, $day);
+        $available = [[$open, $close]];
+        foreach ($cuts as $cut) {
             $available = $this->subtract($available, $cut);
-            $unavailable[] = $cut;
+        }
+        $closed = [[$open, $close]];
+        foreach ($available as $keep) {
+            $closed = $this->subtract($closed, $keep);
         }
 
-        $closed = $this->subtractMany([[$open, $close]], $available);
-
-        return array_map(function (array $window) use ($day, $unavailable) {
+        return array_map(function (array $window) use ($day, $cuts) {
             $labels = [];
-            foreach ($unavailable as [$from, $to, $label]) {
-                if ($from < $window[1] && $to > $window[0]) {
+            foreach ($cuts as [$from, $to, $label]) {
+                if ($from < $window[1] && $to > $window[0] && trim($label) !== '') {
                     $labels[mb_strtolower(trim($label))] = true;
                 }
             }
@@ -157,7 +140,7 @@ class PickupDeskSchedule
     }
 
     /**
-     * Сводка для экранов: курьеру, клиенту и складу.
+     * Сводка для экрана склада: статус, перерывы сегодня, действующие отлучки.
      *
      * @return array<string, mixed>
      */
@@ -165,8 +148,7 @@ class PickupDeskSchedule
     {
         $at = $this->local($at);
         $today = $this->closedWindows($at);
-        $roster = $this->roster($at);
-        $pauses = $this->pausesOn($at)->filter(fn (PickupDeskPause $p) => $p->until_at->gt($at));
+        $tz = $this->warehouse->timezone();
 
         return [
             ...$this->status($at),
@@ -179,29 +161,28 @@ class PickupDeskSchedule
             ], $today),
             'today_text' => $this->todayText($today, $at),
             'week_text' => $this->weekText(),
-            'roster' => $roster->map(fn (PickupDeskStaff $s) => ['id' => $s->id, 'name' => $s->name, 'user_id' => $s->user_id])->values()->all(),
-            'pauses' => $pauses->map(fn (PickupDeskPause $p) => [
-                'id' => $p->id,
-                'staff_id' => $p->staff_id,
-                'staff_name' => $p->staff?->name,
-                'reason' => $p->reason,
-                'until' => $p->until_at->setTimezone($this->warehouse->timezone())->format('H:i'),
-                'user_id' => $p->user_id,
-            ])->values()->all(),
+            'pauses' => PickupDeskPause::query()->active($at)->with('user:id,name')->orderBy('until_at')->get()
+                ->map(fn (PickupDeskPause $p) => [
+                    'id' => $p->id,
+                    'reason' => $p->reason,
+                    'until' => $p->until_at->setTimezone($tz)->format('H:i'),
+                    'user_id' => $p->user_id,
+                    'user_name' => $p->user?->name,
+                ])->values()->all(),
         ];
     }
 
     /**
-     * Та же сводка для курьера, клиента и API: без имён смены и чьих-то отлучек — наружу уходит только итог.
+     * Та же сводка для курьера, клиента и API: без отлучек по именам — наружу уходит только итог.
      *
      * @return array<string, mixed>
      */
     public function publicSummary(CarbonInterface $at): array
     {
-        return array_diff_key($this->summary($at), ['roster' => true, 'pauses' => true]);
+        return array_diff_key($this->summary($at), ['pauses' => true]);
     }
 
-    /** «Перерывы: пн–пт 13:00–14:00; сб без перерывов» — по плану, без живых отлучек. */
+    /** «пн–пт 13:00–14:00; сб без перерывов» — по плану, без живых отлучек; null, если перерывов нет вовсе. */
     public function weekText(): ?string
     {
         $names = [1 => 'пн', 2 => 'вт', 3 => 'ср', 4 => 'чт', 5 => 'пт', 6 => 'сб', 7 => 'вс'];
@@ -235,10 +216,10 @@ class PickupDeskSchedule
         ));
     }
 
-    /** @return Collection<int, PickupDeskPause> Отлучки, пересекающие дату (действующие или завершённые). */
+    /** @return Collection<int, PickupDeskPause> Отлучки, пересекающие дату (действующие и завершённые). */
     private function pausesOn(CarbonImmutable $day): Collection
     {
-        return PickupDeskPause::query()->with('staff')
+        return PickupDeskPause::query()
             ->where('started_at', '<', $day->endOfDay())
             ->where(fn ($q) => $q->whereNull('ended_at')->orWhere('ended_at', '>', $day->startOfDay()))
             ->where('until_at', '>', $day->startOfDay())
@@ -250,13 +231,10 @@ class PickupDeskSchedule
     {
         $tz = $this->warehouse->timezone();
         $from = $pause->started_at->setTimezone($tz);
-        $to = ($pause->ended_at ?? $pause->until_at)->setTimezone($tz);
-        if ($pause->ended_at !== null && $pause->ended_at->gt($pause->until_at)) {
-            $to = $pause->until_at->setTimezone($tz);
-        }
+        $to = $pause->endsAt()->setTimezone($tz);
 
         return [
-            max(0, $from->lt($day) ? 0 : $this->minutes($from)),
+            $from->lt($day) ? 0 : $this->minutes($from),
             $to->gt($day->endOfDay()) ? 24 * 60 : $this->minutes($to),
             $pause->reason,
         ];
@@ -301,7 +279,7 @@ class PickupDeskSchedule
 
     private function hm(string $time): int
     {
-        [$h, $m] = array_map('intval', explode(':', PickupDeskBreak::hm($time)));
+        [$h, $m] = array_map('intval', explode(':', substr($time, 0, 5)));
 
         return $h * 60 + $m;
     }
@@ -311,9 +289,9 @@ class PickupDeskSchedule
         return CarbonImmutable::instance($at)->setTimezone($this->warehouse->timezone());
     }
 
-    // ---- интервальная арифметика: списки [from, to) в минутах, отсортированные и без пересечений
-
     /**
+     * Вычитание отрезка из списка отрезков [from, to) в минутах.
+     *
      * @param  list<array{0: int, 1: int}>  $intervals
      * @param  array{0: int, 1: int, 2?: string}  $cut
      * @return list<array{0: int, 1: int}>
@@ -340,42 +318,5 @@ class PickupDeskSchedule
         }
 
         return $result;
-    }
-
-    /**
-     * @param  list<array{0: int, 1: int}>  $intervals
-     * @param  list<array{0: int, 1: int}>  $cuts
-     * @return list<array{0: int, 1: int}>
-     */
-    private function subtractMany(array $intervals, array $cuts): array
-    {
-        foreach ($cuts as $cut) {
-            $intervals = $this->subtract($intervals, $cut);
-        }
-
-        return $intervals;
-    }
-
-    /**
-     * @param  list<array{0: int, 1: int}>  $intervals
-     * @return list<array{0: int, 1: int}>
-     */
-    private function union(array $intervals): array
-    {
-        usort($intervals, fn (array $a, array $b) => $a[0] <=> $b[0]);
-        $merged = [];
-        foreach ($intervals as [$from, $to]) {
-            if ($to <= $from) {
-                continue;
-            }
-            $last = array_key_last($merged);
-            if ($last !== null && $from <= $merged[$last][1]) {
-                $merged[$last][1] = max($merged[$last][1], $to);
-            } else {
-                $merged[] = [$from, $to];
-            }
-        }
-
-        return $merged;
     }
 }

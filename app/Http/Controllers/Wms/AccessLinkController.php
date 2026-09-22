@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Wms;
 
 use App\Http\Controllers\User\PickupController as CabinetPickupController;
+use App\Models\Pickup\PickupDeskPause;
 use App\Models\Pickup\PickupHandover;
 use App\Models\WmsAccessLink;
 use App\Services\Pickup\PickupQueue;
@@ -59,8 +60,24 @@ class AccessLinkController extends WmsController
 
         $rows = $this->queue->present($handovers->pluck('goodsIssue')->filter()->unique('id')->values())->keyBy('id');
 
-        return response()->json(['days' => $days, 'rows' => $handovers->map(fn (PickupHandover $h) => [
+        // pick-18: отлучки «Отойти» с этого телефона — в том же журнале, чтобы было видно, когда стойка стояла.
+        $pauses = PickupDeskPause::query()
+            ->where('user_id', $link->user_id)
+            ->where('started_at', '>=', now()->subDays($days))
+            ->orderByDesc('started_at')->limit(200)->get()
+            ->map(fn (PickupDeskPause $p) => [
+                'id' => 'pause-'.$p->id,
+                'kind' => 'pause',
+                'issued_at' => $p->started_at->toIso8601String(),
+                'reason' => $p->reason,
+                'until' => $p->until_at->format('H:i'),
+                'ended_at' => $p->ended_at?->format('H:i'),
+                'is_active' => $p->ended_at === null && $p->until_at->isFuture(),
+            ]);
+
+        $items = $handovers->map(fn (PickupHandover $h) => [
             'id' => $h->id,
+            'kind' => 'handover',
             'issued_at' => $h->issued_at->toIso8601String(),
             'client' => $rows->get($h->goods_issue_id)['client'] ?? 'Клиент не определён',
             'company' => $rows->get($h->goods_issue_id)['company'] ?? null,
@@ -75,7 +92,9 @@ class AccessLinkController extends WmsController
             'cancelled_by' => $h->canceller?->name,
             'cancel_reason' => $h->cancel_reason,
             'needs_review' => $h->needs_review,
-        ])->values()->all()]);
+        ]);
+
+        return response()->json(['days' => $days, 'rows' => $items->concat($pauses)->sortByDesc('issued_at')->values()->all()]);
     }
 
     public function revoke(WmsAccessLink $link): JsonResponse

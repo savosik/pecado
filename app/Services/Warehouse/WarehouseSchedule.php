@@ -2,20 +2,80 @@
 
 namespace App\Services\Warehouse;
 
+use App\Models\Pickup\PickupDeskDay;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * График склада и обещание времени сборки (pick-02).
  *
- * Чистый сервис без БД: «сейчас» приходит аргументом, все расчёты — в часовом поясе склада.
+ * «Сейчас» приходит аргументом, все расчёты — в часовом поясе склада. Недельные часы берутся из
+ * config/warehouse.php, а начальник склада может переопределить их по дням в таблице
+ * pickup_desk_days (pick-18) — там же, где правит перерывы выдачи. Переопределение читается один раз
+ * на запрос и кешируется; без таблицы (ранние миграции, консоль) действует конфиг.
  * Правило заказчика: заказ, отправленный в отгрузку до отсечки (за час до закрытия), собирается
  * сегодня; позже — со следующего открытия. Обещание = момент начала сборки + SLA.
  */
 class WarehouseSchedule
 {
+    public const WEEK_CACHE_KEY = 'warehouse.week.override';
+
     /** Дальше вперёд открытие не ищем: защита от бесконечного цикла при пустом графике. */
     private const LOOKAHEAD_DAYS = 60;
+
+    /** @var array<int, array{0: string, 1: string}|null>|null */
+    private ?array $week = null;
+
+    /**
+     * Часы по дням недели: конфиг, поверх — строки pickup_desk_days.
+     *
+     * @return array<int, array{0: string, 1: string}|null>
+     */
+    public function week(): array
+    {
+        if ($this->week !== null) {
+            return $this->week;
+        }
+
+        $week = [];
+        for ($iso = 1; $iso <= 7; $iso++) {
+            $hours = config("warehouse.week.$iso");
+            $week[$iso] = is_array($hours) && count($hours) === 2 ? [(string) $hours[0], (string) $hours[1]] : null;
+        }
+
+        foreach ($this->overrides() as $iso => $row) {
+            if (! $row['works']) {
+                $week[$iso] = null;
+
+                continue;
+            }
+            $week[$iso] = [$row['opens_at'] ?? $week[$iso][0] ?? '09:00', $row['closes_at'] ?? $week[$iso][1] ?? '21:00'];
+        }
+
+        return $this->week = $week;
+    }
+
+    /** Сброс после правки таблицы дней. */
+    public static function forgetWeek(): void
+    {
+        Cache::forget(self::WEEK_CACHE_KEY);
+    }
+
+    /** @return array<int, array{works: bool, opens_at: ?string, closes_at: ?string}> */
+    private function overrides(): array
+    {
+        try {
+            return Cache::remember(self::WEEK_CACHE_KEY, 300, fn () => PickupDeskDay::query()->get()
+                ->mapWithKeys(fn (PickupDeskDay $d) => [(int) $d->iso_weekday => [
+                    'works' => (bool) $d->works,
+                    'opens_at' => PickupDeskDay::hm($d->opens_at),
+                    'closes_at' => PickupDeskDay::hm($d->closes_at),
+                ]])->all());
+        } catch (\Throwable) {
+            return []; // таблицы ещё нет или БД недоступна — работаем по конфигу
+        }
+    }
 
     public function timezone(): string
     {
@@ -37,7 +97,7 @@ class WarehouseSchedule
             return null;
         }
 
-        $hours = config("warehouse.special_hours.$key") ?? config('warehouse.week.'.$day->isoWeekday());
+        $hours = config("warehouse.special_hours.$key") ?? $this->week()[$day->isoWeekday()];
         if (! is_array($hours) || count($hours) !== 2) {
             return null;
         }
@@ -194,7 +254,7 @@ class WarehouseSchedule
         $groups = [];
 
         foreach ($names as $iso => $name) {
-            $hours = config("warehouse.week.$iso");
+            $hours = $this->week()[$iso];
             if (! is_array($hours)) {
                 continue;
             }

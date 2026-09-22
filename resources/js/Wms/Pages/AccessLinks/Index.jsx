@@ -171,14 +171,21 @@ export default function AccessLinksIndex() {
                             {journal[link.id] && !journal[link.id].loading && (
                                 <Box borderTopWidth="1px" pt="2">
                                     <HStack justify="space-between" mb="1">
-                                        <Text fontSize="sm" fontWeight="600">Выдачи за {journal[link.id].days} дн.: {journal[link.id].rows.length}</Text>
+                                        <Text fontSize="sm" fontWeight="600">Выдачи за {journal[link.id].days} дн.: {journal[link.id].rows.filter((r) => r.kind !== 'pause').length}</Text>
                                         <HStack gap="1">
                                             {[7, 30, 90].map((d) => <Button key={d} size="xs" variant={journal[link.id].days === d ? 'solid' : 'ghost'} onClick={() => loadJournal(link, d)}>{d} дн.</Button>)}
                                         </HStack>
                                     </HStack>
                                     {journal[link.id].rows.length === 0 && <Text fontSize="sm" color="fg.muted">Выдач с этого телефона не было.</Text>}
                                     <VStack align="stretch" gap="1">
-                                        {journal[link.id].rows.map((h) => (
+                                        {journal[link.id].rows.map((h) => h.kind === 'pause' ? (
+                                            <HStack key={h.id} fontSize="sm" gap="3" align="flex-start" color="fg.muted">
+                                                <Text flexShrink={0} w="88px">{timeText(h.issued_at)}</Text>
+                                                <Text lineClamp="1">
+                                                    Отошёл: {h.reason}, до {h.until}{h.ended_at ? ` · вернулся в ${h.ended_at}` : h.is_active ? ' · ещё не вернулся' : ''}
+                                                </Text>
+                                            </HStack>
+                                        ) : (
                                             <HStack key={h.id} justify="space-between" fontSize="sm" gap="3" opacity={h.is_cancelled ? 0.6 : 1} align="flex-start">
                                                 <Text color="fg.muted" flexShrink={0} w="88px">{timeText(h.issued_at)}</Text>
                                                 <Box flex="1" minW="0">

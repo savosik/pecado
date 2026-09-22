@@ -7,18 +7,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** Живая отлучка со стойки выдачи (pick-18): «отошёл на 20 минут, обед». */
+/** Живая отлучка со стойки выдачи (pick-18): «отошёл на 20 минут, обед» — стойка закрыта до срока. */
 class PickupDeskPause extends Model
 {
-    protected $fillable = ['staff_id', 'user_id', 'reason', 'started_at', 'until_at', 'ended_at'];
+    protected $fillable = ['user_id', 'reason', 'started_at', 'until_at', 'ended_at'];
 
     protected $casts = ['started_at' => 'datetime', 'until_at' => 'datetime', 'ended_at' => 'datetime'];
-
-    /** @return BelongsTo<PickupDeskStaff, $this> */
-    public function staff(): BelongsTo
-    {
-        return $this->belongsTo(PickupDeskStaff::class, 'staff_id');
-    }
 
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
@@ -30,5 +24,11 @@ class PickupDeskPause extends Model
     public function scopeActive(Builder $query, ?\DateTimeInterface $at = null): Builder
     {
         return $query->whereNull('ended_at')->where('until_at', '>', $at ?? now());
+    }
+
+    /** Фактический конец: «Вернулся» или истечение срока, что раньше. */
+    public function endsAt(): \Carbon\CarbonInterface
+    {
+        return $this->ended_at !== null && $this->ended_at->lt($this->until_at) ? $this->ended_at : $this->until_at;
     }
 }

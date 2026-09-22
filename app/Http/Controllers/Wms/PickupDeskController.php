@@ -2,27 +2,26 @@
 
 namespace App\Http\Controllers\Wms;
 
-use App\Models\Pickup\PickupDeskBreak;
+use App\Models\Pickup\PickupDeskDay;
 use App\Models\Pickup\PickupDeskPause;
-use App\Models\Pickup\PickupDeskStaff;
-use App\Models\User;
 use App\Services\Pickup\PickupDeskSchedule;
 use App\Services\Warehouse\WarehouseSchedule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Стойка выдачи самовывоза (pick-18): выдают ли сейчас, «Отойти»/«Вернулся» и график перерывов.
+ * Стойка выдачи самовывоза (pick-18): выдают ли сейчас, «Отойти»/«Вернулся» и график по дням недели.
  *
- * Статус и отлучки — JSON для экрана выдачи (телефон у стойки). График (смена и плановые перерывы)
- * ведёт начальник склада на отдельной странице; расчёт «когда выдача закрыта» — {@see PickupDeskSchedule}.
+ * Статус и отлучки — JSON для экрана выдачи (телефон у стойки). График — одна таблица «день недели →
+ * часы и перерывы», которую начальник склада правит прямо в ней; она же уходит курьеру и клиенту.
  */
 class PickupDeskController extends WmsController
 {
     public const REASONS = ['обед', 'почта', 'отгрузка', 'приёмка', 'другое'];
+
+    private const DAY_NAMES = [1 => 'Понедельник', 2 => 'Вторник', 3 => 'Среда', 4 => 'Четверг', 5 => 'Пятница', 6 => 'Суббота', 7 => 'Воскресенье'];
 
     public function __construct(
         private readonly PickupDeskSchedule $desk,
@@ -36,16 +35,15 @@ class PickupDeskController extends WmsController
         return response()->json(['desk' => $this->desk->summary(now())]);
     }
 
-    /** «Отойти»: кто, на сколько и зачем. Второй сотрудник смены при этом выдачу продолжает. */
+    /** «Отойти»: на сколько и зачем. Стойка закрыта до срока — это видят курьер и клиент. */
     public function pause(Request $request): JsonResponse
     {
         $this->ensureEnabled();
         $data = $request->validate([
-            'staff_id' => ['nullable', 'integer', Rule::exists('pickup_desk_staff', 'id')->where('active', true)],
             'minutes' => ['required_without:until_close', 'nullable', 'integer', 'min:5', 'max:720'],
             'until_close' => ['nullable', 'boolean'],
             'reason' => ['required', 'string', 'max:60'],
-        ], [], ['staff_id' => 'сотрудник', 'minutes' => 'минуты', 'reason' => 'причина']);
+        ], [], ['minutes' => 'минуты', 'reason' => 'причина']);
 
         $now = now();
         $until = ! empty($data['until_close'])
@@ -56,38 +54,28 @@ class PickupDeskController extends WmsController
             return response()->json(['message' => 'Склад уже закрыт — отмечать отлучку не нужно'], 422);
         }
 
-        // Повторное «Отойти» того же человека переписывает срок, а не плодит записи.
-        PickupDeskPause::query()->active($now)
-            ->when(isset($data['staff_id']), fn ($q) => $q->where('staff_id', $data['staff_id']), fn ($q) => $q->whereNull('staff_id'))
-            ->update(['ended_at' => $now]);
+        // Повторное «Отойти» переписывает срок, а не плодит записи.
+        PickupDeskPause::query()->active($now)->update(['ended_at' => $now]);
 
         $pause = PickupDeskPause::create([
-            'staff_id' => $data['staff_id'] ?? null,
             'user_id' => $this->wmsActor($request)->id,
             'reason' => mb_strtolower(trim($data['reason'])),
             'started_at' => $now,
             'until_at' => $until,
         ]);
 
-        $summary = $this->desk->summary($now);
-        $message = $summary['state'] === PickupDeskSchedule::STATE_BREAK
-            ? 'Выдача закрыта до '.$pause->until_at->format('H:i').' — курьеры это видят'
-            : 'Отмечено. На стойке остаётся коллега, выдача продолжается';
-
-        return response()->json(['ok' => true, 'message' => $message, 'desk' => $summary]);
+        return response()->json([
+            'ok' => true,
+            'message' => 'Выдача закрыта до '.$pause->until_at->format('H:i').' — курьеры это видят',
+            'desk' => $this->desk->summary($now),
+        ]);
     }
 
-    /** «Вернулся»: гасит отлучку (свою или указанную). */
-    public function resume(Request $request): JsonResponse
+    /** «Вернулся»: гасит действующую отлучку. */
+    public function resume(): JsonResponse
     {
         $this->ensureEnabled();
-        $data = $request->validate(['pause_id' => ['nullable', 'integer', 'exists:pickup_desk_pauses,id']]);
-
-        $query = PickupDeskPause::query()->active();
-        if (isset($data['pause_id'])) {
-            $query->whereKey($data['pause_id']);
-        }
-        $ended = $query->update(['ended_at' => now()]);
+        $ended = PickupDeskPause::query()->active()->update(['ended_at' => now()]);
 
         return response()->json([
             'ok' => true,
@@ -96,7 +84,7 @@ class PickupDeskController extends WmsController
         ]);
     }
 
-    // ---- график: смена и плановые перерывы (начальник склада)
+    // ---- график: одна таблица по дням недели (начальник склада)
 
     public function schedule(): Response
     {
@@ -105,132 +93,82 @@ class PickupDeskController extends WmsController
         return Inertia::render('Wms/Pages/Pickups/Schedule', $this->schedulePayload());
     }
 
-    public function storeStaff(Request $request): JsonResponse
+    /** Правка строки дня прямо в таблице: работает ли, часы, перерывы. */
+    public function updateDay(Request $request, int $iso): JsonResponse
     {
         $this->ensureEnabled();
-        $data = $this->validateStaff($request);
-        $data['sort_order'] = (int) PickupDeskStaff::query()->max('sort_order') + 1;
-        PickupDeskStaff::create($data);
+        abort_unless($iso >= 1 && $iso <= 7, 404);
 
-        return response()->json(['ok' => true, 'message' => 'Сотрудник добавлен в смену', ...$this->schedulePayload()]);
-    }
-
-    public function updateStaff(Request $request, PickupDeskStaff $staff): JsonResponse
-    {
-        $this->ensureEnabled();
-        $staff->update($this->validateStaff($request));
-
-        return response()->json(['ok' => true, 'message' => 'Сохранено', ...$this->schedulePayload()]);
-    }
-
-    public function destroyStaff(PickupDeskStaff $staff): JsonResponse
-    {
-        $this->ensureEnabled();
-        $staff->delete();
-
-        return response()->json(['ok' => true, 'message' => 'Сотрудник убран из смены', ...$this->schedulePayload()]);
-    }
-
-    public function storeBreak(Request $request, PickupDeskStaff $staff): JsonResponse
-    {
-        $this->ensureEnabled();
-        $staff->breaks()->create($this->validateBreak($request));
-
-        return response()->json(['ok' => true, 'message' => 'Перерыв добавлен', ...$this->schedulePayload()]);
-    }
-
-    public function updateBreak(Request $request, PickupDeskBreak $break): JsonResponse
-    {
-        $this->ensureEnabled();
-        $break->update($this->validateBreak($request));
-
-        return response()->json(['ok' => true, 'message' => 'Сохранено', ...$this->schedulePayload()]);
-    }
-
-    public function destroyBreak(PickupDeskBreak $break): JsonResponse
-    {
-        $this->ensureEnabled();
-        $break->delete();
-
-        return response()->json(['ok' => true, 'message' => 'Перерыв удалён', ...$this->schedulePayload()]);
-    }
-
-    /** @return array<string, mixed> */
-    private function validateStaff(Request $request): array
-    {
-        return $request->validate([
-            'name' => ['required', 'string', 'max:120'],
-            'user_id' => ['nullable', 'integer', 'exists:users,id'],
-            'weekdays' => ['required', 'array', 'min:1'],
-            'weekdays.*' => ['integer', 'between:1,7'],
-            'active' => ['nullable', 'boolean'],
-        ], [], ['name' => 'имя', 'user_id' => 'учётка', 'weekdays' => 'дни недели']);
-    }
-
-    /** @return array<string, mixed> */
-    private function validateBreak(Request $request): array
-    {
         $data = $request->validate([
-            'weekdays' => ['required', 'array', 'min:1'],
-            'weekdays.*' => ['integer', 'between:1,7'],
-            'starts_at' => ['required', 'date_format:H:i'],
-            'ends_at' => ['required', 'date_format:H:i', 'after:starts_at'],
-            'label' => ['required', 'string', 'max:60'],
-            'active' => ['nullable', 'boolean'],
-        ], ['ends_at.after' => 'Конец перерыва должен быть позже начала'], [
-            'weekdays' => 'дни недели', 'starts_at' => 'начало', 'ends_at' => 'конец', 'label' => 'подпись',
+            'works' => ['required', 'boolean'],
+            'opens_at' => ['required_if:works,true', 'nullable', 'date_format:H:i'],
+            'closes_at' => ['required_if:works,true', 'nullable', 'date_format:H:i', 'after:opens_at'],
+            'breaks' => ['present', 'array', 'max:10'],
+            'breaks.*.from' => ['required', 'date_format:H:i'],
+            'breaks.*.to' => ['required', 'date_format:H:i'],
+            'breaks.*.label' => ['nullable', 'string', 'max:60'],
+        ], [
+            'closes_at.after' => 'Закрытие должно быть позже открытия',
+        ], [
+            'opens_at' => 'открытие', 'closes_at' => 'закрытие', 'breaks' => 'перерывы',
+            'breaks.*.from' => 'начало перерыва', 'breaks.*.to' => 'конец перерыва', 'breaks.*.label' => 'подпись',
         ]);
-        $data['label'] = mb_strtolower(trim($data['label']));
 
-        return $data;
+        $breaks = [];
+        foreach ($data['breaks'] as $i => $b) {
+            if ($b['to'] <= $b['from']) {
+                return response()->json(['message' => 'Конец перерыва должен быть позже начала', 'errors' => ["breaks.$i.to" => ['Конец перерыва должен быть позже начала']]], 422);
+            }
+            if ($data['works'] && ($b['from'] < $data['opens_at'] || $b['to'] > $data['closes_at'])) {
+                return response()->json(['message' => 'Перерыв выходит за часы выдачи', 'errors' => ["breaks.$i.from" => ['Перерыв выходит за часы выдачи']]], 422);
+            }
+            $breaks[] = ['from' => $b['from'], 'to' => $b['to'], 'label' => mb_strtolower(trim((string) ($b['label'] ?? '')))];
+        }
+        usort($breaks, fn (array $a, array $b) => strcmp($a['from'], $b['from']));
+
+        PickupDeskDay::query()->updateOrCreate(['iso_weekday' => $iso], [
+            'works' => $data['works'],
+            'opens_at' => $data['works'] ? $data['opens_at'] : null,
+            'closes_at' => $data['works'] ? $data['closes_at'] : null,
+            'breaks' => $breaks,
+        ]);
+        WarehouseSchedule::forgetWeek();
+
+        return response()->json(['ok' => true, 'message' => self::DAY_NAMES[$iso].': сохранено', ...$this->schedulePayload()]);
     }
 
     /** @return array<string, mixed> */
     private function schedulePayload(): array
     {
-        $names = [1 => 'Понедельник', 2 => 'Вторник', 3 => 'Среда', 4 => 'Четверг', 5 => 'Пятница', 6 => 'Суббота', 7 => 'Воскресенье'];
-        $monday = now($this->schedule->timezone())->startOfWeek();
+        // Свежий сервис: часы кешируются на запрос, а мы их только что поменяли.
+        $schedule = new WarehouseSchedule;
+        $desk = new PickupDeskSchedule($schedule);
+        $monday = now($schedule->timezone())->startOfWeek();
+        $rows = PickupDeskDay::query()->get()->keyBy('iso_weekday');
 
-        // Недельный предпросмотр: когда по плану на стойке никого — то, что увидят курьер и клиент.
-        $preview = [];
+        $days = [];
         for ($iso = 1; $iso <= 7; $iso++) {
             $day = $monday->copy()->addDays($iso - 1);
-            $hours = $this->schedule->hoursFor($day);
-            $preview[] = [
+            $hours = $schedule->hoursFor($day);
+            $row = $rows->get($iso);
+            $days[] = [
                 'iso' => $iso,
-                'name' => $names[$iso],
+                'name' => self::DAY_NAMES[$iso],
                 'works' => $hours !== null,
-                'hours' => $hours ? $hours[0]->format('H:i').'–'.$hours[1]->format('H:i') : null,
-                'roster' => $this->desk->roster($day)->pluck('name')->values()->all(),
+                'opens_at' => $hours ? $hours[0]->format('H:i') : (PickupDeskDay::hm($row?->opens_at) ?? config("warehouse.week.$iso.0") ?? '09:00'),
+                'closes_at' => $hours ? $hours[1]->format('H:i') : (PickupDeskDay::hm($row?->closes_at) ?? config("warehouse.week.$iso.1") ?? '21:00'),
+                'breaks' => $desk->plannedBreaks($iso),
+                // Итог, как его увидят курьер и клиент: перерывы обрезаны часами выдачи.
                 'closed' => array_map(fn (array $w) => [
                     'from' => $w['from']->format('H:i'), 'to' => $w['to']->format('H:i'), 'label' => $w['label'],
-                ], $hours ? $this->desk->closedWindows($day, false) : []),
+                ], $hours ? $desk->closedWindows($day, false) : []),
             ];
         }
 
         return [
-            'staff' => PickupDeskStaff::query()->with(['breaks', 'user:id,name'])->orderBy('sort_order')->orderBy('id')->get()
-                ->map(fn (PickupDeskStaff $s) => [
-                    'id' => $s->id,
-                    'name' => $s->name,
-                    'user_id' => $s->user_id,
-                    'user_name' => $s->user?->name,
-                    'weekdays' => array_map('intval', (array) $s->weekdays),
-                    'active' => $s->active,
-                    'breaks' => $s->breaks->map(fn (PickupDeskBreak $b) => [
-                        'id' => $b->id,
-                        'weekdays' => array_map('intval', (array) $b->weekdays),
-                        'starts_at' => PickupDeskBreak::hm($b->starts_at),
-                        'ends_at' => PickupDeskBreak::hm($b->ends_at),
-                        'label' => $b->label,
-                        'active' => $b->active,
-                    ])->values()->all(),
-                ])->values()->all(),
-            'preview' => $preview,
-            'weekText' => $this->desk->weekText(),
-            // Учётки склада — чтобы «Отойти» на экране выдачи знало, кто нажал.
-            'users' => User::query()->role(['storekeeper', 'warehouse-head', 'pickup-operator'])
-                ->orderBy('name')->get(['id', 'name'])->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name])->all(),
+            'days' => $days,
+            'weekText' => $desk->weekText(),
+            'hoursText' => $schedule->weekText(),
             'reasons' => self::REASONS,
         ];
     }

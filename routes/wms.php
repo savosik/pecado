@@ -114,12 +114,7 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
         });
         Route::middleware('permission:wms-pickups.schedule')->prefix('schedule')->name('schedule.')->group(function () {
             Route::get('/', [PickupDeskController::class, 'schedule'])->name('index');
-            Route::post('/staff', [PickupDeskController::class, 'storeStaff'])->name('staff.store');
-            Route::put('/staff/{staff}', [PickupDeskController::class, 'updateStaff'])->name('staff.update');
-            Route::delete('/staff/{staff}', [PickupDeskController::class, 'destroyStaff'])->name('staff.destroy');
-            Route::post('/staff/{staff}/breaks', [PickupDeskController::class, 'storeBreak'])->name('breaks.store');
-            Route::put('/breaks/{break}', [PickupDeskController::class, 'updateBreak'])->name('breaks.update');
-            Route::delete('/breaks/{break}', [PickupDeskController::class, 'destroyBreak'])->name('breaks.destroy');
+            Route::put('/days/{iso}', [PickupDeskController::class, 'updateDay'])->whereNumber('iso')->name('days.update');
         });
 
         Route::middleware('permission:wms-pickups.issue')->group(function () {

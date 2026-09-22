@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { Box, Dialog, HStack, Input, Portal, Text, VStack } from '@chakra-ui/react';
 import { LuCalendarClock, LuCoffee, LuDoorOpen, LuUndo2 } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
@@ -25,20 +25,17 @@ const STATE_STYLE = {
  * Если на смене двое, отлучка одного выдачу не закрывает: об этом говорит текст под статусом.
  */
 export default function DeskBar({ desk, canIssue, onChange }) {
-    const { auth } = usePage().props;
     const { can } = usePermission();
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
-    const [form, setForm] = useState({ staff_id: '', minutes: 20, until_close: false, reason: 'обед', custom: '' });
+    const [form, setForm] = useState({ minutes: 20, until_close: false, reason: 'обед', custom: '' });
 
     if (!desk) return null;
     const style = STATE_STYLE[desk.state] || STATE_STYLE.closed;
-    const roster = desk.roster || [];
     const pauses = desk.pauses || [];
-    const myStaff = roster.find((s) => s.user_id && s.user_id === auth?.user?.id);
 
     const openDialog = () => {
-        setForm({ staff_id: String(myStaff?.id ?? (roster.length === 1 ? roster[0].id : '')), minutes: 20, until_close: false, reason: 'обед', custom: '' });
+        setForm({ minutes: 20, until_close: false, reason: 'обед', custom: '' });
         setOpen(true);
     };
 
@@ -60,10 +57,7 @@ export default function DeskBar({ desk, canIssue, onChange }) {
     const submitPause = async () => {
         const reason = form.reason === 'другое' ? form.custom.trim() : form.reason;
         if (!reason) { toaster.create({ description: 'Укажите причину', type: 'info' }); return; }
-        // Со смены из двоих без выбора человека отлучка закрыла бы стойку целиком — не даём промахнуться.
-        if (roster.length > 0 && !form.staff_id) { toaster.create({ description: 'Выберите, кто отходит', type: 'info' }); return; }
         const ok = await post('/wms/pickups/desk/pause', {
-            staff_id: form.staff_id ? Number(form.staff_id) : null,
             minutes: form.until_close ? null : form.minutes,
             until_close: form.until_close,
             reason,
@@ -71,7 +65,7 @@ export default function DeskBar({ desk, canIssue, onChange }) {
         if (ok) setOpen(false);
     };
 
-    const resume = (pauseId) => post('/wms/pickups/desk/resume', { pause_id: pauseId ?? null });
+    const resume = () => post('/wms/pickups/desk/resume', {});
 
     return (
         <Box p="3" bg={style.bg} borderRadius="lg" borderWidth="1px" borderColor={style.border}>
@@ -85,18 +79,10 @@ export default function DeskBar({ desk, canIssue, onChange }) {
                         {desk.today_text}
                         {desk.state === 'open' && desk.next_break ? `. Следующий перерыв ${desk.next_break}` : ''}
                     </Text>
-                    {roster.length > 0 && (
-                        <Text fontSize="xs" color="fg.muted" mt="1">
-                            На смене: {roster.map((s) => s.name).join(', ')}
-                            {roster.length > 1 ? ' — перерыв одного выдачу не закрывает' : ''}
-                        </Text>
-                    )}
                     {pauses.map((p) => (
                         <HStack key={p.id} fontSize="sm" mt="1" gap="2" flexWrap="wrap">
-                            <Text>
-                                {p.staff_name ? `${p.staff_name}: ${p.reason}` : `Стойка закрыта: ${p.reason}`} до {p.until}
-                            </Text>
-                            {canIssue && <Button size="xs" variant="outline" loading={busy} onClick={() => resume(p.id)}><LuUndo2 /> Вернулся</Button>}
+                            <Text>Отошёл{p.user_name ? ` ${p.user_name}` : ''}: {p.reason}, до {p.until}</Text>
+                            {canIssue && <Button size="xs" variant="outline" loading={busy} onClick={resume}><LuUndo2 /> Вернулся</Button>}
                         </HStack>
                     ))}
                 </Box>
@@ -120,19 +106,7 @@ export default function DeskBar({ desk, canIssue, onChange }) {
                             <Dialog.Header><Dialog.Title>Отойти со стойки</Dialog.Title></Dialog.Header>
                             <Dialog.Body>
                                 <VStack align="stretch" gap="4">
-                                    {roster.length > 1 && (
-                                        <Field label="Кто отходит">
-                                            <HStack gap="2" flexWrap="wrap">
-                                                {roster.map((s) => (
-                                                    <Button key={s.id} size="sm" variant={String(s.id) === form.staff_id ? 'solid' : 'outline'}
-                                                        onClick={() => setForm((f) => ({ ...f, staff_id: String(s.id) }))}>{s.name}</Button>
-                                                ))}
-                                            </HStack>
-                                        </Field>
-                                    )}
-                                    {roster.length === 0 && (
-                                        <Text fontSize="sm" color="fg.muted">Смена на сегодня не заведена — отлучка закроет стойку целиком.</Text>
-                                    )}
+                                    <Text fontSize="sm" color="fg.muted">Курьер и клиент увидят «Перерыв до …» и не поедут впустую. Вернулись раньше — нажмите «Вернулся».</Text>
                                     <Field label="На сколько">
                                         <HStack gap="2" flexWrap="wrap">
                                             {DURATIONS.map((m) => (
