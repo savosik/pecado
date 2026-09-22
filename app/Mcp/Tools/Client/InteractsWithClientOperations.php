@@ -103,8 +103,16 @@ trait InteractsWithClientOperations
 
         // Чат-помощник: страницы не больше 25 строк — модель попросит следующую,
         // если клиенту нужно больше; ярлыки просят по 100, это для CLI-агентов.
-        if (\App\Support\Client\ClientApiSource::isAssistant() && isset($args['per_page']) && (int) $args['per_page'] > \App\Support\Client\AssistantPayload::PER_PAGE) {
-            $args['per_page'] = \App\Support\Client\AssistantPayload::PER_PAGE;
+        if (\App\Support\Client\ClientApiSource::isAssistant()) {
+            if (isset($args['per_page']) && (int) $args['per_page'] > \App\Support\Client\AssistantPayload::PER_PAGE) {
+                $args['per_page'] = \App\Support\Client\AssistantPayload::PER_PAGE;
+            }
+
+            // Ссылки на файлы из чата человек открывает не сразу: максимум срока,
+            // а не умолчание для CLI-агента, который скачивает тут же.
+            if (str_ends_with($operationId, '.link') && ! isset($args['ttl'])) {
+                $args['ttl'] = \App\Support\Client\AssistantPayload::LINK_TTL_MINUTES;
+            }
         }
 
         try {

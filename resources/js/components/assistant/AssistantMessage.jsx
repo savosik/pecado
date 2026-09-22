@@ -2,6 +2,33 @@ import { Box, HStack, Text } from '@chakra-ui/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { LuCircleAlert, LuCircleCheck, LuCircleX, LuPaperclip } from 'react-icons/lu';
+import { useProductQuickView } from '@/contexts/ProductQuickViewContext';
+
+const PRODUCT_LINK = /^(?:https?:\/\/[^/]+)?\/products\/([^/?#]+)\/?$/;
+
+/**
+ * Ссылка в ответе помощника: карточка товара открывается быстрым просмотром
+ * поверх чата, остальное — в новой вкладке (подписанные ссылки на файлы,
+ * разделы кабинета).
+ */
+function ChatLink({ href, children, openQuickView }) {
+    const match = typeof href === 'string' ? href.match(PRODUCT_LINK) : null;
+
+    if (match) {
+        const slug = decodeURIComponent(match[1]);
+        return (
+            <a
+                href={href}
+                onClick={(e) => { e.preventDefault(); openQuickView(slug); }}
+                title="Быстрый просмотр товара"
+            >
+                {children}
+            </a>
+        );
+    }
+
+    return <a href={href} target="_blank" rel="noreferrer">{children}</a>;
+}
 
 const TOOL_LABELS = {
     'client-catalog': 'смотрю доступные разделы',
@@ -48,6 +75,11 @@ function ToolTrail({ tools }) {
  * Служебные ходы (подтверждение, отказ) — тонкой строкой по центру.
  */
 export default function AssistantMessage({ message, streaming = false }) {
+    const { openQuickView } = useProductQuickView();
+    const components = {
+        a: ({ href, children }) => <ChatLink href={href} openQuickView={openQuickView}>{children}</ChatLink>,
+    };
+
     if (message.kind === 'confirmation') {
         const approved = message.text === 'Подтверждено';
 
@@ -86,7 +118,7 @@ export default function AssistantMessage({ message, streaming = false }) {
                         <Text>{message.text}</Text>
                     </HStack>
                 ) : message.text ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{message.text}</ReactMarkdown>
                 ) : (
                     <Text color="fg.subtle">{streaming ? 'Печатает…' : '…'}</Text>
                 )}

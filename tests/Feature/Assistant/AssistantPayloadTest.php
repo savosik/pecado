@@ -58,6 +58,32 @@ class AssistantPayloadTest extends AssistantTestCase
     }
 
     #[Test]
+    public function устаревшая_подписанная_ссылка_в_браузере_ведёт_в_кабинет_с_объяснением(): void
+    {
+        $expired = \Illuminate\Support\Facades\URL::temporarySignedRoute('api.client.v1.files.document', now()->subMinute(), ['document' => 1, 'user' => $this->client->id]);
+
+        $this->actingAs($this->client)
+            ->get($expired, ['Accept' => 'text/html'])
+            ->assertRedirect('/cabinet/documents')
+            ->assertSessionHas('error');
+
+        $payment = \Illuminate\Support\Facades\URL::temporarySignedRoute('api.client.v1.files.payment-order', now()->subMinute(), ['company_id' => 1, 'user' => $this->client->id]);
+        $this->actingAs($this->client)->get($payment, ['Accept' => 'text/html'])->assertRedirect('/cabinet/payment-orders');
+
+        // Агенту по API — по-прежнему JSON 403.
+        $this->getJson($expired)->assertStatus(403);
+    }
+
+    #[Test]
+    public function промпт_велит_давать_ссылки_на_товары_и_постоянные_ссылки_на_документы(): void
+    {
+        $text = SystemPrompt::instructions();
+
+        $this->assertStringContainsString('[название](/products/{slug})', $text);
+        $this->assertStringContainsString('/cabinet/documents/{id}/download', $text);
+    }
+
+    #[Test]
     public function список_операций_в_промпте_покрывает_реестр_и_отмечает_закрытые(): void
     {
         $prompt = app(SystemPrompt::class);

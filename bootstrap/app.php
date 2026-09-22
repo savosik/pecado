@@ -74,6 +74,18 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
+            // Подписанная ссылка на файл из чата-помощника устарела, а человек
+            // открыл её в браузере: вместо JSON «Доступ запрещён» — в раздел
+            // кабинета с объяснением, где документ лежит постоянно.
+            if ($response->getStatusCode() === 403
+                && $request->is('api/client/v1/files/*')
+                && ! $request->expectsJson()
+                && $request->user() !== null) {
+                $target = str_contains($request->path(), 'payment-orders') ? '/cabinet/payment-orders' : '/cabinet/documents';
+
+                return redirect($target)->with('error', 'Ссылка из чата устарела: она действует час. Документ можно скачать здесь или попросить помощника дать новую ссылку.');
+            }
+
             if (in_array($response->getStatusCode(), [500, 503, 404, 403])) {
                 // API-маршруты и AJAX-запросы — возвращаем JSON, а не Inertia-страницу.
                 // Inertia-запросы тоже шлют Accept: application/json, поэтому отличаем
