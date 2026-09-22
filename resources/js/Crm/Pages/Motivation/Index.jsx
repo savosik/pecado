@@ -133,11 +133,9 @@ export default function MotivationIndex(props) {
 
                         {calc.frozen && (
                             <Box fontSize="sm" color="fg.muted">
-                                Месяц утверждён: числа читаются из снимка расчёта и не меняются. Расчётный лист — в разделе «Моя зарплата».
+                                Месяц утверждён: числа читаются из снимка расчёта и не меняются. Подробности — в <Link href={`/crm/motivation/payslip?month=${data.month}`}><u>расчётном листе</u></Link>.
                             </Box>
                         )}
-
-                        {calc.parallel && <ParallelBlock parallel={calc.parallel} />}
                     </>
                 )}
             </VStack>

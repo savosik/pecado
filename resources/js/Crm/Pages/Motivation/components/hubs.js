@@ -41,11 +41,12 @@ export const HUBS = {
         ],
     },
     focus: {
-        // Свой пункт меню: товары, а не клиенты. Первая вкладка — работнику,
-        // вторая — руководителю (по праву edit).
+        // Свой пункт меню: товары, а не клиенты. Две вкладки — работнику
+        // (что предлагать и кому), третья — руководителю (по праву edit).
         title: 'Фокус-товары',
         tabs: [
-            { key: 'mine', label: 'Кому предложить', path: '/crm/motivation/focus' },
+            { key: 'what', label: 'Что предложить', path: '/crm/motivation/focus' },
+            { key: 'whom', label: 'Кому предложить', path: '/crm/motivation/focus/partners' },
             { key: 'list', label: 'Фокус-перечень', path: '/crm/motivation/focus-list', permission: 'edit-only' },
         ],
     },

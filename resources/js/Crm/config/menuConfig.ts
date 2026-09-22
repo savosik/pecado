@@ -224,8 +224,8 @@ export const menuConfig: MenuGroup[] = [
             { label: "Мои клиенты", icon: LuUsers, path: "/crm/motivation/base", permission: "crm-motivation.view", match: ["/crm/motivation/rhythm", "/crm/motivation/debts", "/crm/motivation/wake", "/crm/motivation/new-partners", "/crm/motivation/packages"] },
             { label: "Расчётный лист", icon: LuReceipt, path: "/crm/motivation/payslip", permission: "crm-motivation.view", match: ["/crm/motivation/plan", "/crm/motivation/quarter"] },
             // Фокус-товары — отдельный пункт: товары, а не клиенты. Внутри две вкладки:
-            // «Кому предложить» работнику и «Фокус-перечень» руководителю.
-            { label: "Фокус-товары", icon: LuStar, path: "/crm/motivation/focus", permission: "crm-motivation.view", match: ["/crm/motivation/focus-list"] },
+            // «Что предложить» и «Кому предложить» работнику, «Фокус-перечень» руководителю.
+            { label: "Фокус-товары", icon: LuStar, path: "/crm/motivation/focus", permission: "crm-motivation.view", match: ["/crm/motivation/focus/partners", "/crm/motivation/focus-list"] },
             { label: "Параметры и планы", icon: LuSlidersHorizontal, path: "/crm/motivation/settings", permission: "crm-motivation.edit", match: ["/crm/motivation/plans"] },
             { label: "Ведомость", icon: LuClipboardCheck, path: "/crm/motivation/team", permission: "crm-motivation.edit", match: ["/crm/motivation/approval", "/crm/motivation/quarter/admin", "/crm/motivation/forecast"] },
             { label: "Клиенты отдела", icon: LuPackage, path: "/crm/motivation/pool/admin", permission: "crm-motivation.edit", match: ["/crm/motivation/health"] },

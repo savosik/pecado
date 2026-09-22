@@ -316,7 +316,12 @@ class MotivationPlanTest extends TestCase
     {
         $this->evenShipments(100_000);
 
-        // Планы третьего квартала заведомо ниже факта.
+        // Планы третьего квартала заведомо ниже факта и поставлены по этой же методике.
+        MotivationPlanOrder::factory()->create([
+            'quarter_start' => '2026-07-01',
+            'personal_manager_id' => $this->manager->id,
+            'status' => MotivationPlanOrder::STATUS_APPROVED,
+        ]);
         foreach (['2026-07-01', '2026-08-01', '2026-09-01'] as $month) {
             $this->plan($month, 1_000_000);
         }
@@ -328,6 +333,22 @@ class MotivationPlanTest extends TestCase
             round($result['median_per_day'] * 22 + $result['overperformance_carry'] / 3, 2),
             $result['values']['2026-10-01'],
         );
+    }
+
+    #[Test]
+    #[TestDox('Перевыполнение плана прежней методики в новый план не переносится')]
+    public function overperformance_of_an_incomparable_quarter_is_not_carried(): void
+    {
+        $this->evenShipments(100_000);
+
+        foreach (['2026-07-01', '2026-08-01', '2026-09-01'] as $month) {
+            $this->plan($month, 1_000_000);   // прежняя методика, факт выше плана
+        }
+
+        $result = $this->calculate();
+
+        $this->assertFalse($result['previous_quarter_comparable']);
+        $this->assertSame(0.0, $result['overperformance_carry']);
     }
 
     #[Test]

@@ -116,6 +116,10 @@ export default function SalaryIndex(props) {
                 </Alert>
             )}
 
+            {data.legacy_notice && (
+                <Alert status="warning" title="Оплата идёт по новой системе">{data.legacy_notice}</Alert>
+            )}
+
             {calc && (
                 <VStack align="stretch" gap={5}>
                     <EarningsHero calculation={calc} monthLabel={data.month_label} refreshing={refreshing} />

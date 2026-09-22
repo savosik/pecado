@@ -54,13 +54,45 @@ class PayslipService
         $inputs = PayrollInputs::fromArray((array) $calculation->inputs);
         $motivation = $inputs->motivation;
 
-        $rateK1 = (float) (EffectiveParams::fromArray((array) $calculation->params_effective)->for('motivation_variable')['rate_k1_per_day'] ?? 0);
+        $variableParams = EffectiveParams::fromArray((array) $calculation->params_effective)->for('motivation_variable');
+        $rateK1 = (float) ($variableParams['rate_k1_per_day'] ?? 0);
+        // Ставки П1/П2 и итог по показателям — чтобы у каждой отгрузки было видно «выручка × ставка = начислено».
+        $rates = ['base' => (float) ($variableParams['rate_p1'] ?? 0), 'new' => (float) ($variableParams['rate_p2'] ?? 0)];
+        $variable = null;
+        foreach ((array) data_get($calculation->breakdown, 'components', []) as $component) {
+            if (is_array($component) && ($component['key'] ?? null) === 'motivation_variable') {
+                $variable = $component;
+            }
+        }
         $documents = $motivation->documents ?? [];
+        $threshold = isset($variable['meta']['threshold']) ? (float) $variable['meta']['threshold'] : null;
         $groups = ['base' => [], 'new' => []];
 
-        foreach ($documents as $document) {
+        // П1 платится только с отгрузок сверх порога: документы базы идут по дате,
+        // накопительно, и в лист попадает только та их часть, что легла выше порога
+        // (документ на границе — частично). Ниже порога вознаграждения нет — и строк нет.
+        $ordered = array_values(array_filter($documents, 'is_array'));
+        usort($ordered, fn (array $a, array $b): int => [(string) ($a['date'] ?? ''), (string) ($a['number'] ?? '')] <=> [(string) ($b['date'] ?? ''), (string) ($b['number'] ?? '')]);
+        $cumulative = 0.0;
+        $baseTotal = 0.0;
+
+        foreach ($ordered as $document) {
             $group = ($document['group'] ?? 'base') === 'new' ? 'new' : 'base';
             $partnerId = (int) ($document['partner_id'] ?? 0);
+            $amount = (float) ($document['amount'] ?? 0);
+            $counted = $amount;
+
+            if ($group === 'base') {
+                $baseTotal += $amount;
+                if ($threshold !== null) {
+                    $before = $cumulative;
+                    $cumulative += $amount;
+                    $counted = max(0.0, min($amount, $cumulative - max($threshold, $before)));
+                    if ($counted <= 0.0) {
+                        continue;
+                    }
+                }
+            }
 
             $groups[$group][$partnerId] ??= [
                 'partner_id' => $partnerId,
@@ -68,22 +100,27 @@ class PayslipService
                 'amount' => 0.0,
                 'documents' => [],
             ];
-            $groups[$group][$partnerId]['amount'] += (float) ($document['amount'] ?? 0);
+            $groups[$group][$partnerId]['amount'] += $counted;
             $groups[$group][$partnerId]['documents'][] = [
                 'number' => (string) ($document['number'] ?? ''),
                 'date' => $document['date'] ?? null,
-                'amount' => (float) ($document['amount'] ?? 0),
+                'amount' => Money::round($counted),
+                // Документ на границе порога: в зачёт пошла часть.
+                'partial' => $counted < $amount ? Money::round($amount) : null,
             ];
         }
 
-        foreach ($groups as &$partners) {
+        foreach ($groups as $group => &$partners) {
             foreach ($partners as &$partner) {
                 $partner['amount'] = Money::round($partner['amount']);
+                $partner['accrued'] = Money::round($partner['amount'] * $rates[$group]);
             }
             unset($partner);
             usort($partners, fn (array $a, array $b): int => $b['amount'] <=> $a['amount']);
         }
         unset($partners);
+
+        $baseTotal = Money::round($baseTotal);
 
         return [
             'calculation' => [
@@ -107,6 +144,14 @@ class PayslipService
                 'base' => array_values($groups['base']),
                 'new' => array_values($groups['new']),
                 'documents_count' => count($documents),
+                'rates' => $rates,
+                // Справка под перечнем П1: план, порог, выполнено, сверх порога, начислено.
+                'base_plan' => isset($variable['meta']['plan']) ? (float) $variable['meta']['plan'] : null,
+                'base_threshold' => $threshold,
+                'base_total' => $baseTotal,
+                'base_over_threshold' => $threshold === null ? $baseTotal : Money::round(max(0.0, $baseTotal - $threshold)),
+                'base_accrued' => Money::round((float) ($variable['meta']['p1'] ?? 0)),
+                'new_accrued' => Money::round((float) ($variable['meta']['p2'] ?? 0)),
             ],
             'returns' => $motivation->returnRows ?? [],
             'overdue' => array_map(fn (array $row): array => $row + ['deduction' => Money::round((float) ($row['integral'] ?? 0) * $rateK1)], $motivation->overdueRows ?? []),

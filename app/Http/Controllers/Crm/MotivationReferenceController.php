@@ -33,7 +33,15 @@ class MotivationReferenceController extends CrmController
 
     public function focus(Request $request): Response
     {
-        return Inertia::render('Crm/Pages/Motivation/Focus', $this->payload($request, 'focus'));
+        return Inertia::render('Crm/Pages/Motivation/Focus', ['tab' => 'what'] + $this->payload($request, 'focus'));
+    }
+
+    /**
+     * Вторая вкладка того же экрана — кому из партнёров предложить перечень.
+     */
+    public function focusPartners(Request $request): Response
+    {
+        return Inertia::render('Crm/Pages/Motivation/Focus', ['tab' => 'whom'] + $this->payload($request, 'focus'));
     }
 
     public function focusData(Request $request): JsonResponse
