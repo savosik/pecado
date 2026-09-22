@@ -44,14 +44,14 @@ class PartnerListService
     public const WAKE_SILENT_DAYS = 90;
 
     /** Поднимать при изменении состава полей строки — сбрасывает кэш набора. */
-    private const DATASET_VERSION = 6;
+    private const DATASET_VERSION = 8;
 
     /** Сколько ключевых позиций показывать в «что брал». */
     private const TOP_PRODUCTS = 3;
 
     /** Колонки, по которым можно сортировать с сервера. */
     private const SORTABLE = [
-        'rate', 'usual_gain', 'current_gain', 'k1_deduction',
+        'rate', 'usual_gain', 'current_gain', 'k1_deduction', 'best_gain', 'last_visit_on', 'last_order_on', 'priority', 'remaining_gain',
         'name', 'usual_monthly', 'current_month', 'best_month', 'potential', 'your_gain',
         'assortment', 'last_purchase_on', 'silent_days', 'debt', 'shortfall', 'cost',
     ];
@@ -97,8 +97,9 @@ class PartnerListService
             default => $r['ever_bought'],   // рабочий список — те, кто покупал хоть раз
         }));
 
-        return $this->page($rows, $query, 'potential', 'desc', $month, $summary, $filter,
-            'Потенциал — разница между лучшим месяцем партнёра за два года и его закупкой в этом месяце. «Может дать» — потенциал по ставке П1.');
+        return $this->page($rows, $query, 'priority', 'desc', $month, $summary, $filter,
+            'Порядок по умолчанию — «где быстрее заработать»: сначала новые партнёры без зачёта за квартал (ближе к порогу — выше), '
+            .'затем новые с зачётом, затем остальные — по тому, сколько ещё могут принести в этом месяце: недобор до обычной закупки × ваша ставка.');
     }
 
     /**
@@ -290,11 +291,18 @@ class PartnerListService
         $assortment = $this->assortment($ids, $period);
         $debts = $this->debts($ids);
         $deductions = $this->deductions($managerId, $period);
+        // Активность: когда партнёр был на сайте и когда последний раз оформлял заказ.
+        $visits = \App\Models\User::query()->whereIn('id', $ids)->pluck('last_seen_at', 'id');
+        $orders = \App\Models\Order::query()->whereIn('user_id', $ids)->selectRaw('user_id, MAX(COALESCE(erp_created_at, created_at)) AS last_at')->groupBy('user_id')->pluck('last_at', 'user_id');
         $touches = $this->lastTouches($ids);
         $novelty = $this->novelty($ids, $period);
         $rateP1 = $this->rateP1($managerId, $period);
         $rateP2 = (float) ($this->motivationParams($managerId, $period)['rate_p2'] ?? config('motivation.default_parameters.rate_p2', 0));
         $dropThreshold = (int) config('crm.opportunities.drop_threshold_percent', 25) / 100;
+        // Порядок «где быстрее заработать»: новым нужен зачёт за квартал (премия отдела).
+        $qualification = (float) ($this->motivationParams($managerId, $period)['quarterly_qualification_amount']
+            ?? config('motivation.default_parameters.quarterly_qualification_amount', 0));
+        $quarter = $this->quarterAmounts($novelty, $period);
 
         $rows = [];
 
@@ -311,6 +319,11 @@ class PartnerListService
             $shortfall = Money::round(max(0.0, $usual - $current));
             $silentDays = $signal['days_since'] ?? null;
             $cycle = (int) ($signal['cycle_days'] ?? 0);
+            $isNew = in_array($id, $novelty, true);
+            $rate = $isNew ? $rateP2 : $rateP1;
+            // Сколько работник ещё может получить с партнёра в этом месяце: недобор до обычной закупки × ставка.
+            $remainingGain = Money::round($shortfall * $rate);
+            $toQualification = $isNew ? Money::round(max(0.0, $qualification - (float) ($quarter[$id] ?? 0))) : null;
 
             $rows[] = [
                 'id' => $id,
@@ -339,8 +352,19 @@ class PartnerListService
                 'abc' => $signal['abc'] ?? null,
                 'debt' => $debts[$id] ?? null,
                 'last_touch' => $touches[$id] ?? null,
-                'in_novelty' => in_array($id, $novelty, true),
+                'last_visit_on' => isset($visits[$id]) ? CarbonImmutable::parse((string) $visits[$id])->toDateString() : null,
+                'last_order_on' => isset($orders[$id]) ? CarbonImmutable::parse((string) $orders[$id])->toDateString() : null,
+                // Зарплата при лучшем месяце: лучший месяц × ставка.
+                'best_gain' => Money::round((float) $best['amount'] * (in_array($id, $novelty, true) ? $rateP2 : $rateP1)),
+                'in_novelty' => $isNew,
                 'ever_bought' => $everBought,
+                'remaining_gain' => $remainingGain,
+                'to_qualification' => $toQualification,
+                // Ключ порядка по умолчанию: новые без зачёта (ближе к порогу — выше), затем новые с зачётом,
+                // затем остальные — по тому, сколько ещё могут принести. Ступени разнесены на порядки.
+                'priority' => $isNew
+                    ? ($toQualification > 0 ? 2e12 - $toQualification : 1e12 + $remainingGain)
+                    : $remainingGain,
                 'flags' => [
                     'drop' => $usual > 0 && $current < $usual * (1 - $dropThreshold),
                     'stopped' => $usual > 0 && $current <= 0,

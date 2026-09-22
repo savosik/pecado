@@ -28,7 +28,9 @@ const COLLAPSED = 12;
  * Блок «сколько заработано» показывает сумму честно, без укрупнения:
  * при нынешних продажах собственных марок это сотни рублей в месяц.
  */
-export default function MotivationFocus({ month, month_label: monthLabel, manager, scope_options: scopeOptions, can_see_all: canSeeAll, data }) {
+export default function MotivationFocus({ tab = 'what', month, month_label: monthLabel, manager, scope_options: scopeOptions, can_see_all: canSeeAll, data }) {
+    const whom = tab === 'whom';
+    const path = whom ? '/crm/motivation/focus/partners' : '/crm/motivation/focus';
     const { dialogs, setTaskFor, setCallFor } = usePartnerDialogs();
     const [showAll, setShowAll] = useState(false);
     const items = data?.items ?? [];
@@ -39,15 +41,15 @@ export default function MotivationFocus({ month, month_label: monthLabel, manage
         const params = { month, ...changes };
         if (canSeeAll && manager?.id && !('manager' in changes)) params.manager = manager.id;
         Object.keys(params).forEach((k) => { if (params[k] === '' || params[k] === null || params[k] === undefined) delete params[k]; });
-        router.get('/crm/motivation/focus', params, { preserveState: true, preserveScroll: true, replace: true });
+        router.get(path, params, { preserveState: true, preserveScroll: true, replace: true });
     };
 
     return (
-        <CrmLayout breadcrumbs={hubBreadcrumbs('focus', 'mine')}>
+        <CrmLayout breadcrumbs={hubBreadcrumbs('focus', tab)}>
             <Head title="Фокус-товары — CRM" />
             <PageHeader
                 title="Фокус-товары"
-                description="Что продвигать и кому это можно предложить сегодня."
+                description={whom ? 'Кому из ваших партнёров можно предложить перечень сегодня.' : 'Что продвигать в этом месяце и сколько это даёт.'}
                 actions={canSeeAll && (scopeOptions ?? []).length > 0 ? (
                     <select aria-label="Работник" style={selectStyle} value={manager?.id ?? ''} onChange={(e) => navigate({ manager: e.target.value })}>
                         <option value="">Выберите работника…</option>
@@ -55,14 +57,14 @@ export default function MotivationFocus({ month, month_label: monthLabel, manage
                     </select>
                 ) : null}
             />
-            <MotivationTabs hub="focus" current="mine" />
+            <MotivationTabs hub="focus" current={tab} />
 
             <VStack align="stretch" gap={4}>
                 {manager === null && (
                     <Alert status="info" title="Карточка работника не привязана">Выберите работника выше или обратитесь к руководителю.</Alert>
                 )}
 
-                {data && (
+                {data && !whom && (
                     <>
                         <SimpleGrid columns={{ base: 1, sm: 3 }} gap={3}>
                             <Stat label="Позиций в перечне" value={String(items.length)} hint="Состав перечня на этот период. Меняется приказом руководителя; прошлые месяцы читаются по снимку." />
@@ -120,7 +122,16 @@ export default function MotivationFocus({ month, month_label: monthLabel, manage
                                 </Table.Root>
                             </Box>
                         )}
+                    </>
+                )}
 
+                {data && whom && (
+                    <>
+                        {items.length === 0 && (
+                            <Alert status="warning" title="Фокус-перечень на этот период пуст">
+                                Перечень заполняет руководитель приказом. Пока он пуст, предлагать нечего.
+                            </Alert>
+                        )}
                         <Box>
                             <HStack gap={2} mb={2}>
                                 <Text fontWeight="700">Кому предложить</Text>

@@ -6,7 +6,7 @@ import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { fmtDateTime, fmtDay, fmtRub, fmtSigned, plural } from '../Salary/components/format';
+import { fmtDateTime, fmtDay, fmtPercent, fmtRub, fmtSigned, plural } from '../Salary/components/format';
 import MotivationTabs from './components/MotivationTabs';
 import { hubBreadcrumbs } from './components/hubs';
 import FoldSection from './components/FoldSection';
@@ -144,8 +144,20 @@ export default function MotivationPayslip({ month, month_label: monthLabel, mont
                             </Section>
                         )}
 
-                        <Shipments title="Отгрузки закреплённой базы (П1)" groups={slip.shipments.base} />
-                        <Shipments title="Отгрузки новым партнёрам (П2)" groups={slip.shipments.new} />
+                        <Shipments
+                            title="Отгрузки сверх порога оплаты (П1)"
+                            groups={slip.shipments.base}
+                            rate={slip.shipments.rates?.base ?? 0}
+                            accrued={slip.shipments.base_accrued ?? 0}
+                            empty="Отгрузок сверх порога оплаты в этом месяце пока нет — П1 не начисляется."
+                            reference={[
+                                ['Личный план месяца', slip.shipments.base_plan],
+                                ['Порог оплаты', slip.shipments.base_threshold],
+                                ['Выполнено (отгрузки базы)', slip.shipments.base_total],
+                                ['Итого сверх порога', slip.shipments.base_over_threshold],
+                            ]}
+                        />
+                        <Shipments title="Отгрузки новым партнёрам (П2)" groups={slip.shipments.new} rate={slip.shipments.rates?.new ?? 0} accrued={slip.shipments.new_accrued ?? 0} />
 
                         {slip.returns.length > 0 && (
                             <Section title="Возвраты периода">
@@ -160,10 +172,14 @@ export default function MotivationPayslip({ month, month_label: monthLabel, mont
 
                         {slip.overdue.length > 0 && (
                             <Section title={`Просроченная задолженность (К1) · ${slip.overdue.length} ${plural(slip.overdue.length, 'накладная', 'накладные', 'накладных')}`}>
-                                <Text fontSize="xs" color="fg.muted" mb={2}>Полный перечень по партнёрам и накладным — на экране «Долги»; здесь — состав вычета.</Text>
+                                <Text fontSize="xs" color="fg.muted" mb={2}>Вычет по накладной — сумма её просроченного остатка за каждый день месяца × ставка К1 в день; погашенная в этом месяце накладная сохраняет вычет за дни, пока была просрочена. Полный перечень по партнёрам и накладным — на экране «Долги».</Text>
                                 {slip.overdue.slice(0, 20).map((r) => (
                                     <HStack key={r.invoice_id} justify="space-between" fontSize="sm" py={1}>
-                                        <Text>{r.number} · {r.partner_name} · долг {fmtRub(r.balance_end ?? 0, 0)} · {r.days} дн.</Text>
+                                        <Text>
+                                            {r.number} · {r.partner_name} · {r.balance_end > 0
+                                                ? `долг ${fmtRub(r.balance_end, 0)} · просрочен ${r.days} ${plural(r.days, 'день', 'дня', 'дней')}`
+                                                : `погашена${r.settled_on ? ` ${fmtDay(r.settled_on)}` : ''} · была просрочена ${r.days} ${plural(r.days, 'день', 'дня', 'дней')}${r.days > 0 ? ` по ${fmtRub((r.integral ?? 0) / r.days, 0)} в среднем` : ''}`}
+                                        </Text>
                                         <Text fontVariantNumeric="tabular-nums" color="red.fg">−{fmtRub(r.deduction ?? 0, 0)}</Text>
                                     </HStack>
                                 ))}
@@ -207,30 +223,42 @@ function Section({ title, open = false, children }) {
     );
 }
 
-function Shipments({ title, groups }) {
+/**
+ * Перечень отгрузок показателя: по партнёру «сумма × ставка = начислено».
+ * Для П1 сервер уже оставил только часть отгрузок сверх порога, а `reference` —
+ * справка внизу: план, порог, выполнено, сверх порога.
+ */
+function Shipments({ title, groups, rate = 0, accrued = 0, empty = null, reference = [] }) {
     const [open, setOpen] = useState(() => new Set());
+    const rows = groups ?? [];
 
-    if (!groups || groups.length === 0) return null;
+    if (rows.length === 0 && !empty) return null;
 
     const toggle = (id) => setOpen((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-    const total = groups.reduce((s, g) => s + Number(g.amount), 0);
-    const docs = groups.reduce((s, g) => s + g.documents.length, 0);
+    const total = rows.reduce((s, g) => s + Number(g.amount), 0);
+    const docs = rows.reduce((s, g) => s + g.documents.length, 0);
+    const pct = fmtPercent(rate, 2);
+    const heading = rows.length > 0
+        ? `${title} · ${rows.length} ${plural(rows.length, 'партнёр', 'партнёра', 'партнёров')}, ${docs} ${plural(docs, 'документ', 'документа', 'документов')}`
+        : title;
 
     return (
-        <Section title={`${title} · ${groups.length} ${plural(groups.length, 'партнёр', 'партнёра', 'партнёров')}, ${docs} ${plural(docs, 'документ', 'документа', 'документов')}`}>
+        <Section title={heading}>
             <VStack align="stretch" gap={0} divideY="1px" divideColor="border">
-                {groups.map((g) => (
+                {rows.length === 0 && <Text fontSize="sm" color="fg.muted" py={1}>{empty}</Text>}
+                {rows.map((g) => (
                     <Box key={g.partner_id}>
                         <HStack as="button" type="button" w="100%" py={1.5} gap={2} textAlign="left" cursor="pointer" onClick={() => toggle(g.partner_id)} aria-expanded={open.has(g.partner_id)}>
                             <Box color="fg.subtle">{open.has(g.partner_id) ? <LuChevronDown size={14} /> : <LuChevronRight size={14} />}</Box>
                             <Text fontSize="sm" flex="1">{g.partner_name} <Text as="span" color="fg.subtle">· {g.documents.length}</Text></Text>
-                            <Text fontSize="sm" fontWeight="600" fontVariantNumeric="tabular-nums">{fmtRub(g.amount)}</Text>
+                            <Text fontSize="sm" fontVariantNumeric="tabular-nums" color="fg.muted">{fmtRub(g.amount)} × {pct} =</Text>
+                            <Text fontSize="sm" fontWeight="600" fontVariantNumeric="tabular-nums" color="green.fg" minW="110px" textAlign="right">{fmtRub(g.accrued ?? 0)}</Text>
                         </HStack>
                         {open.has(g.partner_id) && (
                             <VStack align="stretch" gap={0} pl={6} pb={2}>
                                 {g.documents.map((d) => (
                                     <HStack key={`${d.number}-${d.date}`} justify="space-between" fontSize="xs" color="fg.muted" py={0.5}>
-                                        <Text>{d.number} · {fmtDay(d.date)}</Text>
+                                        <Text>{d.number} · {fmtDay(d.date)}{d.partial ? ` · сверх порога ${fmtRub(d.amount)} из ${fmtRub(d.partial)}` : ''}</Text>
                                         <Text fontVariantNumeric="tabular-nums">{fmtRub(d.amount)}</Text>
                                     </HStack>
                                 ))}
@@ -238,10 +266,27 @@ function Shipments({ title, groups }) {
                         )}
                     </Box>
                 ))}
-                <HStack justify="space-between" pt={2} fontSize="sm">
-                    <Text color="fg.muted">Итого по документам</Text>
-                    <Text fontWeight="700" fontVariantNumeric="tabular-nums">{fmtRub(total)}</Text>
-                </HStack>
+                {rows.length > 0 && (
+                    <HStack justify="space-between" pt={2} fontSize="sm">
+                        <Text color="fg.muted">Начислено: {fmtRub(total)} × {pct}</Text>
+                        <Text fontWeight="700" fontVariantNumeric="tabular-nums" color={accrued > 0 ? 'green.fg' : 'fg.subtle'}>{fmtRub(accrued)}</Text>
+                    </HStack>
+                )}
+                {reference.length > 0 && (
+                    <VStack align="stretch" gap={0} pt={2} fontSize="xs" color="fg.muted">
+                        <Text pb={1}>Справочно</Text>
+                        {reference.filter(([, v]) => v !== null && v !== undefined).map(([label, value]) => (
+                            <HStack key={label} justify="space-between" py={0.5}>
+                                <Text>{label}</Text>
+                                <Text fontVariantNumeric="tabular-nums">{fmtRub(value)}</Text>
+                            </HStack>
+                        ))}
+                        <HStack justify="space-between" py={0.5}>
+                            <Text>Начислено</Text>
+                            <Text fontVariantNumeric="tabular-nums" fontWeight="600">{fmtRub(accrued)}</Text>
+                        </HStack>
+                    </VStack>
+                )}
             </VStack>
         </Section>
     );

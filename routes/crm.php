@@ -696,6 +696,7 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/motivation/packages', [MotivationPartnersController::class, 'packages'])->name('motivation.packages');
         Route::get('/motivation/focus', [MotivationReferenceController::class, 'focus'])->name('motivation.focus');
         Route::get('/motivation/focus/data', [MotivationReferenceController::class, 'focusData'])->name('motivation.focus.data');
+        Route::get('/motivation/focus/partners', [MotivationReferenceController::class, 'focusPartners'])->name('motivation.focus.partners');
         Route::get('/motivation/plan', [MotivationReferenceController::class, 'plan'])->name('motivation.plan');
         Route::get('/motivation/plan/data', [MotivationReferenceController::class, 'planData'])->name('motivation.plan.data');
         Route::get('/motivation/quarter', [MotivationReferenceController::class, 'quarter'])->name('motivation.quarter');

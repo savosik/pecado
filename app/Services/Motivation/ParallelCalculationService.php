@@ -154,6 +154,46 @@ class ParallelCalculationService
     }
 
     /**
+     * Расчёт по прежней схеме для месяца, который оплачивается по Положению 2.2.
+     *
+     * Экраны «Мотивация v1» показывают его вместо оплачиваемого снимка: раздел
+     * существует ради сверки со старой системой, и подмена цифр новой формулой
+     * лишает его смысла. null — месяц оплачивается по прежней схеме (показывать
+     * оплачиваемый снимок) либо окно параллельного расчёта закончилось.
+     */
+    public function legacy(PayrollCalculation $paying): ?PayrollCalculation
+    {
+        $period = CarbonImmutable::instance($paying->period_month)->startOfMonth();
+        $window = $this->window();
+
+        if ($window === null || ! $this->inWindow($period)) {
+            return null;
+        }
+
+        $payingScheme = $this->schemes->forMonth($period);
+        if ((int) $payingScheme->getKey() !== (int) $window['scheme']->getKey()) {
+            return null;
+        }
+
+        $legacyScheme = $this->otherScheme($payingScheme, $window['scheme']);
+        if ($legacyScheme === null) {
+            return null;
+        }
+
+        return $this->transient($this->shadow((int) $paying->personal_manager_id, $period, $legacyScheme, $paying->isFrozen()), $paying);
+    }
+
+    /**
+     * Оплачивается ли месяц по Положению 2.2.
+     */
+    public function paysByV2(CarbonInterface $month): bool
+    {
+        $window = $this->window();
+
+        return $window !== null && CarbonImmutable::instance($month)->startOfMonth()->gte($window['effective_from']);
+    }
+
+    /**
      * Короткая сводка для строки руководителя: итог по другой схеме и разница.
      *
      * @return array{scheme_label: string, phase: string, total: float, difference: float}|null

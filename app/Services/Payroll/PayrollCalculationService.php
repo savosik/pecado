@@ -225,7 +225,7 @@ class PayrollCalculationService
             ->all();
     }
 
-    public function teamSummary(CarbonInterface $month): array
+    public function teamSummary(CarbonInterface $month, ?\Closure $substitute = null): array
     {
         $period = PayrollCalculation::normalizeMonth($month);
 
@@ -240,6 +240,10 @@ class PayrollCalculationService
 
         foreach ($managers as $manager) {
             $calculation = $this->ensureDraft((int) $manager->getKey(), $period);
+            // Подмена снимка (например, расчёт по прежней схеме для «Мотивации v1»).
+            if ($substitute !== null) {
+                $calculation = $substitute($calculation);
+            }
             $breakdown = (array) $calculation->breakdown;
             $inputs = (array) $calculation->inputs;
             $forecast = (array) ($calculation->forecast ?? []);

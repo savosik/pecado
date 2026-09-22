@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Crm;
 
+use App\Models\PayrollCalculation;
 use App\Services\Payroll\PayrollCalculationPresenter;
 use App\Services\Payroll\PayrollCalculationService;
 use App\Services\Payroll\PayrollCatalog;
@@ -34,6 +35,7 @@ class SalaryController extends CrmController
         private readonly \App\Services\Payroll\PayrollCalculator $calculator,
         private readonly \App\Services\Payroll\PayrollParamsResolver $paramsResolver,
         private readonly PayrollWhatIfService $whatIf,
+        private readonly \App\Services\Motivation\ParallelCalculationService $parallel,
     ) {}
 
     public function index(Request $request): Response
@@ -230,7 +232,20 @@ class SalaryController extends CrmController
     private function teamPayload(Request $request): array
     {
         $month = $this->month($request);
-        $rows = $this->calculations->teamSummary($month);
+        // Месяц по Положению 2.2: суммы — по прежней схеме (раздел сверки), статус и
+        // действия — у оплачиваемого снимка, утверждение и выплата идут в «Мотивации v2».
+        $legacyShown = false;
+        $rows = $this->calculations->teamSummary($month, $this->parallel->paysByV2($month) ? function (PayrollCalculation $c) use (&$legacyShown): PayrollCalculation {
+            $legacy = $this->parallel->legacy($c);
+            if ($legacy === null) {
+                return $c;
+            }
+            $legacyShown = true;
+            $legacy->setAttribute('id', $c->getKey());
+            $legacy->status = $c->status;
+
+            return $legacy;
+        } : null);
 
         $totals = ['total' => 0.0, 'salary' => 0.0, 'kpi_bonus' => 0.0, 'extra_income' => 0.0, 'new_clients_bonus' => 0.0, 'manual_correction' => 0.0, 'penalty' => 0.0, 'revenue' => 0.0, 'plan' => 0.0];
         $statuses = ['draft' => 0, 'approved' => 0, 'paid' => 0];
@@ -253,8 +268,9 @@ class SalaryController extends CrmController
             'rows' => $rows,
             'totals' => array_map(fn (float $v): float => round($v, 2), $totals),
             'statuses' => $statuses,
-            'can_edit' => $this->crmActor($request)->can('crm-salary.edit'),
+            'can_edit' => ! $legacyShown && $this->crmActor($request)->can('crm-salary.edit'),
             'poll_seconds' => max(15, (int) config('payroll.poll_seconds', 60)),
+            'legacy_notice' => $this->legacyNotice($month, $legacyShown),
         ];
     }
 
@@ -321,9 +337,26 @@ class SalaryController extends CrmController
         }
 
         $calculation = $this->calculations->ensureDraft((int) $manager->getKey(), $month);
-        $payload['calculation'] = $this->presenter->present($calculation);
+        // Раздел «Мотивация v1» — сверка со старой системой: месяц, оплачиваемый по
+        // Положению 2.2, показывается здесь по прежней схеме, а не оплачиваемым снимком.
+        $legacy = $this->parallel->legacy($calculation);
+        $payload['calculation'] = $this->presenter->present($legacy ?? $calculation);
+        $payload['legacy_notice'] = $this->legacyNotice($month, $legacy !== null);
 
         return $payload;
+    }
+
+    private function legacyNotice(CarbonImmutable $month, bool $legacyShown): ?string
+    {
+        if ($legacyShown) {
+            return sprintf('Зарплата за %s считается по Положению 2.2 — оплачиваемый расчёт в разделе «Мотивация v2 → Расчётный лист». Здесь справочно показан расчёт по прежней схеме.', mb_strtolower(MonthLabel::ru($month)));
+        }
+
+        if ($this->parallel->paysByV2($month)) {
+            return sprintf('Зарплата за %s считается по Положению 2.2, окно параллельного расчёта закончилось — по прежней схеме этот месяц не считается. Показан действующий расчёт.', mb_strtolower(MonthLabel::ru($month)));
+        }
+
+        return null;
     }
 
     private function month(Request $request): CarbonImmutable

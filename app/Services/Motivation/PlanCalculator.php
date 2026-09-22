@@ -62,12 +62,12 @@ class PlanCalculator
     public function calculate(int $managerId, CarbonInterface $quarter, array $params = [], bool $waiveDeclineLimit = false): array
     {
         $start = CarbonImmutable::instance($quarter)->startOfQuarter()->startOfDay();
-        // Слои: умолчания Приложения № 1 ← приказ, действующий на начало квартала ← явные
+        // Слои: умолчания Приложения № 1 ← приказ, действующий на квартал ← явные
         // параметры вызова. Без среднего слоя сезонность и прирост, изданные на экране
         // «Параметры», до плана не доходили.
         $defaults = array_replace(
             (array) config('motivation.default_parameters', []),
-            (array) (\App\Models\Motivation\MotivationParameterOrder::effectiveFor($start)->values ?? []),
+            (array) ($this->orderFor($start)->values ?? []),
         );
 
         $depth = max(1, (int) ($params['median_depth_periods'] ?? $defaults['median_depth_periods'] ?? 6));
@@ -91,7 +91,11 @@ class PlanCalculator
             fn (?float $value): bool => $value !== null,
         )));
 
-        $carry = $this->overperformanceCarry($managerId, $start, $carryShare);
+        // Перенос перевыполнения и предел снижения сравнивают факт с планом прошлого
+        // квартала — это имеет смысл только если тот план ставился по этой же методике.
+        // Прежние планы (сверху вниз, от цифры компании) для обоих правил несопоставимы.
+        $comparable = $this->previousQuarterIsComparable($managerId, $start);
+        $carry = $comparable ? $this->overperformanceCarry($managerId, $start, $carryShare) : 0.0;
         $previousTotal = $this->previousQuarterPlan($managerId, $start);
 
         $workingDays = [];
@@ -111,7 +115,6 @@ class PlanCalculator
         }
 
         $declineLimited = false;
-        $comparable = $this->previousQuarterIsComparable($managerId, $start);
 
         if ($previousTotal !== null && $previousTotal > 0 && $comparable && ! $waiveDeclineLimit) {
             $floor = $previousTotal * (1 - $declineLimit);
@@ -150,6 +153,24 @@ class PlanCalculator
                 'to' => $sampleTo->toDateString(),
             ],
         ];
+    }
+
+    /**
+     * Приказ по параметрам, по которому считается квартал.
+     *
+     * Квартал — один акт с одними правилами, поэтому берётся приказ, действующий
+     * на его первый месяц. Исключение — переход: пока ни одного приказа не было,
+     * первый изданный действует на квартал, в котором вступает в силу, иначе
+     * сезон и прирост доходили бы до плана только со следующего квартала.
+     */
+    private function orderFor(CarbonImmutable $quarterStart): ?\App\Models\Motivation\MotivationParameterOrder
+    {
+        return \App\Models\Motivation\MotivationParameterOrder::effectiveFor($quarterStart)
+            ?? \App\Models\Motivation\MotivationParameterOrder::query()
+                ->whereDate('effective_from', '>', $quarterStart)
+                ->whereDate('effective_from', '<', $quarterStart->addMonths(3))
+                ->orderBy('effective_from')
+                ->first();
     }
 
     /**
