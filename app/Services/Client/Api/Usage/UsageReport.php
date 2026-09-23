@@ -483,8 +483,12 @@ final class UsageReport
      */
     private function activeTokens(Builder $clients): Builder
     {
+        // Только личные ключи: токены чата-помощника выпускает воркер на тред,
+        // клиент их не выдавал — в «партнёры с токенами» и «токены без вызовов»
+        // им не место.
         return ApiToken::query()
             ->where('is_active', true)
+            ->where('kind', ApiToken::KIND_PERSONAL)
             ->whereIn('user_id', (clone $clients)->select('users.id'));
     }
 

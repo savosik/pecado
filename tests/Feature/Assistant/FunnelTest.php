@@ -46,9 +46,13 @@ class FunnelTest extends AssistantTestCase
         // Второй клиент: только видел иконку.
         $threads->event($second, ChatEvent::SHOWN, null, 'catalog');
 
+        // Токен помощника у клиента активен, но это не «ключ, выданный в кабинете».
+        $this->assertSame(1, \App\Models\ApiToken::where('user_id', $this->client->id)->where('kind', 'assistant')->where('is_active', true)->count());
+
         $page = $this->actingAs($head)->get('/crm/agent-usage?scope=department')->assertOk();
 
         $page->assertInertia(fn ($p) => $p
+            ->where('summary.partners_with_tokens', 0)
             ->where('assistant.funnel.0.value', 2)
             ->where('assistant.funnel.1.value', 1)
             ->where('assistant.funnel.2.value', 1)
