@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { HStack, IconButton, Text } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
 import { LuBot, LuHistory, LuMessageSquarePlus } from 'react-icons/lu';
@@ -24,6 +25,20 @@ export default function AssistantDrawer({ voice, attachments }) {
     const closeDialog = useAssistantStore((s) => s.closeDialog);
     const newThread = useAssistantStore((s) => s.newThread);
 
+    // Панель немодальная, страница под ней прокручивается, и её полоса
+    // прокрутки занимает правый край окна: без отступа она ложится поверх
+    // панели и закрывает кнопку отправки. Отступ — ширина этой полосы
+    // (на телефонах и с overlay-скроллбарами она равна нулю).
+    const [gutter, setGutter] = useState(0);
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const measure = () => setGutter(Math.max(0, window.innerWidth - document.documentElement.clientWidth));
+        measure();
+        window.addEventListener('resize', measure);
+        return () => window.removeEventListener('resize', measure);
+    }, [open]);
+
     return (
         // Немодальный: без затемнения, фокус не заперт, страница под ним живая —
         // клиент кликает по товару из ответа, быстрый просмотр открывается поверх
@@ -38,7 +53,7 @@ export default function AssistantDrawer({ voice, attachments }) {
             trapFocus={false}
             preventScroll={false}
         >
-            <DrawerContent boxShadow="2xl">
+            <DrawerContent boxShadow="2xl" style={{ marginRight: gutter }}>
                 <DrawerHeader py="3" borderBottomWidth="1px" borderColor="border.muted">
                     <HStack justify="space-between" pr="8">
                         <HStack gap="2">
