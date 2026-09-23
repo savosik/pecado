@@ -46,6 +46,7 @@ Schedule::command('erp:cleanup-processed')->dailyAt('05:20')->withoutOverlapping
 Schedule::command('model:prune', ['--model' => [
     \App\Models\SentEmail::class,
 ]])->dailyAt('05:10'); // журнал исходящих писем: ретенция MAIL_JOURNAL_RETENTION_DAYS
+Schedule::command('categories:resort-by-moscow-stock')->hourly()->withoutOverlapping(); // порядок категорий по числу товаров в наличии; видимость считает StockVisibility на лету
 Schedule::command('sitemap:generate')->dailyAt('03:30'); // после search:sync
 Schedule::command('feed:build-yandex')->hourly()->withoutOverlapping(); // публичный YML-фид Яндекс.Маркета
 Schedule::command('promo:rebuild-rule-products')->dailyAt('02:40')->withoutOverlapping(); // участники правил акций: состав категорий и теги меняются массово

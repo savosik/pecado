@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Category;
 use App\Models\MenuItem;
 use App\Models\User;
+use App\Services\Catalog\StockVisibility;
 use App\Support\Impersonation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -98,8 +99,18 @@ class HandleInertiaRequests extends Middleware
                 // Заказ только что оформлен: спокойный момент попросить о чём-то (опрос о НДС).
                 'order_placed' => fn () => (bool) $request->session()->get('order_placed'),
             ],
-            'footerCategories' => Cache::remember('footer.categories', 3600, fn () => Category::active()->whereIsRoot()->select('id', 'name', 'slug')->limit(5)->get()
-            ),
+            // Пять корневых категорий с товарами в наличии (StockVisibility), порядок — по `sort`.
+            'footerCategories' => Cache::remember('footer.categories', 3600, function () {
+                $visibleIds = app(StockVisibility::class)->categoryIds();
+
+                return Category::active()->whereIsRoot()
+                    ->when($visibleIds !== null, fn ($q) => $q->whereIn('id', $visibleIds))
+                    ->orderByRaw('sort IS NULL, sort ASC')
+                    ->orderBy('_lft')
+                    ->select('id', 'name', 'slug')
+                    ->limit(5)
+                    ->get();
+            }),
             'headerMenuItems' => Cache::remember('menu.header', 3600, fn () => MenuItem::published()->forHeader()->ordered()->get()
             ),
             'footerMenuItems' => Cache::remember('menu.footer', 3600, fn () => MenuItem::published()->forFooter()->ordered()->get()

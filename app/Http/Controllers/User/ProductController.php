@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductSelection;
 use App\Services\Catalog\ProductIdentifierResolver;
+use App\Services\Catalog\StockVisibility;
 use App\Services\Product\ProductQueryService;
 use App\Services\Product\SimilarProductsService;
 use Illuminate\Http\Request;
@@ -169,6 +170,7 @@ class ProductController extends Controller
         /** @var \Illuminate\Database\Eloquent\Collection<int, Category> $children */
         $children = $category->children()
             ->where('is_active', true)
+            ->tap($this->onlyStockedCategories())
             ->orderByRaw('sort IS NULL, sort ASC')
             ->orderBy('_lft')
             ->get(['id', 'name', 'slug', '_lft', '_rgt']);
@@ -191,6 +193,7 @@ class ProductController extends Controller
         /** @var \Illuminate\Database\Eloquent\Collection<int, Category> $siblings */
         $siblings = $query
             ->where('is_active', true)
+            ->tap($this->onlyStockedCategories())
             ->where('id', '!=', $category->id)
             ->orderByRaw('sort IS NULL, sort ASC')
             ->orderBy('_lft')
@@ -1048,6 +1051,7 @@ class ProductController extends Controller
     public function categoriesRoot(): \Illuminate\Http\JsonResponse
     {
         $categories = Category::active()->whereIsRoot()
+            ->tap($this->onlyStockedCategories())
             ->orderBy('_lft')
             ->get(['id', 'name', 'slug', 'parent_id']);
 
@@ -1064,6 +1068,7 @@ class ProductController extends Controller
 
         $children = $category->children()
             ->where('is_active', true)
+            ->tap($this->onlyStockedCategories())
             ->orderByRaw('sort IS NULL, sort ASC')
             ->orderBy('_lft')
             ->get(['id', 'name', 'slug', 'parent_id']);
@@ -1072,6 +1077,18 @@ class ProductController extends Controller
             'category' => $category->only(['id', 'name', 'slug', 'parent_id']),
             'children' => $children,
         ]);
+    }
+
+    /**
+     * Ограничение списков категорий теми, где есть товары в наличии на складах
+     * региона (на всю глубину) — см. StockVisibility. Сама страница категории
+     * остаётся доступной по прямой ссылке, скрываются только списки и меню.
+     */
+    private function onlyStockedCategories(): \Closure
+    {
+        $visibleIds = app(StockVisibility::class)->categoryIds(auth()->user()?->region_id);
+
+        return fn ($query) => $query->when($visibleIds !== null, fn ($q) => $q->whereIn('id', $visibleIds));
     }
 
     /**
