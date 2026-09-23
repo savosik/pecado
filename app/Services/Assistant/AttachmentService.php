@@ -29,7 +29,9 @@ final class AttachmentService
      */
     public static function kindFor(string $mime): ?string
     {
-        $kind = config('assistant.attachments.mimes.'.$mime);
+        // Не через config('…mimes.'.$mime): в MIME Excel и Word есть точки,
+        // а точка для config() — разделитель уровней, и такие типы «пропадали».
+        $kind = ((array) config('assistant.attachments.mimes', []))[$mime] ?? null;
 
         return is_string($kind) ? $kind : null;
     }
@@ -44,13 +46,67 @@ final class AttachmentService
      * MIME по содержимому файла, а не по имени: переименованный .xlsx в .png
      * остаётся таблицей, а нераспознанное содержимое — octet-stream, который
      * в разрешённых форматах не значится. Имени из браузера не верим.
+     *
+     * Особый случай — офисные файлы: xlsx и docx это zip, и если первым в
+     * архиве лежит не [Content_Types].xml (так пишут 1С и часть конвертеров),
+     * libmagic видит просто zip. Тогда заглядываем внутрь: книга Excel —
+     * xl/workbook.xml, документ Word — word/document.xml.
      */
     public static function detectMime(UploadedFile $file): string
     {
         $path = $file->getRealPath();
         $guessed = $path ? \Symfony\Component\Mime\MimeTypes::getDefault()->guessMimeType($path) : null;
+        $guessed = is_string($guessed) && $guessed !== '' ? $guessed : 'application/octet-stream';
+        $extension = strtolower((string) $file->getClientOriginalExtension());
 
-        return is_string($guessed) && $guessed !== '' ? $guessed : 'application/octet-stream';
+        if ($path && in_array($guessed, ['application/zip', 'application/octet-stream', 'application/x-zip-compressed'], true)) {
+            $office = self::officeMimeFromZip($path);
+
+            if ($office !== null) {
+                return $office;
+            }
+        }
+
+        // Старый .xls — OLE-контейнер; libmagic иногда называет его общим именем.
+        if (in_array($guessed, ['application/x-ole-storage', 'application/CDFV2', 'application/vnd.ms-office'], true) && $extension === 'xls') {
+            return 'application/vnd.ms-excel';
+        }
+
+        if ($guessed === 'text/plain' && $extension === 'csv') {
+            return 'text/csv';
+        }
+
+        return $guessed;
+    }
+
+    /**
+     * Книга Excel или документ Word внутри zip; null — обычный архив.
+     */
+    private static function officeMimeFromZip(string $path): ?string
+    {
+        if (! class_exists(\ZipArchive::class)) {
+            return null;
+        }
+
+        $zip = new \ZipArchive;
+
+        if ($zip->open($path, \ZipArchive::RDONLY) !== true) {
+            return null;
+        }
+
+        try {
+            if ($zip->locateName('xl/workbook.xml') !== false) {
+                return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            }
+
+            if ($zip->locateName('word/document.xml') !== false) {
+                return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            }
+        } finally {
+            $zip->close();
+        }
+
+        return null;
     }
 
     public function store(ChatThread $thread, User $user, UploadedFile $file): ChatAttachment

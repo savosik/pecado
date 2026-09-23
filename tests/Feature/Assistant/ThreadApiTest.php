@@ -177,6 +177,54 @@ class ThreadApiTest extends AssistantTestCase
     }
 
     #[Test]
+    public function обычный_xlsx_и_docx_принимаются_как_таблицы(): void
+    {
+        $thread = app(ThreadService::class)->open($this->client);
+        $sheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet;
+        $sheet->getActiveSheet()->setCellValue('A1', 'LE-13');
+        $path = tempnam(sys_get_temp_dir(), 'xlsx');
+        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($sheet))->save($path);
+
+        $this->actingAs($this->client)
+            ->post("/cabinet/assistant/threads/{$thread->id}/attachments", ['file' => new UploadedFile($path, 'прайс.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true)])
+            ->assertCreated()
+            ->assertJsonPath('attachment.kind', 'table');
+    }
+
+    #[Test]
+    public function xlsx_с_нестандартным_порядком_записей_в_архиве_принимается_как_таблица(): void
+    {
+        $thread = app(ThreadService::class)->open($this->client);
+
+        // Как пишут 1С и часть конвертеров: первым лежит не [Content_Types].xml —
+        // libmagic видит просто zip, а мы заглядываем внутрь за книгой.
+        $path = tempnam(sys_get_temp_dir(), 'xlsx');
+        $zip = new \ZipArchive;
+        $zip->open($path, \ZipArchive::OVERWRITE);
+        $zip->addFromString('docProps/app.xml', '<Properties/>');
+        $zip->addFromString('xl/workbook.xml', '<workbook/>');
+        $zip->addFromString('[Content_Types].xml', '<Types/>');
+        $zip->close();
+
+        $file = new UploadedFile($path, 'prays-1c.xlsx', 'application/octet-stream', null, true);
+        $this->actingAs($this->client)
+            ->post("/cabinet/assistant/threads/{$thread->id}/attachments", ['file' => $file])
+            ->assertCreated()
+            ->assertJsonPath('attachment.kind', 'table')
+            ->assertJsonPath('attachment.mime', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        // Обычный zip книгой не притворяется.
+        $plain = tempnam(sys_get_temp_dir(), 'zip');
+        $zip = new \ZipArchive;
+        $zip->open($plain, \ZipArchive::OVERWRITE);
+        $zip->addFromString('readme.txt', 'hello');
+        $zip->close();
+        $this->actingAs($this->client)
+            ->postJson("/cabinet/assistant/threads/{$thread->id}/attachments", ['file' => new UploadedFile($plain, 'archive.xlsx', 'application/octet-stream', null, true)])
+            ->assertStatus(422);
+    }
+
+    #[Test]
     public function вложение_уходит_заглушкой_в_ход_и_блоком_file_id_в_запрос(): void
     {
         $thread = app(ThreadService::class)->open($this->client);

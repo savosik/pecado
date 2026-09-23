@@ -4,6 +4,8 @@ import { LuMic, LuMicOff, LuPaperclip, LuSend, LuX } from 'react-icons/lu';
 import { useAssistantStore } from '@/stores/useAssistantStore';
 import { useSpeechInput } from './useSpeechInput';
 
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'pdf', 'xlsx', 'xls', 'csv', 'txt', 'docx'];
+
 const formatSize = (bytes) => (bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} МБ` : `${Math.ceil(bytes / 1024)} КБ`);
 
 /**
@@ -74,9 +76,11 @@ export default function Composer({ prefill = null, voice = true, attachments = {
                 useAssistantStore.setState({ error: `Файл «${file.name}» больше ${Math.round((attachments.max_size_kb || 20480) / 1024)} МБ.` });
                 return;
             }
-            if (attachments.mimes?.length && file.type && !attachments.mimes.includes(file.type)) {
-                const ext = file.name.includes('.') ? `.${file.name.split('.').pop()}` : file.type;
-                useAssistantStore.setState({ error: `Формат ${ext} не поддерживается. Подойдут фото, PDF, Excel, CSV и Word.` });
+            // Тип от браузера ненадёжен (для xlsx часто пусто или octet-stream):
+            // отсеиваем только явно чужое по расширению, окончательно решает сервер.
+            const ext = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
+            if (ext && !ALLOWED_EXTENSIONS.includes(ext)) {
+                useAssistantStore.setState({ error: `Формат .${ext} не поддерживается. Подойдут фото, PDF, Excel, CSV и Word.` });
                 return;
             }
             upload(file);
