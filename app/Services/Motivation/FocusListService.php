@@ -38,6 +38,7 @@ class FocusListService
         private readonly ShipmentAnalyticsService $analytics,
         private readonly PartnerAttributionResolver $attribution,
         private readonly OpportunityService $opportunities,
+        private readonly EffectiveParameters $parameters,
     ) {}
 
     /**
@@ -50,7 +51,7 @@ class FocusListService
         $productIds = array_keys($rules);
 
         $params = $calculation === null ? [] : EffectiveParams::fromArray((array) $calculation->params_effective)->for('motivation_variable');
-        $rateP3 = (float) ($params['rate_p3'] ?? config('motivation.default_parameters.rate_p3', 0));
+        $rateP3 = (float) ($params['rate_p3'] ?? $this->parameters->float('rate_p3', $period));
 
         $products = $productIds === [] ? [] : Product::query()->whereIn('id', $productIds)->get(['id', 'name', 'sku', 'category_id'])->keyBy('id')->all();
         $stock = $productIds === [] ? [] : DB::table('product_warehouse')

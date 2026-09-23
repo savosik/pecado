@@ -32,6 +32,8 @@ use Illuminate\Support\Facades\DB;
  */
 class NoveltyCalculator
 {
+    public function __construct(private readonly EffectiveParameters $parameters) {}
+
     /**
      * Пересчитать кэш. Возвращает число обработанных партнёров.
      *
@@ -42,12 +44,15 @@ class NoveltyCalculator
         $months = $this->purchaseMonths($partnerIds);
         $historyStart = $this->historyStart();
         $now = now();
+        // Срок перерыва и Период новизны — из приказа, действующего в месяце пересборки.
+        $noveltyMonths = max(1, $this->parameters->int('novelty_periods', CarbonImmutable::instance($now)->startOfMonth(), 6));
+        $gapMonths = max(1, $this->parameters->int('no_purchase_months', CarbonImmutable::instance($now)->startOfMonth(), 12));
 
         $ids = $partnerIds !== [] ? $partnerIds : $this->allPartnerIds();
         $rows = [];
 
         foreach ($ids as $partnerId) {
-            $rows[] = $this->row($partnerId, $months[$partnerId] ?? [], $historyStart, $now);
+            $rows[] = $this->row($partnerId, $months[$partnerId] ?? [], $historyStart, $now, $noveltyMonths, $gapMonths);
         }
 
         foreach (array_chunk($rows, 500) as $chunk) {
@@ -70,7 +75,7 @@ class NoveltyCalculator
      * @param  list<string>  $purchaseMonths  месяцы покупок в порядке возрастания, Y-m-01
      * @return array<string, mixed>
      */
-    private function row(int $partnerId, array $purchaseMonths, ?CarbonImmutable $historyStart, \DateTimeInterface $now): array
+    private function row(int $partnerId, array $purchaseMonths, ?CarbonImmutable $historyStart, \DateTimeInterface $now, int $noveltyMonths, int $gapMonths): array
     {
         $base = [
             'user_id' => $partnerId,
@@ -90,8 +95,6 @@ class NoveltyCalculator
         }
 
         $first = CarbonImmutable::parse($purchaseMonths[0]);
-        $noveltyMonths = max(1, (int) config('motivation.default_parameters.novelty_periods', 6));
-        $gapMonths = max(1, (int) config('motivation.default_parameters.no_purchase_months', 12));
 
         // Последний перерыв нужной длины задаёт начало действующего Периода новизны:
         // партнёр, замолчавший на год и вернувшийся, снова Новый (п. 2.9).

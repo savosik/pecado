@@ -36,6 +36,7 @@ class ParameterOrderService
 
     public function __construct(
         private readonly ParameterCatalog $catalog,
+        private readonly EffectiveParameters $effective,
         private readonly MotivationSchemeInstaller $installer,
         private readonly PayrollCalculationService $calculations,
         private readonly PayrollCalculator $calculator,
@@ -49,7 +50,7 @@ class ParameterOrderService
      */
     public function effective(CarbonInterface $month): array
     {
-        $order = MotivationParameterOrder::effectiveFor(CarbonImmutable::instance($month));
+        $order = $this->effective->order($month);
 
         return [
             'order' => $order,

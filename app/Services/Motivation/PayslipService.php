@@ -31,6 +31,7 @@ class PayslipService
     public function __construct(
         private readonly MotivationPresenter $presenter,
         private readonly WorkingCalendar $calendar,
+        private readonly EffectiveParameters $parameters,
     ) {}
 
     /**
@@ -209,7 +210,7 @@ class PayslipService
     public function objection(PayrollCalculation $calculation, ?CarbonInterface $today = null): array
     {
         $today = CarbonImmutable::instance($today ?? CarbonImmutable::today())->startOfDay();
-        $days = max(0, (int) config('motivation.default_parameters.objection_working_days', 5));
+        $days = max(0, $this->parameters->int('objection_working_days', CarbonImmutable::instance($calculation->period_month)->startOfMonth(), 5));
         $items = MotivationObjection::query()
             ->where('calculation_id', $calculation->getKey())
             ->orderByDesc('id')

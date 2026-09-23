@@ -23,7 +23,10 @@ use Carbon\CarbonInterface;
  */
 class CorrectionService
 {
-    public function __construct(private readonly PayrollCalculationService $calculations) {}
+    public function __construct(
+        private readonly PayrollCalculationService $calculations,
+        private readonly EffectiveParameters $parameters,
+    ) {}
 
     /**
      * @throws \InvalidArgumentException
@@ -46,7 +49,7 @@ class CorrectionService
         }
 
         $params = EffectiveParams::fromArray((array) $calculation->params_effective);
-        $limitShare = (float) (config('motivation.default_parameters.adjustment_limit') ?? 0.15);
+        $limitShare = $this->parameters->float('adjustment_limit', $period, 0.15);
         $variable = $this->variablePart($calculation);
         $already = (float) PayrollManualAdjustment::query()
             ->where('personal_manager_id', $managerId)

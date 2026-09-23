@@ -39,6 +39,7 @@ class PlanCalculator
         private readonly ShipmentAnalyticsService $analytics,
         private readonly PartnerAttributionResolver $attribution,
         private readonly WorkingCalendar $calendar,
+        private readonly EffectiveParameters $effective,
     ) {}
 
     /**
@@ -65,10 +66,7 @@ class PlanCalculator
         // Слои: умолчания Приложения № 1 ← приказ, действующий на квартал ← явные
         // параметры вызова. Без среднего слоя сезонность и прирост, изданные на экране
         // «Параметры», до плана не доходили.
-        $defaults = array_replace(
-            (array) config('motivation.default_parameters', []),
-            (array) ($this->orderFor($start)->values ?? []),
-        );
+        $defaults = $this->effective->forQuarter($start);
 
         $depth = max(1, (int) ($params['median_depth_periods'] ?? $defaults['median_depth_periods'] ?? 6));
         $growth = (float) ($params['growth_rate'] ?? $defaults['growth_rate'] ?? 0);
@@ -153,24 +151,6 @@ class PlanCalculator
                 'to' => $sampleTo->toDateString(),
             ],
         ];
-    }
-
-    /**
-     * Приказ по параметрам, по которому считается квартал.
-     *
-     * Квартал — один акт с одними правилами, поэтому берётся приказ, действующий
-     * на его первый месяц. Исключение — переход: пока ни одного приказа не было,
-     * первый изданный действует на квартал, в котором вступает в силу, иначе
-     * сезон и прирост доходили бы до плана только со следующего квартала.
-     */
-    private function orderFor(CarbonImmutable $quarterStart): ?\App\Models\Motivation\MotivationParameterOrder
-    {
-        return \App\Models\Motivation\MotivationParameterOrder::effectiveFor($quarterStart)
-            ?? \App\Models\Motivation\MotivationParameterOrder::query()
-                ->whereDate('effective_from', '>', $quarterStart)
-                ->whereDate('effective_from', '<', $quarterStart->addMonths(3))
-                ->orderBy('effective_from')
-                ->first();
     }
 
     /**

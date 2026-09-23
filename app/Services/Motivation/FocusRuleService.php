@@ -366,7 +366,7 @@ class FocusRuleService
 
     private function rateP3(CarbonImmutable $period): float
     {
-        return (float) ($this->orders->effective($period)['values']['rate_p3'] ?? config('motivation.default_parameters.rate_p3', 0));
+        return (float) ($this->orders->effective($period)['values']['rate_p3'] ?? 0);
     }
 
     /**

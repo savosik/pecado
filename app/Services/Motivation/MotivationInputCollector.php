@@ -35,6 +35,7 @@ class MotivationInputCollector
         private readonly PartnerAttributionResolver $attribution,
         private readonly OverdueDebtIntegrator $debts,
         private readonly WorkingCalendar $calendar,
+        private readonly EffectiveParameters $parameters,
     ) {}
 
     /**
@@ -64,7 +65,7 @@ class MotivationInputCollector
             $partnerIds,
             $period,
             $names,
-            (int) ($params['grace_working_days'] ?? config('motivation.default_parameters.grace_working_days', 5)),
+            (int) ($params['grace_working_days'] ?? $this->parameters->int('grace_working_days', $period, 5)),
         );
 
         $days = $this->days($managerId, $period);

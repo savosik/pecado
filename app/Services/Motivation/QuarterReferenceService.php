@@ -20,7 +20,10 @@ use Carbon\CarbonInterface;
  */
 class QuarterReferenceService
 {
-    public function __construct(private readonly QuarterlyBonusService $bonuses) {}
+    public function __construct(
+        private readonly QuarterlyBonusService $bonuses,
+        private readonly EffectiveParameters $parameters,
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -33,8 +36,8 @@ class QuarterReferenceService
             ?? $this->bonuses->recalculate($quarter);
 
         $snapshot = (array) $bonus->snapshot;
-        $threshold = (float) ($snapshot['threshold'] ?? config('motivation.default_parameters.quarterly_qualification_amount', 0));
-        $steps = (array) ($snapshot['steps'] ?? config('motivation.default_parameters.quarterly_steps', []));
+        $threshold = (float) ($snapshot['threshold'] ?? $this->parameters->float('quarterly_qualification_amount', $quarter));
+        $steps = (array) ($snapshot['steps'] ?? $this->parameters->value('quarterly_steps', $quarter) ?? []);
 
         $rows = MotivationQuarterlyQualification::query()->forQuarter($quarter)->get();
         $partnerIds = $rows->pluck('user_id')->map('intval')->all();

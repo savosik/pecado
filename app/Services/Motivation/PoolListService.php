@@ -44,6 +44,7 @@ class PoolListService
         private readonly ShipmentAnalyticsService $analytics,
         private readonly PartnerAttributionResolver $attribution,
         private readonly PayrollParamsResolver $params,
+        private readonly EffectiveParameters $parameters,
     ) {}
 
     /**
@@ -64,7 +65,7 @@ class PoolListService
             'total' => count($working),
             'with_history' => count($withHistory),
             'lost' => count($lost),
-            'package_size' => (int) config('motivation.default_parameters.pool_package_size', 20),
+            'package_size' => $this->parameters->int('pool_package_size', $period, 20),
         ];
 
         // Без фильтров по умолчанию: раздел открывается на всех свободных партнёрах,
@@ -74,8 +75,8 @@ class PoolListService
         $selected = $showLost ? $lost : ($historyOnly ? $withHistory : $working);
 
         $rateP2 = (float) ($this->params->effective($managerId, $period)->for('motivation_variable')['rate_p2']
-            ?? config('motivation.default_parameters.rate_p2', 0));
-        $noveltyMonths = max(1, (int) config('motivation.default_parameters.novelty_periods', 6));
+            ?? $this->parameters->float('rate_p2', $period));
+        $noveltyMonths = max(1, $this->parameters->int('novelty_periods', $period, 6));
 
         foreach ($selected as &$row) {
             // Оценка только по истории: партнёр без покупок не «спящий», а холодный.
@@ -157,7 +158,7 @@ class PoolListService
      */
     public function tap(int $managerId, CarbonImmutable $period): array
     {
-        $periods = max(1, (int) config('motivation.default_parameters.pool_tap_periods', 2));
+        $periods = max(1, $this->parameters->int('pool_tap_periods', $period, 2));
         $checked = [];
         $belowCount = 0;
         $unknown = 0;
