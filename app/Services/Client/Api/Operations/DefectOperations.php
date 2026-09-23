@@ -147,7 +147,7 @@ class DefectOperations implements OperationProvider
             ->values()
             ->all();
 
-        return Envelope::data($rows, ['product' => ['id' => $product->id, 'sku' => $product->sku, 'name' => $product->name]]);
+        return Envelope::data($rows, ['product' => ['id' => $product->id, 'sku' => $product->sku, 'slug' => $product->slug, 'name' => $product->name]]);
     }
 
     /** @return array<string, mixed> */

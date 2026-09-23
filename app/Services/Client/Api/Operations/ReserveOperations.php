@@ -142,6 +142,7 @@ class ReserveOperations implements OperationProvider
             'items' => $order->items->map(fn ($item) => [
                 'item_id' => $item->id,
                 'sku' => $item->product?->sku,
+                'slug' => $item->product?->slug,
                 'name' => $item->product?->name ?? $item->name,
                 'quantity' => (float) $item->quantity,
                 'price' => (float) ($item->final_price ?? $item->price),

@@ -256,7 +256,6 @@ class CatalogOperations implements OperationProvider
     private function card(Product $product, ?PriceResult $price, ?Currency $currency, array $maps): array
     {
         return $this->identity($product) + [
-            'slug' => $product->slug,
             'url' => $product->slug ? route('products.show', $product->slug) : null,
             'brand' => $product->brand?->name,
         ] + $this->price($product, $price, $currency) + $this->stock($product, $maps);
@@ -273,6 +272,9 @@ class CatalogOperations implements OperationProvider
             'sku' => $product->sku,
             'barcode' => $product->barcode,
             'name' => $product->name,
+            // slug — единственный способ дать ссылку на карточку; без него агент
+            // составляет адрес из названия и получает 404
+            'slug' => $product->slug,
         ];
     }
 

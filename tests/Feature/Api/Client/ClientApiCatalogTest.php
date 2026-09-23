@@ -95,6 +95,7 @@ class ClientApiCatalogTest extends ClientApiTestCase
         $response->assertJsonCount(2, 'data')
             ->assertJsonPath('data.0.code', 'B-2')
             ->assertJsonPath('data.0.price', 50)
+            ->assertJsonPath('data.0.slug', $b->slug, 'slug нужен агенту для ссылки на карточку')
             ->assertJsonPath('data.1.code', 'A-1')
             ->assertJsonPath('data.1.base_price', 120)
             ->assertJsonPath('data.1.price', 100)

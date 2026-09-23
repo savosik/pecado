@@ -80,6 +80,8 @@ class AssistantPayloadTest extends AssistantTestCase
         $text = SystemPrompt::instructions();
 
         $this->assertStringContainsString('[название](/products/{slug})', $text);
+        $this->assertStringContainsString('никогда не составляй его из названия', $text);
+        $this->assertStringContainsString('[название](/products/{sku})', $text);
         $this->assertStringContainsString('/cabinet/documents/{id}/download', $text);
     }
 

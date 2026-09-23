@@ -40,7 +40,9 @@ Route::get('/products/novinki', [ProductController::class, 'novelties'])->name('
 Route::get('/products/bestsellery', [ProductController::class, 'bestsellers'])->name('products.bestsellers');
 Route::get('/products/utsenka', [ProductController::class, 'liquidation'])->name('products.liquidation');
 Route::get('/products/favorites', [ProductController::class, 'favorites'])->middleware('auth')->name('products.favorites');
-Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
+Route::get('/products/{product:slug}', [ProductController::class, 'show'])
+    ->missing([ProductController::class, 'redirectByIdentifier'])
+    ->name('products.show');
 Route::get('/certificates/{certificate}/files/{media}/download', [CertificateController::class, 'download'])
     ->whereNumber('certificate')->whereNumber('media')->name('certificates.download');
 Route::get('/brands', [App\Http\Controllers\User\BrandsController::class, 'index'])->name('brands.index');

@@ -31,7 +31,9 @@ Route::get('/search/products/price-intervals', [SearchApiController::class, 'pri
 Route::get('/products/by-ids', [\App\Http\Controllers\User\ProductByIdsController::class, '__invoke'])->name('api.products.by-ids');
 
 // QuickView — JSON-карточка товара
-Route::get('/products/{product:slug}', [ProductController::class, 'showJson'])->name('api.products.show');
+Route::get('/products/{product:slug}', [ProductController::class, 'showJson'])
+    ->missing([ProductController::class, 'redirectByIdentifier'])
+    ->name('api.products.show');
 
 // CMS-страницы по slug — для встроенного показа в модалках (политика, согласие и т.п.)
 Route::get('/pages/{slug}', [UserPageController::class, 'apiShow'])->name('api.pages.show');

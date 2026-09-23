@@ -487,6 +487,7 @@ class ContentOperations implements OperationProvider
             'code' => $product->code,
             'sku' => $product->sku,
             'name' => $product->name,
+            'slug' => $product->slug,
         ];
     }
 

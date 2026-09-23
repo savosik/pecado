@@ -9,6 +9,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductSelection;
+use App\Services\Catalog\ProductIdentifierResolver;
 use App\Services\Product\ProductQueryService;
 use App\Services\Product\SimilarProductsService;
 use Illuminate\Http\Request;
@@ -394,6 +395,26 @@ class ProductController extends Controller
         $data = $this->buildProductShowData($product);
 
         return Inertia::render('User/Products/Show', $data);
+    }
+
+    /**
+     * Карточка по артикулу, коду или штрихкоду вместо slug:
+     * /products/WY0639 → 301 на /products/winyi-amelia-wy0639.
+     *
+     * Ссылки из чата-помощника и агентов клиентов приходят и по артикулу
+     * (slug модель иногда «составляет» из названия и получает 404), а артикул
+     * клиент знает всегда. Для быстрого просмотра — тот же редирект на JSON.
+     */
+    public static function redirectByIdentifier(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $identifier = trim((string) $request->route('product'));
+        $product = $identifier !== '' ? app(ProductIdentifierResolver::class)->resolve($identifier) : null;
+
+        abort_unless($product !== null && $product->slug, 404);
+
+        $route = $request->routeIs('api.products.show') ? 'api.products.show' : 'products.show';
+
+        return redirect()->to(route($route, $product->slug), 301);
     }
 
     /**
