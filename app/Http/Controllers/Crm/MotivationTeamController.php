@@ -31,6 +31,7 @@ class MotivationTeamController extends CrmController
         private readonly TeamSummaryService $team,
         private readonly PayrollCalculationService $calculations,
         private readonly CorrectionService $corrections,
+        private readonly \App\Services\Motivation\EffectiveParameters $parameters,
     ) {}
 
     public function index(Request $request): Response
@@ -265,7 +266,7 @@ class MotivationTeamController extends CrmController
                 ])
                 ->all();
 
-            $payload['adjustment_limit'] = (float) config('motivation.default_parameters.adjustment_limit', 0.15);
+            $payload['adjustment_limit'] = $this->parameters->float('adjustment_limit', $month, 0.15);
         }
 
         return $payload;

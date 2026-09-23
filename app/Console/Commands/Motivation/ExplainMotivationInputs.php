@@ -48,7 +48,7 @@ class ExplainMotivationInputs extends Command
             : ['grace_working_days' => (int) $this->option('grace')];
 
         $inputs = $collector->collect((int) $manager->getKey(), $month, $params);
-        $rate = (float) config('motivation.default_parameters.rate_k1_per_day', 0.0005);
+        $rate = app(\App\Services\Motivation\EffectiveParameters::class)->float('rate_k1_per_day', $month, 0.0005);
 
         $this->line(sprintf('%s — %s', $manager->name, MonthLabel::ru($month)));
         $this->newLine();

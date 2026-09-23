@@ -27,6 +27,7 @@ class MotivationPlansController extends CrmController
     public function __construct(
         private readonly PlanCalculator $calculator,
         private readonly PlanOrderService $orders,
+        private readonly \App\Services\Motivation\EffectiveParameters $parameters,
     ) {}
 
     public function index(Request $request): Response
@@ -243,7 +244,7 @@ class MotivationPlansController extends CrmController
                 ->whereDate('starts_on', '<=', $quarter->subDay())
                 ->whereDate('ends_on', '>=', $quarter->subMonths(6))
                 ->exists(),
-            'decline_limit' => (float) config('motivation.default_parameters.plan_decline_limit', 0.2),
+            'decline_limit' => $this->parameters->float('plan_decline_limit', $quarter, 0.2),
             'can_edit' => $this->crmActor($request)->can('crm-motivation.edit'),
         ];
     }

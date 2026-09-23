@@ -31,6 +31,7 @@ class MotivationPartnersController extends CrmController
         private readonly \App\Services\Motivation\PoolPackageService $packages,
         private readonly \App\Services\Payroll\PayrollParamsResolver $params,
         private readonly \App\Services\Motivation\ClientTabCounts $tabCounts,
+        private readonly \App\Services\Motivation\EffectiveParameters $parameters,
     ) {}
 
     public function base(Request $request): Response
@@ -81,7 +82,8 @@ class MotivationPartnersController extends CrmController
         $actor = $this->crmActor($request);
         $month = $this->month($request);
         $manager = $this->scopes->manager($actor, $request->integer('manager') ?: null);
-        $defaults = (array) config('motivation.default_parameters', []);
+        // Правила пакета — по приказу, действующему в месяце, а не по конфигу.
+        $defaults = $this->parameters->forMonth($month);
 
         $payload = [
             'manager' => $manager === null ? null : ['id' => (int) $manager->getKey(), 'name' => (string) $manager->name],

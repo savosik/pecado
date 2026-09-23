@@ -62,6 +62,7 @@ class PartnerListService
         private readonly PartnerAttributionResolver $attribution,
         private readonly PayrollParamsResolver $params,
         private readonly DebtListService $debtList,
+        private readonly EffectiveParameters $parameters,
     ) {}
 
     /**
@@ -84,7 +85,7 @@ class PartnerListService
             'threshold' => $this->thresholdState($managerId, $month),
             // Ставка К1 в день — для расшифровки вычета в строке.
             'rate_k1_per_day' => (float) ($this->motivationParams($managerId, CarbonImmutable::instance($month)->startOfMonth())['rate_k1_per_day']
-                ?? config('motivation.default_parameters.rate_k1_per_day', 0)),
+                ?? $this->parameters->float('rate_k1_per_day', $month)),
         ];
 
         // Вкладка называется «Все»: без отбора показываем всю базу, включая ни разу не покупавших.
@@ -201,9 +202,9 @@ class PartnerListService
         $ids = array_column($rows, 'id');
 
         $params = $this->motivationParams($managerId, $period);
-        $rateP2 = (float) ($params['rate_p2'] ?? config('motivation.default_parameters.rate_p2', 0));
-        $threshold = (float) config('motivation.default_parameters.quarterly_qualification_amount', 0);
-        $noveltyMonths = max(1, (int) config('motivation.default_parameters.novelty_periods', 6));
+        $rateP2 = (float) ($params['rate_p2'] ?? $this->parameters->float('rate_p2', $period));
+        $threshold = $this->parameters->float('quarterly_qualification_amount', $period->startOfQuarter());
+        $noveltyMonths = max(1, $this->parameters->int('novelty_periods', $period, 6));
 
         $novelty = $ids === [] ? [] : MotivationPartnerNovelty::query()->whereIn('user_id', $ids)->get()->keyBy('user_id');
         $quarter = $this->quarterAmounts($ids, $period);
@@ -297,11 +298,11 @@ class PartnerListService
         $touches = $this->lastTouches($ids);
         $novelty = $this->novelty($ids, $period);
         $rateP1 = $this->rateP1($managerId, $period);
-        $rateP2 = (float) ($this->motivationParams($managerId, $period)['rate_p2'] ?? config('motivation.default_parameters.rate_p2', 0));
+        $rateP2 = (float) ($this->motivationParams($managerId, $period)['rate_p2'] ?? $this->parameters->float('rate_p2', $period));
         $dropThreshold = (int) config('crm.opportunities.drop_threshold_percent', 25) / 100;
         // Порядок «где быстрее заработать»: новым нужен зачёт за квартал (премия отдела).
         $qualification = (float) ($this->motivationParams($managerId, $period)['quarterly_qualification_amount']
-            ?? config('motivation.default_parameters.quarterly_qualification_amount', 0));
+            ?? $this->parameters->float('quarterly_qualification_amount', $period->startOfQuarter()));
         $quarter = $this->quarterAmounts($novelty, $period);
 
         $rows = [];
@@ -444,7 +445,7 @@ class PartnerListService
         }
 
         $share = (float) ($this->motivationParams($managerId, CarbonImmutable::instance($month)->startOfMonth())['payment_threshold']
-            ?? config('motivation.default_parameters.payment_threshold', 0.6));
+            ?? $this->parameters->float('payment_threshold', $month, 0.6));
 
         return [
             'reached' => $shipped >= $threshold,
@@ -823,7 +824,7 @@ class PartnerListService
 
     private function rateP1(int $managerId, CarbonImmutable $period): float
     {
-        return (float) ($this->motivationParams($managerId, $period)['rate_p1'] ?? config('motivation.default_parameters.rate_p1', 0));
+        return (float) ($this->motivationParams($managerId, $period)['rate_p1'] ?? $this->parameters->float('rate_p1', $period));
     }
 
     /**

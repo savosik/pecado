@@ -35,6 +35,7 @@ class PoolPackageService
         private readonly PoolListService $pool,
         private readonly PartnerAttributionResolver $attribution,
         private readonly WorkingCalendar $calendar,
+        private readonly EffectiveParameters $parameters,
     ) {}
 
     /**
@@ -67,15 +68,15 @@ class PoolPackageService
                 'with_history' => $withHistory,
                 'issued_this_quarter' => MotivationPoolPackageItem::query()->whereHas('package', fn ($q) => $q->whereDate('issued_on', '>=', $quarter))->count(),
                 'returned_this_quarter' => MotivationPoolPackageItem::query()->where('outcome', MotivationPoolPackageItem::OUTCOME_RETURNED)->whereDate('returned_to_pool_at', '>=', $quarter)->count(),
-                'package_size' => (int) config('motivation.default_parameters.pool_package_size', 20),
-                'contact_working_days' => (int) config('motivation.default_parameters.pool_contact_working_days', 10),
-                'shipment_days' => (int) config('motivation.default_parameters.pool_shipment_days', 90),
+                'package_size' => $this->parameters->int('pool_package_size', $period, 20),
+                'contact_working_days' => $this->parameters->int('pool_contact_working_days', $period, 10),
+                'shipment_days' => $this->parameters->int('pool_shipment_days', $period, 90),
             ],
             'taps' => $taps,
             'packages' => $packages->map(fn (MotivationPoolPackage $p): array => $this->packageRow($p))->all(),
             'note' => sprintf(
                 'В общем списке %d партнёров, покупали из них %d. Раздача пакетами по %d из такой базы даёт низкую конверсию — сроки в приказе стоит устанавливать с учётом этого.',
-                count($poolIds), $withHistory, (int) config('motivation.default_parameters.pool_package_size', 20),
+                count($poolIds), $withHistory, $this->parameters->int('pool_package_size', $period, 20),
             ),
         ];
     }
@@ -91,7 +92,7 @@ class PoolPackageService
     {
         $today = CarbonImmutable::today();
         $partnerIds = array_values(array_unique(array_map('intval', $partnerIds)));
-        $size = (int) config('motivation.default_parameters.pool_package_size', 20);
+        $size = $this->parameters->int('pool_package_size', $today->startOfMonth(), 20);
 
         if ($partnerIds === []) {
             throw new \InvalidArgumentException('Выберите хотя бы одного партнёра.');
@@ -112,8 +113,8 @@ class PoolPackageService
             throw new \InvalidArgumentException('Часть выбранных партнёров уже закреплена — обновите список.');
         }
 
-        $contactDue = $this->addWorkingDays($today, (int) config('motivation.default_parameters.pool_contact_working_days', 10));
-        $shipmentDue = $today->addDays((int) config('motivation.default_parameters.pool_shipment_days', 90));
+        $contactDue = $this->addWorkingDays($today, $this->parameters->int('pool_contact_working_days', $today->startOfMonth(), 10));
+        $shipmentDue = $today->addDays($this->parameters->int('pool_shipment_days', $today->startOfMonth(), 90));
         $attributionFrom = $today->addMonthNoOverflow()->startOfMonth();
 
         $package = DB::transaction(function () use ($managerId, $partnerIds, $actor, $comment, $today, $contactDue, $shipmentDue, $attributionFrom): MotivationPoolPackage {

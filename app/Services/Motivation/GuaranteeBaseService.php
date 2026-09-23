@@ -41,7 +41,7 @@ class GuaranteeBaseService
     {
         $effective = CarbonImmutable::instance($effectiveFrom)->startOfMonth();
         $until = $effective->addMonths(self::GUARANTEE_MONTHS);
-        $share = (float) ($this->orders->effective($effective)['values']['transition_guarantee_share'] ?? config('motivation.default_parameters.transition_guarantee_share', 0));
+        $share = (float) ($this->orders->effective($effective)['values']['transition_guarantee_share'] ?? 0);
 
         $rows = [];
         foreach (PersonalManager::query()->active()->where('payroll_enabled', true)->orderBy('name')->get() as $manager) {

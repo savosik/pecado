@@ -34,6 +34,7 @@ class QuarterlyBonusService
         private readonly ShipmentAnalyticsService $analytics,
         private readonly PartnerAttributionResolver $attribution,
         private readonly QuarterlyBonusCalculator $calculator,
+        private readonly EffectiveParameters $parameters,
     ) {}
 
     /**
@@ -54,7 +55,8 @@ class QuarterlyBonusService
         }
 
         $rows = $this->qualifications($start, $end);
-        $params = (array) config('motivation.default_parameters', []);
+        // Порог и ступени — по приказу, действующему на квартал; снимок хранит их в премии.
+        $params = $this->parameters->forQuarter($start);
         $threshold = (float) ($params['quarterly_qualification_amount'] ?? 0);
         $steps = (array) ($params['quarterly_steps'] ?? []);
 
