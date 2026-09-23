@@ -54,7 +54,9 @@ final class AnthropicGateway implements AssistantGateway
                 throw new GatewayException(GatewayException::INVALID, "Не удалось открыть файл {$filename}.");
             }
 
-            $file = $this->client()->files->upload(file: $handle);
+            $file = $this->client()->files->upload(
+                file: \Anthropic\Core\FileParam::fromResource($handle, $filename, $mime),
+            );
 
             return (string) $file->id;
         } catch (GatewayException $e) {
