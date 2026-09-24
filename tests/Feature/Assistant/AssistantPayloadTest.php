@@ -82,6 +82,10 @@ class AssistantPayloadTest extends AssistantTestCase
         $this->assertStringContainsString('[название](/products/{slug})', $text);
         $this->assertStringContainsString('никогда не составляй его из названия', $text);
         $this->assertStringContainsString('[название](/products/{sku})', $text);
+        $this->assertStringContainsString('Память — подсказка о клиенте, а не текущее состояние', $text);
+        $this->assertStringContainsString('только если он есть в questions.list', $text);
+        $this->assertStringContainsString('Не говори «проверил»', $text);
+        $this->assertStringContainsString('Не предлагай «напомнить менеджеру»', $text);
         $this->assertStringContainsString('/cabinet/documents/{id}/download', $text);
     }
 

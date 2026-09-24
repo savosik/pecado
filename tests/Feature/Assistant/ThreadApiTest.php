@@ -34,9 +34,22 @@ class ThreadApiTest extends AssistantTestCase
         $again = $this->actingAs($this->client)->postJson('/cabinet/assistant/threads')->assertOk()->json('thread.id');
         $this->assertSame($first, $again);
 
+        // Пустой открытый тред и есть «новый разговор»: кнопка не плодит пустые записи.
+        $reused = $this->actingAs($this->client)->postJson('/cabinet/assistant/threads', ['fresh' => true])->assertOk()->json('thread.id');
+        $this->assertSame($first, $reused);
+        $this->assertSame('open', ChatThread::find($first)->status);
+
+        ChatMessage::create(['thread_id' => $first, 'role' => 'user', 'content' => [['type' => 'text', 'text' => 'привет']], 'text' => 'привет', 'status' => 'done']);
+
         $fresh = $this->actingAs($this->client)->postJson('/cabinet/assistant/threads', ['fresh' => true])->assertOk()->json('thread.id');
         $this->assertNotSame($first, $fresh);
+        $this->assertSame('closed', ChatThread::find($first)->status, 'непустой прежний тред закрыт');
         $this->assertSame('product', ChatThread::find($first)->page['type']);
+
+        // В истории только треды, где что-то написано.
+        $ids = collect($this->actingAs($this->client)->getJson('/cabinet/assistant/threads')->assertOk()->json('threads'))->pluck('id')->all();
+        $this->assertSame([$first], $ids, 'пустой свежий тред в списке не показывается');
+        $this->assertSame(2, ChatThread::count());
     }
 
     #[Test]

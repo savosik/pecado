@@ -123,6 +123,17 @@ class ChatThread extends Model
         return $query->where('status', self::STATUS_OPEN);
     }
 
+    /**
+     * Только треды, в которых хоть что-то написано: пустые заводятся
+     * открытием панели и в истории клиента — шум.
+     *
+     * @param  Builder<ChatThread>  $query
+     */
+    public function scopeWithMessages(Builder $query): Builder
+    {
+        return $query->has('messages');
+    }
+
     /** @param  Builder<ChatThread>  $query */
     public function scopeForUser(Builder $query, User|int $user): Builder
     {

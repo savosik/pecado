@@ -75,6 +75,8 @@ class BubbleTest extends AssistantTestCase
     public function страница_помощника_в_кабинете_отдаёт_треды(): void
     {
         $thread = app(\App\Services\Assistant\ThreadService::class)->open($this->client);
+        \App\Models\ChatMessage::create(['thread_id' => $thread->id, 'role' => 'user', 'content' => [['type' => 'text', 'text' => 'привет']], 'text' => 'привет', 'status' => 'done']);
+        app(\App\Services\Assistant\ThreadService::class)->open($this->client); // пустой — в списке не показывается
 
         $this->actingAs($this->client)
             ->get('/cabinet/assistant')

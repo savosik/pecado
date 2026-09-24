@@ -25,16 +25,16 @@ export default function AssistantIndex() {
     const current = useAssistantStore((s) => s.thread);
     const open = useAssistantStore((s) => s.open);
     const switchThread = useAssistantStore((s) => s.switchThread);
-    const openDialog = useAssistantStore((s) => s.openDialog);
     const closeDialog = useAssistantStore((s) => s.closeDialog);
     const newThread = useAssistantStore((s) => s.newThread);
     const startPolling = useAssistantStore((s) => s.startPolling);
 
     useEffect(() => {
         // Drawer на этой странице не нужен — диалог встроен в саму страницу.
+        // Тред здесь не заводим: он появится с первым сообщением или по кнопке
+        // «Новый разговор», иначе каждый заход на страницу оставлял пустой тред.
         if (open) closeDialog();
-        if (!current) openDialog().then(() => closeDialog());
-        else startPolling();
+        if (current) startPolling();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

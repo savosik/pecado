@@ -74,6 +74,20 @@ export const useAssistantStore = create((set, get) => ({
         set({ page });
     },
 
+    /**
+     * Тред нужен только когда клиент что-то пишет или прикладывает: заводим
+     * его лениво, чтобы простое открытие страницы не оставляло пустых тредов.
+     */
+    async ensureThread() {
+        if (get().thread) return get().thread;
+
+        const { data } = await window.axios.post('/cabinet/assistant/threads', { page: get().page });
+        get().applyState(data, true);
+        get().startPolling();
+
+        return get().thread;
+    },
+
     async openDialog({ fresh = false, prefill = null } = {}) {
         set({ open: true, error: null, prefill });
 
@@ -166,12 +180,13 @@ export const useAssistantStore = create((set, get) => ({
     },
 
     async send(text) {
-        const { thread, pendingAttachments, page } = get();
-        if (!thread) return false;
-
         set({ error: null });
 
         try {
+            const thread = await get().ensureThread();
+            const { pendingAttachments, page } = get();
+            if (!thread) return false;
+
             const { data } = await window.axios.post(`/cabinet/assistant/threads/${thread.id}/messages`, {
                 text,
                 attachments: pendingAttachments.map((a) => a.id),
@@ -206,12 +221,23 @@ export const useAssistantStore = create((set, get) => ({
     },
 
     async upload(file) {
-        const thread = get().thread;
-        if (!thread) return;
+        set({ uploading: true, error: null });
+        let thread;
+
+        try {
+            thread = await get().ensureThread();
+        } catch (error) {
+            set({ uploading: false, error: errorMessage(error, 'Не удалось открыть помощника.') });
+            return;
+        }
+
+        if (!thread) {
+            set({ uploading: false });
+            return;
+        }
 
         const form = new FormData();
         form.append('file', file);
-        set({ uploading: true, error: null });
 
         try {
             const { data } = await window.axios.post(`/cabinet/assistant/threads/${thread.id}/attachments`, form, {

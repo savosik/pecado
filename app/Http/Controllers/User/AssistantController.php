@@ -37,6 +37,7 @@ class AssistantController extends Controller
 
         $threads = ChatThread::query()
             ->forUser($user)
+            ->withMessages()
             ->orderByDesc('last_message_at')
             ->limit(50)
             ->get()
@@ -55,6 +56,7 @@ class AssistantController extends Controller
         return response()->json([
             'threads' => ChatThread::query()
                 ->forUser($user)
+                ->withMessages()
                 ->orderByDesc('last_message_at')
                 ->limit(30)
                 ->get()
@@ -73,14 +75,21 @@ class AssistantController extends Controller
         // о чём мы говорили» не сбывается до закрытия по бездействию через сутки.
         if ($request->boolean('fresh')) {
             $closer = app(\App\Services\Assistant\ThreadCloser::class);
+            $thread = null;
 
-            foreach (ChatThread::query()->forUser($user)->open()->get() as $previous) {
+            foreach (ChatThread::query()->forUser($user)->open()->orderByDesc('last_message_at')->get() as $previous) {
+                // Пустой открытый тред и есть «новый разговор» — не плодим
+                // пустые записи в истории на каждое нажатие кнопки.
+                if ($thread === null && ! $previous->messages()->exists()) {
+                    $thread = $previous;
+
+                    continue;
+                }
+
                 if (! $this->threads->isBusy($previous)) {
                     $closer->close($previous);
                 }
             }
-
-            $thread = null;
         } else {
             $thread = ChatThread::query()->forUser($user)->open()->orderByDesc('last_message_at')->first();
         }

@@ -48,6 +48,8 @@ class ThreadCloserTest extends AssistantTestCase
         $request = $this->gateway->lastRequest();
         $this->assertStringContainsString('Сколько стоит LE-13?', $request['messages'][0]['content']);
         $this->assertArrayNotHasKey('mcpServers', $request, 'память пишется без инструментов');
+        $this->assertStringContainsString('не записывай ни как «открытые вопросы»', $request['messages'][0]['content'], 'неотвеченные предложения помощника — не обязательства');
+        $this->assertStringContainsString('ограничения сайта', $request['messages'][0]['content'], 'заметка о клиенте, а не о сайте');
     }
 
     #[Test]
