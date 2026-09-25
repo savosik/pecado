@@ -54,6 +54,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => \App\Http\Middleware\CheckPermission::class,
             'apiship.webhook' => \App\Http\Middleware\ApiShipWebhookEnabled::class,
+            'agent-hub.link' => \App\Http\Middleware\ResolveAgentHubLink::class,
         ]);
 
         $middleware->group('admin', [

@@ -451,17 +451,21 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Диалоги ИИ-агентов (сайт ↔ 1С): топики совместной работы двух агентов.
     Route::middleware('permission:agent-topics.view')->group(function () {
         Route::get('/agent-topics', [\App\Http\Controllers\Admin\AgentTopicController::class, 'index'])->name('agent-topics.index');
+        // Ссылки-хеши на пульт: объявлены до {agentTopic}, иначе «links» уехало бы в биндинг топика.
+        Route::get('/agent-topics/links', [\App\Http\Controllers\Admin\AgentHubLinkController::class, 'index'])->name('agent-topics.links.index');
         Route::get('/agent-topics/{agentTopic}', [\App\Http\Controllers\Admin\AgentTopicController::class, 'show'])->name('agent-topics.show')->whereNumber('agentTopic');
     });
     Route::middleware('permission:agent-topics.create')->group(function () {
         Route::get('/agent-topics/create', [\App\Http\Controllers\Admin\AgentTopicController::class, 'create'])->name('agent-topics.create');
         Route::post('/agent-topics', [\App\Http\Controllers\Admin\AgentTopicController::class, 'store'])->name('agent-topics.store');
+        Route::post('/agent-topics/links', [\App\Http\Controllers\Admin\AgentHubLinkController::class, 'store'])->name('agent-topics.links.store');
     });
     Route::middleware('permission:agent-topics.edit')->group(function () {
         Route::put('/agent-topics/{agentTopic}', [\App\Http\Controllers\Admin\AgentTopicController::class, 'update'])->name('agent-topics.update');
         Route::post('/agent-topics/{agentTopic}/messages', [\App\Http\Controllers\Admin\AgentTopicController::class, 'storeMessage'])->name('agent-topics.messages.store');
         Route::post('/agent-topics/{agentTopic}/pass-turn', [\App\Http\Controllers\Admin\AgentTopicController::class, 'passTurn'])->name('agent-topics.pass-turn');
         Route::post('/agent-topics/{agentTopic}/close', [\App\Http\Controllers\Admin\AgentTopicController::class, 'close'])->name('agent-topics.close');
+        Route::delete('/agent-topics/links/{agentHubLink}', [\App\Http\Controllers\Admin\AgentHubLinkController::class, 'destroy'])->name('agent-topics.links.destroy');
     });
 
     // Регионы

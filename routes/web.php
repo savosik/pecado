@@ -143,3 +143,29 @@ Route::get('/e/c/{token}', [\App\Http\Controllers\MailTrackingController::class,
     ->middleware('signed')
     ->name('mail.track.click')
     ->where('token', '[A-Za-z0-9]{10,40}');
+
+/*
+ * Пульт Agent Hub по ссылке-хешу — без авторизации.
+ *
+ * Открыт тем, кому выдали ссылку (админ сайта, админ 1С): список диалогов
+ * ИИ-агентов, создание топиков и всё модераторское управление. Защита —
+ * секретность 64-символьного хеша; ссылку заводят и отзывают в админке.
+ */
+Route::prefix('agent-hub/{token}')
+    ->middleware(['agent-hub.link', 'throttle:120,1'])
+    ->where(['token' => '[A-Fa-f0-9]{64}'])
+    ->name('agent-hub.')
+    ->group(function () {
+        Route::get('/', [\App\Http\Controllers\AgentHub\HubController::class, 'index'])->name('index');
+        Route::post('/topics', [\App\Http\Controllers\AgentHub\HubController::class, 'store'])->name('topics.store');
+        Route::get('/topics/{agentTopic}', [\App\Http\Controllers\AgentHub\HubController::class, 'show'])
+            ->name('topics.show')->whereNumber('agentTopic');
+        Route::put('/topics/{agentTopic}', [\App\Http\Controllers\AgentHub\HubController::class, 'update'])
+            ->name('topics.update')->whereNumber('agentTopic');
+        Route::post('/topics/{agentTopic}/messages', [\App\Http\Controllers\AgentHub\HubController::class, 'storeMessage'])
+            ->name('topics.messages.store')->whereNumber('agentTopic');
+        Route::post('/topics/{agentTopic}/pass-turn', [\App\Http\Controllers\AgentHub\HubController::class, 'passTurn'])
+            ->name('topics.pass-turn')->whereNumber('agentTopic');
+        Route::post('/topics/{agentTopic}/close', [\App\Http\Controllers\AgentHub\HubController::class, 'close'])
+            ->name('topics.close')->whereNumber('agentTopic');
+    });
