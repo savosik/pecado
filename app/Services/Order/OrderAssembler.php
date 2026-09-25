@@ -115,9 +115,24 @@ class OrderAssembler
     private function createItems(Order $order, array $lines, User $user): float
     {
         $total = 0.0;
+        $priceless = [];
 
         foreach (array_values($lines) as $index => $line) {
             [$price, $basePrice, $discountPercent] = $this->resolvePrice($line, $user);
+
+            // Позиция без цены в заказ не попадает. Ноль законен только у промо:
+            // подарок и пробник выдаёт акция, и 1С ждёт такую строку. У обычного
+            // товара ноль означает, что цены нет нигде — ни в карточке, ни в
+            // индивидуальном прайсе, — и документ уедет в 1С непроводимым.
+            if ($line->promoKind === null && $price <= 0) {
+                $priceless[] = [
+                    'product_id' => $line->product->id,
+                    'sku' => $line->product->sku,
+                    'name' => $line->product->name,
+                ];
+
+                continue;
+            }
 
             $subtotal = $price * $line->quantity;
             $total += $subtotal;
@@ -141,6 +156,13 @@ class OrderAssembler
                 'quantity' => $line->quantity,
                 'subtotal' => $subtotal,
             ]);
+        }
+
+        if ($priceless !== []) {
+            throw new \App\Exceptions\ProductWithoutPriceException(
+                'В заказе есть позиции без цены',
+                $priceless,
+            );
         }
 
         return $total;
@@ -185,7 +207,20 @@ class OrderAssembler
 
         $result = $this->priceService->getPriceResult($line->product, $user);
         $price = $result->getDisplayPrice();
+        $base = (float) $result->basePrice;
 
-        return [$price, (float) $result->basePrice, (float) $result->discountPercent];
+        // Базовой цены может не быть: карточку завело сообщение product.created,
+        // а price.updated по ней из 1С не приходил — товар при этом продаётся по
+        // индивидуальной цене и на витрине выглядит нормально. Для обычной позиции
+        // контракт задаёт тождество final_price = base_price × (1 − скидка), то есть
+        // 1С вправе считать строку от базы, и нулевая база давала нулевую строку:
+        // 23.09.2026 из-за этого не провелись 29УТ-014790 и 29УТ-014791 (955067-L).
+        // Поэтому база, которая не больше цены клиента (ноль или наценка),
+        // схлопывается в саму цену — то же правило, что уже действует для уценки.
+        if ($base <= $price) {
+            return [$price, $price, 0.0];
+        }
+
+        return [$price, $base, (float) $result->discountPercent];
     }
 }

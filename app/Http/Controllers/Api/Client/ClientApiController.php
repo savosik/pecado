@@ -149,6 +149,12 @@ class ClientApiController extends Controller
             return response()->json(Envelope::error('stock_changed', $e->getMessage(), null, [
                 'conflicts' => $e->getItems(),
             ]), 409);
+        } catch (\App\Exceptions\ProductWithoutPriceException $e) {
+            // Товар без цены: ни базовой в карточке, ни индивидуальной от 1С.
+            // Агенту нужно знать, какие строки убрать, а не получить 500.
+            return response()->json(Envelope::error('no_price', $e->getMessage(), 'items', [
+                'items' => $e->getItems(),
+            ]), 422);
         } catch (DebtRestrictionException $e) {
             return response()->json(Envelope::error('debt_restricted', $e->getMessage(), null, [
                 'debt' => $e->toPayload(),

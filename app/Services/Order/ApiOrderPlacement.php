@@ -3,6 +3,7 @@
 namespace App\Services\Order;
 
 use App\Contracts\Currency\UserCurrencyResolverInterface;
+use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Enums\OrderType;
 use App\Models\Company;
@@ -28,6 +29,7 @@ class ApiOrderPlacement
     public function __construct(
         private readonly ProductIdentifierResolver $identifiers,
         private readonly StockServiceInterface $stocks,
+        private readonly PriceServiceInterface $prices,
         private readonly UserCurrencyResolverInterface $currencyResolver,
         private readonly ClientApiPromotions $promotions,
         private readonly OrderAssembler $assembler,
@@ -82,6 +84,24 @@ class ApiOrderPlacement
                     'requested' => $requestedQty,
                     'reason' => 'out_of_stock',
                     'message' => 'Нет в наличии',
+                ];
+
+                continue;
+            }
+
+            // Товар без цены в заказ не берём: ни базовой в карточке, ни
+            // индивидуальной от 1С — строка уехала бы в 1С нулевой, документ не
+            // провёлся бы, а клиент получил бы товар даром.
+            if ($this->prices->getPriceResult($product, $user)->getDisplayPrice() <= 0) {
+                $notAccepted[] = [
+                    'line' => $line,
+                    'identifier' => $identifier,
+                    'product_id' => $product->id,
+                    'slug' => $product->slug,
+                    'name' => $product->name,
+                    'requested' => $requestedQty,
+                    'reason' => 'no_price',
+                    'message' => 'Цена не назначена',
                 ];
 
                 continue;

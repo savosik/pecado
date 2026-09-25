@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 16.11.0
+  version: 16.11.1
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -3427,7 +3427,7 @@ components:
         base_price:
           type: number
           minimum: 0
-          description: 'Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3)'
+          description: 'Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price > 0 и base_price >= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля'
         discount_percent:
           type: number
           maximum: 100
