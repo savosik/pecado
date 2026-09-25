@@ -1,7 +1,7 @@
 @component('mail::message')
 # Новый вопрос с сайта
 
-На сайте задан новый вопрос через форму FAQ.
+Клиент задал вопрос менеджеру на сайте.
 
 **От:** {{ $question->name ?: 'без имени' }} ({{ $question->email }})
 @if ($question->user_id)
@@ -19,7 +19,7 @@
 > {!! nl2br(e(\Illuminate\Support\Str::limit($question->body, 800))) !!}
 
 @component('mail::button', ['url' => $adminUrl, 'color' => 'primary'])
-Открыть в админке
+Открыть вопрос
 @endcomponent
 
 — Pecado.ru

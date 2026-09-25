@@ -4,18 +4,22 @@ import {
     LuPackageX,
     LuShieldCheck,
     LuTruck,
+    LuPackageCheck,
+    LuLink,
     LuScanBarcode,
     LuListOrdered,
     LuPackageSearch,
     LuSettings,
     LuTriangleAlert,
-} from "react-icons/lu";
+    LuBookOpen, LuCalendarClock } from "react-icons/lu";
 
 export interface MenuItem {
     label: string;
     icon: React.ElementType;
     path: string;
     permission?: string;
+    /** Ключ из общего пропа `config`: пункт виден только при включённой функции. */
+    feature?: string;
 }
 
 export interface MenuGroup {
@@ -55,6 +59,8 @@ export const menuConfig: MenuGroup[] = [
         title: "Отгрузка",
         icon: LuTruck,
         items: [
+            { label: "Выдача заказов", icon: LuPackageCheck, path: "/wms/pickups", permission: "wms-pickups.view", feature: "pickup" },
+            { label: "График выдачи", icon: LuCalendarClock, path: "/wms/pickups/schedule", permission: "wms-pickups.schedule", feature: "pickup" },
             { label: "Расходные ордера", icon: LuClipboardList, path: "/wms/goods-issues", permission: "wms-goods-issues.view" },
         ],
     },
@@ -65,6 +71,21 @@ export const menuConfig: MenuGroup[] = [
             { label: "Реализации к доставке", icon: LuPackageSearch, path: "/wms/delivery-candidates", permission: "wms-deliveries.view" },
             { label: "Отправки", icon: LuTruck, path: "/wms/deliveries", permission: "wms-deliveries.view" },
             { label: "Настройки ApiShip", icon: LuSettings, path: "/wms/delivery-settings", permission: "wms-delivery-settings.view" },
+        ],
+    },
+    {
+        title: "Сотрудники",
+        icon: LuLink,
+        items: [
+            { label: "Ссылки для кладовщиков", icon: LuLink, path: "/wms/access-links", permission: "wms-access.view" },
+        ],
+    },
+    {
+        // Инструкции для склада из админки: текст, PDF или видео. Без права.
+        title: "Справка",
+        icon: LuBookOpen,
+        items: [
+            { label: "Инструкции", icon: LuBookOpen, path: "/wms/instructions" },
         ],
     },
     // Разделы приёмки, отбора и инвентаризации добавятся сюда позже.

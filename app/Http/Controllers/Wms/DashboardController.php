@@ -23,6 +23,10 @@ class DashboardController extends WmsController
             ],
             'isWarehouseHead' => $this->isWarehouseHead($request),
             'goodsIssues' => $this->goodsIssueSummary($request),
+            // pick-07: что лежит на стойке выдачи и где склад опаздывает со сборкой самовывоза
+            'pickups' => config('pickup.wms_enabled') && $request->user()->can('wms-pickups.view')
+                ? app(\App\Services\Pickup\PickupQueue::class)->counters()
+                : null,
         ]);
     }
 

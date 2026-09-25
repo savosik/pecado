@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Wms\AccessLinkController;
 use App\Http\Controllers\Wms\DashboardController;
 use App\Http\Controllers\Wms\DefectController;
 use App\Http\Controllers\Wms\DefectTypeController;
@@ -7,6 +8,9 @@ use App\Http\Controllers\Wms\DeliveryCandidateController;
 use App\Http\Controllers\Wms\DeliveryController;
 use App\Http\Controllers\Wms\DeliverySettingsController;
 use App\Http\Controllers\Wms\GoodsIssueController;
+use App\Http\Controllers\Wms\InstructionController;
+use App\Http\Controllers\Wms\PickupController;
+use App\Http\Controllers\Wms\PickupDeskController;
 use App\Http\Controllers\Wms\StockBufferController;
 use Illuminate\Support\Facades\Route;
 
@@ -80,6 +84,49 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
 
         // Ниже export — иначе «export» попал бы в {goodsIssue} как id.
         Route::get('/goods-issues/{goodsIssue}', [GoodsIssueController::class, 'show'])->name('goods-issues.show');
+    });
+
+    // Ссылки для кладовщиков (pick-17): вход в кабинет склада без пароля. Только начальник склада.
+    Route::middleware('permission:wms-access.view')->prefix('access-links')->name('access-links.')->group(function () {
+        Route::get('/', [AccessLinkController::class, 'index'])->name('index');
+        Route::get('/{link}/handovers', [AccessLinkController::class, 'handovers'])->name('handovers');
+        Route::middleware('permission:wms-access.edit')->group(function () {
+            Route::post('/', [AccessLinkController::class, 'store'])->name('store');
+            Route::post('/{link}/regenerate', [AccessLinkController::class, 'regenerate'])->name('regenerate');
+            Route::post('/{link}/revoke', [AccessLinkController::class, 'revoke'])->name('revoke');
+        });
+    });
+
+    // Выдача заказов самовывоза (эпик pick-00). Документ сайта: в 1С статуса «выдан» нет.
+    // Экран под телефон — действия отвечают JSON. Рубильник — config('pickup.wms_enabled').
+    Route::middleware('permission:wms-pickups.view')->prefix('pickups')->name('pickups.')->group(function () {
+        Route::get('/', [PickupController::class, 'index'])->name('index');
+        Route::get('/data', [PickupController::class, 'data'])->name('data');
+        Route::get('/search', [PickupController::class, 'search'])->name('search');
+        Route::get('/passes/{pass}', [PickupController::class, 'pass'])->name('pass');
+        Route::post('/resolve', [PickupController::class, 'resolve'])->name('resolve')->middleware('throttle:120,1');
+
+        // Стойка выдачи (pick-18): выдают ли сейчас, «Отойти»/«Вернулся», смена и плановые перерывы.
+        Route::get('/desk', [PickupDeskController::class, 'status'])->name('desk.status');
+        Route::middleware('permission:wms-pickups.issue')->group(function () {
+            Route::post('/desk/pause', [PickupDeskController::class, 'pause'])->name('desk.pause');
+            Route::post('/desk/resume', [PickupDeskController::class, 'resume'])->name('desk.resume');
+        });
+        Route::middleware('permission:wms-pickups.schedule')->prefix('schedule')->name('schedule.')->group(function () {
+            Route::get('/', [PickupDeskController::class, 'schedule'])->name('index');
+            Route::put('/days/{iso}', [PickupDeskController::class, 'updateDay'])->whereNumber('iso')->name('days.update');
+        });
+
+        Route::middleware('permission:wms-pickups.issue')->group(function () {
+            Route::post('/passes/{pass}/issue-all', [PickupController::class, 'issueAll'])->name('issue-all');
+            Route::post('/{goodsIssue}/issue', [PickupController::class, 'issue'])->name('issue');
+        });
+
+        Route::middleware('permission:wms-pickups.cancel')->group(function () {
+            Route::post('/handovers/{handover}/cancel', [PickupController::class, 'cancel'])->name('cancel');
+            Route::post('/handovers/{handover}/review', [PickupController::class, 'review'])->name('review');
+            Route::post('/{goodsIssue}/close', [PickupController::class, 'close'])->name('close');
+        });
     });
 
     // Реализации к доставке — рабочий стол склада перед созданием отправки:
@@ -156,4 +203,10 @@ Route::middleware(['web', 'auth', 'wms'])->prefix('wms')->name('wms.')->group(fu
         Route::delete('/defect-types/{defectType}', [DefectTypeController::class, 'destroy'])
             ->name('defect-types.destroy')->middleware('permission:wms-defect-types.delete');
     });
+
+    // Инструкции для склада. Без отдельного права: читает каждый, кто попал в WMS.
+    Route::get('/instructions', [InstructionController::class, 'index'])->name('instructions.index');
+    Route::get('/instructions/{instruction}', [InstructionController::class, 'show'])
+        ->name('instructions.show')
+        ->whereNumber('instruction');
 });

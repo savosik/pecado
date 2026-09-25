@@ -14,6 +14,11 @@ export default function LoginForm() {
         email: '',
         password: '',
         remember: false,
+        // Попап открывают на любой странице (новость, каталог, товар) —
+        // после входа пользователь должен остаться там же, а не улететь на главную.
+        return_to: typeof window !== 'undefined'
+            ? window.location.pathname + window.location.search + window.location.hash
+            : '',
     });
 
     const handleSubmit = (e) => {

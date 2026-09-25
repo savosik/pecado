@@ -339,6 +339,20 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     });
     Route::delete('/news/{news}', [\App\Http\Controllers\Admin\NewsController::class, 'destroy'])->name('news.destroy')->middleware('permission:news.delete');
 
+    // Инструкции для клиентов, CRM и WMS: ведутся здесь, читаются в панелях.
+    Route::middleware('permission:instructions.view')->group(function () {
+        Route::get('/instructions', [\App\Http\Controllers\Admin\InstructionController::class, 'index'])->name('instructions.index');
+    });
+    Route::middleware('permission:instructions.create')->group(function () {
+        Route::get('/instructions/create', [\App\Http\Controllers\Admin\InstructionController::class, 'create'])->name('instructions.create');
+        Route::post('/instructions', [\App\Http\Controllers\Admin\InstructionController::class, 'store'])->name('instructions.store');
+    });
+    Route::middleware('permission:instructions.edit')->group(function () {
+        Route::get('/instructions/{instruction}/edit', [\App\Http\Controllers\Admin\InstructionController::class, 'edit'])->name('instructions.edit')->whereNumber('instruction');
+        Route::put('/instructions/{instruction}', [\App\Http\Controllers\Admin\InstructionController::class, 'update'])->name('instructions.update')->whereNumber('instruction');
+    });
+    Route::delete('/instructions/{instruction}', [\App\Http\Controllers\Admin\InstructionController::class, 'destroy'])->name('instructions.destroy')->whereNumber('instruction')->middleware('permission:instructions.delete');
+
     // Меню
     Route::middleware('permission:menu-items.view')->group(function () {
         Route::get('/menu-items', [\App\Http\Controllers\Admin\MenuItemController::class, 'index'])->name('menu-items.index');

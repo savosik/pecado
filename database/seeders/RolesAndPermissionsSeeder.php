@@ -79,6 +79,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'stories' => ['view', 'create', 'edit', 'delete'],
         'menu-items' => ['view', 'create', 'edit', 'delete'],
         'user-questions' => ['view', 'edit', 'delete'],
+        // Инструкции для клиентов, CRM и WMS: ведёт контент-менеджер в админке,
+        // читальные разделы панелей отдельного права не требуют.
+        'instructions' => ['view', 'create', 'edit', 'delete'],
 
         // Теги
         'tags' => ['view', 'create', 'edit', 'delete'],
@@ -140,6 +143,11 @@ class RolesAndPermissionsSeeder extends Seeder
         // Недоборы: view — журнал и сводки, edit — причина отмены и комментарий
         // в строке. Границы задаёт скоуп клиентов, как в остальных разделах.
         'crm-shortages' => ['view', 'edit'],
+        // Вопросы клиентов менеджеру (форма на сайте, кабинет, клиентский API):
+        // view — список и карточка в границах своих партнёров, edit — ответ и
+        // отклонение. До этого вопросы жили только в админке под `user-questions`,
+        // и менеджеры о них не знали.
+        'crm-questions' => ['view', 'edit'],
         // Режим «Заказы в резерве» (v16.9.0, res-11): сводка злоупотреблений
         // и рычаг РОПа (точечное отключение, индивидуальное окно).
         'crm-reserves' => ['view', 'edit'],
@@ -166,6 +174,9 @@ class RolesAndPermissionsSeeder extends Seeder
         // Токены ИИ-агентов: выдача и отзыв. Только РОП — токен даёт запись
         // в CRM от имени сотрудника, и раздавать их самим сотрудникам нельзя.
         'crm-agent-tokens' => ['view', 'create', 'delete'],
+        // Журнал вызовов агентов клиентов (capi-17): смотреть, кто из партнёров
+        // пользуется MCP/API и для чего. Только чтение — управлять здесь нечем.
+        'crm-agent-usage' => ['view'],
         // Просмотр сайта от имени клиента. Действие одно и не раскладывается
         // на view/edit: это не раздел, а переключатель сессии. Границы задаёт
         // скоуп клиентов — менеджер входит только под своими.
@@ -197,6 +208,12 @@ class RolesAndPermissionsSeeder extends Seeder
         // Страховой запас (эпик buf-00): рисковые SKU с занижением показа
         // и ручные пометки склада «придержи N шт».
         'wms-stock-buffers' => ['view', 'edit'],
+        // Выдача заказов самовывоза (эпик pick-00): issue — отметить «выдан», cancel — отменить
+        // ошибочную выдачу и закрыть хвост без выдачи (только начальник склада), schedule — смена
+        // и технические перерывы стойки выдачи (pick-18, только начальник склада).
+        'wms-pickups' => ['view', 'issue', 'cancel', 'schedule'],
+        // Ссылки для входа кладовщиков без пароля (pick-17) — только начальнику склада.
+        'wms-access' => ['view', 'edit'],
 
         // Уценка глазами закупщика — админский ресурс (без `wms-` префикса):
         // цену и публикацию задаёт buyer-manager в /admin, а не кладовщик.
@@ -265,6 +282,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'stories' => 'Истории',
         'menu-items' => 'Меню',
         'user-questions' => 'Вопросы пользователей',
+        'instructions' => 'Инструкции',
         'tags' => 'Теги',
         'crm-dashboard' => 'CRM: Рабочий стол',
         'crm-clients' => 'CRM: Мои партнёры',
@@ -281,11 +299,13 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-emails' => 'CRM: Письма',
         'crm-plans' => 'CRM: Планы продаж',
         'crm-shortages' => 'CRM: Недоборы',
+        'crm-questions' => 'CRM: Вопросы клиентов',
         'crm-shortage-reasons' => 'CRM: Причины недоборов',
         'crm-contacts' => 'CRM: Контакты',
         'crm-contracts' => 'CRM: Договоры',
         'crm-attachments' => 'CRM: Вложения',
         'crm-agent-tokens' => 'CRM: Токены ИИ-агентов',
+        'crm-agent-usage' => 'CRM: ИИ-агенты клиентов',
         'crm-impersonate' => 'CRM: Вход под партнёром',
         'crm-salary' => 'CRM: Зарплата',
         'crm-motivation' => 'CRM: Мотивация 2.0',
@@ -294,6 +314,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'wms-defect-types' => 'Склад: Справочник дефектов',
         'wms-goods-issues' => 'Склад: Расходные ордера',
         'wms-stock-buffers' => 'Склад: Страховой запас',
+        'wms-pickups' => 'Склад: Выдача заказов',
+        'wms-access' => 'Склад: Ссылки для кладовщиков',
         'defects' => 'Уценка (цены и публикация)',
         'defect-types' => 'Справочник дефектов',
         'supplier-preorders' => 'Предзаказы поставщику',
@@ -317,7 +339,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 'articles', 'brand-stories', 'news', 'faqs',
                 'banners', 'pages', 'stories', 'tags', 'media',
-                'menu-items', 'user-questions',
+                'menu-items', 'user-questions', 'instructions',
                 // Механику акций контент-менеджер только смотрит
                 'promotion-rules' => ['view'],
             ],
@@ -331,7 +353,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'payments' => ['view'],
                 // CRM: партнёры отдела. Менеджеры взаимозаменяемы — экран открывается
                 // сфокусированным на своих, расфокус остаётся осознанным действием.
-                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-finance', 'crm-shortages', 'crm-contacts', 'crm-contracts' => ['view', 'create', 'edit'], 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-shortage-reasons' => ['view'], 'crm-absences' => ['view'], 'crm-impersonate', 'crm-salary' => ['view'],
+                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-finance', 'crm-shortages', 'crm-questions', 'crm-contacts', 'crm-contracts' => ['view', 'create', 'edit'], 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-shortage-reasons' => ['view'], 'crm-absences' => ['view'], 'crm-impersonate', 'crm-salary' => ['view'], 'crm-agent-usage',
             ],
         ],
         'sales-manager-crm' => [
@@ -339,14 +361,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
                 // Для менеджеров, которым нужны партнёры отдела, но не нужна админка.
-                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-finance', 'crm-shortages', 'crm-contacts', 'crm-contracts' => ['view', 'create', 'edit'], 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-shortage-reasons' => ['view'], 'crm-absences' => ['view'], 'crm-impersonate', 'crm-salary' => ['view'],
+                'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-finance', 'crm-shortages', 'crm-questions', 'crm-contacts', 'crm-contracts' => ['view', 'create', 'edit'], 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-shortage-reasons' => ['view'], 'crm-absences' => ['view'], 'crm-impersonate', 'crm-salary' => ['view'], 'crm-agent-usage',
             ],
         ],
         'sales-head' => [
             'label' => 'Руководитель отдела продаж',
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
-                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-department', 'crm-leads', 'crm-lead-stages', 'crm-contractors', 'crm-team', 'crm-absences', 'crm-timesheet', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-finance', 'crm-shortages', 'crm-shortage-reasons', 'crm-reserves', 'crm-contacts', 'crm-contracts', 'crm-agent-tokens', 'crm-impersonate', 'crm-salary',
+                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-department', 'crm-leads', 'crm-lead-stages', 'crm-contractors', 'crm-team', 'crm-absences', 'crm-timesheet', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-finance', 'crm-shortages', 'crm-questions', 'crm-shortage-reasons', 'crm-reserves', 'crm-contacts', 'crm-contracts', 'crm-agent-tokens', 'crm-agent-usage', 'crm-impersonate', 'crm-salary',
                 // Мотивация 2.0: на время разработки и параллельного расчёта — только руководителю.
                 'crm-motivation',
                 // Себестоимость руководителю отдела появится вместе с отчётом по марже
@@ -370,7 +392,15 @@ class RolesAndPermissionsSeeder extends Seeder
                 // Только WMS: в /admin роль намеренно не пускает.
                 // Справочник дефектов ведёт начальник склада — у кладовщика его нет.
                 'wms-dashboard', 'wms-defects', 'wms-defect-types', 'wms-goods-issues',
-                'wms-deliveries', 'wms-delivery-settings', 'wms-stock-buffers',
+                'wms-deliveries', 'wms-delivery-settings', 'wms-stock-buffers', 'wms-pickups', 'wms-access',
+            ],
+        ],
+        // pick-17: учётки, в которые входят по ссылке кладовщика. Только экран выдачи — ни меню,
+        // ни других разделов склада; сама ссылка выдаётся начальником склада.
+        'pickup-operator' => [
+            'label' => 'Выдача по ссылке',
+            'resources' => [
+                'wms-pickups' => ['view', 'issue'],
             ],
         ],
         'storekeeper' => [
@@ -381,6 +411,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 // Отправки собирает и передаёт в ТК кладовщик, но отменить
                 // уже принятую перевозчиком заявку может только начальник склада.
                 'wms-deliveries' => ['view', 'create', 'edit', 'submit'],
+                // Кладовщик выдаёт, отмену ошибочной выдачи делает начальник склада.
+                'wms-pickups' => ['view', 'issue'],
             ],
         ],
         // Роль buyer-manager (закупщик) намеренно не описана здесь: она заведена

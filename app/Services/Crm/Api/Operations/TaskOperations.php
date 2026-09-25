@@ -5,9 +5,9 @@ namespace App\Services\Crm\Api\Operations;
 use App\Enums\Crm\TaskStatus;
 use App\Models\CrmTask;
 use App\Models\User;
-use App\Services\Crm\Api\OperationInput;
 use App\Services\Crm\CrmEntityResolver;
 use App\Services\Crm\CrmTaskService;
+use App\Support\OperationApi\OperationInput;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Gate;
 

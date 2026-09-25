@@ -23,6 +23,10 @@ class HandleWmsInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => $this->panelAuthProps($request->user()),
             'flash' => $this->panelFlashProps($request),
+            // Флаги для меню панели: пункт с `feature` виден только при включённой функции.
+            'config' => ['pickup' => (bool) config('pickup.wms_enabled')],
+            // pick-17: сессия по ссылке кладовщика — «киоск» без бокового меню и шапки панели
+            'kiosk' => $request->session()->has(\App\Models\WmsAccessLink::SESSION_LINK),
         ];
     }
 }

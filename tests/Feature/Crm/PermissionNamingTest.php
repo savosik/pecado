@@ -183,7 +183,7 @@ class PermissionNamingTest extends TestCase
     {
         $this->seed(RolesAndPermissionsSeeder::class);
 
-        foreach (['warehouse-head', 'storekeeper'] as $role) {
+        foreach (['warehouse-head', 'storekeeper', 'pickup-operator'] as $role) {
             $user = User::factory()->create();
             $user->assignRole($role);
 

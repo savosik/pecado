@@ -2,6 +2,7 @@ import { Box, Flex, HStack, VStack, Text, Badge, Card, Table, Separator, SimpleG
 import { Head, Link, usePage } from '@inertiajs/react';
 import { LuArrowLeft, LuPackage, LuShoppingBag, LuTriangleAlert, LuMapPin, LuMessageSquare, LuInfo, LuTruck, LuClock, LuFileSpreadsheet, LuFileText } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
+import OrderNumber from '../components/OrderNumber';
 import { Tooltip } from '@/components/ui/tooltip';
 import PaymentScheduleBlock from '@/components/payments/PaymentScheduleBlock';
 import { getOrderTypeShortLabel, getOrderTypeColor } from '@/constants/orderType';
@@ -275,16 +276,7 @@ export default function ShipmentShow({ shipment, related_orders }) {
                                             <Box flex="1" minW="0">
                                                 {/* Строка 1: номер + бейджи + дата */}
                                                 <Flex gap="2" align="center" flexWrap="wrap" mb="2">
-                                                    <Text
-                                                        fontWeight="700"
-                                                        fontSize="md"
-                                                        fontFamily="mono"
-                                                        whiteSpace="nowrap"
-                                                        color="gray.800"
-                                                        _dark={{ color: 'gray.100' }}
-                                                    >
-                                                        {order.number}
-                                                    </Text>
+                                                    <OrderNumber order={order} fontSize="md" />
                                                     <Badge
                                                         colorPalette={getOrderTypeColor(order.type)}
                                                         variant="subtle" fontSize="2xs" px="2" borderRadius="full"

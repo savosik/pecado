@@ -4,9 +4,9 @@ namespace App\Services\Crm\Api\Operations;
 
 use App\Models\Payment;
 use App\Models\User;
-use App\Services\Crm\Api\OperationInput;
 use App\Services\Crm\CrmEntityResolver;
 use App\Support\Crm\CrmEntityMap;
+use App\Support\OperationApi\OperationInput;
 
 /**
  * Платежи для машинного потребителя CRM.

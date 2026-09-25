@@ -36,6 +36,14 @@ final class ClientListFilters
     ];
 
     /**
+     * Сортировка, когда менеджер не выбрал иначе (или выбрал неизвестную).
+     *
+     * Константа, а не литерал: на неё опирается ClientPlanFactTest, и смена умолчания
+     * (готовится сортировка по значимости) не должна требовать правки тестов.
+     */
+    public const DEFAULT_SORT = 'id';
+
+    /**
      * Состояние задач по партнёру.
      *
      * `none` — «нет следующего шага», рабочий список на неделю, а не отчётная цифра.
@@ -120,13 +128,13 @@ final class ClientListFilters
         $canSeeTasks = $actor->can('crm-tasks.view');
 
         $search = self::sanitizeSearch($request->input('search'));
-        $sortBy = self::pick($request->input('sort_by'), self::SORTS) ?? 'id';
+        $sortBy = self::pick($request->input('sort_by'), self::SORTS) ?? self::DEFAULT_SORT;
         $sortOrder = $request->input('sort_order') === 'asc' ? 'asc' : 'desc';
 
         // Сортировка по невидимым данным сбрасывается на дефолт, а не молча
         // применяется к пустой колонке.
         if (! $canSeeTasks && in_array($sortBy, ['next_task_due', 'active_tasks_count'], true)) {
-            $sortBy = 'id';
+            $sortBy = self::DEFAULT_SORT;
         }
 
         return new self(

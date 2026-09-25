@@ -4,9 +4,9 @@ namespace App\Mcp\Tools\Crm;
 
 use App\Models\User;
 use App\Services\Crm\Api\Operation;
-use App\Services\Crm\Api\OperationDenied;
 use App\Services\Crm\Api\OperationRegistry;
 use App\Services\Crm\Api\OperationRunner;
+use App\Support\OperationApi\OperationDenied;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;

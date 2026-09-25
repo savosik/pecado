@@ -69,11 +69,25 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->group('wms', [
             \App\Http\Middleware\EnsureUserIsWms::class,
+            \App\Http\Middleware\EnsureWmsLinkSessionValid::class, // pick-17: вход по ссылке гаснет при её перевыпуске
             \App\Http\Middleware\HandleWmsInertiaRequests::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
+            // Подписанная ссылка на файл из чата-помощника устарела, а человек
+            // открыл её в браузере: вместо JSON «Доступ запрещён» — в раздел
+            // кабинета с объяснением, где документ лежит постоянно.
+            // Признак браузера — явный text/html в Accept: агенты и curl шлют
+            // application/json или */* и получают прежний JSON 403.
+            if ($response->getStatusCode() === 403
+                && $request->is('api/client/v1/files/*')
+                && str_contains((string) $request->header('Accept', ''), 'text/html')) {
+                $target = str_contains($request->path(), 'payment-orders') ? '/cabinet/payment-orders' : '/cabinet/documents';
+
+                return redirect($target)->with('error', 'Ссылка из чата устарела: она действует час. Документ можно скачать здесь или попросить помощника дать новую ссылку.');
+            }
+
             if (in_array($response->getStatusCode(), [500, 503, 404, 403])) {
                 // API-маршруты и AJAX-запросы — возвращаем JSON, а не Inertia-страницу.
                 // Inertia-запросы тоже шлют Accept: application/json, поэтому отличаем

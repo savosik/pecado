@@ -6,11 +6,10 @@ use App\Enums\UserQuestionStatus;
 use App\Http\Requests\Admin\AnswerUserQuestionRequest;
 use App\Http\Requests\Admin\RejectUserQuestionRequest;
 use App\Models\UserQuestion;
-use App\Notifications\UserQuestions\QuestionAnsweredNotification;
+use App\Services\Support\UserQuestionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -131,15 +130,7 @@ class UserQuestionController extends AdminController
 
     public function answer(AnswerUserQuestionRequest $request, UserQuestion $question): RedirectResponse
     {
-        $manager = $request->user();
-        $question->markAnswered($manager, $request->string('answer'));
-
-        if ($question->user_id !== null && $question->user) {
-            $question->user->notify(new QuestionAnsweredNotification($question));
-        } else {
-            Notification::route('mail', $question->email)
-                ->notify(new QuestionAnsweredNotification($question));
-        }
+        app(UserQuestionService::class)->answer($question, $request->user(), (string) $request->string('answer'));
 
         return redirect()
             ->route('admin.user-questions.show', $question)
@@ -148,7 +139,7 @@ class UserQuestionController extends AdminController
 
     public function reject(RejectUserQuestionRequest $request, UserQuestion $question): RedirectResponse
     {
-        $question->markRejected($request->user(), $request->input('rejected_reason'));
+        app(UserQuestionService::class)->reject($question, $request->user(), $request->input('rejected_reason'));
 
         return redirect()
             ->route('admin.user-questions.show', $question)

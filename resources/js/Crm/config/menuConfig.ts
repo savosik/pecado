@@ -1,5 +1,6 @@
 import {
     LuLayoutDashboard,
+    LuBot,
     LuUsers,
     LuUsersRound,
     LuBuilding2,
@@ -44,6 +45,8 @@ import {
     LuStar,
     LuSlidersHorizontal,
     LuCoins,
+    LuMessageCircleQuestion,
+    LuBookOpen,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -72,6 +75,9 @@ export const menuConfig: MenuGroup[] = [
         items: [
             { label: "Рабочий стол", icon: LuLayoutDashboard, path: "/crm", permission: "crm-dashboard.view" },
             { label: "Задачи", icon: LuListChecks, path: "/crm/tasks", permission: "crm-tasks.view", counter: "tasks" },
+            // Вопросы партнёров с сайта, из кабинета и через API — очередь на ответ,
+            // а не справочник, поэтому рядом с задачами. Счётчик — ждущие ответа.
+            { label: "Вопросы клиентов", icon: LuMessageCircleQuestion, path: "/crm/questions", permission: "crm-questions.view", counter: "questions" },
         ],
     },
     {
@@ -130,6 +136,8 @@ export const menuConfig: MenuGroup[] = [
         icon: LuChartLine,
         items: [
             { label: "Отчёты продаж", icon: LuChartLine, path: "/crm/analytics", permission: "crm-analytics.view" },
+            // Пользуются ли партнёры своим ИИ-агентом (MCP /mcp/client и REST v1): кто, как часто, для чего.
+            { label: "ИИ-агенты клиентов", icon: LuBot, path: "/crm/agent-usage", permission: "crm-agent-usage.view" },
             // Недоборы: журнал отменённых строк заказов. Счётчик — неразмеченные
             // отмены: строка есть, а причина («склад» или «клиент») не проставлена.
             { label: "Недоборы", icon: LuPackageX, path: "/crm/shortages", permission: "crm-shortages.view", counter: "shortages" },
@@ -242,6 +250,15 @@ export const menuConfig: MenuGroup[] = [
             // Отсутствия видит весь отдел: кто кого замещает — рабочая информация.
             { label: "Отсутствия", icon: LuCalendarOff, path: "/crm/absences", permission: "crm-absences.view" },
             { label: "Табель", icon: LuCalendarCheck, path: "/crm/timesheet", permission: "crm-timesheet.view" },
+        ],
+    },
+    {
+        // Инструкции для отдела: текст, PDF или видео из админки. Без права —
+        // читает каждый, кто попал в CRM.
+        title: "Справка",
+        icon: LuBookOpen,
+        items: [
+            { label: "Инструкции", icon: LuBookOpen, path: "/crm/instructions" },
         ],
     },
     {

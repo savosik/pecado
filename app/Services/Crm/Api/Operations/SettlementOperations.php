@@ -4,8 +4,8 @@ namespace App\Services\Crm\Api\Operations;
 
 use App\Models\SettlementEntry;
 use App\Models\User;
-use App\Services\Crm\Api\OperationInput;
 use App\Services\Crm\Finance\ReconciliationService;
+use App\Support\OperationApi\OperationInput;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 

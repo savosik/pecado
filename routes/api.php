@@ -31,7 +31,9 @@ Route::get('/search/products/price-intervals', [SearchApiController::class, 'pri
 Route::get('/products/by-ids', [\App\Http\Controllers\User\ProductByIdsController::class, '__invoke'])->name('api.products.by-ids');
 
 // QuickView — JSON-карточка товара
-Route::get('/products/{product:slug}', [ProductController::class, 'showJson'])->name('api.products.show');
+Route::get('/products/{product:slug}', [ProductController::class, 'showJson'])
+    ->missing([ProductController::class, 'redirectByIdentifier'])
+    ->name('api.products.show');
 
 // CMS-страницы по slug — для встроенного показа в модалках (политика, согласие и т.п.)
 Route::get('/pages/{slug}', [UserPageController::class, 'apiShow'])->name('api.pages.show');
@@ -183,6 +185,47 @@ Route::prefix('client-api/{token}')
         Route::post('/reserves/{order}/confirm', [\App\Http\Controllers\Api\ClientApiController::class, 'reserveConfirm'])->name('reserves.confirm');
         Route::post('/reserves/{order}/items', [\App\Http\Controllers\Api\ClientApiController::class, 'reserveItems'])->name('reserves.items');
         Route::post('/reserves/{order}/cancel', [\App\Http\Controllers\Api\ClientApiController::class, 'reserveCancel'])->name('reserves.cancel');
+    });
+
+// ──────────────────────────────────────────────────────────────
+// Клиентский API v1 — для ИИ-агентов клиентов (эпик capi-00)
+//
+// Маршруты собраны обходом реестра операций: реестр — единственный источник
+// для адресов, discovery `/me`, OpenAPI-документа и каталога инструментов
+// MCP `/mcp/client`. Токен — тот же api_tokens, но в заголовке Bearer;
+// legacy `/api/client-api/{token}/*` выше остаётся без изменений и навсегда.
+// ──────────────────────────────────────────────────────────────
+Route::prefix('client/v1')
+    ->middleware([\App\Http\Middleware\AuthenticateClientApi::class, 'throttle:client-api', \App\Http\Middleware\RecordClientApiUsage::class])
+    ->name(\App\Http\Controllers\Api\Client\ClientApiController::ROUTE_PREFIX)
+    ->group(function () {
+        Route::get('me', [\App\Http\Controllers\Api\Client\ClientApiController::class, 'me'])->name('me');
+
+        foreach (app(\App\Services\Client\Api\OperationRegistry::class)->callable() as $operation) {
+            $route = Route::match([$operation->method], $operation->uri, [
+                \App\Http\Controllers\Api\Client\ClientApiController::class, 'run',
+            ])->name($operation->id);
+
+            // Ограничения параметров пути из реестра: числовые id — цифры,
+            // идентификаторы — безопасный набор, иначе `orders/changes` ушло
+            // бы в карточку заказа.
+            foreach ($operation->routeConstraints() as $param => $pattern) {
+                $route->where($param, $pattern);
+            }
+        }
+    });
+
+// Файлы клиентского API v1 по временным подписанным ссылкам — без Bearer:
+// ссылку агент передаёт человеку. Подпись — middleware signed, принадлежность
+// и гейт раздела — в контроллере. Имена маршрутов вне реестра операций
+// (префикс files.), тест дрейфа их пропускает.
+Route::prefix('client/v1/files')
+    ->middleware(['signed', 'throttle:client-api'])
+    ->name('api.client.v1.files.')
+    ->group(function () {
+        Route::get('documents/{document}', [\App\Http\Controllers\Api\Client\ClientFileController::class, 'document'])->whereNumber('document')->name('document');
+        Route::get('contracts/{contract}/media/{media}', [\App\Http\Controllers\Api\Client\ClientFileController::class, 'contractFile'])->whereNumber(['contract', 'media'])->name('contract-file');
+        Route::get('payment-orders', [\App\Http\Controllers\Api\Client\ClientFileController::class, 'paymentOrder'])->name('payment-order');
     });
 
 // ──────────────────────────────────────────────────────────────
