@@ -26,6 +26,9 @@ use Illuminate\Support\Str;
  * @property int $last_seq
  * @property string|null $resolution
  * @property int|null $created_by
+ * @property int|null $hub_link_id
+ * @property string|null $created_by_agent
+ * @property string|null $external_key
  *
  * @mixin \Eloquent
  */
@@ -54,6 +57,9 @@ class AgentTopic extends Model
         'last_seq',
         'resolution',
         'created_by',
+        'hub_link_id',
+        'created_by_agent',
+        'external_key',
     ];
 
     protected function casts(): array
@@ -87,6 +93,12 @@ class AgentTopic extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** Ссылка-хеш, по которой топик создан (пусто — создан из админки). */
+    public function hubLink(): BelongsTo
+    {
+        return $this->belongsTo(AgentHubLink::class, 'hub_link_id');
     }
 
     /** Роль стороны по её токену: site / erp, null — токен не отсюда. */

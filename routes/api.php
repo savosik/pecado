@@ -189,8 +189,23 @@ Route::prefix('client-api/{token}')
 // Agent Hub — совместная работа ИИ-агентов (сайт ↔ 1С) по токену
 // Самоописываемая точка входа: GET по ссылке отдаёт задачу и правила
 // ──────────────────────────────────────────────────────────────
+// Заведение топиков внешними агентами по ссылке-хешу пульта.
+// Объявлено до agent-hub/{token}, иначе сегмент «links» ушёл бы в токен топика.
+Route::prefix('agent-hub/links/{token}')
+    ->middleware(['agent-hub.link', 'throttle:60,1'])
+    ->where(['token' => '[A-Fa-f0-9]{64}'])
+    ->name('api.agent-hub.links.')
+    ->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\AgentHubLinkController::class, 'show'])->name('show');
+        Route::get('/topics', [\App\Http\Controllers\Api\AgentHubLinkController::class, 'index'])->name('topics.index');
+        Route::post('/topics', [\App\Http\Controllers\Api\AgentHubLinkController::class, 'store'])->name('topics.store');
+        Route::get('/topics/{agentTopic}', [\App\Http\Controllers\Api\AgentHubLinkController::class, 'topic'])
+            ->name('topics.show')->whereNumber('agentTopic');
+    });
+
 Route::prefix('agent-hub/{token}')
     ->middleware('throttle:120,1')
+    ->where(['token' => '[A-Fa-f0-9]{64}'])
     ->name('api.agent-hub.')
     ->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\AgentHubController::class, 'show'])->name('show');

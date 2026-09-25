@@ -71,6 +71,11 @@ export default function Index({ topics, filters }) {
                 createPermission="agent-topics.create"
                 onCreate={() => router.visit(route('admin.agent-topics.create'))}
                 createLabel="Создать топик"
+                actions={(
+                    <Button variant="outline" onClick={() => router.visit(route('admin.agent-topics.links.index'))}>
+                        Ссылки на пульт
+                    </Button>
+                )}
             />
 
             <Box mb={4}>
