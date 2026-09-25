@@ -233,6 +233,22 @@ class CheckoutController extends Controller
                     'stock' => 'Количество товаров на складе изменилось. Уточните корзину перед оформлением.',
                 ])
                 ->with('stock_conflicts', $e->getItems());
+        } catch (\App\Exceptions\ProductWithoutPriceException $e) {
+            // Цены нет ни в карточке, ни в индивидуальном прайсе. Молча оформить
+            // такую позицию нельзя: в 1С уедет непроводимый документ, а клиент
+            // получит товар даром. Называем товары поимённо — иначе клиент не
+            // поймёт, что именно убрать из корзины.
+            $names = implode(', ', array_map(
+                static fn (array $item) => $item['sku'] ? "{$item['name']} (арт. {$item['sku']})" : $item['name'],
+                $e->getItems(),
+            ));
+
+            return back()
+                ->withErrors([
+                    'price' => 'Для этих товаров пока не назначена цена, оформить их нельзя: '
+                        .$names.'. Уберите их из корзины или свяжитесь с менеджером.',
+                ])
+                ->with('priceless_items', $e->getItems());
         } catch (\App\Exceptions\DebtRestrictionException $e) {
             // Лестница долга: причина, сумма и что закрыто — клиенту, без угроз.
             return back()

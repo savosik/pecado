@@ -848,6 +848,24 @@ class ClientApiController extends Controller
                 continue;
             }
 
+            // Товар без цены в заказ не берём: ни базовой в карточке, ни
+            // индивидуальной от 1С — строка уехала бы в 1С нулём, документ не
+            // провёлся бы, а клиент получил бы товар даром.
+            if ($this->priceService->getPriceResult($product, $user)->getDisplayPrice() <= 0) {
+                $notAccepted[] = [
+                    'line' => $line,
+                    'identifier' => $item['identifier'],
+                    'product_id' => $product->id,
+                    'slug' => $product->slug,
+                    'name' => $product->name,
+                    'requested' => $requestedQty,
+                    'reason' => 'no_price',
+                    'message' => 'Цена не назначена',
+                ];
+
+                continue;
+            }
+
             // Отгружаем столько, сколько реально доступно; остаток запроса — в shortfall.
             $fulfillQty = min($requestedQty, $totalAvailable);
             $instockQty = min($fulfillQty, $available);
