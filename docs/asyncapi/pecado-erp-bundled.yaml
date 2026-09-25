@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 16.10.0
+  version: 16.11.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -2280,6 +2280,105 @@ channels:
                     - string
                     - 'null'
                   description: Человекочитаемая причина отказа.
+            ship_together_key:
+              type:
+                - string
+                - 'null'
+              format: uuid
+              description: >
+                Ключ группы совместной отгрузки (v16.11.0) — эхо
+                `ship_together_key` из
+
+                `order.confirmed`. Присылается вместе с `ship_together_status` в
+                терминальном
+
+                итоге группы по каждому разрешимому заказу манифеста; в
+                остальных
+
+                сообщениях отсутствует или `null`.
+            ship_together_status:
+              type:
+                - string
+                - 'null'
+              enum:
+                - confirmed
+                - conflict
+                - null
+              description: >
+                Итог группы совместной отгрузки (v16.11.0). `confirmed` — все
+                заказы группы
+
+                подтверждены и переданы в один групповой цикл оформления (в этом
+                же сообщении
+
+                `reserve: false`, статус «К отгрузке»). `conflict` — группа
+                отклонена целиком,
+
+                резерв и статус заказа не изменились (`reserve: true`). Пока
+                группа
+
+                собирается, 1С ничего не шлёт.
+            ship_together_conflict:
+              type:
+                - object
+                - 'null'
+              description: |
+                Причина отказа группы (v16.11.0). Обязателен при
+                `ship_together_status: conflict`, `null` при `confirmed`.
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  enum:
+                    - timeout
+                    - manifest_mismatch
+                    - not_reserved
+                    - incompatible
+                    - merge_forbidden
+                    - shortage
+                    - processing_error
+                  description: >
+                    `timeout` — полный состав группы не получен за 15 минут;
+
+                    `manifest_mismatch` — ключ или манифест различаются между
+                    сообщениями
+
+                    группы либо `uuid` заказа не входит в манифест;
+                    `not_reserved` — заказ
+
+                    уже не в резерве (подтверждён, отменён, снят вручную);
+                    `incompatible` —
+
+                    не совпали реквизиты объединения (организация, соглашение,
+                    договор,
+
+                    валюта, склад, получатель, дата отгрузки, складская
+                    операция,
+
+                    транспортное назначение); `merge_forbidden` — объединение
+                    запрещено
+
+                    флагом партнёра или соглашения; `shortage` — недобор по
+                    одному из заказов
+
+                    на предконтроле или в ордерном движке; `processing_error` —
+
+                    непредвиденная техническая ошибка после успешного
+                    предконтроля,
+
+                    группа откачена.
+                message:
+                  type:
+                    - string
+                    - 'null'
+                  description: Человекочитаемая причина для клиента и журнала.
+                order_uuid:
+                  type:
+                    - string
+                    - 'null'
+                  format: uuid
+                  description: Виновный заказ, если он один и однозначен; иначе `null`.
             revision:
               type:
                 - integer
@@ -9649,15 +9748,61 @@ channels:
               type: string
               format: date-time
               description: Дата-время подтверждения клиентом (ISO-8601 с таймзоной).
+            ship_together_key:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            ship_together_order_uuids:
+              type: array
+              items:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              uniqueItems: true
+              minItems: 2
+              description: >
+                Манифест группы (v16.11.0): UUID всех заказов группы,
+                уникальные, минимум 2,
+
+                одинаковый состав и порядок во всех сообщениях группы; `uuid`
+                текущего
+
+                заказа обязан входить в массив. 1С ждёт все заказы манифеста 15
+                минут
+
+                с момента сохранения первого валидного сообщения группы;
+                неполная группа
+
+                частично не оформляется (`conflict.reason: timeout`).
+
+                Присутствует только вместе с `ship_together_key`.
             timestamp:
               type: string
               format: date-time
+          dependencies:
+            ship_together_key:
+              - ship_together_order_uuids
+            ship_together_order_uuids:
+              - ship_together_key
           examples:
             - event: order.confirmed
               message_id: msg-order-confirm-o1a2b3c4
               uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
               confirmed_at: '2026-09-03T12:00:00+03:00'
               timestamp: '2026-09-03T12:00:01+03:00'
+            - event: order.confirmed
+              message_id: msg-order-confirm-g1a2b3c4-1
+              uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
+              confirmed_at: '2026-09-21T19:40:00+03:00'
+              ship_together_key: 3f7c1d2e-5b6a-4c8d-9e0f-112233445566
+              ship_together_order_uuids:
+                - a81bc81b-dead-4e5d-abff-90865d1e13b1
+                - b92cd92c-beef-4f6e-bc00-a1976e2f24c2
+              timestamp: '2026-09-21T19:40:01+03:00'
     servers:
       - $ref: '#/servers/rabbitmq'
     bindings:
@@ -10672,6 +10817,30 @@ operations:
       **v15.3:** Поле `delivery_method` (`delivery` | `pickup`) обновляет
       `orders.delivery_method`. Отсутствие ключа или null — способ доставки не
       меняется.
+
+
+      **v16.11.0 (топик №7 Agent Hub, 18.09.2026) — итог совместной отгрузки.**
+      Поля
+
+      `ship_together_key`, `ship_together_status`, `ship_together_conflict`
+      несут
+
+      терминальный итог группы резервов, отправленных в отгрузку вместе (см.
+
+      `sendOrderConfirmed`). Пока группа собирается, 1С ничего не шлёт. На успех
+      —
+
+      `order.updated` по **каждому** заказу группы с `reserve: false`, статусом
+
+      «К отгрузке» и `ship_together_status: confirmed`. На отказ — по каждому
+
+      разрешимому заказу опорного манифеста: прежний `reserve: true`,
+
+      `ship_together_status: conflict`, обязательный `ship_together_conflict`.
+
+      Сайт держит заказы группы в состоянии «ждём подтверждения склада» до этого
+
+      сообщения и применяет итог по нему (`reserve` авторитетен).
     action: receive
     channel:
       $ref: '#/channels/erpInOrders'
@@ -10927,6 +11096,57 @@ operations:
 
 
       Идемпотентно: повтор по уже подтверждённому заказу — успех без изменений.
+
+
+      **v16.11.0 (топик №7 Agent Hub, resolution 18.09.2026) — совместная
+      отгрузка.**
+
+      Клиент отмечает несколько резервов и отправляет их в отгрузку вместе: сайт
+      шлёт
+
+      по каждому заказу прежний `order.confirmed` с парой необязательных полей
+
+      `ship_together_key` (UUID группы) и `ship_together_order_uuids` (манифест
+      — все
+
+      заказы группы). Объединяются не заказы, а отгрузка: заказы остаются
+      отдельными
+
+      документами, 1С оформляет по группе **минимальный комплект** реализаций и
+
+      расходных ордеров (одна реализация и один ордер, если позволяют владельцы
+      товара,
+
+      налоговый режим и складские ключи; несколько документов — не конфликт).
+
+
+      Правила группы:
+
+
+      - оба поля присутствуют только вместе; без них — прежнее поведение по
+      одному заказу;
+
+      - сайт до публикации проверяет: один партнёр, один контрагент, одна
+      валюта, **ровно
+        один склад**, один способ и адрес доставки, все заказы — действующие резервы;
+        все сообщения группы публикуются в одной транзакции сайта;
+      - 1С копит группу по манифесту: состояния `collecting → confirmed |
+      conflict`;
+        тайм-аут **15 минут с момента сохранения первого валидного сообщения группы в 1С**
+        (задержка доставки на срок не влияет); полная группа обрабатывается сразу;
+      - по полному составу — предконтроль под групповой блокировкой (резерв в
+      1С,
+        организация, соглашение, договор, флаги запрета объединения партнёра и
+        соглашения, получатель, дата отгрузки, складская операция, транспортное
+        назначение, остатки), подтверждение всех заказов и **один** групповой вызов
+        движков реализации и ордеров; поштучный автоордер для группы подавлен;
+      - отказ — по всей группе: резервы и статусы не меняются, частичных
+        `goods_issue.*` / `shipment.*` наружу нет, ошибка ордерного движка откатывает группу;
+      - итог на ключ один и окончательный: поздние сообщения с тем же ключом
+      получают
+        тот же итог; повтор после отказа — новый ключ и новые `message_id`;
+      - итог приходит в `order.updated` (`ship_together_status`,
+      `ship_together_conflict`).
     action: send
     channel:
       $ref: '#/channels/erpOutOrders'
@@ -14661,15 +14881,61 @@ components:
             type: string
             format: date-time
             description: Дата-время подтверждения клиентом (ISO-8601 с таймзоной).
+          ship_together_key:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          ship_together_order_uuids:
+            type: array
+            items:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            uniqueItems: true
+            minItems: 2
+            description: >
+              Манифест группы (v16.11.0): UUID всех заказов группы, уникальные,
+              минимум 2,
+
+              одинаковый состав и порядок во всех сообщениях группы; `uuid`
+              текущего
+
+              заказа обязан входить в массив. 1С ждёт все заказы манифеста 15
+              минут
+
+              с момента сохранения первого валидного сообщения группы; неполная
+              группа
+
+              частично не оформляется (`conflict.reason: timeout`).
+
+              Присутствует только вместе с `ship_together_key`.
           timestamp:
             type: string
             format: date-time
+        dependencies:
+          ship_together_key:
+            - ship_together_order_uuids
+          ship_together_order_uuids:
+            - ship_together_key
         examples:
           - event: order.confirmed
             message_id: msg-order-confirm-o1a2b3c4
             uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
             confirmed_at: '2026-09-03T12:00:00+03:00'
             timestamp: '2026-09-03T12:00:01+03:00'
+          - event: order.confirmed
+            message_id: msg-order-confirm-g1a2b3c4-1
+            uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
+            confirmed_at: '2026-09-21T19:40:00+03:00'
+            ship_together_key: 3f7c1d2e-5b6a-4c8d-9e0f-112233445566
+            ship_together_order_uuids:
+              - a81bc81b-dead-4e5d-abff-90865d1e13b1
+              - b92cd92c-beef-4f6e-bc00-a1976e2f24c2
+            timestamp: '2026-09-21T19:40:01+03:00'
     OrderUpdated:
       name: order.updated
       title: Заказ обновлён
@@ -14776,6 +15042,103 @@ components:
                   - string
                   - 'null'
                 description: Человекочитаемая причина отказа.
+          ship_together_key:
+            type:
+              - string
+              - 'null'
+            format: uuid
+            description: >
+              Ключ группы совместной отгрузки (v16.11.0) — эхо
+              `ship_together_key` из
+
+              `order.confirmed`. Присылается вместе с `ship_together_status` в
+              терминальном
+
+              итоге группы по каждому разрешимому заказу манифеста; в остальных
+
+              сообщениях отсутствует или `null`.
+          ship_together_status:
+            type:
+              - string
+              - 'null'
+            enum:
+              - confirmed
+              - conflict
+              - null
+            description: >
+              Итог группы совместной отгрузки (v16.11.0). `confirmed` — все
+              заказы группы
+
+              подтверждены и переданы в один групповой цикл оформления (в этом
+              же сообщении
+
+              `reserve: false`, статус «К отгрузке»). `conflict` — группа
+              отклонена целиком,
+
+              резерв и статус заказа не изменились (`reserve: true`). Пока
+              группа
+
+              собирается, 1С ничего не шлёт.
+          ship_together_conflict:
+            type:
+              - object
+              - 'null'
+            description: |
+              Причина отказа группы (v16.11.0). Обязателен при
+              `ship_together_status: conflict`, `null` при `confirmed`.
+            required:
+              - reason
+            properties:
+              reason:
+                type: string
+                enum:
+                  - timeout
+                  - manifest_mismatch
+                  - not_reserved
+                  - incompatible
+                  - merge_forbidden
+                  - shortage
+                  - processing_error
+                description: >
+                  `timeout` — полный состав группы не получен за 15 минут;
+
+                  `manifest_mismatch` — ключ или манифест различаются между
+                  сообщениями
+
+                  группы либо `uuid` заказа не входит в манифест; `not_reserved`
+                  — заказ
+
+                  уже не в резерве (подтверждён, отменён, снят вручную);
+                  `incompatible` —
+
+                  не совпали реквизиты объединения (организация, соглашение,
+                  договор,
+
+                  валюта, склад, получатель, дата отгрузки, складская операция,
+
+                  транспортное назначение); `merge_forbidden` — объединение
+                  запрещено
+
+                  флагом партнёра или соглашения; `shortage` — недобор по одному
+                  из заказов
+
+                  на предконтроле или в ордерном движке; `processing_error` —
+
+                  непредвиденная техническая ошибка после успешного
+                  предконтроля,
+
+                  группа откачена.
+              message:
+                type:
+                  - string
+                  - 'null'
+                description: Человекочитаемая причина для клиента и журнала.
+              order_uuid:
+                type:
+                  - string
+                  - 'null'
+                format: uuid
+                description: Виновный заказ, если он один и однозначен; иначе `null`.
           revision:
             type:
               - integer
@@ -23243,15 +23606,61 @@ components:
           type: string
           format: date-time
           description: Дата-время подтверждения клиентом (ISO-8601 с таймзоной).
+        ship_together_key:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        ship_together_order_uuids:
+          type: array
+          items:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          uniqueItems: true
+          minItems: 2
+          description: >
+            Манифест группы (v16.11.0): UUID всех заказов группы, уникальные,
+            минимум 2,
+
+            одинаковый состав и порядок во всех сообщениях группы; `uuid`
+            текущего
+
+            заказа обязан входить в массив. 1С ждёт все заказы манифеста 15
+            минут
+
+            с момента сохранения первого валидного сообщения группы; неполная
+            группа
+
+            частично не оформляется (`conflict.reason: timeout`).
+
+            Присутствует только вместе с `ship_together_key`.
         timestamp:
           type: string
           format: date-time
+      dependencies:
+        ship_together_key:
+          - ship_together_order_uuids
+        ship_together_order_uuids:
+          - ship_together_key
       examples:
         - event: order.confirmed
           message_id: msg-order-confirm-o1a2b3c4
           uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
           confirmed_at: '2026-09-03T12:00:00+03:00'
           timestamp: '2026-09-03T12:00:01+03:00'
+        - event: order.confirmed
+          message_id: msg-order-confirm-g1a2b3c4-1
+          uuid: a81bc81b-dead-4e5d-abff-90865d1e13b1
+          confirmed_at: '2026-09-21T19:40:00+03:00'
+          ship_together_key: 3f7c1d2e-5b6a-4c8d-9e0f-112233445566
+          ship_together_order_uuids:
+            - a81bc81b-dead-4e5d-abff-90865d1e13b1
+            - b92cd92c-beef-4f6e-bc00-a1976e2f24c2
+          timestamp: '2026-09-21T19:40:01+03:00'
     OrderCreatedPayload:
       type: object
       required:
@@ -24051,6 +24460,101 @@ components:
                 - string
                 - 'null'
               description: Человекочитаемая причина отказа.
+        ship_together_key:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: >
+            Ключ группы совместной отгрузки (v16.11.0) — эхо `ship_together_key`
+            из
+
+            `order.confirmed`. Присылается вместе с `ship_together_status` в
+            терминальном
+
+            итоге группы по каждому разрешимому заказу манифеста; в остальных
+
+            сообщениях отсутствует или `null`.
+        ship_together_status:
+          type:
+            - string
+            - 'null'
+          enum:
+            - confirmed
+            - conflict
+            - null
+          description: >
+            Итог группы совместной отгрузки (v16.11.0). `confirmed` — все заказы
+            группы
+
+            подтверждены и переданы в один групповой цикл оформления (в этом же
+            сообщении
+
+            `reserve: false`, статус «К отгрузке»). `conflict` — группа
+            отклонена целиком,
+
+            резерв и статус заказа не изменились (`reserve: true`). Пока группа
+
+            собирается, 1С ничего не шлёт.
+        ship_together_conflict:
+          type:
+            - object
+            - 'null'
+          description: |
+            Причина отказа группы (v16.11.0). Обязателен при
+            `ship_together_status: conflict`, `null` при `confirmed`.
+          required:
+            - reason
+          properties:
+            reason:
+              type: string
+              enum:
+                - timeout
+                - manifest_mismatch
+                - not_reserved
+                - incompatible
+                - merge_forbidden
+                - shortage
+                - processing_error
+              description: >
+                `timeout` — полный состав группы не получен за 15 минут;
+
+                `manifest_mismatch` — ключ или манифест различаются между
+                сообщениями
+
+                группы либо `uuid` заказа не входит в манифест; `not_reserved` —
+                заказ
+
+                уже не в резерве (подтверждён, отменён, снят вручную);
+                `incompatible` —
+
+                не совпали реквизиты объединения (организация, соглашение,
+                договор,
+
+                валюта, склад, получатель, дата отгрузки, складская операция,
+
+                транспортное назначение); `merge_forbidden` — объединение
+                запрещено
+
+                флагом партнёра или соглашения; `shortage` — недобор по одному
+                из заказов
+
+                на предконтроле или в ордерном движке; `processing_error` —
+
+                непредвиденная техническая ошибка после успешного предконтроля,
+
+                группа откачена.
+            message:
+              type:
+                - string
+                - 'null'
+              description: Человекочитаемая причина для клиента и журнала.
+            order_uuid:
+              type:
+                - string
+                - 'null'
+              format: uuid
+              description: Виновный заказ, если он один и однозначен; иначе `null`.
         revision:
           type:
             - integer

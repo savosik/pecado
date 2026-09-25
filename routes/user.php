@@ -40,7 +40,9 @@ Route::get('/products/novinki', [ProductController::class, 'novelties'])->name('
 Route::get('/products/bestsellery', [ProductController::class, 'bestsellers'])->name('products.bestsellers');
 Route::get('/products/utsenka', [ProductController::class, 'liquidation'])->name('products.liquidation');
 Route::get('/products/favorites', [ProductController::class, 'favorites'])->middleware('auth')->name('products.favorites');
-Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
+Route::get('/products/{product:slug}', [ProductController::class, 'show'])
+    ->missing([ProductController::class, 'redirectByIdentifier'])
+    ->name('products.show');
 Route::get('/certificates/{certificate}/files/{media}/download', [CertificateController::class, 'download'])
     ->whereNumber('certificate')->whereNumber('media')->name('certificates.download');
 Route::get('/brands', [App\Http\Controllers\User\BrandsController::class, 'index'])->name('brands.index');
@@ -200,8 +202,14 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     // v16.9.0 (res-07): раздел «Заказы в резерве» + подтверждение отгрузки
     Route::get('/reserves', [\App\Http\Controllers\User\ReserveOrderController::class, 'index'])->name('reserves.index');
     Route::post('/orders/{order}/confirm-reserve', [\App\Http\Controllers\User\ReserveOrderController::class, 'confirm'])->name('orders.confirm-reserve');
+    // v16.11.0: совместная отгрузка группы резервов (рубильник order_reserve.ship_together.enabled)
+    Route::post('/reserves/ship-together', [\App\Http\Controllers\User\ReserveOrderController::class, 'shipTogether'])->name('reserves.ship-together');
     // v16.9.0 (res-08): правка состава резервного заказа (v1 — только уменьшение)
     Route::post('/orders/{order}/reserve-items', [\App\Http\Controllers\User\ReserveOrderController::class, 'updateItems'])->name('orders.reserve-items');
+    // pick-09: раздел «Самовывоз» — готовое к выдаче и пропуска курьерам (рубильник pickup.enabled)
+    Route::get('/pickup', [\App\Http\Controllers\User\PickupController::class, 'index'])->name('pickup.index');
+    Route::post('/pickup/passes', [\App\Http\Controllers\User\PickupController::class, 'store'])->name('pickup.passes.store')->middleware('throttle:20,1');
+    Route::post('/pickup/passes/{pass}/revoke', [\App\Http\Controllers\User\PickupController::class, 'revoke'])->name('pickup.passes.revoke');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
     // Изменения заказов (сводная лента)
@@ -250,6 +258,8 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
 
     // API-токены
     Route::get('/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'index'])->name('api-tokens.index');
+    Route::get('/mcp', [\App\Http\Controllers\User\ApiTokenController::class, 'mcp'])->name('api-tokens.mcp');
+    Route::get('/api-legacy', [\App\Http\Controllers\User\ApiTokenController::class, 'legacy'])->name('api-tokens.legacy');
     Route::post('/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'store'])->name('api-tokens.store');
     Route::post('/api-tokens/{apiToken}/regenerate', [\App\Http\Controllers\User\ApiTokenController::class, 'regenerate'])->name('api-tokens.regenerate');
     Route::delete('/api-tokens/{apiToken}', [\App\Http\Controllers\User\ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
@@ -328,6 +338,10 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/questions/{question}', [CabinetQuestionsController::class, 'show'])->name('questions.show');
     Route::get('/questions/{question}/attachment', [CabinetQuestionsController::class, 'downloadAttachment'])->name('questions.attachment');
 
+    // Инструкции для клиентов (текст, PDF, видео) — ведутся в админке.
+    Route::get('/instructions', [\App\Http\Controllers\User\CabinetInstructionController::class, 'index'])->name('instructions.index');
+    Route::get('/instructions/{instruction}', [\App\Http\Controllers\User\CabinetInstructionController::class, 'show'])->name('instructions.show')->whereNumber('instruction');
+
     // Медиатека
     Route::get('/media', [MediaController::class, 'index'])->name('media.index');
     Route::get('/media/api', [MediaController::class, 'api'])->name('media.api');
@@ -352,3 +366,36 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::post('/search-presets', [\App\Http\Controllers\User\SearchPresetController::class, 'store'])->name('search-presets.store');
     Route::delete('/search-presets/{preset}', [\App\Http\Controllers\User\SearchPresetController::class, 'destroy'])->name('search-presets.destroy');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Помощник клиента (assist-00)
+|--------------------------------------------------------------------------
+| Виджет живёт на всех страницах сайта, эндпоинты — здесь. Пока помощник
+| недоступен (выключен, кончился баланс, исчерпан месячный предел) маршруты
+| отвечают 404: раздела как будто нет.
+*/
+Route::middleware(['auth', \App\Http\Middleware\EnsureAssistantAvailable::class])
+    ->prefix('cabinet/assistant')
+    ->name('cabinet.assistant.')
+    ->group(function () {
+        Route::get('/', [\App\Http\Controllers\User\AssistantController::class, 'index'])->name('index');
+        Route::get('/threads', [\App\Http\Controllers\User\AssistantController::class, 'threads'])->name('threads');
+        Route::post('/threads', [\App\Http\Controllers\User\AssistantController::class, 'open'])->name('open');
+        Route::get('/threads/{thread}', [\App\Http\Controllers\User\AssistantController::class, 'state'])->name('state');
+        Route::post('/threads/{thread}/messages', [\App\Http\Controllers\User\AssistantController::class, 'send'])
+            ->middleware('throttle:30,1')
+            ->name('send');
+        Route::post('/threads/{thread}/close', [\App\Http\Controllers\User\AssistantController::class, 'close'])->name('close');
+        Route::post('/threads/{thread}/attachments', [\App\Http\Controllers\User\AssistantController::class, 'upload'])
+            ->middleware('throttle:30,1')
+            ->name('upload');
+        Route::delete('/attachments/{attachment}', [\App\Http\Controllers\User\AssistantController::class, 'removeAttachment'])->name('attachments.remove');
+        Route::post('/confirmations/{confirmation}', [\App\Http\Controllers\User\AssistantController::class, 'decide'])->name('decide');
+        Route::get('/bubble', [\App\Http\Controllers\User\AssistantController::class, 'bubble'])
+            ->middleware('throttle:120,1')
+            ->name('bubble');
+        Route::post('/events', [\App\Http\Controllers\User\AssistantController::class, 'event'])
+            ->middleware('throttle:120,1')
+            ->name('event');
+    });

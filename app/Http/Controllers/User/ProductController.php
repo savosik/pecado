@@ -9,6 +9,8 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductSelection;
+use App\Services\Catalog\ProductIdentifierResolver;
+use App\Services\Catalog\StockVisibility;
 use App\Services\Product\ProductQueryService;
 use App\Services\Product\SimilarProductsService;
 use Illuminate\Http\Request;
@@ -168,6 +170,7 @@ class ProductController extends Controller
         /** @var \Illuminate\Database\Eloquent\Collection<int, Category> $children */
         $children = $category->children()
             ->where('is_active', true)
+            ->tap($this->onlyStockedCategories())
             ->orderByRaw('sort IS NULL, sort ASC')
             ->orderBy('_lft')
             ->get(['id', 'name', 'slug', '_lft', '_rgt']);
@@ -190,6 +193,7 @@ class ProductController extends Controller
         /** @var \Illuminate\Database\Eloquent\Collection<int, Category> $siblings */
         $siblings = $query
             ->where('is_active', true)
+            ->tap($this->onlyStockedCategories())
             ->where('id', '!=', $category->id)
             ->orderByRaw('sort IS NULL, sort ASC')
             ->orderBy('_lft')
@@ -394,6 +398,26 @@ class ProductController extends Controller
         $data = $this->buildProductShowData($product);
 
         return Inertia::render('User/Products/Show', $data);
+    }
+
+    /**
+     * Карточка по артикулу, коду или штрихкоду вместо slug:
+     * /products/WY0639 → 301 на /products/winyi-amelia-wy0639.
+     *
+     * Ссылки из чата-помощника и агентов клиентов приходят и по артикулу
+     * (slug модель иногда «составляет» из названия и получает 404), а артикул
+     * клиент знает всегда. Для быстрого просмотра — тот же редирект на JSON.
+     */
+    public static function redirectByIdentifier(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $identifier = trim((string) $request->route('product'));
+        $product = $identifier !== '' ? app(ProductIdentifierResolver::class)->resolve($identifier) : null;
+
+        abort_unless($product !== null && $product->slug, 404);
+
+        $route = $request->routeIs('api.products.show') ? 'api.products.show' : 'products.show';
+
+        return redirect()->to(route($route, $product->slug), 301);
     }
 
     /**
@@ -1027,6 +1051,7 @@ class ProductController extends Controller
     public function categoriesRoot(): \Illuminate\Http\JsonResponse
     {
         $categories = Category::active()->whereIsRoot()
+            ->tap($this->onlyStockedCategories())
             ->orderBy('_lft')
             ->get(['id', 'name', 'slug', 'parent_id']);
 
@@ -1043,6 +1068,7 @@ class ProductController extends Controller
 
         $children = $category->children()
             ->where('is_active', true)
+            ->tap($this->onlyStockedCategories())
             ->orderByRaw('sort IS NULL, sort ASC')
             ->orderBy('_lft')
             ->get(['id', 'name', 'slug', 'parent_id']);
@@ -1051,6 +1077,18 @@ class ProductController extends Controller
             'category' => $category->only(['id', 'name', 'slug', 'parent_id']),
             'children' => $children,
         ]);
+    }
+
+    /**
+     * Ограничение списков категорий теми, где есть товары в наличии на складах
+     * региона (на всю глубину) — см. StockVisibility. Сама страница категории
+     * остаётся доступной по прямой ссылке, скрываются только списки и меню.
+     */
+    private function onlyStockedCategories(): \Closure
+    {
+        $visibleIds = app(StockVisibility::class)->categoryIds(auth()->user()?->region_id);
+
+        return fn ($query) => $query->when($visibleIds !== null, fn ($q) => $q->whereIn('id', $visibleIds));
     }
 
     /**

@@ -18,6 +18,7 @@ import ClientDocuments from '@/Crm/Components/ClientDocuments';
 import CommentThread from '@/Crm/Components/CommentThread';
 import AttachmentPanel from '@/Crm/Components/AttachmentPanel';
 import NotificationMatrix from '@/Crm/Components/NotificationMatrix';
+import AssistantPanel from '@/Crm/Components/AssistantPanel';
 import ContactsPanel from '@/Crm/Components/ContactsPanel';
 import VoiceNotes from '@/Crm/Components/VoiceNotes';
 import ClientProfileForm from '@/Crm/Components/ClientProfileForm';
@@ -69,6 +70,8 @@ export default function Show() {
     const canViewProfile = can('crm-profile.view') && !!profile;
     const canViewComments = can('crm-comments.view');
     const canViewFiles = can('crm-attachments.view');
+    // Переписка партнёра с помощником на сайте (assist-00): право раздела «ИИ-агенты клиентов».
+    const canViewAssistant = can('crm-agent-usage.view');
     const canViewContacts = can('crm-contacts.view');
     const canViewTasks = can('crm-tasks.view');
     const [composeOpen, setComposeOpen] = useState(false);
@@ -309,6 +312,7 @@ export default function Show() {
                                     {canViewFiles && <Tabs.Trigger value="files">Файлы</Tabs.Trigger>}
                                     {canViewContacts && <Tabs.Trigger value="contacts">Контакты</Tabs.Trigger>}
                                     <Tabs.Trigger value="notifications">Уведомления</Tabs.Trigger>
+                                    {canViewAssistant && <Tabs.Trigger value="assistant">Помощник</Tabs.Trigger>}
                                 </Tabs.List>
 
                                 {canViewComments && (
@@ -418,6 +422,12 @@ export default function Show() {
                                             canEdit={can('crm-contacts.edit')}
                                             canCreate={can('crm-contacts.create')}
                                         />
+                                    </Tabs.Content>
+                                )}
+
+                                {canViewAssistant && (
+                                    <Tabs.Content value="assistant">
+                                        <AssistantPanel clientId={client.id} />
                                     </Tabs.Content>
                                 )}
 

@@ -80,6 +80,7 @@ class SearchExportTest extends TestCase
         $order = Order::factory()->create([
             'user_id' => $this->user->id,
             'number' => 'ORD-EXPORT-001',
+            'erp_number' => '29УТ-000101',
             'total_amount' => 1234.56,
         ]);
         OrderItem::create([
@@ -96,7 +97,9 @@ class SearchExportTest extends TestCase
         $response->assertOk();
         $this->assertSame('text/csv; charset=UTF-8', $response->headers->get('Content-Type'));
         $body = $response->streamedContent();
-        $this->assertStringContainsString('ORD-EXPORT-001', $body);
+        // Клиенту — номер 1С; временный сайтовый ORD-… в выгрузку не попадает
+        $this->assertStringContainsString('29УТ-000101', $body);
+        $this->assertStringNotContainsString('ORD-EXPORT-001', $body);
         $this->assertStringContainsString('Номер;Тип;Статус', $body);
     }
 
@@ -137,11 +140,13 @@ class SearchExportTest extends TestCase
         $confirmed = Order::factory()->create([
             'user_id' => $this->user->id,
             'number' => 'ORD-CONFIRMED',
+            'erp_number' => '29УТ-CONFIRMED',
             'status' => OrderStatus::READY_FOR_PROVISION,
         ]);
         $closed = Order::factory()->create([
             'user_id' => $this->user->id,
             'number' => 'ORD-CLOSED',
+            'erp_number' => '29УТ-CLOSED',
             'status' => OrderStatus::CLOSED,
         ]);
 
@@ -150,8 +155,8 @@ class SearchExportTest extends TestCase
 
         $response->assertOk();
         $body = $response->streamedContent();
-        $this->assertStringContainsString('ORD-CONFIRMED', $body);
-        $this->assertStringNotContainsString('ORD-CLOSED', $body);
+        $this->assertStringContainsString('29УТ-CONFIRMED', $body);
+        $this->assertStringNotContainsString('29УТ-CLOSED', $body);
     }
 
     #[Test]
@@ -163,10 +168,12 @@ class SearchExportTest extends TestCase
         Order::factory()->create([
             'user_id' => $other->id,
             'number' => 'ORD-FOREIGN-XYZ',
+            'erp_number' => '29УТ-FOREIGN',
         ]);
         Order::factory()->create([
             'user_id' => $this->user->id,
             'number' => 'ORD-MINE-ABC',
+            'erp_number' => '29УТ-MINE',
         ]);
 
         $response = $this->actingAs($this->user)
@@ -174,8 +181,8 @@ class SearchExportTest extends TestCase
 
         $response->assertOk();
         $body = $response->streamedContent();
-        $this->assertStringContainsString('ORD-MINE-ABC', $body);
-        $this->assertStringNotContainsString('ORD-FOREIGN-XYZ', $body);
+        $this->assertStringContainsString('29УТ-MINE', $body);
+        $this->assertStringNotContainsString('29УТ-FOREIGN', $body);
     }
 
     #[Test]

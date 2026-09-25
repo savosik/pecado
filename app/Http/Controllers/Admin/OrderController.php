@@ -329,6 +329,9 @@ class OrderController extends AdminController
                 'type' => $order->type?->value,
                 'status' => $order->status?->value,
                 'status_label' => $this->getStatusLabel($order->status),
+                // pick-15: стадия сборки и факт выдачи. Сотруднику видно всегда, независимо от клиентского
+                // рубильника: вопрос «где заказ» менеджеру задают и до включения раздела в кабинете.
+                'fulfilment' => app(\App\Services\Pickup\OrderFulfilmentResolver::class)->forOrder($order),
                 // v16.9.0 (res-12): окно резерва — время клиента, не менеджера
                 'reserve' => (bool) $order->reserve,
                 'reserved_until' => $order->reserve

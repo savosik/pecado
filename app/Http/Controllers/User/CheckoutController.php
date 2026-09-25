@@ -3,19 +3,17 @@
 namespace App\Http\Controllers\User;
 
 use App\Contracts\Cart\CartServiceInterface;
-use App\Contracts\Defect\DefectStockServiceInterface;
-use App\Contracts\Order\CheckoutServiceInterface;
-use App\Contracts\Pricing\PriceServiceInterface;
-use App\Contracts\Stock\StockServiceInterface;
 use App\Enums\Country;
 use App\Enums\DeliveryMethod;
 use App\Enums\OrderType;
-use App\Enums\PromoKind;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreCheckoutRequest;
-use App\Models\DeliveryAddress;
 use App\Models\Order;
-use App\Models\User;
+use App\Services\Cart\CartStockNormalizer;
+use App\Services\Order\CabinetCheckout;
+use App\Services\Order\CheckoutPreview;
+use App\Services\Order\CheckoutRequestDto;
+use App\Services\Order\NothingToCheckoutException;
 use App\Support\Preorder\PreorderTerms;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,10 +25,9 @@ class CheckoutController extends Controller
 {
     public function __construct(
         protected CartServiceInterface $cartService,
-        protected CheckoutServiceInterface $checkoutService,
-        protected PriceServiceInterface $priceService,
-        protected StockServiceInterface $stockService,
-        protected DefectStockServiceInterface $defectStockService
+        protected CheckoutPreview $preview,
+        protected CabinetCheckout $checkout,
+        protected CartStockNormalizer $normalizer,
     ) {}
 
     /**
@@ -54,45 +51,7 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index');
         }
 
-        $cartDetails = $this->cartService->getCartDetails($cart, $user);
-
-        // Разделить товары на instock, preorder и defect (уценка)
-        $items = $cartDetails['items'] ?? [];
-        $instockItems = array_values(array_filter($items, fn ($it) => ($it['item_type'] ?? '') === 'instock'));
-        $preorderItems = array_values(array_filter($items, fn ($it) => ($it['item_type'] ?? '') === 'preorder'));
-        $defectItems = array_values(array_filter($items, fn ($it) => ($it['item_type'] ?? '') === 'defect'));
-
-        // Подытоги
-        $instockTotals = [
-            'quantity' => array_sum(array_column($instockItems, 'quantity')),
-            'amount_regular' => array_sum(array_column($instockItems, 'total_amount_regular')),
-            'amount_discounted' => array_sum(array_column($instockItems, 'total_amount_discounted')),
-        ];
-        $preorderTotals = [
-            'quantity' => array_sum(array_column($preorderItems, 'quantity')),
-            'amount_regular' => array_sum(array_column($preorderItems, 'total_amount_regular')),
-            'amount_discounted' => array_sum(array_column($preorderItems, 'total_amount_discounted')),
-        ];
-        $defectTotals = [
-            'quantity' => array_sum(array_column($defectItems, 'quantity')),
-            'amount_regular' => array_sum(array_column($defectItems, 'total_amount_regular')),
-            'amount_discounted' => array_sum(array_column($defectItems, 'total_amount_discounted')),
-        ];
-
-        // Промо-позиции: подотчётные и рекламные образцы показываются разными
-        // таблицами — у образцов другой режим учёта, и клиент должен видеть это
-        // до оформления, а не узнавать из накладной
-        $promoItems = array_values(array_filter(
-            $cartDetails['promo_items'] ?? [],
-            fn ($it) => ($it['promo_kind'] ?? '') !== PromoKind::SAMPLE->value && ! ($it['is_declined'] ?? false),
-        ));
-        $sampleItems = array_values(array_filter(
-            $cartDetails['promo_items'] ?? [],
-            fn ($it) => ($it['promo_kind'] ?? '') === PromoKind::SAMPLE->value && ! ($it['is_declined'] ?? false),
-        ));
-
-        $promoTotals = $this->groupTotals($promoItems);
-        $sampleTotals = $this->groupTotals($sampleItems);
+        $preview = $this->preview->build($user, $cart);
 
         // Компании и адреса пользователя
         $companies = $user->companies()->select('id', 'name', 'legal_name', 'tax_id', 'is_default')->get();
@@ -103,25 +62,18 @@ class CheckoutController extends Controller
             ->get();
 
         return Inertia::render('User/Checkout/Index', [
-            'cart' => [
-                'id' => $cart->id,
-                'name' => $cart->name,
-            ],
-            'instockItems' => $instockItems,
-            'preorderItems' => $preorderItems,
-            'defectItems' => $defectItems,
-            'promoItems' => $promoItems,
-            'sampleItems' => $sampleItems,
-            'instockTotals' => $instockTotals,
-            'preorderTotals' => $preorderTotals,
-            'defectTotals' => $defectTotals,
-            'promoTotals' => $promoTotals,
-            'sampleTotals' => $sampleTotals,
-            'grandTotal' => [
-                'quantity' => $cartDetails['total_quantity'] ?? 0,
-                'amount_regular' => $cartDetails['total_amount_regular'] ?? 0,
-                'amount_discounted' => $cartDetails['total_amount_discounted'] ?? 0,
-            ],
+            'cart' => $preview['cart'],
+            'instockItems' => $preview['instock_items'],
+            'preorderItems' => $preview['preorder_items'],
+            'defectItems' => $preview['defect_items'],
+            'promoItems' => $preview['promo_items'],
+            'sampleItems' => $preview['sample_items'],
+            'instockTotals' => $preview['instock_totals'],
+            'preorderTotals' => $preview['preorder_totals'],
+            'defectTotals' => $preview['defect_totals'],
+            'promoTotals' => $preview['promo_totals'],
+            'sampleTotals' => $preview['sample_totals'],
+            'grandTotal' => $preview['grand_total'],
             'companies' => $companies,
             'addresses' => $addresses,
             // Запомненный способ доставки из последнего заказа (иначе — доставка).
@@ -131,21 +83,6 @@ class CheckoutController extends Controller
                 'label' => $c->label(),
             ]),
         ]);
-    }
-
-    /**
-     * Подытоги группы строк.
-     *
-     * @param  array<int, array<string, mixed>>  $items
-     * @return array{quantity: int, amount_regular: float, amount_discounted: float}
-     */
-    private function groupTotals(array $items): array
-    {
-        return [
-            'quantity' => array_sum(array_column($items, 'quantity')),
-            'amount_regular' => array_sum(array_column($items, 'total_amount_regular')),
-            'amount_discounted' => array_sum(array_column($items, 'total_amount_discounted')),
-        ];
     }
 
     /**
@@ -162,71 +99,28 @@ class CheckoutController extends Controller
         }
 
         $company = $user->companies()->findOrFail($request->validated('company_id'));
-
         $deliveryMethod = DeliveryMethod::from($request->validated('delivery_method'));
 
-        // «Только со склада»: клиент не хочет ждать поставку — предзаказные
-        // строки уходят из корзины до оформления. Если кроме них ничего нет,
-        // оформлять нечего: возвращаем на чекаут с объяснением, а не пустой заказ.
-        if ($request->boolean('instock_only') || ! $user->preordersEnabled()) {
-            if ($cart->items()->where('item_type', '!=', 'preorder')->doesntExist()) {
-                return back()->withErrors([
-                    'stock' => 'В корзине только товары под предзаказ — со склада оформлять нечего.',
-                ]);
-            }
-
-            $this->cartService->removePreorderItems($user, $cart);
-            $cart->load('items');
-        }
-
         try {
-            $orders = $this->checkoutService->checkout(
-                $cart,
-                $company,
-                $request->validated('delivery_address'),
-                $request->validated('comment'),
-                $request->validated('manager_comment'),
-                $request->validated('warehouse_comment'),
-                $deliveryMethod,
-                $request->boolean('reserve'),
-            );
-
-            // Запомнить выбранный способ доставки для предвыбора на следующем checkout.
-            $user->update(['default_delivery_method' => $deliveryMethod]);
-
-            // Сохранить новый адрес в список пользователя (только при доставке и по запросу).
-            if ($deliveryMethod === DeliveryMethod::DELIVERY && $request->boolean('save_address')) {
-                $this->saveDeliveryAddress($user, $request);
+            $orders = $this->checkout->submit($user, $cart, $company, new CheckoutRequestDto(
+                deliveryMethod: $deliveryMethod,
+                deliveryAddress: $request->validated('delivery_address'),
+                comment: $request->validated('comment'),
+                managerComment: $request->validated('manager_comment'),
+                warehouseComment: $request->validated('warehouse_comment'),
+                instockOnly: $request->boolean('instock_only'),
+                reserve: $request->boolean('reserve'),
+                saveAddress: $request->boolean('save_address'),
+                addressName: $request->validated('address_name'),
+                addressMakeDefault: $request->boolean('address_make_default'),
+                addressData: $request->validated('address_data'),
+            ));
+        } catch (NothingToCheckoutException $e) {
+            if ($e->reason === NothingToCheckoutException::EMPTY_CART) {
+                return redirect()->route('cart.index');
             }
 
-            // Очистить корзину после успешного заказа
-            $cart->items()->delete();
-
-            // v16.9.0 (res-06): резервный заказ — сразу в рабочее место резервов.
-            // Один заказ → его страница (там таймер и кнопки), несколько →
-            // раздел «Заказы в резерве».
-            $reserveOrder = $orders->first(fn (Order $o) => $o->reserve);
-
-            if ($reserveOrder !== null) {
-                $target = $orders->count() === 1
-                    ? redirect()->route('cabinet.orders.show', $reserveOrder)
-                    : redirect()->route('cabinet.reserves.index');
-
-                return $target->with('success', $this->successMessage($orders))->with('order_placed', true);
-            }
-
-            // Если создано несколько заказов (обычный / предзаказ / уценка) —
-            // редиректим в список заказов
-            if ($orders->count() > 1) {
-                return redirect()
-                    ->route('cabinet.orders.index')
-                    ->with('success', $this->successMessage($orders))->with('order_placed', true);
-            }
-
-            // Один заказ — редиректим на его страницу
-            return redirect()
-                ->route('cabinet.orders.show', $orders->first())
-                ->with('success', $this->successMessage($orders))->with('order_placed', true);
+            return back()->withErrors(['stock' => $e->getMessage()]);
         } catch (\App\Exceptions\InsufficientStockException $e) {
             return back()
                 ->withErrors([
@@ -239,6 +133,30 @@ class CheckoutController extends Controller
                 ->withErrors(['debt' => $e->getMessage()])
                 ->with('debt_restriction', $e->toPayload());
         }
+
+        // v16.9.0 (res-06): резервный заказ — сразу в рабочее место резервов.
+        // Один заказ → его страница (там таймер и кнопки), несколько →
+        // раздел «Заказы в резерве».
+        $reserveOrder = $orders->first(fn (Order $o) => $o->reserve);
+
+        if ($reserveOrder !== null) {
+            $target = $orders->count() === 1
+                ? redirect()->route('cabinet.orders.show', $reserveOrder)
+                : redirect()->route('cabinet.reserves.index');
+
+            return $target->with('success', $this->successMessage($orders))->with('order_placed', true);
+        }
+
+        // Несколько заказов (обычный / предзаказ / уценка) — в список заказов
+        if ($orders->count() > 1) {
+            return redirect()
+                ->route('cabinet.orders.index')
+                ->with('success', $this->successMessage($orders))->with('order_placed', true);
+        }
+
+        return redirect()
+            ->route('cabinet.orders.show', $orders->first())
+            ->with('success', $this->successMessage($orders))->with('order_placed', true);
     }
 
     /**
@@ -251,59 +169,22 @@ class CheckoutController extends Controller
     private function successMessage(Collection $orders): string
     {
         $preorder = $orders->first(fn (Order $o) => $o->type === OrderType::PREORDER);
+        // Правило выдачи самовывоза — в каждом сообщении об оформлении: курьеры ездят без пропуска
+        $pickupNote = (bool) config('pickup.enabled') && $orders->contains(fn (Order $o) => $o->delivery_method === \App\Enums\DeliveryMethod::PICKUP)
+            ? ' Самовывоз: когда соберём — напишем, курьера отправляйте с пропуском из кабинета.'
+            : '';
 
         if ($preorder === null) {
-            return $orders->count() > 1 ? 'Заказы успешно оформлены!' : 'Заказ успешно оформлен!';
+            return ($orders->count() > 1 ? 'Заказы успешно оформлены!' : 'Заказ успешно оформлен!').$pickupNote;
         }
 
         $lead = PreorderTerms::leadLabel();
 
         if ($orders->count() === 1) {
-            return "Предзаказ {$preorder->number} оформлен. Товар заказываем у поставщика, ориентировочная поставка — {$lead}.";
+            return "Предзаказ оформлен. Товар заказываем у поставщика, ориентировочная поставка — {$lead}. ".Order::pendingNumberHint();
         }
 
-        return "Оформлено документов: {$orders->count()}. Предзаказ {$preorder->number} — отдельно, ориентировочная поставка {$lead}.";
-    }
-
-    /**
-     * Сохранить введённый на checkout адрес в список адресов пользователя.
-     * Дубли (точное совпадение строки адреса) не создаём.
-     * При address_make_default делаем адрес адресом по умолчанию.
-     */
-    private function saveDeliveryAddress(User $user, StoreCheckoutRequest $request): void
-    {
-        $address = trim((string) $request->validated('delivery_address'));
-
-        if ($address === '') {
-            return;
-        }
-
-        $makeDefault = $request->boolean('address_make_default');
-
-        $existing = $user->deliveryAddresses()->where('address', $address)->first();
-
-        if ($existing) {
-            // Дубликат: при необходимости лишь переназначаем «по умолчанию».
-            if ($makeDefault && ! $existing->is_default) {
-                DeliveryAddress::where('user_id', $user->id)->update(['is_default' => false]);
-                $existing->update(['is_default' => true]);
-            }
-
-            return;
-        }
-
-        if ($makeDefault) {
-            DeliveryAddress::where('user_id', $user->id)->update(['is_default' => false]);
-        }
-
-        $name = trim((string) $request->validated('address_name'));
-
-        $user->deliveryAddresses()->create([
-            'name' => $name !== '' ? $name : 'Адрес доставки',
-            'address' => $address,
-            'address_data' => $request->validated('address_data'),
-            'is_default' => $makeDefault,
-        ]);
+        return "Оформлено документов: {$orders->count()}. Предзаказ — отдельно, ориентировочная поставка {$lead}. ".Order::pendingNumberHint();
     }
 
     /**
@@ -319,42 +200,7 @@ class CheckoutController extends Controller
         $user = $request->user();
         $cart = $this->cartService->getOrCreateActiveCart($user);
 
-        $adjusted = 0;
-        $removed = 0;
-
-        $cart->loadMissing('items.product', 'items.productDefect');
-
-        foreach ($cart->items as $item) {
-            if (! $item->product) {
-                continue;
-            }
-
-            if ($item->isDefect()) {
-                // Уценка: лимит — свободный остаток партии; закрытую/снятую считаем недоступной.
-                $defect = $item->productDefect;
-                $totalAvailable = ($defect && $defect->is_published && $defect->price !== null && ! $defect->isClosed())
-                    ? $this->defectStockService->available($defect)
-                    : 0;
-            } else {
-                $stock = $this->stockService->getStock($item->product, $user);
-                $totalAvailable = (int) ($stock['available'] + $stock['preorder']);
-            }
-
-            if ($item->quantity <= $totalAvailable) {
-                continue;
-            }
-
-            if ($totalAvailable <= 0) {
-                $item->delete();
-                $removed++;
-
-                continue;
-            }
-
-            $item->quantity = $totalAvailable;
-            $item->save();
-            $adjusted++;
-        }
+        ['adjusted' => $adjusted, 'removed' => $removed, 'remaining_lines' => $remaining] = $this->normalizer->normalize($user, $cart);
 
         if ($adjusted === 0 && $removed === 0) {
             return redirect()
@@ -371,7 +217,7 @@ class CheckoutController extends Controller
         }
 
         // Если корзина опустела — увести в корзину
-        if ($cart->items()->count() === 0) {
+        if ($remaining === 0) {
             return redirect()
                 ->route('cart.index')
                 ->with('warning', 'Корзина опустела после сверки с остатками ('.implode(', ', $parts).').');

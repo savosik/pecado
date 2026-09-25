@@ -4,10 +4,10 @@ namespace App\Services\Crm\Api\Operations;
 
 use App\Enums\Crm\ClientLifecycleStatus;
 use App\Models\User;
-use App\Services\Crm\Api\OperationInput;
 use App\Services\Crm\ClientLifecycleService;
 use App\Services\Crm\ClientProfileService;
 use App\Support\Crm\ClientPassport;
+use App\Support\OperationApi\OperationInput;
 use Spatie\Tags\Tag;
 
 /**

@@ -6,12 +6,10 @@ use App\Contracts\Cart\CartServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
-use App\Models\CartPromotionSelection;
 use App\Models\Product;
-use App\Models\ProductBarcode;
 use App\Models\ProductDefect;
-use App\Models\PromotionRule;
 use App\Services\Cart\OrderImportService;
+use App\Services\Promotion\CartPromoChoice;
 use App\Services\Promotion\CartPromotionProgress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -23,7 +21,8 @@ use Inertia\Response as InertiaResponse;
 class CartController extends Controller
 {
     public function __construct(
-        protected CartServiceInterface $cartService
+        protected CartServiceInterface $cartService,
+        protected CartPromoChoice $promoChoice,
     ) {}
 
     // ────────────────────────────────────────────
@@ -213,14 +212,7 @@ class CartController extends Controller
 
         $cart = $this->promoCart($request);
 
-        CartPromotionSelection::updateOrCreate(
-            [
-                'cart_id' => $cart->id,
-                'promotion_rule_id' => $validated['rule_id'],
-                'reward_index' => $validated['reward_index'],
-            ],
-            ['product_id' => $validated['product_id']],
-        );
+        $this->promoChoice->select($cart, (int) $validated['rule_id'], (int) $validated['reward_index'], (int) $validated['product_id']);
 
         return $this->promoResponse($cart);
     }
@@ -244,22 +236,11 @@ class CartController extends Controller
 
         $cart = $this->promoCart($request);
 
-        // От бесплатного не отказываются: подарок ничего не стоит, а кнопка
-        // «отказаться» рядом с ним выглядит как ошибка интерфейса
-        if ($validated['declined'] && ! $this->promoRewardIsOptional($cart, $validated['rule_id'], $validated['reward_index'])) {
-            return response()->json([
-                'message' => 'От этой промо-позиции нельзя отказаться',
-            ], 422);
+        try {
+            $this->promoChoice->decline($cart, (int) $validated['rule_id'], (int) $validated['reward_index'], (bool) $validated['declined']);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
-
-        CartPromotionSelection::updateOrCreate(
-            [
-                'cart_id' => $cart->id,
-                'promotion_rule_id' => $validated['rule_id'],
-                'reward_index' => $validated['reward_index'],
-            ],
-            ['is_declined' => $validated['declined']],
-        );
 
         return $this->promoResponse($cart);
     }
@@ -277,17 +258,6 @@ class CartController extends Controller
         }
 
         return $this->cartService->getOrCreateActiveCart($request->user());
-    }
-
-    /**
-     * Отклоняемая ли награда: платная и помеченная `optional` в правиле.
-     */
-    private function promoRewardIsOptional(Cart $cart, int $ruleId, int $rewardIndex): bool
-    {
-        $rule = PromotionRule::find($ruleId);
-        $reward = (array) (array_values((array) ($rule?->rewards ?? []))[$rewardIndex] ?? []);
-
-        return (float) ($reward['price'] ?? 0) > 0 && (bool) ($reward['optional'] ?? true);
     }
 
     /**
@@ -511,60 +481,15 @@ class CartController extends Controller
             'quantity.min' => 'Количество должно быть не менее 1.',
         ]);
 
-        $productBarcode = ProductBarcode::where('barcode', $validated['barcode'])->first();
-
-        if (! $productBarcode) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Товар с таким штрихкодом не найден.',
-            ], 404);
-        }
-
         $user = $request->user();
         $cart = $this->cartService->getOrCreateActiveCart($user);
-        $product = $productBarcode->product;
-        $qty = $validated['quantity'] ?? 1;
+        $result = $this->cartService->addByBarcode($user, $cart, $validated['barcode'], (int) ($validated['quantity'] ?? 1));
 
-        // Remember previous quantity to detect if anything was actually added
-        $previousQty = $cart->items()
-            ->where('product_id', $product->id)
-            ->sum('quantity');
-
-        $result = $this->cartService->addProduct($user, $cart, $product, $qty);
-
-        $actualTotal = $result['instock'] + $result['preorder'];
-
-        // Nothing was added — max stock already reached
-        if ($actualTotal <= $previousQty) {
-            return response()->json([
-                'status' => 'warning',
-                'message' => "Достигнут максимум для «{$product->name}» ({$result['max_total']} шт.)",
-                'product_id' => $product->id,
-                'product_name' => $product->name,
-                ...$result,
-            ]);
-        }
-
-        $addedQty = $actualTotal - $previousQty;
-
-        // Partially added (was clamped)
-        if ($addedQty < $qty) {
-            return response()->json([
-                'status' => 'partial',
-                'message' => "Добавлено {$addedQty} из {$qty} шт. «{$product->name}» (макс. {$result['max_total']} шт.)",
-                'product_id' => $product->id,
-                'product_name' => $product->name,
-                ...$result,
-            ], 201);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Товар добавлен в корзину.',
-            'product_id' => $product->id,
-            'product_name' => $product->name,
-            ...$result,
-        ], 201);
+        return match ($result['status']) {
+            'not_found' => response()->json(['status' => 'error', 'message' => $result['message']], 404),
+            'warning' => response()->json($result),
+            default => response()->json($result, 201),
+        };
     }
 
     /**

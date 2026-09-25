@@ -30,6 +30,7 @@ import {
     LuReceipt,
     LuFileText,
     LuNewspaper,
+    LuBookOpen,
     LuCircleHelp,
     LuMessageSquare,
     LuImage,
@@ -153,6 +154,8 @@ export const menuConfig: MenuGroup[] = [
             { label: "Новости", icon: LuNewspaper, path: "/admin/news", permission: "news.view" },
             { label: "FAQ", icon: LuCircleHelp, path: "/admin/faqs", permission: "faqs.view" },
             { label: "Вопросы пользователей", icon: LuMessageSquare, path: "/admin/user-questions", permission: "user-questions.view" },
+            // Инструкции: текст, PDF или видео для клиентов, CRM и склада.
+            { label: "Инструкции", icon: LuBookOpen, path: "/admin/instructions", permission: "instructions.view" },
             { label: "Баннеры", icon: LuImage, path: "/admin/banners", permission: "banners.view" },
             { label: "Страницы", icon: LuFile, path: "/admin/pages", permission: "pages.view" },
             { label: "Истории", icon: LuCirclePlay, path: "/admin/stories", permission: "stories.view" },

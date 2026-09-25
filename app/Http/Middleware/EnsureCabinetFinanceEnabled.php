@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Support\Cabinet\CabinetFinance;
+use App\Services\Client\Api\FeatureGate;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,7 +23,7 @@ class EnsureCabinetFinanceEnabled
 {
     public function handle(Request $request, Closure $next): Response
     {
-        abort_unless(CabinetFinance::enabledFor($request->user()), 404);
+        abort_unless(FeatureGate::FINANCE->allows($request->user()), 404);
 
         return $next($request);
     }

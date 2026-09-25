@@ -46,7 +46,22 @@ class HandleCrmInertiaRequests extends Middleware
         return [
             ...$this->shortagesCounter($user),
             ...$this->tasksCounter($user),
+            ...$this->questionsCounter($user),
         ];
+    }
+
+    /**
+     * Вопросы клиентов, ждущие ответа (новые и в работе) в разрезе «мои».
+     *
+     * @return array<string, int>
+     */
+    private function questionsCounter(\App\Models\User $user): array
+    {
+        if (! $user->can('crm-questions.view')) {
+            return [];
+        }
+
+        return ['questions' => app(\App\Services\Support\UserQuestionCrmQuery::class)->openCount($user)];
     }
 
     /**

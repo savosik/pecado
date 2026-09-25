@@ -6,17 +6,15 @@ use App\Enums\ReturnReason;
 use App\Enums\ReturnStatus;
 use App\Http\Controllers\Controller;
 use App\Models\ProductReturn;
-use App\Models\ReturnItem;
-use App\Models\Shipment;
-use App\Models\ShipmentItem;
 use App\Models\User;
+use App\Services\Returns\ClientReturnPresenter;
+use App\Services\Returns\ClientReturnQuery;
+use App\Services\Returns\ReturnableShipmentItems;
 use App\Services\Returns\ReturnService;
 use App\Services\SimpleCsvExporter;
 use App\Services\SimpleXlsxExporter;
 use App\Support\Search\EmptyResultSuggestion;
-use App\Support\Search\FuzzyDocumentMatcher;
 use App\Support\Search\MatchSourceResolver;
-use App\Support\Search\QueryRouter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,9 +22,20 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * Возвраты в кабинете клиента — тонкий транспорт над сервисами возвратов.
+ *
+ * Выборка, основания и представление живут в `App\Services\Returns\*` и общие
+ * с клиентским API v1: здесь только разбор запроса и сборка Inertia-страниц.
+ */
 class ReturnController extends Controller
 {
-    public function __construct(private readonly ReturnService $returnService) {}
+    public function __construct(
+        private readonly ReturnService $returnService,
+        private readonly ClientReturnQuery $query,
+        private readonly ReturnableShipmentItems $bases,
+        private readonly ClientReturnPresenter $presenter,
+    ) {}
 
     /**
      * Список возвратов текущего пользователя.
@@ -38,7 +47,6 @@ class ReturnController extends Controller
         $search = $context['search'];
         $perPage = $context['per_page'];
 
-        // Заглушка прежней структуры для дальнейшего pagination + transform.
         $returns = $query->paginate($perPage)->withQueryString();
         $returns->getCollection()->transform(function ($return) use ($search) {
             $match = MatchSourceResolver::resolve(
@@ -55,17 +63,7 @@ class ReturnController extends Controller
                 ],
             );
 
-            return [
-                'id' => $return->id,
-                'number' => $return->erp_number ?? ('#'.$return->id),
-                'uuid' => $return->uuid,
-                'status' => $return->status?->value,
-                'status_label' => $this->getStatusLabel($return->status),
-                'total_amount' => $return->total_amount,
-                'created_at' => $return->created_at?->format('d.m.Y H:i'),
-                'items_count' => $return->items->count(),
-                'primary_reason' => $return->items->first()?->reason?->value,
-                'primary_reason_label' => $this->getReasonLabel($return->items->first()?->reason),
+            return $this->presenter->row($return) + [
                 'match_source' => $match['source'],
                 'match_snippet' => $match['snippet'],
             ];
@@ -89,14 +87,8 @@ class ReturnController extends Controller
                 'sort_order' => $context['sort_order'],
                 'per_page' => $perPage,
             ],
-            'statuses' => collect(ReturnStatus::cases())->map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $this->getStatusLabel($case),
-            ]),
-            'reasons' => collect(ReturnReason::cases())->map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $this->getReasonLabel($case),
-            ]),
+            'statuses' => $this->statusOptions(),
+            'reasons' => $this->reasonOptions(),
             'exportEnabled' => (bool) config('search-cabinet.export'),
             'suggestion' => $suggestion,
         ]);
@@ -144,8 +136,8 @@ class ReturnController extends Controller
             foreach ($query->cursor() as $return) {
                 yield [
                     $return->erp_number ?? ('#'.$return->id),
-                    $this->getStatusLabel($return->status),
-                    $this->getReasonLabel($return->items->first()?->reason),
+                    $this->presenter->statusLabel($return->status),
+                    $this->presenter->reasonLabel($return->items->first()?->reason),
                     $return->items->count(),
                     round((float) $return->total_amount, 2),
                     $return->created_at?->format('d.m.Y H:i'),
@@ -160,134 +152,31 @@ class ReturnController extends Controller
             : $xlsx->stream($filename, $headers, $rows, 'Возвраты');
     }
 
+    /**
+     * Запрос списка и контекст фильтров для страницы/экспорта.
+     *
+     * @return array{0: \Illuminate\Database\Eloquent\Builder<ProductReturn>, 1: array<string, mixed>}
+     */
     private function buildIndexQuery(Request $request, User $user): array
     {
-        $search = trim((string) $request->input('search', ''));
+        $filters = $request->only(['search', 'status', 'reason', 'date_from', 'date_to', 'amount_from', 'amount_to']);
+        $query = $this->query->builder($user, $filters);
 
-        $query = ProductReturn::query()
-            ->where('user_id', $user->id)
-            ->with(['items']);
-
-        if ($search !== '') {
-            $normalized = preg_replace('/[\s\-]+/u', '', $search);
-            $queryType = QueryRouter::classify($search);
-
-            $fuzzyReturnIds = FuzzyDocumentMatcher::isApplicable($search, $queryType)
-                ? FuzzyDocumentMatcher::findDocumentIds(
-                    $search,
-                    ReturnItem::class,
-                    'return_id',
-                    'return',
-                    $user->id,
-                )
-                : [];
-
-            $query->where(function ($q) use ($search, $normalized, $queryType, $fuzzyReturnIds) {
-                // Базовое: UUID / ERP-номер / числовой ID.
-                $q->where('uuid', 'like', "%{$search}%")
-                    ->orWhere('erp_number', 'like', "%{$search}%");
-
-                if (ctype_digit($search)) {
-                    $q->orWhere('id', (int) $search);
-                }
-
-                // Нормализованная форма ERP-номера (C-2.1): дефис/пробелы съедаются с обеих сторон.
-                if ($normalized !== '') {
-                    $q->orWhereRaw("REPLACE(REPLACE(erp_number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
-                }
-
-                // Поиск по номеру исходной реализации (C-2.2).
-                $q->orWhereHas('items.shipmentItem.shipment', function ($s) use ($search, $normalized) {
-                    $s->where('number', 'like', "%{$search}%")
-                        ->orWhere('erp_number', 'like', "%{$search}%")
-                        ->orWhere('uuid', 'like', "%{$search}%");
-                    if ($normalized !== '') {
-                        $s->orWhereRaw("REPLACE(REPLACE(number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
-                        $s->orWhereRaw("REPLACE(REPLACE(erp_number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
-                    }
-                });
-
-                // Состав возврата: name/sku/code товара (C-2.3).
-                $q->orWhereHas('items.shipmentItem.product', function ($p) use ($search) {
-                    $p->where('name', 'like', "%{$search}%")
-                        ->orWhere('sku', 'like', "%{$search}%")
-                        ->orWhere('code', 'like', "%{$search}%");
-                });
-
-                // Бренд в составе (C-2.3).
-                $q->orWhereHas('items.shipmentItem.product.brand', fn ($b) => $b->where('name', 'like', "%{$search}%"));
-
-                // Штрихкод (C-2.3, точное совпадение).
-                if ($queryType === QueryRouter::TYPE_BARCODE) {
-                    $q->orWhereHas('items.shipmentItem.product.barcodes', fn ($b) => $b->where('barcode', $search));
-                }
-
-                // Текст комментария причины (C-2.4).
-                $q->orWhereHas('items', fn ($i) => $i->where('reason_comment', 'like', "%{$search}%"));
-
-                // Fuzzy через Meilisearch (PR 4.2, флаг CABINET_SEARCH_FUZZY_DOCUMENTS).
-                if (! empty($fuzzyReturnIds)) {
-                    $q->orWhereIn('id', $fuzzyReturnIds);
-                }
-            });
-        }
-
-        // Статус — поддерживаем скаляр (старое поведение) и массив (multi-select).
-        $statusInput = $request->input('status');
-        if (is_array($statusInput)) {
-            $statuses = array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''));
-            if (count($statuses) > 0) {
-                $query->whereIn('status', $statuses);
-            }
-        } elseif ($statusInput) {
-            $query->where('status', $statusInput);
-        }
-
-        // Причина — multi-select (C-2.5) с обратной совместимостью со скалярным значением.
-        $reasonInput = $request->input('reason');
-        $reasons = is_array($reasonInput)
-            ? array_values(array_filter($reasonInput, fn ($v) => $v !== null && $v !== ''))
-            : ($reasonInput ? [$reasonInput] : []);
-        if (count($reasons) > 0) {
-            $query->whereHas('items', fn ($q) => $q->whereIn('reason', $reasons));
-        }
-
-        if ($dateFrom = $request->input('date_from')) {
-            $query->whereDate('created_at', '>=', $dateFrom);
-        }
-        if ($dateTo = $request->input('date_to')) {
-            $query->whereDate('created_at', '<=', $dateTo);
-        }
-
-        if ($amountFrom = $request->input('amount_from')) {
-            $query->where('total_amount', '>=', $amountFrom);
-        }
-        if ($amountTo = $request->input('amount_to')) {
-            $query->where('total_amount', '<=', $amountTo);
-        }
-
-        $sortBy = $request->input('sort_by', 'id');
-        $sortOrder = $request->input('sort_order', 'desc');
-        $allowedSortFields = ['id', 'total_amount', 'status', 'created_at'];
-        if (in_array($sortBy, $allowedSortFields)) {
-            $query->orderBy($sortBy, $sortOrder);
-        }
+        $sortBy = (string) $request->input('sort_by', 'id');
+        $sortOrder = (string) $request->input('sort_order', 'desc');
+        $this->query->applySort($query, $sortBy, $sortOrder);
 
         $perPage = (int) $request->input('per_page', 15);
         $perPage = min(max($perPage, 5), 100);
 
-        $selectedStatuses = is_array($statusInput)
-            ? array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''))
-            : ($statusInput ? [(string) $statusInput] : []);
-
         return [$query, [
-            'search' => $search,
-            'selected_statuses' => $selectedStatuses,
-            'reasons' => $reasons,
-            'date_from' => $dateFrom,
-            'date_to' => $dateTo,
-            'amount_from' => $amountFrom,
-            'amount_to' => $amountTo,
+            'search' => trim((string) $request->input('search', '')),
+            'selected_statuses' => $this->query->list($request->input('status')),
+            'reasons' => $this->query->list($request->input('reason')),
+            'date_from' => $request->input('date_from'),
+            'date_to' => $request->input('date_to'),
+            'amount_from' => $request->input('amount_from'),
+            'amount_to' => $request->input('amount_to'),
             'sort_by' => $sortBy,
             'sort_order' => $sortOrder,
             'per_page' => $perPage,
@@ -300,10 +189,7 @@ class ReturnController extends Controller
     public function create(): InertiaResponse
     {
         return Inertia::render('User/Cabinet/Returns/Create', [
-            'reasons' => collect(ReturnReason::cases())->map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $this->getReasonLabel($case),
-            ]),
+            'reasons' => $this->reasonOptions(),
         ]);
     }
 
@@ -356,196 +242,22 @@ class ReturnController extends Controller
      */
     public function show(Request $request, ProductReturn $return): InertiaResponse
     {
-        $user = $request->user();
-        abort_unless($return->user_id === $user->id, 403);
-
-        // is_stub обязателен: у заглушки вместо названия лежит UUID, клиенту его не показываем
-        $return->load([
-            'items.product',
-            'items.shipmentItem.shipment',
-            'organization:id,name,legal_name,tax_id,is_stub',
-        ]);
+        abort_unless($return->user_id === $request->user()->id, 403);
 
         return Inertia::render('User/Cabinet/Returns/Show', [
-            'return' => [
-                'id' => $return->id,
-                'number' => $return->erp_number ?? ('#'.$return->id),
-                'uuid' => $return->uuid,
-                'status' => $return->status?->value,
-                'status_label' => $this->getStatusLabel($return->status),
-                'total_amount' => $return->total_amount,
-                'comment' => $return->comment,
-                'created_at' => $return->created_at?->format('d.m.Y H:i'),
-                'updated_at' => $return->updated_at?->format('d.m.Y H:i'),
-                // v15.8.0: продавец по основаниям возврата — справочно
-                'seller' => $this->sellerPayload($return),
-                'items' => $return->items->map(function ($item) {
-                    $shipment = $item->shipmentItem?->shipment;
-
-                    return [
-                        'id' => $item->id,
-                        'quantity' => $item->quantity,
-                        'price' => $item->price,
-                        'subtotal' => $item->subtotal,
-                        'reason' => $item->reason?->value,
-                        'reason_label' => $this->getReasonLabel($item->reason),
-                        'reason_comment' => $item->reason_comment,
-                        'product' => $item->product ? [
-                            'id' => $item->product->id,
-                            'name' => $item->product->name,
-                            'sku' => $item->product->sku,
-                            'slug' => $item->product->slug,
-                            'image_url' => $item->product->getFirstMediaUrl('main'),
-                        ] : null,
-                        'shipment' => $shipment ? [
-                            'id' => $shipment->id,
-                            'uuid' => $shipment->uuid,
-                            'number' => $shipment->number,
-                            'date' => $shipment->date?->format('d.m.Y'),
-                            'currency_code' => $shipment->currency_code,
-                        ] : null,
-                    ];
-                }),
-            ],
-            'statuses' => collect(ReturnStatus::cases())->map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $this->getStatusLabel($case),
-            ]),
+            'return' => $this->presenter->card($return),
+            'statuses' => $this->statusOptions(),
         ]);
     }
 
     /**
-     * Автокомплит реализаций текущего пользователя.
-     *
-     * Расширенный поиск (см. docs/cabinet-search-scenarios.md §3, C-3.1 … C-3.4):
-     * - C-3.1: номер/erp_number, в т.ч. без дефиса (нормализация);
-     * - C-3.2: товар в составе по name/sku/code + бренду + штрихкоду (точный матч для 8/12/13/14 цифр);
-     * - C-3.4: open_returns_count — кол-во возвратов по реализации в незакрытых статусах.
+     * Автокомплит реализаций текущего пользователя (C-3.1 … C-3.4).
      */
     public function searchShipments(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $q = trim((string) $request->input('query'));
-
-        $query = Shipment::query()
-            ->select('shipments.*')
-            ->where('user_id', $user->id)
-            // Образцы «Рекламы» не покупались — возвращать по ним нечего.
-            ->withoutInternalOrganizations()
-            ->with(['items.product.brand'])
-            ->withCount('items')
-            ->selectSub(function ($sub) {
-                $sub->from('return_items')
-                    ->join('returns', 'returns.id', '=', 'return_items.return_id')
-                    ->whereColumn('return_items.shipment_id', 'shipments.id')
-                    ->whereNotIn('returns.status', [
-                        ReturnStatus::COMPLETED->value,
-                        ReturnStatus::REJECTED->value,
-                    ])
-                    ->selectRaw('COUNT(DISTINCT return_items.return_id)');
-            }, 'open_returns_count')
-            ->orderByDesc('date')
-            ->orderByDesc('id');
-
-        if ($q !== '') {
-            $normalized = preg_replace('/[\s\-]+/u', '', $q);
-            $queryType = QueryRouter::classify($q);
-
-            $query->where(function ($sub) use ($q, $normalized, $queryType) {
-                $sub->where('number', 'like', "%{$q}%")
-                    ->orWhere('erp_number', 'like', "%{$q}%");
-
-                $sub->orWhereRaw("REPLACE(REPLACE(number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
-                $sub->orWhereRaw("REPLACE(REPLACE(COALESCE(erp_number, ''), '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
-
-                $sub->orWhereHas('items.product', function ($p) use ($q, $queryType) {
-                    $p->where(function ($pp) use ($q, $queryType) {
-                        $pp->where('name', 'like', "%{$q}%")
-                            ->orWhere('sku', 'like', "%{$q}%")
-                            ->orWhere('code', 'like', "%{$q}%")
-                            ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', "%{$q}%"));
-
-                        if ($queryType === QueryRouter::TYPE_BARCODE) {
-                            $pp->orWhereHas('barcodes', fn ($bc) => $bc->where('barcode', $q));
-                        }
-                    });
-                });
-            });
-        }
-
-        $shipments = $query->limit(20)->get()->map(function (Shipment $s) use ($q) {
-            $matchSource = 'number';
-            $matchProduct = null;
-
-            if ($q !== '') {
-                $normalized = preg_replace('/[\s\-]+/u', '', $q);
-                $shipmentNumberNormalized = preg_replace('/[\s\-]+/u', '', (string) $s->number);
-                $erpNumberNormalized = preg_replace('/[\s\-]+/u', '', (string) ($s->erp_number ?? ''));
-                $needle = mb_strtolower($q);
-                $needleNormalized = mb_strtolower((string) $normalized);
-
-                $hitsNumber = str_contains(mb_strtolower((string) $s->number), $needle)
-                    || str_contains(mb_strtolower((string) $shipmentNumberNormalized), $needleNormalized);
-                $hitsErp = $s->erp_number !== null && (
-                    str_contains(mb_strtolower((string) $s->erp_number), $needle)
-                    || str_contains(mb_strtolower((string) $erpNumberNormalized), $needleNormalized)
-                );
-
-                if (! $hitsNumber && ! $hitsErp) {
-                    $matchSource = 'composition';
-                    $matchProduct = $this->pickMatchedProduct($s, $q);
-                } elseif ($hitsErp && ! $hitsNumber) {
-                    $matchSource = 'erp_number';
-                }
-            }
-
-            return [
-                'id' => $s->id,
-                'uuid' => $s->uuid,
-                'number' => $s->number,
-                'erp_number' => $s->erp_number,
-                'date' => $s->date?->format('d.m.Y'),
-                'total_amount' => $s->total_amount,
-                'currency_code' => $s->currency_code,
-                'items_count' => $s->items_count,
-                'open_returns_count' => (int) ($s->open_returns_count ?? 0),
-                'match_source' => $matchSource,
-                'match_product' => $matchProduct,
-                'label' => 'Реализация '.$s->number.($s->date ? ' от '.$s->date->format('d.m.Y') : ''),
-            ];
-        });
-
-        return response()->json($shipments);
-    }
-
-    /**
-     * Найти первый товар в составе реализации, который дал совпадение с запросом.
-     */
-    private function pickMatchedProduct(Shipment $shipment, string $q): ?array
-    {
-        $needle = mb_strtolower($q);
-
-        foreach ($shipment->items as $item) {
-            $product = $item->product;
-            if (! $product) {
-                continue;
-            }
-
-            $hit = str_contains(mb_strtolower((string) $product->name), $needle)
-                || str_contains(mb_strtolower((string) $product->sku), $needle)
-                || str_contains(mb_strtolower((string) $product->code), $needle)
-                || ($product->brand && str_contains(mb_strtolower((string) $product->brand->name), $needle));
-
-            if ($hit) {
-                return [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'sku' => $product->sku,
-                ];
-            }
-        }
-
-        return null;
+        return response()->json(
+            $this->bases->searchShipments($request->user(), (string) $request->input('query'))
+        );
     }
 
     /**
@@ -553,91 +265,30 @@ class ReturnController extends Controller
      */
     public function getShipmentItems(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $shipmentId = (int) $request->input('shipment_id');
+        $shipment = $this->bases->shipmentFor($request->user(), (int) $request->input('shipment_id'));
 
-        $shipment = Shipment::where('id', $shipmentId)
-            ->where('user_id', $user->id)
-            ->withoutInternalOrganizations()
-            ->firstOrFail();
-
-        $items = ShipmentItem::with('product')
-            ->where('shipment_id', $shipment->id)
-            ->get()
-            ->map(function (ShipmentItem $si) use ($shipment) {
-                $already = (int) ReturnItem::where('shipment_item_id', $si->id)->sum('quantity');
-                $available = max(0, (int) $si->quantity - $already);
-
-                return [
-                    'shipment_item_id' => $si->id,
-                    'product' => $si->product ? [
-                        'id' => $si->product->id,
-                        'name' => $si->product->name,
-                        'sku' => $si->product->sku,
-                        'image_url' => $si->product->getFirstMediaUrl('main'),
-                    ] : null,
-                    'price' => (float) $si->price,
-                    'currency_code' => $shipment->currency_code,
-                    'shipped_quantity' => (int) $si->quantity,
-                    'already_returned' => $already,
-                    'available_quantity' => $available,
-                ];
-            });
-
-        return response()->json([
-            'shipment' => [
-                'id' => $shipment->id,
-                'uuid' => $shipment->uuid,
-                'number' => $shipment->number,
-                'date' => $shipment->date?->format('d.m.Y'),
-                'currency_code' => $shipment->currency_code,
-            ],
-            'items' => $items,
-        ]);
-    }
-
-    protected function getStatusLabel(?ReturnStatus $status): string
-    {
-        return $status?->label() ?? 'Неизвестно';
+        return response()->json($this->bases->forShipment($shipment));
     }
 
     /**
-     * Организация возврата для клиента — справочно, выведена с реализаций-оснований.
-     *
-     * `null`, когда выключен флаг, организация не определена (основания разных
-     * юрлиц) либо это заглушка с UUID вместо названия.
-     *
-     * @return array<string, mixed>|null
+     * @return \Illuminate\Support\Collection<int, array{value: string, label: string}>
      */
-    private function sellerPayload(ProductReturn $return): ?array
+    private function statusOptions(): \Illuminate\Support\Collection
     {
-        if (! config('erp.organizations.enabled')) {
-            return null;
-        }
-
-        $organization = $return->organization;
-
-        if (! $organization || $organization->is_stub) {
-            return null;
-        }
-
-        return [
-            'name' => $organization->name,
-            'legal_name' => $organization->legal_name,
-            'tax_id' => $organization->tax_id,
-        ];
+        return collect(ReturnStatus::cases())->map(fn ($case) => [
+            'value' => $case->value,
+            'label' => $this->presenter->statusLabel($case),
+        ]);
     }
 
-    protected function getReasonLabel(?ReturnReason $reason): string
+    /**
+     * @return \Illuminate\Support\Collection<int, array{value: string, label: string}>
+     */
+    private function reasonOptions(): \Illuminate\Support\Collection
     {
-        return match ($reason) {
-            ReturnReason::DEFECTIVE => 'Бракованный товар',
-            ReturnReason::WRONG_ITEM => 'Неправильный товар',
-            ReturnReason::CHANGED_MIND => 'Передумал',
-            ReturnReason::DAMAGED_IN_TRANSIT => 'Повреждён при доставке',
-            ReturnReason::WRONG_SIZE => 'Неправильный размер',
-            ReturnReason::OTHER => 'Другое',
-            default => 'Не указано',
-        };
+        return collect(ReturnReason::cases())->map(fn ($case) => [
+            'value' => $case->value,
+            'label' => $this->presenter->reasonLabel($case),
+        ]);
     }
 }

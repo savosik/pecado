@@ -1,0 +1,256 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>Самовывоз 9–21 — план тестирования по ролям</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  @page { size:A4; margin:13mm 12mm 13mm; }
+  body { background:#fff; font-size:10.5pt; }
+  section { break-before:page; } section.first { break-before:auto; }
+  h1 { font-size:26pt; margin:2mm 0 3mm; } h2 { font-size:17pt; margin-bottom:1.5mm; } h3 { font-size:11.5pt; margin:4mm 0 1.5mm; }
+  p { margin-bottom:2mm; } .lead { font-size:12pt !important; }
+  .role { display:flex; justify-content:space-between; align-items:flex-end; gap:6mm; border-bottom:1.5px solid var(--ink); padding-bottom:2mm; margin-bottom:3mm; }
+  .role .who { font-size:8.5pt; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); font-weight:700; }
+  .meta { display:grid; grid-template-columns:repeat(3,1fr); gap:4mm; font-size:9.5pt; margin-bottom:3mm; }
+  .meta div { border-bottom:1px solid #9a938b; padding-bottom:.5mm; color:var(--muted); height:7mm; display:flex; align-items:flex-end; }
+  table.t { border-collapse:collapse; width:100%; font-size:9.6pt; }
+  table.t thead { display:table-header-group; }
+  table.t th { text-align:left; font-size:7.6pt; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); border-bottom:1.5px solid var(--ink); padding:1.2mm 1.5mm; font-weight:600; }
+  table.t td { border-bottom:1px solid var(--line); padding:1.6mm 1.5mm; vertical-align:top; }
+  table.t tr { break-inside:avoid; }
+  table.t td.id { font-weight:700; white-space:nowrap; color:var(--accent-dark); width:11mm; }
+  table.t td.res { width:24mm; white-space:nowrap; font-size:8.6pt; }
+  table.t td.note { width:30mm; }
+  .bx { display:inline-block; width:3.3mm; height:3.3mm; border:.35mm solid #55504a; border-radius:.5mm; vertical-align:-.5mm; margin-right:1mm; }
+  code, .cmd { font-family:'DejaVu Sans Mono','Liberation Mono',monospace; font-size:8.6pt; }
+  .cmd { background:var(--panel); border:1px solid var(--line); border-radius:2mm; padding:2mm 3mm; white-space:pre-wrap; margin-bottom:2.5mm; display:block; }
+  .panel { margin-bottom:3mm; } .panel p:last-child { margin-bottom:0; }
+  ul.tight { margin-bottom:2.5mm; }
+  .key { font-weight:600; }
+  .crit { color:var(--accent); font-weight:700; }
+</style></head><body>
+
+<section class="first">
+  <div class="eyebrow">Pecado · эпик pick-00 · приёмочное тестирование</div>
+  <h1>Самовывоз 9–21:<br>план тестирования по ролям</h1>
+  <p class="lead">Проверяем весь путь заказа глазами каждого участника: магазин ставит резерв и выпускает пропуск, курьер приезжает с QR-кодом, кладовщик выдаёт, менеджер и руководитель утром видят, что произошло без них.</p>
+
+  <div class="cols-2">
+    <div class="panel accent"><h3 style="margin-top:0">Как пользоваться</h3>
+      <ul class="tight small"><li>У каждой роли свой раздел. Тестировщик проходит строки по порядку и ставит отметку: <span class="bx"></span>да или <span class="bx"></span>нет.</li><li>Не получилось — коротко пишет в колонке «Замечание», что увидел на экране. Снимок экрана — в общий чат.</li><li>Строки с пометкой <span class="crit">★</span> — критичные: без них включать нельзя.</li><li>Роли идут в порядке жизни заказа. Клиент, курьер и кладовщик тестируют <span class="key">одновременно на одних и тех же заказах</span>.</li></ul></div>
+    <div class="panel"><h3 style="margin-top:0">Кто тестирует</h3>
+      <table class="t"><tr><td class="key">0. Ведущий</td><td>готовит стенд, имитирует 1С</td></tr><tr><td class="key">1. Клиент</td><td>сотрудник в роли магазина</td></tr><tr><td class="key">2. Курьер</td><td>любой человек с телефоном</td></tr><tr><td class="key">3. Кладовщик</td><td>настоящий кладовщик, с телефона</td></tr><tr><td class="key">4. Начальник склада</td><td>отмены и разбор</td></tr><tr><td class="key">5. Менеджер</td><td>карточка заказа, сводка</td></tr><tr><td class="key">6. Руководитель ОП</td><td>сводка отдела, настройки</td></tr><tr><td class="key">7. Интегратор</td><td>API и ИИ-агент клиента</td></tr></table></div>
+  </div>
+
+  <h3>Где тестируем</h3>
+  <p>Стенд <span class="key">dev.pecado.ru</span> после слияния ветки <code>feature/pick-pickup</code>. На бою до приёмки ничего не включается. Телефоны — настоящие: Android и iPhone, мобильный интернет, не офисный Wi-Fi.</p>
+
+  <h3>Что считается успехом</h3>
+  <ul class="tight"><li>Все строки со <span class="crit">★</span> пройдены у всех ролей.</li><li>Кладовщик выдаёт заказ по QR не дольше чем за минуту и не больше чем в три нажатия после скана.</li><li>Ни на одном экране нет английских слов, обрезанного текста и горизонтальной прокрутки на телефоне.</li><li>Клиент ни разу не захотел позвонить менеджеру, чтобы понять, что с заказом.</li></ul>
+</section>
+
+<section>
+  <div class="role"><div><div class="who">Роль 0</div><h2>Ведущий тестирования: подготовка стенда</h2></div></div>
+  <p>Ведущий делает то, чего на стенде не делает 1С: «собирает» заказы, сдвигает время, запускает рассылки. Команды выполняются на сервере стенда в каталоге проекта.</p>
+
+  <h3>Включить функции</h3>
+  <span class="cmd">PICKUP_ENABLED=true
+PICKUP_WMS_ENABLED=true
+PICKUP_HANDOVER_SINCE="2026-09-18 00:00"   # дата начала тестирования
+ORDER_RESERVE_ENABLED=true
+MAIL_STREAM_ENABLED=true                    # иначе писем клиенту не будет</span>
+  <p class="small">После правки <code>.env</code>: <code>docker compose exec app php artisan config:cache</code>. Права склада приходят сидером при выкладке; если роли пустые — <code>php artisan db:seed --class=RolesAndPermissionsSeeder --force</code>.</p>
+
+  <h3>Учётные записи</h3>
+  <table class="t"><thead><tr><th>Роль</th><th>Что нужно</th><th>Логин</th></tr></thead>
+    <tr><td>Клиент</td><td>участник режима резервов (<code>reserve_allowed</code>), есть юрлицо, назначен персональный менеджер, включён самовывоз в чекауте</td><td class="note"></td></tr>
+    <tr><td>Второй клиент</td><td>для проверки «чужое не видно»</td><td class="note"></td></tr>
+    <tr><td>Кладовщик</td><td>роль <code>storekeeper</code></td><td class="note"></td></tr>
+    <tr><td>Начальник склада</td><td>роль <code>warehouse-head</code></td><td class="note"></td></tr>
+    <tr><td>Менеджер</td><td>персональный менеджер клиента из первой строки</td><td class="note"></td></tr>
+    <tr><td>Руководитель ОП</td><td>роль <code>sales-head</code></td><td class="note"></td></tr>
+  </table>
+
+  <h3>Имитация склада в 1С</h3>
+  <p>Команда создаёт по заказу демо-ордер «ДЕМО-<i>id</i>» и двигает его по статусам так же, как это делает шина. На проде она отключена.</p>
+  <span class="cmd">php artisan pickup:demo-step ORD-2026-0001 to_pick     # склад начал сборку → у клиента «Собирается»
+php artisan pickup:demo-step ORD-2026-0001 shipped     # собран → «Собран, ждёт выдачи» + письмо
+php artisan pickup:demo-step ORD-2026-0001 to_pick     # откат после «собран»
+php artisan pickup:demo-step ORD-2026-0001 cancelled   # ордер удалён в 1С
+php artisan pickup:demo-step ORD-2026-0001 shipped --packages=3</span>
+  <p class="small">При создании ордера команда печатает <span class="key">штрихкод расходного листа</span> — длинное число. Его кладовщик вводит вручную в поле «Лист», чтобы проверить сценарий «коробка проверена». Настоящий лист из 1С сканируется отдельно (строка С-14).</p>
+
+  <h3>Рассылки и время</h3>
+  <span class="cmd">php artisan pickup:offhours-digest --dry-run   # кому и сколько ушло бы в утренней сводке
+php artisan pickup:offhours-digest             # отправить (один раз в день)
+php artisan pickup:remind-waiting --dry-run    # кандидаты на напоминание «давно не забирают»</span>
+  <p class="small">Письма клиенту видны в журнале <span class="key">/crm/emails</span>. Чтобы проверить напоминание и «зависшие», не дожидаясь трёх дней, ведущий сдвигает у демо-ордера дату сборки:</p>
+  <span class="cmd">php artisan tinker --execute="App\Models\GoodsIssue::where('number','ДЕМО-123')->update(['status_changed_at'=>now()->subDays(4)]);"</span>
+
+  <h3>Имитация недобора</h3>
+  <p class="small">На стенде строку заказа отменяет не 1С, а ведущий — той же точкой, которую вызывает синхронизатор строк:</p>
+  <span class="cmd">php artisan tinker --execute="event(new App\Events\Order\OrderItemsCancelled(App\Models\Order::find(123), [['name'=>'Массажное масло','quantity'=>2.0]]));"</span>
+
+  <h3 style="break-before:page">Проверки ведущего</h3>
+
+  <table class="t"><thead><tr><th></th><th>Проверка ведущего</th><th>Ожидаем</th><th>Итог</th><th>Замечание</th></tr></thead>
+    <tr><td class="id">В-01 <span class="crit">★</span></td><td>Выключить <code>PICKUP_ENABLED</code>, открыть кабинет клиента и карточку заказа</td><td>Пункта «Самовывоз» нет, заказы выглядят как раньше, <code>/cabinet/pickup</code> и <code>/p/…</code> отвечают 404</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">В-02</td><td>Выключить только <code>PICKUP_WMS_ENABLED</code></td><td>У кладовщика нет пункта «Выдача заказов»; адрес <code>/wms/pickups</code> уводит на рабочий стол склада</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">В-03 <span class="crit">★</span></td><td>Собрать заказ датой раньше <code>PICKUP_HANDOVER_SINCE</code> (сдвинуть <code>status_changed_at</code>)</td><td>В «Ждут» у склада его нет; у клиента он «Отгружен», а не «ждёт выдачи»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">В-04</td><td><code>php artisan db:comments:audit</code></td><td>По таблицам <code>pickup_*</code> пробелов нет</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+  </table>
+</section>
+
+<section>
+  <div class="role"><div><div class="who">Роль 1</div><h2>Клиент — интернет-магазин</h2></div></div>
+  <div class="meta"><div>Тестировщик:</div><div>Дата:</div><div>Телефон и браузер:</div></div>
+  <p>Проходите с телефона. Нужно оформить <span class="key">три заказа с самовывозом в резерв</span> (К-01), дальше ведущий будет «собирать» их по вашей просьбе.</p>
+  <table class="t"><thead><tr><th></th><th>Что сделать</th><th>Что должно получиться</th><th>Итог</th><th>Замечание</th></tr></thead>
+    <tr><td class="id">К-01 <span class="crit">★</span></td><td>Собрать корзину, в оформлении выбрать «Самовывоз» и «Поставьте в резерв». Повторить три раза</td><td>Три заказа в разделе «Заказы в резерве» с таймерами</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-02 <span class="crit">★</span></td><td>В оформлении посмотреть подпись под «Данные проверены — можно отгружать»</td><td>До 20:00: «Соберём к ~ЧЧ:ММ, выдача сегодня до 21:00». После 20:00 или в воскресенье: «Склад сегодня уже не успеет: соберём завтра / в понедельник к ~09:40»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-03</td><td>В «Заказах в резерве» нажать «В отгрузку» у первого заказа</td><td>В окне подтверждения — то же обещание времени. После подтверждения заказ исчез из резервов</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-04 <span class="crit">★</span></td><td>Открыть «Заказы»</td><td>У отправленного заказа метка «Передан на склад», у остальных — «В резерве». Технических статусов 1С («Готов к отгрузке») нет</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-05</td><td>Попросить ведущего начать сборку. Открыть карточку заказа</td><td>«Собирается», шкала на втором шаге, «Ожидаем к ~ЧЧ:ММ», в «Истории склада» — «Склад начал сборку»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-06 <span class="crit">★</span></td><td>Попросить ведущего собрать заказ. Обновить кабинет</td><td>Зелёная метка «Собран, ждёт выдачи», число мест, кнопка «Пропуск курьеру». На главной кабинета — плитка «Готово к выдаче: 1». У пункта меню «Самовывоз» — цифра 1</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-07 <span class="crit">★</span></td><td>Проверить почту</td><td>Письмо «Заказ … собран — можно отправлять курьера»: адрес склада, до скольки выдают, ссылка в «Самовывоз»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-08</td><td>Отправить в отгрузку и собрать остальные два заказа. Открыть «Самовывоз»</td><td>Три строки в «Готово к выдаче», у каждой галочка, число мест и «ждёт с …». Сверху — адрес и часы склада</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-09 <span class="crit">★</span></td><td>Отметить два заказа, вписать имя курьера, нажать «Пропуск на выбранное»</td><td>Появился пропуск: QR-код, шесть цифр, «На выбранные заказы · 2 компл.», срок действия</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-10</td><td>Нажать на QR-код</td><td>QR увеличился — его можно показать с экрана</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-11 <span class="crit">★</span></td><td>«Переслать курьеру» → отправить ссылку курьеру в мессенджер</td><td>Открылось меню «Поделиться» телефона; на компьютере — ссылка скопирована. Курьер получил ссылку вида <code>…/p/…</code></td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-12 <span class="crit">★</span></td><td>На третий заказ выпустить второй пропуск и отправить второму курьеру</td><td>Два действующих пропуска одновременно, у каждого свой состав</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-13 <span class="crit">★</span></td><td>После выдачи на складе (роль 3) обновить кабинет</td><td>Заказы «Выдан курьеру» со временем; в «Самовывозе» они в «Выдано за 7 дней» с именем курьера; использованный пропуск исчез</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-14</td><td>Выпустить пропуск и сразу нажать «Отозвать»</td><td>Предупреждение, затем пропуск исчез. Курьер по старой ссылке видит «Пропуск не действует»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-15</td><td>Нажать «Пропуск на всё готовое», когда готового нет</td><td>Понятный отказ: «Сейчас нет собранных заказов…»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-16</td><td>Попросить ведущего откатить собранный заказ в сборку и собрать заново</td><td>Метка вернулась в «Собирается», в истории «Возвращён в сборку». После повторной сборки — снова «Собран» и <span class="key">новое</span> письмо</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-17</td><td>Ведущий сдвигает дату сборки на 4 дня назад и запускает напоминания</td><td>Письмо «…заказ ждёт вас на складе». Повторный запуск второго письма не даёт</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-18</td><td>Кабинет → «Уведомления»</td><td>В списке есть «Заказ собран и ждёт выдачи», «Товара не хватило при сборке», «Собранный заказ давно ждёт на складе» (включены) и «Заказ выдан курьеру» (выключено). Переключаются</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-19</td><td>Войти вторым клиентом</td><td>Чужих заказов и пропусков в «Самовывозе» нет</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">К-20</td><td>Оформить заказ с <span class="key">доставкой</span>, собрать</td><td>Метка «Отгружен», шкала из трёх шагов, в «Самовывоз» заказ не попадает, письма «собран» нет</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+  </table>
+</section>
+
+<section>
+  <div class="role"><div><div class="who">Роль 2</div><h2>Курьер</h2></div></div>
+  <div class="meta"><div>Тестировщик:</div><div>Дата:</div><div>Телефон и браузер:</div></div>
+  <p>У вас нет учётной записи — только ссылка от «магазина». Откройте её с телефона на мобильном интернете.</p>
+  <table class="t"><thead><tr><th></th><th>Что сделать</th><th>Что должно получиться</th><th>Итог</th><th>Замечание</th></tr></thead>
+    <tr><td class="id">У-01 <span class="crit">★</span></td><td>Открыть ссылку из мессенджера</td><td>Страница открылась без входа: «Можно забирать», крупный QR, шесть цифр, сколько комплектов и мест, номера заказов</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">У-02 <span class="crit">★</span></td><td>Внимательно прочитать страницу</td><td>Нет названия магазина, сумм и списка товаров</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">У-03</td><td>Посмотреть блок со складом</td><td>Адрес, как пройти, «пн–сб, 9:00–21:00», «Сегодня выдаём до 21:00» либо «Сейчас склад закрыт»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">У-04</td><td>Нажать «Построить маршрут» и «Позвонить на склад»</td><td>Открылись карты с адресом склада; набирается номер склада</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">У-05</td><td>Открыть пропуск, в котором заказ ещё собирается</td><td>«Ещё собирается» и пояснение, что выдадут, когда будет готово</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">У-06 <span class="crit">★</span></td><td>Показать QR кладовщику (роль 3), получить заказы</td><td>Выдали ровно то, что в пропуске. Подписывать ничего не просили</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">У-07</td><td>Открыть ту же ссылку после выдачи</td><td>«Пропуск не действует» — он использован</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">У-08</td><td>Изменить в ссылке несколько символов</td><td>Та же страница «Пропуск не действует», без подсказок, существует ли такой пропуск</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">У-09</td><td>Включить на телефоне яркость на минимум, показать QR</td><td>Кладовщик всё равно считывает код; если нет — называете шесть цифр</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">У-10</td><td>Приехать «без пропуска» (сценарий С-09)</td><td>Кладовщик убедился, что вы от магазина, попросил расписаться в расходном листе и выдал</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+  </table>
+</section>
+
+<section>
+  <div class="role"><div><div class="who">Роль 3</div><h2>Кладовщик</h2></div></div>
+  <div class="meta"><div>Тестировщик:</div><div>Дата:</div><div>Телефон и браузер:</div></div>
+  <p>Только с телефона, стоя у стойки выдачи. Вход — по ссылке от начальника склада (строка Н-08) либо логином на <span class="key">dev.pecado.ru/wms</span>, меню «Отгрузка» → «Выдача заказов».</p>
+  <table class="t"><thead><tr><th></th><th>Что сделать</th><th>Что должно получиться</th><th>Итог</th><th>Замечание</th></tr></thead>
+    <tr><td class="id">С-01 <span class="crit">★</span></td><td>Открыть «Выдачу заказов»</td><td>Сверху часы склада, зелёная кнопка «Сканировать пропуск», поиск, вкладки «Ждут», «Собираются», «Выдано», «Зависшие» с цифрами</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-02</td><td>Добавить сайт на главный экран телефона и открыть значком</td><td>Значок «Склад Pecado», открывается сразу на «Выдаче заказов», без адресной строки</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-03 <span class="crit">★</span></td><td>Вкладка «Ждут»</td><td>Собранные заказы клиента: название, юрлицо, номера заказов, номер ордера, сколько мест, сколько ждёт</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-04</td><td>Вкладка «Собираются»</td><td>Заказы в сборке с «обещали к ЧЧ:ММ». Если время вышло — красная метка «опаздывает»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-05 <span class="crit">★</span></td><td>«Сканировать пропуск», разрешить камеру, навести на QR у курьера</td><td>Звуковой сигнал, открылся пропуск: клиент крупно, «Отдать: 2 компл. · N мест», «Подпись не нужна», список комплектов</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-06 <span class="crit">★</span></td><td>Нажать «Выдать всё»</td><td>Сигнал, сообщение «Выдано комплектов: 2», возврат к списку. Заказы ушли из «Ждут» во «Выдано»: ваша фамилия, время, «QR пропуска», имя курьера</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-07 <span class="crit">★</span></td><td>Убедиться, что третий заказ клиента остался</td><td>Он по-прежнему в «Ждут»: его не было в пропуске</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-08</td><td>Второй курьер: вместо камеры ввести шесть цифр</td><td>Открылся второй пропуск. Выдать комплект кнопкой «Выдать» у строки</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-09 <span class="crit">★</span></td><td>Курьер без пропуска: найти клиента поиском, «Выдать без пропуска»</td><td>Подсказка: убедиться, что курьер от клиента, и взять подпись в расходном листе; виден телефон клиента. Вписать имя курьера, «Выдан». Во «Выдано» способ «Вручную»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-10 <span class="crit">★</span></td><td>Двое кладовщиков одновременно жмут «Выдан» по одному заказу</td><td>У одного — «Выдано», у второго — сигнал ошибки и «Уже выдал … в ЧЧ:ММ». Выдача записана один раз</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-11</td><td>Открыть пропуск, в котором один комплект ещё собирается</td><td>У него «Ещё собирается», кнопки «Выдать» нет, «Выдать всё» считает только готовое</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-12</td><td>Отсканировать отозванный пропуск</td><td>Красная карточка «Не выдавать. Попросите магазин прислать курьеру новый пропуск»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-13</td><td>В открытом пропуске нажать «Лист» и ввести штрихкод демо-ордера от ведущего</td><td>«Коробка проверена», у комплекта зелёная отметка. Ввести штрихкод <span class="key">чужого</span> ордера — сигнал и «Этот комплект не для этого курьера»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-14 <span class="crit">★</span></td><td>Взять <span class="key">настоящий расходный лист из 1С</span> по заказу, который есть на стенде, отсканировать камерой из списка</td><td>Найден нужный ордер. Если «Документ по штрихкоду не найден» — сфотографировать лист и передать ведущему</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-15</td><td>Подключить USB- или Bluetooth-сканер, открыть «Сканировать пропуск», «пикнуть» QR с бумаги</td><td>Код попал в поле и сработал сам, без нажатий</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-16</td><td>Десять раз подряд ввести неверные шесть цифр</td><td>«Слишком много неверных кодов…» — даже верный код не принимается несколько минут. QR при этом работает</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-17</td><td>Отсканировать случайный штрихкод товара</td><td>Сигнал ошибки, «Документ по штрихкоду не найден», экран не завис</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-18</td><td>Во «Выдано» поискать кнопку отмены выдачи</td><td>У кладовщика её нет</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-19</td><td>Оставить экран открытым, попросить ведущего собрать ещё один заказ</td><td>В течение полуминуты заказ сам появился в «Ждут»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">С-20</td><td>Засечь время: от «курьер показал телефон» до «выдано»</td><td>Меньше минуты. Записать фактическое время в замечание</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+  </table>
+</section>
+
+<section>
+  <div class="role"><div><div class="who">Роль 4</div><h2>Начальник склада</h2></div></div>
+  <div class="meta"><div>Тестировщик:</div><div>Дата:</div><div>Устройство:</div></div>
+  <table class="t"><thead><tr><th></th><th>Что сделать</th><th>Что должно получиться</th><th>Итог</th><th>Замечание</th></tr></thead>
+    <tr><td class="id">Н-01</td><td>Открыть рабочий стол склада</td><td>Плитка «Выдача заказов»: ждут курьера, сборок опаздывает, зависло и на разборе. Ведёт на экран выдачи</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Н-02 <span class="crit">★</span></td><td>Во «Выдано» у ошибочной выдачи вписать причину, «Отменить выдачу»</td><td>Без причины кнопка неактивна. После отмены запись серая «отменена», заказ вернулся в «Ждут», у клиента снова «Собран, ждёт выдачи», пропуск снова действует</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Н-03</td><td>Попробовать отменить выдачу старше суток (ведущий сдвигает время)</td><td>Поля отмены нет</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Н-04</td><td>Вкладка «Зависшие»: «Уже забрали раньше — закрыть без выдачи»</td><td>Заказ ушёл из списка, во «Выдано» способ «Закрыто без выдачи». Клиенту письмо «выдан» не уходит</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Н-05 <span class="crit">★</span></td><td>Ведущий откатывает в сборку уже <span class="key">выданный</span> ордер</td><td>Появилась вкладка «Разбор» с этой выдачей и пояснением, в какой статус ушёл ордер. Выдача не пропала. Вписать итог, «Разобрано» — вкладка исчезла</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Н-06</td><td>Админка → роли → «Кладовщик» и «Начальник склада»</td><td>В группе «Склад (WMS)» есть «Склад: Выдача заказов» с действиями «Просмотр», «Выдача», «Отмена заявки». У кладовщика отмена выключена</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Н-08 <span class="crit">★</span></td><td>Меню «Сотрудники» → «Ссылки для кладовщиков»: выпустить ссылку «Стойка выдачи», переслать её на телефон кладовщика</td><td>Кладовщик открыл ссылку — без логина и пароля попал на «Выдачу заказов», сверху предложение добавить на главный экран</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Н-09</td><td>«Перевыпустить» ту же ссылку</td><td>Телефон кладовщика при следующем нажатии выходит на страницу входа с подсказкой «попросите новую»; старая ссылка не входит; новая — входит</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Н-10</td><td>Показать QR-код ссылки, кладовщик наводит камеру</td><td>Вход по QR так же, как по ссылке; во «Выдано» выдача записана на учётную запись этой ссылки</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Н-07</td><td>Открыть глазом расходный ордер из карточки выдачи</td><td>Открылась карточка ордера в журнале расходных ордеров</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+  </table>
+
+  <div class="role" style="margin-top:8mm"><div><div class="who">Роль 5</div><h2>Менеджер отдела продаж</h2></div></div>
+  <div class="meta"><div>Тестировщик:</div><div>Дата:</div><div>Устройство:</div></div>
+  <table class="t"><thead><tr><th></th><th>Что сделать</th><th>Что должно получиться</th><th>Итог</th><th>Замечание</th></tr></thead>
+    <tr><td class="id">М-01 <span class="crit">★</span></td><td>Открыть в админке заказ клиента, который сейчас собран</td><td>Блок «Склад и выдача»: стадия, «Самовывоз», расходный ордер, статус 1С, мест, «ждёт с …»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">М-02 <span class="crit">★</span></td><td>Открыть выданный заказ</td><td>Кто выдал, когда, имя курьера. На вопрос клиента «забрали ли заказ» можно ответить, не звоня на склад</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">М-03</td><td>Попробовать отметить или отменить выдачу</td><td>Таких кнопок у менеджера нет: это право склада</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">М-04 <span class="crit">★</span></td><td>Ведущий запускает утреннюю сводку после «вечерних» событий</td><td>Письмо «Пока вас не было…»: разделы «Собраны и не забраны», «Резервы, которые клиент потерял», «Отправлены на склад», «Выданы курьерам». Только ваши клиенты</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">М-05</td><td>CRM → «Мои уведомления»</td><td>Есть «Самовывоз: что произошло без меня», можно выключить. После выключения сводка не приходит</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">М-06</td><td>Карточка партнёра → «Уведомления»</td><td>В матрице есть четыре новых типа про самовывоз, их можно включить и выключить партнёру</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">М-07</td><td>В 17:00 следующего дня получить сводку недоборов</td><td>В неё попала отмена строки, сделанная вчера после 17:00</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+  </table>
+</section>
+
+<section>
+  <div class="role"><div><div class="who">Роль 6</div><h2>Руководитель отдела продаж</h2></div></div>
+  <div class="meta"><div>Тестировщик:</div><div>Дата:</div><div>Устройство:</div></div>
+  <table class="t"><thead><tr><th></th><th>Что сделать</th><th>Что должно получиться</th><th>Итог</th><th>Замечание</th></tr></thead>
+    <tr><td class="id">Р-01 <span class="crit">★</span></td><td>Получить утреннюю сводку (ведущий запускает её после событий у двух клиентов, один из них без менеджера)</td><td>Письмо «Пока отдел не работал…»: события всех клиентов, в последней колонке — менеджер либо «без менеджера»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Р-02</td><td>Запустить сводку второй раз в тот же день</td><td>Второе письмо не приходит</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Р-03</td><td>Дождаться дня без событий</td><td>Пустое письмо не приходит</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Р-04 <span class="crit">★</span></td><td>Ведущий имитирует недобор по заказу клиента (команда в разделе ведущего), затем то же по заказу в резерве</td><td>Клиенту ушло письмо «…части товара не хватило»: что и сколько, «замену мы не подбираем». По заказу в резерве такое письмо не уходит</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Р-05</td><td>Журнал писем <code>/crm/emails</code></td><td>Письма про самовывоз видны, с метками «самовывоз», «собран», «выдан», «не-забран»</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">Р-06</td><td>Прочитать буклет и обе инструкции, сверяя с экранами</td><td>Названия кнопок и разделов в PDF совпадают с тем, что на экране. Расхождения выписать</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+  </table>
+
+  <div class="role" style="margin-top:8mm"><div><div class="who">Роль 7</div><h2>Интегратор: клиентский API и ИИ-агент</h2></div></div>
+  <div class="meta"><div>Тестировщик:</div><div>Дата:</div><div>Токен клиента:</div></div>
+  <table class="t"><thead><tr><th></th><th>Что сделать</th><th>Что должно получиться</th><th>Итог</th><th>Замечание</th></tr></thead>
+    <tr><td class="id">А-01 <span class="crit">★</span></td><td><code>GET /api/client/v1/orders</code> и <code>/orders/{id}</code></td><td>У заказов блок <code>fulfilment</code>: <code>stage</code>, <code>label</code>, <code>is_pickup</code>, <code>goods_issues</code>; в карточке ещё <code>events</code></td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">А-02</td><td><code>GET /pickup/schedule</code></td><td>Часы, отсечка, адрес, <code>promise</code> с текстом обещания на сейчас</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">А-03 <span class="crit">★</span></td><td><code>GET /pickup/ready</code></td><td>Массивы <code>ready</code> и <code>picking</code> совпадают с разделом «Самовывоз» в кабинете</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">А-04 <span class="crit">★</span></td><td><code>POST /pickup/passes</code> со <code>scope=selected</code> и ключом идемпотентности, затем повторить с тем же ключом</td><td>Пропуск создан, в ответе <code>url</code> и <code>code</code>; повтор не создаёт второй. Пропуск виден в кабинете и считывается на складе</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">А-05</td><td>Создать пропуск на чужой комплект; создать при пустой полке</td><td>422 с кодами <code>not_available</code> и <code>nothing_ready</code></td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">А-06</td><td><code>POST /pickup/passes/{id}/revoke</code></td><td>Пропуск исчез из <code>/pickup/passes</code>, ссылка не действует</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">А-07</td><td>При выключенном <code>PICKUP_ENABLED</code> вызвать <code>/pickup/ready</code></td><td>403 <code>pickup_unavailable</code>; у заказов <code>fulfilment: null</code></td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">А-08</td><td>Спросить ИИ-агента клиента: «Какие заказы можно забирать?», «Выпусти пропуск курьеру Олегу на заказ …», «Успеете собрать сегодня?»</td><td>Агент отвечает по данным кабинета, выпускает пропуск и присылает ссылку, называет время по графику склада</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+    <tr><td class="id">А-09</td><td>Открыть <code>/docs/client-api</code></td><td>Раздел «Самовывоз» с пятью операциями и описаниями на русском</td><td class="res"><span class="bx"></span>да <span class="bx"></span>нет</td><td class="note"></td></tr>
+  </table>
+</section>
+
+<section>
+  <div class="role"><div><div class="who">Итог</div><h2>Сводный лист приёмки</h2></div></div>
+  <table class="t"><thead><tr><th>Роль</th><th>Строк всего</th><th>Критичных ★</th><th>Пройдено</th><th>Не пройдено</th><th>Тестировщик, подпись</th></tr></thead>
+    <tr><td class="key">0. Ведущий</td><td>4</td><td>2</td><td class="note"></td><td class="note"></td><td class="note"></td></tr>
+    <tr><td class="key">1. Клиент</td><td>20</td><td>9</td><td></td><td></td><td></td></tr>
+    <tr><td class="key">2. Курьер</td><td>10</td><td>3</td><td></td><td></td><td></td></tr>
+    <tr><td class="key">3. Кладовщик</td><td>20</td><td>8</td><td></td><td></td><td></td></tr>
+    <tr><td class="key">4. Начальник склада</td><td>10</td><td>3</td><td></td><td></td><td></td></tr>
+    <tr><td class="key">5. Менеджер</td><td>7</td><td>3</td><td></td><td></td><td></td></tr>
+    <tr><td class="key">6. Руководитель ОП</td><td>6</td><td>2</td><td></td><td></td><td></td></tr>
+    <tr><td class="key">7. Интегратор</td><td>9</td><td>3</td><td></td><td></td><td></td></tr>
+  </table>
+
+  <h3>Замечания, которые блокируют включение</h3>
+  <table class="t"><thead><tr><th style="width:14mm">Строка</th><th>Что не так</th><th style="width:34mm">Кто исправляет</th><th style="width:24mm">Исправлено</th></tr></thead>
+    <tr><td style="height:11mm"></td><td></td><td></td><td></td></tr><tr><td style="height:11mm"></td><td></td><td></td><td></td></tr><tr><td style="height:11mm"></td><td></td><td></td><td></td></tr><tr><td style="height:11mm"></td><td></td><td></td><td></td></tr><tr><td style="height:11mm"></td><td></td><td></td><td></td></tr><tr><td style="height:11mm"></td><td></td><td></td><td></td></tr>
+  </table>
+
+  <h3>Решение</h3>
+  <div class="cols-2">
+    <div class="panel good"><p><span class="bx"></span><span class="key">Включаем склад</span> (<code>PICKUP_WMS_ENABLED</code>) с даты: ____________</p><p><span class="bx"></span><span class="key">Включаем клиентов</span> (<code>PICKUP_ENABLED</code>) с даты: ____________</p></div>
+    <div class="panel warn"><p><span class="bx"></span><span class="key">Не включаем</span>, повторное тестирование: ____________</p><p>Решение принял: ________________________</p></div>
+  </div>
+  <p class="small muted">После включения на бою первую неделю ведущий ежедневно смотрит: вкладки «Зависшие» и «Разбор», журнал нераспознанных сканов <code>pickup_scan_misses</code>, утреннюю сводку и жалобы клиентов.</p>
+</section>
+</body></html>

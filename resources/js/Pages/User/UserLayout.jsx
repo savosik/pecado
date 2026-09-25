@@ -12,6 +12,7 @@ import BugReportWidget from '@/Components/BugReportWidget';
 import AgeGate from '@/components/common/AgeGate';
 import CookieConsent from '@/components/common/CookieConsent';
 import { TaxSurveyProvider, TaxSurveySideTab } from './TaxSurvey/TaxSurvey';
+import AssistantLauncher from '@/components/assistant/AssistantLauncher';
 
 export default function UserLayout({ children, fluid = false, flushTop = false }) {
     return (
@@ -40,6 +41,10 @@ export default function UserLayout({ children, fluid = false, flushTop = false }
                 <Toaster />
                 <BugReportWidget />
                 <TaxSurveySideTab />
+                {/* Помощник клиента (assist-00): иконка-консультант на всех страницах витрины и
+                    кабинета; внутри ProductQuickViewProvider, чтобы ссылки на товары в чате
+                    открывали быстрый просмотр. Сам не рендерится, пока сервер не дал prop `assistant`. */}
+                <AssistantLauncher />
                 <AgeGate />
                 <CookieConsent />
             </Box>

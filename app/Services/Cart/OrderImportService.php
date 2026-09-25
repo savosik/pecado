@@ -3,7 +3,7 @@
 namespace App\Services\Cart;
 
 use App\Models\Product;
-use App\Models\ProductBarcode;
+use App\Services\Catalog\ProductIdentifierResolver;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
@@ -184,75 +184,15 @@ class OrderImportService
     }
 
     /**
-     * Построить карту «идентификатор (lowercase) → коллекция товаров» батчевыми запросами.
+     * Карта «идентификатор (lowercase) → коллекция товаров» — общим резолвером,
+     * тем же, что у client-api и поиска: один артикул везде находится одинаково.
      *
      * @param  array<int, string>  $identifiers
      * @return Collection<string, Collection<int, Product>>
      */
     private function buildLookup(array $identifiers): Collection
     {
-        $unique = collect($identifiers)
-            ->map(fn ($v) => trim($v))
-            ->filter(fn ($v) => $v !== '')
-            ->unique()
-            ->values();
-
-        if ($unique->isEmpty()) {
-            return collect();
-        }
-
-        $needles = $unique->all();
-
-        // Карта lowercased-идентификатор → [product_id => Product]
-        /** @var array<string, array<int, Product>> $map */
-        $map = [];
-
-        $add = function (string $value, Product $product) use (&$map) {
-            $key = mb_strtolower(trim($value));
-            if ($key === '') {
-                return;
-            }
-            $map[$key][$product->getKey()] = $product;
-        };
-
-        Product::query()
-            ->whereIn('sku', $needles)
-            ->orWhereIn('code', $needles)
-            ->orWhereIn('barcode', $needles)
-            ->get(['id', 'name', 'sku', 'code', 'barcode'])
-            ->each(function (Product $p) use ($add) {
-                if ($p->sku !== null) {
-                    $add($p->sku, $p);
-                }
-                if ($p->code !== null) {
-                    $add($p->code, $p);
-                }
-                if ($p->barcode !== null) {
-                    $add($p->barcode, $p);
-                }
-            });
-
-        ProductBarcode::query()
-            ->whereIn('barcode', $needles)
-            ->with('product:id,name')
-            ->get()
-            ->each(function (ProductBarcode $pb) use ($add) {
-                if ($pb->product) {
-                    $add($pb->barcode, $pb->product);
-                }
-            });
-
-        // Оставляем в карте только ключи, которые реально запрашивались, и превращаем
-        // вложенные массивы в коллекции.
-        $result = collect();
-        foreach ($needles as $needle) {
-            $key = mb_strtolower($needle);
-            if (isset($map[$key]) && ! $result->has($key)) {
-                $result->put($key, collect(array_values($map[$key])));
-            }
-        }
-
-        return $result;
+        return app(ProductIdentifierResolver::class)->lookup(array_values($identifiers));
     }
 
     /**

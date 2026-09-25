@@ -91,15 +91,57 @@ class OrderReservePublisher
      */
     public function publishConfirmed(Order $order, ?CarbonInterface $confirmedAt = null): void
     {
-        $payload = [
+        PublishOrderToErpJob::dispatch($this->confirmedPayload($order, $confirmedAt));
+    }
+
+    /**
+     * Подтверждение заказа в составе группы совместной отгрузки (v16.11.0).
+     *
+     * Те же поля, что у одиночного подтверждения, плюс ключ группы и манифест —
+     * UUID всех заказов группы в одном и том же порядке в каждом сообщении.
+     * 1С копит группу по манифесту и оформляет по ней минимальный комплект
+     * реализаций и расходных ордеров; неполная группа частично не оформляется.
+     *
+     * @param  list<string>  $orderUuids  манифест группы, включая uuid этого заказа
+     * @param  bool  $dispatch  false — только собрать payload (испытания: пропуск сообщения)
+     * @return array<string, mixed> отправленный (или собранный) payload
+     */
+    public function publishConfirmedInGroup(Order $order, string $shipTogetherKey, array $orderUuids, ?CarbonInterface $confirmedAt = null, bool $dispatch = true): array
+    {
+        $payload = $this->confirmedPayload($order, $confirmedAt);
+        $payload['ship_together_key'] = $shipTogetherKey;
+        $payload['ship_together_order_uuids'] = array_values($orderUuids);
+
+        if ($dispatch) {
+            PublishOrderToErpJob::dispatch($payload);
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Повторная публикация ранее собранного payload с тем же message_id (испытания
+     * Р-7.7/Р-7.8: повтор и поздняя доставка не должны менять итог группы в 1С).
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function republish(array $payload): void
+    {
+        PublishOrderToErpJob::dispatch($payload);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function confirmedPayload(Order $order, ?CarbonInterface $confirmedAt): array
+    {
+        return [
             'event' => 'order.confirmed',
             'message_id' => $this->newMessageId(),
             'uuid' => $order->uuid,
             'confirmed_at' => ($confirmedAt ?? now())->toIso8601String(),
             'timestamp' => now()->toIso8601String(),
         ];
-
-        PublishOrderToErpJob::dispatch($payload);
     }
 
     private function newMessageId(): string

@@ -3,12 +3,12 @@
 namespace App\Services\Crm\Api\Operations;
 
 use App\Models\User;
-use App\Services\Crm\Api\OperationInput;
 use App\Services\Crm\ClientInsightService;
 use App\Services\Crm\ClientListService;
 use App\Services\Crm\ClientPlanFactService;
 use App\Services\Crm\ClientProfileService;
 use App\Support\Crm\ClientListFilters;
+use App\Support\OperationApi\OperationInput;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 
