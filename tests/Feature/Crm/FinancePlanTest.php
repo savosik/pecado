@@ -35,6 +35,15 @@ class FinancePlanTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Период раздела по умолчанию — «сегодня … конец текущего месяца», а сроки
+        // в тестах задаются от «сегодня» (`now()->addDays(3)`). В последние дни
+        // месяца такой срок уезжает в следующий, выпадает из периода, и план
+        // становится нулевым — тест падал 28-го числа, ничего не сломав в коде.
+        // Замораживаем время на середину месяца: у «через три дня» всегда есть
+        // место внутри периода.
+        $this->travelTo(now()->startOfMonth()->addDays(9)->setTime(12, 0));
+
         $this->seed(RolesAndPermissionsSeeder::class);
         $this->restrictManagersToOwnClients();
 
