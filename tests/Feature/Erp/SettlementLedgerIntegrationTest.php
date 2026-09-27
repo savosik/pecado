@@ -184,6 +184,52 @@ class SettlementLedgerIntegrationTest extends TestCase
     }
 
     /**
+     * Период движения регистра проходит шину целиком (16.12.0): схема принимает
+     * поле, обработчик приводит момент к нашей зоне, дата операции не подменяется.
+     */
+    #[Test]
+    public function период_движения_регистра_доезжает_через_шину(): void
+    {
+        $this->dispatch($this->postedMessage([
+            $this->entry(['date' => '2026-07-15', 'entry_date' => '2026-07-17T02:00:00+05:00']),
+        ]));
+
+        $entry = SettlementEntry::query()->sole();
+
+        $this->assertSame('2026-07-17 00:00:00', $entry->entry_date?->toDateTimeString());
+        $this->assertSame('2026-07-15', $entry->date?->toDateString());
+        $this->assertSame('success', ErpBusMessage::query()->latest('id')->value('status'));
+    }
+
+    /**
+     * Сообщение старого формата (поля нет вовсе) обязано остаться валидным:
+     * 1С включает публикацию отдельным рубильником, и до включения весь поток
+     * идёт без периода.
+     */
+    #[Test]
+    public function сообщение_без_периода_остаётся_валидным(): void
+    {
+        $this->dispatch($this->postedMessage([$this->entry()]));
+
+        $this->assertNull(SettlementEntry::query()->sole()->entry_date);
+        $this->assertSame('success', ErpBusMessage::query()->latest('id')->value('status'));
+    }
+
+    /**
+     * Пустая строка вместо периода — дефект форматировщика 1С, а не «периода нет».
+     * Сообщение уходит в разбор целиком: молча оставить документ на фолбэке значит
+     * спрятать поломку и потом искать её на сверке.
+     */
+    #[Test]
+    public function пустой_период_уводит_сообщение_в_разбор(): void
+    {
+        $this->dispatch($this->postedMessage([$this->entry(['entry_date' => ''])]));
+
+        $this->assertSame(0, SettlementEntry::query()->count());
+        $this->assertSame('failed', ErpBusMessage::query()->latest('id')->value('status'));
+    }
+
+    /**
      * Неизвестный тип — единственное, из-за чего документ отбрасывается целиком.
      * Пропустить строку молча нельзя: баланс разъедется незаметно.
      */

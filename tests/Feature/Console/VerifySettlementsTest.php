@@ -51,6 +51,19 @@ class VerifySettlementsTest extends TestCase
         ]);
     }
 
+    private function checkpoint(float $amount, string $asOf = '2026-08-01'): void
+    {
+        SettlementCheckpoint::factory()->create([
+            'user_id' => $this->user->id,
+            'company_id' => $this->company->id,
+            'organization_id' => $this->organization->id,
+            'currency_code' => 'RUB',
+            'as_of_date' => $asOf,
+            'amount' => $amount,
+            'is_verified' => true,
+        ]);
+    }
+
     private function balance(float $amount): void
     {
         ContractorOrganizationBalance::query()->create([
@@ -226,6 +239,101 @@ class VerifySettlementsTest extends TestCase
         ]);
 
         $this->artisan('settlements:verify')->assertExitCode(0);
+    }
+
+    /**
+     * Ось точки — период движения регистра (16.12.0, топик №10).
+     *
+     * Боевой случай круга 13: платёж с датой документа 30.07 и периодом движения
+     * 03.08 23:59:59. По прежней оси он попадал в точку на 01.08 и объявлял верную
+     * точку расхождением; по периоду регистра — не попадает, и точка сходится.
+     */
+    #[Test]
+    public function движение_с_периодом_после_точки_в_неё_не_входит(): void
+    {
+        $this->entry([
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -50000,
+            'date' => '2026-07-01',
+        ]);
+        $this->entry([
+            'type' => SettlementEntry::TYPE_PAYMENT_IN,
+            'amount' => 548,
+            'date' => '2026-07-30',
+            'entry_date' => '2026-08-03 23:59:59',
+        ]);
+        $this->balance(-49452);
+
+        $this->checkpoint(-50000);
+
+        $this->artisan('settlements:verify')->assertExitCode(0);
+    }
+
+    /**
+     * Обратный случай: операция датирована после точки, а период движения — до неё.
+     * В точку входит именно период.
+     */
+    #[Test]
+    public function движение_с_периодом_до_точки_в_неё_входит(): void
+    {
+        $this->entry([
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -50000,
+            'date' => '2026-08-05',
+            'entry_date' => '2026-07-31 18:00:00',
+        ]);
+        $this->balance(-50000);
+
+        $this->checkpoint(-50000);
+
+        $this->artisan('settlements:verify')->assertExitCode(0);
+    }
+
+    /**
+     * Граница строгая и берётся в учётной зоне: 1С отбирает
+     * `Период < НачалоДня(ДатаОтсечки)`, поэтому движение ровно в полночь даты точки
+     * относится уже к следующему периоду.
+     */
+    #[Test]
+    public function движение_ровно_в_полночь_даты_точки_в_неё_не_входит(): void
+    {
+        $this->entry([
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -50000,
+            'date' => '2026-07-31',
+        ]);
+        $this->entry([
+            'type' => SettlementEntry::TYPE_PAYMENT_IN,
+            'amount' => 1000,
+            'date' => '2026-07-31',
+            'entry_date' => '2026-08-01 00:00:00',
+        ]);
+        $this->balance(-49000);
+
+        $this->checkpoint(-50000);
+
+        $this->artisan('settlements:verify')->assertExitCode(0);
+    }
+
+    /**
+     * Историческая часть ленты поля не получит, пока 1С не сделает массовую досылку:
+     * строки без `entry_date` обязаны остаться на прежней оси, а не выпасть из точки.
+     */
+    #[Test]
+    public function строка_без_периода_режется_по_прежней_оси(): void
+    {
+        $this->entry([
+            'type' => SettlementEntry::TYPE_SHIPMENT,
+            'amount' => -50000,
+            'date' => '2026-07-15',
+        ]);
+        $this->balance(-50000);
+
+        $this->checkpoint(-50000);
+
+        $this->artisan('settlements:verify')
+            ->expectsOutputToContain('Ось дат')
+            ->assertExitCode(0);
     }
 
     /**
