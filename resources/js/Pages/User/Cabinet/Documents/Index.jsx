@@ -61,12 +61,23 @@ function DocumentRow({ document }) {
     const TypeIcon = TYPE_ICONS[document.type] || LuFile;
     const BaseIcon = document.base?.label?.startsWith('Отгрузка') ? LuTruck : LuShoppingBag;
     const isSpreadsheet = document.format && document.format !== 'pdf';
+    // Файлы одной формы: 1С выгружает УПД и в PDF, и в Excel — для клиента это
+    // один документ. Старые строки приходят без files, поэтому собираем запасной
+    // список из полей самой строки.
+    const files = document.files?.length
+        ? document.files
+        : [{
+            format: document.format || 'pdf',
+            label: isSpreadsheet ? 'Excel' : 'PDF',
+            size: document.size,
+            url: document.download_url,
+        }];
+    const single = files.length === 1;
     // Формат и размер — одной подписью под кнопкой: «PDF · 0,1 МБ». Бейдж
     // формата на каждой строке был шумом, а размер сам по себе ни о чём.
-    const fileMeta = [
-        isSpreadsheet ? 'Excel' : 'PDF',
-        document.size,
-    ].filter(Boolean).join(' · ');
+    const fileMeta = single
+        ? [files[0].label, files[0].size].filter(Boolean).join(' · ')
+        : files.map((file) => [file.label, file.size].filter(Boolean).join(' ')).join(' · ');
 
     return (
         <Box
@@ -126,7 +137,7 @@ function DocumentRow({ document }) {
                             >
                                 {document.number ? `№ ${document.number}` : document.title}
                             </Text>
-                            {isSpreadsheet && (
+                            {single && isSpreadsheet && (
                                 <Badge
                                     colorPalette="green" variant="subtle"
                                     fontSize="2xs" px="2" py="0.5" borderRadius="full" gap="1"
@@ -185,17 +196,25 @@ function DocumentRow({ document }) {
                 {/* Обычная ссылка, а не Inertia: сервер отдаёт файл,
                     а Inertia ждёт JSON и такой ответ не поймёт. */}
                 <VStack gap="1" align={{ base: 'stretch', md: 'end' }} flexShrink="0" w={{ base: '100%', md: 'auto' }}>
-                    <Button
-                        as="a"
-                        href={document.download_url}
-                        variant="outline"
-                        colorPalette="pecado"
-                        size="sm"
-                        minW="32"
-                    >
-                        <LuFileDown size={16} />
-                        Скачать
-                    </Button>
+                    {/* Один файл — привычная кнопка «Скачать»; два формата —
+                        кнопка на каждый, чтобы не прятать Excel в меню. */}
+                    <HStack gap="2" w={{ base: '100%', md: 'auto' }}>
+                        {files.map((file) => (
+                            <Button
+                                key={file.url}
+                                as="a"
+                                href={file.url}
+                                variant="outline"
+                                colorPalette="pecado"
+                                size="sm"
+                                minW={single ? '32' : '24'}
+                                flex={{ base: '1', md: 'none' }}
+                            >
+                                {file.format === 'pdf' ? <LuFileDown size={16} /> : <LuFileSpreadsheet size={16} />}
+                                {single ? 'Скачать' : file.label}
+                            </Button>
+                        ))}
+                    </HStack>
                     <Text fontSize="xs" color="gray.400" _dark={{ color: 'gray.500' }} textAlign={{ md: 'end' }}>
                         {fileMeta}
                     </Text>

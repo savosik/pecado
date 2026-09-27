@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Enums\PrintedDocumentFormat;
 use App\Enums\PrintedDocumentType;
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
@@ -37,6 +38,8 @@ class PrintedDocumentController extends Controller
         $organizationsEnabled = (bool) config('erp.organizations.enabled');
         $typeCounts = $this->typeCounts($request, $user);
 
+        $siblings = $this->siblingFormats($documents->getCollection(), $user);
+
         $documents->getCollection()->transform(fn (PrintedDocument $document): array => [
             'id' => $document->id,
             'title' => $document->display_title,
@@ -59,6 +62,9 @@ class PrintedDocumentController extends Controller
             // на телефоне», а не точное число байтов.
             'size' => $document->size_label,
             'download_url' => route('cabinet.documents.download', $document->id),
+            // Файлы формы: первый — главный (PDF), дальше остальные форматы.
+            // Пока формат один, список из одного элемента, и строка выглядит как прежде.
+            'files' => $this->filePayload($document, $siblings[$document->variant_key] ?? []),
         ]);
 
         return Inertia::render('User/Cabinet/Documents/Index', [
@@ -170,6 +176,9 @@ class PrintedDocumentController extends Controller
             // ссылка на ненайденный файл выглядит как поломка сайта, а не как
             // задержка обмена. Проблемные документы разбирает менеджер в CRM.
             ->stored()
+            // Один документ — одна строка: PDF и Excel той же формы приезжают
+            // разными сообщениями, но клиенту это два файла одного УПД.
+            ->primaryVariant()
             ->with(['company:id,name', 'organization:id,name,is_stub', 'order:id,number,erp_number', 'shipment:id,number,erp_number']);
 
         if ($search !== '') {
@@ -300,6 +309,56 @@ class PrintedDocumentController extends Controller
                 'label' => $organization->name,
             ])
             ->all();
+    }
+
+    /**
+     * Дополнительные форматы форм, попавших на страницу, одним запросом.
+     *
+     * Запрос идёт по ключу склейки и через ту же видимость, что и список:
+     * доступ к файлу проверяется ещё раз при скачивании, но и показывать
+     * кнопку на чужой документ незачем.
+     *
+     * @param  \Illuminate\Support\Collection<int, PrintedDocument>  $documents
+     * @return array<string, list<PrintedDocument>>
+     */
+    private function siblingFormats(\Illuminate\Support\Collection $documents, User $user): array
+    {
+        $keys = $documents->pluck('variant_key')->filter()->unique()->values();
+
+        if ($keys->isEmpty()) {
+            return [];
+        }
+
+        $ids = $documents->pluck('id')->all();
+
+        return PrintedDocument::query()
+            ->visibleTo($user)
+            ->stored()
+            ->whereIn('variant_key', $keys)
+            ->whereNotIn('id', $ids)
+            ->orderedByFormat()
+            ->get()
+            ->groupBy('variant_key')
+            ->map(fn ($group) => $group->all())
+            ->all();
+    }
+
+    /**
+     * Файлы одной строки списка: главный формат и приложенные к нему.
+     *
+     * @param  list<PrintedDocument>  $siblings
+     * @return list<array{format: string, label: string, size: string|null, url: string}>
+     */
+    private function filePayload(PrintedDocument $document, array $siblings): array
+    {
+        return array_map(static fn (PrintedDocument $file): array => [
+            'format' => $file->format->value,
+            // Короткая подпись на кнопке: «PDF» и «Excel». Полное «Excel (XLSX)»
+            // на кнопке не помещается, а различать xlsx и xls клиенту незачем.
+            'label' => $file->format === PrintedDocumentFormat::PDF ? 'PDF' : 'Excel',
+            'size' => $file->size_label,
+            'url' => route('cabinet.documents.download', $file->id),
+        ], array_merge([$document], $siblings));
     }
 
     /**

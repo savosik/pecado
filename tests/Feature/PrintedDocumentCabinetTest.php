@@ -23,6 +23,7 @@ use Tests\TestCase;
  */
 class PrintedDocumentCabinetTest extends TestCase
 {
+    use \Illuminate\Foundation\Testing\WithFaker;
     use RefreshDatabase;
 
     private User $user;
@@ -337,5 +338,173 @@ class PrintedDocumentCabinetTest extends TestCase
 
         $this->get('/cabinet/documents')->assertRedirect();
         $this->get("/cabinet/documents/{$document->id}/download")->assertRedirect();
+    }
+
+    /**
+     * Пара «PDF + Excel» одной формы, как её выгружает 1С: разные uuid,
+     * одинаковые поля конверта.
+     *
+     * @return array{0: PrintedDocument, 1: PrintedDocument}
+     */
+    private function updPair(array $overrides = []): array
+    {
+        $shipmentUuid = $this->faker->uuid();
+
+        $common = array_merge([
+            'type' => PrintedDocumentType::UPD,
+            'erp_type_code' => 'upd',
+            'erp_type_name' => 'УПД',
+            'number' => '29УТ-002488',
+            'date' => '2026-09-24',
+            'base_document_kind' => 'shipment',
+            'shipment_uuid' => $shipmentUuid,
+            'contractor_uuid' => 'contractor-uuid',
+            'organization_uuid' => 'organization-uuid',
+        ], $overrides);
+
+        $pdf = $this->document(array_merge($common, [
+            'uuid' => 'upd-pdf',
+            'mime_type' => 'application/pdf',
+            'path' => '2026/09/upd-pdf.pdf',
+        ]));
+
+        $xlsx = $this->document(array_merge($common, [
+            'uuid' => 'upd-xlsx',
+            'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'path' => '2026/09/upd-xlsx.xlsx',
+        ]));
+
+        return [$pdf, $xlsx];
+    }
+
+    #[Test]
+    public function pdf_and_excel_of_the_same_form_are_shown_as_one_row_with_two_files(): void
+    {
+        [$pdf, $xlsx] = $this->updPair();
+
+        // Главной остаётся PDF: он документ для подписи, Excel к нему приложение.
+        $this->actingAs($this->user)
+            ->get('/cabinet/documents')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('documents.data', 1)
+                ->where('documents.data.0.id', $pdf->id)
+                ->has('documents.data.0.files', 2)
+                ->where('documents.data.0.files.0.label', 'PDF')
+                ->where('documents.data.0.files.0.url', route('cabinet.documents.download', $pdf->id))
+                ->where('documents.data.0.files.1.label', 'Excel')
+                ->where('documents.data.0.files.1.url', route('cabinet.documents.download', $xlsx->id)));
+
+        // Оба файла скачиваются: склейка — это про показ, а не про доступ.
+        $this->actingAs($this->user)->get("/cabinet/documents/{$xlsx->id}/download")->assertOk();
+    }
+
+    #[Test]
+    public function excel_alone_stays_a_full_row_until_pdf_arrives(): void
+    {
+        $xlsx = $this->document([
+            'type' => PrintedDocumentType::UPD,
+            'number' => '29УТ-002490',
+            'base_document_kind' => 'shipment',
+            'shipment_uuid' => $this->faker->uuid(),
+            'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+
+        $this->actingAs($this->user)
+            ->get('/cabinet/documents')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('documents.data', 1)
+                ->where('documents.data.0.id', $xlsx->id)
+                ->has('documents.data.0.files', 1)
+                ->where('documents.data.0.files.0.label', 'Excel'));
+    }
+
+    #[Test]
+    public function forms_of_different_documents_are_never_glued(): void
+    {
+        [$pdf] = $this->updPair();
+
+        // Другая реализация: тот же вид и та же дата, но своё основание и номер.
+        $other = $this->document([
+            'type' => PrintedDocumentType::UPD,
+            'number' => '29УТ-002489',
+            'date' => '2026-09-24',
+            'base_document_kind' => 'shipment',
+            'shipment_uuid' => $this->faker->uuid(),
+            'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+
+        $this->actingAs($this->user)
+            ->get('/cabinet/documents')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('documents.data', 2));
+
+        $this->assertNotSame($pdf->fresh()->variant_key, $other->fresh()->variant_key);
+    }
+
+    #[Test]
+    public function form_without_base_document_is_not_glued(): void
+    {
+        // Акт сверки основания не имеет: склеивать его с чем-либо по номеру
+        // и дате опаснее, чем показать лишнюю строку.
+        $act = $this->document([
+            'type' => PrintedDocumentType::RECONCILIATION_ACT,
+            'number' => 'СВ-000001',
+            'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+
+        $this->assertNull($act->fresh()->variant_key);
+    }
+
+    #[Test]
+    public function counters_and_export_count_glued_form_once(): void
+    {
+        $this->updPair();
+
+        $this->actingAs($this->user)
+            ->get('/cabinet/documents')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('typeCounts.upd', 1)
+                ->where('typeTotal', 1));
+
+        $csv = $this->actingAs($this->user)->get('/cabinet/documents/export?format=csv');
+        $csv->assertOk();
+
+        $this->assertSame(1, substr_count($csv->streamedContent(), '29УТ-002488'));
+    }
+
+    #[Test]
+    public function second_format_of_the_same_form_does_not_produce_a_second_letter(): void
+    {
+        [$pdf, $xlsx] = $this->updPair();
+
+        // Клиенту сказали «появился УПД» один раз: второй файл той же формы —
+        // не новость, а вторая кнопка в той же строке кабинета.
+        $stream = $this->mock(\App\Services\Crm\Mail\MailStream::class);
+        $stream->shouldReceive('captureQuietly')
+            ->once()
+            ->withArgs(fn ($occasion) => $occasion->subject?->is($pdf));
+
+        $occasions = app(\App\Services\Crm\Mail\Sources\DocumentOccasions::class);
+        $occasions->published($pdf);
+        $occasions->published($xlsx);
+    }
+
+    #[Test]
+    public function reissued_form_still_notifies_the_client(): void
+    {
+        [$pdf, $xlsx] = $this->updPair();
+        $xlsx->forceFill(['revision' => 2])->save();
+
+        // Перевыставление — настоящая новость: два письма подряд склеит окно
+        // потока, а промолчать о новой редакции нельзя.
+        $stream = $this->mock(\App\Services\Crm\Mail\MailStream::class);
+        $stream->shouldReceive('captureQuietly')->twice();
+
+        $occasions = app(\App\Services\Crm\Mail\Sources\DocumentOccasions::class);
+        $occasions->published($pdf);
+        $occasions->published($xlsx->fresh());
     }
 }

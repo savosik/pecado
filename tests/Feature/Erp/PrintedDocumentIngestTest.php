@@ -472,4 +472,74 @@ class PrintedDocumentIngestTest extends TestCase
             fn (StorePrintedDocumentFile $job) => str_contains($job->fileUrl, self::UUID),
         );
     }
+
+    #[Test]
+    public function excel_variant_arrives_beside_pdf_and_does_not_replace_it(): void
+    {
+        $user = User::factory()->create(['erp_id' => 'partner-uuid-1']);
+        Company::factory()->create(['user_id' => $user->id, 'erp_id' => 'contractor-uuid-1']);
+        Shipment::factory()->create(['uuid' => 'shipment-uuid-1', 'user_id' => $user->id]);
+
+        $envelope = [
+            'type_code' => 'upd',
+            'type_name' => 'УПД',
+            'number' => '29УТ-002488',
+            'date' => '2026-09-24',
+            'partner_uuid' => 'partner-uuid-1',
+            'contractor_uuid' => 'contractor-uuid-1',
+            'organization_uuid' => 'org-uuid-1',
+            'shipment_uuid' => 'shipment-uuid-1',
+            'base_document_kind' => 'shipment',
+        ];
+
+        $this->publish($envelope);
+
+        // Excel-вариант той же формы — собственный стабильный uuid, те же поля
+        // конверта. Общий uuid заменил бы клиенту PDF для подписи Excel-ем.
+        $xlsxUuid = '5f2504e0-4f89-11d3-9a0c-0305e82c3399';
+        $this->publish(array_merge($envelope, [
+            'uuid' => $xlsxUuid,
+            'message_id' => 'msg-xlsx',
+            'file_url' => 's3://documents-exchange/2026/09/'.$xlsxUuid.'.xlsx',
+            'file_name' => 'УПД_29УТ-002488.xlsx',
+            'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]), "PK\x03\x04таблица");
+
+        $pdf = PrintedDocument::where('uuid', self::UUID)->firstOrFail();
+        $xlsx = PrintedDocument::where('uuid', $xlsxUuid)->firstOrFail();
+
+        $this->assertSame(2, PrintedDocument::count());
+        $this->assertSame(PrintedDocument::FILE_STORED, $pdf->file_status);
+        $this->assertSame(PrintedDocument::FILE_STORED, $xlsx->file_status);
+        $this->assertSame('application/pdf', $pdf->mime_type);
+        $this->assertStringEndsWith('.xlsx', (string) $xlsx->path);
+
+        // Ключ склейки общий — в кабинете это одна строка с двумя кнопками.
+        $this->assertNotNull($pdf->variant_key);
+        $this->assertSame($pdf->variant_key, $xlsx->variant_key);
+    }
+
+    #[Test]
+    public function excel_variant_without_base_document_is_not_glued_to_pdf(): void
+    {
+        // Если 1С не заполнит shipment_uuid у Excel-варианта, склейки не будет:
+        // сайт лучше покажет две строки, чем свяжет формы наугад.
+        $this->publish([
+            'type_code' => 'upd',
+            'shipment_uuid' => 'shipment-uuid-1',
+            'base_document_kind' => 'shipment',
+        ]);
+
+        $xlsxUuid = '6f2504e0-4f89-11d3-9a0c-0305e82c3388';
+        $this->publish([
+            'uuid' => $xlsxUuid,
+            'message_id' => 'msg-xlsx-no-base',
+            'type_code' => 'upd',
+            'file_url' => 's3://documents-exchange/2026/09/'.$xlsxUuid.'.xlsx',
+            'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ], "PK\x03\x04таблица");
+
+        $this->assertNull(PrintedDocument::where('uuid', $xlsxUuid)->value('variant_key'));
+        $this->assertNotNull(PrintedDocument::where('uuid', self::UUID)->value('variant_key'));
+    }
 }

@@ -48,6 +48,7 @@ use Illuminate\Support\Str;
  * @property string|null $shipment_uuid
  * @property string|null $tax_id
  * @property string|null $base_document_kind
+ * @property string|null $variant_key
  * @property string|null $disk
  * @property string|null $path
  * @property string|null $source_url
@@ -131,6 +132,7 @@ class PrintedDocument extends Model
         'shipment_uuid',
         'tax_id',
         'base_document_kind',
+        'variant_key',
         'disk',
         'path',
         'source_url',
@@ -146,6 +148,18 @@ class PrintedDocument extends Model
         'erp_created_at',
         'erp_updated_at',
     ];
+
+    /**
+     * Ключ склейки форматов считается самой моделью, а не обработчиком сообщения:
+     * запись правят и приёмник шины, и `documents:relink`, и разовые команды,
+     * а ключ обязан соответствовать текущим полям конверта в любом из этих путей.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $document): void {
+            $document->variant_key = $document->buildVariantKey();
+        });
+    }
 
     protected function casts(): array
     {
@@ -229,6 +243,85 @@ class PrintedDocument extends Model
     public function scopeStored(Builder $query): Builder
     {
         return $query->where('file_status', self::FILE_STORED);
+    }
+
+    /**
+     * Ключ склейки форматов: PDF и XLSX одной и той же формы.
+     *
+     * С осени 2026 1С выгружает УПД дважды — PDF для подписи и XLSX для загрузки
+     * в учётную систему клиента. У форматов **разные** `uuid` (общий ключ заменил бы
+     * PDF Excel-ем по идемпотентности), но для клиента это один документ, и в кабинете
+     * он остаётся одной строкой с двумя кнопками.
+     *
+     * Склеиваются только формы по документу-основанию: там есть и основание, и номер,
+     * и совпадение всех полей конверта означает «та же форма в другом формате».
+     * Форма без основания или без номера (акт сверки, договор) ключа не получает —
+     * ошибочно склеить два разных документа хуже, чем показать лишнюю строку.
+     */
+    public function buildVariantKey(): ?string
+    {
+        $base = $this->shipment_uuid ?: $this->order_uuid;
+
+        if ($base === null || blank($this->number)) {
+            return null;
+        }
+
+        return sha1(implode('|', [
+            // Сырой атрибут, а не каст: ключ считается в `saving`, когда вид формы
+            // у только что заполненной модели ещё может отсутствовать.
+            (string) ($this->attributes['type'] ?? ''),
+            (string) $this->base_document_kind,
+            $base,
+            (string) $this->number,
+            $this->date?->toDateString() ?? '',
+            (string) $this->contractor_uuid,
+            (string) $this->organization_uuid,
+        ]));
+    }
+
+    /**
+     * Только «главная» запись каждой группы форматов.
+     *
+     * Главный — PDF: он остаётся документом для подписи, Excel к нему приложение.
+     * Если PDF в группе нет (например, приехал пока один XLSX), главной становится
+     * самая ранняя запись. Отбор идёт условием в SQL, а не группировкой: GROUP BY
+     * сломал бы и пагинацию, и счётчики видов документов.
+     *
+     * @param  Builder<PrintedDocument>  $query
+     * @return Builder<PrintedDocument>
+     */
+    public function scopePrimaryVariant(Builder $query): Builder
+    {
+        $table = $this->getTable();
+        $mine = self::formatRankSql($table);
+        $other = self::formatRankSql('variant');
+
+        return $query->whereNotExists(function ($sub) use ($table, $mine, $other): void {
+            $sub->selectRaw('1')
+                ->from($table.' as variant')
+                ->whereColumn('variant.variant_key', $table.'.variant_key')
+                ->whereNotNull($table.'.variant_key')
+                ->whereNull('variant.deleted_at')
+                ->where('variant.file_status', self::FILE_STORED)
+                ->whereRaw("({$other} < {$mine} OR ({$other} = {$mine} AND variant.id < {$table}.id))");
+        });
+    }
+
+    /**
+     * Все форматы одной формы, начиная с главного: PDF, затем остальные по дате появления.
+     *
+     * @param  Builder<PrintedDocument>  $query
+     * @return Builder<PrintedDocument>
+     */
+    public function scopeOrderedByFormat(Builder $query): Builder
+    {
+        return $query->orderByRaw(self::formatRankSql($this->getTable()))->orderBy($this->getTable().'.id');
+    }
+
+    /** Ранг формата для отбора главной записи: PDF впереди всех остальных. */
+    private static function formatRankSql(string $alias): string
+    {
+        return "CASE WHEN {$alias}.mime_type = 'application/pdf' THEN 0 ELSE 1 END";
     }
 
     public function getTypeLabelAttribute(): string

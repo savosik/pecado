@@ -26,7 +26,7 @@ class DocumentOccasions
 
     public function published(PrintedDocument $document): void
     {
-        if (! $this->isReady($document)) {
+        if (! $this->isReady($document) || $this->isExtraFormat($document)) {
             return;
         }
 
@@ -78,6 +78,31 @@ class DocumentOccasions
                 'body' => 'Учётная система отозвала ранее выложенный документ. Если вы уже сохранили его копию, она больше не актуальна.',
             ],
         ));
+    }
+
+    /**
+     * Второй файл той же формы — не новость для клиента.
+     *
+     * 1С выгружает УПД дважды: PDF для подписи и XLSX для загрузки в учётную
+     * систему. Это разные сообщения с разными `uuid`, но один документ: в кабинете
+     * он одной строкой с двумя кнопками, и письмо о нём тоже должно быть одно.
+     *
+     * Перевыставление (`revision` больше первого) под это правило не подпадает:
+     * там клиенту действительно есть что сказать, а два письма подряд склеит
+     * окно `mail_stream.batch_seconds`.
+     */
+    private function isExtraFormat(PrintedDocument $document): bool
+    {
+        if ($document->variant_key === null || (int) ($document->revision ?? 0) > 1) {
+            return false;
+        }
+
+        return PrintedDocument::query()
+            ->where('variant_key', $document->variant_key)
+            ->whereKeyNot($document->getKey())
+            ->where('id', '<', $document->getKey())
+            ->stored()
+            ->exists();
     }
 
     /**
