@@ -403,14 +403,25 @@ class VerifySettlements extends Command
      */
     private function checkpointRows(Carbon $asOf): array
     {
-        $checkpoints = SettlementCheckpoint::query()->verified()->asOf($asOf)->get();
+        // Точки группируются по ОСИ СВЕРКИ — контрагент × организация × валюта,
+        // а не берутся по одной. У контрагента, закреплённого за двумя партнёрами,
+        // 1С законно снимает две точки (партнёр входит в её ключ), а лента на сайте
+        // одна: партнёр в ось сверки не входит. Поштучное сравнение объявляло такую
+        // пару расхождением дважды, хотя сумма точек сходится с лентой копейка
+        // в копейку — случай Войдакова: −13 647,75 и −4 955,00 против ленты
+        // −18 602,75 (топик №10, 28.09.2026).
+        $groups = SettlementCheckpoint::query()->verified()->asOf($asOf)->get()
+            ->filter(static fn (SettlementCheckpoint $checkpoint): bool => $checkpoint->company_id !== null)
+            ->groupBy(static fn (SettlementCheckpoint $checkpoint): string => implode('|', [
+                $checkpoint->company_id,
+                $checkpoint->organization_id,
+                $checkpoint->currency_code,
+            ]));
 
         $rows = [];
 
-        foreach ($checkpoints as $checkpoint) {
-            if ($checkpoint->company_id === null) {
-                continue;
-            }
+        foreach ($groups as $group) {
+            $checkpoint = $group->first();
 
             $base = fn () => SettlementEntry::query()
                 ->facts()
@@ -424,7 +435,7 @@ class VerifySettlements extends Command
             // для строк, приехавших до включения поля.
             $byEntry = (float) $base()->beforeCheckpoint($asOf)->sum('amount');
 
-            $amount = (float) $checkpoint->amount;
+            $amount = (float) $group->sum(static fn (SettlementCheckpoint $row): float => (float) $row->amount);
 
             $rows[] = [
                 'company_id' => $checkpoint->company_id,
@@ -432,6 +443,7 @@ class VerifySettlements extends Command
                 'currency' => $checkpoint->currency_code,
                 'as_of_date' => $asOf->toDateString(),
                 'checkpoint' => round($amount, 2),
+                'checkpoint_parts' => $group->count(),
                 'ledger_date' => round($byDate, 2),
                 'ledger_entry' => round($byEntry, 2),
                 'delta_date' => round($byDate - $amount, 2),
@@ -483,7 +495,7 @@ class VerifySettlements extends Command
                 $row['company_id'],
                 $row['organization_id'] ?? '—',
                 $row['currency'],
-                number_format($row['checkpoint'], 2, ',', ' '),
+                number_format($row['checkpoint'], 2, ',', ' ').($row['checkpoint_parts'] > 1 ? sprintf(' (%d точки)', $row['checkpoint_parts']) : ''),
                 number_format($row['ledger_date'], 2, ',', ' '),
                 number_format($row['ledger_entry'], 2, ',', ' '),
                 number_format($row['delta_date'], 2, ',', ' '),
