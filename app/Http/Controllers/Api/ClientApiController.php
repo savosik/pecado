@@ -597,6 +597,14 @@ class ClientApiController extends Controller
             ], 403);
         }
 
+        // res-12: через новогодние каникулы резерв не принимаем — явный отказ
+        if ($reserve && ($reason = app(\App\Services\Order\ReservePolicy::class)->blockReason($user)) !== null) {
+            return response()->json([
+                'error' => $reason,
+                'code' => 'reserve_not_offered_now',
+            ], 422);
+        }
+
         // Размещение — общим сервисом с API v1: раскладка на наличие/предзаказ,
         // «дружественное урезание», промо, запись недостачи. Ответ — прежний.
         try {

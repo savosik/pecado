@@ -18,7 +18,7 @@ import { LuClock3 } from 'react-icons/lu';
  */
 export default function Index() {
     const {
-        partners = [], windowDays = 90, defaultHours = 24,
+        partners = [], windowDays = 90, defaultHours = 24, workingDays = false, holdLimitHours = 240,
         alertShare = 0.3, reserveEnabled = false, canEdit = false,
         canaryUuids = [],
     } = usePage().props;
@@ -186,6 +186,9 @@ export default function Index() {
                 «Окно, ч» пустое — действует умолчание ({defaultHours} ч). «Отключён» прячет резерв
                 у партнёра на сайте, не трогая его флаг в 1С. Пустое окно и выключенный тумблер —
                 возврат к умолчаниям (строка отклонения удаляется).
+                {workingDays && ` Выходные и праздники окно не расходуют: при окне 24 ч резерв из пятницы
+                живёт до понедельника, тот же час. Срок не длиннее ${holdLimitHours} ч календарно (предел 1С),
+                через новогодние праздники резерв не предлагается.`}
             </Text>
         </Box>
     );

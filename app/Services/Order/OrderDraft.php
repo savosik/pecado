@@ -39,6 +39,10 @@ final readonly class OrderDraft
         // reservedUntil — запрошенный сайтом срок; фактический вернёт 1С.
         public bool $reserve = false,
         public ?\Carbon\CarbonInterface $reservedUntil = null,
+        // res-12: момент, от которого считан reservedUntil, — он же created_at резервного
+        // заказа и `date` в order.created. 1С режет срок по date + предел, поэтому обе
+        // даты обязаны стоять на одной секунде.
+        public ?\Carbon\CarbonInterface $reservedFrom = null,
     ) {}
 
     /**

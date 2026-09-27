@@ -93,6 +93,9 @@ class ReserveControlController extends Controller
             'partners' => $partners,
             'windowDays' => $windowDays,
             'defaultHours' => (int) config('order_reserve.hours'),
+            // res-12: окно считается в рабочих днях клиента — подпись легенды меняется
+            'workingDays' => app(\App\Services\Order\ReservePolicy::class)->workingDays(),
+            'holdLimitHours' => app(\App\Services\Order\ReservePolicy::class)->holdLimitHours(),
             'alertShare' => (float) config('order_reserve.expired_share_alert'),
             'reserveEnabled' => (bool) config('order_reserve.enabled'),
             // Канареечные испытания: РОП должен понимать, почему у 84 участников

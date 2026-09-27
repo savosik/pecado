@@ -1328,7 +1328,11 @@ function OrderSummaryTicket({
     // radio «можно отгружать / поставьте в резерв». Резервируется только складская
     // часть корзины, поэтому без instock-строк radio не показываем.
     const { config: pageConfig } = usePage().props;
-    const reserveAvailable = !!pageConfig?.reserves_enabled && groups.instock.items.length > 0;
+    // res-12: в новогодние каникулы резерв не предлагается — вместо radio причина.
+    const reserveBlockReason = pageConfig?.reserves_enabled ? pageConfig?.reserve_block_reason : null;
+    const reserveAvailable = !!pageConfig?.reserves_enabled && !reserveBlockReason && groups.instock.items.length > 0;
+    // Срок в рабочих днях: пятничный резерв живёт до понедельника, поэтому показываем дедлайн.
+    const reserveUntilText = pageConfig?.reserve_until_text || null;
     const reserveHours = Number(pageConfig?.reserve_hours || 24);
     // Склонение «час/часа/часов» под срок резерва (24 → «часа», 48 → «часов»).
     const reserveHoursWord = (() => {
@@ -1752,7 +1756,9 @@ function OrderSummaryTicket({
                                                 <VStack align="flex-start" gap="0">
                                                     <Text>Поставьте в резерв — подтвержу отгрузку позже</Text>
                                                     <Text fontSize="xs" fontWeight="400" color="fg.muted">
-                                                        Ваш заказ будет зарезервирован на {reserveHours} {reserveHoursWord}, за это время вы можете его отменить или подтвердить.
+                                                        {reserveUntilText
+                                                            ? `Ваш заказ будет зарезервирован до ${reserveUntilText} (выходные и праздники в срок не входят), за это время вы можете его отменить или подтвердить.`
+                                                            : `Ваш заказ будет зарезервирован на ${reserveHours} ${reserveHoursWord}, за это время вы можете его отменить или подтвердить.`}
                                                     </Text>
                                                 </VStack>
                                             </Radio>
@@ -1779,6 +1785,9 @@ function OrderSummaryTicket({
                         </Checkbox>
                         )}
                     </Box>
+                    {reserveBlockReason && groups.instock.items.length > 0 && (
+                        <Text fontSize="sm" color="fg.muted">{reserveBlockReason}</Text>
+                    )}
 
                     {/* До md — столбиком на всю ширину: две широкие кнопки с длинными
                         подписями («Со склада N шт. + предзаказ N шт.») в строку не помещаются.

@@ -185,7 +185,7 @@ class HandleInertiaRequests extends Middleware
      * При выключенном рубильнике или для гостя — по нулям без единого запроса
      * к БД; счётчик резервов считается только участнику режима.
      *
-     * @return array{reserves_enabled: bool, reserve_count: int}
+     * @return array<string, mixed>
      */
     private function reserveProps(\Illuminate\Http\Request $request): array
     {
@@ -204,6 +204,30 @@ class HandleInertiaRequests extends Middleware
             'reserve_hours' => $enabled
                 ? app(\App\Services\Order\ReservePolicy::class)->hoursFor($user)
                 : 0,
+            ...$this->reserveDeadlineProps($enabled ? $user : null),
+        ];
+    }
+
+    /**
+     * Срок в рабочих днях (res-12): чекаут показывает не «на 24 часа», а сам дедлайн —
+     * пятничный резерв живёт до понедельника, и «24 часа» ввели бы в заблуждение.
+     * В новогодние каникулы резерв не предлагается — вместо radio причина.
+     *
+     * @return array{reserve_until_text: ?string, reserve_block_reason: ?string}
+     */
+    private function reserveDeadlineProps(?\App\Models\User $user): array
+    {
+        $policy = app(\App\Services\Order\ReservePolicy::class);
+
+        if ($user === null || ! $policy->workingDays()) {
+            return ['reserve_until_text' => null, 'reserve_block_reason' => null];
+        }
+
+        $until = $policy->requestedReservedUntil($user);
+
+        return [
+            'reserve_until_text' => $until?->locale('ru')->isoFormat('dd, D MMMM, HH:mm'),
+            'reserve_block_reason' => $policy->blockReason($user),
         ];
     }
 

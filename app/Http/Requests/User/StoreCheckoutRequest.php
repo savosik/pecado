@@ -85,6 +85,14 @@ class StoreCheckoutRequest extends FormRequest
             if ($this->boolean('reserve')
                 && ! app(\App\Services\Order\ReservePolicy::class)->availableFor($this->user())) {
                 $validator->errors()->add('reserve', 'Режим резерва вам недоступен — оформите заказ обычным способом.');
+
+                return;
+            }
+
+            // res-12: в новогодние каникулы резерв не принимаем — отказ, а не тихая отгрузка
+            if ($this->boolean('reserve')
+                && ($reason = app(\App\Services\Order\ReservePolicy::class)->blockReason($this->user())) !== null) {
+                $validator->errors()->add('reserve', $reason);
             }
         });
     }
