@@ -27,6 +27,7 @@ use App\Services\Crm\Api\Operations\TaskOperations;
 use App\Support\Crm\ClientListFilters;
 use App\Support\Crm\ClientPassport;
 use App\Support\Crm\CrmEntityMap;
+use App\Support\OperationApi\Param;
 
 /**
  * Каталог операций CRM, доступных машинному потребителю.

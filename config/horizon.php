@@ -242,6 +242,21 @@ return [
             'timeout' => 3600,
             'nice' => 0,
         ],
+        // Помощник клиента (assist-00): ход модели с MCP-вызовами длится до минут,
+        // а не секунд — свой супервизор с таймаутом под это, без повторов.
+        'supervisor-assistant' => [
+            'connection' => 'redis',
+            'queue' => ['assistant'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 256,
+            'tries' => 1,
+            'timeout' => 600,
+            'nice' => 0,
+        ],
     ],
 
     'environments' => [
@@ -259,6 +274,9 @@ return [
             'supervisor-notifications' => [
                 'maxProcesses' => 3,
             ],
+            'supervisor-assistant' => [
+                'maxProcesses' => 3,
+            ],
         ],
 
         'local' => [
@@ -271,6 +289,9 @@ return [
             'supervisor-notifications' => [
                 'maxProcesses' => 2,
             ],
+            'supervisor-assistant' => [
+                'maxProcesses' => 1,
+            ],
         ],
 
         'dev' => [
@@ -281,6 +302,9 @@ return [
                 'maxProcesses' => 2,
             ],
             'supervisor-notifications' => [
+                'maxProcesses' => 2,
+            ],
+            'supervisor-assistant' => [
                 'maxProcesses' => 2,
             ],
         ],

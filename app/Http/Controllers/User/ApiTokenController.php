@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApiToken;
+use App\Models\ClientAgentCall;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,26 +13,86 @@ use Inertia\Inertia;
 class ApiTokenController extends Controller
 {
     /**
-     * Страница управления API-ключами с документацией.
+     * Страница управления API-ключами и документацией API v1.
      */
     public function index()
     {
-        $tokens = ApiToken::where('user_id', Auth::id())
-            ->latest()
-            ->get()
-            ->map(fn (ApiToken $token) => [
+        return Inertia::render('User/Cabinet/ApiTokens/Index', [
+            'tokens' => $this->tokens()->map(fn (ApiToken $token) => [
                 'id' => $token->id,
                 'name' => $token->name,
                 'token' => $token->token,
                 'base_url' => $token->base_url,
+                'v1_base_url' => $token->v1_base_url,
                 'is_active' => $token->is_active,
                 'last_used_at' => $token->last_used_at?->toISOString(),
                 'created_at' => $token->created_at?->toISOString(),
-            ]);
-
-        return Inertia::render('User/Cabinet/ApiTokens/Index', [
-            'tokens' => $tokens,
+            ]),
+            'docs' => $this->docs(),
         ]);
+    }
+
+    /**
+     * Подключение ИИ-агента к MCP-серверу: тот же ключ, что у API v1.
+     *
+     * Без активного ключа страница не показывает образец настройки — клиенты
+     * копировали «<ВАШ_КЛЮЧ>» как есть и получали 401. Вместо этого кнопка
+     * «Создать ключ и подключить» (тот же store) сразу раскрывает настройку с
+     * настоящим ключом. Состояние подключения — по журналу client_agent_calls
+     * (когда и какой агент подключался), чтобы клиент сам видел результат.
+     */
+    public function mcp()
+    {
+        $token = $this->tokens()->firstWhere('is_active', true);
+
+        $lastConnect = ClientAgentCall::query()
+            ->where('user_id', Auth::id())
+            ->where('kind', ClientAgentCall::KIND_MCP_CONNECT)
+            ->latest('id')
+            ->first();
+
+        return Inertia::render('User/Cabinet/ApiTokens/Mcp', [
+            'apiKey' => $token?->token,
+            'docs' => $this->docs(),
+            'connection' => [
+                'has_inactive_keys' => $token === null && $this->tokens()->isNotEmpty(),
+                'last_connected_at' => $lastConnect?->created_at?->toISOString(),
+                'agent' => $lastConnect?->agent,
+                'last_used_at' => $token?->last_used_at?->toISOString(),
+            ],
+        ]);
+    }
+
+    /**
+     * Описание прежнего API с ключом в адресе — только адреса ключей и методы.
+     */
+    public function legacy()
+    {
+        return Inertia::render('User/Cabinet/ApiTokens/Legacy', [
+            'tokens' => $this->tokens()->map(fn (ApiToken $token) => [
+                'id' => $token->id,
+                'name' => $token->name,
+                'base_url' => $token->base_url,
+            ]),
+        ]);
+    }
+
+    /** @return \Illuminate\Support\Collection<int, ApiToken> */
+    private function tokens()
+    {
+        // Токены чата-помощника (kind=assistant) клиенту не показываются: их
+        // выпускает и отзывает воркер, править их руками нечего.
+        return ApiToken::where('user_id', Auth::id())->personal()->latest()->get();
+    }
+
+    /** @return array<string, string> */
+    private function docs(): array
+    {
+        return [
+            'ui' => url('/docs/client-api'),
+            'openapi' => url('/docs/client-api.json'),
+            'mcp' => url('/mcp/client'),
+        ];
     }
 
     /**
@@ -55,6 +116,7 @@ class ApiTokenController extends Controller
             'name' => $token->name,
             'token' => $token->token,
             'base_url' => $token->base_url,
+            'v1_base_url' => $token->v1_base_url,
             'is_active' => $token->is_active,
             'last_used_at' => null,
             'created_at' => $token->created_at?->toISOString(),

@@ -8,9 +8,9 @@ use App\Http\Controllers\Traits\BuildsCatalogFacets;
 use App\Http\Requests\User\SearchFilterRequest;
 use App\Services\Product\CatalogFacetService;
 use App\Services\Product\CatalogProductPresenter;
-use App\Services\Product\CatalogQueryBuilder;
 use App\Services\Product\ProductQueryService;
 use App\Services\Search\ExactProductMatcher;
+use App\Services\Search\ProductSearchQuery;
 use App\Services\Search\ProductSearchResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -29,10 +29,10 @@ class SearchApiController extends Controller
 
     public function __construct(
         private readonly CatalogFacetService $facetService,
-        private readonly CatalogQueryBuilder $queryBuilder,
         private readonly CatalogProductPresenter $presenter,
         private readonly ProductSearchResolver $resolver,
         private readonly ExactProductMatcher $exactMatcher,
+        private readonly ProductSearchQuery $search,
     ) {}
 
     /**
@@ -60,7 +60,7 @@ class SearchApiController extends Controller
         // Сортировка: по умолчанию — порядок релевантности Meilisearch
         $sort = $validated['sort'] ?? SearchFilterRequest::SORT_RELEVANCE;
         if ($sort === SearchFilterRequest::SORT_RELEVANCE) {
-            $this->applyRelevanceOrder($query, $ids);
+            $this->search->applyRelevanceOrder($query, $ids);
         } else {
             (CatalogSort::from($sort))->apply($query);
         }
@@ -143,67 +143,15 @@ class SearchApiController extends Controller
     // ──────────────────────────────────────────────────────────────
 
     /**
-     * Базовый запрос каталога, ограниченный найденными товарами.
-     *
-     * Параметр `q` из фильтров убираем: релевантность уже учтена набором id,
-     * а LIKE-поиск каталога отбросил бы находки Meilisearch по опечаткам и синонимам.
-     *
-     * Товары без остатков по умолчанию НЕ прячем: в поиске ищут конкретную позицию
-     * и должны её найти, даже когда её нет в наличии. Отфильтровать можно вручную.
+     * Базовый запрос каталога, ограниченный найденными товарами — общим сервисом
+     * поиска (им же пользуется клиентский API v1).
      *
      * @param  array<string, mixed>  $validated
      * @param  array<int, int>  $ids
      */
     private function searchQuery(array $validated, array $ids): Builder
     {
-        unset($validated['q']);
-
-        // whereIntegerInRaw, а не whereIn: до 1000 id, биндинги упёрлись бы
-        // в лимит параметров драйвера.
-        return $this->queryBuilder->build($validated, hideUnavailableByDefault: false)
-            ->whereIntegerInRaw('products.id', $ids);
-    }
-
-    /**
-     * Сортировка по релевантности: сначала товары в наличии, затем доступные
-     * под предзаказ, затем те, которых нет; внутри групп — порядок, в котором
-     * ответил Meilisearch.
-     *
-     * @param  array<int, int>  $ids
-     */
-    private function applyRelevanceOrder(Builder $query, array $ids): void
-    {
-        $query->reorder();
-
-        // primary_stock / preorder_stock — алиасы подзапросов остатков (withRegionStockSums)
-        $query->orderByRaw(
-            '(CASE WHEN primary_stock > 0 THEN 0 WHEN preorder_stock > 0 THEN 1 ELSE 2 END)'
-        );
-        $query->orderByRaw($this->relevanceExpression($query, $ids));
-    }
-
-    /**
-     * SQL-выражение позиции товара в выдаче Meilisearch.
-     *
-     * id подставляются в текст запроса как целые (не биндинги) — их до 1000.
-     *
-     * @param  array<int, int>  $ids
-     */
-    private function relevanceExpression(Builder $query, array $ids): string
-    {
-        $ids = array_map('intval', array_values($ids));
-
-        if (in_array($query->getConnection()->getDriverName(), ['mysql', 'mariadb'], true)) {
-            return 'FIELD(products.id, '.implode(',', $ids).')';
-        }
-
-        // SQLite и прочие драйверы без FIELD()
-        $cases = '';
-        foreach ($ids as $position => $id) {
-            $cases .= " WHEN {$id} THEN {$position}";
-        }
-
-        return '(CASE products.id'.$cases.' ELSE '.count($ids).' END)';
+        return $this->search->builder($validated, $ids);
     }
 
     /**

@@ -73,7 +73,8 @@ class OrderChangeLog extends Model
                 return;
             }
 
-            self::composeLetter($log, $order, $order->erp_number ?: $order->number);
+            // Клиенту — номер 1С или «от даты (номер присваивается)», временный ORD-… не показываем
+            self::composeLetter($log, $order, $order->clientLabel());
         });
     }
 
@@ -135,6 +136,7 @@ class OrderChangeLog extends Model
 
         $data = [
             'order_number' => $number,
+            'order_key' => $order->number,
             'order_type' => $order->type?->value,
             'source' => $log->source,
             'total' => (float) ($order->total ?? 0),

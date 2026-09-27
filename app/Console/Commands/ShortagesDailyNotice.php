@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Cache;
 /**
  * Вечернее письмо менеджеру: сегодняшние недоборы, которые он ещё не разнёс.
  *
- * Запускается в 17:00 — к этому часу склад закрыл дневные расходные ордера,
- * а рабочий день ещё не кончился: строку можно разнести и, если нужно,
+ * Запускается в 17:00 по будням: рабочий день менеджера ещё не кончился — строку можно разнести и, если нужно,
  * позвонить клиенту сегодня же.
  *
  * Молчит осознанно: нет отмен — нет письма; менеджер разнёс всё до 17:00 —
@@ -40,7 +39,11 @@ class ShortagesDailyNotice extends Command
             ? Carbon::parse((string) $this->option('date'))
             : Carbon::today();
 
-        $groups = $digest->forDay($day);
+        // Окно — от прошлой рассылки (17:00 предыдущего рабочего дня офиса): вечерние и субботние
+        // отмены склада попадают в ближайшую сводку. Пересборка прошлого (--date) — строго за день.
+        $since = $this->option('date') ? null : $this->previousNoticeMoment($day);
+
+        $groups = $digest->forDay($day, $since);
 
         if ($groups === []) {
             $this->info(sprintf('Неразнесённых недоборов за %s нет — писем не будет.', $day->format('d.m.Y')));
@@ -101,6 +104,19 @@ class ShortagesDailyNotice extends Command
             : sprintf('Отправлено писем: %d.', $sent));
 
         return self::SUCCESS;
+    }
+
+    /** 17:00 предыдущего рабочего дня офиса — момент прошлой рассылки. */
+    private function previousNoticeMoment(Carbon $day): Carbon
+    {
+        $calendar = app(\App\Services\Payroll\Support\WorkingCalendar::class);
+        $cursor = $day->copy()->subDay();
+
+        for ($i = 0; $i < 14 && ! $calendar->isWorkingDay($cursor); $i++) {
+            $cursor->subDay();
+        }
+
+        return $cursor->setTime(17, 0);
     }
 
     /**

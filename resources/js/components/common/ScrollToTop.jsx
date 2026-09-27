@@ -28,12 +28,18 @@ export default function ScrollToTop() {
     // Ранний выход — строго после всех хуков: на /cart компонент уходил
     // из рендера раньше useCallback, и React ловил «rendered fewer hooks
     // than expected» при переходе в корзину и обратно.
+    const { assistant } = usePage().props;
+
     if (isCartPage) return null;
 
     return (
         <Box
             position="fixed"
-            bottom={{ base: '24', lg: '8' }}
+            // Когда у клиента есть помощник (assist-00), его иконка стоит в этом же углу —
+            // кнопка «Наверх» поднимается над ней, иначе два круга ложатся друг на друга.
+            bottom={assistant
+                ? { base: 'calc(140px + env(safe-area-inset-bottom))', lg: '88px' }
+                : { base: '24', lg: '8' }}
             right={{ base: '4', lg: '8' }}
             zIndex="50"
             opacity={isVisible ? 1 : 0}

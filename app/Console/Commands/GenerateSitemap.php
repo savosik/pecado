@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\News;
 use App\Models\Product;
 use App\Models\Promotion;
+use App\Services\Catalog\StockVisibility;
 use Illuminate\Console\Command;
 use Spatie\Sitemap\Sitemap;
 use Spatie\Sitemap\Tags\Url;
@@ -54,9 +55,13 @@ class GenerateSitemap extends Command
 
     private function addCategories(Sitemap $sitemap): void
     {
+        // Только категории с товарами в наличии (StockVisibility) — пустые в индекс не отдаём.
+        $visibleIds = app(StockVisibility::class)->categoryIds();
+
         Category::query()
             ->where('is_active', true)
             ->whereNotNull('slug')
+            ->when($visibleIds !== null, fn ($q) => $q->whereIn('id', $visibleIds))
             ->select(['slug', 'updated_at'])
             ->each(function (Category $category) use ($sitemap) {
                 $sitemap->add(
@@ -70,8 +75,12 @@ class GenerateSitemap extends Command
 
     private function addBrands(Sitemap $sitemap): void
     {
+        // Только бренды с товарами в наличии (StockVisibility) — пустые в индекс не отдаём.
+        $visibleIds = app(StockVisibility::class)->brandIds();
+
         Brand::query()
             ->whereNotNull('slug')
+            ->when($visibleIds !== null, fn ($q) => $q->whereIn('id', $visibleIds))
             ->select(['slug', 'updated_at'])
             ->each(function (Brand $brand) use ($sitemap) {
                 $sitemap->add(

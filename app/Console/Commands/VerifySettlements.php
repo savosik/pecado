@@ -43,6 +43,14 @@ use Illuminate\Support\Facades\DB;
  * ранний признак, — но выход остаётся нулевым. `--strict-balances` возвращает
  * прежнее поведение, когда канал балансов починят.
  *
+ * ## Ось дат (16.12.0)
+ *
+ * Инвариант точки режется по **периоду движения регистра** (`entry_date`) — тем же
+ * полем, которым 1С набирает движения в точку. Строки без него остаются на прежней
+ * оси `date`. Обе оси считаются рядом: пока историческая часть ленты поля не получила,
+ * честный отчёт о включении — «сколько пар сходилось до и сколько сходится после»,
+ * а не одно число. Разбор пар печатает `--checkpoint-detail=N`.
+ *
  * Команда только читает. Запускать на проде безопасно.
  */
 class VerifySettlements extends Command
@@ -53,6 +61,7 @@ class VerifySettlements extends Command
         {--format=table : table или csv}
         {--only-mismatch : Показывать только расхождения}
         {--checkpoint=2026-08-01 : Дата контрольной точки-эталона (01.08.2026 — итог по 31.07, 150 пар)}
+        {--checkpoint-detail=0 : Показать разбор N пар точки по обеим осям дат (date и entry_date)}
         {--strict-balances : Считать провалом и расхождение с balance.updated}';
 
     protected $description = 'Сверка регистра взаиморасчётов с балансами из 1С и со старой моделью';
@@ -89,6 +98,12 @@ class VerifySettlements extends Command
 
         $this->renderSummary($rows, $mismatched, $orphans, $threshold);
         $failedInvariants = $this->renderInvariants();
+
+        $detail = (int) $this->option('checkpoint-detail');
+
+        if ($detail > 0) {
+            $this->renderCheckpointDetail(Carbon::parse((string) $this->option('checkpoint')), $detail);
+        }
 
         // Ненулевой код — чтобы гейт можно было поставить в CI, а не читать глазами.
         // Балансы в приговор не входят: см. докблок класса.
@@ -286,6 +301,19 @@ class VerifySettlements extends Command
             'Лента до даты точки сходится с контрольной точкой' => $this->checkpointMismatchCount($checkpointDate),
         ];
 
+        $coverage = $this->entryDateCoverage();
+
+        $this->newLine();
+        $this->info('Ось дат');
+        $this->table(['Показатель', 'Значение'], [
+            ['Движений с периодом регистра (entry_date)', $coverage['with']],
+            ['Движений на фолбэке (date → document_date)', $coverage['without']],
+        ]);
+
+        if ($coverage['with'] === 0) {
+            $this->line('Поле `entry_date` ещё не приезжает: лента целиком режется по прежней оси.');
+        }
+
         $this->newLine();
         $this->info('Инварианты');
         $this->table(
@@ -358,28 +386,109 @@ class VerifySettlements extends Command
      */
     private function checkpointMismatchCount(Carbon $asOf): int
     {
+        return count(array_filter(
+            $this->checkpointRows($asOf),
+            static fn (array $row): bool => abs($row['delta_entry']) > self::EPSILON,
+        ));
+    }
+
+    /**
+     * Обе оси по каждой сверенной паре: старая (`date`) и новая (`entry_date`).
+     *
+     * Считаются рядом намеренно. Пока 1С не досылает историю, часть ленты остаётся
+     * на прежней оси, и единственный честный отчёт о включении поля — «сколько пар
+     * сходилось до и сколько сходится после», а не одно число.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function checkpointRows(Carbon $asOf): array
+    {
         $checkpoints = SettlementCheckpoint::query()->verified()->asOf($asOf)->get();
 
-        $mismatched = 0;
+        $rows = [];
 
         foreach ($checkpoints as $checkpoint) {
             if ($checkpoint->company_id === null) {
                 continue;
             }
 
-            $ledger = (float) SettlementEntry::query()
+            $base = fn () => SettlementEntry::query()
                 ->facts()
                 ->where('type', '!=', SettlementEntry::TYPE_OPENING_BALANCE)
-                ->forReconciliation($checkpoint->company_id, $checkpoint->organization_id, $checkpoint->currency_code)
-                // Контрольная точка — состояние НА начало дня, поэтому строго раньше.
-                ->whereDate('date', '<', $asOf->toDateString())
-                ->sum('amount');
+                ->forReconciliation($checkpoint->company_id, $checkpoint->organization_id, $checkpoint->currency_code);
 
-            if (abs($ledger - (float) $checkpoint->amount) > self::EPSILON) {
-                $mismatched++;
-            }
+            // Прежняя ось: дата хозяйственной операции, строго раньше даты точки.
+            $byDate = (float) $base()->whereDate('date', '<', $asOf->toDateString())->sum('amount');
+
+            // Новая ось (16.12.0): период движения регистра, фолбэк на прежнюю
+            // для строк, приехавших до включения поля.
+            $byEntry = (float) $base()->beforeCheckpoint($asOf)->sum('amount');
+
+            $amount = (float) $checkpoint->amount;
+
+            $rows[] = [
+                'company_id' => $checkpoint->company_id,
+                'organization_id' => $checkpoint->organization_id,
+                'currency' => $checkpoint->currency_code,
+                'as_of_date' => $asOf->toDateString(),
+                'checkpoint' => round($amount, 2),
+                'ledger_date' => round($byDate, 2),
+                'ledger_entry' => round($byEntry, 2),
+                'delta_date' => round($byDate - $amount, 2),
+                'delta_entry' => round($byEntry - $amount, 2),
+            ];
         }
 
-        return $mismatched;
+        return $rows;
+    }
+
+    /**
+     * Покрытие новой оси: сколько фактических движений несут период движения
+     * регистра, а сколько живёт на фолбэке. Ровно эти числа 1С ждёт в отчёте
+     * о включении поля.
+     *
+     * @return array{with: int, without: int}
+     */
+    private function entryDateCoverage(): array
+    {
+        $with = SettlementEntry::query()->facts()->whereNotNull('entry_date')->count();
+        $without = SettlementEntry::query()->facts()->whereNull('entry_date')->count();
+
+        return ['with' => $with, 'without' => $without];
+    }
+
+    /**
+     * Разбор пар точки по обеим осям — доказательство для отчёта в шину:
+     * видно, какие пары сходились до включения поля и какие сходятся после.
+     */
+    private function renderCheckpointDetail(Carbon $asOf, int $limit): void
+    {
+        $rows = $this->checkpointRows($asOf);
+
+        if ($rows === []) {
+            $this->warn(sprintf('Сверенных контрольных точек на %s нет — разбор по осям пуст.', $asOf->toDateString()));
+
+            return;
+        }
+
+        // Сначала пары, где оси дали разный ответ: именно они и есть предмет спора.
+        usort($rows, static fn (array $a, array $b): int => abs($b['ledger_entry'] - $b['ledger_date'])
+            <=> abs($a['ledger_entry'] - $a['ledger_date']));
+
+        $this->newLine();
+        $this->info(sprintf('Разбор точки %s по осям дат (первые %d пар)', $asOf->toDateString(), $limit));
+        $this->table(
+            ['Контрагент', 'Орг.', 'Вал.', 'Точка', 'Лента по date', 'Лента по entry_date', 'Δ до', 'Δ после'],
+            array_map(static fn (array $row): array => [
+                $row['company_id'],
+                $row['organization_id'] ?? '—',
+                $row['currency'],
+                number_format($row['checkpoint'], 2, ',', ' '),
+                number_format($row['ledger_date'], 2, ',', ' '),
+                number_format($row['ledger_entry'], 2, ',', ' '),
+                number_format($row['delta_date'], 2, ',', ' '),
+                number_format($row['delta_entry'], 2, ',', ' '),
+            ], array_slice($rows, 0, $limit)),
+        );
     }
 }

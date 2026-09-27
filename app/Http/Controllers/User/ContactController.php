@@ -3,16 +3,14 @@
 namespace App\Http\Controllers\User;
 
 use App\Enums\ContactRole;
-use App\Enums\ContactSource;
 use App\Enums\Crm\PreferredChannel;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Contact;
-use App\Models\ContactLink;
+use App\Services\Contacts\PartnerContactService;
 use App\Services\Contacts\VCardExporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -32,7 +30,9 @@ class ContactController extends Controller
      * Потолок на партнёра. Не от жадности: справочник на тысячу человек
      * перестаёт быть справочником, а превращается в свалку.
      */
-    private const MAX_CONTACTS = 50;
+    private const MAX_CONTACTS = PartnerContactService::MAX_CONTACTS;
+
+    public function __construct(private readonly PartnerContactService $contacts) {}
 
     public function index(Request $request): Response
     {
@@ -51,7 +51,7 @@ class ContactController extends Controller
             ->get();
 
         return response()->json([
-            'data' => $contacts->map(fn (Contact $contact): array => $this->payload($contact))->all(),
+            'data' => $contacts->map(fn (Contact $contact): array => $this->contacts->payload($contact))->all(),
             'companies' => Company::query()
                 ->where('user_id', $request->user()->id)
                 ->orderBy('name')
@@ -74,37 +74,18 @@ class ContactController extends Controller
             ], 422);
         }
 
-        $data = $this->validated($request);
+        $contact = $this->contacts->create($partner, $request->all());
 
-        $contact = new Contact($data['attributes']);
-        $contact->client_user_id = $partner->id;
-        $contact->source = ContactSource::SELF;
-        $contact->partner_touched_at = now();
-        $contact->created_by_user_id = $partner->id;
-        $contact->updated_by_user_id = $partner->id;
-        $contact->save();
-
-        $this->syncCompanyLinks($contact, $partner->id, $data['links']);
-
-        return response()->json($this->payload($contact->fresh('links.subject')), 201);
+        return response()->json($this->contacts->payload($contact), 201);
     }
 
     public function update(Request $request, Contact $contact): JsonResponse
     {
         $this->assertOwn($request, $contact);
 
-        $partner = $request->user();
-        $data = $this->validated($request);
+        $contact = $this->contacts->update($request->user(), $contact, $request->all());
 
-        $contact->fill($data['attributes']);
-        // Отметка нужна менеджеру: он видит, что данные свежие и не от него.
-        $contact->partner_touched_at = now();
-        $contact->updated_by_user_id = $partner->id;
-        $contact->save();
-
-        $this->syncCompanyLinks($contact, $partner->id, $data['links']);
-
-        return response()->json($this->payload($contact->fresh('links.subject')));
+        return response()->json($this->contacts->payload($contact));
     }
 
     /**
@@ -135,13 +116,9 @@ class ContactController extends Controller
     {
         $this->assertOwn($request, $contact);
 
-        $contact->forceFill([
-            'is_active' => false,
-            'partner_touched_at' => now(),
-            'updated_by_user_id' => $request->user()->id,
-        ])->save();
+        $contact = $this->contacts->deactivate($request->user(), $contact);
 
-        return response()->json($this->payload($contact->fresh('links.subject')));
+        return response()->json($this->contacts->payload($contact));
     }
 
     public function avatar(Request $request, Contact $contact): JsonResponse
@@ -178,163 +155,11 @@ class ContactController extends Controller
      */
     private function query(Request $request)
     {
-        return Contact::query()
-            ->where('client_user_id', $request->user()->id)
-            ->whereNull('merged_into_id');
+        return $this->contacts->query($request->user());
     }
 
     private function assertOwn(Request $request, Contact $contact): void
     {
         abort_if((int) $contact->client_user_id !== (int) $request->user()->id, 404);
-    }
-
-    /**
-     * @return array{attributes: array<string, mixed>, links: list<array{company_id: int, role: ContactRole}>}
-     */
-    private function validated(Request $request): array
-    {
-        $validated = Validator::make($request->all(), [
-            'full_name' => ['required', 'string', 'max:191'],
-            'greeting_name' => ['nullable', 'string', 'max:100'],
-            'position' => ['nullable', 'string', 'max:191'],
-            'email' => ['nullable', 'email', 'max:191'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'phone_extra' => ['nullable', 'string', 'max:50'],
-            'telegram' => ['nullable', 'string', 'max:100'],
-            'whatsapp' => ['nullable', 'string', 'max:50'],
-            'instagram' => ['nullable', 'string', 'max:100'],
-            'birthday' => ['nullable', 'date'],
-            'birthday_has_year' => ['boolean'],
-            'preferred_channel' => ['nullable', \Illuminate\Validation\Rule::enum(PreferredChannel::class)],
-            'is_active' => ['boolean'],
-            'company_id' => ['nullable', 'integer'],
-            'role' => ['nullable', \Illuminate\Validation\Rule::enum(ContactRole::class)],
-            // Один человек — бухгалтер в нескольких юрлицах партнёра: привязок
-            // столько, сколько компаний. Старая пара company_id/role принимается
-            // как одна привязка.
-            'links' => ['nullable', 'array', 'max:50'],
-            'links.*.company_id' => ['required', 'integer'],
-            'links.*.role' => ['required', \Illuminate\Validation\Rule::enum(ContactRole::class)],
-        ], [
-            'full_name.required' => 'Укажите ФИО.',
-            'email.email' => 'Это не похоже на адрес электронной почты.',
-            'birthday.date' => 'Дата рождения указана неверно.',
-        ])->after(function ($validator) use ($request): void {
-            // Человек без единого способа связи бесполезен: ни позвонить,
-            // ни написать, ни выгрузить в телефон.
-            if (blank($request->input('email')) && blank($request->input('phone'))) {
-                $validator->errors()->add('phone', 'Укажите телефон или почту — иначе с человеком не связаться.');
-            }
-        })->validate();
-
-        $requested = collect($validated['links'] ?? []);
-
-        if ($requested->isEmpty() && filled($validated['company_id'] ?? null)) {
-            $requested = collect([[
-                'company_id' => (int) $validated['company_id'],
-                'role' => (string) ($validated['role'] ?? ContactRole::MANAGER->value),
-            ]]);
-        }
-
-        // Юрлицо должно быть своим: чужое отбрасывается молча — пустота,
-        // а не чужая привязка.
-        $own = Company::query()
-            ->where('user_id', $request->user()->id)
-            ->whereIn('id', $requested->pluck('company_id')->map(fn ($id) => (int) $id)->all())
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
-
-        $links = $requested
-            ->filter(fn (array $link): bool => in_array((int) $link['company_id'], $own, true))
-            ->map(fn (array $link): array => [
-                'company_id' => (int) $link['company_id'],
-                'role' => ContactRole::tryFrom((string) ($link['role'] ?? '')) ?? ContactRole::MANAGER,
-            ])
-            ->unique(fn (array $link): string => $link['company_id'].':'.$link['role']->value)
-            ->values()
-            ->all();
-
-        return [
-            'attributes' => collect($validated)->only([
-                'full_name', 'greeting_name', 'position', 'email', 'phone', 'phone_extra',
-                'telegram', 'whatsapp', 'instagram', 'birthday', 'birthday_has_year',
-                'preferred_channel', 'is_active',
-            ])->all(),
-            'links' => $links,
-        ];
-    }
-
-    /**
-     * Привязки к юрлицам партнёра: по одной на компанию, со своей ролью.
-     *
-     * Список заменяется целиком тем, что прислала форма: снятая галочка —
-     * снятая привязка.
-     *
-     * @param  list<array{company_id: int, role: ContactRole}>  $links
-     */
-    private function syncCompanyLinks(Contact $contact, int $partnerId, array $links): void
-    {
-        $contact->links()->where('subject_type', Company::class)->delete();
-
-        foreach ($links as $link) {
-            ContactLink::query()->updateOrCreate([
-                'contact_id' => $contact->getKey(),
-                'subject_type' => Company::class,
-                'subject_id' => $link['company_id'],
-                'role' => $link['role']->value,
-            ], [
-                'client_user_id' => $partnerId,
-                'source' => ContactSource::SELF,
-                'created_by_user_id' => $partnerId,
-            ]);
-        }
-    }
-
-    /**
-     * Карточка для кабинета.
-     *
-     * Заметка менеджера сюда не попадает никогда: там пишут «требует особого
-     * подхода» и подобное.
-     *
-     * @return array<string, mixed>
-     */
-    private function payload(Contact $contact): array
-    {
-        $companyLinks = $contact->links
-            ->where('subject_type', Company::class)
-            ->sortBy(fn (ContactLink $link) => $link->subject?->name ?? '')
-            ->values();
-        $companyLink = $companyLinks->first();
-
-        return [
-            'id' => (int) $contact->getKey(),
-            'full_name' => $contact->full_name,
-            'greeting_name' => $contact->greeting_name,
-            'position' => $contact->position,
-            'email' => $contact->email,
-            'phone' => $contact->phone,
-            'phone_extra' => $contact->phone_extra,
-            'telegram' => $contact->telegram,
-            'whatsapp' => $contact->whatsapp,
-            'instagram' => $contact->instagram,
-            'birthday' => $contact->birthday?->toDateString(),
-            'birthday_has_year' => (bool) $contact->birthday_has_year,
-            'preferred_channel' => $contact->preferred_channel?->value,
-            'preferred_channel_label' => $contact->preferred_channel?->label(),
-            'is_active' => (bool) $contact->is_active,
-            'avatar_url' => $contact->avatarUrl(),
-            'is_mine' => $contact->source->belongsToPartner(),
-            'source_label' => $contact->source->belongsToPartner() ? 'Ваш контакт' : 'Завёл менеджер',
-            'company_id' => $companyLink === null ? null : (int) $companyLink->subject_id,
-            'role' => $companyLink?->role->value,
-            'role_label' => $companyLink?->role->label(),
-            'links' => $companyLinks->map(fn (ContactLink $link): array => [
-                'company_id' => (int) $link->subject_id,
-                'company_name' => (string) ($link->subject?->name ?: $link->subject?->legal_name ?: ''),
-                'role' => $link->role->value,
-                'role_label' => $link->role->label(),
-            ])->all(),
-        ];
     }
 }

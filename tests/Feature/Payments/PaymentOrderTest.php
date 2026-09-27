@@ -216,6 +216,35 @@ class PaymentOrderTest extends TestCase
         $this->assertSame('accountant', $contact->links()->sole()->role->value);
     }
 
+    /**
+     * Партнёр без менеджера (лид, тестовая учётка): письмо уходит от РОПа, а не
+     * отказом «некому отправить» — иначе помощник в чате не может выслать платёжку.
+     */
+    #[Test]
+    public function without_manager_the_letter_is_sent_by_sales_head(): void
+    {
+        Queue::fake();
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+        $head = User::factory()->create(['email' => 'rop@pecado.ru', 'name' => 'РОП']);
+        $head->assignRole('sales-head');
+        $this->client->forceFill(['personal_manager_id' => null])->save();
+
+        $this->actingAs($this->client)
+            ->post('/cabinet/payment-orders/send', [
+                'company_id' => $this->company->id,
+                'organization_id' => $this->organization->id,
+                'scenario' => 'overdue',
+                'email' => 'buh@romashka.ru',
+                'save_contact' => false,
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $letter = CrmEmail::query()->sole();
+        $this->assertSame('rop@pecado.ru', $letter->reply_to);
+        $this->assertSame($head->id, $letter->user_id);
+    }
+
     #[Test]
     public function cabinet_is_closed_when_client_sees_no_money(): void
     {
@@ -244,6 +273,27 @@ class PaymentOrderTest extends TestCase
             ->assertJsonPath('pairs.0.documents.0.overdue', true)
             ->assertJsonPath('scenarios.2.value', 'document')
             ->assertJsonCount(2, 'pairs.0.documents');
+    }
+
+    #[Test]
+    public function options_do_not_fail_when_there_are_facts_but_no_outstanding_lines(): void
+    {
+        // Клиент всё оплатил: строк графика к оплате нет, а проводки есть.
+        SettlementEntry::query()->where('user_id', $this->client->id)->delete();
+        SettlementEntry::factory()->create([
+            'nature' => SettlementEntry::NATURE_FACT,
+            'user_id' => $this->client->id,
+            'company_id' => $this->company->id,
+            'organization_id' => $this->organization->id,
+            'amount' => -1500,
+            'amount_rub' => -1500,
+        ]);
+
+        $options = $this->service()->options($this->client);
+
+        $this->assertCount(1, $options['pairs']);
+        $this->assertSame(1500.0, $options['pairs'][0]['debt']);
+        $this->assertSame([], $options['pairs'][0]['documents']);
     }
 
     private function plan(float $amount, string $due, string $number, string $date): void

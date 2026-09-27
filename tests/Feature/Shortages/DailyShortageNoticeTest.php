@@ -236,6 +236,20 @@ class DailyShortageNoticeTest extends TestCase
     }
 
     #[Test]
+    public function evening_and_saturday_cancellations_reach_the_next_digest(): void
+    {
+        // pick-13: склад собирает до 21:00 и по субботам. Раньше сводка брала только текущие сутки,
+        // и отмена вчерашнего вечера не попадала ни в одно письмо.
+        $yesterdayEvening = now()->subDay()->setTime(19, 40);
+        $this->cancelledLine(cancelledAt: $yesterdayEvening->toDateTimeString());
+
+        $digest = app(\App\Services\Shortage\DailyShortageDigest::class);
+
+        $this->assertSame([], $digest->forDay(now()), 'строго за сутки вечерняя отмена теряется');
+        $this->assertCount(1, $digest->forDay(now(), now()->subDay()->setTime(17, 0)), 'окно от прошлой рассылки её подбирает');
+    }
+
+    #[Test]
     public function the_letter_renders_with_the_lines_and_a_link(): void
     {
         $line = $this->cancelledLine();

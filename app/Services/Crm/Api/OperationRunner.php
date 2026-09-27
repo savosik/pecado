@@ -4,6 +4,8 @@ namespace App\Services\Crm\Api;
 
 use App\Models\User;
 use App\Support\Crm\CrmSource;
+use App\Support\OperationApi\OperationDenied;
+use App\Support\OperationApi\OperationInput;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;

@@ -5,6 +5,7 @@ namespace App\Services\Order;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Services\Erp\OrderReservePublisher;
+use App\Support\Order\StatusCommentContext;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -41,16 +42,17 @@ class ClientOrderActions
         $publisher->publishDeleted($order, OrderReservePublisher::REASON_CLIENT_CANCELLED);
 
         // Комментарий уходит в OrderStatusHistory (booted::updating) — менеджер
-        // видит, что отмена клиентская (и через какой канал), а не 1С-овская
-        request()->merge(['status_comment' => $historyComment]);
-
-        $order->status = OrderStatus::CLOSED;
-        if ($order->reserve) {
-            $order->reserve = false;
-            // Исход для метрик злоупотреблений (res-11)
-            $order->reserve_outcome = 'cancelled';
-        }
-        $order->save();
+        // видит, что отмена клиентская (и через какой канал), а не 1С-овская.
+        // Контекст, а не request(): сервис вызывается и из MCP, где запроса нет.
+        StatusCommentContext::with($historyComment, function () use ($order): void {
+            $order->status = OrderStatus::CLOSED;
+            if ($order->reserve) {
+                $order->reserve = false;
+                // Исход для метрик злоупотреблений (res-11)
+                $order->reserve_outcome = 'cancelled';
+            }
+            $order->save();
+        });
         $order->deleteQuietly();
     }
 
@@ -71,6 +73,9 @@ class ClientOrderActions
         $order->reserve = false;
         // Исход для метрик злоупотреблений (res-11)
         $order->reserve_outcome = 'confirmed';
+        // S3 (прогон 21.09.2026): заказ ушёл по одному — старый отказ группы на карточке больше не к месту
+        $order->ship_together_status = null;
+        $order->ship_together_conflict = null;
         $order->save();
     }
 
@@ -178,6 +183,16 @@ class ClientOrderActions
             throw new ReserveActionException(
                 'not_reserved',
                 "Заказ уже не в резерве — {$verb} его нельзя. Обновите данные, чтобы увидеть актуальное состояние.",
+            );
+        }
+
+        // v16.11.0: заказ ушёл в 1С в составе группы и ждёт её итога. Любое действие
+        // сейчас разошлось бы с тем, что 1С вот-вот применит ко всей группе.
+        if ($order->shipTogetherPending()) {
+            throw new ReserveActionException(
+                'ship_together_pending',
+                "Заказ отправлен в отгрузку вместе с другими и ждёт подтверждения склада — {$verb} его сейчас нельзя. Дождитесь ответа склада.",
+                409,
             );
         }
     }

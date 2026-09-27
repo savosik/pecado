@@ -10,6 +10,8 @@ import {
     LuPackage, LuTruck, LuClock, LuMapPin, LuStore,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
+import OrderNumber from '../components/OrderNumber';
+import { FulfilmentBadge } from '@/components/cabinet/FulfilmentPanel';
 import { TaxSurveyInvite } from '../../TaxSurvey/TaxSurvey';
 import { Field } from '@/components/ui/field';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -626,26 +628,24 @@ export default function OrdersIndex({ scope = 'orders', filters, statuses, statu
 
                                                 {/* Строка заголовка: номер + крупный статус */}
                                                 <Flex gap="2.5" align="center" flexWrap="wrap" mb="1.5">
-                                                    <Text
-                                                        fontWeight="700"
-                                                        fontSize="lg"
-                                                        fontFamily="mono"
-                                                        whiteSpace="nowrap"
-                                                        color="gray.800"
-                                                        _dark={{ color: 'gray.100' }}
-                                                    >
-                                                        {order.number}
-                                                    </Text>
-                                                    <Badge
-                                                        colorPalette={STATUS_COLORS[order.status] || 'gray'}
-                                                        variant="subtle"
-                                                        fontSize="xs"
-                                                        fontWeight="600"
-                                                        px="2.5" py="1"
-                                                        borderRadius="full"
-                                                    >
-                                                        {order.status_label}
-                                                    </Badge>
+                                                    <OrderNumber order={order} fontSize="lg" />
+                                                    {/* pick-05: стадия исполнения важнее технического статуса 1С —
+                                                        резервный заказ приезжает как «Готов к отгрузке», собранный
+                                                        самовывоз неотличим от отгруженного. */}
+                                                    {order.fulfilment && order.fulfilment.stage !== 'none' ? (
+                                                        <FulfilmentBadge fulfilment={order.fulfilment} />
+                                                    ) : (
+                                                        <Badge
+                                                            colorPalette={STATUS_COLORS[order.status] || 'gray'}
+                                                            variant="subtle"
+                                                            fontSize="xs"
+                                                            fontWeight="600"
+                                                            px="2.5" py="1"
+                                                            borderRadius="full"
+                                                        >
+                                                            {order.status_label}
+                                                        </Badge>
+                                                    )}
                                                 </Flex>
 
                                                 <MatchBadge

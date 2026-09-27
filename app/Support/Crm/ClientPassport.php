@@ -14,7 +14,7 @@ use App\Enums\Crm\Psychotype;
 use App\Enums\Crm\SalesChannel;
 use App\Enums\Crm\StaffLevel;
 use App\Models\CrmClientProfile;
-use App\Services\Crm\Api\Param;
+use App\Support\OperationApi\Param;
 use Illuminate\Validation\Rule;
 
 /**

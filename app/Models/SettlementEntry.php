@@ -34,6 +34,7 @@ use Illuminate\Support\Carbon;
  * @property string $nature
  * @property string $type
  * @property \Illuminate\Support\Carbon|null $date В БД колонка NOT NULL, но у несохранённой модели атрибута ещё нет
+ * @property \Illuminate\Support\Carbon|null $entry_date Период движения регистра из 1С (16.12.0); NULL — строка старше поля
  * @property \Illuminate\Support\Carbon|null $valid_until
  * @property int|null $user_id
  * @property int|null $company_id
@@ -167,6 +168,7 @@ class SettlementEntry extends Model
         'nature',
         'type',
         'date',
+        'entry_date',
         'valid_until',
         'user_id',
         'company_id',
@@ -207,6 +209,7 @@ class SettlementEntry extends Model
     {
         return [
             'date' => 'date',
+            'entry_date' => 'datetime',
             'valid_until' => 'date',
             'document_date' => 'date',
             'amount' => 'decimal:2',
@@ -320,6 +323,55 @@ class SettlementEntry extends Model
     public function scopeUpTo(Builder $query, Carbon $date): void
     {
         $query->whereDate('date', '<=', $date->toDateString());
+    }
+
+    /**
+     * Лента до контрольной точки (16.12.0).
+     *
+     * Ось отбора — **период движения регистра** (`entry_date`), то самое поле,
+     * которым 1С набирает движения в `settlement.checkpoint`. Дата хозяйственной
+     * операции с ним расходится у 9,4 % движений (разрыв до 74 дней), и лента,
+     * нарезанная по ней, объявляла расхождением верную точку.
+     *
+     * Строки без `entry_date` остаются на прежней оси `date` — исторические
+     * движения поля не получат, пока 1С не сделает массовую досылку, и объявлять
+     * их битыми нельзя.
+     *
+     * Граница строгая: движение ровно в начало дня даты точки в точку не входит —
+     * 1С отбирает `Период < НачалоДня(ДатаОтсечки)`.
+     *
+     * @param  Builder<self>  $query
+     */
+    public function scopeBeforeCheckpoint(Builder $query, Carbon $asOf): void
+    {
+        $boundary = self::checkpointBoundary($asOf);
+        $fallbackDate = $asOf->toDateString();
+
+        $query->where(static function (Builder $query) use ($boundary, $fallbackDate): void {
+            $query
+                ->where(static fn (Builder $inner): Builder => $inner
+                    ->whereNotNull('entry_date')
+                    ->where('entry_date', '<', $boundary))
+                ->orWhere(static fn (Builder $inner): Builder => $inner
+                    ->whereNull('entry_date')
+                    ->whereDate('date', '<', $fallbackDate));
+        });
+    }
+
+    /**
+     * Начало дня даты точки в **учётной зоне 1С**, приведённое к зоне приложения.
+     *
+     * Полночь у нас и полночь у них — разные моменты: сервер учёта работает
+     * не в нашем часовом поясе. Если брать местную полночь, отсечка уедет
+     * на разницу поясов, и в точку попадут чужие движения.
+     */
+    public static function checkpointBoundary(Carbon $asOf): Carbon
+    {
+        $accounting = (string) config('erp.settlements.accounting_timezone', 'Europe/Moscow');
+
+        return Carbon::parse($asOf->toDateString(), $accounting)
+            ->startOfDay()
+            ->setTimezone((string) config('app.timezone'));
     }
 
     /**

@@ -1,0 +1,75 @@
+/* Общий стиль материалов pick-01. Печать: A4, headless Chrome (см. ../build.sh). */
+@font-face { font-family: Jost; font-weight: 400; src: url('../../../public/fonts/jost/jost-cyrillic-400-normal.woff2') format('woff2'); unicode-range: U+0400-04FF, U+2116; }
+@font-face { font-family: Jost; font-weight: 400; src: url('../../../public/fonts/jost/jost-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: Jost; font-weight: 500; src: url('../../../public/fonts/jost/jost-cyrillic-500-normal.woff2') format('woff2'); unicode-range: U+0400-04FF, U+2116; }
+@font-face { font-family: Jost; font-weight: 500; src: url('../../../public/fonts/jost/jost-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: Jost; font-weight: 600; src: url('../../../public/fonts/jost/jost-cyrillic-600-normal.woff2') format('woff2'); unicode-range: U+0400-04FF, U+2116; }
+@font-face { font-family: Jost; font-weight: 600; src: url('../../../public/fonts/jost/jost-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: Jost; font-weight: 700; src: url('../../../public/fonts/jost/jost-cyrillic-700-normal.woff2') format('woff2'); unicode-range: U+0400-04FF, U+2116; }
+@font-face { font-family: Jost; font-weight: 700; src: url('../../../public/fonts/jost/jost-latin-700-normal.woff2') format('woff2'); }
+
+:root {
+  --paper:#fff; --ink:#1d1d1f; --muted:#6b6560; --line:#e7e1da; --panel:#faf7f3;
+  --accent:#9e1b32; --accent-dark:#6f1223; --accent-soft:#f8ecef;
+  --champagne:#b38153; --champagne-soft:#f6efe6;
+  --good:#1f8a4c; --good-soft:#e8f5ed; --warn:#c77700; --warn-soft:#fbf1e2; --purple:#7c3aed; --purple-soft:#f1eafd;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+@page { size:A4; margin:0; }
+body { background:#e9e5e0; color:var(--ink); font-family:Jost, 'Segoe UI', Arial, sans-serif; font-size:12pt; line-height:1.42; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+.page { background:var(--paper); width:210mm; height:297mm; margin:0 auto 8mm; padding:15mm 16mm 13mm; display:flex; flex-direction:column; gap:5.5mm; page-break-after:always; overflow:hidden; position:relative; }
+@media print { body { background:#fff; } .page { margin:0; } }
+h1 { font-size:34pt; line-height:1.04; font-weight:700; letter-spacing:-.01em; }
+h2 { font-size:21pt; line-height:1.12; font-weight:700; text-wrap:balance; }
+h3 { font-size:12.5pt; font-weight:600; line-height:1.2; }
+p.lead { font-size:13pt; color:#3a3633; }
+.muted { color:var(--muted); } .small { font-size:10.5pt; } .b { font-weight:600; }
+.eyebrow { font-size:8.5pt; letter-spacing:.2em; text-transform:uppercase; color:var(--accent); font-weight:600; }
+.head { display:flex; align-items:flex-end; gap:5mm; border-bottom:1.5px solid var(--ink); padding-bottom:3mm; }
+.head .step { font-size:9pt; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); font-weight:700; white-space:nowrap; }
+.foot { margin-top:auto; display:flex; justify-content:space-between; align-items:center; font-size:8.5pt; color:var(--muted); border-top:1px solid var(--line); padding-top:2.5mm; }
+.foot img { height:6.5mm; }
+.cols-2 { display:grid; grid-template-columns:1fr 1fr; gap:6mm; } .cols-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:4.5mm; }
+.panel { background:var(--panel); border:1px solid var(--line); border-radius:3mm; padding:4mm 4.5mm; }
+.panel.accent { background:var(--accent-soft); border-color:#e7c6cd; } .panel.good { background:var(--good-soft); border-color:#c2e2cf; }
+.panel.warn { background:var(--warn-soft); border-color:#ecd5ad; } .panel.champ { background:var(--champagne-soft); border-color:#e6d5bf; }
+.panel h3 { margin-bottom:1.6mm; }
+ul.tight { list-style:none; display:flex; flex-direction:column; gap:1.7mm; }
+ul.tight li { padding-left:5mm; position:relative; }
+ul.tight li::before { content:''; position:absolute; left:0; top:.52em; width:2.2mm; height:2.2mm; border-radius:50%; background:var(--accent); }
+ol.steps { list-style:none; counter-reset:s; display:flex; flex-direction:column; gap:3mm; }
+ol.steps li { counter-increment:s; padding-left:10mm; position:relative; }
+ol.steps li::before { content:counter(s); position:absolute; left:0; top:-.2mm; width:7mm; height:7mm; border-radius:50%; background:var(--accent); color:#fff; font-weight:700; font-size:10.5pt; display:flex; align-items:center; justify-content:center; }
+ol.steps.big { gap:4.5mm; } ol.steps.big li { font-size:13.5pt; padding-left:14mm; min-height:10mm; } ol.steps.big li::before { width:9.5mm; height:9.5mm; font-size:13pt; }
+table.data { border-collapse:collapse; width:100%; font-size:11pt; }
+table.data th { text-align:left; font-size:8pt; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); border-bottom:1.5px solid var(--ink); padding:1.6mm 2mm; font-weight:600; }
+table.data td { border-bottom:1px solid var(--line); padding:2mm; vertical-align:top; }
+.num { font-variant-numeric:tabular-nums; }
+.kpi { display:flex; flex-direction:column; gap:1mm; } .kpi .v { font-size:25pt; font-weight:700; line-height:1; color:var(--accent); } .kpi .l { font-size:9.5pt; color:var(--muted); }
+
+/* телефон */
+.phone { width:58mm; border:2.2mm solid #1d1d1f; border-radius:7mm; overflow:hidden; background:#fff; flex-shrink:0; box-shadow:0 1.5mm 5mm rgba(0,0,0,.16); }
+.phone .screen > img { display:block; width:100%; height:100%; object-fit:cover; object-position:top; }
+.phone .screen { height:116mm; overflow:hidden; position:relative; }
+.shots { display:flex; gap:6mm; align-items:flex-start; }
+figure { display:flex; flex-direction:column; gap:2mm; } figcaption { font-size:9.8pt; color:var(--muted); max-width:58mm; }
+.mock-note { font-size:7.5pt; letter-spacing:.12em; text-transform:uppercase; color:var(--champagne); font-weight:600; }
+
+/* макеты экранов */
+.ui { font-size:7.6pt; line-height:1.3; padding:2.4mm; background:#faf8f5; height:100%; display:flex; flex-direction:column; gap:1.8mm; }
+.ui .bar { display:flex; justify-content:space-between; align-items:center; } .ui .bar img { height:5mm; }
+.ui .title { font-size:10pt; font-weight:700; }
+.ui .card { background:#fff; border:.25mm solid var(--line); border-radius:2mm; padding:2mm; display:flex; flex-direction:column; gap:1.1mm; }
+.ui .row { display:flex; justify-content:space-between; align-items:center; gap:1.5mm; }
+.ui .mono { font-weight:700; font-size:8.4pt; letter-spacing:.02em; }
+.badge { display:inline-block; border-radius:9mm; padding:.35mm 1.9mm; font-size:6.8pt; font-weight:600; white-space:nowrap; }
+.badge.purple { background:var(--purple-soft); color:var(--purple); } .badge.gray { background:#eeeae5; color:#5c5550; }
+.badge.warn { background:var(--warn-soft); color:#8a5300; } .badge.good { background:var(--good); color:#fff; } .badge.done { background:#e3efe7; color:#1b6b3c; }
+.btn { border-radius:1.6mm; padding:1.5mm 2mm; text-align:center; font-weight:600; font-size:7.8pt; }
+.btn.green { background:var(--good); color:#fff; } .btn.dark { background:#1d1d1f; color:#fff; } .btn.line { border:.3mm solid var(--line); background:#fff; } .btn.red { border:.3mm solid var(--accent); color:var(--accent); background:#fff; }
+.prog { display:grid; grid-template-columns:repeat(4,1fr); gap:.8mm; } .prog i { height:1.3mm; border-radius:1mm; background:#e4ded7; } .prog i.on { background:var(--good); }
+.chk { width:3.2mm; height:3.2mm; border:.3mm solid #8d857d; border-radius:.7mm; flex-shrink:0; } .chk.on { background:var(--accent); border-color:var(--accent); position:relative; }
+.chk.on::after { content:''; position:absolute; left:.85mm; top:.25mm; width:.9mm; height:1.7mm; border:solid #fff; border-width:0 .4mm .4mm 0; transform:rotate(45deg); }
+.code { font-size:17pt; font-weight:700; letter-spacing:.18em; text-align:center; font-variant-numeric:tabular-nums; }
+
+.legend { display:grid; grid-template-columns:repeat(5,1fr); gap:3mm; } .legend div { display:flex; flex-direction:column; gap:1.5mm; align-items:flex-start; font-size:10pt; } .legend .badge { font-size:8.5pt; padding:.6mm 2.4mm; }

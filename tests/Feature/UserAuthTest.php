@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Password;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class UserAuthTest extends TestCase
@@ -104,6 +105,78 @@ class UserAuthTest extends TestCase
 
         $response->assertRedirect('/admin');
         $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_login_from_popup_returns_to_the_page_where_it_happened(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+            'return_to' => '/news/kak-vybrat-tovar?utm=x#top',
+        ]);
+
+        $response->assertRedirect('/news/kak-vybrat-tovar?utm=x#top');
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_popup_return_path_beats_stale_intended_url(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->withSession(['url.intended' => 'http://localhost/profile'])
+            ->post('/login', [
+                'email' => $user->email,
+                'password' => 'password',
+                'return_to' => '/catalog/whips',
+            ]);
+
+        $response->assertRedirect('/catalog/whips');
+        $response->assertSessionMissing('url.intended');
+    }
+
+    public function test_staff_login_from_popup_also_stays_on_the_page(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole('super-admin');
+
+        $response = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+            'return_to' => '/catalog/whips',
+        ]);
+
+        $response->assertRedirect('/catalog/whips');
+    }
+
+    #[DataProvider('unsafeReturnPaths')]
+    public function test_unsafe_return_path_falls_back_to_default(string $returnTo): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+            'return_to' => $returnTo,
+        ]);
+
+        $response->assertRedirect('/');
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public static function unsafeReturnPaths(): array
+    {
+        return [
+            'чужой хост' => ['https://evil.example/phish'],
+            'protocol-relative' => ['//evil.example/phish'],
+            'обратный слеш' => ['/\\evil.example'],
+            'страница входа' => ['/login'],
+            'регистрация' => ['/register?ref=1'],
+            'api' => ['/api/content/products'],
+            'пустая строка' => [''],
+            'без ведущего слеша' => ['news/x'],
+        ];
     }
 
     public function test_login_fails_with_invalid_credentials(): void

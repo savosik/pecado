@@ -77,6 +77,7 @@ class OrderItemsSynchronizer
 
         $matchedIds = [];
         $total = 0.0;
+        $cancelledNow = [];
 
         foreach ($rows as $index => $row) {
             $match = $matches[$index];
@@ -116,6 +117,7 @@ class OrderItemsSynchronizer
             // не недобор, и в журнале ему делать нечего.
             if ($becameCancelled) {
                 $fields['cancelled_at'] = now();
+                $cancelledNow[] = ['name' => (string) $row['name'], 'quantity' => (float) $row['quantity']];
             } elseif ($match !== null && $match->cancelled && ! $row['cancelled']) {
                 $fields['cancelled_at'] = null;
                 $fields['cancel_reason_id'] = null;
@@ -139,6 +141,12 @@ class OrderItemsSynchronizer
         }
 
         $this->deleteMissing($order, $existing, $matchedIds);
+
+        // pick-00: склад собирает вечером и в субботу без менеджера — о недоборе клиенту сообщает сайт.
+        // Одно событие на сообщение 1С, а не на строку: письмо должно быть одно.
+        if ($cancelledNow !== []) {
+            event(new \App\Events\Order\OrderItemsCancelled($order, $cancelledNow));
+        }
 
         return round($total, 2);
     }

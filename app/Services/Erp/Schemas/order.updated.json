@@ -69,6 +69,67 @@
             },
             "additionalProperties": true
         },
+        "ship_together_key": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "Ключ группы совместной отгрузки (v16.11.0), эхо ship_together_key из order.confirmed. Присылается вместе с ship_together_status в терминальном итоге группы по каждому разрешимому заказу манифеста; в остальных сообщениях отсутствует или null."
+        },
+        "ship_together_status": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "enum": [
+                "confirmed",
+                "conflict",
+                null
+            ],
+            "description": "Итог группы совместной отгрузки (v16.11.0): 'confirmed' — все заказы группы подтверждены и переданы в один групповой цикл оформления (в этом же сообщении reserve=false, статус «К отгрузке»); 'conflict' — группа отклонена целиком, резерв и статус заказа не изменились (reserve=true). Пока группа собирается, 1С ничего не шлёт."
+        },
+        "ship_together_conflict": {
+            "type": [
+                "object",
+                "null"
+            ],
+            "description": "Причина отказа группы (v16.11.0). Обязателен при ship_together_status=conflict, null при confirmed.",
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "enum": [
+                        "timeout",
+                        "manifest_mismatch",
+                        "not_reserved",
+                        "incompatible",
+                        "merge_forbidden",
+                        "shortage",
+                        "processing_error"
+                    ],
+                    "description": "Код причины: 'timeout' — полный состав группы не получен за 15 минут; 'manifest_mismatch' — ключ или манифест различаются между сообщениями группы либо uuid заказа не входит в манифест; 'not_reserved' — заказ уже не в резерве (подтверждён, отменён, снят вручную); 'incompatible' — не совпали реквизиты объединения (организация, соглашение, договор, валюта, склад, получатель, дата отгрузки, складская операция, транспортное назначение); 'merge_forbidden' — объединение запрещено флагом партнёра или соглашения; 'shortage' — недобор по одному из заказов на предконтроле или в ордерном движке; 'processing_error' — непредвиденная техническая ошибка после успешного предконтроля, группа откачена."
+                },
+                "message": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Человекочитаемая причина для клиента и журнала."
+                },
+                "order_uuid": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "format": "uuid",
+                    "description": "Виновный заказ, если он один и однозначен; иначе null."
+                }
+            },
+            "required": [
+                "reason"
+            ],
+            "additionalProperties": true
+        },
         "number": {
             "type": [
                 "string",

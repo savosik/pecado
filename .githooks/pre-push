@@ -13,7 +13,11 @@
 
 set -uo pipefail
 
-cd "$(git rev-parse --show-toplevel)"
+# git запускает клиентские хуки из корня рабочего дерева — в том числе из
+# worktree. `git rev-parse --show-toplevel` внутри хука на это полагаться не
+# даёт: при выставленном GIT_DIR он отдавал корень общего дерева, и тесты
+# ветки искались в /var/www, где новых файлов нет («Test file … not found»).
+TOP=$PWD
 
 RED=$'\033[1;31m'; GRN=$'\033[1;32m'; YEL=$'\033[1;33m'; DIM=$'\033[2m'; RST=$'\033[0m'
 
@@ -21,6 +25,21 @@ docker ps --format '{{.Names}}' 2>/dev/null | grep -qx pecado-app || {
   printf '%s·%s pecado-app не запущен — тесты пропущены\n' "$YEL" "$RST"
   exit 0
 }
+
+# Из git worktree тесты гоняются по коду ветки, а не общего дерева: контейнер
+# смонтирован на основной каталог, поэтому worktree внутри проекта виден как
+# /var/www/<относительный путь>. artisan test там ловит второй автозагрузчик —
+# запускаем phpunit напрямую. Worktree вне проекта контейнеру не виден.
+MAIN=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+if [[ "$TOP" == "$MAIN" ]]; then
+  RUNNER=(docker exec pecado-app php artisan test)
+elif [[ "$TOP" == "$MAIN"/* && -d "$TOP/vendor" ]]; then
+  RUNNER=(docker exec -w "/var/www/${TOP#"$MAIN"/}" pecado-app php -d memory_limit=1G vendor/bin/phpunit)
+else
+  printf '%s▶%s Worktree %s контейнеру не виден или без vendor — тесты здесь не прогнать.\n' "$YEL" "$RST" "$TOP"
+  printf '  Положите worktree в %s.worktrees/<имя>%s и скопируйте vendor (%scp -al%s), либо push --no-verify под свою ответственность.\n' "$DIM" "$RST" "$DIM" "$RST"
+  exit 1
+fi
 
 # База сравнения: upstream ветки, иначе origin/dev, иначе последний коммит.
 BASE=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "origin/dev")
@@ -65,10 +84,10 @@ if [[ -z "$TESTS" ]]; then
 fi
 
 COUNT=$(wc -l <<<"$TESTS")
-printf '%s▶%s Прогоняю %d тестовых файл(ов) по изменениям…\n' "$GRN" "$RST" "$COUNT"
+printf '%s▶%s Прогоняю %d тестовых файл(ов) по изменениям (%s)…\n' "$GRN" "$RST" "$COUNT" "${TOP#"$MAIN"}"
 
 # shellcheck disable=SC2086
-if docker exec pecado-app php artisan test $(echo "$TESTS" | paste -sd' ' -); then
+if "${RUNNER[@]}" $(echo "$TESTS" | paste -sd' ' -); then
   printf '%s✓%s Тесты прошли\n' "$GRN" "$RST"
   exit 0
 fi

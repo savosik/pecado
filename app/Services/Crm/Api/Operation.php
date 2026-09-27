@@ -3,6 +3,7 @@
 namespace App\Services\Crm\Api;
 
 use App\Models\User;
+use App\Support\OperationApi\Param;
 
 /**
  * Одна операция CRM, доступная машинному потребителю.

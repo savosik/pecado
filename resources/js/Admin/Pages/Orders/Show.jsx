@@ -21,6 +21,7 @@ import { toaster } from "@/components/ui/toaster";
 import { OrderHistoryTimeline } from "./Components/OrderHistoryTimeline";
 import EntityCrmPanel from "@/Crm/Components/EntityCrmPanel";
 import { RelatedShipmentsSection } from "./Components/RelatedShipmentsSection";
+import { FulfilmentSection } from "./Components/FulfilmentSection";
 import { SupplierPreorderSection } from "./Components/SupplierPreorderSection";
 import { getOrderStatusColor as getStatusColor } from "@/constants/orderStatus";
 import { getOrderTypeLabel as getTypeLabel, getOrderTypeColor as getTypeColor } from "@/constants/orderType";
@@ -93,6 +94,9 @@ const OrderShow = () => {
                     сначала свяжитесь с клиентом.
                 </Alert>
             )}
+
+            {/* pick-15: стадия сборки и факт выдачи — чтобы отвечать клиенту, не звоня на склад */}
+            <FulfilmentSection fulfilment={order.fulfilment} />
 
             <SimpleGrid columns={{ base: 1, lg: 2 }} gap={6} mb={6}>
                 {/* Основная информация */}

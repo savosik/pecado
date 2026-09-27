@@ -2,7 +2,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import WmsLayout from '@/Wms/Layouts/WmsLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { Box, Card, HStack, SimpleGrid, Text, VStack } from '@chakra-ui/react';
-import { LuWarehouse, LuPackage, LuLayers, LuPackageX, LuTruck } from 'react-icons/lu';
+import { LuWarehouse, LuPackage, LuLayers, LuPackageX, LuTruck, LuPackageCheck } from 'react-icons/lu';
 
 const formatNumber = (value) => new Intl.NumberFormat('ru-RU').format(value ?? 0);
 
@@ -54,7 +54,7 @@ function WarehouseCard({ warehouse }) {
 }
 
 export default function Dashboard() {
-    const { warehouses, totals, isWarehouseHead, goodsIssues, auth } = usePage().props;
+    const { warehouses, totals, isWarehouseHead, goodsIssues, pickups, auth } = usePage().props;
 
     return (
         <>
@@ -70,6 +70,35 @@ export default function Dashboard() {
                     <StatCard label="Позиций в наличии" value={totals.positions_in_stock} icon={LuPackage} />
                     <StatCard label="Всего единиц товара" value={totals.units_total} icon={LuLayers} />
                 </SimpleGrid>
+
+                {pickups && (
+                    <Link href="/wms/pickups">
+                        <Card.Root _hover={{ borderColor: 'colorPalette.solid' }} borderColor={pickups.awaiting > 0 ? 'green.muted' : undefined}>
+                            <Card.Body>
+                                <HStack justify="space-between" flexWrap="wrap" gap={3}>
+                                    <HStack gap={2}>
+                                        <Box color="green.fg"><LuPackageCheck size={20} /></Box>
+                                        <Text fontWeight="600">Выдача заказов</Text>
+                                    </HStack>
+                                    <HStack gap={5}>
+                                        <VStack gap={0} align="flex-end">
+                                            <Text fontSize="xl" fontWeight="bold">{formatNumber(pickups.awaiting)}</Text>
+                                            <Text fontSize="xs" color="fg.muted">ждут курьера</Text>
+                                        </VStack>
+                                        <VStack gap={0} align="flex-end">
+                                            <Text fontSize="xl" fontWeight="bold" color={pickups.picking_overdue > 0 ? 'red.500' : undefined}>{formatNumber(pickups.picking_overdue)}</Text>
+                                            <Text fontSize="xs" color="fg.muted">сборок опаздывает</Text>
+                                        </VStack>
+                                        <VStack gap={0} align="flex-end">
+                                            <Text fontSize="xl" fontWeight="bold" color={pickups.stale + pickups.review > 0 ? 'orange.500' : undefined}>{formatNumber(pickups.stale + pickups.review)}</Text>
+                                            <Text fontSize="xs" color="fg.muted">зависло и на разборе</Text>
+                                        </VStack>
+                                    </HStack>
+                                </HStack>
+                            </Card.Body>
+                        </Card.Root>
+                    </Link>
+                )}
 
                 {goodsIssues && (
                     <Link href="/wms/goods-issues">

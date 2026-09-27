@@ -6,10 +6,10 @@ use App\Enums\ContactRole;
 use App\Enums\ContactSource;
 use App\Models\Contact;
 use App\Models\User;
-use App\Services\Crm\Api\OperationInput;
 use App\Services\Crm\ContactLinkService;
 use App\Services\Crm\ContactListService;
 use App\Services\Crm\Mail\PartnerAddressBook;
+use App\Support\OperationApi\OperationInput;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Gate;
 

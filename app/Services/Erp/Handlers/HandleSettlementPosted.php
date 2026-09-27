@@ -8,6 +8,7 @@ use App\Models\SettlementEntry;
 use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
 use App\Services\Erp\Support\ResolvesSettlementParties;
 use App\Services\Settlements\SettlementProjector;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -160,6 +161,9 @@ class HandleSettlementPosted
             'type' => $type,
             'date' => $this->stringOrNull($entry['date'] ?? null)
                 ?? $this->stringOrNull($payload['document_date'] ?? null),
+            // Период движения регистра (16.12.0) — ось сверки с контрольной точкой.
+            // Дату операции он не заменяет: показываем строку по-прежнему по `date`.
+            'entry_date' => $this->resolveEntryDate($entry, $index),
             'amount' => $amount,
             'currency_code' => $currency,
             'amount_rub' => $this->resolveAmountRub($entry, $amount, $currency, $uuid),
@@ -186,6 +190,50 @@ class HandleSettlementPosted
         }
 
         return $row;
+    }
+
+    /**
+     * Период движения регистра (`entries[].entry_date`, контракт 16.12.0).
+     *
+     * Приходит строкой ISO 8601 со смещением сеанса 1С; сайт хранит её приведённой
+     * к своей зоне, чтобы сравнение с отсечкой контрольной точки шло моментами
+     * времени, а не «полночь у нас против полночи у них».
+     *
+     * Значение без смещения трактуется как время учётной зоны 1С: naive-дата из 1С —
+     * это стенные часы учёта, и вешать на неё зону сайта значило бы сдвинуть момент.
+     *
+     * Периода у движения может не быть — тогда 1С ключ не присылает, и строка
+     * остаётся на прежней оси. `null` равнозначен отсутствию ключа, а вот пустая
+     * строка контрактом запрещена: это признак сломанного форматировщика на той
+     * стороне, и молча превратить её в «периода нет» значит скрыть дефект.
+     *
+     * @param  array<string, mixed>  $entry
+     */
+    private function resolveEntryDate(array $entry, int $index): ?string
+    {
+        if (! array_key_exists('entry_date', $entry) || $entry['entry_date'] === null) {
+            return null;
+        }
+
+        $raw = $entry['entry_date'];
+
+        if (! is_string($raw) || trim($raw) === '') {
+            throw new ErpUnprocessableMessageException(
+                sprintf('settlement.posted: пустой или нестроковый entry_date в строке %d', $index),
+            );
+        }
+
+        $accounting = (string) config('erp.settlements.accounting_timezone', 'Europe/Moscow');
+
+        try {
+            $parsed = Carbon::parse(trim($raw), $accounting);
+        } catch (\Throwable $e) {
+            throw new ErpUnprocessableMessageException(
+                sprintf('settlement.posted: не разобрать entry_date «%s» в строке %d', $raw, $index),
+            );
+        }
+
+        return $parsed->setTimezone((string) config('app.timezone'))->toDateTimeString();
     }
 
     /**

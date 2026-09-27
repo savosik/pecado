@@ -244,8 +244,10 @@ class MailStream
     {
         $parts = [$occasion->key, 'c'.($occasion->clientUserId ?? 0)];
 
-        if (filled($data['order_number'] ?? null)) {
-            $parts[] = 'o'.$data['order_number'];
+        // Ключ склейки — внутренний номер заказа (order_key), а не подпись для клиента:
+        // у двух заказов без номера 1С подпись «от даты» одинаковая
+        if (filled($data['order_key'] ?? $data['order_number'] ?? null)) {
+            $parts[] = 'o'.($data['order_key'] ?? $data['order_number']);
         }
 
         if (filled($data['document_number'] ?? null)) {
@@ -254,6 +256,12 @@ class MailStream
 
         if (filled($data['shipment_number'] ?? null)) {
             $parts[] = 's'.$data['shipment_number'];
+        }
+
+        // Повод, который может законно повториться по тому же заказу (pick-12: заказ собран, откатился
+        // в сборку и собран снова), различается суффиксом — моментом события.
+        if (filled($data['origin_suffix'] ?? null)) {
+            $parts[] = 'x'.$data['origin_suffix'];
         }
 
         if (str_starts_with($occasion->key, 'finance.overdue')) {

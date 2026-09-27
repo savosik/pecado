@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryAddress;
+use App\Services\Delivery\DeliveryAddressBook;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -83,10 +84,10 @@ class DeliveryAddressController extends Controller
 
         $newValue = ! $deliveryAddress->is_default;
 
-        DeliveryAddress::where('user_id', Auth::id())->update(['is_default' => false]);
-
         if ($newValue) {
-            $deliveryAddress->update(['is_default' => true]);
+            app(DeliveryAddressBook::class)->setDefault(Auth::user(), $deliveryAddress);
+        } else {
+            $deliveryAddress->update(['is_default' => false]);
         }
 
         return response()->json([

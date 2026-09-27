@@ -5,9 +5,9 @@ namespace App\Http\Controllers\User;
 use App\Enums\PrintedDocumentFormat;
 use App\Enums\PrintedDocumentType;
 use App\Http\Controllers\Controller;
-use App\Models\Organization;
 use App\Models\PrintedDocument;
 use App\Models\User;
+use App\Services\Documents\ClientDocumentQuery;
 use App\Services\SimpleCsvExporter;
 use App\Services\SimpleXlsxExporter;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,6 +29,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class PrintedDocumentController extends Controller
 {
+    public function __construct(private readonly ClientDocumentQuery $documents) {}
+
     public function index(Request $request): InertiaResponse
     {
         $user = $request->user();
@@ -57,7 +59,7 @@ class PrintedDocumentController extends Controller
             'organization' => $organizationsEnabled && $document->organization && ! $document->organization->is_stub
                 ? $document->organization->name
                 : null,
-            'base' => $this->basePayload($document),
+            'base' => $this->documents->base($document),
             // Размер округлённый: клиенту важно понять, «откроется ли это
             // на телефоне», а не точное число байтов.
             'size' => $document->size_label,
@@ -77,7 +79,7 @@ class PrintedDocumentController extends Controller
                 ->map(fn (?string $name, int $id): array => ['value' => (string) $id, 'label' => (string) $name])
                 ->values()
                 ->all(),
-            'organizations' => $organizationsEnabled ? $this->organizationOptions($user) : [],
+            'organizations' => $organizationsEnabled ? $this->documents->organizationOptions($user) : [],
             'organizationsEnabled' => $organizationsEnabled,
             'presetsEnabled' => (bool) config('search-cabinet.presets'),
             'exportEnabled' => (bool) config('search-cabinet.export'),
@@ -114,7 +116,7 @@ class PrintedDocumentController extends Controller
                     // читается как потеря данных, а не как «организации нет».
                     $withSeller ? [$document->organization ? $document->organization->name : 'Не указана'] : [],
                     [
-                        $this->basePayload($document)['label'] ?? '',
+                        $this->documents->base($document)['label'] ?? '',
                         $document->size_bytes === null ? '' : round($document->size_bytes / 1024 / 1024, 2),
                     ],
                 );
@@ -159,156 +161,32 @@ class PrintedDocumentController extends Controller
     }
 
     /**
-     * Единый конструктор отбора для списка, выгрузки и счётчиков.
+     * Единый конструктор отбора для списка, выгрузки и счётчиков — общим сервисом
+     * с клиентским API v1.
      *
      * @return array{0: Builder<PrintedDocument>, 1: array{per_page: int, filters: array<string, mixed>}}
      */
     private function buildIndexQuery(Request $request, User $user, bool $applyTypeFilter = true): array
     {
-        $search = trim((string) $request->input('search', ''));
-        $types = $this->arrayInput($request, 'type');
-        $companyIds = $this->arrayInput($request, 'company_id');
-        $organizationIds = $this->arrayInput($request, 'organization_id');
+        $filters = $this->filters($request);
+        $query = $this->documents->builder($user, $filters, $applyTypeFilter, primaryVariantOnly: true);
 
-        $query = PrintedDocument::query()
-            ->visibleTo($user)
-            // Клиенту нельзя показывать строку, которую невозможно скачать:
-            // ссылка на ненайденный файл выглядит как поломка сайта, а не как
-            // задержка обмена. Проблемные документы разбирает менеджер в CRM.
-            ->stored()
-            // Один документ — одна строка: PDF и Excel той же формы приезжают
-            // разными сообщениями, но клиенту это два файла одного УПД.
-            ->primaryVariant()
-            ->with(['company:id,name', 'organization:id,name,is_stub', 'order:id,number,erp_number', 'shipment:id,number,erp_number']);
-
-        if ($search !== '') {
-            $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $search).'%';
-            // Номер ищем и в нормализованном виде: клиент копирует «29УТ-002488»
-            // из письма, а набирает «29УТ002488».
-            $normalized = '%'.preg_replace('/[^\p{L}\p{N}]+/u', '', $search).'%';
-
-            $query->where(function (Builder $inner) use ($like, $normalized): void {
-                $inner->where('number', 'like', $like)
-                    ->orWhere('title', 'like', $like)
-                    ->orWhere('erp_type_name', 'like', $like)
-                    ->orWhereRaw("REPLACE(REPLACE(REPLACE(number, '-', ''), ' ', ''), '/', '') LIKE ?", [$normalized]);
-            });
-        }
-
-        if ($applyTypeFilter && $types !== []) {
-            $query->whereIn('type', array_values(array_intersect($types, PrintedDocumentType::values())));
-        }
-
-        if ($companyIds !== []) {
-            // Пересекаем с контрагентами пользователя: чужой id в адресе не должен
-            // даже доходить до запроса как валидное условие.
-            $own = $user->companies()->pluck('id')->map(fn ($id) => (string) $id)->all();
-            $query->whereIn('company_id', array_values(array_intersect($companyIds, $own)) ?: [0]);
-        }
-
-        if ($organizationIds !== []) {
-            $query->whereIn('organization_id', $organizationIds);
-        }
-
-        if ($request->filled('date_from')) {
-            $query->whereDate('date', '>=', $request->input('date_from'));
-        }
-
-        if ($request->filled('date_to')) {
-            $query->whereDate('date', '<=', $request->input('date_to'));
-        }
-
-        // Deep-link из карточки заказа и реализации.
-        if ($request->filled('order_id')) {
-            $query->where('order_id', (int) $request->input('order_id'));
-        }
-
-        if ($request->filled('shipment_id')) {
-            $query->where('shipment_id', (int) $request->input('shipment_id'));
-        }
-
-        $allowedSort = ['date', 'number', 'type', 'id'];
-        $sortBy = in_array($request->input('sort_by'), $allowedSort, true)
+        $sortBy = in_array($request->input('sort_by'), ClientDocumentQuery::SORT_FIELDS, true)
             ? (string) $request->input('sort_by')
             : 'date';
         $sortOrder = $request->input('sort_order') === 'asc' ? 'asc' : 'desc';
-
-        // Вторичная сортировка по id: дат без времени у документов много,
-        // и без неё порядок внутри одного дня скачет между страницами.
-        $query->orderBy($sortBy, $sortOrder)->orderByDesc('id');
+        $this->documents->applySort($query, $sortBy, $sortOrder);
 
         $perPage = min(max((int) $request->input('per_page', 15), 5), 100);
 
         return [$query, [
             'per_page' => $perPage,
-            'filters' => [
-                'search' => $search,
-                'type' => $types,
-                'company_id' => $companyIds,
-                'organization_id' => $organizationIds,
-                'date_from' => $request->input('date_from'),
-                'date_to' => $request->input('date_to'),
-                'order_id' => $request->input('order_id'),
-                'shipment_id' => $request->input('shipment_id'),
+            'filters' => $filters + [
                 'sort_by' => $sortBy,
                 'sort_order' => $sortOrder,
                 'per_page' => $perPage,
             ],
         ]];
-    }
-
-    /**
-     * Счётчики по видам документов для чипов быстрых фильтров.
-     *
-     * @return array<string, int>
-     */
-    private function typeCounts(Request $request, User $user): array
-    {
-        [$query] = $this->buildIndexQuery($request, $user, applyTypeFilter: false);
-
-        // select() сбрасывает колонки и сортировку подзапросов, reorder() снимает
-        // orderBy — иначе MySQL в режиме ONLY_FULL_GROUP_BY отвергнет запрос,
-        // хотя SQLite в тестах его пропустит.
-        return $query->reorder()
-            ->select('type')
-            ->selectRaw('COUNT(*) as total')
-            ->groupBy('type')
-            ->pluck('total', 'type')
-            ->map(fn ($count) => (int) $count)
-            ->all();
-    }
-
-    /**
-     * Организации, встречающиеся в документах именно этого клиента.
-     *
-     * Показывать весь справочник незачем: клиент работает с одним-двумя нашими
-     * юрлицами, а фильтр с двумя десятками пустых вариантов бесполезен.
-     *
-     * @return list<array{value: string, label: string}>
-     */
-    private function organizationOptions(User $user): array
-    {
-        $ids = PrintedDocument::query()
-            ->visibleTo($user)
-            ->stored()
-            ->whereNotNull('organization_id')
-            ->distinct()
-            ->pluck('organization_id');
-
-        if ($ids->isEmpty()) {
-            return [];
-        }
-
-        return Organization::query()
-            ->whereIn('id', $ids)
-            ->where('is_stub', false)
-            ->ordered()
-            ->get(['id', 'name'])
-            ->map(fn (Organization $organization) => [
-                'value' => (string) $organization->id,
-                'label' => $organization->name,
-            ])
-            ->all();
     }
 
     /**
@@ -362,27 +240,30 @@ class PrintedDocumentController extends Controller
     }
 
     /**
-     * Документ-основание печатной формы.
-     *
-     * @return array{label: string, url: string}|null
+     * @return array<string, mixed>
      */
-    private function basePayload(PrintedDocument $document): ?array
+    private function filters(Request $request): array
     {
-        if ($document->shipment) {
-            return [
-                'label' => 'Отгрузка '.($document->shipment->erp_number ?: $document->shipment->number),
-                'url' => route('cabinet.shipments.show', $document->shipment->id),
-            ];
-        }
+        return [
+            'search' => trim((string) $request->input('search', '')),
+            'type' => $this->arrayInput($request, 'type'),
+            'company_id' => $this->arrayInput($request, 'company_id'),
+            'organization_id' => $this->arrayInput($request, 'organization_id'),
+            'date_from' => $request->input('date_from'),
+            'date_to' => $request->input('date_to'),
+            'order_id' => $request->input('order_id'),
+            'shipment_id' => $request->input('shipment_id'),
+        ];
+    }
 
-        if ($document->order) {
-            return [
-                'label' => 'Заказ '.($document->order->erp_number ?: $document->order->number),
-                'url' => route('cabinet.orders.show', $document->order->id),
-            ];
-        }
-
-        return null;
+    /**
+     * Счётчики по видам документов для чипов быстрых фильтров.
+     *
+     * @return array<string, int>
+     */
+    private function typeCounts(Request $request, User $user): array
+    {
+        return $this->documents->typeCounts($user, $this->filters($request), primaryVariantOnly: true);
     }
 
     /**

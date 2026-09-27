@@ -12,7 +12,7 @@ import {
     LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin, LuContact,
     LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuReceipt, LuLayoutGrid, LuWrench, LuCode,
     LuChartPie, LuMessageSquare, LuArrowRightLeft, LuFileText, LuBell, LuFilePen, LuClock3,
-    LuHourglass, LuBanknote,
+    LuHourglass, LuBanknote, LuBot, LuArchive, LuPackageCheck, LuBookOpen,
 } from 'react-icons/lu';
 
 // Меню кабинета группируется по сущностям, а не по стадиям заказа: стадия —
@@ -40,6 +40,8 @@ const menuGroups = [
             // Режим «Заказы в резерве» (v16.9.0): пункт виден только участнику режима
             // (config.reserves_enabled), бейдж — количество активных резервов.
             { href: '/cabinet/reserves', label: 'Заказы в резерве', icon: LuClock3, feature: 'reserves', badge: 'reserve_count' },
+            // Самовывоз (pick-09): что собрано и ждёт курьера, пропуска с QR. Бейдж — число готовых комплектов.
+            { href: '/cabinet/pickup', label: 'Самовывоз', icon: LuPackageCheck, feature: 'pickup', badge: 'pickup_ready_count' },
             { href: '/cabinet/carts', label: 'Корзины', icon: LuShoppingCart, badge: 'cart_count' },
             { href: '/cabinet/order-changes', label: 'Изменения заказов', icon: LuArrowRightLeft },
         ],
@@ -78,7 +80,15 @@ const menuGroups = [
         items: [
             { href: '/cabinet/export-presets', label: 'Стандартные выгрузки', icon: LuLayoutGrid },
             { href: '/cabinet/product-exports', label: 'Конструктор выгрузок', icon: LuWrench },
+        ],
+    },
+    {
+        title: 'Интеграции',
+        items: [
+            { href: '/cabinet/assistant', label: 'Помощник', icon: LuBot, feature: 'assistant' },
             { href: '/cabinet/api-tokens', label: 'API', icon: LuCode },
+            { href: '/cabinet/mcp', label: 'ИИ-агенты (MCP)', icon: LuBot },
+            { href: '/cabinet/api-legacy', label: 'Legacy API', icon: LuArchive },
         ],
     },
     {
@@ -91,6 +101,8 @@ const menuGroups = [
         title: 'Поддержка',
         items: [
             { href: '/cabinet/questions', label: 'Мои вопросы', icon: LuMessageSquare },
+            // Инструкции из админки: текст, PDF или видео для клиентов.
+            { href: '/cabinet/instructions', label: 'Инструкции', icon: LuBookOpen },
         ],
     },
     {
@@ -136,7 +148,7 @@ function MenuItemRow({ item, isActive, badgeCount = 0 }) {
 }
 
 function SidebarContent({ currentPath }) {
-    const { config } = usePage().props;
+    const { config, assistant } = usePage().props;
 
     // Карта фиче-флагов: пункт с `feature` виден, только когда его флаг включён.
     // Раньше здесь был хардкод одного флага — второй раздел за флагом заставил бы
@@ -148,6 +160,10 @@ function SidebarContent({ currentPath }) {
         contracts: !!config?.contracts_cabinet_enabled,
         // Режим «Заказы в резерве»: рубильник ∧ флаг участника из 1С (считает бэк)
         reserves: !!config?.reserves_enabled,
+        // Самовывоз: стадии сборки и пропуска курьерам (рубильник pickup.enabled)
+        pickup: !!config?.pickup_enabled,
+        // Помощник (assist-00): prop есть только у клиента с юрлицом при доступном сервисе.
+        assistant: !!assistant,
     };
 
     const visibleGroups = menuGroups

@@ -4,9 +4,9 @@ namespace App\Services\Crm\Api\Operations;
 
 use App\Models\Media;
 use App\Models\User;
-use App\Services\Crm\Api\OperationInput;
 use App\Services\Crm\CrmEntityResolver;
 use App\Support\Crm\CrmAttachments;
+use App\Support\OperationApi\OperationInput;
 use Spatie\MediaLibrary\HasMedia;
 
 /**

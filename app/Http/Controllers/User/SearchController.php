@@ -11,6 +11,7 @@ use App\Models\Category;
 use App\Models\News;
 use App\Models\Product;
 use App\Models\SearchHistory;
+use App\Services\Catalog\StockVisibility;
 use App\Services\Product\ProductQueryService;
 use App\Services\Search\ExactProductMatcher;
 use App\Services\Search\ProductSearchResolver;
@@ -469,10 +470,13 @@ class SearchController extends Controller
     private function searchCategories(string $query, int $limit): array
     {
         try {
+            $visibleIds = app(StockVisibility::class)->categoryIds(auth()->user()?->region_id);
+
             return Category::search($query)
                 ->take($limit)
                 ->get()
                 ->filter(fn (Category $category) => $category->is_active)
+                ->when($visibleIds !== null, fn ($items) => $items->filter(fn (Category $category) => in_array((int) $category->id, $visibleIds, true)))
                 ->map(fn (Category $category) => [
                     'id' => $category->id,
                     'name' => $category->name,
@@ -489,9 +493,12 @@ class SearchController extends Controller
     private function searchBrands(string $query, int $limit): array
     {
         try {
+            $visibleIds = app(StockVisibility::class)->brandIds(auth()->user()?->region_id);
+
             return Brand::search($query)
                 ->take($limit)
                 ->get()
+                ->when($visibleIds !== null, fn ($items) => $items->filter(fn (Brand $brand) => in_array((int) $brand->id, $visibleIds, true)))
                 ->map(fn (Brand $brand) => [
                     'id' => $brand->id,
                     'name' => $brand->name,

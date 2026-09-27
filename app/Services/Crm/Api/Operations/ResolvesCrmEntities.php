@@ -3,7 +3,7 @@
 namespace App\Services\Crm\Api\Operations;
 
 use App\Models\User;
-use App\Services\Crm\Api\OperationInput;
+use App\Support\OperationApi\OperationInput;
 
 /**
  * Резолв партнёра для операций API.

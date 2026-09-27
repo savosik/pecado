@@ -6,21 +6,27 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\ProductSelection;
+use App\Services\Catalog\StockVisibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 
 class CatalogController extends Controller
 {
+    public function __construct(private readonly StockVisibility $visibility) {}
+
     /**
      * Дерево категорий для каталог-панели.
      */
     public function categories(): JsonResponse
     {
-        // Только категории с товарами в наличии в Москве — `sort` проставлен командой
-        // categories:resort-by-moscow-stock, NULL означает «нет товаров на всю глубину».
+        // Только категории с товарами в наличии на складах региона (на всю глубину) —
+        // считается на лету по остаткам, см. StockVisibility. Порядок — по `sort`
+        // (команда categories:resort-by-moscow-stock: больше товаров — выше).
+        $visibleIds = $this->visibility->categoryIds(Auth::user()?->region_id);
+
         $tree = Category::active()
-            ->whereNotNull('sort')
-            ->orderBy('sort')
+            ->when($visibleIds !== null, fn ($q) => $q->whereIn('id', $visibleIds))
+            ->orderByRaw('sort IS NULL, sort ASC')
             ->orderBy('_lft')
             ->get()
             ->toTree();
@@ -44,12 +50,19 @@ class CatalogController extends Controller
     }
 
     /**
-     * Список всех брендов для каталог-панели.
+     * Список брендов для каталог-панели и страницы «Все бренды».
+     *
+     * Только бренды с товарами в наличии на складах региона (у самого бренда или у
+     * дочернего) — см. StockVisibility. Дочерние бренды фильтруются так же.
      */
     public function brands(): JsonResponse
     {
-        $brands = Brand::with(['tags', 'children' => fn ($q) => $q->orderBy('name')])
+        $visibleIds = $this->visibility->brandIds(Auth::user()?->region_id);
+        $onlyVisible = fn ($q) => $q->when($visibleIds !== null, fn ($q) => $q->whereIn('id', $visibleIds));
+
+        $brands = Brand::with(['tags', 'children' => fn ($q) => $onlyVisible($q)->orderBy('name')])
             ->whereNull('parent_id')
+            ->tap($onlyVisible)
             ->orderBy('name')
             ->get()
             ->map(function (Brand $brand) {

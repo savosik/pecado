@@ -47,7 +47,7 @@ export default function CheckoutIndex({
     countries = [],
     defaultDeliveryMethod = 'delivery',
 }) {
-    const { currency, errors: serverErrors, flash, debt, preorder: preorderTerms } = usePage().props;
+    const { currency, errors: serverErrors, flash, debt, preorder: preorderTerms, config: pageConfig } = usePage().props;
     const debtRestriction = flash?.debt_restriction || null;
     const currencySymbol = currency?.symbol ?? '₽';
 
@@ -445,7 +445,7 @@ export default function CheckoutIndex({
                                                     </RadioCard.ItemText>
                                                 </Flex>
                                                 <Text fontSize="xs" color="fg.muted">
-                                                    Заберёте заказ со склада самостоятельно
+                                                    Заберёте со склада. Курьера отправляйте с пропуском из кабинета
                                                 </Text>
                                             </RadioCard.ItemContent>
                                             <RadioCard.ItemIndicator />
@@ -456,6 +456,19 @@ export default function CheckoutIndex({
 
                             {errors.delivery_method && (
                                 <Text color="red.500" fontSize="sm" mt="2">{errors.delivery_method}</Text>
+                            )}
+
+                            {/* Правило выдачи (просьба заказчика 22.09.2026): курьеры до сих пор приезжают без пропуска,
+                                поэтому напоминаем на каждом шаге, начиная с выбора самовывоза. */}
+                            {data.delivery_method === 'pickup' && pageConfig?.pickup_enabled && (
+                                <Box mt="3" p="3" borderRadius="md" bg="orange.50" borderWidth="1px" borderColor="orange.200" _dark={{ bg: 'orange.900/20', borderColor: 'orange.700' }}>
+                                    <Text fontSize="sm" fontWeight="700">Курьер приезжает с пропуском</Text>
+                                    <Text fontSize="sm" color="fg.muted">
+                                        Когда заказ соберут, мы напишем. Выпустите пропуск в кабинете и перешлите его курьеру —
+                                        QR-код или шесть цифр. Без пропуска склад выдаст только после проверки и с подписью
+                                        в расходном листе: это дольше.
+                                    </Text>
+                                </Box>
                             )}
                         </Box>
 
@@ -1721,6 +1734,13 @@ function OrderSummaryTicket({
                                                     <Text fontSize="xs" fontWeight="400" color="fg.muted">
                                                         Заказ направляется на склад для сборки. Внести изменения или отменить не получится.
                                                     </Text>
+                                                    {/* pick-04: обещание времени сборки по графику склада (отсечка 20:00) */}
+                                                    {pageConfig?.pickup_promise && (
+                                                        <Text fontSize="xs" fontWeight="600" color={pageConfig.pickup_promise.same_day ? 'green.fg' : 'orange.fg'}>
+                                                            {pageConfig.pickup_promise.text}
+                                                            {data.delivery_method === 'pickup' && pageConfig.pickup_promise.deadline_text ? `, ${pageConfig.pickup_promise.deadline_text}` : ''}
+                                                        </Text>
+                                                    )}
                                                 </VStack>
                                             </Radio>
                                         </Box>

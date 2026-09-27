@@ -39,15 +39,18 @@ class DailyShortageDigest
      *
      * @return list<array<string, mixed>>
      */
-    public function forDay(?CarbonInterface $day = null): array
+    public function forDay(?CarbonInterface $day = null, ?CarbonInterface $since = null): array
     {
         $day = Carbon::parse($day ?? Carbon::today());
+        // pick-13: склад собирает до 21:00 и по субботам, а сводка уходит по будням в 17:00. Без `$since`
+        // отмены вечера и субботы не попадали ни в одно письмо — окно тянется от прошлой рассылки.
+        $from = $since !== null ? Carbon::parse($since) : $day->copy()->startOfDay();
 
         $items = OrderItem::query()
             ->where('order_items.cancelled', true)
             ->whereNull('order_items.cancel_reason_id')
             ->whereNull('order_items.cancel_archived_at')
-            ->whereBetween('order_items.cancelled_at', [$day->copy()->startOfDay(), $day->copy()->endOfDay()])
+            ->whereBetween('order_items.cancelled_at', [$from, $day->copy()->endOfDay()])
             ->whereHas('order', fn ($q) => $q->whereNull('orders.deleted_at'))
             ->with([
                 'order:id,number,erp_number,user_id,company_id,erp_created_at,created_at',

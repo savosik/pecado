@@ -278,7 +278,7 @@ function OrderLink({ row }) {
     return (
         <Link href={`/cabinet/orders/${row.order_id}`}>
             <Text as="span" fontFamily="mono" fontWeight="500" _hover={{ color: 'pecado.500' }} transition="color 0.15s">
-                {row.order_number}
+                {row.order_number || row.order_label}
             </Text>
         </Link>
     );

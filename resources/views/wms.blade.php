@@ -9,6 +9,12 @@
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+        {{-- pick-16: кабинет склада ставится значком на телефон кладовщика и открывается сразу на выдаче заказов.
+             Общий manifest.json стартует в кабинет клиента, поэтому у склада свой, со scope /wms/. --}}
+        <link rel="manifest" href="/manifest-wms.json">
+        <meta name="theme-color" content="#9e1b32">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-title" content="Склад Pecado">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

@@ -252,6 +252,22 @@ class GoodsIssue extends Model
         return $this->hasMany(GoodsIssueStatusHistory::class)->orderBy('changed_at');
     }
 
+    /**
+     * Действующая (неотменённая) выдача ордера курьеру — документ сайта, pick-06.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<\App\Models\Pickup\PickupHandover, $this>
+     */
+    public function activeHandover(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\Pickup\PickupHandover::class)->whereNull('cancelled_at');
+    }
+
+    /** @return HasMany<\App\Models\Pickup\PickupHandover, $this> */
+    public function handovers(): HasMany
+    {
+        return $this->hasMany(\App\Models\Pickup\PickupHandover::class)->orderBy('issued_at');
+    }
+
     /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {

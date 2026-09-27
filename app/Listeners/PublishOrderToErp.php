@@ -40,7 +40,7 @@ class PublishOrderToErp
         // увидит его в кабинете склада. Снять гейт — как только UUID прописан.
         $orderType = $order->type?->value ?? $order->type;
 
-        if ($orderType === 'defect' && $this->defectWarehouseUuids() === []) {
+        if ($orderType === 'defect' && $this->warehouses()->defectWarehouseUuids() === []) {
             \Illuminate\Support\Facades\Log::warning(
                 'Заказ уценки не опубликован в 1С: у склада некондиции нет external_id',
                 ['order_uuid' => $order->uuid, 'order_number' => $order->number]
@@ -52,7 +52,7 @@ class PublishOrderToErp
         // Тот же гейт для рекламных образцов: пока склад «Москва подарки» не заведён
         // и не получил external_id от 1С, публиковать образцы нельзя — пустой
         // warehouse_uuids хуже отсутствия сообщения
-        if ($orderType === 'promo_sample' && $this->promoSampleWarehouseUuids() === []) {
+        if ($orderType === 'promo_sample' && $this->warehouses()->promoSampleWarehouseUuids() === []) {
             \Illuminate\Support\Facades\Log::warning(
                 'Заказ рекламных образцов не опубликован в 1С: у склада «Москва подарки» нет external_id',
                 ['order_uuid' => $order->uuid, 'order_number' => $order->number]
@@ -159,124 +159,19 @@ class PublishOrderToErp
     }
 
     /**
-     * Resolve warehouse_uuids for the order.
-     *
-     * For 'order' type → primary warehouses of user's region.
-     * For 'preorder' type → preorder warehouses of user's region.
-     * Falls back to empty array if region is not set.
+     * Склады отгрузки заказа — общий резолвер с проверкой группы совместной
+     * отгрузки (v16.11.0), чтобы «ровно один склад» считался по тем же UUID,
+     * что уходят в order.created.
      *
      * @return string[]
      */
     private function resolveWarehouseUuids(\App\Models\Order $order): array
     {
-        $type = $order->type?->value ?? $order->type ?? 'order';
-
-        // Уценка отгружается со склада некондиции — он один и в регионы не входит,
-        // поэтому регион здесь не участвует (в отличие от order/preorder).
-        if ($type === 'defect') {
-            return $this->defectWarehouseUuids();
-        }
-
-        // Рекламные образцы отгружаются со своего склада, регион здесь не участвует
-        if ($type === 'promo_sample') {
-            return $this->promoSampleWarehouseUuids();
-        }
-
-        // Подотчётные промо-позиции лежат на обычных складах наличия региона,
-        // поэтому ниже они идут по той же ветке, что и `order`
-
-        $region = $order->user?->region;
-
-        if (! $region) {
-            return [];
-        }
-
-        $warehouses = match ($type) {
-            'preorder' => $region->preorderWarehouses()->get(),
-            default => $region->primaryWarehouses()->get(),
-        };
-
-        $uuids = $warehouses
-            ->pluck('external_id')
-            ->filter()
-            ->values()
-            ->toArray();
-
-        // ⚠️ КОСТЫЛЬ: только для предзаказов подменяем UUID склада «Тюмень Основной».
-        // См. config('erp.preorder_warehouse_uuid_override'). Легко откатывается
-        // флагом PREORDER_WAREHOUSE_UUID_OVERRIDE_ENABLED=false.
-        if ($type === 'preorder') {
-            $uuids = $this->applyPreorderWarehouseOverride($uuids);
-        }
-
-        return $uuids;
+        return $this->warehouses()->resolve($order);
     }
 
-    /**
-     * UUID склада(ов) некондиции — источник отгрузки заказов уценки.
-     *
-     * @return string[]
-     */
-    private function defectWarehouseUuids(): array
+    private function warehouses(): \App\Services\Order\OrderWarehouseResolver
     {
-        return \App\Models\Warehouse::query()
-            ->where('is_defect', true)
-            ->pluck('external_id')
-            ->filter()
-            ->values()
-            ->toArray();
-    }
-
-    /**
-     * UUID склада рекламных образцов («Москва подарки»).
-     *
-     * Пока склад не заведён или не получил external_id от 1С, метод возвращает
-     * пустой массив, и гейт выше не даёт опубликовать заказ. Это корректное
-     * поведение, а не ошибка.
-     *
-     * @return string[]
-     */
-    private function promoSampleWarehouseUuids(): array
-    {
-        return \App\Models\Warehouse::query()
-            ->promoSample()
-            ->pluck('external_id')
-            ->filter()
-            ->values()
-            ->toArray();
-    }
-
-    /**
-     * ⚠️ ВРЕМЕННЫЙ КОСТЫЛЬ: подмена UUID склада «Тюмень Основной» в предзаказах.
-     *
-     * По требованию 1С в исходящих preorder-сообщениях UUID склада
-     * «Тюмень Основной» (source_uuid) временно заменяется на target_uuid.
-     * Управляется через config('erp.preorder_warehouse_uuid_override').
-     *
-     * Откат: PREORDER_WAREHOUSE_UUID_OVERRIDE_ENABLED=false либо удалить этот
-     * метод вместе с его вызовом и блоком конфига.
-     *
-     * @param  string[]  $uuids
-     * @return string[]
-     */
-    private function applyPreorderWarehouseOverride(array $uuids): array
-    {
-        $override = config('erp.preorder_warehouse_uuid_override');
-
-        if (! ($override['enabled'] ?? false)) {
-            return $uuids;
-        }
-
-        $source = $override['source_uuid'] ?? null;
-        $target = $override['target_uuid'] ?? null;
-
-        if (! $source || ! $target) {
-            return $uuids;
-        }
-
-        return array_values(array_map(
-            static fn (string $uuid): string => $uuid === $source ? $target : $uuid,
-            $uuids,
-        ));
+        return app(\App\Services\Order\OrderWarehouseResolver::class);
     }
 }

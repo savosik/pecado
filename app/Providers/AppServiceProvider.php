@@ -19,6 +19,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Журнал вызовов агентов клиентов: контекст одного вызова общий для
+        // OperationRunner (отмечает операцию) и того, кто пишет строку (сервер
+        // MCP, middleware REST). Без единого экземпляра операция терялась бы.
+        $this->app->scoped(\App\Services\Client\Api\Usage\UsageContext::class);
+
+        // Помощник клиента (assist-00): единственная дверь к Anthropic. Тесты
+        // подменяют её фейком, реальный API в CI не вызывается.
+        $this->app->singleton(
+            \App\Services\Assistant\Gateway\AssistantGateway::class,
+            \App\Services\Assistant\Gateway\AnthropicGateway::class
+        );
+
         $this->app->bind(
             \App\Contracts\Pricing\PriceServiceInterface::class,
             \App\Services\Pricing\PriceService::class
@@ -159,6 +171,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\PublishContractorToErp::class,
         );
 
+        // Помощник клиента (assist-00): пропал или вернулся → письмо РОПу.
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\AssistantAvailabilityChanged::class,
+            \App\Listeners\NotifyAssistantAvailability::class,
+        );
+
         // Лестница долга (debt-00 v2): переход ступени → письмо клиенту и задача
         // менеджеру; новые движения/баланс из 1С → пересчёт только вверх;
         // истёкшая разблокировка → задача поставившему.
@@ -195,6 +213,28 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\Payroll\ScheduleDraftRecalculation::class,
         );
         // Отгрузки и планы будят черновик зарплаты; проекция оплаты пишет quietly и сюда не попадает.
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\Pickup\GoodsIssueHandedOver::class,
+            \App\Listeners\Pickup\ClosePassAfterHandover::class,
+        );
+
+        // pick-12: письма клиенту «собран, ждёт выдачи» и «выдан курьеру» — через матрицу уведомлений.
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\Pickup\GoodsIssueReadyChanged::class,
+            [\App\Listeners\Pickup\NotifyClientAboutPickup::class, 'ready'],
+        );
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\Pickup\GoodsIssueHandedOver::class,
+            [\App\Listeners\Pickup\NotifyClientAboutPickup::class, 'handedOver'],
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\Order\OrderItemsCancelled::class,
+            [\App\Listeners\Pickup\NotifyClientAboutPickup::class, 'shortfall'],
+        );
+
+        // pick-06: откат «отгружен» после выдачи и сигнал «ордер собран» — по журналу статусов РО.
+        \App\Models\GoodsIssueStatusHistory::observe(\App\Observers\PickupGoodsIssueStatusObserver::class);
         \App\Models\Shipment::observe(\App\Observers\PayrollShipmentObserver::class);
         \App\Models\CrmSalesPlan::observe(\App\Observers\PayrollSalesPlanObserver::class);
 
@@ -305,6 +345,12 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by('crm-api:'.($request->user()?->id ?: $request->ip()));
         });
 
+        // Клиентский API v1 и MCP клиента: лимит жёстче менеджерского и тоже
+        // по владельцу токена — несколько клиентов могут сидеть за одним NAT.
+        RateLimiter::for('client-api', function (Request $request) {
+            return Limit::perMinute(60)->by('client-api:'.($request->user()?->id ?: $request->ip()));
+        });
+
         // Scramble: спека API (/docs/api, /docs/api.json) публично доступна.
         // По умолчанию RestrictedDocsAccess пускает только в local; открываем всем,
         // чтобы ИИ-агент мог скачать OpenAPI-контракт по URL на dev/prod.
@@ -372,6 +418,36 @@ class AppServiceProvider extends ServiceProvider
         Scramble::registerJsonSpecificationRoute(path: 'docs/kanban-api.json', api: 'kanban');
 
         $this->registerCrmApiDocs();
+        $this->registerClientApiDocs();
+    }
+
+    /**
+     * Документация клиентского API v1 (`/api/client/v1/*`).
+     *
+     * Та же конструкция, что у CRM: спецификация строится из OperationRegistry
+     * клиента, а не сканируется из единственного контроллера; интерфейс — общий
+     * Scramble. Конфиг берётся внутри замыкания (см. оговорку про route:cache ниже).
+     */
+    private function registerClientApiDocs(): void
+    {
+        Scramble::registerApi('client', [
+            'api_path' => 'api/client/v1',
+            'info' => [
+                'title' => 'Pecado Client API',
+                'version' => '1.0',
+            ],
+        ]);
+
+        \Illuminate\Support\Facades\Route::get('docs/client-api', function (\App\Services\Client\Api\ClientApiDocument $document) {
+            return view('scramble::docs', [
+                'spec' => $document->build(),
+                'config' => Scramble::getGeneratorConfig('client'),
+            ]);
+        })->middleware(\Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess::class);
+
+        \Illuminate\Support\Facades\Route::get('docs/client-api.json', function (\App\Services\Client\Api\ClientApiDocument $document) {
+            return response()->json($document->build(), options: JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        })->middleware(\Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess::class);
     }
 
     /**

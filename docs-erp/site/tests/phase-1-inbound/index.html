@@ -2044,6 +2044,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#g-entry_date-v16120" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G) Период движения регистра (entry_date, v16.12.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3638,6 +3649,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#g-entry_date-v16120" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G) Период движения регистра (entry_date, v16.12.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -4549,6 +4571,40 @@
 <li>[ ] Контрольная точка сохранена, в ленту движений <strong>не попала</strong></li>
 <li>[ ] Повторная доставка обновляет запись, а не добавляет вторую</li>
 <li>[ ] <code>settlements:verify</code> подтверждает: сальдо 01.01 + движения H1 = checkpoint 01.07</li>
+</ul>
+<h3 id="g-entry_date-v16120">G) Период движения регистра (<code>entry_date</code>, v16.12.0)<a class="headerlink" href="#g-entry_date-v16120" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p>Бизнес-правила → <a href="../../rules/settlements/">Ось дат: период движения регистра</a></p>
+</blockquote>
+<p>🔵 <strong>1С включает</strong> публикацию поля и отправляет <code>settlement.posted</code> с
+<code>entries[].entry_date</code> в ISO 8601 со смещением (<code>2026-08-04T01:59:59+05:00</code>).</p>
+<ul>
+<li>[ ] Движение сохранено, период приведён к учётной зоне (<code>2026-08-03 23:59:59</code>)</li>
+<li>[ ] Дата хозяйственной операции (<code>date</code>) <strong>не подменена</strong> периодом</li>
+<li>[ ] <code>settlements:verify</code> показывает ненулевое покрытие оси</li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> движение с датой операции <strong>до</strong> даты точки и периодом <strong>после</strong> неё
+(боевой случай: документ 30.07, период 03.08 23:59:59, точка на 01.08).</p>
+<ul>
+<li>[ ] В контрольную точку движение <strong>не входит</strong>, инвариант сходится</li>
+<li>[ ] Обратный случай (операция после точки, период до неё) — входит</li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> движение с периодом ровно в полночь даты точки.</p>
+<ul>
+<li>[ ] В точку <strong>не входит</strong>: граница строгая и берётся как начало дня в зоне учёта</li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> движение <strong>без</strong> ключа <code>entry_date</code> (поток до включения).</p>
+<ul>
+<li>[ ] Строка сохранена и режется по прежней оси <code>date</code> → <code>document_date</code></li>
+<li>[ ] Сообщение валидно, в DLQ не уходит</li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> движение с <code>entry_date: ""</code> (дефект форматировщика пустой даты).</p>
+<ul>
+<li>[ ] Сообщение отклонено <strong>целиком</strong> и попадает в разбор, а не молчит на фолбэке</li>
+</ul>
+<p>🔵 <strong>Отчёт о включении</strong> — <code>settlements:verify --checkpoint-detail=5</code>.</p>
+<ul>
+<li>[ ] Видно число движений с периодом и на фолбэке, дельта каждой пары до и после</li>
 </ul>
 <h2 id="125-payment_scheduleupdated-v1600">1.25 — График оплаты (<code>payment_schedule.updated</code>, v16.0.0)<a class="headerlink" href="#125-payment_scheduleupdated-v1600" title="Permanent link">&para;</a></h2>
 <p><strong>Зависимости:</strong> 1.16 (реализации), 1.24 (движения)</p>

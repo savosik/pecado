@@ -7,7 +7,9 @@ use App\Models\Currency;
 use App\Models\Payment;
 use App\Models\User;
 use App\Services\Crm\Finance\ReconciliationService;
+use App\Services\Currency\CabinetAmountConverter;
 use App\Services\CurrencyService;
+use App\Services\Payments\ClientPaymentQuery;
 use App\Services\Settlements\CabinetSettlementFinance;
 use App\Services\SimpleCsvExporter;
 use App\Services\SimpleXlsxExporter;
@@ -26,15 +28,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class PaymentController extends Controller
 {
-    private const DIRECTION_LABELS = [
-        Payment::DIRECTION_IN => 'Поступление',
-        Payment::DIRECTION_OUT => 'Возврат',
-    ];
-
-    private const SORTS = ['id', 'date', 'amount'];
-
     public function __construct(
-        protected CurrencyService $currencyService
+        protected CurrencyService $currencyService,
+        protected ClientPaymentQuery $payments,
     ) {}
 
     /**
@@ -48,7 +44,7 @@ class PaymentController extends Controller
         $payments = $query->paginate($context['per_page'])->withQueryString();
         $currency = $this->getUserCurrency($request);
 
-        $payments->getCollection()->transform(fn (Payment $payment) => $this->row($payment, $currency));
+        $payments->getCollection()->transform(fn (Payment $payment) => $this->payments->row($payment, $currency));
 
         return Inertia::render('User/Cabinet/Payments/Index', [
             'payments' => $payments,
@@ -64,7 +60,7 @@ class PaymentController extends Controller
                 'sort_order' => $context['sort_order'],
                 'per_page' => $context['per_page'],
             ],
-            'directions' => $this->options(self::DIRECTION_LABELS),
+            'directions' => ClientPaymentQuery::directionOptions(),
             'companies' => $user->companies()
                 ->orderBy('name')
                 ->get(['id', 'name'])
@@ -83,35 +79,10 @@ class PaymentController extends Controller
         abort_unless($payment->user_id === $user->id, 403);
         abort_if($payment->isFromInternalOrganization(), 404);
 
-        $payment->load([
-            'company',
-            'organization:id,name,legal_name,tax_id,is_stub',
-        ]);
-
         $currency = $this->getUserCurrency($request);
 
         return Inertia::render('User/Cabinet/Payments/Show', [
-            'payment' => array_merge($this->row($payment, $currency), [
-                'document_type' => $payment->document_type,
-                'operation_name' => $payment->operation_name,
-                'bank_date' => $payment->bank_date instanceof \Illuminate\Support\Carbon
-                    ? $payment->bank_date->format('d.m.Y')
-                    : null,
-                'bank_confirmed_at' => $payment->bank_confirmed_at?->format('d.m.Y H:i'),
-                'organization_account' => $payment->organization_account,
-                'organization_bank_name' => $payment->organization_bank_name,
-                'payer_account' => $payment->payer_account,
-                'payer_bank_name' => $payment->payer_bank_name,
-                'uip' => $payment->uip,
-                'purpose' => $payment->purpose,
-                'company' => $payment->company ? [
-                    'id' => $payment->company->id,
-                    'name' => $payment->company->name,
-                    'legal_name' => $payment->company->legal_name,
-                    'tax_id' => $payment->company->tax_id,
-                ] : null,
-                'seller' => $this->sellerPayload($payment),
-            ]),
+            'payment' => $this->payments->card($payment, $currency),
             'currency_code' => $currency?->code ?? 'RUB',
         ]);
     }
@@ -270,7 +241,7 @@ class PaymentController extends Controller
                     [
                         $payment->number,
                         $payment->date->format('Y-m-d H:i'),
-                        self::DIRECTION_LABELS[$payment->direction] ?? $payment->direction,
+                        ClientPaymentQuery::DIRECTION_LABELS[$payment->direction] ?? $payment->direction,
                         $payment->company?->name ?? '',
                     ],
                     $withSeller ? [$payment->organization?->name ?? 'Не указана'] : [],
@@ -278,7 +249,7 @@ class PaymentController extends Controller
                         $payment->bank_number ?? '',
                         round((float) $payment->amount, 2),
                         $payment->currency_code ?? 'RUB',
-                        round($this->convertAmount((float) $payment->amount, $payment->currency_code, $currency), 2),
+                        round(app(CabinetAmountConverter::class)->convert((float) $payment->amount, $payment->currency_code, $currency), 2),
                     ],
                 );
             }
@@ -292,173 +263,44 @@ class PaymentController extends Controller
     }
 
     /**
+     * Выборка и контекст фильтров — общим сервисом с клиентским API v1.
+     *
      * @return array{0: \Illuminate\Database\Eloquent\Builder<Payment>, 1: array<string, mixed>}
      */
     private function buildIndexQuery(Request $request, User $user): array
     {
-        $search = trim((string) $request->input('search', ''));
+        $filters = [
+            'search' => trim((string) $request->input('search', '')),
+            'direction' => $request->input('direction'),
+            'company_id' => $request->integer('company_id') ?: null,
+            'date_from' => $request->input('date_from'),
+            'date_to' => $request->input('date_to'),
+            'amount_from' => $request->input('amount_from'),
+            'amount_to' => $request->input('amount_to'),
+        ];
 
-        $query = Payment::query()
-            ->where('user_id', $user->id)
-            // Платежи внутренних юрлиц («Реклама») — не расчёты клиента.
-            ->withoutInternalOrganizations()
-            ->with(['company', 'organization']);
-
-        if ($search !== '') {
-            $query->where(function ($inner) use ($search) {
-                $inner->where('number', 'like', "%{$search}%")
-                    ->orWhere('bank_number', 'like', "%{$search}%")
-                    ->orWhere('uip', 'like', "%{$search}%")
-                    ->orWhere('purpose', 'like', "%{$search}%");
-            });
-        }
-
-        $directions = $this->multi($request, 'direction', array_keys(self::DIRECTION_LABELS));
-        if ($directions !== []) {
-            $query->whereIn('direction', $directions);
-        }
-
-        $companyId = $request->integer('company_id') ?: null;
-        if ($companyId !== null) {
-            $query->where('company_id', $companyId);
-        }
-
-        if ($dateFrom = $request->input('date_from')) {
-            $query->whereDate('date', '>=', $dateFrom);
-        }
-        if ($dateTo = $request->input('date_to')) {
-            $query->whereDate('date', '<=', $dateTo);
-        }
-
-        if ($amountFrom = $request->input('amount_from')) {
-            $query->where('amount', '>=', $amountFrom);
-        }
-        if ($amountTo = $request->input('amount_to')) {
-            $query->where('amount', '<=', $amountTo);
-        }
+        $query = $this->payments->builder($user, $filters);
 
         $sortBy = $request->input('sort_by', 'date');
         $sortOrder = $request->input('sort_order') === 'asc' ? 'asc' : 'desc';
-
-        if (in_array($sortBy, self::SORTS, true)) {
-            $query->orderBy($sortBy, $sortOrder);
-        }
-        // Вторичная сортировка: платежи одного дня иначе разъезжаются между страницами.
-        $query->orderBy('id', 'desc');
+        $this->payments->applySort($query, $sortBy, $sortOrder);
 
         return [$query, [
-            'search' => $search,
-            'directions' => $directions,
-            'company_id' => $companyId,
-            'date_from' => $dateFrom,
-            'date_to' => $dateTo,
-            'amount_from' => $amountFrom,
-            'amount_to' => $amountTo,
+            'search' => $filters['search'],
+            'directions' => $this->payments->directions($filters['direction']),
+            'company_id' => $filters['company_id'],
+            'date_from' => $filters['date_from'],
+            'date_to' => $filters['date_to'],
+            'amount_from' => $filters['amount_from'],
+            'amount_to' => $filters['amount_to'],
             'sort_by' => $sortBy,
             'sort_order' => $sortOrder,
             'per_page' => min(max((int) $request->input('per_page', 15), 5), 100),
         ]];
     }
 
-    /**
-     * Мультивыбор, понимающий и скаляр: старые ссылки продолжают работать.
-     *
-     * @param  list<string>  $allowed
-     * @return list<string>
-     */
-    private function multi(Request $request, string $key, array $allowed): array
-    {
-        $input = $request->input($key);
-
-        if ($input === null || $input === '') {
-            return [];
-        }
-
-        $values = array_map('strval', is_array($input) ? $input : [$input]);
-
-        return array_values(array_intersect(array_unique($values), $allowed));
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function row(Payment $payment, ?Currency $currency): array
-    {
-        return [
-            'id' => $payment->id,
-            'number' => $payment->number,
-            'date' => $payment->date->format('Y-m-d'),
-            'date_label' => $payment->date->format('d.m.Y'),
-            'direction' => $payment->direction,
-            'direction_label' => self::DIRECTION_LABELS[$payment->direction] ?? $payment->direction,
-            'bank_number' => $payment->bank_number,
-            'bank_confirmed' => (bool) $payment->bank_confirmed,
-            'amount' => (float) $payment->amount,
-            'amount_converted' => $this->convertAmount((float) $payment->amount, $payment->currency_code, $currency),
-            'currency_code' => $payment->currency_code,
-            'company_name' => $payment->company?->name,
-        ];
-    }
-
-    /**
-     * Наша организация — получатель платежа. Показ гейтит тот же флаг,
-     * что и «Продавца» в реализациях.
-     *
-     * @return array<string, mixed>|null
-     */
-    private function sellerPayload(Payment $payment): ?array
-    {
-        if (! config('erp.organizations.enabled') || $payment->organization === null) {
-            return null;
-        }
-
-        return [
-            'name' => $payment->organization->name,
-            'legal_name' => $payment->organization->legal_name,
-            'tax_id' => $payment->organization->tax_id,
-            'is_stub' => (bool) $payment->organization->is_stub,
-        ];
-    }
-
-    /**
-     * @param  array<string, string>  $labels
-     * @return list<array{value: string, label: string}>
-     */
-    private function options(array $labels): array
-    {
-        return array_map(
-            fn ($value, $label) => ['value' => $value, 'label' => $label],
-            array_keys($labels),
-            $labels
-        );
-    }
-
     private function getUserCurrency(Request $request): ?Currency
     {
         return $request->user()?->region?->currency;
-    }
-
-    /**
-     * Платежи хранятся в валюте 1С, показываются в валюте кабинета.
-     * Логика повторяет отгрузки — иначе один и тот же документ показывал бы
-     * клиенту разные суммы в разных разделах.
-     */
-    private function convertAmount(float $amount, ?string $sourceCurrencyCode, ?Currency $targetCurrency): float
-    {
-        $amountInRub = $amount;
-
-        if ($sourceCurrencyCode && $sourceCurrencyCode !== 'RUB') {
-            $sourceCurrency = Currency::where('code', $sourceCurrencyCode)->first();
-
-            if ($sourceCurrency) {
-                $amountInRub = round($amount * (float) $sourceCurrency->exchange_rate, 2);
-            }
-        }
-
-        if (! $targetCurrency || $targetCurrency->is_base) {
-            return $amountInRub;
-        }
-
-        return $this->currencyService->convertFromBase($amountInRub, $targetCurrency);
     }
 }

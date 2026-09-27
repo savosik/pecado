@@ -94,7 +94,7 @@ class OrderChangeAggregator
      * `kind`: 'edit' — правка состава (added/removed/changed, свёрнуто);
      * 'api' — недостача при приёме по API (not_accepted/partial, «запрошено→принято»).
      *
-     * @return array<int, array{order_id:int, order_number:string, order_type:?string, changed_at:\Illuminate\Support\Carbon, kind:string, type:string, product_id:?int, product_name:string, slug:?string, external_id:?string, from:int, to:int}>
+     * @return array<int, array{order_id:int, order_number:?string, order_label:string, order_type:?string, changed_at:\Illuminate\Support\Carbon, kind:string, type:string, product_id:?int, product_name:string, slug:?string, external_id:?string, from:int, to:int}>
      */
     public function flatten(EloquentCollection $orders): array
     {
@@ -103,15 +103,17 @@ class OrderChangeAggregator
         $rows = [];
         foreach ($perOrder as $entry) {
             $order = $entry['order'];
-            $orderNumber = $order->erp_number ?? $order->number ?? ('#'.$order->id);
+            $orderNumber = $order->clientNumber();
+            $orderLabel = $order->clientLabel();
             $orderType = $order->type?->value;
 
-            $emit = function (array $rec, string $kind, string $type) use ($order, $orderNumber, $orderType, $resolver) {
+            $emit = function (array $rec, string $kind, string $type) use ($order, $orderNumber, $orderLabel, $orderType, $resolver) {
                 $meta = $resolver($rec);
 
                 return [
                     'order_id' => $order->id,
                     'order_number' => $orderNumber,
+                    'order_label' => $orderLabel,
                     'order_type' => $orderType,
                     'changed_at' => $rec['changed_at'],
                     'kind' => $kind,

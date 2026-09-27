@@ -25,7 +25,8 @@ class CaptureOrderStatusChanged
             return;
         }
 
-        $number = $order->erp_number ?: $order->number;
+        // Клиенту — номер 1С или «от даты (номер присваивается)», временный ORD-… не показываем
+        $number = $order->clientLabel();
 
         app(MailStream::class)->captureQuietly(new Occasion(
             key: self::OCCASION,
@@ -34,6 +35,7 @@ class CaptureOrderStatusChanged
             subject: $order,
             data: [
                 'order_number' => $number,
+                'order_key' => $order->number,
                 'status' => $order->status?->value,
                 'status_label' => $order->status?->label(),
                 'previous_status' => $order->previousStatus?->value,

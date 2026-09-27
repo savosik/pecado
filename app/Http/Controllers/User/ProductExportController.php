@@ -255,7 +255,7 @@ class ProductExportController extends Controller
                 ->get()
                 ->map(fn (Order $order) => [
                     'id' => $order->id,
-                    'name' => '№ '.($order->number ?: $order->erp_number ?: $order->id)
+                    'name' => ($order->clientNumber() !== null ? '№ '.$order->clientNumber() : 'Без номера')
                         .' от '.($order->erp_created_at ?? $order->created_at)?->format('d.m.Y'),
                 ])
                 ->values(),

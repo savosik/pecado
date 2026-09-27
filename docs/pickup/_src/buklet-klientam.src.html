@@ -1,0 +1,194 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>Pecado — склад с 9 до 21: заказ, резерв, самовывоз без ожидания</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .cover { background:linear-gradient(160deg,#9e1b32 0%,#6f1223 70%,#4d0c18 100%); color:#fff; padding:20mm 18mm 16mm; gap:0; }
+  .cover .logo { height:17mm; align-self:flex-start; filter:brightness(0) invert(1); }
+  .cover .eyebrow { color:#f1d9b8; margin-top:30mm; }
+  .cover h1 { font-size:47pt; margin-top:5mm; } .cover h1 span { color:#f1d9b8; }
+  .cover .lead { color:#f6e9ea; font-size:15pt; margin-top:8mm; max-width:150mm; }
+  .cover .kpis { margin-top:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:6mm; border-top:1px solid rgba(255,255,255,.35); padding-top:7mm; }
+  .cover .kpi .v { color:#fff; font-size:24pt; white-space:nowrap; } .cover .kpi .l { color:#f1d9b8; font-size:10.5pt; }
+  .cycle { display:grid; grid-template-columns:repeat(5,1fr); gap:0; counter-reset:c; }
+  .cycle div { counter-increment:c; position:relative; padding:9mm 3mm 0 0; font-size:10.5pt; }
+  .cycle div::before { content:counter(c); position:absolute; top:0; left:0; width:7mm; height:7mm; border-radius:50%; background:var(--accent); color:#fff; font-weight:700; display:flex; align-items:center; justify-content:center; font-size:10.5pt; z-index:1; }
+  .cycle div::after { content:''; position:absolute; top:3.4mm; left:7mm; right:0; height:.5mm; background:var(--accent); opacity:.35; }
+  .cycle div:last-child::after { display:none; } .cycle b { display:block; font-size:11pt; margin-bottom:.8mm; }
+  .day { position:relative; height:17mm; margin-top:2mm; }
+  .day .track { position:absolute; left:0; right:0; top:6mm; height:5mm; border-radius:3mm; background:linear-gradient(90deg,var(--good) 0 91.6%,var(--warn) 91.6% 100%); }
+  .day span { position:absolute; top:0; font-size:9pt; font-weight:600; transform:translateX(-50%); white-space:nowrap; }
+  .day em { position:absolute; top:12.2mm; font-size:8.5pt; font-style:normal; color:var(--muted); transform:translateX(-50%); white-space:nowrap; }
+  .faq { display:grid; grid-template-columns:1fr 1fr; gap:6mm 8mm; } .faq h3 { font-size:12pt; color:var(--accent-dark); margin-bottom:.8mm; } .faq p { font-size:11pt; }
+  .courier h1 { font-size:30pt; } .courier .addr { font-size:17pt; font-weight:700; line-height:1.2; }
+</style></head><body>
+
+<section class="page cover">
+  <img class="logo" src="img/logo.png" alt="Pecado">
+  <div class="eyebrow">Для интернет-магазинов · новый график склада</div>
+  <h1>Склад работает<br><span>с 9 до 21,</span><br>с понедельника<br>по субботу</h1>
+  <p class="lead">Покупатель позвонил вечером или в субботу — вы оформляете заказ, склад собирает его за 40 минут, курьер забирает. Без звонков менеджеру и без ожидания утра.</p>
+  <div class="kpis">
+    <div class="kpi"><span class="v">9:00–21:00</span><span class="l">понедельник – суббота</span></div>
+    <div class="kpi"><span class="v">30–40 минут</span><span class="l">от кнопки «В отгрузку» до собранного заказа</span></div>
+    <div class="kpi"><span class="v">до 20:00</span><span class="l">принимаем заказы к сборке на сегодня</span></div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="head"><h2>Зачем это вашему магазину</h2></div>
+  <p class="lead">Спрос на наши товары выше всего вечером и в выходные. Маркетплейсы приучают покупателя к доставке за четыре часа. Теперь вы можете отвечать тем же — со своей ценой и своим сервисом.</p>
+  <div class="cols-3">
+    <div class="panel accent"><h3>Продавайте после шести</h3><p class="small">Заказ, оформленный в 19:30, будет собран сегодня. Срочная доставка вечером — ваше преимущество, а не потерянный покупатель.</p></div>
+    <div class="panel accent"><h3>Суббота — рабочий день</h3><p class="small">Раньше заказ пятничного вечера уезжал в понедельник. Теперь — в субботу утром.</p></div>
+    <div class="panel accent"><h3>Ничего не согласовывать</h3><p class="small">Заказ сразу уходит на склад. Резерв, подтверждение, отмена, пропуск курьеру — всё в кабинете, в пару нажатий.</p></div>
+  </div>
+  <h3>Как это работает — пять шагов</h3>
+  <div class="cycle">
+    <div><b>Заказ в резерв</b>Покупатель оставил заявку — вы сразу бронируете товар у нас на 24 часа.</div>
+    <div><b>Звонок покупателю</b>Подтверждаете заказ. Товар всё это время ждёт вас на складе.</div>
+    <div><b>«В отгрузку»</b>Подтвердил — одна кнопка. Несколько заказов — «В отгрузку вместе», одной накладной. Отказался — «Отменить».</div>
+    <div><b>Сборка 40 минут</b>В кабинете видно: собирается, собран, ждёт выдачи.</div>
+    <div><b>Курьер с пропуском</b>Пересылаете курьеру QR-код. Он показывает его на складе и забирает заказ.</div>
+  </div>
+  <table class="data">
+    <tr><th style="width:30%"></th><th>Было</th><th>Стало</th></tr>
+    <tr><td class="b">Часы склада</td><td>Пн–пт, 9:00–18:00</td><td class="b">Пн–сб, 9:00–21:00</td></tr>
+    <tr><td class="b">Покупатель отказался</td><td>Звонок менеджеру, ожидание</td><td class="b">Кнопка «Отменить» в кабинете</td></tr>
+    <tr><td class="b">Готов ли заказ</td><td>Уточнять по телефону</td><td class="b">Статус в кабинете и письмо «Собран»</td></tr>
+    <tr><td class="b">Выдача курьеру</td><td>«Я от такого-то магазина», подпись</td><td class="b">Пропуск с QR-кодом, без подписей</td></tr>
+  </table>
+  <div class="panel champ"><p class="small"><span class="b">Важно.</span> Режим резервов включается для интернет-магазинов. Если в оформлении заказа вы не видите варианта «Поставьте в резерв», напишите своему менеджеру — подключим за один рабочий день.</p></div>
+  <div class="foot"><img src="img/logo.png" alt=""><span>стр. 2 / 8</span></div>
+</section>
+
+<section class="page">
+  <div class="head"><h2>Оформите заказ и поставьте его в резерв</h2><span class="step">Шаг 1</span></div>
+  <div class="shots">
+    <figure><div class="phone"><div class="screen"><img src="img/checkout-pickup.jpg" alt=""></div></div><figcaption>Способ получения — «Самовывоз». Адрес доставки вводить не нужно.</figcaption></figure>
+    <figure><div class="phone"><div class="screen"><img src="img/checkout-reserve.jpg" alt=""></div></div><figcaption>«Поставьте в резерв — подтвержу отгрузку позже». Кнопка внизу меняется на «Поставить в резерв».</figcaption></figure>
+    <div style="display:flex;flex-direction:column;gap:4.5mm">
+      <ol class="steps">
+        <li>Соберите корзину как обычно и перейдите к оформлению.</li>
+        <li>В блоке «Способ доставки» выберите <span class="b">«Самовывоз»</span>.</li>
+        <li>Внизу, перед кнопкой оформления, выберите <span class="b">«Поставьте в резерв»</span>.</li>
+        <li>Нажмите <span class="b">«Поставить в резерв»</span>.</li>
+      </ol>
+      <div class="panel good"><h3>Что происходит с товаром</h3><p class="small">Он закреплён за вами на 24 часа и не уйдёт другому покупателю. На склад в сборку заказ пока не попадает — ждёт вашего решения.</p></div>
+      <div class="panel"><h3>Если покупатель уже подтвердил</h3><p class="small">Выберите «Данные проверены — можно отгружать». Заказ сразу уйдёт на склад, шаг 2 вам не понадобится.</p></div>
+    </div>
+  </div>
+  <div class="panel warn"><p class="small"><span class="b">Через 24 часа резерв снимается сам.</span> За три часа до этого мы пришлём письмо-напоминание. Снятый резерв — не штраф: товар просто вернётся в свободный остаток, а заказ закроется.</p></div>
+  <div class="foot"><img src="img/logo.png" alt=""><span>стр. 3 / 8</span></div>
+</section>
+
+<section class="page">
+  <div class="head"><h2>Покупатель ответил — решите судьбу заказа</h2><span class="step">Шаг 2</span></div>
+  <div class="shots">
+    <figure><div class="phone"><div class="screen"><img src="img/reserves.jpg" alt=""></div></div><figcaption>Кабинет → «Заказы в резерве». У каждого заказа — таймер и две кнопки.</figcaption></figure>
+    <figure><div class="phone"><div class="screen"><img src="img/reserves-together.jpg" alt=""></div></div><figcaption>Несколько заказов одному курьеру: отметьте галочками и нажмите «В отгрузку вместе».</figcaption></figure>
+    <figure><div class="phone"><div class="screen"><img src="img/order-card.jpg" alt=""></div></div><figcaption>Те же действия — в карточке заказа. Здесь же «Изменить состав».</figcaption></figure>
+  </div>
+  <div class="cols-3">
+    <div class="panel good"><h3>Покупатель подтвердил</h3><p class="small">Нажмите <span class="b">«В отгрузку»</span>. Склад получит заказ сразу, без менеджера. После этого изменить или отменить заказ уже нельзя.</p></div>
+    <div class="panel accent"><h3>Покупатель отказался</h3><p class="small">Нажмите <span class="b">«Отменить»</span>. Товар вернётся в остаток, звонить никому не нужно.</p></div>
+    <div class="panel"><h3>Берёт не всё</h3><p class="small">Откройте заказ и нажмите <span class="b">«Изменить состав»</span>: можно уменьшить количество или убрать позицию. Добавить товар — новым заказом.</p></div>
+  </div>
+  <div class="panel champ"><h3>Несколько заказов — одному курьеру</h3><p class="small">Покупатели подтвердили сразу несколько заказов? Отметьте их галочками и нажмите <span class="b">«В отгрузку вместе»</span>: склад соберёт их одной отгрузкой — одна накладная и один расходный ордер вместо стопки документов. Склад подтверждает группу за минуту; на это время заказы остаются в резерве, но изменить или отменить их нельзя. Если объединить не получилось, заказы вернутся в резерв, а вы получите письмо с причиной — отправьте их снова вместе или по одному.</p></div>
+  <div class="foot"><img src="img/logo.png" alt=""><span>стр. 4 / 8</span></div>
+</section>
+
+<section class="page">
+  <div class="head"><h2>Следите за сборкой, не звоня на склад</h2><span class="step">Шаг 3</span></div>
+  <div class="shots">
+    <figure><div class="phone"><div class="screen"><img src="img/orders-stages.jpg" alt="" style="object-position:top"></div></div><figcaption>В списке заказов сразу видно, за чем можно посылать курьера: «Собран, ждёт выдачи», «Собирается», «В резерве».</figcaption></figure>
+    <figure><div class="phone"><div class="screen"><img src="img/order-ready.jpg" alt="" style="object-position:top"></div></div><figcaption>В карточке заказа — шкала, число мест, кнопка «Пропуск курьеру» и история склада по минутам.</figcaption></figure>
+    <div style="display:flex;flex-direction:column;gap:4mm">
+      <div class="panel accent"><h3>Главный вопрос — «можно ли слать курьера?»</h3><p class="small">Ответ теперь виден в списке заказов: зелёная метка «Собран, ждёт выдачи». Рядом — сколько мест и с какого времени заказ ждёт.</p></div>
+      <div class="panel"><h3>Видно, когда забрали</h3><p class="small">После выдачи в заказе появится время и отметка склада. Удобно, когда покупатель спрашивает «где мой заказ», а курьер не берёт трубку.</p></div>
+      <div class="panel good"><p class="small">Когда заказ собран, мы пришлём письмо. Обновлять страницу и звонить на склад не нужно.</p></div>
+    </div>
+  </div>
+  <div class="legend">
+    <div><span class="badge purple">В резерве</span>Товар ждёт вашего решения</div>
+    <div><span class="badge gray">Передан на склад</span>Склад получил заказ</div>
+    <div><span class="badge warn">Собирается</span>Обычно 30–40 минут</div>
+    <div><span class="badge good">Собран, ждёт выдачи</span><span class="b">Можно посылать курьера</span></div>
+    <div><span class="badge done">Выдан курьеру</span>Видно, когда забрали</div>
+  </div>
+  <h3>Правило восьми вечера</h3>
+  <div class="day">
+    <div class="track"></div>
+    <span style="left:0;transform:none">9:00</span><span style="left:91.6%">20:00</span><span style="right:0;left:auto;transform:none">21:00</span>
+    <em style="left:45%">отправили в отгрузку — соберём и выдадим сегодня</em><em style="left:95.8%">только выдача</em>
+  </div>
+  <p class="small">Заказ, отправленный в отгрузку <span class="b">до 20:00</span>, собираем и выдаём в тот же день. Отправленный позже — соберём первым делом на следующий рабочий день склада, к 9:40. Кабинет подскажет точное время ещё до того, как вы нажмёте кнопку. Последний час склад только выдаёт готовые заказы — курьеру нужно успеть до 21:00.</p>
+  <div class="foot"><img src="img/logo.png" alt=""><span>стр. 5 / 8</span></div>
+</section>
+
+<section class="page">
+  <div class="head"><h2>Отправьте курьера с пропуском</h2><span class="step">Шаг 4</span></div>
+  <div class="shots">
+    <figure><div class="phone"><div class="screen"><img src="img/pickup-ready.jpg" alt="" style="object-position:top"></div></div><figcaption>Кабинет → «Самовывоз»: отметьте заказы, которые заберёт этот курьер, или выпустите пропуск на всё готовое.</figcaption></figure>
+    <figure><div class="phone"><div class="screen"><img src="img/pickup-pass.jpg" alt="" style="object-position:top"></div></div><figcaption>Пропуск — это ссылка с QR-кодом и шестью цифрами. Перешлите её курьеру в любой мессенджер.</figcaption></figure>
+    <div style="display:flex;flex-direction:column;gap:4mm">
+      <ol class="steps">
+        <li>Откройте в кабинете раздел <span class="b">«Самовывоз»</span>.</li>
+        <li>Нажмите <span class="b">«Пропуск на всё готовое»</span> — или отметьте нужные заказы и выберите «Пропуск на выбранное».</li>
+        <li>Нажмите <span class="b">«Переслать курьеру»</span> и отправьте ссылку.</li>
+        <li>Курьер показывает QR-код на складе. Кладовщик сканирует его и выдаёт именно эти заказы.</li>
+      </ol>
+      <div class="panel accent"><h3>Два курьера — два пропуска</h3><p class="small">Заказы, не вошедшие в пропуск, останутся на складе и дождутся второго курьера. Перепутать невозможно: склад видит только то, что вы отметили.</p></div>
+    </div>
+  </div>
+  <div class="cols-3">
+    <div class="panel"><h3>Курьеру не нужен ваш кабинет</h3><p class="small">По ссылке он видит адрес, часы и номера заказов — без цен и состава.</p></div>
+    <div class="panel"><h3>Пропуск потерялся</h3><p class="small">Нажмите «Отозвать пропуск» и выпустите новый. Старая ссылка перестанет работать сразу.</p></div>
+    <div class="panel"><h3>Срок пропуска</h3><p class="small">Три рабочих дня склада. Истёк — выпустите новый: сам заказ хранится сколько нужно.</p></div>
+  </div>
+  <div class="foot"><img src="img/logo.png" alt=""><span>стр. 6 / 8</span></div>
+</section>
+
+<section class="page courier">
+  <div class="eyebrow">Эту страницу можно переслать курьеру отдельно</div>
+  <h1>Памятка курьеру:<br>как забрать заказ на складе Pecado</h1>
+  <div class="cols-2">
+    <div class="panel accent"><div class="small muted">Адрес</div><div class="addr">Москва, ул. Дубнинская, 75с1А</div><p class="small" style="margin-top:2mm">Заезд через территорию института ВИСТИ. Ориентир — голубые двери и вывеска «ВИСТИ» на здании.</p></div>
+    <div class="panel accent"><div class="small muted">Выдача заказов</div><div class="addr">Пн–сб, 9:00–21:00</div><p class="small" style="margin-top:2mm">Воскресенье — выходной. Приезжайте до 21:00: после закрытия заказы не выдаём. Телефон склада: +7 (991) 584-33-90.</p></div>
+  </div>
+  <div class="shots" style="align-items:flex-start">
+    <figure><div class="phone"><div class="screen"><img src="img/courier-page.jpg" alt="" style="object-position:top"></div></div><figcaption>Так выглядит пропуск на телефоне курьера.</figcaption></figure>
+    <ol class="steps big" style="flex:1">
+    <li><span class="b">Откройте ссылку-пропуск</span>, которую прислал магазин. На экране — QR-код и шесть цифр.</li>
+    <li><span class="b">Проверьте статус на этой же странице.</span> «Можно забирать» — поезжайте. «Ещё собирается» — там указано, к какому времени будет готово.</li>
+    <li><span class="b">На складе покажите QR-код кладовщику.</span> Нет интернета — назовите шесть цифр.</li>
+    <li><span class="b">Получите заказы и сверьте число мест</span> с тем, что написано в пропуске.</li>
+    <li><span class="b">Подписывать ничего не нужно.</span> QR-код и есть подтверждение: кладовщик отметит выдачу, магазин увидит её у себя.</li>
+  </ol>
+  </div>
+  <div class="cols-2">
+    <div class="panel"><h3>Вам выдадут только то, что в пропуске</h3><p class="small">Если у магазина на складе лежат и другие заказы, они останутся ждать другого курьера. Так и задумано, спорить с кладовщиком не нужно — вопрос к магазину.</p></div>
+    <div class="panel warn"><h3>Пропуска нет или он не открывается</h3><p class="small">Попросите магазин прислать ссылку заново — это минута. Без пропуска кладовщик сначала убедится, что вы от этого магазина, а вы распишетесь в расходном листе. Это дольше.</p></div>
+  </div>
+  <div class="foot"><img src="img/logo.png" alt=""><span>стр. 7 / 8</span></div>
+</section>
+
+<section class="page">
+  <div class="head"><h2>Вопросы, которые нам зададут первыми</h2></div>
+  <div class="faq">
+    <div><h3>Нужно ли теперь звонить менеджеру?</h3><p>Для заказа, резерва, отмены и выдачи — нет. Менеджеры работают пн–пт с 9:00 до 18:00 и помогут с ассортиментом, условиями и спорными случаями. Вечером и в субботу они отдыхают — всё перечисленное в этом буклете работает без них.</p></div>
+    <div><h3>Почему заказ не ушёл на склад?</h3><p>Единственная причина — просроченная задолженность. Кабинет скажет об этом сразу при оформлении. Оплатите долг или свяжитесь с менеджером в его рабочее время.</p></div>
+    <div><h3>Я забыл подтвердить резерв. Что будет?</h3><p>Через 24 часа резерв снимется, товар вернётся в остаток. За три часа до этого придёт письмо. Оформить заказ заново можно в любой момент — кнопкой «Повторить заказ».</p></div>
+    <div><h3>Можно ли отменить заказ после «В отгрузку»?</h3><p>Нет: склад начинает сборку сразу. Поэтому и нужен резерв — держите в нём заказ, пока покупатель не подтвердил.</p></div>
+    <div><h3>Какого-то товара не оказалось при сборке</h3><p>Заказ будет собран без него, сумма пересчитается, а вы сразу получите письмо: чего и сколько не хватило. Замену мы не подбираем — закажите другой товар в каталоге отдельным заказом.</p></div>
+    <div><h3>Сколько хранится собранный заказ?</h3><p>Сколько нужно — собранный заказ ждёт вас на складе. Если он лежит давно, мы напомним письмом: на третий день, через неделю и дальше. Место на стойке выдачи ограничено, поэтому чем раньше, тем лучше.</p></div>
+    <div><h3>У нас интеграция по API</h3><p>Резерв, подтверждение, отмена, статус сборки и выпуск пропуска доступны через клиентский API и ИИ-агента. Документация — в кабинете, раздел «API».</p></div>
+    <div><h3>Это работает для доставки?</h3><p>Резерв, статусы сборки и отправка вместе — да, для любых заказов. Пропуск нужен только для самовывоза.</p></div>
+    <div><h3>Когда нельзя отправить заказы вместе?</h3><p>Если они на разные юрлица, с разных складов, с разными способами или адресами доставки. Кабинет скажет об этом сразу — отправьте такие заказы раздельно.</p></div>
+  </div>
+  <div class="panel accent" style="margin-top:2mm"><div class="cols-3">
+    <div><div class="small muted">Склад, выдача</div><div class="b">+7 (991) 584-33-90</div><div class="small">пн–сб, 9:00–21:00</div></div>
+    <div><div class="small muted">Менеджеры</div><div class="b">+7 (495) 128-23-98</div><div class="small">пн–пт, 9:00–18:00</div></div>
+    <div><div class="small muted">Почта</div><div class="b">info@pecado.ru</div><div class="small">pecado.ru → Кабинет</div></div>
+  </div></div>
+  <div class="foot"><img src="img/logo.png" alt=""><span>стр. 8 / 8</span></div>
+</section>
+</body></html>

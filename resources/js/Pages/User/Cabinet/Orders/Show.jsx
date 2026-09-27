@@ -16,6 +16,8 @@ import {
     LuSend, LuPencil, LuUndo2,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
+import { orderTitle, orderNumberHint } from '../components/OrderNumber';
+import FulfilmentPanel, { FulfilmentBadge } from '@/components/cabinet/FulfilmentPanel';
 import { TaxSurveyInvite } from '../../TaxSurvey/TaxSurvey';
 import ReserveCountdown from '@/components/cabinet/ReserveCountdown';
 import { NumberInputRoot, NumberInputField } from '@/components/ui/number-input';
@@ -201,7 +203,7 @@ export default function OrderShow({ order }) {
 
     return (
         <CabinetLayout
-            title={`Заказ ${order.number}`}
+            title={orderTitle(order)}
             actions={
                 <HStack gap="2">
                     {repeatableCount > 0 && (
@@ -252,14 +254,14 @@ export default function OrderShow({ order }) {
         >
             {/* Сразу после оформления: заказ собирается — спокойный момент для пары вопросов про НДС. */}
             <TaxSurveyInvite afterOrder mb="4" />
-            <Head title={`Заказ ${order.number} — Pecado`} />
+            <Head title={`${orderTitle(order)} — Pecado`} />
 
             <ConfirmDialog
                 open={cancelOpen}
                 onClose={() => setCancelOpen(false)}
                 onConfirm={doCancel}
                 title="Отменить заказ?"
-                description={`Заказ ${order.number} будет отменён, товар вернётся в свободный остаток. Действие необратимо — для нового заказа соберите корзину заново или используйте «Повторить заказ» до отмены.`}
+                description={`${orderTitle(order)} будет отменён, товар вернётся в свободный остаток. Действие необратимо — для нового заказа соберите корзину заново или используйте «Повторить заказ» до отмены.`}
                 confirmLabel="Отменить заказ"
                 cancelLabel="Не отменять"
                 isLoading={cancelling}
@@ -278,7 +280,7 @@ export default function OrderShow({ order }) {
                 onClose={() => setConfirmReserveOpen(false)}
                 onConfirm={doConfirmReserve}
                 title="Отправить в отгрузку?"
-                description={`Заказ ${order.number} уйдёт в сборку и отгрузку — изменить или отменить его после подтверждения будет нельзя.`}
+                description={`${orderTitle(order)} уйдёт в сборку и отгрузку — изменить или отменить его после подтверждения будет нельзя.${config?.pickup_promise ? ` ${config.pickup_promise.text}${order.delivery_method === 'pickup' && config.pickup_promise.deadline_text ? `, ${config.pickup_promise.deadline_text}` : ''}.` : ''}`}
                 confirmLabel="В отгрузку"
                 cancelLabel="Ещё подумаю"
                 colorPalette="green"
@@ -286,8 +288,29 @@ export default function OrderShow({ order }) {
             />
 
             <Stack gap="5">
+                {/* ═══ Сборка и выдача (эпик pick-00): шкала, обещанное время, пропуск курьеру ═══ */}
+                {!order.reserve && <FulfilmentPanel fulfilment={order.fulfilment} />}
+
+                {/* ═══ Совместная отгрузка (v16.11.0): группа ушла в 1С, ждём итог — действия закрыты ═══ */}
+                {order.reserve && order.ship_together?.status === 'pending' && (
+                    <Card.Root borderColor="blue.200" borderWidth="1px" bg="blue.50" _dark={{ bg: 'blue.900/20', borderColor: 'blue.700' }}>
+                        <Card.Body py="4">
+                            <HStack gap="3" align="flex-start">
+                                <Box color="blue.500" mt="1"><LuSend size={22} /></Box>
+                                <VStack align="flex-start" gap="0">
+                                    <Text fontWeight="700">Отправлен на склад вместе с другими заказами — подтверждаем</Text>
+                                    <Text fontSize="sm" color="fg.muted">
+                                        Всё в порядке: склад соберёт группу в одно место и выпишет одну накладную, подтверждение обычно
+                                        занимает минуту. До него заказ числится в резерве, делать ничего не нужно.
+                                    </Text>
+                                </VStack>
+                            </HStack>
+                        </Card.Body>
+                    </Card.Root>
+                )}
+
                 {/* ═══ Плашка резерва: таймер + подтверждение (v16.9.0, res-07) ═══ */}
-                {order.reserve && (
+                {order.reserve && order.ship_together?.status !== 'pending' && (
                     <Card.Root borderColor="purple.300" borderWidth="1px" bg="purple.50" _dark={{ bg: 'purple.900/20', borderColor: 'purple.700' }}>
                         <Card.Body py="4">
                             <Flex
@@ -308,6 +331,12 @@ export default function OrderShow({ order }) {
                                             Товар удержан на складе. Не подтвердите до истечения срока —
                                             резерв снимется автоматически. Пока резерв активен, заказ можно отменить.
                                         </Text>
+                                        {order.ship_together?.status === 'conflict' && order.ship_together.conflict && (
+                                            <Text fontSize="sm" color="red.fg" mt="1">
+                                                Отправить вместе с другими не удалось: {order.ship_together.conflict.label.toLowerCase()}.
+                                                {order.ship_together.conflict.message ? ` ${order.ship_together.conflict.message}` : ''} Заказ снова в резерве.
+                                            </Text>
+                                        )}
                                     </VStack>
                                 </HStack>
                                 {/* Три действия резерва вместе: подтвердить, изменить, отменить.
@@ -479,6 +508,10 @@ export default function OrderShow({ order }) {
                         <Badge colorPalette="purple" variant="solid" fontSize="sm" px="3" py="1" borderRadius="full">
                             В резерве
                         </Badge>
+                    ) : order.fulfilment && order.fulfilment.stage !== 'none' ? (
+                        // pick-05: тот же приём для сборки — «Собирается / Собран, ждёт выдачи / Выдан»
+                        // понятнее клиенту, чем статус 1С, который для самовывоза от них не зависит.
+                        <FulfilmentBadge fulfilment={order.fulfilment} size="sm" />
                     ) : (
                         <Badge
                             colorPalette={STATUS_COLORS[order.status] ?? 'gray'}
@@ -504,8 +537,13 @@ export default function OrderShow({ order }) {
                         {order.delivery_method_label ?? (order.delivery_method === 'pickup' ? 'Самовывоз' : 'Доставка')}
                     </Badge>
                     <Text fontSize="sm" color="fg.muted">
-                        Заказ {order.number} от {createdAt.split(' ')[0]}
+                        {order.number ? `Заказ ${order.number} от ${createdAt.split(' ')[0]}` : `Заказ от ${createdAt.split(' ')[0]}`}
                     </Text>
+                    {!order.number && (
+                        <Text fontSize="sm" color="fg.muted" fontStyle="italic">
+                            {orderNumberHint(order)}
+                        </Text>
+                    )}
                 </Flex>
 
                 {/* Предзаказ: клиент должен видеть, что это ожидание поставки, а не задержка отгрузки */}

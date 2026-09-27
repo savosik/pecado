@@ -53,7 +53,8 @@
                     },
                     "base_price": {
                         "type": "number",
-                        "minimum": 0
+                        "minimum": 0,
+                        "description": "Прайсовая цена товара до корректировки. Гарантия сайта (v16.11.1): в обычной позиции больше нуля и не меньше final_price; при отсутствии прайсовой цены у карточки сайт присылает base_price = final_price и discount_percent = 0."
                     },
                     "discount_percent": {
                         "type": "number",

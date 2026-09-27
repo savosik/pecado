@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Category;
 use App\Models\MenuItem;
 use App\Models\User;
+use App\Services\Catalog\StockVisibility;
 use App\Support\Impersonation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -98,8 +99,18 @@ class HandleInertiaRequests extends Middleware
                 // Заказ только что оформлен: спокойный момент попросить о чём-то (опрос о НДС).
                 'order_placed' => fn () => (bool) $request->session()->get('order_placed'),
             ],
-            'footerCategories' => Cache::remember('footer.categories', 3600, fn () => Category::active()->whereIsRoot()->select('id', 'name', 'slug')->limit(5)->get()
-            ),
+            // Пять корневых категорий с товарами в наличии (StockVisibility), порядок — по `sort`.
+            'footerCategories' => Cache::remember('footer.categories', 3600, function () {
+                $visibleIds = app(StockVisibility::class)->categoryIds();
+
+                return Category::active()->whereIsRoot()
+                    ->when($visibleIds !== null, fn ($q) => $q->whereIn('id', $visibleIds))
+                    ->orderByRaw('sort IS NULL, sort ASC')
+                    ->orderBy('_lft')
+                    ->select('id', 'name', 'slug')
+                    ->limit(5)
+                    ->get();
+            }),
             'headerMenuItems' => Cache::remember('menu.header', 3600, fn () => MenuItem::published()->forHeader()->ordered()->get()
             ),
             'footerMenuItems' => Cache::remember('menu.footer', 3600, fn () => MenuItem::published()->forFooter()->ordered()->get()
@@ -112,6 +123,9 @@ class HandleInertiaRequests extends Middleware
             // просмотра его видит и менеджер — проходит за клиента во время звонка,
             // ответ записывается от имени менеджера (TaxSurveyController).
             'taxSurvey' => fn () => app(\App\Services\Crm\TaxRegime\ClientTaxSurvey::class)->forUser($request->user()),
+            // Помощник клиента (assist-00): иконка-консультант на всех страницах.
+            // null — не показывать вовсе (гость, выключен, кончился баланс).
+            'assistant' => fn () => app(\App\Support\Assistant\AssistantPresence::class)->forUser($request->user()),
             'config' => [
                 'yandex_maps_api_key' => (string) config('services.yandex_maps.api_key', ''),
                 // Показывать ли клиенту его долги. Флаг нужен и на фронте: пункт меню
@@ -130,6 +144,7 @@ class HandleInertiaRequests extends Middleware
                 // чекауте видны только участнику режима (рубильник ∧ флаг 1С ∧ не
                 // отключён точечно); счётчик — бейдж на пункте меню.
                 ...($this->reserveProps($request)),
+                ...($this->pickupProps($request)),
                 // Бейджи разделов кабинета (предзаказы, корзины).
                 ...($this->cabinetCounts($request)),
             ],
@@ -189,6 +204,32 @@ class HandleInertiaRequests extends Middleware
             'reserve_hours' => $enabled
                 ? app(\App\Services\Order\ReservePolicy::class)->hoursFor($user)
                 : 0,
+        ];
+    }
+
+    /**
+     * Самовывоз (эпик pick-00): флаг раздела и число комплектов, готовых к выдаче.
+     *
+     * Счётчик считается только на страницах кабинета — там он и показывается; при выключенном
+     * рубильнике и для гостя — без запросов к БД.
+     *
+     * @return array{pickup_enabled: bool, pickup_ready_count: int, pickup_promise: ?array<string, mixed>}
+     */
+    private function pickupProps(\Illuminate\Http\Request $request): array
+    {
+        $user = $request->user();
+        $enabled = $user !== null && (bool) config('pickup.enabled');
+
+        return [
+            'pickup_enabled' => $enabled,
+            'pickup_ready_count' => $enabled && str_starts_with($request->path(), 'cabinet')
+                ? app(\App\Services\Pickup\OrderFulfilmentResolver::class)->readyForUser($user)->count()
+                : 0,
+            // pick-04: честное обещание «когда соберём» с учётом графика и отсечки 20:00 — клиент видит его
+            // ДО кнопки «В отгрузку». Считает сервер: фронт время сам не вычисляет.
+            'pickup_promise' => $enabled && ($request->is('cabinet*') || $request->is('checkout*'))
+                ? app(\App\Services\Warehouse\WarehouseSchedule::class)->describe(now())
+                : null,
         ];
     }
 }

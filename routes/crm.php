@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Crm\AbsenceController;
 use App\Http\Controllers\Crm\AgentTokenController;
+use App\Http\Controllers\Crm\AgentUsageController;
 use App\Http\Controllers\Crm\AnalyticsController;
 use App\Http\Controllers\Crm\AttachmentController;
 use App\Http\Controllers\Crm\CalendarFeedController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Crm\DocumentController;
 use App\Http\Controllers\Crm\EmailController;
 use App\Http\Controllers\Crm\FinanceController;
 use App\Http\Controllers\Crm\ImpersonationController;
+use App\Http\Controllers\Crm\InstructionController;
 use App\Http\Controllers\Crm\LeadController;
 use App\Http\Controllers\Crm\LeadStageController;
 use App\Http\Controllers\Crm\MailSuppressionController;
@@ -44,6 +46,7 @@ use App\Http\Controllers\Crm\NotificationPreferenceController;
 use App\Http\Controllers\Crm\PaymentOrderController;
 use App\Http\Controllers\Crm\PlanController;
 use App\Http\Controllers\Crm\PresenceController;
+use App\Http\Controllers\Crm\QuestionController;
 use App\Http\Controllers\Crm\SalaryAdjustmentController;
 use App\Http\Controllers\Crm\SalaryApprovalController;
 use App\Http\Controllers\Crm\SalaryController;
@@ -151,6 +154,17 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::patch('/partners/{client}/notifications/marketing', [NotificationPreferenceController::class, 'marketing'])
             ->name('clients.notifications.marketing')
             ->whereNumber('client');
+
+        // Помощник клиента (assist-00): переписка партнёра с агентом на сайте —
+        // только чтение, право то же, что у раздела «ИИ-агенты клиентов».
+        Route::get('/partners/{client}/assistant', [\App\Http\Controllers\Crm\AssistantController::class, 'index'])
+            ->name('clients.assistant.index')
+            ->whereNumber('client');
+        Route::get('/partners/{client}/assistant/{thread}', [\App\Http\Controllers\Crm\AssistantController::class, 'thread'])
+            ->name('clients.assistant.thread')
+            ->whereNumber('client');
+        Route::get('/assistant/attachments/{attachment}/download', [\App\Http\Controllers\Crm\AssistantController::class, 'download'])
+            ->name('assistant.attachments.download');
 
         // Закупки партнёра для карточки — отдельным запросом, а не в пропсах
         // страницы: разрез по брендам и категориям нужен не при каждом открытии
@@ -854,6 +868,15 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
 
     // Токены ИИ-агентов (crm-13). Только у РОПа: токен даёт запись в CRM
     // от имени сотрудника, и выдавать его себе сотрудник не должен.
+    // ИИ-агенты клиентов: пользуются ли партнёры MCP `/mcp/client` и REST v1 —
+    // наблюдение по журналу вызовов, разрез «мои / отдел» как у остальных разделов.
+    Route::middleware('permission:crm-agent-usage.view')->group(function () {
+        Route::get('/agent-usage', [AgentUsageController::class, 'index'])->name('agent-usage.index');
+        Route::get('/agent-usage/{client}', [AgentUsageController::class, 'show'])
+            ->name('agent-usage.show')
+            ->whereNumber('client');
+    });
+
     Route::middleware('permission:crm-agent-tokens.view')->group(function () {
         Route::get('/agent-tokens', [AgentTokenController::class, 'index'])->name('agent-tokens.index');
     });
@@ -925,6 +948,26 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
 
     // степень удовлетворения, edit — причина недобора и комментарий к строке.
     // Замен сайт не предлагает: отмену делает и склад при сборке, и клиент.
+    // Вопросы клиентов менеджеру. Граница карточки — по праву (свои партнёры
+    // или отдел), разрез списка — по фокусу экрана; см. UserQuestionCrmQuery.
+    Route::middleware('permission:crm-questions.view')->group(function () {
+        Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
+        Route::get('/questions/{question}', [QuestionController::class, 'show'])
+            ->name('questions.show')
+            ->whereNumber('question');
+        Route::get('/questions/{question}/attachment', [QuestionController::class, 'downloadAttachment'])
+            ->name('questions.attachment')
+            ->whereNumber('question');
+    });
+    Route::middleware('permission:crm-questions.edit')->group(function () {
+        Route::post('/questions/{question}/answer', [QuestionController::class, 'answer'])
+            ->name('questions.answer')
+            ->whereNumber('question');
+        Route::post('/questions/{question}/reject', [QuestionController::class, 'reject'])
+            ->name('questions.reject')
+            ->whereNumber('question');
+    });
+
     Route::middleware('permission:crm-shortages.view')->group(function () {
         Route::get('/shortages', [ShortageController::class, 'index'])->name('shortages.index');
     });
@@ -950,4 +993,11 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
             ->name('shortage-reasons.destroy')
             ->whereNumber('reason');
     });
+
+    // Инструкции для менеджеров. Без отдельного права — как «Мои уведомления»:
+    // читает каждый, кто вообще попал в CRM.
+    Route::get('/instructions', [InstructionController::class, 'index'])->name('instructions.index');
+    Route::get('/instructions/{instruction}', [InstructionController::class, 'show'])
+        ->name('instructions.show')
+        ->whereNumber('instruction');
 });

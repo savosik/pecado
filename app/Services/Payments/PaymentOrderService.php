@@ -77,7 +77,10 @@ class PaymentOrderService
             ->get()
             ->keyBy(fn (object $row): string => $row->company_id.':'.$row->organization_id);
 
-        $pairKeys = $lines->map(fn (SettlementEntry $line): string => $line->company_id.':'.$line->organization_id)
+        // toBase(): у пустой Eloquent-коллекции map() остаётся Eloquent-коллекцией, и merge()
+        // строковых ключей падает на getKey() — клиент с проводками, но без
+        // непогашенных строк графика, получал 500 вместо списка пар.
+        $pairKeys = $lines->toBase()->map(fn (SettlementEntry $line): string => $line->company_id.':'.$line->organization_id)
             ->merge($balances->keys())
             ->unique()
             ->values();
@@ -551,6 +554,14 @@ class PaymentOrderService
 
         $fallbackId = (int) config('mail_stream.fallback_author_id', 0);
 
-        return $fallbackId > 0 ? User::query()->find($fallbackId) : null;
+        if ($fallbackId > 0) {
+            return User::query()->find($fallbackId);
+        }
+
+        // Партнёр без закреплённого менеджера (лид, тестовая учётка) — письмо
+        // от РОПа, как в MailStream: он и отвечает за нераспределённых. Раньше
+        // здесь был отказ «некому отправить», и помощник в чате упирался в него.
+        return User::query()->role('sales-head')->whereNotNull('email')->orderBy('id')->first()
+            ?? User::query()->role('sales-manager')->whereNotNull('email')->orderBy('id')->first();
     }
 }

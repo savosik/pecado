@@ -115,7 +115,11 @@ class InstockOnlyCheckoutTest extends TestCase
         $response = $this->checkout();
 
         $preorder = Order::where('type', OrderType::PREORDER->value)->firstOrFail();
-        $response->assertSessionHas('success', fn (string $m) => str_contains($m, $preorder->number) && str_contains($m, '7–9 дней'));
+        // Временный ORD-… клиенту не называем: вместо него — когда ждать номер 1С
+        $response->assertSessionHas('success', fn (string $m) => str_contains($m, 'Предзаказ')
+            && ! str_contains($m, $preorder->number)
+            && str_contains($m, 'учётную систему')
+            && str_contains($m, '7–9 дней'));
     }
 
     #[Test]

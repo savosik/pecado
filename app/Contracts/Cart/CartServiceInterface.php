@@ -44,6 +44,13 @@ interface CartServiceInterface
     public function addProduct(User $user, Cart $cart, Product $product, int $qty): array;
 
     /**
+     * Добавить товар по штрихкоду со статусом результата (not_found / warning / partial / success).
+     *
+     * @return array<string, mixed>
+     */
+    public function addByBarcode(User $user, Cart $cart, string $barcode, int $qty = 1): array;
+
+    /**
      * Update cart item quantity with spillover logic.
      *
      * @return array{instock: int, preorder: int, clamped: int, max_total: int, cart_totals: array}

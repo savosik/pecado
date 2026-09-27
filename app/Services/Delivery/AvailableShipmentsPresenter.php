@@ -331,7 +331,7 @@ class AvailableShipmentsPresenter
             // Заказ в «Ожидается оплата» склад не отгружает, и узнать об этом
             // надо до того, как заявка уйдёт перевозчику.
             'orders' => $relatedOrders->map(static fn (Order $order): array => [
-                'number' => $order->erp_number ?: $order->number,
+                'number' => $order->clientLabel(),
                 'status' => $order->status->value,
                 'status_label' => $order->status->label(),
                 'status_color' => $order->status->color(),

@@ -16,10 +16,19 @@ Schedule::command('documents:relink')->everyTenMinutes()->withoutOverlapping();
 Schedule::command('documents:reconcile')->hourly()->withoutOverlapping();
 Schedule::command('documents:clean-exchange')->dailyAt('04:10')->withoutOverlapping();
 Schedule::command('documents:prune')->dailyAt('04:20')->withoutOverlapping();
+// Помощник клиента (assist-00): пока спрятан из-за баланса или прокси, раз в 10 минут
+// пробуем Anthropic и возвращаем его сами; доступному помощнику проба ничего не стоит.
+Schedule::command('assistant:probe')->everyTenMinutes()->withoutOverlapping();
+// Треды помощника без активности сутки закрываются, модель дописывает заметку о клиенте.
+Schedule::command('assistant:close-idle')->hourlyAt(20)->withoutOverlapping();
+Schedule::command('model:prune', ['--model' => [\App\Models\ClientApiIdempotencyKey::class]])->hourly()->withoutOverlapping();
+Schedule::command('model:prune', ['--model' => [\App\Models\ClientAgentCall::class]])->dailyAt('05:15')->withoutOverlapping(); // журнал вызовов агентов клиентов: ретенция CLIENT_AGENT_CALLS_RETENTION_DAYS
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
 // v16.9.0 (режим «Заказы в резерве», res-09): основной таймер снятия просроченных
 // резервов — у сайта; страховка 1С (+6 ч) в норме не срабатывает
 Schedule::command('reserve:release-expired')->everyFiveMinutes()->withoutOverlapping();
+// v16.11.0: группы совместной отгрузки без итога из 1С возвращаются в резерв
+Schedule::command('reserve:ship-together-timeout')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('health:check')->everyMinute();
 Schedule::command('search:sync')->cron('0 3 */3 * *'); // каждые 3 дня в 03:00
 Schedule::command('search:repair-embeddings --reindex-missing')->dailyAt('03:20')->withoutOverlapping(); // досчёт векторов у товаров без эмбеддинга (упавших по 402/после сброса индекса)
@@ -37,6 +46,7 @@ Schedule::command('erp:cleanup-processed')->dailyAt('05:20')->withoutOverlapping
 Schedule::command('model:prune', ['--model' => [
     \App\Models\SentEmail::class,
 ]])->dailyAt('05:10'); // журнал исходящих писем: ретенция MAIL_JOURNAL_RETENTION_DAYS
+Schedule::command('categories:resort-by-moscow-stock')->hourly()->withoutOverlapping(); // порядок категорий по числу товаров в наличии; видимость считает StockVisibility на лету
 Schedule::command('sitemap:generate')->dailyAt('03:30'); // после search:sync
 Schedule::command('feed:build-yandex')->hourly()->withoutOverlapping(); // публичный YML-фид Яндекс.Маркета
 Schedule::command('promo:rebuild-rule-products')->dailyAt('02:40')->withoutOverlapping(); // участники правил акций: состав категорий и теги меняются массово
@@ -72,7 +82,9 @@ Schedule::command('contacts:birthday-tasks')->dailyAt('06:20')->withoutOverlappi
 // ответ устаревает за 90 дней, ежедневный прогон только дёргал бы менеджера.
 Schedule::command('crm:tax-regime-tasks')->mondays()->at('06:25')->withoutOverlapping();
 Schedule::command('crm:tasks-remind')->dailyAt('08:30')->withoutOverlapping(); // напоминания о завтрашних дедлайнах и о просрочке за сутки (за флагом MAIL_FEATURE_CRM_TASKS)
-Schedule::command('shortages:daily-notice')->weekdays()->at('17:00')->withoutOverlapping(); // вечерняя сводка неразнесённых недоборов менеджеру (за флагом MAIL_FEATURE_SHORTAGE_NOTICE); в выходные склад не собирает
+Schedule::command('shortages:daily-notice')->weekdays()->at('17:00')->withoutOverlapping(); // вечерняя сводка неразнесённых недоборов менеджеру (за флагом MAIL_FEATURE_SHORTAGE_NOTICE); склад собирает до 21:00 и в субботу — окно сводки тянется от прошлой рассылки
+Schedule::command('pickup:remind-waiting')->dailyAt('10:30')->withoutOverlapping(); // собранный самовывоз давно не забирают — письмо клиенту на 3, 7, 14, 30-й день (ступень в ключе письма, дублей нет)
+Schedule::command('pickup:offhours-digest')->weekdays()->at('09:00')->withoutOverlapping(); // pick-13: утром менеджеру — что произошло по его клиентам вечером и в субботу (самовывоз, резервы); за рубильником PICKUP_ENABLED
 Schedule::command('crm:tasks-push')->everyTenMinutes()->withoutOverlapping(); // push-напоминания подписанным браузерам (за флагом CRM_PUSH_ENABLED; без VAPID молчит)
 Schedule::command('crm:tasks-weekly-report')->fridays()->at('17:00')->withoutOverlapping(); // недельный отчёт по задачам менеджерам и РОПу (за флагом MAIL_FEATURE_CRM_TASKS)
 Schedule::command('crm:leads-remind-stale')->dailyAt('05:50')->withoutOverlapping(); // задачи по залежавшимся лидам; до материализации повторов и утренних напоминаний
