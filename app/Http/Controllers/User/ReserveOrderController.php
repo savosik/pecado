@@ -51,7 +51,8 @@ class ReserveOrderController extends Controller
                 'created_at_formatted' => ($order->erp_created_at ?? $order->created_at)?->format('d.m.Y H:i'),
                 // ISO для живого таймера на клиенте; фактический срок из 1С
                 'reserved_until' => $order->reserved_until?->toIso8601String(),
-                'reserved_until_formatted' => $order->reserved_until?->timezone(config('app.timezone'))->format('d.m.Y H:i'),
+                // res-12: день недели обязателен — пятничный резерв живёт до понедельника
+                'reserved_until_formatted' => $order->reserved_until?->timezone(config('app.timezone'))->locale('ru')->isoFormat('dd, D MMMM, HH:mm'),
                 // v16.11.0: состояние группы — «ждём склад» блокирует действия, «отказ» показывает причину
                 'ship_together' => \App\Services\Order\ShipTogetherService::present($order),
             ])->values(),

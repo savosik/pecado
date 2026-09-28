@@ -150,6 +150,19 @@ class ReserveWorkingDaysTest extends TestCase
     }
 
     #[Test]
+    public function cabinet_shows_deadline_with_weekday(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-02 17:00:00'));
+        $this->checkout(reserve: true);
+
+        // «05.10.2026 17:00» не говорит клиенту, что это понедельник
+        $this->actingAs($this->user)
+            ->get('/cabinet/reserves')
+            ->assertInertia(fn ($page) => $page
+                ->where('reserves.0.reserved_until_formatted', 'пн, 5 октября, 17:00'));
+    }
+
+    #[Test]
     public function calendar_hours_are_kept_while_switch_is_off(): void
     {
         config(['order_reserve.working_days' => false]);

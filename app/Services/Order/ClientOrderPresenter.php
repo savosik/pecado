@@ -180,7 +180,7 @@ class ClientOrderPresenter
             'items_version' => (int) ($order->items_version ?? 0),
             'reserved_until' => $order->reserve ? $order->reserved_until?->toIso8601String() : null,
             'reserved_until_formatted' => $order->reserve
-                ? $order->reserved_until?->timezone(config('app.timezone'))->format('d.m.Y H:i')
+                ? $order->reserved_until?->timezone(config('app.timezone'))->locale('ru')->isoFormat('dd, D MMMM, HH:mm')
                 : null,
             // v16.11.0: совместная отгрузка — «ждём склад» закрывает действия, отказ показывает причину
             'ship_together' => ShipTogetherService::present($order),
