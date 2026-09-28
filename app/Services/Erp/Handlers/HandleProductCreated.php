@@ -6,6 +6,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductModel;
+use App\Services\Erp\Support\PendingPrices;
 use Illuminate\Database\ConcurrencyErrorDetector;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -51,6 +52,10 @@ class HandleProductCreated
         }, function (Throwable $e): bool {
             return $this->shouldRetryOnDeadlock($e);
         });
+
+        // Цена могла прийти раньше карточки (очереди разные) — применяем отложенную.
+        // Вызов после коммита: price.updated, отложивший цену позже, сам увидит карточку.
+        app(PendingPrices::class)->apply($uuid);
     }
 
     protected function runInTransaction(callable $callback): void
@@ -118,7 +123,6 @@ class HandleProductCreated
             // withoutGlobalScopes: HiddenScope фильтрует hidden=true, без него мы не найдём
             // скрытый товар и создадим дубликат с тем же external_id → ошибка 1062.
             $existing = Product::withoutGlobalScopes()->where('external_id', $uuid)->first();
-            $basePrice = $existing?->base_price ?? 0;
 
             // --- Модель товара ---
             // Если включён preserve_existing и у товара уже есть model_id — сохраняем его
@@ -165,8 +169,6 @@ class HandleProductCreated
                 'hs_code' => $hsCode,
                 'abc_xyz' => $abcXyz,
                 'turnover' => $turnover,
-                // Цена не перезаписывается здесь — она управляется через price.updated (US-02)
-                'base_price' => $basePrice,
             ];
 
             // v13.10: аудит-метки 1С (опционально). При отсутствии ключа в payload
@@ -179,10 +181,11 @@ class HandleProductCreated
                 $fields['erp_updated_at'] = $payload['erp_updated_at'];
             }
 
-            $product = Product::withoutGlobalScopes()->updateOrCreate(
-                ['external_id' => $uuid],
-                $fields
-            );
+            // Базовую цену здесь не пишем вовсе, только ставим 0 новой карточке: её
+            // меняет лишь price.updated. Запись прочитанного значения обратно затирала
+            // цену, принятую параллельным воркером между чтением и записью (v16.12.3).
+            $product = $existing ?? new Product(['external_id' => $uuid, 'base_price' => 0]);
+            $product->fill($fields)->save();
 
             // --- Штрих-коды ---
             // insertOrIgnore вместо upsert: ON DUPLICATE KEY UPDATE даёт gap-locks

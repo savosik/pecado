@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services\Erp\Handlers;
 
+use App\Models\ErpPendingPrice;
 use App\Models\Product;
 use App\Services\Erp\Handlers\HandlePriceUpdated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -34,22 +35,21 @@ class HandlePriceUpdatedTest extends TestCase
     }
 
     #[Test]
-    public function it_ignores_unknown_product_without_error(): void
+    public function it_parks_price_for_unknown_product(): void
     {
-        Log::shouldReceive('info')
-            ->once()
-            ->withArgs(function ($msg) {
-                return str_contains($msg, 'товар не найден по UUID');
-            });
-
+        // v16.12.3: цена, обогнавшая product.created, не выбрасывается, а откладывается.
         $handler = new HandlePriceUpdated;
         $handler->handle([
             'event' => 'price.updated',
+            'message_id' => 'msg-early-price',
             'product_uuid' => 'nonexistent-uuid-1234',
             'price' => 15000.00,
         ]);
 
-        // Не должно быть ошибки — просто игнорируем
+        $pending = ErpPendingPrice::where('product_uuid', 'nonexistent-uuid-1234')->first();
+        $this->assertNotNull($pending);
+        $this->assertEquals(15000.00, (float) $pending->price);
+        $this->assertSame('msg-early-price', $pending->message_id);
     }
 
     #[Test]
