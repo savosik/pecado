@@ -115,11 +115,21 @@ class NotifyClientAboutPickup
      * Недобор при сборке (решение заказчика 18.09.2026): менеджер замену не подбирает — клиенту уходит
      * письмо «товара не хватило, закажите что-то другое». В окне резерва строки уменьшает сам клиент,
      * это не недобор.
+     *
+     * Закрытие заказа в 1С тоже отменяет непоставленные строки, но это не сборка. 25.09.2026 1С
+     * закрыла 6 877 заказов с начала года, и 75 клиентов получили 324 письма о «недоборе» по
+     * январским–июльским заказам. Поэтому молчим, если заказ закрыт или старше окна сборки.
      */
     public function shortfall(\App\Events\Order\OrderItemsCancelled $event): void
     {
         $order = $event->order;
         if (! config('pickup.enabled') || $order->reserve || blank($order->user_id)) {
+            return;
+        }
+
+        $placedAt = $order->erp_created_at ?? $order->created_at;
+        if ($order->status === \App\Enums\OrderStatus::CLOSED
+            || ($placedAt !== null && $placedAt->lt(now()->subDays((int) config('pickup.shortfall_max_age_days'))))) {
             return;
         }
 

@@ -109,6 +109,56 @@ class PickupNotificationsTest extends TestCase
     }
 
     #[Test]
+    public function closed_or_old_order_is_not_a_picking_shortfall(): void
+    {
+        // Инцидент 25.09.2026: 1С закрыла заказы с начала года, отменив непоставленные строки, —
+        // клиенты получили письма о «недоборе» по январским заказам.
+        $closed = $this->pickupOrder($this->client, ['status' => \App\Enums\OrderStatus::CLOSED]);
+        event(new \App\Events\Order\OrderItemsCancelled($closed, [['name' => 'Свеча', 'quantity' => 1.0]]));
+
+        $old = $this->pickupOrder($this->client, ['erp_created_at' => now()->subDays(31)]);
+        event(new \App\Events\Order\OrderItemsCancelled($old, [['name' => 'Свеча', 'quantity' => 1.0]]));
+
+        $this->assertSame(0, $this->emails('orders.items_unavailable'));
+
+        $fresh = $this->pickupOrder($this->client, ['erp_created_at' => now()->subDays(2)]);
+        event(new \App\Events\Order\OrderItemsCancelled($fresh, [['name' => 'Свеча', 'quantity' => 1.0]]));
+
+        $this->assertSame(1, $this->emails('orders.items_unavailable'));
+    }
+
+    #[Test]
+    public function order_closed_by_erp_with_cancelled_lines_sends_no_shortfall_letter(): void
+    {
+        // Сквозь обработчик шины: тот же payload, что 1С слала 25.09.2026 при массовом закрытии.
+        $product = \App\Models\Product::factory()->create(['external_id' => '00000000-0000-4000-a000-0000000025a9']);
+
+        $closing = $this->pickupOrder($this->client, ['erp_created_at' => now()->subMonths(8)]);
+        $picking = $this->pickupOrder($this->client);
+
+        foreach ([[$closing, 'закрыт'], [$picking, 'в процессе отгрузки']] as [$order, $status]) {
+            $order->items()->create([
+                'product_id' => $product->id, 'line_number' => 1, 'name' => 'Массажное масло',
+                'quantity' => 2, 'price' => 100, 'final_price' => 100, 'base_price' => 100, 'subtotal' => 200,
+            ]);
+
+            app(\App\Services\Erp\Handlers\HandleOrderUpdated::class)->handle([
+                'event' => 'order.updated',
+                'uuid' => $order->uuid,
+                'status' => $status,
+                'items' => [[
+                    'line_number' => 1, 'product_uuid' => $product->external_id, 'quantity' => 2,
+                    'base_price' => 100, 'discount_percent' => 0, 'final_price' => 100, 'cancelled' => true,
+                ]],
+            ]);
+        }
+
+        $letters = CrmEmail::query()->where('origin_event', 'orders.items_unavailable')->get();
+        $this->assertCount(1, $letters, 'письмо только по заказу, который собирается сейчас');
+        $this->assertSame($picking->id, (int) $letters->first()->related_id);
+    }
+
+    #[Test]
     public function reminders_refuse_to_run_without_history_cutoff(): void
     {
         // Старые самовывозы не имеют отметки «выдан» — без даты отсечения письма ушли бы по всей истории.
