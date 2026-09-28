@@ -264,6 +264,11 @@ class OrderOperations implements OperationProvider
             throw new GateClosed(FeatureGate::RESERVE);
         }
 
+        // res-12: через новогодние каникулы резерв не принимаем — отказ с причиной
+        if ($reserve && ($reason = $this->reservePolicy()->blockReason($actor)) !== null) {
+            throw ValidationException::withMessages(['reserve' => $reason]);
+        }
+
         $products = [];
 
         foreach ($input->array('products') as $i => $row) {
@@ -337,5 +342,10 @@ class OrderOperations implements OperationProvider
         $order = $this->orderOf($actor, (string) $input->get('order'), withTrashed: true);
 
         return Envelope::data($this->repeater->repeat($actor, $order, $input->string('mode') ?? OrderRepeater::MODE_MERGE));
+    }
+
+    private function reservePolicy(): \App\Services\Order\ReservePolicy
+    {
+        return app(\App\Services\Order\ReservePolicy::class);
     }
 }

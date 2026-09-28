@@ -48,7 +48,15 @@ class OrderAssembler
         $checkoutUuid = (string) \Illuminate\Support\Str::uuid();
 
         foreach ($draft->filledGroups() as $type => $lines) {
-            $order = Order::create($this->baseData($draft, $type) + ['checkout_uuid' => $checkoutUuid]);
+            $order = new Order($this->baseData($draft, $type) + ['checkout_uuid' => $checkoutUuid]);
+
+            // res-12: created_at резервного заказа = момент расчёта срока (он же `date` в
+            // order.created) — 1С режет срок по date + предел до секунды. Вне $fillable.
+            if ($order->reserve && $draft->reservedFrom !== null) {
+                $order->created_at = $draft->reservedFrom;
+            }
+
+            $order->save();
 
             $order->total_amount = $this->createItems($order, $lines, $draft->user);
 

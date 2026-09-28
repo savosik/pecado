@@ -65,7 +65,15 @@ class CheckoutService implements CheckoutServiceInterface
         // неучастнику или при выключенном рубильнике.
         $reserve = $reserve && $this->reservePolicy->availableFor($cart->user);
 
-        return DB::transaction(function () use ($cart, $company, $deliveryAddress, $comment, $managerComment, $warehouseComment, $deliveryMethod, $reserve) {
+        // res-12: срок не рассчитывается (новогодние каникулы) — отказ, а не заказ под
+        // отгрузку вместо резерва: клиент выбирал удержание, а не отгрузку.
+        if ($reserve && ($reason = $this->reservePolicy->blockReason($cart->user)) !== null) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['reserve' => $reason]);
+        }
+
+        $reservedFrom = \Carbon\CarbonImmutable::now()->startOfSecond();
+
+        return DB::transaction(function () use ($cart, $company, $deliveryAddress, $comment, $managerComment, $warehouseComment, $deliveryMethod, $reserve, $reservedFrom) {
             $user = $cart->user;
             $currency = $this->currencyResolver->resolve($user);
 
@@ -172,7 +180,9 @@ class CheckoutService implements CheckoutServiceInterface
                 currency: $currency,
                 warehouseComments: $warehouseComments,
                 reserve: $reserve,
-                reservedUntil: $reserve ? $this->reservePolicy->requestedReservedUntil($user) : null,
+                reservedUntil: $reserve ? ($this->reservePolicy->requestedReservedUntil($user, $reservedFrom)
+                    ?? throw \Illuminate\Validation\ValidationException::withMessages(['reserve' => 'Сейчас резерв оформить нельзя — оформите заказ к отгрузке.'])) : null,
+                reservedFrom: $reserve ? $reservedFrom : null,
             );
 
             // Заказ уценки отгружается со склада некондиции. Остаток партии проверен

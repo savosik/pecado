@@ -40,7 +40,7 @@
 - `Pages/User/Cabinet/Documents/Index.jsx`: кнопка на каждый формат, подпись «PDF 0,1 МБ · Excel 24 КБ».
 - `DocumentOccasions::published()`: второй формат той же формы не ставит повода для письма.
 - Документация: правила и критерии приёмки `docs-erp/content/rules/printed-documents.md`,
-  раздел «УПД в Excel рядом с PDF» в задании 1С, changelog 16.12.1.
+  раздел «УПД в Excel рядом с PDF» в задании 1С, changelog 16.12.2.
 - Тесты: `PrintedDocumentCabinetTest` (+7), `Erp/PrintedDocumentIngestTest` (+2) — 91 зелёный.
 
 ## Что дальше

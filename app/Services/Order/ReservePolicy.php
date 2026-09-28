@@ -16,6 +16,8 @@ use Carbon\CarbonImmutable;
  */
 class ReservePolicy
 {
+    public function __construct(private readonly ReserveDeadlineCalculator $deadlines) {}
+
     /** Глобальный рубильник режима (тихая выкатка / аварийное гашение). */
     public function enabled(): bool
     {
@@ -76,11 +78,52 @@ class ReservePolicy
      *
      * Это срок, который сайт отправит в reserved_until; фактический может быть
      * короче — 1С урезает до своего предела удержания и возвращает фактический
-     * срок ответным order.updated.
+     * срок ответным order.updated. Отсчёт — от начала текущей секунды: `date`
+     * заказа (created_at) не раньше неё, поэтому reserved_until − date не выходит
+     * за предел 1С и ограничитель их стороны срок не режет.
+     *
+     * Null — резерв от этого момента не предлагается (новогодние каникулы), см.
+     * {@see blockReason()}; вызывающий обязан отказать явно, а не оформить отгрузку.
      */
-    public function requestedReservedUntil(User $user): CarbonImmutable
+    public function requestedReservedUntil(User $user, ?CarbonImmutable $at = null): ?CarbonImmutable
     {
-        return CarbonImmutable::now()->addHours($this->hoursFor($user));
+        $at = ($at ?? CarbonImmutable::now())->startOfSecond();
+
+        if (! $this->workingDays()) {
+            return $at->addHours($this->hoursFor($user));
+        }
+
+        return $this->deadlines->deadline($at, $this->hoursFor($user), $this->holdLimitHours());
+    }
+
+    /**
+     * Почему участнику сейчас нельзя оформить резерв при том, что режим ему доступен.
+     * Человеческий текст для чекаута и клиентского API; null — можно.
+     */
+    public function blockReason(User $user, ?CarbonImmutable $at = null): ?string
+    {
+        if (! $this->workingDays()) {
+            return null;
+        }
+
+        $at = ($at ?? CarbonImmutable::now())->startOfSecond();
+
+        return match ($this->deadlines->blockReason($at, $this->hoursFor($user), $this->holdLimitHours())) {
+            null => null,
+            ReserveDeadlineCalculator::REASON_NEW_YEAR => 'Через новогодние праздники резервы не принимаем — оформите заказ к отгрузке, после праздников резервы снова доступны.',
+            default => 'Сейчас резерв оформить нельзя — оформите заказ к отгрузке.',
+        };
+    }
+
+    /** Срок считается в рабочих днях клиента (res-12), а не календарными часами. */
+    public function workingDays(): bool
+    {
+        return (bool) config('order_reserve.working_days');
+    }
+
+    public function holdLimitHours(): int
+    {
+        return (int) config('order_reserve.hold_limit_hours', 240);
     }
 
     private function overrideFor(User $user): ?OrderReserveOverride

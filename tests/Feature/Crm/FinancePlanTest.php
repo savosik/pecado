@@ -9,6 +9,7 @@ use App\Models\Shipment;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\Crm\Concerns\RestrictsManagersToOwnClients;
@@ -36,13 +37,13 @@ class FinancePlanTest extends TestCase
     {
         parent::setUp();
 
-        // Период раздела по умолчанию — «сегодня … конец текущего месяца», а сроки
-        // в тестах задаются от «сегодня» (`now()->addDays(3)`). В последние дни
-        // месяца такой срок уезжает в следующий, выпадает из периода, и план
-        // становится нулевым — тест падал 28-го числа, ничего не сломав в коде.
-        // Замораживаем время на середину месяца: у «через три дня» всегда есть
-        // место внутри периода.
-        $this->travelTo(now()->startOfMonth()->addDays(9)->setTime(12, 0));
+        // Время заморожено на середине месяца намеренно. Раздел по умолчанию
+        // показывает окно «сегодня → конец месяца», а сроки в тестах задаются
+        // относительно сегодня («+3 дня»). С 28-го числа такой срок уезжает
+        // в следующий месяц, выпадает из окна, и пять проверок падали на
+        // календаре, а не на коде — ровно та бомба, о которой предупреждает
+        // правило проекта про даты в тестах.
+        Carbon::setTestNow(Carbon::now()->startOfMonth()->addDays(14)->setTime(12, 0));
 
         $this->seed(RolesAndPermissionsSeeder::class);
         $this->restrictManagersToOwnClients();
@@ -51,6 +52,13 @@ class FinancePlanTest extends TestCase
         $this->manager->assignRole('sales-manager');
         $this->card = PersonalManager::factory()->create(['user_id' => $this->manager->id]);
         $this->client = User::factory()->create(['personal_manager_id' => $this->card->id]);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
     }
 
     #[Test]

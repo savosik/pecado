@@ -154,6 +154,17 @@ class ApiOrderPlacement
             ? $this->promotions->resolve(array_merge($instockItems, $preorderItems), $user)
             : null;
 
+        // res-12: вызывающие отказывают раньше с причиной; здесь последний рубеж —
+        // резерв без срока схема order.created не пропустит.
+        $reservedFrom = \Carbon\CarbonImmutable::now()->startOfSecond();
+        $reservedUntil = $request->reserve ? $this->reservePolicy->requestedReservedUntil($user, $reservedFrom) : null;
+
+        if ($request->reserve && $reservedUntil === null) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'reserve' => $this->reservePolicy->blockReason($user) ?? 'Сейчас резерв оформить нельзя — оформите заказ к отгрузке.',
+            ]);
+        }
+
         $draft = new OrderDraft(
             user: $user,
             company: $company,
@@ -169,7 +180,8 @@ class ApiOrderPlacement
             currency: $currency,
             warehouseComments: $promoResult !== null ? $promoResult->warehouseComments : [],
             reserve: $request->reserve,
-            reservedUntil: $request->reserve ? $this->reservePolicy->requestedReservedUntil($user) : null,
+            reservedUntil: $reservedUntil,
+            reservedFrom: $request->reserve ? $reservedFrom : null,
         );
 
         // Заказы и запись о недостаче — одной транзакцией. OrderCreated сборщик
