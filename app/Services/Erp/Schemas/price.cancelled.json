@@ -1,0 +1,39 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "price.cancelled",
+    "title": "price.cancelled (1С → Сайт) — отложенная цена отменена",
+    "description": "v16.13.0. Документ установки цен будущей датой распровели, удалили или перепровели без части строк до наступления даты. Сайт удаляет отложенные цены с этим document_uuid по перечисленным товарам. Действующую цену сообщение не меняет: если цена документа уже вступила в силу, 1С дополнительно присылает обычный price.updated с ценой, которая действует после отмены.",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string",
+            "const": "price.cancelled",
+            "description": "Тип события. Всегда «price.cancelled»."
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "document_uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "GUID документа установки цен, чьи отложенные цены снимаются."
+        },
+        "product_uuids": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+                "type": "string",
+                "format": "uuid"
+            },
+            "description": "Товары, по которым снимается отложенная цена документа. Товар без отложенной цены этого документа пропускается без ошибки."
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "document_uuid",
+        "product_uuids"
+    ]
+}

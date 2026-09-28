@@ -30,6 +30,7 @@ class ErpMessageValidator
         'partner.deleted' => 'partner.deleted.json',
         // US-03: Базовые цены
         'price.updated' => 'price.updated.json',
+        'price.cancelled' => 'price.cancelled.json',
         // US-18: Себестоимость
         'cost.updated' => 'cost.updated.json',
         // US-05: Курсы валют
