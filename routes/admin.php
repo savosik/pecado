@@ -175,6 +175,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Сертификаты
     Route::middleware('permission:certificates.view')->group(function () {
         Route::get('/certificates/search', [\App\Http\Controllers\Admin\CertificateController::class, 'search'])->name('certificates.search');
+        Route::post('/certificates/resolve-products', [\App\Http\Controllers\Admin\CertificateController::class, 'resolveProducts'])->name('certificates.resolve-products');
         Route::get('/certificates', [\App\Http\Controllers\Admin\CertificateController::class, 'index'])->name('certificates.index');
         Route::get('/certificates/{certificate}', [\App\Http\Controllers\Admin\CertificateController::class, 'show'])->name('certificates.show')->whereNumber('certificate');
     });

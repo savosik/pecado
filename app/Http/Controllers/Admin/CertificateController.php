@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Certificate;
+use App\Models\Product;
+use App\Services\Cart\OrderImportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -224,6 +226,47 @@ class CertificateController extends AdminController
         $media->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Распознать товары по списку «в столбик» (штрихкоды, артикулы, коды 1С) —
+     * как «Импорт заказа» в корзине. Форма сертификата сама добавляет найденное
+     * к уже выбранным товарам; сохраняется всё обычной кнопкой формы.
+     */
+    public function resolveProducts(Request $request, OrderImportService $importer): \Illuminate\Http\JsonResponse
+    {
+        $validated = $request->validate([
+            'identifiers' => 'required|array|min:1|max:2000',
+            'identifiers.*' => 'required|string|max:255',
+        ], [
+            'identifiers.required' => 'Вставьте штрихкоды, артикулы или коды — по одному в строке.',
+            'identifiers.max' => 'За один раз можно прописать не больше 2000 строк.',
+        ]);
+
+        $resolution = $importer->resolve(array_map(
+            fn (string $identifier) => ['identifier' => $identifier, 'quantity' => '1'],
+            $validated['identifiers'],
+        ));
+
+        $ids = array_column($resolution['resolved'], 'product_id');
+        $products = Product::query()->with('media')->findMany($ids)->keyBy('id');
+
+        return response()->json([
+            'products' => collect($ids)
+                ->map(fn (int $id) => $products->get($id))
+                ->filter()
+                ->map(fn (Product $product) => [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'sku' => $product->sku,
+                    'image_url' => $product->getFirstMediaUrl('main'),
+                    'price' => $product->base_price,
+                ])
+                ->values(),
+            'unresolved' => collect($resolution['unresolved'])
+                ->map(fn (array $row) => ['identifier' => $row['identifier'], 'reason' => $row['reason']])
+                ->values(),
+        ]);
     }
 
     /**

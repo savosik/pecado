@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, FileUploader, ProductSelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, FileUploader, ProductSelector, ProductBulkPaste } from '@/Admin/Components';
 import { Box, Card, Input, Stack, SimpleGrid, Text, HStack, IconButton, Badge } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 import { ConfirmDialog } from '@/shared/Panel/ConfirmDialog';
@@ -139,7 +139,11 @@ export default function Edit({ certificate }) {
                                 </Box>
 
                                 <Box>
-                                    <FormField label="Привязанные товары" error={errors.products}>
+                                    <FormField label={`Привязанные товары${data.products.length ? ` (${data.products.length})` : ''}`} error={errors.products}>
+                                        <ProductBulkPaste
+                                            value={data.products}
+                                            onChange={(products) => setData('products', products)}
+                                        />
                                         <ProductSelector
                                             value={data.products}
                                             onChange={(products) => setData('products', products)}

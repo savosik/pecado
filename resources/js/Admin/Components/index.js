@@ -19,6 +19,7 @@ export { default as EditorJsEditor } from './Editor/EditorJsEditor';
 export { SelectRelation } from './SelectRelation';
 export { BarcodeSelector } from './BarcodeSelector';
 export { ProductSelector } from './ProductSelector';
+export { ProductBulkPaste } from './ProductBulkPaste';
 export { EntitySelector } from './EntitySelector';
 export { MultiEntitySelector } from './MultiEntitySelector';
 export { FileUploader } from './FileUploader';
