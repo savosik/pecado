@@ -43,6 +43,7 @@ Schedule::command('catalog:rebuild-sort-scores')->dailyAt('02:50')->withoutOverl
 Schedule::command('stock:buffers:recompute')->dailyAt('02:20')->withoutOverlapping(); // страховой буфер по рисковым SKU (отмены/брак/срок годности); показ занижает только флаг STOCK_BUFFER_ENABLED (buf-04)
 Schedule::command('erp:cleanup-messages')->dailyAt('05:00')->withoutOverlapping(); // лог шины ERP: архив в холодное хранилище + удаление старше ERP_BUS_RETENTION_DAYS
 Schedule::command('erp:cleanup-processed')->dailyAt('05:20')->withoutOverlapping(); // журнал дедупликации входящих: ретенция ERP_PROCESSED_RETENTION_DAYS
+Schedule::command('erp:activate-scheduled-prices')->everyMinute()->withoutOverlapping(); // v16.13.0: цены из 1С с будущей датой вступления — включаются в свой срок
 Schedule::command('model:prune', ['--model' => [
     \App\Models\SentEmail::class,
 ]])->dailyAt('05:10'); // журнал исходящих писем: ретенция MAIL_JOURNAL_RETENTION_DAYS

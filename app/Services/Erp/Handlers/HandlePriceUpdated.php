@@ -4,12 +4,17 @@ namespace App\Services\Erp\Handlers;
 
 use App\Models\Product;
 use App\Services\Erp\Support\PendingPrices;
+use App\Services\Erp\Support\ScheduledPrices;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class HandlePriceUpdated
 {
-    public function __construct(private PendingPrices $pending = new PendingPrices) {}
+    public function __construct(
+        private PendingPrices $pending = new PendingPrices,
+        private ScheduledPrices $scheduled = new ScheduledPrices,
+    ) {}
 
     /**
      * Обработка события price.updated из 1С.
@@ -17,6 +22,10 @@ class HandlePriceUpdated
      * Находит товар по product_uuid (external_id) и обновляет базовую цену.
      * Если карточки ещё нет (цена обогнала product.created) — цена откладывается
      * и применяется при создании карточки (v16.12.3).
+     *
+     * v16.13.0: цена с будущей effective_from откладывается по паре товар ×
+     * документ и включается планировщиком в свой срок. Прошедшая или
+     * отсутствующая дата — цена применяется сразу, как раньше.
      */
     public function handle(array $payload): void
     {
@@ -27,6 +36,36 @@ class HandlePriceUpdated
             Log::warning('price.updated: отсутствует product_uuid или price', ['payload' => $payload]);
 
             return;
+        }
+
+        $documentUuid = $payload['document_uuid'] ?? null;
+        $effectiveFrom = isset($payload['effective_from']) ? Carbon::parse($payload['effective_from']) : null;
+
+        if ($effectiveFrom !== null && $documentUuid !== null && $effectiveFrom->isFuture()) {
+            $this->scheduled->schedule(
+                $productUuid,
+                $documentUuid,
+                (float) $price,
+                $effectiveFrom,
+                $payload['document_number'] ?? null,
+                $payload['message_id'] ?? null,
+            );
+
+            Log::info('price.updated: цена отложена до даты вступления в силу', [
+                'product_uuid' => $productUuid,
+                'document_uuid' => $documentUuid,
+                'document_number' => $payload['document_number'] ?? null,
+                'price' => $price,
+                'effective_from' => $effectiveFrom->toIso8601String(),
+            ]);
+
+            return;
+        }
+
+        // Документ перепровели датой, которая уже наступила: прежняя
+        // отложенная запись этой пары больше не нужна.
+        if ($documentUuid !== null) {
+            $this->scheduled->forget($productUuid, $documentUuid);
         }
 
         $applied = DB::transaction(function () use ($productUuid, $price): bool {
@@ -41,6 +80,7 @@ class HandlePriceUpdated
 
             $oldPrice = $product->base_price;
 
+            $this->scheduled->supersedeDue($productUuid);
             $this->pending->discard($productUuid);
             $product->update([
                 'base_price' => $price,
@@ -60,6 +100,7 @@ class HandlePriceUpdated
             return;
         }
 
+        $this->scheduled->supersedeDue($productUuid);
         $this->pending->park($productUuid, (float) $price, $payload['message_id'] ?? null);
 
         // Карточка могла появиться, пока цена откладывалась: product.created

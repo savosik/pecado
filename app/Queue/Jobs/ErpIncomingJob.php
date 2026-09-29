@@ -33,6 +33,7 @@ use App\Services\Erp\Handlers\HandlePaymentCreated;
 use App\Services\Erp\Handlers\HandlePaymentDeleted;
 use App\Services\Erp\Handlers\HandlePaymentScheduleUpdated;
 use App\Services\Erp\Handlers\HandlePaymentUpdated;
+use App\Services\Erp\Handlers\HandlePriceCancelled;
 use App\Services\Erp\Handlers\HandlePriceUpdated;
 use App\Services\Erp\Handlers\HandlePrintedDocumentDeleted;
 use App\Services\Erp\Handlers\HandlePrintedDocumentPublished;
@@ -75,6 +76,7 @@ class ErpIncomingJob extends BaseJob
         'partner.deleted' => HandlePartnerDeleted::class,
         // US-03: Базовые цены
         'price.updated' => HandlePriceUpdated::class,
+        'price.cancelled' => HandlePriceCancelled::class,
         // US-18: Себестоимость
         'cost.updated' => HandleCostUpdated::class,
         // US-05: Курсы валют
