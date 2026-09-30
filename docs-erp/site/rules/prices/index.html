@@ -550,6 +550,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#v16123" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Цена пришла раньше карточки (v16.12.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v16130" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Дата вступления цены в силу (v16.13.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2105,6 +2127,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#v16123" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Цена пришла раньше карточки (v16.12.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v16130" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Дата вступления цены в силу (v16.13.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2184,7 +2228,7 @@
 
 <h1 id="_1">Цены<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>JSON Schema:</strong> <a href="/docs/erp/schemas/price.updated.json"><code>price.updated.json</code></a> | <a href="/docs/erp/schemas/exchange_rate.updated.json"><code>exchange_rate.updated.json</code></a><br />
+<p><strong>JSON Schema:</strong> <a href="/docs/erp/schemas/price.updated.json"><code>price.updated.json</code></a> | <a href="/docs/erp/schemas/price.cancelled.json"><code>price.cancelled.json</code></a> | <a href="/docs/erp/schemas/exchange_rate.updated.json"><code>exchange_rate.updated.json</code></a><br />
 <strong>AsyncAPI:</strong> <a href="/docs/erp/spec.yaml">Полная спецификация</a></p>
 </blockquote>
 <h2 id="priceupdated">Базовые цены (price.updated)<a class="headerlink" href="#priceupdated" title="Permanent link">&para;</a></h2>
@@ -2192,7 +2236,10 @@
 <h3 id="-">Бизнес-правила<a class="headerlink" href="#-" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Выгрузка цен использует вид цен из <code>ОсновнойВидЦен</code> настроек</li>
-<li>Если товар с UUID не найден — событие игнорируется</li>
+<li>Если товара с UUID на сайте ещё нет, цена <strong>откладывается</strong> и применяется в момент
+  <code>product.created</code> этого товара (v16.12.3). Из нескольких отложенных цен действует
+  последняя принятая. Раньше такое событие игнорировалось, и цена терялась навсегда</li>
+<li><code>product.created</code> и <code>product.updated</code> базовую цену <strong>не меняют</strong> — её меняет только <code>price.updated</code></li>
 <li>Сайт <strong>не</strong> отправляет обновления цен в 1С</li>
 <li><strong>Базовая цена карточки на сайте живёт только из <code>price.updated</code>.</strong> <code>product.created</code> заводит товар с нулевой базовой ценой и никогда её не меняет. Пока по товару не пришёл ни один <code>price.updated</code>, базовая цена на сайте — 0, даже если в 1С цена назначена. Продаваться товар при этом может: клиентская цена приезжает отдельным каналом (см. <a href="../individual-prices/">Индивидуальные цены</a>). Последствие для заказов — см. <a href="../orders/">Заказы → order.created</a>: сайт подставляет <code>base_price = final_price</code>, чтобы строка документа не встала нулём</li>
 </ul>
@@ -2204,11 +2251,104 @@
 <p>Разрез по организациям существует только в документах и взаиморасчётах, см.
 <a href="../organizations/">Организации</a>. То же требование для остатков — см.
 <a href="../stocks/">Остатки</a>.</p>
+<h4 id="v16123">Цена пришла раньше карточки (v16.12.3)<a class="headerlink" href="#v16123" title="Permanent link">&para;</a></h4>
+<p><code>price.updated</code> и <code>product.created</code> идут разными очередями (<code>erp_in.prices</code>,
+<code>erp_in.catalog</code>) с параллельными воркерами, поэтому порядок их обработки
+<a href="../message-ordering/">не гарантирован</a>. 1С публикует цену нового товара одновременно
+с его карточкой: сообщения приходят в одну секунду, и цена нередко обрабатывается
+первой. До v16.12.3 сайт такую цену выбрасывал, и карточка оставалась с нулевой
+базой до следующего изменения цены в 1С (топик №12, товары 955067-L и 955077-S,
+сентябрь 2026).</p>
+<p>Теперь сайт сохраняет цену по неизвестному UUID в <code>erp_pending_prices</code>. Применяет
+её та из двух сторон, которая завершилась второй: <code>product.created</code> после создания
+карточки или сам <code>price.updated</code>, если карточка появилась, пока цена сохранялась.
+Со стороны 1С <strong>ничего менять не нужно</strong>: порядок отправки, состав и формат
+сообщений прежние.</p>
+<h4 id="v16130">Дата вступления цены в силу (v16.13.0)<a class="headerlink" href="#v16130" title="Permanent link">&para;</a></h4>
+<p>Коммерческий отдел проводит установку цен <strong>будущей датой</strong>: акции, плановые переоценки,
+смена прайса с первого числа. До v16.13.0 сайт применял любое <code>price.updated</code> в момент
+получения и показывал новую цену раньше срока. 27.09.2026 документ датой 28.09 00:00 ушёл
+на витрину за сутки (топик №15 Agent Hub, пример — 9015108: 3 845 → 2 295). Заказ уходит
+в 1С с ценой витрины, и регистр цен 1С при приёме не читается, поэтому все заказы до даты
+действия пришли бы по новой цене.</p>
+<p><strong>Поля <code>price.updated</code>:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Смысл</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>effective_from</code></td>
+<td>Момент, с которого цена действует: дата документа установки цен = период записи в регистре цен. ISO-8601 <strong>с обязательным смещением</strong> (<code>2026-09-28T00:00:00+03:00</code>); без смещения сообщение отклоняется.</td>
+</tr>
+<tr>
+<td><code>document_uuid</code></td>
+<td>GUID документа установки цен. Вместе с <code>product_uuid</code> — ключ отложенной цены.</td>
+</tr>
+<tr>
+<td><code>document_number</code></td>
+<td>Номер документа — только для разбора, логика на нём не строится.</td>
+</tr>
+</tbody>
+</table>
+<p><code>effective_from</code> и <code>document_uuid</code> передаются <strong>вместе</strong>: одно без другого отклоняется
+валидацией. Сообщение без обоих — прежний формат.</p>
+<p><strong>Правила приёма на сайте:</strong></p>
+<ul>
+<li><code>effective_from</code> не позже текущего момента сайта — цена применяется сразу, как раньше;</li>
+<li><code>effective_from</code> в будущем — цена сохраняется <strong>отложенной</strong>. До этого момента витрина,
+  корзина, поиск, выгрузки и расчёт заказа работают по действующей цене;</li>
+<li>планировщик сайта раз в минуту включает отложенные цены с наступившей датой, по
+  возрастанию <code>effective_from</code>. Задержка после <code>effective_from</code> — не больше минуты.
+  Включение — та же запись базовой цены, что и обычный <code>price.updated</code>: поисковый индекс
+  и данные выгрузок обновляются вместе с ней, готовые файлы фидов — следующим прогревом;</li>
+<li>ключ отложенной цены — пара <code>product_uuid</code> + <code>document_uuid</code>. Новое сообщение с той же
+  парой заменяет запись целиком, в том числе дату (документ перепровели другим числом);
+  если новая дата уже наступила — цена применяется сразу, а отложенная запись снимается;</li>
+<li>у товара может лежать несколько отложенных цен разных документов;</li>
+<li>цены с прошедшей датой между собой <strong>не сравниваются</strong>: последняя принятая побеждает,
+  как и раньше. На этом держится откат: после отмены вступившего документа 1С шлёт
+  действующую цену с датой более раннего документа, и она должна лечь;</li>
+<li>сообщение без <code>effective_from</code> применяется сразу (прежний формат, переходный период);</li>
+<li>будущая цена по товару, которого на сайте ещё нет, не теряется: включается в свой срок,
+  а если карточка появилась позже срока — при её создании (как в v16.12.3).</li>
+</ul>
+<p><strong>Отмена — <code>price.cancelled</code>.</strong> Документ будущей датой распровели, удалили или перепровели
+без части строк до наступления даты. 1С отправляет <code>document_uuid</code> и список <code>product_uuids</code>;
+сайт удаляет отложенные цены этого документа по перечисленным товарам, товар без такой
+записи пропускается без ошибки. Действующую цену сообщение не меняет: если цена документа
+уже вступила в силу, 1С дополнительно присылает <code>price.updated</code> с ценой, действующей после
+отмены. Если документ перепровели, убрав из него строки, <code>price.cancelled</code> нужен и по
+убранным товарам — иначе их отложенные цены останутся.</p>
+<p><strong>Полная выгрузка цен</strong> (<code>RMQ_ВыгрузитьВсеЦены</code>) отдаёт действующую цену каждого товара с
+<code>effective_from</code> = период записи в регистре (дата в прошлом — применится сразу) и все
+будущие записи регистра по основному виду цены, каждую своим <code>price.updated</code>. Будущие
+записи работают как upsert по паре <code>product_uuid</code> + <code>document_uuid</code>: восстанавливают
+потерянное, но <strong>ничего не удаляют</strong>. Выгрузка не эталон расписания — неполная выгрузка
+(обрыв, сбой задания) иначе снесла бы запланированные цены. Снимает отложенную цену
+только <code>price.cancelled</code>.</p>
+<p><strong>Заказ</strong> фиксирует цену в строке в момент оформления на сайте и уходит в 1С через секунды.
+Заказ, оформленный до <code>effective_from</code>, идёт по цене, которую видел клиент; 1С строки при
+приёме по регистру не пересчитывает.</p>
+<p><strong>Вне v16.13.0:</strong> будущая цена клиенту не показывается (решение коммерческого отдела,
+контракт позволит без доработок обмена); отложенные индивидуальные цены
+(<code>individual_prices.ready</code>) — отдельным кругом.</p>
 <h3 id="_3">Критерии приёмки<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] Сайт принимает <code>price.updated</code> и обновляет цену товара по UUID</li>
-<li>[ ] Если товар не найден — событие игнорируется без ошибок</li>
+<li>[ ] Если товара ещё нет — событие принимается без ошибок, цена откладывается</li>
+<li>[ ] <code>product.created</code> после отложенной цены создаёт карточку сразу с этой ценой</li>
+<li>[ ] Порядок <code>price.updated</code> и <code>product.created</code> не важен: цена не теряется ни в каком порядке</li>
+<li>[ ] <code>product.created</code> по существующей карточке базовую цену не трогает</li>
 <li>[ ] По каждому товару, которому в 1С назначена цена, <code>price.updated</code> приходит хотя бы один раз — иначе базовая цена на сайте останется нулевой</li>
+<li>[ ] <code>price.updated</code> с будущей <code>effective_from</code> не меняет цену до срока и включается не позже минуты после него (v16.13.0)</li>
+<li>[ ] Повтор с тем же <code>document_uuid</code> заменяет отложенную цену и дату, отложенная запись по паре одна</li>
+<li>[ ] <code>price.cancelled</code> снимает отложенную цену документа и не трогает действующую</li>
+<li>[ ] <code>price.updated</code> без <code>effective_from</code> применяется сразу</li>
+<li>[ ] <code>effective_from</code> без смещения, <code>effective_from</code> без <code>document_uuid</code> — отклоняются валидацией</li>
 </ul>
 <hr />
 <h2 id="exchange_rateupdated">Курсы валют (exchange_rate.updated)<a class="headerlink" href="#exchange_rateupdated" title="Permanent link">&para;</a></h2>
