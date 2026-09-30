@@ -4,6 +4,7 @@ namespace App\Services\Payroll\Components\Motivation;
 
 use App\Enums\Payroll\ComponentKind;
 use App\Services\Payroll\Components\AbstractComponent;
+use App\Services\Payroll\Dto\AdjustmentInput;
 use App\Services\Payroll\Dto\ComponentResult;
 use App\Services\Payroll\Dto\PayrollContext;
 use App\Services\Payroll\Support\Money;
@@ -41,7 +42,7 @@ class TransitionGuaranteeComponent extends AbstractComponent
 
     public function howComputed(): string
     {
-        return 'Гарантированный минимум = доля × средний заработок за три месяца до введения Положения. Доплата = минимум минус то, что вышло по расчёту.';
+        return 'Гарантированный минимум = доля × средний заработок за три месяца до введения Положения. Доплата = минимум минус то, что вышло по расчёту без корректировок РОПа: удержание гарантией не компенсируется.';
     }
 
     public function kind(): ComponentKind
@@ -103,7 +104,12 @@ class TransitionGuaranteeComponent extends AbstractComponent
     {
         $share = $this->number($params, 'share');
         $base = $this->number($params, 'base');
-        $earned = $context->runningTotal;
+        // Корректировка РОПа (удержание за товар, разовая доплата) — поверх гарантии:
+        // гарантия страхует заработок по формуле, иначе она гасила бы удержание.
+        $corrections = $context->params->enabled('manual_correction')
+            ? array_sum(array_map(fn (AdjustmentInput $item): float => $item->amount, $context->inputs->corrections))
+            : 0.0;
+        $earned = Money::round($context->runningTotal - $corrections);
 
         $minimum = Money::round($base * $share);
         $amount = Money::round(max(0.0, $minimum - $earned));

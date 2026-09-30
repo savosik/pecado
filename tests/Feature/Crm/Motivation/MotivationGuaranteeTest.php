@@ -4,6 +4,7 @@ namespace Tests\Feature\Crm\Motivation;
 
 use App\Enums\UserKind;
 use App\Models\PayrollCalculation;
+use App\Models\PayrollManualAdjustment;
 use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Motivation\GuaranteeBaseService;
@@ -102,6 +103,32 @@ class MotivationGuaranteeTest extends TestCase
         $lateGuarantee = collect((array) data_get($late->breakdown, 'components', []))->keyBy('key')['motivation_guarantee'];
         $this->assertSame(0.0, (float) $lateGuarantee['amount']);
         $this->assertStringContainsString('завершилась', (string) $lateGuarantee['explanation']);
+    }
+
+    #[Test]
+    #[TestDox('Удержание РОПа гарантией не компенсируется: итог уменьшается на всю сумму')]
+    public function correction_is_applied_on_top_of_guarantee(): void
+    {
+        app(GuaranteeBaseService::class)->fix($this->effective, $this->head);
+        $calculations = app(PayrollCalculationService::class);
+        $before = (float) $calculations->ensureDraft($this->profile->id, $this->effective)->total;
+
+        PayrollManualAdjustment::factory()->create([
+            'personal_manager_id' => $this->profile->id,
+            'period_month' => $this->effective->toDateString(),
+            'component_key' => PayrollManualAdjustment::COMPONENT_MANUAL_CORRECTION,
+            'label' => 'Удержание за товар',
+            'qty' => 1,
+            'price' => -8342,
+            'amount' => -8342,
+        ]);
+
+        $after = $calculations->recalculateDraft($this->profile->id, $this->effective);
+        $this->assertNotNull($after);
+        $components = collect((array) data_get($after->breakdown, 'components', []))->keyBy('key');
+
+        $this->assertSame(-8342.0, (float) $components['manual_correction']['amount']);
+        $this->assertEqualsWithDelta($before - 8342, (float) $after->total, 0.01, 'Доплата до гарантии не выросла на сумму удержания');
     }
 
     #[Test]
