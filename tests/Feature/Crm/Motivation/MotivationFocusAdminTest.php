@@ -78,7 +78,8 @@ class MotivationFocusAdminTest extends TestCase
         $this->assertSame([$product->id => 0.03], app(FocusRangeResolver::class)->itemsFor($this->month));
 
         try {
-            $service->close($rule, CarbonImmutable::today());
+            // Не today(): в последний день месяца он совпадает с концом периода, и исключения нет.
+            $service->close($rule, CarbonImmutable::today()->endOfMonth()->subDay());
             $this->fail('Исключение внутри текущего периода');
         } catch (\InvalidArgumentException $e) {
             $this->assertStringContainsString('не ранее '.CarbonImmutable::today()->endOfMonth()->format('d.m.Y'), $e->getMessage());
