@@ -163,6 +163,34 @@ class MotivationDebtExclusionsTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('Исключение партнёра целиком снимает вычет только по его накладным, а не по всей базе работника')]
+    public function exclusion_by_partner_covers_only_that_partner(): void
+    {
+        Event::fake([PayrollInputsChanged::class]);
+        $excluded = User::factory()->create(['personal_manager_id' => $this->profile->id, 'name' => 'Исключённый']);
+        $other = User::factory()->create(['personal_manager_id' => $this->profile->id, 'name' => 'Обычный']);
+        $this->overdueInvoice($excluded, 100_000);
+        $this->overdueInvoice($other, 300_000);
+
+        $calculations = app(PayrollCalculationService::class);
+        $before = app(DebtListService::class)->build($calculations->recalculateDraft($this->profile->id, $this->month, 'test'));
+
+        \App\Models\Motivation\MotivationDebtExclusion::query()->create([
+            'user_id' => $excluded->id,
+            'shipment_id' => null,
+            'company_id' => null,
+            'reason' => 'other',
+            'excluded_from' => $this->month->toDateString(),
+            'author_id' => $this->head->id,
+        ]);
+
+        $after = app(DebtListService::class)->build($calculations->recalculateDraft($this->profile->id, $this->month, 'test'));
+
+        $this->assertGreaterThan(0, $after['summary']['deducted_this_month'], 'Долг второго партнёра остаётся в расчёте');
+        $this->assertEqualsWithDelta($before['summary']['deducted_this_month'] * 0.75, $after['summary']['deducted_this_month'], 1.0, 'Снята ровно доля исключённого партнёра (100 из 400 тыс.)');
+    }
+
+    #[Test]
     #[TestDox('Исключение по контрагенту снимает вычет только по накладным этого юрлица')]
     public function exclusion_by_contractor_covers_only_that_company(): void
     {
