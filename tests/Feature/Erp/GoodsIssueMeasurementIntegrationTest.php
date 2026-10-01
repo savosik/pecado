@@ -271,8 +271,8 @@ class GoodsIssueMeasurementIntegrationTest extends TestCase
 
         $gate = $this->gate();
         $this->assertSame(MeasuredPlacesGate::PENDING, $gate['verdict']);
-        $this->assertTrue($gate['blocks']);
-        $this->assertSame([], $gate['places']);
+        $this->assertFalse($gate['blocks'], 'расчёт умолчанием не блокируется — только справка');
+        $this->assertSame([], $gate['places'], 'частичный обмер в места расчёта не идёт');
     }
 
     // ───────────────────────── I ─────────────────────────
@@ -406,7 +406,7 @@ class GoodsIssueMeasurementIntegrationTest extends TestCase
     }
 
     #[Test]
-    public function m_unknown_shipping_mode_blocks_calculation_and_is_journaled(): void
+    public function m_unknown_shipping_mode_is_journaled_and_flagged(): void
     {
         $this->fire($this->snapshot(10, 'pending', [$this->box(['weight' => null, 'dimensions' => null])], null));
 
@@ -417,8 +417,14 @@ class GoodsIssueMeasurementIntegrationTest extends TestCase
 
         $gate = $this->gate();
         $this->assertSame(MeasuredPlacesGate::MODE_UNKNOWN, $gate['verdict']);
-        $this->assertTrue($gate['blocks']);
-        $this->assertStringContainsString('обратитесь к менеджеру', (string) $gate['message']);
+        $this->assertFalse($gate['blocks']);
+        $this->assertStringContainsString('не определила способ доставки', (string) $gate['message']);
+
+        // С включённым запретом тот же вердикт расчёт блокирует.
+        config(['services.apiship.measurement_gate' => true]);
+        $enforced = $this->gate();
+        $this->assertTrue($enforced['blocks']);
+        $this->assertStringContainsString('обратитесь к менеджеру', (string) $enforced['message']);
 
         $log = ErpBusMessage::query()->where('event', 'goods_issue.updated')->latest('id')->firstOrFail();
         $this->assertSame('success', $log->status);
@@ -426,7 +432,7 @@ class GoodsIssueMeasurementIntegrationTest extends TestCase
     }
 
     #[Test]
-    public function m_unknown_mode_blocks_even_when_measurement_is_done(): void
+    public function m_unknown_mode_wins_over_done_measurement(): void
     {
         $this->fire($this->snapshot(10, 'done', [$this->box()], null));
 
@@ -434,20 +440,20 @@ class GoodsIssueMeasurementIntegrationTest extends TestCase
     }
 
     #[Test]
-    public function m_pickup_from_erp_against_delivery_orders_blocks_and_is_journaled(): void
+    public function m_pickup_from_erp_against_delivery_orders_is_journaled_and_flagged(): void
     {
         $this->fire($this->snapshot(10, 'not_required', [$this->box(['weight' => null, 'dimensions' => null])], 'pickup'));
 
         $gate = $this->gate();
         $this->assertSame(MeasuredPlacesGate::MODE_MISMATCH, $gate['verdict']);
-        $this->assertTrue($gate['blocks']);
+        $this->assertFalse($gate['blocks']);
 
         $log = ErpBusMessage::query()->where('event', 'goods_issue.updated')->latest('id')->firstOrFail();
         $this->assertStringContainsString('Способ доставки расходится', (string) $log->error_message);
     }
 
     #[Test]
-    public function m_delivery_from_erp_against_pickup_orders_blocks(): void
+    public function m_delivery_from_erp_against_pickup_orders_is_flagged(): void
     {
         $this->fire($this->snapshot(10, 'done', [$this->box()], 'delivery', [], [$this->pickupOrder]));
 

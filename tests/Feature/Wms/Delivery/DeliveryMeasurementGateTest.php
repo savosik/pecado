@@ -11,15 +11,17 @@ use App\Models\Order;
 use App\Models\Shipment;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\Attributes\TestDox;
 
 /**
  * Расчёт доставки и обмер грузовых мест расходного ордера (v16.14.0, топик Agent Hub №13).
  *
- * Правила: ордер старого формата (без обмера) считается как раньше — места вводит кладовщик;
- * `pending`, неизвестный способ и расхождение способа расчёт блокируют; `mixed` — нет:
- * ордер едет целиком, по всем местам.
+ * Решение заказчика 01.10.2026: сайт пока только принимает габариты из 1С, расчёт кладовщику
+ * НЕ блокируется — он считает по местам, введённым руками, а состояние обмера видит справкой.
+ * Запрет (`APISHIP_MEASUREMENT_GATE=true`) оставлен выключателем для блока логистики: с ним
+ * `pending`, неизвестный способ и расхождение способа расчёт блокируют; `mixed` — нет.
  */
 class DeliveryMeasurementGateTest extends DeliveryTestCase
 {
@@ -121,9 +123,11 @@ class DeliveryMeasurementGateTest extends DeliveryTestCase
     }
 
     #[Test]
-    #[TestDox('Обмер не завершён — расчёта нет, перевозчик не вызывается')]
+    #[TestDox('Запрет включён: обмер не завершён — расчёта нет, перевозчик не вызывается')]
     public function pending_measurement_blocks(): void
     {
+        config()->set('services.apiship.measurement_gate', true);
+
         $this->goodsIssue([
             'number' => 'УТ-00013001',
             'shipping_mode' => 'delivery',
@@ -138,9 +142,11 @@ class DeliveryMeasurementGateTest extends DeliveryTestCase
     }
 
     #[Test]
-    #[TestDox('Способ доставки 1С не определила — расчёта нет, «обратитесь к менеджеру»')]
+    #[TestDox('Запрет включён: способ доставки 1С не определила — расчёта нет')]
     public function unknown_mode_blocks(): void
     {
+        config()->set('services.apiship.measurement_gate', true);
+
         $this->goodsIssue([
             'shipping_mode' => null,
             'measurement_required' => true,
@@ -153,9 +159,11 @@ class DeliveryMeasurementGateTest extends DeliveryTestCase
     }
 
     #[Test]
-    #[TestDox('1С говорит «самовывоз», заказ на сайте — на доставку: расчёт заблокирован')]
+    #[TestDox('Запрет включён: 1С говорит «самовывоз», заказ на сайте — на доставку — расчёта нет')]
     public function mode_mismatch_blocks(): void
     {
+        config()->set('services.apiship.measurement_gate', true);
+
         $this->goodsIssue([
             'shipping_mode' => 'pickup',
             'measurement_required' => false,
@@ -218,18 +226,57 @@ class DeliveryMeasurementGateTest extends DeliveryTestCase
         $this->calculate($this->delivery())->assertOk();
     }
 
-    #[Test]
-    #[TestDox('Выключатель APISHIP_MEASUREMENT_GATE возвращает расчёт по ручным местам')]
-    public function gate_can_be_switched_off(): void
+    /**
+     * @return array<string, array{array<string, mixed>, string, string}>
+     */
+    public static function informationalVerdicts(): array
     {
-        config()->set('services.apiship.measurement_gate', false);
+        return [
+            'обмер не завершён' => [
+                ['shipping_mode' => 'delivery', 'measurement_required' => true, 'measurement_state' => GoodsIssue::MEASUREMENT_PENDING],
+                'pending',
+                'ещё не завершил',
+            ],
+            'способ не определён' => [
+                ['shipping_mode' => null, 'measurement_required' => true, 'measurement_state' => GoodsIssue::MEASUREMENT_PENDING],
+                'mode_unknown',
+                'не определила способ доставки',
+            ],
+            'способ расходится' => [
+                ['shipping_mode' => 'pickup', 'measurement_required' => false, 'measurement_state' => GoodsIssue::MEASUREMENT_NOT_REQUIRED],
+                'mode_mismatch',
+                'расходится',
+            ],
+        ];
+    }
 
-        $this->goodsIssue([
-            'shipping_mode' => 'delivery',
-            'measurement_required' => true,
-            'measurement_state' => GoodsIssue::MEASUREMENT_PENDING,
-        ]);
+    /**
+     * @param  array<string, mixed>  $attrs
+     */
+    #[Test]
+    #[DataProvider('informationalVerdicts')]
+    #[TestDox('По умолчанию расчёт не блокируется, состояние обмера — справка для кладовщика')]
+    public function by_default_verdicts_are_informational(array $attrs, string $verdict, string $text): void
+    {
+        $this->assertFalse(config('services.apiship.measurement_gate'), 'запрет умолчанием выключен');
 
-        $this->calculate($this->delivery())->assertOk();
+        $this->goodsIssue($attrs);
+
+        $props = $this->actingAs($this->userWithRole('storekeeper'))
+            ->get('/wms/deliveries/create?shipment_ids[]='.$this->shipment->id)
+            ->assertOk()
+            ->viewData('page')['props'];
+
+        $measurement = $props['preselected'][0]['goods_issue']['measurement'];
+
+        $this->assertSame($verdict, $measurement['verdict']);
+        $this->assertFalse($measurement['blocks']);
+        $this->assertStringContainsString($text, $measurement['message']);
+        $this->assertStringNotContainsString('недоступен', $measurement['message']);
+        $this->assertSame([], $measurement['places'], 'незавершённый обмер в места не подставляется');
+
+        // Расчёт идёт по местам, которые кладовщик ввёл руками.
+        $this->calculate($this->delivery())->assertOk()->assertJsonCount(1, 'tariffs');
+        $this->assertSame(3200, $this->sentPayload('/calculator')['weight']);
     }
 }

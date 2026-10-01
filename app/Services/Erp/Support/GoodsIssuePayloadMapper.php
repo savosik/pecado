@@ -332,8 +332,9 @@ class GoodsIssuePayloadMapper
     /**
      * Журнал по способу доставки: неизвестный способ и расхождение с заказами сайта.
      *
-     * Сам запрет расчёта считает {@see MeasuredPlacesGate} в момент расчёта — заказ могут
-     * исправить позже. Здесь только запись факта, чтобы 1С увидела его рядом с сообщением.
+     * Расчёт доставки этим не блокируется (решение заказчика 01.10.2026) — только запись
+     * факта, чтобы 1С увидела его рядом с сообщением. Вердикт для склада считает
+     * {@see MeasuredPlacesGate} на лету: заказ могут исправить позже.
      *
      * @param  array<string, mixed>  $payload
      */
@@ -349,7 +350,7 @@ class GoodsIssuePayloadMapper
         }
 
         if ($goodsIssue->shipping_mode === null) {
-            $this->note($context, $goodsIssue->uuid, 'Способ доставки ордера не определён (shipping_mode = null): расчёт доставки по ордеру недоступен.');
+            $this->note($context, $goodsIssue->uuid, 'Способ доставки ордера не определён (shipping_mode = null).');
 
             return;
         }
@@ -359,7 +360,7 @@ class GoodsIssuePayloadMapper
 
         if ($gate->isMismatch($goodsIssue->shipping_mode, $siteMode)) {
             $this->note($context, $goodsIssue->uuid, sprintf(
-                'Способ доставки расходится: 1С — %s, заказы ордера на сайте — %s. Расчёт доставки по ордеру заблокирован.',
+                'Способ доставки расходится: 1С — %s, заказы ордера на сайте — %s.',
                 $goodsIssue->shipping_mode,
                 $siteMode,
             ));

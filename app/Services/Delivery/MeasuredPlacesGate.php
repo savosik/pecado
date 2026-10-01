@@ -19,6 +19,11 @@ use Illuminate\Support\Facades\DB;
  * нельзя. Поэтому `mixed` расчёт не блокирует — к перевозчику уходит весь ордер целиком,
  * включая заказы на самовывоз (решение заказчика 28.09.2026), и одно место дважды не считается.
  *
+ * Запрет расчёта умолчанием ВЫКЛЮЧЕН (решение заказчика 01.10.2026: сайт пока обеспечивает
+ * только поток габаритов из 1С, учтены они будут в блоке логистики). Вердикты считаются
+ * всегда и показываются складу как справка; расчёт запрещают только при включённом
+ * `services.apiship.measurement_gate`.
+ *
  * Вердикты:
  *  - `legacy`        — ордер старого формата, блока `measurement` не было: обмера нет, места
  *                      кладовщик вводит руками, как до v16.14.0;
@@ -43,8 +48,14 @@ class MeasuredPlacesGate
 
     public const MODE_MISMATCH = 'mode_mismatch';
 
-    /** Вердикты, при которых расчёт доставки по ордеру запрещён. */
+    /** Вердикты, при которых расчёт доставки по ордеру запрещён — если запрет включён. */
     public const BLOCKING = [self::PENDING, self::MODE_UNKNOWN, self::MODE_MISMATCH];
+
+    /** Включён ли запрет расчёта по вердиктам (`APISHIP_MEASUREMENT_GATE`). */
+    public function enforced(): bool
+    {
+        return (bool) config('services.apiship.measurement_gate', false);
+    }
 
     /**
      * Вердикт по одному ордеру.
@@ -71,6 +82,7 @@ class MeasuredPlacesGate
             $issues->filter(static fn (GoodsIssue $issue): bool => $issue->measurement_state !== null),
         );
 
+        $enforced = $this->enforced();
         $result = [];
 
         foreach ($issues as $id => $issue) {
@@ -79,8 +91,8 @@ class MeasuredPlacesGate
 
             $result[$id] = [
                 'verdict' => $verdict,
-                'blocks' => in_array($verdict, self::BLOCKING, true),
-                'message' => $this->message($verdict, $issue),
+                'blocks' => $enforced && in_array($verdict, self::BLOCKING, true),
+                'message' => $this->message($verdict, $issue, $enforced),
                 'site_mode' => $siteMode,
                 'places' => $verdict === self::READY ? $this->places($issue) : [],
             ];
@@ -149,7 +161,7 @@ class MeasuredPlacesGate
      */
     public function blockingMessage(iterable $orderUuids): ?string
     {
-        if (! config('services.apiship.measurement_gate', true)) {
+        if (! $this->enforced()) {
             return null;
         }
 
@@ -222,14 +234,23 @@ class MeasuredPlacesGate
         return self::READY;
     }
 
-    private function message(string $verdict, GoodsIssue $issue): ?string
+    /**
+     * Текст для склада. Без запрета — нейтральная справка, с запретом — причина отказа.
+     */
+    private function message(string $verdict, GoodsIssue $issue, bool $enforced): ?string
     {
         $number = $issue->number;
 
         return match ($verdict) {
-            self::PENDING => "Обмер мест по ордеру {$number} не завершён — расчёт доставки появится, когда упаковщик закончит обмер.",
-            self::MODE_UNKNOWN => "По ордеру {$number} 1С не определила способ доставки — расчёт недоступен, обратитесь к менеджеру.",
-            self::MODE_MISMATCH => "По ордеру {$number} способ доставки в 1С и в заказах на сайте расходится — расчёт недоступен, обратитесь к менеджеру.",
+            self::PENDING => $enforced
+                ? "Обмер мест по ордеру {$number} не завершён — расчёт доставки появится, когда упаковщик закончит обмер."
+                : "Обмер мест по ордеру {$number} упаковщик ещё не завершил — вес и габариты мест укажите сами.",
+            self::MODE_UNKNOWN => $enforced
+                ? "По ордеру {$number} 1С не определила способ доставки — расчёт недоступен, обратитесь к менеджеру."
+                : "По ордеру {$number} 1С не определила способ доставки.",
+            self::MODE_MISMATCH => $enforced
+                ? "По ордеру {$number} способ доставки в 1С и в заказах на сайте расходится — расчёт недоступен, обратитесь к менеджеру."
+                : "По ордеру {$number} способ доставки в 1С и в заказах на сайте расходится.",
             self::READY => $issue->shipping_mode === GoodsIssue::SHIPPING_MIXED
                 ? "Ордер {$number} собран по заказам с доставкой и самовывозом — в отправление входит весь ордер, все его места."
                 : null,
