@@ -354,7 +354,7 @@ class AvailableShipmentsPresenter
                 'status_label' => $goodsIssue->status_label,
                 'status_color' => $goodsIssue->status_color,
                 'is_stale' => $goodsIssue->is_stale,
-                'is_shipped' => $goodsIssue->status === GoodsIssue::STATUS_SHIPPED,
+                'is_shipped' => $goodsIssue->status === GoodsIssue::STATUS_SHIPPED && ! $goodsIssue->isShippedEmpty(),
                 'packages_count' => (int) $goodsIssue->packages_count,
                 'delivery_type_label' => $goodsIssue->delivery_type_label,
                 'delivery_address' => $goodsIssue->delivery_address,

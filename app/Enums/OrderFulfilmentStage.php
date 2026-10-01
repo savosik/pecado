@@ -18,6 +18,8 @@ enum OrderFulfilmentStage: string
     case READY = 'ready';
     case HANDED_OVER = 'handed_over';
     case SHIPPED = 'shipped';
+    /** Ордер отгружен без товара — полный недобор (v16.15.0): собрать ничего не удалось. */
+    case NOT_COLLECTED = 'not_collected';
 
     public function label(): string
     {
@@ -29,6 +31,7 @@ enum OrderFulfilmentStage: string
             self::READY => 'Собран, ждёт выдачи',
             self::HANDED_OVER => 'Выдан курьеру',
             self::SHIPPED => 'Отгружен',
+            self::NOT_COLLECTED => 'Сборка не состоялась',
         };
     }
 
@@ -40,6 +43,7 @@ enum OrderFulfilmentStage: string
             self::PICKING => 'orange',
             self::READY => 'green',
             self::HANDED_OVER, self::SHIPPED => 'teal',
+            self::NOT_COLLECTED => 'red',
         };
     }
 
@@ -53,6 +57,7 @@ enum OrderFulfilmentStage: string
             self::READY => 'Можно отправлять курьера',
             self::HANDED_OVER => 'Заказ выдан на складе',
             self::SHIPPED => 'Заказ собран и отгружен',
+            self::NOT_COLLECTED => 'Товара не оказалось на складе — позиции сняты с заказа',
         };
     }
 
@@ -62,7 +67,7 @@ enum OrderFulfilmentStage: string
         return match ($this) {
             self::NONE, self::RESERVED => 0,
             self::SENT_TO_WAREHOUSE => 1,
-            self::PICKING => 2,
+            self::PICKING, self::NOT_COLLECTED => 2,
             self::READY, self::SHIPPED => 3,
             self::HANDED_OVER => 4,
         };

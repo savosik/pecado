@@ -55,7 +55,7 @@ class OrderFulfilmentResolver
         // 2. Сами ордера (удалённые в 1С отсекает SoftDeletes).
         $issues = $links->isEmpty() ? collect() : GoodsIssue::query()
             ->whereIn('id', $links->pluck('goods_issue_id')->unique())
-            ->get(['id', 'uuid', 'number', 'status', 'status_changed_at', 'packages_count', 'created_at'])
+            ->get(['id', 'uuid', 'number', 'status', 'shipped_empty', 'status_changed_at', 'packages_count', 'created_at'])
             ->keyBy('id');
 
         // 3. Действующие выдачи с именем кладовщика.
@@ -101,7 +101,9 @@ class OrderFulfilmentResolver
             return [];
         }
 
-        $numbers = GoodsIssue::withTrashed()->whereIn('id', $issueIds)->pluck('number', 'id');
+        $issueRows = GoodsIssue::withTrashed()->whereIn('id', $issueIds)->get(['id', 'number', 'status', 'shipped_empty']);
+        $numbers = $issueRows->pluck('number', 'id');
+        $emptyShipped = $issueRows->filter(fn (GoodsIssue $gi) => $gi->isShippedEmpty())->keyBy('id');
         $several = $numbers->count() > 1;
         $suffix = fn (int $id): string => $several ? ' (ордер '.$numbers->get($id).')' : '';
         $events = [];
@@ -110,6 +112,7 @@ class OrderFulfilmentResolver
         $started = [];
         foreach ($histories as $h) {
             $label = match (true) {
+                $h->to_status === GoodsIssue::STATUS_SHIPPED && $emptyShipped->has($h->goods_issue_id) => 'Сборка не состоялась: товара нет',
                 $h->to_status === GoodsIssue::STATUS_SHIPPED => 'Собран',
                 $h->to_status === \App\Models\GoodsIssueStatusHistory::STATUS_CANCELLED => 'Сборка отменена складом',
                 $h->from_status === GoodsIssue::STATUS_SHIPPED => 'Возвращён в сборку',
@@ -153,6 +156,10 @@ class OrderFulfilmentResolver
 
         if ($issue->status !== GoodsIssue::STATUS_SHIPPED) {
             return Stage::PICKING;
+        }
+
+        if ($issue->isShippedEmpty()) {
+            return Stage::NOT_COLLECTED;
         }
 
         return $isPickup && $this->afterCutoff($issue->status_changed_at) ? Stage::READY : Stage::SHIPPED;
@@ -249,6 +256,9 @@ class OrderFulfilmentResolver
         $stage = $this->orderStage($order, $rows);
         $handed = $rows->where('stage', Stage::HANDED_OVER->value);
         $done = $rows->whereIn('stage', [Stage::READY->value, Stage::HANDED_OVER->value, Stage::SHIPPED->value]);
+        // Счётчик «готово N из M» — по ордерам с товаром: отгруженный без товара частью сборки не считается.
+        $counted = $rows->where('stage', '!=', Stage::NOT_COLLECTED->value);
+        $counted = $counted->isEmpty() ? $rows : $counted;
 
         return [
             'stage' => $stage->value,
@@ -257,11 +267,11 @@ class OrderFulfilmentResolver
             'hint' => $stage->hint(),
             'step' => $stage->step(),
             'is_pickup' => $isPickup,
-            'is_partial' => $rows->count() > 1 && $rows->pluck('stage')->unique()->count() > 1,
+            'is_partial' => $counted->count() > 1 && $counted->pluck('stage')->unique()->count() > 1,
             'goods_issues' => $rows->all(),
             'packages_total' => (int) $rows->sum('packages_count'),
             'packages_handed' => (int) $handed->sum('packages_count'),
-            'issues_total' => $rows->count(),
+            'issues_total' => $counted->count(),
             'issues_done' => $done->count(),
             'ready_since' => $stage === Stage::READY ? $rows->pluck('ready_since')->filter()->max() : null,
             'handed_at' => $stage === Stage::HANDED_OVER ? $rows->pluck('handed_at')->filter()->max() : null,
@@ -283,6 +293,14 @@ class OrderFulfilmentResolver
 
             return $waiting ? Stage::SENT_TO_WAREHOUSE : Stage::NONE;
         }
+
+        // Пустой отгруженный ордер (полный недобор) на стадию заказа не влияет, если есть другие ордера:
+        // товара по нему нет, а по остальным заказ собирается или собран.
+        $collected = $rows->reject(fn (array $row) => $row['stage'] === Stage::NOT_COLLECTED->value);
+        if ($collected->isEmpty()) {
+            return Stage::NOT_COLLECTED;
+        }
+        $rows = $collected;
 
         // Стадия заказа — минимальная по его ордерам: «собран» только когда собрано всё.
         $rank = [Stage::PICKING->value => 1, Stage::READY->value => 2, Stage::SHIPPED->value => 2, Stage::HANDED_OVER->value => 3];

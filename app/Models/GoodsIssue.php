@@ -26,6 +26,7 @@ use Illuminate\Support\Str;
  * @property \Illuminate\Support\Carbon|null $date
  * @property \Illuminate\Support\Carbon|null $shipment_date
  * @property string $status
+ * @property bool $shipped_empty Отгружен без товара — полный недобор (v16.15.0)
  * @property \Illuminate\Support\Carbon|null $status_changed_at
  * @property string|null $operation
  * @property int|null $warehouse_id
@@ -183,6 +184,9 @@ class GoodsIssue extends Model
      */
     public const STALE_HOURS = 24;
 
+    /** Метка отгруженного без товара ордера (полный недобор, v16.15.0). */
+    public const SHIPPED_EMPTY_LABEL = 'Отгружен без товара';
+
     protected $fillable = [
         'uuid',
         'number',
@@ -211,6 +215,7 @@ class GoodsIssue extends Model
         'unresolved_items_count',
         'erp_created_at',
         'erp_updated_at',
+        'shipped_empty',
     ];
 
     protected function casts(): array
@@ -220,6 +225,7 @@ class GoodsIssue extends Model
             'shipment_date' => 'datetime',
             'status_changed_at' => 'datetime',
             'total_quantity' => 'decimal:3',
+            'shipped_empty' => 'boolean',
             'erp_created_at' => \App\Casts\ErpDatetime::class,
             'erp_updated_at' => \App\Casts\ErpDatetime::class,
         ];
@@ -351,12 +357,40 @@ class GoodsIssue extends Model
 
     public function getStatusLabelAttribute(): string
     {
+        if ($this->isShippedEmpty()) {
+            return self::SHIPPED_EMPTY_LABEL;
+        }
+
         return self::STATUS_LABELS[$this->status] ?? $this->status;
     }
 
     public function getStatusColorAttribute(): string
     {
+        if ($this->isShippedEmpty()) {
+            return 'red';
+        }
+
         return self::STATUS_COLORS[$this->status] ?? 'gray';
+    }
+
+    /**
+     * Отгружен без товара (полный недобор, v16.15.0): 1С провела ордер без строк.
+     *
+     * Строки у такого ордера есть — это последний снимок сборки, — но товар не уехал:
+     * ни «ждёт выдачи», ни очереди выдачи, ни кандидата на доставку.
+     */
+    public function isShippedEmpty(): bool
+    {
+        return $this->status === self::STATUS_SHIPPED && (bool) $this->shipped_empty;
+    }
+
+    /**
+     * @param  Builder<GoodsIssue>  $query
+     * @return Builder<GoodsIssue>
+     */
+    public function scopeWithGoods(Builder $query): Builder
+    {
+        return $query->where($query->qualifyColumn('shipped_empty'), false);
     }
 
     public function getPriorityLabelAttribute(): ?string

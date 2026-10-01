@@ -155,6 +155,14 @@ export default function GoodsIssueShow() {
                                         <Text fontSize="xs">Висит в статусе дольше суток</Text>
                                     </HStack>
                                 )}
+                                {order.shipped_empty && (
+                                    <HStack gap={1} color="red.500">
+                                        <LuTriangleAlert size={14} />
+                                        <Text fontSize="xs">
+                                            Полный недобор: собрать ничего не удалось. Ниже — состав последней сборки
+                                        </Text>
+                                    </HStack>
+                                )}
                                 {order.unresolved_items_count > 0 && (
                                     <HStack gap={1} color="orange.500">
                                         <LuTriangleAlert size={14} />

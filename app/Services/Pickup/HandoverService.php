@@ -36,8 +36,8 @@ class HandoverService
                     throw $this->alreadyIssued($existing);
                 }
 
-                if ($method !== PickupHandover::METHOD_BACKFILL && $locked->status !== GoodsIssue::STATUS_SHIPPED) {
-                    throw HandoverException::notReady(GoodsIssue::STATUS_LABELS[$locked->status] ?? $locked->status);
+                if ($method !== PickupHandover::METHOD_BACKFILL && ($locked->status !== GoodsIssue::STATUS_SHIPPED || $locked->isShippedEmpty())) {
+                    throw HandoverException::notReady($locked->status_label);
                 }
 
                 $handover = PickupHandover::create([

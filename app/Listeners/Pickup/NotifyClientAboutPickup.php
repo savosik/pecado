@@ -35,6 +35,12 @@ class NotifyClientAboutPickup
             return;
         }
 
+        // Отгружен без товара (полный недобор, v16.15.0): выдавать нечего. Проверка здесь, а не только
+        // через стадию: у заказа могут быть другие, собранные ордера, и тогда он «готов» и без этого.
+        if ($event->goodsIssue->isShippedEmpty()) {
+            return;
+        }
+
         $moment = $event->goodsIssue->status_changed_at ?? now();
         $deadline = $this->schedule->closesAt(now());
         $until = $deadline && $deadline->isFuture()

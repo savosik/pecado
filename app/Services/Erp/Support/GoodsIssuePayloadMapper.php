@@ -73,6 +73,12 @@ class GoodsIssuePayloadMapper
             }
         }
 
+        // v16.15.0: полный недобор — 1С отгружает ордер без строк. Признак ставится до записи
+        // статуса: слушатели смены статуса (письмо «ждёт выдачи») должны видеть его сразу.
+        if (isset($payload['items']) && is_array($payload['items'])) {
+            $fields['shipped_empty'] = $fields['status'] === GoodsIssue::STATUS_SHIPPED && $payload['items'] === [];
+        }
+
         // Организация и склад проведения: отсутствие поля не сбрасывает сохранённое.
         $fields = array_merge($fields, $this->resolveOrganizationFields($payload, $context));
 
@@ -93,7 +99,8 @@ class GoodsIssuePayloadMapper
 
             $this->recordStatusChange($goodsIssue, $previousStatus);
 
-            if (isset($payload['items']) && is_array($payload['items'])) {
+            // Пустой отгруженный ордер строки не стирает: связь с заказами живёт только в них.
+            if (isset($payload['items']) && is_array($payload['items']) && ! ($fields['shipped_empty'] ?? false)) {
                 $this->syncItems($goodsIssue, $payload['items'], $context);
             }
 

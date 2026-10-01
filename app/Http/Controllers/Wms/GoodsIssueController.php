@@ -349,6 +349,7 @@ class GoodsIssueController extends WmsController
             'status_color' => $goodsIssue->status_color,
             'status_changed_label' => $goodsIssue->status_changed_at?->format('d.m.Y H:i'),
             'is_stale' => $goodsIssue->is_stale,
+            'shipped_empty' => $goodsIssue->isShippedEmpty(),
             'operation' => $goodsIssue->operation,
             'recipient' => $goodsIssue->recipient_label,
             'tax_id' => $goodsIssue->tax_id,

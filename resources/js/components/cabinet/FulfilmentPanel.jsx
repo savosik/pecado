@@ -43,6 +43,7 @@ export default function FulfilmentPanel({ fulfilment }) {
     const steps = fulfilment.is_pickup ? STEPS : STEPS_DELIVERY;
     const ready = fulfilment.stage === 'ready';
     const handed = fulfilment.stage === 'handed_over';
+    const notCollected = fulfilment.stage === 'not_collected';
     const several = fulfilment.issues_total > 1;
 
     return (
@@ -65,7 +66,7 @@ export default function FulfilmentPanel({ fulfilment }) {
                                     Заказ собирается частями: готово {fulfilment.issues_done} из {fulfilment.issues_total}.
                                 </Text>
                             )}
-                            {fulfilment.is_pickup && !ready && !handed && (
+                            {fulfilment.is_pickup && !ready && !handed && !notCollected && (
                                 <Text fontSize="xs" color="orange.fg" fontWeight="600" mt="1">
                                     Когда соберём — выпустите курьеру пропуск в кабинете. Без пропуска выдача дольше.
                                 </Text>

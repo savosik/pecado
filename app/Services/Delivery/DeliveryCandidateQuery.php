@@ -73,6 +73,8 @@ class DeliveryCandidateQuery
                     DB::table('goods_issue_items')
                         ->join('goods_issues', 'goods_issues.id', '=', 'goods_issue_items.goods_issue_id')
                         ->whereIn('goods_issues.status', $statuses)
+                        // Отгружен без товара (полный недобор, v16.15.0) — везти нечего.
+                        ->where('goods_issues.shipped_empty', false)
                         ->whereNotNull('goods_issue_items.order_uuid')
                         ->select('goods_issue_items.order_uuid'),
                 )));

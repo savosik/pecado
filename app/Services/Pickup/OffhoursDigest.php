@@ -72,6 +72,8 @@ class OffhoursDigest
         $readyIssueIds = GoodsIssueStatusHistory::query()
             ->where('to_status', GoodsIssue::STATUS_SHIPPED)
             ->whereBetween('changed_at', [$from, $to])
+            // Отгруженный без товара (полный недобор) не «собран».
+            ->whereIn('goods_issue_id', GoodsIssue::query()->withGoods()->select('id'))
             ->pluck('goods_issue_id')->unique();
         $handovers = PickupHandover::query()->active()
             ->where('method', '!=', PickupHandover::METHOD_BACKFILL)

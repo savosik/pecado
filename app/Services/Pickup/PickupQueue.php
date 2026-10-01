@@ -123,6 +123,7 @@ class PickupQueue
 
         $issues = GoodsIssue::query()
             ->where('status', GoodsIssue::STATUS_SHIPPED)
+            ->withGoods()
             ->where('status_changed_at', '>=', now()->subDays(60))
             ->whereDoesntHave('activeHandover')
             ->where(function (Builder $q) use ($like, $orderUuids) {
@@ -241,6 +242,8 @@ class PickupQueue
 
         return $this->pickupIssues()
             ->where('status', GoodsIssue::STATUS_SHIPPED)
+            // Отгружен без товара (полный недобор, v16.15.0) — выдавать нечего.
+            ->withGoods()
             ->whereDoesntHave('activeHandover')
             ->when($since, fn (Builder $q) => $q->where('status_changed_at', '>=', $since));
     }

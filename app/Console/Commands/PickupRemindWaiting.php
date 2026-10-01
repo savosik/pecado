@@ -45,6 +45,7 @@ class PickupRemindWaiting extends Command
         }
         $issues = GoodsIssue::query()
             ->where('status', GoodsIssue::STATUS_SHIPPED)
+            ->withGoods()
             ->where('status_changed_at', '<=', now()->subDays($steps->first()))
             ->when($since, fn ($q) => $q->where('status_changed_at', '>=', $since))
             ->whereDoesntHave('activeHandover')
