@@ -179,7 +179,9 @@ class ClientFunnelTest extends TestCase
         $first = $this->client(stage: ClientLifecycleStatus::SLEEPING);
         $second = $this->client(stage: ClientLifecycleStatus::SLEEPING);
         $this->shipment($first, 120000);
-        $this->shipment($first, 60000, Carbon::now()->startOfMonth()->addDay());
+        // Первое число, а не «второе»: 1-го числа месяца «начало месяца + день» — это завтра,
+        // отгрузка выпадала из окна, и тест падал раз в месяц.
+        $this->shipment($first, 60000, Carbon::now()->startOfMonth());
         $this->shipment($second, 240000);
         // Тринадцать месяцев назад — за окном, в сумму не входит.
         $this->shipment($second, 999999, Carbon::now()->subMonthsNoOverflow(13)->startOfMonth()->addDay());
