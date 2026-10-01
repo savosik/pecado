@@ -219,6 +219,10 @@ class ClientOrderPresenter
                 // v15.16.0: строка, отменённая в 1С при недоборе. Показываем
                 // её клиенту, но она не входит в total_amount заказа
                 'cancelled' => (bool) $item->cancelled,
+                // v16.17.0: подпись по причине отмены из 1С; без причины — прежняя формулировка
+                'cancel_label' => $item->cancelled
+                    ? ($item->erp_cancel_reason?->clientLabel() ?? 'Отменена — нет в наличии')
+                    : null,
                 'product' => $item->product ? [
                     'id' => $item->product->id,
                     'name' => $item->product->name,

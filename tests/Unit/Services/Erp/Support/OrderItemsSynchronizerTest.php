@@ -264,6 +264,46 @@ class OrderItemsSynchronizerTest extends TestCase
      * Перенумерация не должна пересоздавать позиции: id сохраняются, только
      * перераспределяются между номерами строк.
      */
+    /**
+     * v16.17.0: 1С перенумеровала половины раздробленной строки и переставила их местами.
+     * Сопоставление по товару обязано свести отменённую с отменённой, а активную с активной —
+     * иначе активная позиция «отменилась» бы заново: новая дата в журнале недоборов и второе письмо клиенту.
+     */
+    #[Test]
+    public function renumbered_halves_of_a_split_line_are_not_matched_crosswise(): void
+    {
+        \Illuminate\Support\Facades\Event::fake([\App\Events\Order\OrderItemsCancelled::class]);
+
+        $order = Order::factory()->create();
+        $product = Product::factory()->create(['external_id' => 'gel-uuid']);
+
+        $base = [
+            'order_id' => $order->id, 'product_id' => $product->id, 'price' => 100,
+            'base_price' => 100, 'discount_percent' => 0, 'final_price' => 100,
+        ];
+        $active = OrderItem::factory()->create($base + ['line_number' => 5, 'quantity' => 2, 'subtotal' => 200]);
+        $cancelled = OrderItem::factory()->create($base + [
+            'line_number' => 6, 'quantity' => 1, 'subtotal' => 100,
+            'cancelled' => true, 'cancelled_at' => now()->subDay(), 'erp_cancel_reason' => 'out_of_stock',
+        ]);
+
+        $line = fn (int $number, int $quantity, bool $isCancelled) => [
+            'line_number' => $number, 'product_uuid' => 'gel-uuid', 'quantity' => $quantity,
+            'base_price' => 100, 'discount_percent' => 0, 'final_price' => 100, 'cancelled' => $isCancelled,
+        ] + ($isCancelled ? ['cancel_reason' => 'out_of_stock'] : []);
+
+        // Отменённая половина теперь идёт первой и под новыми номерами.
+        $this->synchronizer->sync($order, [$line(3, 1, true), $line(4, 2, false)]);
+
+        $this->assertSame(3, $cancelled->fresh()->line_number);
+        $this->assertTrue($cancelled->fresh()->cancelled);
+        $this->assertTrue($cancelled->fresh()->cancelled_at->lt(now()->subHours(23)), 'дата отмены не сдвинулась');
+        $this->assertSame(4, $active->fresh()->line_number);
+        $this->assertFalse($active->fresh()->cancelled);
+
+        \Illuminate\Support\Facades\Event::assertNotDispatched(\App\Events\Order\OrderItemsCancelled::class);
+    }
+
     #[Test]
     public function renumbered_lines_reuse_existing_items(): void
     {

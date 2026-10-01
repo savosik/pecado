@@ -62,6 +62,26 @@ function SourceHint({ hint }) {
 }
 
 /**
+ * Причина отмены из 1С (v16.17.0). Видна всегда, в том числе у разобранной строки:
+ * это факт из документа, а причина из справочника — вывод менеджера.
+ */
+function ErpReason({ reason }) {
+    if (!reason) {
+        return null;
+    }
+
+    const tip = reason.category_label
+        ? `${reason.description} Причину в справочнике стоит искать в категории «${reason.category_label}».`
+        : reason.description;
+
+    return (
+        <Tooltip content={tip} openDelay={300}>
+            <Badge colorPalette="blue" variant="outline" cursor="help">1С: {reason.label}</Badge>
+        </Tooltip>
+    );
+}
+
+/**
  * Комментарий к отмене: сохраняется по Enter или уходу фокуса — отдельная
  * кнопка «Сохранить» на полсотни строк только мешала бы.
  */
@@ -275,7 +295,13 @@ export default function Index({
                         <Text fontSize="xs" color="fg.muted">{row.source_user}, {row.source_at}</Text>
                     )}
 
-                    {!row.reason_id && <SourceHint hint={row.hint} />}
+                    <ErpReason reason={row.erp_reason} />
+
+                    {/* След расходного ордера нужен, пока причины нет ни от менеджера, ни от 1С
+                        (либо 1С сказала «другая» — это ничего не объясняет). */}
+                    {!row.reason_id && (!row.erp_reason || row.erp_reason.value === 'other') && (
+                        <SourceHint hint={row.hint} />
+                    )}
                 </VStack>
             ),
         },

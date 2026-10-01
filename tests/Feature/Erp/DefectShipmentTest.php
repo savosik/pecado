@@ -81,6 +81,40 @@ class DefectShipmentTest extends TestCase
     }
 
     #[Test]
+    public function split_line_does_not_double_the_shipped_quantity(): void
+    {
+        // v16.17.0: 1С дробит строку при приёме заказа — активная часть и отменённый хвост
+        // ссылаются на одну партию. Отгрузили 2 из 5: партия обязана остаться открытой.
+        // До исправления JOIN по строкам заказа давал 2 × 2 = 4, а при хвосте в 1 шт — и «распродано».
+        $product = Product::factory()->create(['external_id' => 'def-prod-split']);
+        $defect = ProductDefect::factory()->for($product)->sellable(150)->create(['quantity' => 4]);
+        $order = $this->defectOrder($defect, 2, 'ord-defect-split');
+
+        OrderItem::create([
+            'order_id' => $order->id,
+            'line_number' => 2,
+            'product_id' => $product->id,
+            'product_defect_id' => $defect->id,
+            'name' => 'Уценка',
+            'price' => $defect->price,
+            'base_price' => $defect->price,
+            'discount_percent' => 0,
+            'final_price' => $defect->price,
+            'quantity' => 1,
+            'subtotal' => $defect->price,
+            'cancelled' => true,
+            'cancelled_at' => now(),
+            'erp_cancel_reason' => 'out_of_stock',
+        ]);
+
+        (new HandleShipmentCreated)->handle(
+            $this->shipmentPayload('ship-split', $order->uuid, $product, 2)
+        );
+
+        $this->assertFalse($defect->fresh()->isClosed(), 'отгружено 2 из 4 — партия ещё продаётся');
+    }
+
+    #[Test]
     public function partial_shipment_keeps_batch_open(): void
     {
         $product = Product::factory()->create(['external_id' => 'def-prod-2']);

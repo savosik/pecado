@@ -13,6 +13,7 @@ use Laravel\Scout\Searchable;
  * @property int|null $line_number Номер строки в табличной части «Товары» документа 1С — ключ сопоставления при обновлении заказа (v15.16.0)
  * @property bool $cancelled Строка отменена в 1С при недоборе: показывается клиенту, но не входит в сумму заказа (v15.16.0)
  * @property \Illuminate\Support\Carbon|null $cancelled_at Когда сайт принял отмену строки из 1С — дата в журнале недоборов
+ * @property \App\Enums\Order\OrderLineCancelReason|null $erp_cancel_reason Причина отмены строки из 1С (items[].cancel_reason, v16.17.0); NULL — не отменена или причина не передана
  * @property int|null $cancel_reason_id Причина недобора из справочника (shortage_reasons.id)
  * @property int|null $cancel_source_user_id Кто разметил отмену
  * @property \Illuminate\Support\Carbon|null $cancel_source_at Когда поставлена причина
@@ -79,6 +80,7 @@ class OrderItem extends Model
         'quantity',
         'subtotal',
         'cancelled_at',
+        'erp_cancel_reason',
         'cancel_reason_id',
         'cancel_source_user_id',
         'cancel_source_at',
@@ -96,6 +98,7 @@ class OrderItem extends Model
         'line_number' => 'integer',
         'cancelled' => 'boolean',
         'cancelled_at' => 'datetime',
+        'erp_cancel_reason' => \App\Enums\Order\OrderLineCancelReason::class,
         'cancel_source_at' => 'datetime',
         'cancel_archived_at' => 'datetime',
     ];

@@ -119,8 +119,13 @@ class NotifyClientAboutPickup
 
     /**
      * Недобор при сборке (решение заказчика 18.09.2026): менеджер замену не подбирает — клиенту уходит
-     * письмо «товара не хватило, закажите что-то другое». В окне резерва строки уменьшает сам клиент,
-     * это не недобор.
+     * письмо «товара не хватило, закажите что-то другое».
+     *
+     * Причина отмены (v16.17.0) решает, нехватка ли это. `client` и `reserve_expired` — нет: строку
+     * снял сам клиент или истёк резерв, письмо о нехватке было бы неправдой. В окне резерва строки
+     * уменьшает сам клиент, поэтому без причины там молчим, как и раньше; но если 1С прямо назвала
+     * нехватку (`out_of_stock` при приёме заказа, `shortage` при сборке) — письмо уходит и по
+     * резерву: это и есть случай 23.09.2026, когда клиент о нехватке не узнал.
      *
      * Закрытие заказа в 1С тоже отменяет непоставленные строки, но это не сборка. 25.09.2026 1С
      * закрыла 6 877 заказов с начала года, и 75 клиентов получили 324 письма о «недоборе» по
@@ -129,7 +134,18 @@ class NotifyClientAboutPickup
     public function shortfall(\App\Events\Order\OrderItemsCancelled $event): void
     {
         $order = $event->order;
-        if (! config('pickup.enabled') || $order->reserve || blank($order->user_id)) {
+        if (! config('pickup.enabled') || blank($order->user_id)) {
+            return;
+        }
+
+        $items = collect($event->items)
+            ->map(fn (array $item) => $item + ['cause' => \App\Enums\Order\OrderLineCancelReason::fromErp($item['reason'] ?? null)])
+            ->filter(fn (array $item) => $order->reserve
+                ? (bool) $item['cause']?->isConfirmedStockShortfall()
+                : ($item['cause'] === null || $item['cause']->isShortfall()))
+            ->values();
+
+        if ($items->isEmpty()) {
             return;
         }
 
@@ -140,7 +156,11 @@ class NotifyClientAboutPickup
         }
 
         $number = $order->erp_number ?: $order->number;
-        $lines = collect($event->items)->map(fn (array $item) => sprintf('%s — %s шт.', $item['name'], rtrim(rtrim(number_format($item['quantity'], 3, ',', ''), '0'), ',')));
+        $lines = $items->map(fn (array $item) => sprintf('%s — %s шт.', $item['name'], rtrim(rtrim(number_format($item['quantity'], 3, ',', ''), '0'), ',')));
+
+        // «При сборке» — только когда сборка и была: отмена при приёме заказа случается до неё.
+        $noStockAtAll = $items->every(fn (array $item) => $item['cause'] === \App\Enums\Order\OrderLineCancelReason::OUT_OF_STOCK);
+        $lead = $noStockAtAll ? 'На складе не оказалось в наличии: ' : 'При сборке не хватило: ';
 
         $this->mailStream->captureQuietly(new Occasion(
             key: 'orders.items_unavailable',
@@ -150,7 +170,7 @@ class NotifyClientAboutPickup
             data: ['order_number' => $number, 'origin_suffix' => $this->suffix(now())],
             view: [
                 'title' => "Заказ {$number}: части товара не хватило",
-                'body' => 'При сборке не хватило: '.$lines->join('; ').'. Заказ будет собран без этих позиций, сумма пересчитана. '
+                'body' => $lead.$lines->join('; ').'. Заказ будет собран без этих позиций, сумма пересчитана. '
                     .'Замену мы не подбираем — если товар нужен, закажите другой в каталоге отдельным заказом.',
                 'url' => url(route('cabinet.orders.show', $order, false)),
                 'entity_label' => "Заказ {$number}",

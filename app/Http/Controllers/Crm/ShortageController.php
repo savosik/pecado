@@ -25,9 +25,10 @@ use Inertia\Response as InertiaResponse;
  * сборке / клиент отказался / товар не был обеспечен), и подборка была уместна
  * в лучшем случае в половине случаев.
  *
- * Причины в протоколе 1С нет, поэтому её ставит человек, выбирая строку
- * справочника; сайт показывает подсказку по расходному ордеру
- * (см. {@see CancellationHintResolver}).
+ * Причину из справочника ставит человек. Сайт подсказывает: с v16.17.0 — причиной
+ * отмены из 1С (`items[].cancel_reason`, пять значений против девяти причин
+ * справочника), а где 1С её не передала — косвенным следом расходного ордера
+ * (см. {@see CancellationHintResolver}). Автоматически причина не проставляется.
  */
 class ShortageController extends CrmController
 {
@@ -164,6 +165,28 @@ class ShortageController extends CrmController
             'source_at' => $item->cancel_source_at?->format('d.m.Y H:i'),
             'note' => $item->cancel_note,
             'hint' => $hints[$item->id] ?? null,
+            'erp_reason' => $this->erpReason($item),
+        ];
+    }
+
+    /**
+     * Причина отмены, как её сообщила 1С, — подсказка менеджеру при выборе причины.
+     *
+     * @return array{value: string, label: string, description: string, category_label: string|null}|null
+     */
+    private function erpReason(OrderItem $item): ?array
+    {
+        $reason = $item->erp_cancel_reason;
+
+        if ($reason === null) {
+            return null;
+        }
+
+        return [
+            'value' => $reason->value,
+            'label' => $reason->label(),
+            'description' => $reason->description(),
+            'category_label' => $reason->suggestedCategory()?->label(),
         ];
     }
 

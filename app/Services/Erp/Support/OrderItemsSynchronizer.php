@@ -2,6 +2,7 @@
 
 namespace App\Services\Erp\Support;
 
+use App\Enums\Order\OrderLineCancelReason;
 use App\Enums\PromoKind;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -52,6 +53,20 @@ use Illuminate\Support\Facades\Log;
  * Складские привязки, не разобранные сопоставлением, наследуются по товару из
  * снимка «до»: при дроблении строки на активную и отменённую обе обязаны
  * ссылаться на ту же партию некондиции.
+ *
+ * ## Дробление строки при приёме заказа (v16.17.0)
+ *
+ * С v16.17.0 1С при приёме заказа сайта отменяет строку без свободного остатка, а при
+ * частичном остатке дробит её: активная часть + отменённый хвост отдельной строкой со
+ * своим номером. Хвоста в заказе сайта не было — он создаётся; активная часть
+ * обновляется на месте. Если хвост занял номер соседней строки и сдвинул остальные,
+ * первый проход по ним промахивается (номер тот же, товар другой), и их подбирает
+ * второй — по товару. Во втором проходе при нескольких строках одного товара сначала
+ * берётся позиция с тем же признаком отмены: иначе активная и отменённая половины
+ * поменялись бы местами, и клиент получил бы второе письмо о той же нехватке.
+ *
+ * Причина отмены (`cancel_reason`) хранится только у отменённой строки; причина,
+ * присланная у активной, отбрасывается. Неизвестное значение сводится к `other`.
  */
 class OrderItemsSynchronizer
 {
@@ -100,6 +115,10 @@ class OrderItemsSynchronizer
                 'name' => $row['name'],
                 'quantity' => $row['quantity'],
                 'cancelled' => $row['cancelled'],
+                // Причина живёт только у отменённой строки. У уже отменённой она может
+                // уточниться следующим сообщением (была «не передана» → out_of_stock):
+                // обновляем значение, дату отмены при этом не трогаем.
+                'erp_cancel_reason' => $row['cancelled'] ? $row['cancel_reason'] : null,
                 'price' => $row['final_price'],
                 'base_price' => $row['base_price'],
                 'discount_percent' => $row['discount_percent'],
@@ -117,7 +136,11 @@ class OrderItemsSynchronizer
             // не недобор, и в журнале ему делать нечего.
             if ($becameCancelled) {
                 $fields['cancelled_at'] = now();
-                $cancelledNow[] = ['name' => (string) $row['name'], 'quantity' => (float) $row['quantity']];
+                $cancelledNow[] = [
+                    'name' => (string) $row['name'],
+                    'quantity' => (float) $row['quantity'],
+                    'reason' => $row['cancel_reason']?->value,
+                ];
             } elseif ($match !== null && $match->cancelled && ! $row['cancelled']) {
                 $fields['cancelled_at'] = null;
                 $fields['cancel_reason_id'] = null;
@@ -193,6 +216,18 @@ class OrderItemsSynchronizer
             $finalPrice = (float) ($item['final_price'] ?? $item['price'] ?? $basePrice);
 
             $lineNumber = $item['line_number'] ?? null;
+            $cancelled = (bool) ($item['cancelled'] ?? false);
+            $rawReason = $item['cancel_reason'] ?? null;
+
+            if ($cancelled && filled($rawReason) && ! OrderLineCancelReason::isKnown($rawReason)) {
+                // Контракт: неизвестную причину принимаем как «другую», заказ из-за неё
+                // не теряем. Предупреждение — чтобы новую причину 1С заметили и завели.
+                Log::warning('ERP: неизвестная причина отмены строки заказа, трактуем как other', [
+                    'cancel_reason' => is_scalar($rawReason) ? (string) $rawReason : gettype($rawReason),
+                    'product_uuid' => $productUuid,
+                    'line_number' => $lineNumber,
+                ]);
+            }
 
             $rows[] = [
                 'line_number' => is_numeric($lineNumber) && (int) $lineNumber > 0
@@ -206,7 +241,8 @@ class OrderItemsSynchronizer
                 'base_price' => $basePrice,
                 'discount_percent' => (float) ($item['discount_percent'] ?? 0),
                 'final_price' => $finalPrice,
-                'cancelled' => (bool) ($item['cancelled'] ?? false),
+                'cancelled' => $cancelled,
+                'cancel_reason' => $cancelled ? OrderLineCancelReason::fromErp($rawReason) : null,
                 'is_promo' => (bool) ($item['is_promo'] ?? false),
                 'promo_kind' => $item['promo_kind'] ?? null,
             ];
@@ -220,7 +256,8 @@ class OrderItemsSynchronizer
      *
      * Первый проход — номер строки при том же товаре; второй — FIFO по товару
      * среди всего, что осталось (позиции без номера, с чужим номером после
-     * перенумерации в 1С, дубли номера). Каждая позиция достаётся не более чем
+     * перенумерации в 1С, дубли номера), с предпочтением позиции с тем же
+     * признаком отмены. Каждая позиция достаётся не более чем
      * одной строке. Дубль номера в пределах заказа возможен (уникального ключа
      * в БД нет намеренно) — по номеру берётся первая, вторая уходит во второй проход.
      *
@@ -271,19 +308,50 @@ class OrderItemsSynchronizer
             $orphans[(int) $item->product_id][] = $item;
         }
 
-        foreach ($rows as $index => $row) {
-            if ($matches[$index] !== null) {
-                continue;
-            }
+        // Сначала — позиции с тем же признаком отмены, затем всё, что осталось.
+        // Двумя заходами, а не «лучшая для строки»: иначе отменённая строка payload
+        // забрала бы единственную активную позицию раньше, чем до неё дошла активная.
+        foreach ([true, false] as $sameStateOnly) {
+            foreach ($rows as $index => $row) {
+                if ($matches[$index] !== null) {
+                    continue;
+                }
 
-            $productId = (int) $row['product_id'];
+                $productId = (int) $row['product_id'];
 
-            if ($productId > 0 && ! empty($orphans[$productId])) {
-                $matches[$index] = array_shift($orphans[$productId]);
+                if ($productId <= 0 || empty($orphans[$productId])) {
+                    continue;
+                }
+
+                $matches[$index] = $this->takeOrphan($orphans[$productId], (bool) $row['cancelled'], $sameStateOnly);
             }
         }
 
         return $matches;
+    }
+
+    /**
+     * Взять позицию товара из несопоставленных: с тем же признаком отмены, а при
+     * `$sameStateOnly = false` — первую по порядку (FIFO).
+     *
+     * Без предпочтения по признаку перенумерованные половины раздробленной строки
+     * могли сопоставиться крест-накрест: отменённая строка payload — с активной
+     * позицией, и наоборот. Состав в итоге верный, но активная позиция «отменилась»
+     * бы заново — со свежей датой в журнале недоборов и повторным письмом клиенту.
+     *
+     * @param  list<OrderItem>  $orphans  изменяется: взятая позиция удаляется
+     */
+    private function takeOrphan(array &$orphans, bool $cancelled, bool $sameStateOnly): ?OrderItem
+    {
+        foreach ($orphans as $position => $item) {
+            if (! $sameStateOnly || (bool) $item->cancelled === $cancelled) {
+                array_splice($orphans, $position, 1);
+
+                return $item;
+            }
+        }
+
+        return null;
     }
 
     /**

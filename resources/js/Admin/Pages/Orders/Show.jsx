@@ -318,7 +318,9 @@ const OrderShow = () => {
                                                 {/* Недобор: строка отменена в 1С и в сумму заказа не входит */}
                                                 {item.cancelled && (
                                                     <Badge colorPalette="gray" variant="subtle" size="xs" mt="1">
-                                                        Отменена в 1С — нет в наличии
+                                                        {item.cancel_reason_label
+                                                            ? `Отменена в 1С — ${item.cancel_reason_label.toLowerCase()}`
+                                                            : 'Отменена в 1С — нет в наличии'}
                                                     </Badge>
                                                 )}
                                             </Table.Cell>

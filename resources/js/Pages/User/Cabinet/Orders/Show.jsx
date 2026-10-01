@@ -799,7 +799,7 @@ export default function OrderShow({ order }) {
                                                                 )}
                                                                 {item.cancelled && (
                                                                     <Badge colorPalette="gray" variant="subtle" size="xs">
-                                                                        Отменена — нет в наличии
+                                                                        {item.cancel_label || 'Отменена — нет в наличии'}
                                                                     </Badge>
                                                                 )}
                                                             </Flex>

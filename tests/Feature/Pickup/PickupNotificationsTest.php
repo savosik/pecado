@@ -109,6 +109,76 @@ class PickupNotificationsTest extends TestCase
     }
 
     #[Test]
+    public function erp_reason_decides_whether_cancellation_is_a_shortfall(): void
+    {
+        // v16.17.0: причина отмены из 1С. Клиент снял строку сам или истёк резерв — это не нехватка.
+        $order = $this->pickupOrder($this->client);
+
+        foreach (['client', 'reserve_expired'] as $reason) {
+            event(new \App\Events\Order\OrderItemsCancelled($order, [['name' => 'Свеча', 'quantity' => 1.0, 'reason' => $reason]]));
+        }
+        $this->assertSame(0, $this->emails('orders.items_unavailable'));
+
+        // В одном сообщении и нехватка, и отказ клиента: в письме только то, чего не хватило.
+        event(new \App\Events\Order\OrderItemsCancelled($order, [
+            ['name' => 'Массажное масло', 'quantity' => 2.0, 'reason' => 'out_of_stock'],
+            ['name' => 'Свеча', 'quantity' => 1.0, 'reason' => 'client'],
+        ]));
+
+        $email = CrmEmail::query()->where('origin_event', 'orders.items_unavailable')->sole();
+        $body = (string) $email->body_html.$email->body_text;
+        $this->assertStringContainsString('Массажное масло — 2 шт.', $body);
+        $this->assertStringNotContainsString('Свеча', $body);
+        // Отмена при приёме заказа случается до сборки — «при сборке не хватило» было бы неправдой.
+        $this->assertStringContainsString('не оказалось в наличии', $body);
+        $this->assertStringNotContainsString('При сборке', $body);
+    }
+
+    #[Test]
+    public function confirmed_stock_shortfall_is_reported_even_for_an_order_in_reserve(): void
+    {
+        // Инцидент 23.09.2026: 1С отменяет строку без остатка сразу при приёме заказа, а заказ интернет-магазина
+        // в этот момент в резерве. Без причины сайт в окне резерва молчит (строки уменьшает сам клиент),
+        // с причиной «нет остатка» / «недобор при сборке» — обязан сказать.
+        $reserved = $this->pickupOrder($this->client, ['reserve' => true, 'reserved_until' => now()->addDay()]);
+
+        foreach ([null, 'client', 'reserve_expired', 'other'] as $reason) {
+            event(new \App\Events\Order\OrderItemsCancelled($reserved, [['name' => 'Свеча', 'quantity' => 1.0, 'reason' => $reason]]));
+        }
+        $this->assertSame(0, $this->emails('orders.items_unavailable'));
+
+        event(new \App\Events\Order\OrderItemsCancelled($reserved, [['name' => 'Гель', 'quantity' => 1.0, 'reason' => 'out_of_stock']]));
+        $this->assertSame(1, $this->emails('orders.items_unavailable'));
+    }
+
+    #[Test]
+    public function split_on_acceptance_through_the_bus_sends_one_letter_and_redelivery_none(): void
+    {
+        $product = \App\Models\Product::factory()->create(['external_id' => '00000000-0000-4000-a000-0000000017a9', 'name' => 'Гель-смазка']);
+        $order = $this->pickupOrder($this->client, ['reserve' => true, 'reserved_until' => now()->addDay()]);
+        $order->items()->create([
+            'product_id' => $product->id, 'line_number' => 1, 'name' => 'Гель-смазка',
+            'quantity' => 3, 'price' => 1000, 'final_price' => 1000, 'base_price' => 1000, 'subtotal' => 3000,
+        ]);
+
+        $payload = [
+            'event' => 'order.updated',
+            'uuid' => $order->uuid,
+            'items' => [
+                ['line_number' => 1, 'product_uuid' => $product->external_id, 'quantity' => 2, 'base_price' => 1000, 'discount_percent' => 0, 'final_price' => 1000, 'cancelled' => false],
+                ['line_number' => 2, 'product_uuid' => $product->external_id, 'quantity' => 1, 'base_price' => 1000, 'discount_percent' => 0, 'final_price' => 1000, 'cancelled' => true, 'cancel_reason' => 'out_of_stock'],
+            ],
+        ];
+
+        app(\App\Services\Erp\Handlers\HandleOrderUpdated::class)->handle($payload);
+        // Тот же состав приходит снова с каждым следующим order.updated — повод уже отработан.
+        app(\App\Services\Erp\Handlers\HandleOrderUpdated::class)->handle($payload);
+
+        $email = CrmEmail::query()->where('origin_event', 'orders.items_unavailable')->sole();
+        $this->assertStringContainsString('Гель-смазка — 1 шт.', (string) $email->body_html.$email->body_text);
+    }
+
+    #[Test]
     public function closed_or_old_order_is_not_a_picking_shortfall(): void
     {
         // Инцидент 25.09.2026: 1С закрыла заказы с начала года, отменив непоставленные строки, —

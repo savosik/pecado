@@ -639,6 +639,40 @@ class WmsDefectControllerTest extends TestCase
     }
 
     #[Test]
+    public function shipping_hides_cancelled_tail_of_a_split_line(): void
+    {
+        // v16.17.0: отменённый хвост раздробленной строки наследует партию товара,
+        // но отбирать по нему нечего — кладовщик видит только живую строку.
+        $defect = ProductDefect::factory()->sellable(100)->create(['quantity' => 5]);
+        $order = $this->defectOrder($defect, 2, \App\Enums\OrderStatus::READY_FOR_SHIPMENT);
+
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $defect->product_id,
+            'product_defect_id' => $defect->id,
+            'name' => 'Уценка',
+            'price' => 100,
+            'base_price' => 100,
+            'discount_percent' => 0,
+            'final_price' => 100,
+            'quantity' => 1,
+            'subtotal' => 100,
+            'cancelled' => true,
+            'cancelled_at' => now(),
+            'erp_cancel_reason' => 'out_of_stock',
+        ]);
+
+        $this->actingAs($this->storekeeper())
+            ->get('/wms/defects/shipping')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('orders.data', 1)
+                ->has('orders.data.0.items', 1)
+                ->where('orders.data.0.items.0.quantity', 2)
+            );
+    }
+
+    #[Test]
     public function shipping_shows_soft_deleted_defect_as_inactive(): void
     {
         // Партию мягко удаляют уже после формирования заказа — позиция должна

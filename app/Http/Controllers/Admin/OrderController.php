@@ -388,6 +388,8 @@ class OrderController extends AdminController
                         'subtotal' => $item->subtotal,
                         // v15.16.0: строка отменена в 1С при недоборе
                         'cancelled' => (bool) $item->cancelled,
+                        // v16.17.0: причина отмены из 1С (null — не передана)
+                        'cancel_reason_label' => $item->cancelled ? $item->erp_cancel_reason?->label() : null,
                         'line_number' => $item->line_number,
                         'product' => $item->product ? [
                             'id' => $item->product->id,
@@ -575,6 +577,8 @@ class OrderController extends AdminController
                         'subtotal' => $item->subtotal,
                         // v15.16.0: строка отменена в 1С при недоборе
                         'cancelled' => (bool) $item->cancelled,
+                        // v16.17.0: причина отмены из 1С (null — не передана)
+                        'cancel_reason_label' => $item->cancelled ? $item->erp_cancel_reason?->label() : null,
                         'line_number' => $item->line_number,
                         'sku' => $item->product ? $item->product->sku : null,
                         'image_url' => $item->product ? $item->product->getFirstMediaUrl('main') : null,

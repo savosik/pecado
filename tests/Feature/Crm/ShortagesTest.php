@@ -366,6 +366,30 @@ class ShortagesTest extends TestCase
     }
 
     #[Test]
+    public function reason_from_erp_is_shown_in_russian_and_does_not_mark_the_line(): void
+    {
+        // v16.17.0: причина отмены из 1С — подсказка, а не разметка: причину справочника выбирает менеджер.
+        ['line' => $line] = $this->makeCancelledLine();
+        $line->forceFill(['erp_cancel_reason' => 'out_of_stock'])->save();
+
+        $response = $this->actingAs($this->manager)->get('/crm/shortages');
+        $props = $this->props($response);
+        $row = $props['rows']['data'][0];
+
+        $this->assertSame('out_of_stock', $row['erp_reason']['value']);
+        $this->assertSame('Нет остатка', $row['erp_reason']['label']);
+        $this->assertSame('Остатки и резерв', $row['erp_reason']['category_label']);
+        $this->assertNull($row['reason_id'], 'причина справочника остаётся за менеджером');
+        $this->assertSame(1, $props['totals']['unmarked_count']);
+
+        // Строка без причины 1С (отмены до включения поставки) — прежняя подсказка по расходному ордеру.
+        $line->forceFill(['erp_cancel_reason' => null])->save();
+        $row = $this->props($this->actingAs($this->manager)->get('/crm/shortages'))['rows']['data'][0];
+        $this->assertNull($row['erp_reason']);
+        $this->assertNotNull($row['hint']);
+    }
+
+    #[Test]
     public function without_goods_issue_the_hint_says_there_is_no_warehouse_trace(): void
     {
         $this->makeCancelledLine();
