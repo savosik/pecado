@@ -3,6 +3,7 @@
 namespace App\Services\Erp;
 
 use App\Models\Agreement;
+use App\Models\GoodsIssue;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PrintedDocument;
@@ -40,8 +41,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *   упал и сообщение вернулось в очередь, повторная попытка снова пройдёт проверку.
  * - Справочники (товары, цены, остатки, контрагенты) в карте отсутствуют: там нет
  *   документа с жизненным циклом, последнее пришедшее значение и есть правильное.
- * - Расходные ордера исключены намеренно — у документа в 1С отключена история
- *   данных, номера ревизии не существует.
+ * - (v16.14.0) Расходные ордера: до этой версии были исключены — у документа в 1С
+ *   отключена история данных. Теперь номер ведёт собственный счётчик 1С, один на ордер
+ *   для `created`/`updated`/`deleted`; пометка на удаление и повторное проведение его
+ *   продолжают. У ордеров правило строже общего: после первой применённой ревизии
+ *   сообщение БЕЗ `revision` по тому же uuid отбрасывается — опоздавший снимок старого
+ *   отправителя не должен затереть обмер мест (см. STRICT_AFTER_FIRST_REVISION).
  * - (v16.0.0) Движения регистра адресуются документом-регистратором, а не строкой,
  *   поэтому идентификатор берётся из `document_uuid`, а отметка живёт в служебной
  *   таблице `settlement_documents`. Хранить её в самих движениях нельзя:
@@ -82,6 +87,29 @@ class ErpRevisionGuard
         // это некому — оба сообщения корректны.
         'printed_document.published' => PrintedDocument::class,
         'printed_document.deleted' => PrintedDocument::class,
+        // v16.14.0 — расходные ордера: обмер грузовых мест публикуется без смены
+        // статуса, и запоздалый `done` поверх `pending` дал бы клиенту расчёт
+        // доставки по коробкам, которых уже нет.
+        'goods_issue.created' => GoodsIssue::class,
+        'goods_issue.updated' => GoodsIssue::class,
+        'goods_issue.deleted' => GoodsIssue::class,
+    ];
+
+    /**
+     * События, для которых сообщение без `revision` устаревает, как только по документу
+     * применена хотя бы одна ревизия.
+     *
+     * У остальных документов сообщение без ревизии применяется всегда: 1С включала поле
+     * по одному каналу, и старый отправитель там равноправен. У ордеров новый отправитель
+     * включается одним выпуском, поэтому снимок без ревизии после ревизии — заведомо
+     * опоздавший.
+     *
+     * @var list<string>
+     */
+    private const STRICT_AFTER_FIRST_REVISION = [
+        'goods_issue.created',
+        'goods_issue.updated',
+        'goods_issue.deleted',
     ];
 
     /**
@@ -125,7 +153,17 @@ class ErpRevisionGuard
         $revision = $this->revisionFrom($payload);
 
         if ($revision === null) {
-            return null;
+            if (! in_array($event, self::STRICT_AFTER_FIRST_REVISION, true)) {
+                return null;
+            }
+
+            $applied = $this->appliedRevision($event, $payload);
+
+            return $applied === null ? null : sprintf(
+                'Сообщение старого формата (без revision) не применено: по документу уже применена ревизия %d. '
+                .'После первой ревизии сообщения без revision по этому документу считаются устаревшими.',
+                $applied,
+            );
         }
 
         $applied = $this->appliedRevision($event, $payload);

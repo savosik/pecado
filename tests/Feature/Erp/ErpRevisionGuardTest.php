@@ -326,7 +326,7 @@ class ErpRevisionGuardTest extends TestCase
     {
         $guard = app(ErpRevisionGuard::class);
 
-        foreach (['product.updated', 'price.updated', 'stock.updated', 'goods_issue.updated'] as $event) {
+        foreach (['product.updated', 'price.updated', 'stock.updated'] as $event) {
             $this->assertNull(
                 $guard->staleReason($event, ['uuid' => 'любой', 'revision' => 1]),
                 "Событие {$event} не должно проверяться по ревизии",

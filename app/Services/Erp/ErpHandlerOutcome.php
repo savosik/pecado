@@ -41,6 +41,18 @@ class ErpHandlerOutcome
         $this->message = $message;
     }
 
+    /**
+     * Сообщение применено, но с оговоркой, о которой должна узнать 1С (v16.14.0).
+     *
+     * Статус остаётся `success` — данные приняты, — а текст попадает в журнал шины рядом
+     * с сообщением. Пример: `measurement.state = done` без `revision` сайт сохранил как
+     * `pending`. Оговорок может быть несколько, они склеиваются.
+     */
+    public function addNote(string $message): void
+    {
+        $this->message = $this->message === null ? $message : $this->message.' '.$message;
+    }
+
     public function status(): string
     {
         return $this->status;

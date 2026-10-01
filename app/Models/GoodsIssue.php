@@ -43,6 +43,14 @@ use Illuminate\Support\Str;
  * @property string|null $delivery_type
  * @property string|null $delivery_address
  * @property string|null $delivery_order
+ * @property int|null $applied_revision Последняя применённая ревизия 1С (v16.14.0)
+ * @property string|null $shipping_mode Способ доставки по версии 1С: pickup|delivery|mixed|null (v16.14.0)
+ * @property bool|null $measurement_required
+ * @property string|null $measurement_state not_required|pending|done; null — ордер старого формата
+ * @property \Carbon\Carbon|null $measured_at
+ * @property string|null $measured_by
+ * @property-read string|null $measurement_label
+ * @property-read string|null $shipping_mode_label
  * @property int $packages_count
  * @property int $items_count
  * @property numeric $total_quantity
@@ -184,6 +192,44 @@ class GoodsIssue extends Model
      */
     public const STALE_HOURS = 24;
 
+    public const SHIPPING_PICKUP = 'pickup';
+
+    public const SHIPPING_DELIVERY = 'delivery';
+
+    public const SHIPPING_MIXED = 'mixed';
+
+    /**
+     * Способ доставки ордера по версии 1С (v16.14.0). Отдельно от `delivery_type`:
+     * то поле — мёртвый реквизит шапки, которого в документе 1С нет.
+     *
+     * @var array<string, string>
+     */
+    public const SHIPPING_MODE_LABELS = [
+        self::SHIPPING_PICKUP => 'Самовывоз',
+        self::SHIPPING_DELIVERY => 'Доставка',
+        self::SHIPPING_MIXED => 'Доставка и самовывоз',
+    ];
+
+    public const MEASUREMENT_NOT_REQUIRED = 'not_required';
+
+    public const MEASUREMENT_PENDING = 'pending';
+
+    public const MEASUREMENT_DONE = 'done';
+
+    /** @var array<string, string> */
+    public const MEASUREMENT_LABELS = [
+        self::MEASUREMENT_NOT_REQUIRED => 'Обмер не нужен',
+        self::MEASUREMENT_PENDING => 'Ждём обмера',
+        self::MEASUREMENT_DONE => 'Обмер завершён',
+    ];
+
+    /** @var array<string, string> */
+    public const MEASUREMENT_COLORS = [
+        self::MEASUREMENT_NOT_REQUIRED => 'gray',
+        self::MEASUREMENT_PENDING => 'orange',
+        self::MEASUREMENT_DONE => 'green',
+    ];
+
     /** Метка отгруженного без товара ордера (полный недобор, v16.15.0). */
     public const SHIPPED_EMPTY_LABEL = 'Отгружен без товара';
 
@@ -216,6 +262,11 @@ class GoodsIssue extends Model
         'erp_created_at',
         'erp_updated_at',
         'shipped_empty',
+        'shipping_mode',
+        'measurement_required',
+        'measurement_state',
+        'measured_at',
+        'measured_by',
     ];
 
     protected function casts(): array
@@ -226,6 +277,9 @@ class GoodsIssue extends Model
             'status_changed_at' => 'datetime',
             'total_quantity' => 'decimal:3',
             'shipped_empty' => 'boolean',
+            'applied_revision' => 'integer',
+            'measurement_required' => 'boolean',
+            'measured_at' => \App\Casts\ErpDatetime::class,
             'erp_created_at' => \App\Casts\ErpDatetime::class,
             'erp_updated_at' => \App\Casts\ErpDatetime::class,
         ];
@@ -391,6 +445,29 @@ class GoodsIssue extends Model
     public function scopeWithGoods(Builder $query): Builder
     {
         return $query->where($query->qualifyColumn('shipped_empty'), false);
+    }
+
+    /**
+     * Обмер мест завершён упаковщиком (v16.14.0). Единственное состояние, в котором
+     * вес и габариты мест годятся для расчёта доставки.
+     */
+    public function isMeasured(): bool
+    {
+        return $this->measurement_state === self::MEASUREMENT_DONE;
+    }
+
+    public function getMeasurementLabelAttribute(): ?string
+    {
+        return $this->measurement_state === null
+            ? null
+            : (self::MEASUREMENT_LABELS[$this->measurement_state] ?? $this->measurement_state);
+    }
+
+    public function getShippingModeLabelAttribute(): ?string
+    {
+        return $this->shipping_mode === null
+            ? null
+            : (self::SHIPPING_MODE_LABELS[$this->shipping_mode] ?? $this->shipping_mode);
     }
 
     public function getPriorityLabelAttribute(): ?string
