@@ -48,7 +48,7 @@ class WeeklyReconciliationTest extends TestCase
         );
     }
 
-    private function debt(string $kind = 'shipment'): void
+    private function debt(string $kind = 'shipment', int $dueInDays = -10): void
     {
         $company = \App\Models\Company::factory()->create(['user_id' => $this->client->id]);
 
@@ -59,7 +59,7 @@ class WeeklyReconciliationTest extends TestCase
             'document_kind' => $kind,
             'amount' => 5000,
             'settled_amount' => 0,
-            'date' => now()->subDays(10),
+            'date' => today()->addDays($dueInDays),
         ]);
     }
 
@@ -181,6 +181,49 @@ class WeeklyReconciliationTest extends TestCase
         $this->artisan('mail:weekly-reconciliation')->assertSuccessful();
 
         $this->assertSame(0, CrmEmail::query()->where('origin_event', 'documents.reconciliation_when_debt')->count());
+    }
+
+    #[Test]
+    public function неоплаченная_реализация_внутри_отсрочки_долгом_не_считается(): void
+    {
+        // Случай Адалт Тойс (сентябрь 2026): отгрузка с отсрочкой 30 дней, срок
+        // ещё не наступил — три понедельника подряд уходило письмо о задолженности.
+        $this->subscribe('documents.reconciliation_when_debt');
+        $this->act(1);
+        $this->debt('shipment', dueInDays: 3);
+
+        $this->artisan('mail:weekly-reconciliation')->assertSuccessful();
+
+        $this->assertSame(0, CrmEmail::query()->where('origin_event', 'documents.reconciliation_when_debt')->count());
+    }
+
+    #[Test]
+    public function в_сумму_письма_входит_только_просроченное(): void
+    {
+        $this->subscribe('documents.reconciliation_when_debt');
+        $this->debt('shipment', dueInDays: -10);
+        $this->debt('shipment', dueInDays: 5);
+
+        $this->artisan('mail:weekly-reconciliation')->assertSuccessful();
+
+        $letter = CrmEmail::query()->where('origin_event', 'documents.reconciliation_when_debt')->firstOrFail();
+
+        $this->assertEquals(5000, $letter->origin_data['overdue_amount']);
+        $this->assertSame(1, $letter->origin_data['positions_count']);
+    }
+
+    #[Test]
+    public function кнопка_ведёт_в_оплаты_когда_раздел_открыт_клиенту(): void
+    {
+        config(['cabinet.finance_enabled' => true]);
+        $this->subscribe('documents.reconciliation_when_debt');
+        $this->debt();
+
+        $this->artisan('mail:weekly-reconciliation')->assertSuccessful();
+
+        $letter = CrmEmail::query()->where('origin_event', 'documents.reconciliation_when_debt')->firstOrFail();
+
+        $this->assertStringContainsString('/cabinet/payments', (string) ($letter->body_html ?? $letter->body));
     }
 
     #[Test]
