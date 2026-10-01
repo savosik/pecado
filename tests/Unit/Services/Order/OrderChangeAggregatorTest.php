@@ -149,6 +149,91 @@ class OrderChangeAggregatorTest extends TestCase
     }
 
     #[Test]
+    public function отмена_строки_в_1с_показывается_как_выбытие(): void
+    {
+        // Боевой случай 01.10.2026 (заказ 29УТ-015186): 1С отменила строку,
+        // количество не менялось — в ленте заказа отмена была, здесь терялась.
+        $p = Product::factory()->create(['name' => 'Кукла', 'slug' => 'kukla']);
+        $order = $this->order();
+
+        $this->log($order, ['modified' => [[
+            'product_id' => $p->id, 'slug' => $p->slug, 'product_name' => $p->name, 'quantity' => 3,
+            'changes' => ['cancelled' => ['old' => false, 'new' => true]],
+        ]]], '2026-07-10 10:00:00');
+
+        $rows = $this->aggregator->flatten($this->userOrders());
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('removed', $rows[0]['type']);
+        $this->assertSame(3, $rows[0]['from']);
+        $this->assertSame(0, $rows[0]['to']);
+    }
+
+    #[Test]
+    public function отмена_в_старом_логе_берёт_количество_из_строки_заказа(): void
+    {
+        // Логи до правки количества не несут — оно есть только в самой строке.
+        $p = Product::factory()->create(['name' => 'Кукла', 'slug' => 'kukla']);
+        $order = $this->order();
+        \App\Models\OrderItem::factory()->create([
+            'order_id' => $order->id, 'product_id' => $p->id, 'quantity' => 2, 'cancelled' => true,
+        ]);
+
+        $this->log($order, ['modified' => [[
+            'product_id' => $p->id, 'slug' => $p->slug, 'product_name' => $p->name,
+            'changes' => ['cancelled' => ['old' => false, 'new' => true]],
+        ]]], '2026-07-10 10:00:00');
+
+        $rows = $this->aggregator->flatten($this->userOrders());
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('removed', $rows[0]['type']);
+        $this->assertSame(2, $rows[0]['from']);
+    }
+
+    #[Test]
+    public function снятая_отмена_сворачивается_в_ноль(): void
+    {
+        $p = Product::factory()->create(['slug' => 'back']);
+        $order = $this->order();
+        $entry = fn (bool $old, bool $new) => ['modified' => [[
+            'product_id' => $p->id, 'slug' => $p->slug, 'product_name' => 'X', 'quantity' => 4,
+            'changes' => ['cancelled' => ['old' => $old, 'new' => $new]],
+        ]]];
+
+        $this->log($order, $entry(false, true), '2026-07-10 10:00:00');
+        $this->log($order, $entry(true, false), '2026-07-10 11:00:00');
+
+        $this->assertCount(0, $this->aggregator->flatten($this->userOrders()));
+    }
+
+    #[Test]
+    public function дробление_строки_при_недоборе_даёт_уменьшение_а_не_добавление(): void
+    {
+        // 1С делит строку надвое: у исходной падает количество, рядом появляется
+        // уже отменённая. Отменённый хвост — не «добавлен товар».
+        $p = Product::factory()->create(['slug' => 'split']);
+        $order = $this->order();
+
+        $this->log($order, [
+            'added' => [[
+                'product_id' => $p->id, 'slug' => $p->slug, 'product_name' => 'X', 'quantity' => 3, 'price' => 10, 'cancelled' => true,
+            ]],
+            'modified' => [[
+                'product_id' => $p->id, 'slug' => $p->slug, 'product_name' => 'X', 'quantity' => 7,
+                'changes' => ['quantity' => ['old' => 10, 'new' => 7]],
+            ]],
+        ], '2026-07-10 10:00:00');
+
+        $rows = $this->aggregator->flatten($this->userOrders());
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('changed', $rows[0]['type']);
+        $this->assertSame(10, $rows[0]['from']);
+        $this->assertSame(7, $rows[0]['to']);
+    }
+
+    #[Test]
     public function grouped_by_order_matches_flatten_counts(): void
     {
         $a = Product::factory()->create(['name' => 'A', 'slug' => 'a']);

@@ -207,6 +207,12 @@ class OrderChangeAggregator
                 }
 
                 foreach (($changes['added'] ?? []) as $item) {
+                    // Строка, пришедшая из 1С уже отменённой, — хвост дробления
+                    // при недоборе: товара она клиенту не добавляет, а само
+                    // уменьшение несёт соседняя запись modified.
+                    if (! empty($item['cancelled'])) {
+                        continue;
+                    }
                     $this->fold($net, $item, 0, (int) ($item['quantity'] ?? 0), $at);
                 }
                 foreach (($changes['removed'] ?? []) as $item) {
@@ -214,10 +220,26 @@ class OrderChangeAggregator
                 }
                 foreach (($changes['modified'] ?? []) as $item) {
                     $qty = $item['changes']['quantity'] ?? null;
-                    if ($qty === null) {
+                    $cancel = $item['changes']['cancelled'] ?? null;
+                    if ($qty === null && $cancel === null) {
                         continue; // изменения только цены/скидки — не движение состава
                     }
-                    $this->fold($net, $item, (int) ($qty['old'] ?? 0), (int) ($qty['new'] ?? 0), $at);
+
+                    // Отмена строки в 1С количество не трогает, но товар клиент
+                    // не получит: для состава это «было N → стало 0». Без этой
+                    // ветки отмена была видна в ленте заказа и терялась здесь.
+                    $newQty = $qty !== null
+                        ? (int) ($qty['new'] ?? 0)
+                        : $this->lineQuantity($order, $item, (bool) ($cancel['new'] ?? false));
+                    $oldQty = $qty !== null ? (int) ($qty['old'] ?? 0) : $newQty;
+
+                    $this->fold(
+                        $net,
+                        $item,
+                        ($cancel['old'] ?? false) ? 0 : $oldQty,
+                        ($cancel['new'] ?? false) ? 0 : $newQty,
+                        $at,
+                    );
                 }
             }
 
@@ -301,6 +323,32 @@ class OrderChangeAggregator
             'to' => $to,
             'changed_at' => $at,
         ];
+    }
+
+    /**
+     * Количество в строке, у которой сменился только признак отмены.
+     *
+     * Новые логи несут его сами (`quantity`). В записях до этой правки его нет —
+     * берём из текущих строк заказа, предпочитая строку в том же состоянии отмены:
+     * товар может стоять в заказе дважды (дробление при недоборе).
+     *
+     * @param  array<string, mixed>  $item
+     */
+    private function lineQuantity(Order $order, array $item, bool $cancelled): int
+    {
+        if (isset($item['quantity'])) {
+            return (int) $item['quantity'];
+        }
+
+        $order->loadMissing('items:id,order_id,product_id,name,quantity,cancelled');
+
+        $lines = ! empty($item['product_id'])
+            ? $order->items->where('product_id', $item['product_id'])
+            : $order->items->where('name', $item['product_name'] ?? null);
+
+        $line = $lines->first(fn ($line) => (bool) $line->cancelled === $cancelled) ?? $lines->first();
+
+        return (int) ($line->quantity ?? 0);
     }
 
     private function fold(array &$net, array $item, int $before, int $after, ?Carbon $changedAt): void

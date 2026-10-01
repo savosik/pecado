@@ -321,6 +321,9 @@ class OrderChangeLogger
                     'product_id' => $newItem['product_id'] ?? null,
                     'slug' => $newItem['slug'] ?? null,
                     'product_name' => $newItem['name'],
+                    // Количество строки после изменения: отмена его не меняет,
+                    // а «Изменениям заказов» нужно показать, сколько штук выбыло
+                    'quantity' => $newItem['quantity'],
                     'changes' => $changes,
                 ];
             }
