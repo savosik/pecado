@@ -1421,6 +1421,14 @@ operations:
 
       Строка в журнал пишется только при фактическом изменении статуса — повторное
       сообщение с тем же статусом журнал не засоряет.
+
+      **(v16.15.0) Полный недобор** — упаковщик оформил недобор, а собрано ничего
+      (некондиция, брак, недостача). 1С отгружает ордер без строк и шлёт финальное
+      `goods_issue.updated` со `status: shipped`, `items: []`, `packages: []`, а при
+      `revision` — `measurement.state = not_required`. Сайт строки прошлых снимков не
+      удаляет (по ним ордер остаётся привязан к заказам), помечает ордер «отгружен без
+      товара»: клиенту не уходит письмо о готовности к выдаче, ордер не встаёт в очередь
+      выдачи, стадия заказа — «Сборка не состоялась».
     action: receive
     channel:
       $ref: '#/channels/erpInWarehouse'
@@ -5341,13 +5349,15 @@ components:
         `packages` непустой, у каждого места `weight > 0` и `dimensions` (все стороны ≥ 1).
         При `pending`/`not_required` — `measured_at` и `measured_by` равны `null`.
         `required = false` только при `state = not_required`.
+        **(v16.15.0)** У отгруженного без товара ордера (`status = shipped`, `items: []`)
+        допускается только `not_required` с `required = false`.
       required:
         - required
         - state
       properties:
         required:
           type: boolean
-          description: Нужен ли обмер. `false` только для самовывоза.
+          description: Нужен ли обмер. `false` только для самовывоза и (v16.15.0) отгруженного без товара ордера.
         state:
           type: string
           enum:
@@ -5678,6 +5688,11 @@ components:
         полностью совпадает с `GoodsIssueCreatedPayload`, отличается только значением
         поля `event`. Разделение на две схемы сделано на вырост — при появлении
         у `goods_issue.updated` собственных полей схема эволюционирует независимо.
+
+        **(v16.15.0) Отличие от `created`:** при `status = shipped` допускается
+        `items: []` — ордер отгружен без товара (полный недобор). Тогда `packages`
+        пуст или отсутствует, `measurement` (если передан) — `required = false`,
+        `state = not_required`. В остальных статусах `items` — не меньше одной строки.
       required:
         - event
         - message_id
@@ -5796,8 +5811,11 @@ components:
           description: 'Аудит-метка: дата-время последнего изменения документа в 1С.'
         items:
           type: array
-          minItems: 1
-          description: Табличная часть «Товары по распоряжениям». Присылается целиком.
+          description: |
+            Табличная часть «Товары по распоряжениям». Присылается целиком. Не меньше одной
+            строки во всех статусах, кроме `shipped`.
+            **(v16.15.0)** При `status = shipped` допускается `[]` — полный недобор. Сайт
+            прежние строки ордера не удаляет, а помечает ордер «отгружен без товара».
           items:
             $ref: '#/components/schemas/GoodsIssueItem'
         shipping_mode:
@@ -5859,6 +5877,22 @@ components:
                 length: 120
                 width: 80
                 height: 145
+
+        - event: goods_issue.updated
+          message_id: msg-gi-upd-0e9f8d7c
+          revision: 15
+          uuid: 7f3d9c10-4b21-4e8a-9c55-1a2b3c4d5e6f
+          number: 'УТ-00009420'
+          date: '2026-09-29T11:02:10+03:00'
+          status: shipped
+          shipping_mode: delivery
+          measurement:
+            required: false
+            state: not_required
+            measured_at: null
+            measured_by: null
+          items: []
+          packages: []
 
     GoodsIssueDeletedPayload:
       type: object
