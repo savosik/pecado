@@ -478,7 +478,8 @@ class PrintedDocumentCabinetTest extends TestCase
     #[Test]
     public function second_format_of_the_same_form_does_not_produce_a_second_letter(): void
     {
-        [$pdf, $xlsx] = $this->updPair();
+        // Дата от сегодня: о формах старше documents.notify_max_age_days не пишем.
+        [$pdf, $xlsx] = $this->updPair(['date' => today()->subDays(3)->toDateString()]);
 
         // Клиенту сказали «появился УПД» один раз: второй файл той же формы —
         // не новость, а вторая кнопка в той же строке кабинета.
@@ -495,7 +496,7 @@ class PrintedDocumentCabinetTest extends TestCase
     #[Test]
     public function reissued_form_still_notifies_the_client(): void
     {
-        [$pdf, $xlsx] = $this->updPair();
+        [$pdf, $xlsx] = $this->updPair(['date' => today()->subDays(3)->toDateString()]);
         $xlsx->forceFill(['revision' => 2])->save();
 
         // Перевыставление — настоящая новость: два письма подряд склеит окно

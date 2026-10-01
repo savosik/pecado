@@ -222,6 +222,11 @@ class InternalOrganizationHiddenFromClientTest extends TestCase
         $regular = $this->document($this->regular);
         $internal = $this->document($this->internal);
 
+        // Фабрика даёт случайную дату до 300 дней назад, а о формах старше
+        // documents.notify_max_age_days письма нет — давность тут не предмет теста.
+        $regular->forceFill(['date' => today()->subDays(3)])->save();
+        $internal->forceFill(['date' => today()->subDays(3)])->save();
+
         $stream = $this->mock(MailStream::class);
         $stream->shouldReceive('captureQuietly')
             ->once()

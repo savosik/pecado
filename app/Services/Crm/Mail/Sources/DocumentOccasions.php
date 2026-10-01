@@ -26,7 +26,7 @@ class DocumentOccasions
 
     public function published(PrintedDocument $document): void
     {
-        if (! $this->isReady($document) || $this->isExtraFormat($document)) {
+        if (! $this->isReady($document) || $this->isTooOld($document) || $this->isExtraFormat($document)) {
             return;
         }
 
@@ -50,9 +50,9 @@ class DocumentOccasions
                 'url' => url(route('cabinet.documents.index', [], false)),
                 'entity_label' => $this->title($document),
             ],
-            // Возрастной ценз считается от даты появления документа в системе,
-            // а не от даты самого документа: акт сверки за прошлый год —
-            // свежая новость, если 1С выложила его сегодня.
+            // Ценз потока (`mail_stream.max_age_minutes`) считается от появления
+            // документа в системе: он отсекает запоздавшую обработку. Давность
+            // самого документа проверена выше, в isTooOld().
             occurredAt: $document->created_at,
         ));
     }
@@ -103,6 +103,30 @@ class DocumentOccasions
             ->where('id', '<', $document->getKey())
             ->stored()
             ->exists();
+    }
+
+    /**
+     * Документ слишком старый, чтобы быть новостью.
+     *
+     * 1С догружает историю пачками: форма появляется на сайте сегодня, но сам
+     * документ — январский. В кабинете ему место, в почте — нет (решение
+     * заказчика 01.10.2026). Срез стоит здесь, у источника события, а не
+     * в матрице уведомлений: «кому слать» остаётся свойством партнёра, а
+     * «новость ли это» решает домен документов.
+     *
+     * Меряется дата самого документа, не `created_at`. Формы без даты
+     * уведомляют как раньше: молчать о документе из-за пустого поля хуже,
+     * чем написать о старом. Документ возрастом ровно в порог — ещё новость.
+     */
+    private function isTooOld(PrintedDocument $document): bool
+    {
+        $maxAgeDays = (int) config('documents.notify_max_age_days', 31);
+
+        if ($maxAgeDays <= 0 || $document->date === null) {
+            return false;
+        }
+
+        return $document->date->copy()->startOfDay()->lessThan(today()->subDays($maxAgeDays));
     }
 
     /**
