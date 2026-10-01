@@ -324,53 +324,27 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
 
     const handleBulkExport = useCallback(async () => {
         try {
-            // FIX #6: pinned CDN version instead of unpredictable xlsx-latest
-            const mod = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs');
-            const XLSX = mod.default || mod;
+            // Файл собирает сервер: библиотеку со стороннего CDN на бою режет CSP.
+            const response = await axios.post(
+                `/cart/${cart.id}/export`,
+                { product_ids: Array.from(selected) },
+                { responseType: 'blob' },
+            );
 
-            const header = ['Название', 'Бренд', 'Артикул', 'Заказано, шт', 'В наличии', 'Предзаказ', 'Цена', 'Сумма'];
-            const aoa = [header];
+            const url = URL.createObjectURL(response.data);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'cart_selected.xlsx';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
 
-            // Build per-product map
-            const byProduct = new Map();
-            for (const it of items) {
-                const pid = Number(it.product?.id);
-                if (!pid) continue;
-                if (!byProduct.has(pid)) byProduct.set(pid, { product: it.product, instock: null, preorder: null });
-                if (it.item_type === 'instock') byProduct.get(pid).instock = it;
-                if (it.item_type === 'preorder') byProduct.get(pid).preorder = it;
-            }
-
-            for (const pid of selected) {
-                const row = byProduct.get(pid);
-                if (!row) continue;
-                const name = row.product?.name || '';
-                const brand = row.product?.brand?.name || '';
-                const sku = row.product?.sku || '';
-                const instock = Number(row.instock?.quantity || 0);
-                const preorder = Number(row.preorder?.quantity || 0);
-                const qty = instock + preorder;
-                const item = row.instock || row.preorder;
-                const price = Number(item?.price_discounted ?? item?.price ?? 0);
-                const sum =
-                    Number(row.instock?.total_amount_discounted ?? row.instock?.total_amount ?? 0) +
-                    Number(row.preorder?.total_amount_discounted ?? row.preorder?.total_amount ?? 0);
-                aoa.push([name, brand, sku, qty, instock, preorder, price, sum]);
-            }
-
-            const ws = XLSX.utils.aoa_to_sheet(aoa);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Корзина');
-            if (XLSX.writeFileXLSX) {
-                XLSX.writeFileXLSX(wb, 'cart_selected.xlsx');
-            } else {
-                XLSX.writeFile(wb, 'cart_selected.xlsx');
-            }
             toastInfo('Экспорт завершён', 'Файл cart_selected.xlsx скачан.');
         } catch {
             toastError('Ошибка экспорта', 'Не удалось экспортировать в Excel.');
         }
-    }, [items, selected]);
+    }, [cart?.id, selected]);
 
     const handleBulkMove = useCallback(async (targetCartId) => {
         const productIds = Array.from(selected);

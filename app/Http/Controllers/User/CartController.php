@@ -11,6 +11,7 @@ use App\Models\ProductDefect;
 use App\Services\Cart\OrderImportService;
 use App\Services\Promotion\CartPromoChoice;
 use App\Services\Promotion\CartPromotionProgress;
+use App\Services\SimpleXlsxExporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -830,6 +831,71 @@ class CartController extends Controller
         $resolution = $importer->resolve($rows);
 
         return $this->respondWithImport($request, $resolution);
+    }
+
+    /**
+     * Экспорт выбранных позиций корзины в Excel.
+     * POST /cart/{cart}/export
+     *
+     * Файл собирает сервер: раньше страница подгружала для этого библиотеку
+     * со стороннего CDN, и на бою её резала политика CSP — экспорт молча
+     * не работал, хотя локально и на dev был исправен.
+     */
+    public function export(Request $request, Cart $cart, SimpleXlsxExporter $xlsx): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        Gate::authorize('view', $cart);
+
+        $validated = $request->validate([
+            'product_ids' => ['required', 'array', 'min:1'],
+            'product_ids.*' => ['integer'],
+        ], [
+            'product_ids.required' => 'Выберите позиции для экспорта.',
+            'product_ids.min' => 'Выберите позиции для экспорта.',
+        ]);
+
+        $details = $this->cartService->getCartDetails($cart, $request->user());
+
+        // Товар лежит в корзине до двух строк — «в наличии» и «предзаказ»;
+        // в файле это одна строка с разбивкой, как и в таблице корзины.
+        $byProduct = [];
+        foreach ($details['items'] as $item) {
+            $productId = (int) ($item['product']['id'] ?? 0);
+            if ($productId === 0 || ! in_array($item['item_type'], ['instock', 'preorder'], true)) {
+                continue;
+            }
+            $byProduct[$productId]['product'] = $item['product'];
+            $byProduct[$productId][$item['item_type']] = $item;
+        }
+
+        $rows = [];
+        foreach (array_unique(array_map('intval', $validated['product_ids'])) as $productId) {
+            $row = $byProduct[$productId] ?? null;
+            if ($row === null) {
+                continue;
+            }
+
+            $instock = $row['instock'] ?? null;
+            $preorder = $row['preorder'] ?? null;
+            $line = $instock ?? $preorder;
+
+            $rows[] = [
+                $row['product']['name'] ?? '',
+                $row['product']['brand']['name'] ?? '',
+                $row['product']['sku'] ?? '',
+                (int) ($instock['quantity'] ?? 0) + (int) ($preorder['quantity'] ?? 0),
+                (int) ($instock['quantity'] ?? 0),
+                (int) ($preorder['quantity'] ?? 0),
+                (float) ($line['price_discounted'] ?? $line['price'] ?? 0),
+                (float) ($instock['total_amount_discounted'] ?? 0) + (float) ($preorder['total_amount_discounted'] ?? 0),
+            ];
+        }
+
+        return $xlsx->stream(
+            'cart_selected',
+            ['Название', 'Бренд', 'Артикул', 'Заказано, шт', 'В наличии', 'Предзаказ', 'Цена', 'Сумма'],
+            $rows,
+            'Корзина',
+        );
     }
 
     /**

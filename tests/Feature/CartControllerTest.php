@@ -45,6 +45,57 @@ class CartControllerTest extends TestCase
         $this->app->instance(StockServiceInterface::class, $this->stockServiceMock);
     }
 
+    // ─── Экспорт выбранных позиций ────────────────────────
+
+    public function test_export_streams_xlsx_with_selected_products_only(): void
+    {
+        $cart = Cart::factory()->create(['user_id' => $this->user->id, 'is_active' => true]);
+        $picked = Product::factory()->create(['name' => 'Выбранный товар', 'sku' => 'SKU-PICKED']);
+        $skipped = Product::factory()->create(['name' => 'Невыбранный товар', 'sku' => 'SKU-SKIPPED']);
+        CartItem::factory()->create(['cart_id' => $cart->id, 'product_id' => $picked->id, 'quantity' => 3, 'item_type' => 'instock']);
+        CartItem::factory()->create(['cart_id' => $cart->id, 'product_id' => $picked->id, 'quantity' => 2, 'item_type' => 'preorder']);
+        CartItem::factory()->create(['cart_id' => $cart->id, 'product_id' => $skipped->id, 'quantity' => 1, 'item_type' => 'instock']);
+
+        $response = $this->actingAs($this->user)->post("/cart/{$cart->id}/export", ['product_ids' => [$picked->id]]);
+
+        $response->assertOk();
+        $this->assertStringContainsString('spreadsheetml', (string) $response->headers->get('Content-Type'));
+
+        $file = tempnam(sys_get_temp_dir(), 'cart-export');
+        file_put_contents($file, $response->streamedContent());
+        $rows = \PhpOffice\PhpSpreadsheet\IOFactory::load($file)->getActiveSheet()->toArray(null, true, false);
+        unlink($file);
+
+        // Заголовок + одна строка: «в наличии» и «предзаказ» одного товара слиты.
+        $this->assertCount(2, $rows);
+        $this->assertSame('Выбранный товар', $rows[1][0]);
+        $this->assertSame('SKU-PICKED', $rows[1][2]);
+        $this->assertEquals(5, $rows[1][3]);
+        $this->assertEquals(3, $rows[1][4]);
+        $this->assertEquals(2, $rows[1][5]);
+        $this->assertEquals(100, $rows[1][6]);
+        $this->assertEquals(500, $rows[1][7]);
+    }
+
+    public function test_export_requires_selection(): void
+    {
+        $cart = Cart::factory()->create(['user_id' => $this->user->id, 'is_active' => true]);
+
+        $this->actingAs($this->user)
+            ->postJson("/cart/{$cart->id}/export", ['product_ids' => []])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['product_ids']);
+    }
+
+    public function test_export_of_foreign_cart_is_forbidden(): void
+    {
+        $foreign = Cart::factory()->create(['user_id' => User::factory()->create()->id]);
+
+        $this->actingAs($this->user)
+            ->post("/cart/{$foreign->id}/export", ['product_ids' => [1]])
+            ->assertForbidden();
+    }
+
     // ─── API: Summary ─────────────────────────────────────
 
     public function test_summary_returns_cart_items(): void

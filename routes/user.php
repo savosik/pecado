@@ -74,6 +74,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/cart', [CartController::class, 'store'])->name('cart.store');
     Route::get('/cart/{cart}', [CartController::class, 'show'])->name('cart.show');
     Route::post('/cart/{cart}/switch', [CartController::class, 'switch'])->name('cart.switch');
+    Route::post('/cart/{cart}/export', [CartController::class, 'export'])->name('cart.export');
     Route::patch('/cart/{cart}', [CartController::class, 'update'])->name('cart.update');
     Route::delete('/cart/{cart}', [CartController::class, 'destroy'])->name('cart.destroy');
 
