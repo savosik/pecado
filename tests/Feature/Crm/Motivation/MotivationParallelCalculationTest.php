@@ -139,6 +139,27 @@ class MotivationParallelCalculationTest extends TestCase
     }
 
     #[Test]
+    #[TestDox('Месяц, выплаченный по прежней схеме, остаётся её месяцем, даже если 2.2 ввели задним числом')]
+    public function month_paid_by_old_scheme_stays_old_after_retroactive_introduction(): void
+    {
+        $calculations = app(PayrollCalculationService::class);
+        $parallel = app(ParallelCalculationService::class);
+
+        // Месяц утверждён по прежней схеме, после чего Положение вводят с даты до него.
+        $paid = $calculations->approve($calculations->ensureDraft($this->profile->id, $this->month), $this->head);
+        app(MotivationSchemeInstaller::class)->install($this->month->subMonth());
+        $paid = $paid->fresh();
+
+        $this->assertFalse($parallel->paidByV2($paid), 'Снимок посчитан по прежней схеме');
+        $this->assertNull($parallel->legacy($paid), 'Раздел сверки показывает сам выплаченный снимок, а не пересчёт');
+
+        $comparison = $parallel->compare($paid);
+        $this->assertNotNull($comparison);
+        $this->assertSame('before', $comparison['phase'], 'Оплата по действующей системе, справочно — 2.2');
+        $this->assertSame((float) $paid->total, (float) $comparison['paying']['total']);
+    }
+
+    #[Test]
     #[TestDox('Без схемы 2.2 параллельного расчёта нет; у замороженного месяца справочный снимок не пересчитывается')]
     public function no_window_without_v2_and_frozen_shadow_is_kept(): void
     {

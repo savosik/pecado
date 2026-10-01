@@ -235,9 +235,13 @@ class SalaryController extends CrmController
         // Месяц по Положению 2.2: суммы — по прежней схеме (раздел сверки), статус и
         // действия — у оплачиваемого снимка, утверждение и выплата идут в «Мотивации v2».
         $legacyShown = false;
-        $rows = $this->calculations->teamSummary($month, $this->parallel->paysByV2($month) ? function (PayrollCalculation $c) use (&$legacyShown): PayrollCalculation {
+        $v2Shown = false;
+        $rows = $this->calculations->teamSummary($month, function (PayrollCalculation $c) use (&$legacyShown, &$v2Shown): PayrollCalculation {
             $legacy = $this->parallel->legacy($c);
             if ($legacy === null) {
+                // Снимок по 2.2 без справочного — окно сравнения закончилось.
+                $v2Shown = $v2Shown || $this->parallel->paidByV2($c);
+
                 return $c;
             }
             $legacyShown = true;
@@ -245,7 +249,7 @@ class SalaryController extends CrmController
             $legacy->status = $c->status;
 
             return $legacy;
-        } : null);
+        });
 
         $totals = ['total' => 0.0, 'salary' => 0.0, 'kpi_bonus' => 0.0, 'extra_income' => 0.0, 'new_clients_bonus' => 0.0, 'manual_correction' => 0.0, 'penalty' => 0.0, 'revenue' => 0.0, 'plan' => 0.0];
         $statuses = ['draft' => 0, 'approved' => 0, 'paid' => 0];
@@ -270,7 +274,7 @@ class SalaryController extends CrmController
             'statuses' => $statuses,
             'can_edit' => ! $legacyShown && $this->crmActor($request)->can('crm-salary.edit'),
             'poll_seconds' => max(15, (int) config('payroll.poll_seconds', 60)),
-            'legacy_notice' => $this->legacyNotice($month, $legacyShown),
+            'legacy_notice' => $this->legacyNotice($month, $legacyShown, $v2Shown),
         ];
     }
 
@@ -341,18 +345,22 @@ class SalaryController extends CrmController
         // Положению 2.2, показывается здесь по прежней схеме, а не оплачиваемым снимком.
         $legacy = $this->parallel->legacy($calculation);
         $payload['calculation'] = $this->presenter->present($legacy ?? $calculation);
-        $payload['legacy_notice'] = $this->legacyNotice($month, $legacy !== null);
+        $payload['legacy_notice'] = $this->legacyNotice($month, $legacy !== null, $this->parallel->paidByV2($calculation));
 
         return $payload;
     }
 
-    private function legacyNotice(CarbonImmutable $month, bool $legacyShown): ?string
+    /**
+     * Плашка раздела сверки. Признак «по 2.2» берётся со снимка, а не с даты схемы:
+     * месяц, выплаченный по прежней схеме до ввода Положения задним числом, плашки не получает.
+     */
+    private function legacyNotice(CarbonImmutable $month, bool $legacyShown, bool $paidByV2): ?string
     {
         if ($legacyShown) {
             return sprintf('Зарплата за %s считается по Положению 2.2 — оплачиваемый расчёт в разделе «Мотивация v2 → Расчётный лист». Здесь справочно показан расчёт по прежней схеме.', mb_strtolower(MonthLabel::ru($month)));
         }
 
-        if ($this->parallel->paysByV2($month)) {
+        if ($paidByV2) {
             return sprintf('Зарплата за %s считается по Положению 2.2, окно параллельного расчёта закончилось — по прежней схеме этот месяц не считается. Показан действующий расчёт.', mb_strtolower(MonthLabel::ru($month)));
         }
 

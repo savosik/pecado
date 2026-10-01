@@ -99,7 +99,7 @@ class ParallelCalculationService
             return null;
         }
 
-        $payingScheme = $this->schemes->forMonth($period);
+        $payingScheme = $this->schemeOf($paying, $period);
         $shadowScheme = $this->otherScheme($payingScheme, $window['scheme']);
 
         if ($shadowScheme === null) {
@@ -170,7 +170,7 @@ class ParallelCalculationService
             return null;
         }
 
-        $payingScheme = $this->schemes->forMonth($period);
+        $payingScheme = $this->schemeOf($paying, $period);
         if ((int) $payingScheme->getKey() !== (int) $window['scheme']->getKey()) {
             return null;
         }
@@ -184,13 +184,41 @@ class ParallelCalculationService
     }
 
     /**
-     * Оплачивается ли месяц по Положению 2.2.
+     * Посчитан ли снимок по Положению 2.2.
+     *
+     * Смотрим на схему самого снимка, а не на дату её действия: Положение могут
+     * ввести задним числом, и месяц, уже выплаченный по прежней схеме, остаётся
+     * выплаченным по ней, хотя по календарю он «месяц 2.2».
      */
-    public function paysByV2(CarbonInterface $month): bool
+    public function paidByV2(PayrollCalculation $calculation): bool
     {
         $window = $this->window();
 
-        return $window !== null && CarbonImmutable::instance($month)->startOfMonth()->gte($window['effective_from']);
+        if ($window === null) {
+            return false;
+        }
+
+        $period = CarbonImmutable::instance($calculation->period_month)->startOfMonth();
+
+        return (int) $this->schemeOf($calculation, $period)->getKey() === (int) $window['scheme']->getKey();
+    }
+
+    /**
+     * Схема, по которой посчитан снимок: записанная в нём, иначе действующая на месяц.
+     */
+    private function schemeOf(PayrollCalculation $calculation, CarbonImmutable $period): PayrollScheme
+    {
+        $schemeId = (int) ($calculation->scheme_id ?? 0);
+
+        if ($schemeId > 0) {
+            foreach ($this->schemes->versions() as $scheme) {
+                if ((int) $scheme->getKey() === $schemeId) {
+                    return $scheme;
+                }
+            }
+        }
+
+        return $this->schemes->forMonth($period);
     }
 
     /**

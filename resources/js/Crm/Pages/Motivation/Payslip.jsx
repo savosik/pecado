@@ -150,6 +150,7 @@ export default function MotivationPayslip({ month, month_label: monthLabel, mont
                             rate={slip.shipments.rates?.base ?? 0}
                             accrued={slip.shipments.base_accrued ?? 0}
                             empty="Отгрузок сверх порога оплаты в этом месяце пока нет — П1 не начисляется."
+                            base={slip.shipments.base_over_threshold ?? null}
                             reference={[
                                 ['Личный план месяца', slip.shipments.base_plan],
                                 ['Порог оплаты', slip.shipments.base_threshold],
@@ -228,7 +229,7 @@ function Section({ title, open = false, children }) {
  * Для П1 сервер уже оставил только часть отгрузок сверх порога, а `reference` —
  * справка внизу: план, порог, выполнено, сверх порога.
  */
-function Shipments({ title, groups, rate = 0, accrued = 0, empty = null, reference = [] }) {
+function Shipments({ title, groups, rate = 0, accrued = 0, empty = null, reference = [], base = null }) {
     const [open, setOpen] = useState(() => new Set());
     const rows = groups ?? [];
 
@@ -268,9 +269,14 @@ function Shipments({ title, groups, rate = 0, accrued = 0, empty = null, referen
                 ))}
                 {rows.length > 0 && (
                     <HStack justify="space-between" pt={2} fontSize="sm">
-                        <Text color="fg.muted">Начислено: {fmtRub(total)} × {pct}</Text>
+                        <Text color="fg.muted">Начислено: {fmtRub(base ?? total)} × {pct}</Text>
                         <Text fontWeight="700" fontVariantNumeric="tabular-nums" color={accrued > 0 ? 'green.fg' : 'fg.subtle'}>{fmtRub(accrued)}</Text>
                     </HStack>
+                )}
+                {rows.length > 0 && base !== null && Math.abs(base - total) >= 0.01 && (
+                    <Text fontSize="xs" color="fg.subtle">
+                        Сумма по документам выше — {fmtRub(total)}: вознаграждение считается по строкам товаров, а шапки накладных округлены (расхождение {fmtRub(Math.abs(base - total))}).
+                    </Text>
                 )}
                 {reference.length > 0 && (
                     <VStack align="stretch" gap={0} pt={2} fontSize="xs" color="fg.muted">

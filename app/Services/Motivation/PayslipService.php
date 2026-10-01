@@ -121,7 +121,10 @@ class PayslipService
         }
         unset($partners);
 
-        $baseTotal = Money::round($baseTotal);
+        // «Выполнено» и «сверх порога» — из расчёта (по строкам товаров), а не из суммы шапок
+        // накладных: шапки округлены, и на сотнях документов расходятся с расчётом на рубли.
+        $documentsTotal = Money::round($baseTotal);
+        $baseTotal = $motivation === null ? $documentsTotal : Money::round((float) $motivation->baseRevenue);
 
         return [
             'calculation' => [
@@ -150,6 +153,7 @@ class PayslipService
                 'base_plan' => isset($variable['meta']['plan']) ? (float) $variable['meta']['plan'] : null,
                 'base_threshold' => $threshold,
                 'base_total' => $baseTotal,
+                'base_documents_total' => $documentsTotal,
                 'base_over_threshold' => $threshold === null ? $baseTotal : Money::round(max(0.0, $baseTotal - $threshold)),
                 'base_accrued' => Money::round((float) ($variable['meta']['p1'] ?? 0)),
                 'new_accrued' => Money::round((float) ($variable['meta']['p2'] ?? 0)),
