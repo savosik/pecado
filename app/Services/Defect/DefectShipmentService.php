@@ -179,9 +179,15 @@ class DefectShipmentService
                     ->where('orders.type', '=', OrderType::DEFECT->value)
                     ->whereNull('orders.deleted_at');
             })
-            ->join('order_items', function ($join) use ($defectId) {
-                $join->on('order_items.order_id', '=', 'orders.id')
-                    ->on('order_items.product_id', '=', 'shipment_items.product_id')
+            // EXISTS, а не JOIN: у раздробленной строки на партию ссылаются обе половины —
+            // активная и отменённый хвост (v16.17.0: 1С дробит строку уже при приёме заказа).
+            // JOIN дал бы по строке реализации две строки заказа и удвоил отгруженное,
+            // а партия закрылась бы как распроданная раньше времени.
+            ->whereExists(function ($query) use ($defectId) {
+                $query->select(DB::raw(1))
+                    ->from('order_items')
+                    ->whereColumn('order_items.order_id', 'orders.id')
+                    ->whereColumn('order_items.product_id', 'shipment_items.product_id')
                     ->where('order_items.product_defect_id', '=', $defectId);
             })
             ->whereNull('shipments.deleted_at')

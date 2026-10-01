@@ -151,7 +151,9 @@ class DefectController extends WmsController
             ->where('status', \App\Enums\OrderStatus::READY_FOR_SHIPMENT->value)
             ->with([
                 'user:id,name',
-                'items' => fn ($q) => $q->whereNotNull('product_defect_id'),
+                // Отменённый хвост раздробленной строки наследует партию своего товара
+                // (см. OrderItemsSynchronizer), но отбирать по нему нечего: складу — только живые строки.
+                'items' => fn ($q) => $q->whereNotNull('product_defect_id')->where('cancelled', false),
                 'items.product:id,name,sku',
                 // Партию грузим вместе с мягко удалёнными: если её удалили после
                 // формирования заказа, позиция всё равно должна остаться видимой
