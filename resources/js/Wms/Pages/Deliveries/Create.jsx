@@ -96,9 +96,46 @@ export default function DeliveriesCreate() {
 
     const placesWeight = places.reduce((sum, place) => sum + (Number(place.weight) || 0), 0);
 
+    // Обмер мест упаковщиком (1С, v16.14.0). Ордер, собранный по нескольким заказам,
+    // учитывается один раз — его коробки общие и едут целиком.
+    const measurement = useMemo(() => {
+        const byIssue = new Map();
+        selected.forEach((item) => {
+            const info = item.goods_issue?.measurement;
+            if (info) {
+                byIssue.set(info.goods_issue_id, { ...info, number: item.goods_issue.number });
+            }
+        });
+        const issues = [...byIssue.values()];
+        const allReady = selected.length > 0
+            && selected.every((item) => item.goods_issue?.measurement?.verdict === 'ready');
+
+        return {
+            places: allReady ? issues.flatMap((issue) => issue.places) : null,
+            numbers: issues.filter((issue) => issue.verdict === 'ready').map((issue) => issue.number),
+            blocking: [...new Set(issues.filter((issue) => issue.blocks).map((issue) => issue.message))],
+            notes: [...new Set(issues.filter((issue) => !issue.blocks && issue.message).map((issue) => issue.message))],
+        };
+    }, [selected]);
+    const measuredKey = measurement.places ? JSON.stringify(measurement.places) : '';
+
+    // Обмер завершён — места подставляем из него, пока кладовщик не правил их руками.
+    useEffect(() => {
+        if (isEdit || weightTouched || !measuredKey) {
+            return;
+        }
+
+        setPlaces(JSON.parse(measuredKey).map((place) => ({
+            weight: String(place.weight),
+            length: place.length,
+            width: place.width,
+            height: place.height,
+        })));
+    }, [measuredKey, weightTouched, isEdit]);
+
     // Расчётный вес → в единственное место, пока его не правили руками.
     useEffect(() => {
-        if (weightTouched || places.length !== 1) {
+        if (weightTouched || places.length !== 1 || measuredKey) {
             return;
         }
 
@@ -107,7 +144,7 @@ export default function DeliveriesCreate() {
                 ? [{ ...prev[0], weight: totals.weight ? String(totals.weight) : '' }]
                 : prev
         ));
-    }, [totals.weight, weightTouched, places.length]);
+    }, [totals.weight, weightTouched, places.length, measuredKey]);
 
     // Клиент определяется первой выбранной реализацией — вместе с ним подтягиваем
     // его адреса и контакты, чтобы кладовщик не перепечатывал их руками.
@@ -280,7 +317,24 @@ export default function DeliveriesCreate() {
                                         )}
                                     </HStack>
 
-                                    {totals.weightless.length > 0 && (
+                                    {measurement.blocking.map((message) => (
+                                        <HStack key={message} gap={1} color="red.500" mt={2} align="start">
+                                            <Box pt="2px"><LuTriangleAlert size={14} /></Box>
+                                            <Text fontSize="xs">{message}</Text>
+                                        </HStack>
+                                    ))}
+
+                                    {measurement.places && (
+                                        <Text fontSize="xs" color="green.600" mt={2}>
+                                            Места подставлены из обмера упаковщика (ордер {measurement.numbers.join(', ')}).
+                                        </Text>
+                                    )}
+
+                                    {measurement.notes.map((message) => (
+                                        <Text key={message} fontSize="xs" color="fg.muted" mt={1}>{message}</Text>
+                                    ))}
+
+                                    {totals.weightless.length > 0 && !measurement.places && (
                                         <HStack gap={1} color="orange.500" mt={2} align="start">
                                             <Box pt="2px"><LuTriangleAlert size={14} /></Box>
                                             <Text fontSize="xs">

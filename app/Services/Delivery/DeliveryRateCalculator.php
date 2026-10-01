@@ -23,6 +23,7 @@ class DeliveryRateCalculator
         private readonly ApiShipClient $client,
         private readonly DeliveryAddressResolver $addresses,
         private readonly ApiShipSettings $settings,
+        private readonly MeasuredPlacesGate $measurement,
     ) {}
 
     /**
@@ -36,6 +37,18 @@ class DeliveryRateCalculator
 
         if (($recipient['city'] ?? null) === null) {
             return ['ok' => false, 'error' => 'Не указан город получателя — расчёт невозможен.', 'tariffs' => []];
+        }
+
+        // v16.14.0: пока упаковщик не завершил обмер мест (или способ доставки ордера
+        // неизвестен либо расходится с заказами), тариф считать не по чему. Ордера
+        // старого формата, без обмера, проверку проходят — места вводит кладовщик.
+        $delivery->loadMissing('shipments.items');
+        $blocked = $this->measurement->blockingMessage(
+            $delivery->shipments->flatMap(static fn ($shipment) => $shipment->items->pluck('order_uuid')),
+        );
+
+        if ($blocked !== null) {
+            return ['ok' => false, 'error' => $blocked, 'tariffs' => []];
         }
 
         $payload = $this->buildPayload($delivery, $recipient);

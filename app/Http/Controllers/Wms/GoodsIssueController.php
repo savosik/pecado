@@ -368,11 +368,28 @@ class GoodsIssueController extends WmsController
             'erp_created_label' => $goodsIssue->erp_created_at?->format('d.m.Y H:i'),
             'erp_updated_label' => $goodsIssue->erp_updated_at?->format('d.m.Y H:i'),
             'groups' => $groups,
+            // v16.14.0: обмер мест упаковщиком. null — ордер старого формата, блока нет.
+            'measurement' => $goodsIssue->measurement_state === null ? null : [
+                'state' => $goodsIssue->measurement_state,
+                'label' => $goodsIssue->measurement_label,
+                'color' => GoodsIssue::MEASUREMENT_COLORS[$goodsIssue->measurement_state] ?? 'gray',
+                'shipping_mode_label' => $goodsIssue->shipping_mode_label ?? 'Не определён',
+                'measured_label' => $goodsIssue->measured_at?->format('d.m.Y H:i'),
+                'measured_by' => $goodsIssue->measured_by,
+                'gate' => app(\App\Services\Delivery\MeasuredPlacesGate::class)->evaluate($goodsIssue)['message'],
+            ],
             'packages' => $goodsIssue->packages->map(fn ($package) => [
+                'id' => (int) $package->getKey(),
                 'number' => (int) $package->number,
                 'positions_count' => $package->positions_count,
-                'weight' => $package->weight,
+                'weight' => $package->weight === null ? null : (float) $package->weight,
                 'volume' => $package->volume,
+                'type_label' => $package->package_type === null ? null : $package->package_type_label,
+                'dimensions_label' => $package->length && $package->width && $package->height
+                    ? "{$package->length}×{$package->width}×{$package->height}"
+                    : null,
+                'volume_m3' => $package->volumeM3(),
+                'barcode' => $package->barcode,
             ])->all(),
             'history' => $goodsIssue->statusHistories->map(fn ($entry) => [
                 'id' => (int) $entry->getKey(),

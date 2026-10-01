@@ -102,6 +102,10 @@ return [
         // Расчёт тарифов у ApiShip тарифицируется как транзакция — одинаковые
         // запросы в пределах этого окна отдаём из кэша.
         'calculator_cache_ttl' => (int) env('APISHIP_CALCULATOR_CACHE_TTL', 600),
+        // v16.14.0: расчёт тарифа ждёт обмера мест упаковщиком. Ордера без обмера
+        // (старый формат) проверку проходят всегда. Выключатель — на случай, если склад
+        // окажется заперт незавершённым обмером: false возвращает ручной ввод мест.
+        'measurement_gate' => (bool) env('APISHIP_MEASUREMENT_GATE', true),
 
         'webhook' => [
             'enabled' => (bool) env('APISHIP_WEBHOOK_ENABLED', false),

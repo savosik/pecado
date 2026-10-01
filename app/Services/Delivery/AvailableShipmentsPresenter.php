@@ -45,7 +45,17 @@ class AvailableShipmentsPresenter
     /** @var list<string> */
     public const SORTS = ['date_desc', 'date_asc', 'amount_desc', 'weight_desc', 'number_asc'];
 
-    public function __construct(private readonly DeliveryWeightCalculator $weights) {}
+    public function __construct(
+        private readonly DeliveryWeightCalculator $weights,
+        private readonly MeasuredPlacesGate $measurement,
+    ) {}
+
+    /**
+     * Вердикты обмера по ордерам текущей выдачи (id ордера → вердикт).
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    private array $measurements = [];
 
     /**
      * Реализации, разложенные на две вкладки: к отправке и самовывоз.
@@ -356,6 +366,9 @@ class AvailableShipmentsPresenter
                 'is_stale' => $goodsIssue->is_stale,
                 'is_shipped' => $goodsIssue->status === GoodsIssue::STATUS_SHIPPED && ! $goodsIssue->isShippedEmpty(),
                 'packages_count' => (int) $goodsIssue->packages_count,
+                // v16.14.0: обмер мест упаковщиком. Мастер отправки подставляет места
+                // из него и предупреждает, если расчёт по ордеру сейчас недоступен.
+                'measurement' => $this->presentMeasurement($goodsIssue),
                 'delivery_type_label' => $goodsIssue->delivery_type_label,
                 'delivery_address' => $goodsIssue->delivery_address,
                 'url' => route('wms.goods-issues.show', $goodsIssue),
@@ -365,6 +378,24 @@ class AvailableShipmentsPresenter
             // держат реализацию и в список вообще не попадают.
             'previous_delivery' => $previous[$shipment->getKey()] ?? null,
             'hidden' => $hidden[$shipment->getKey()] ?? null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function presentMeasurement(GoodsIssue $goodsIssue): array
+    {
+        $row = $this->measurements[$goodsIssue->getKey()] ?? $this->measurement->evaluate($goodsIssue);
+
+        return [
+            'goods_issue_id' => (int) $goodsIssue->getKey(),
+            'verdict' => $row['verdict'],
+            'blocks' => $row['blocks'],
+            'message' => $row['message'],
+            'state_label' => $goodsIssue->measurement_label,
+            'shipping_mode_label' => $goodsIssue->shipping_mode_label,
+            'places' => $row['places'],
         ];
     }
 
@@ -453,9 +484,12 @@ class AvailableShipmentsPresenter
         }
 
         $issues = GoodsIssue::query()
+            ->with('packages')
             ->whereIn('id', $links->pluck('goods_issue_id')->unique())
             ->get()
             ->keyBy('id');
+
+        $this->measurements = $this->measurement->evaluateMany($issues);
 
         $byOrder = [];
 

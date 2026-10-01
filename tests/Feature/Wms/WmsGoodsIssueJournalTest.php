@@ -224,6 +224,52 @@ class WmsGoodsIssueJournalTest extends TestCase
     }
 
     #[Test]
+    public function card_shows_measurement_of_places(): void
+    {
+        $goodsIssue = GoodsIssue::factory()->create([
+            'shipping_mode' => GoodsIssue::SHIPPING_DELIVERY,
+            'measurement_required' => true,
+            'measurement_state' => GoodsIssue::MEASUREMENT_DONE,
+            'measured_at' => '2026-09-29T14:12:00+03:00',
+            'measured_by' => 'Иванов И.И.',
+        ]);
+
+        GoodsIssuePackage::factory()->create([
+            'goods_issue_id' => $goodsIssue->id,
+            'uuid' => '00000000-0000-4000-a000-0000000013e1',
+            'number' => 1,
+            'package_type' => 'pallet',
+            'weight' => 218,
+            'length' => 120,
+            'width' => 80,
+            'height' => 145,
+        ]);
+
+        $this->actingAs($this->userWithRole('storekeeper'))
+            ->get('/wms/goods-issues/'.$goodsIssue->id)
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('order.measurement.label', 'Обмер завершён')
+                ->where('order.measurement.shipping_mode_label', 'Доставка')
+                ->where('order.measurement.measured_by', 'Иванов И.И.')
+                ->where('order.measurement.measured_label', '29.09.2026 14:12')
+                ->where('order.packages.0.type_label', 'Паллета')
+                ->where('order.packages.0.dimensions_label', '120×80×145')
+                ->where('order.packages.0.weight', 218)
+                ->where('order.packages.0.volume_m3', 1.392)
+            );
+    }
+
+    #[Test]
+    public function legacy_card_has_no_measurement_block(): void
+    {
+        $goodsIssue = GoodsIssue::factory()->create();
+
+        $this->actingAs($this->userWithRole('storekeeper'))
+            ->get('/wms/goods-issues/'.$goodsIssue->id)
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('order.measurement', null));
+    }
+
+    #[Test]
     public function soft_deleted_order_is_not_reachable(): void
     {
         $goodsIssue = GoodsIssue::factory()->create();

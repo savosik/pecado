@@ -221,6 +221,25 @@ export default function GoodsIssueShow() {
                                     </Text>
                                 </HStack>
 
+                                {order.measurement && (
+                                    <VStack align="stretch" gap={1}>
+                                        <HStack gap={2} flexWrap="wrap">
+                                            <Badge colorPalette={order.measurement.color}>{order.measurement.label}</Badge>
+                                            <Text fontSize="xs" color="fg.muted">
+                                                Способ доставки по 1С: {order.measurement.shipping_mode_label}
+                                            </Text>
+                                        </HStack>
+                                        {order.measurement.measured_label && (
+                                            <Text fontSize="xs" color="fg.muted">
+                                                Обмерил: {order.measurement.measured_by}, {order.measurement.measured_label}
+                                            </Text>
+                                        )}
+                                        {order.measurement.gate && (
+                                            <Text fontSize="xs" color="fg.muted">{order.measurement.gate}</Text>
+                                        )}
+                                    </VStack>
+                                )}
+
                                 {order.packages.length === 0 ? (
                                     <Text fontSize="sm" color="fg.muted">
                                         1С не прислала упаковочные листы по этому ордеру.
@@ -229,16 +248,22 @@ export default function GoodsIssueShow() {
                                     <Table.Root size="sm">
                                         <Table.Header>
                                             <Table.Row>
-                                                <Table.ColumnHeader>Лист</Table.ColumnHeader>
+                                                <Table.ColumnHeader>Место</Table.ColumnHeader>
                                                 <Table.ColumnHeader textAlign="end">Позиций</Table.ColumnHeader>
-                                                <Table.ColumnHeader textAlign="end">Вес</Table.ColumnHeader>
-                                                <Table.ColumnHeader textAlign="end">Объём</Table.ColumnHeader>
+                                                <Table.ColumnHeader textAlign="end">Вес, кг</Table.ColumnHeader>
+                                                <Table.ColumnHeader textAlign="end">Габариты, см</Table.ColumnHeader>
+                                                <Table.ColumnHeader textAlign="end">Объём, м³</Table.ColumnHeader>
                                             </Table.Row>
                                         </Table.Header>
                                         <Table.Body>
                                             {order.packages.map((pkg) => (
-                                                <Table.Row key={pkg.number}>
-                                                    <Table.Cell fontSize="sm">Упаковочный лист {pkg.number}</Table.Cell>
+                                                <Table.Row key={pkg.id}>
+                                                    <Table.Cell fontSize="sm">
+                                                        Упаковочный лист {pkg.number}
+                                                        {pkg.type_label && (
+                                                            <Text as="span" color="fg.muted"> · {pkg.type_label}</Text>
+                                                        )}
+                                                    </Table.Cell>
                                                     <Table.Cell textAlign="end" fontSize="sm">
                                                         {pkg.positions_count ?? '—'}
                                                     </Table.Cell>
@@ -246,7 +271,10 @@ export default function GoodsIssueShow() {
                                                         {pkg.weight ?? '—'}
                                                     </Table.Cell>
                                                     <Table.Cell textAlign="end" fontSize="sm" color="fg.muted">
-                                                        {pkg.volume ?? '—'}
+                                                        {pkg.dimensions_label ?? '—'}
+                                                    </Table.Cell>
+                                                    <Table.Cell textAlign="end" fontSize="sm" color="fg.muted">
+                                                        {pkg.volume_m3 ?? '—'}
                                                     </Table.Cell>
                                                 </Table.Row>
                                             ))}
