@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 16.14.0
+  version: 16.16.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -1502,6 +1502,183 @@ channels:
         is: queue
         queue:
           name: erp_in.stock
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+  erpInExpectedArrivals:
+    address: erp_in.expected_arrivals
+    title: Ожидаемые поступления (1С → Сайт)
+    description: >
+      **v16.16.0, проект (топик №16 Agent Hub).** Очередь для ожидаемых
+      поступлений
+
+      товара по складам сайта — полный снимок по товару.
+
+      Routing key: `product.expected_arrivals.*`
+
+
+      Отдельно от `erp_in.stock` намеренно: остатки идут потоком ~30 тыс.
+      сообщений
+
+      в сутки, а суточная контрольная выгрузка ожиданий не должна стоять за ними
+
+      в очереди и наоборот. Привязка `product.*` очереди `erp_in.catalog` это
+      событие
+
+      не ловит: в topic-обменнике `*` — ровно одно слово, а в ключе их три.
+
+      Пока приём на сайте не включён (этап 2), очередь не объявлена и сообщения
+
+      с этим ключом брокер не доставляет никуда.
+    messages:
+      productExpectedArrivalsUpdated:
+        name: product.expected_arrivals.updated
+        title: Ожидаемые поступления товара
+        summary: >-
+          Полный снимок ожидаемых поступлений товара по складам сайта (проект
+          v16.16.0)
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          description: >-
+            Полный снимок ожидаемых поступлений одного товара по складам сайта.
+            Целиком заменяет прежний снимок товара; пустой `warehouses` очищает.
+          required:
+            - event
+            - message_id
+            - product_uuid
+            - calculated_at
+            - warehouses
+          properties:
+            event:
+              type: string
+              const: product.expected_arrivals.updated
+            message_id:
+              type: string
+              minLength: 1
+              examples:
+                - msg-arrivals-1f2e3d4c
+            product_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            calculated_at:
+              type: string
+              format: date-time
+              pattern: (Z|[+-][0-9]{2}:[0-9]{2})$
+              description: >-
+                Момент, на который 1С собрала снимок. ISO-8601 с обязательным
+                смещением, для дат 1С «+03:00». Сайт применяет снимок, только
+                если `calculated_at` не раньше сохранённого по товару; более
+                ранний (обогнанный) отбрасывается.
+              examples:
+                - '2026-10-01T09:15:00+03:00'
+            warehouses:
+              type: array
+              description: >-
+                Ожидания по складам сайта. Каждый склад — не больше одного раза;
+                склад без ожиданий не перечисляется. Пустой массив — ожиданий
+                нет ни на одном складе. Склад, не заведённый на сайте,
+                пропускается молча.
+              items:
+                type: object
+                required:
+                  - warehouse_uuid
+                  - arrivals
+                properties:
+                  warehouse_uuid:
+                    type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                  arrivals:
+                    type: array
+                    minItems: 1
+                    description: >-
+                      Ожидаемые поступления на склад. Строки с одинаковыми
+                      `date` и `source` 1С сворачивает в одну; если всё же
+                      придут две — сайт их сложит.
+                    items:
+                      type: object
+                      required:
+                        - date
+                        - quantity
+                        - source
+                      properties:
+                        date:
+                          type:
+                            - string
+                            - 'null'
+                          format: date
+                          description: >-
+                            Ожидаемая дата поступления, yyyy-MM-dd, сегодня или
+                            будущее. `null` — «дата уточняется»: поступление
+                            ожидается, но закупки дату ещё не внесли.
+                          examples:
+                            - '2026-10-14'
+                        quantity:
+                          type: number
+                          exclusiveMinimum: 0
+                          description: >-
+                            Количество к поступлению в базовой единице товара,
+                            строго больше нуля.
+                          examples:
+                            - 20
+                        source:
+                          type: string
+                          enum:
+                            - purchase
+                            - import
+                          description: >-
+                            Источник ожидания: `purchase` — поступление от
+                            поставщика; `import` — импортный заказ
+                            (зарезервирован на будущее, сейчас 1С таких строк не
+                            шлёт).
+        examples:
+          - name: Снимок по двум складам
+            payload:
+              event: product.expected_arrivals.updated
+              message_id: msg-arrivals-1f2e3d4c
+              product_uuid: 550e8400-e29b-41d4-a716-446655440001
+              calculated_at: '2026-10-01T09:15:00+03:00'
+              warehouses:
+                - warehouse_uuid: 7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d
+                  arrivals:
+                    - date: '2026-10-14'
+                      quantity: 20
+                      source: purchase
+                    - date: null
+                      quantity: 5
+                      source: purchase
+                - warehouse_uuid: 8b2c3d4e-5f6a-4b7c-9d8e-0f1a2b3c4d5e
+                  arrivals:
+                    - date: '2026-11-02'
+                      quantity: 12
+                      source: purchase
+          - name: Ожиданий нет (очистка)
+            payload:
+              event: product.expected_arrivals.updated
+              message_id: msg-arrivals-5a6b7c8d
+              product_uuid: 550e8400-e29b-41d4-a716-446655440001
+              calculated_at: '2026-10-15T03:00:00+03:00'
+              warehouses: []
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.expected_arrivals
           durable: true
           autoDelete: false
         bindingVersion: 0.3.0
@@ -11243,6 +11420,59 @@ operations:
     tags:
       - name: US-06
       - name: stock
+  receiveProductExpectedArrivalsUpdated:
+    title: Ожидаемые поступления товара
+    summary: 1С присылает полный снимок ожидаемых поступлений товара по складам сайта
+    description: >
+      Обработчик: `HandleProductExpectedArrivalsUpdated` — **проект, приём не
+      включён**
+
+      (этап 2 топика №16). Схема уже зарегистрирована в валидаторе сайта.
+
+
+      Единица данных — товар. Сообщение несёт **полный снимок** ожиданий товара
+      по всем
+
+      складам сайта и целиком заменяет прежний: склад, которого нет в снимке,
+      очищается;
+
+      пустой `warehouses` — «ожиданий нет» по товару. 1С шлёт снимок при каждом
+      изменении
+
+      ожиданий товара и раз в сутки — контрольную полную выгрузку тем же
+      событием, чтобы
+
+      ушедшие в прошлое даты пропали.
+
+
+      - `date: null` — поступление ожидается, дата уточняется. Даты в прошлом 1С
+      не шлёт;
+        если такая придёт, сайт хранит её, но не показывает.
+      - `quantity` — в базовой единице, строго больше нуля.
+
+      - Склад, не заведённый на сайте, пропускается молча (как в
+      `stock.updated`);
+        неизвестный товар — тоже, следующая контрольная выгрузка его привезёт.
+      - Снимок с `calculated_at` раньше сохранённого по товару отбрасывается —
+      защита
+        от перестановки сообщений.
+
+      В этом круге ожидания видят **только менеджеры** (CRM); клиентам на
+      витрине,
+
+      в кабинете и в клиентском API не показываются.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInExpectedArrivals'
+    messages:
+      - $ref: >-
+          #/channels/erpInExpectedArrivals/messages/productExpectedArrivalsUpdated
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: stock
+      - name: expected-arrivals
   receiveContractorCreated:
     title: Получение контрагента от 1С
     summary: 1С создаёт/обновляет контрагента → Сайт привязывает к партнёру
@@ -13417,6 +13647,146 @@ components:
               меняется этот текст, а не требование к величине.
             examples:
               - 42
+    ProductExpectedArrivalsUpdated:
+      name: product.expected_arrivals.updated
+      title: Ожидаемые поступления товара
+      summary: >-
+        Полный снимок ожидаемых поступлений товара по складам сайта (проект
+        v16.16.0)
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        description: >-
+          Полный снимок ожидаемых поступлений одного товара по складам сайта.
+          Целиком заменяет прежний снимок товара; пустой `warehouses` очищает.
+        required:
+          - event
+          - message_id
+          - product_uuid
+          - calculated_at
+          - warehouses
+        properties:
+          event:
+            type: string
+            const: product.expected_arrivals.updated
+          message_id:
+            type: string
+            minLength: 1
+            examples:
+              - msg-arrivals-1f2e3d4c
+          product_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          calculated_at:
+            type: string
+            format: date-time
+            pattern: (Z|[+-][0-9]{2}:[0-9]{2})$
+            description: >-
+              Момент, на который 1С собрала снимок. ISO-8601 с обязательным
+              смещением, для дат 1С «+03:00». Сайт применяет снимок, только если
+              `calculated_at` не раньше сохранённого по товару; более ранний
+              (обогнанный) отбрасывается.
+            examples:
+              - '2026-10-01T09:15:00+03:00'
+          warehouses:
+            type: array
+            description: >-
+              Ожидания по складам сайта. Каждый склад — не больше одного раза;
+              склад без ожиданий не перечисляется. Пустой массив — ожиданий нет
+              ни на одном складе. Склад, не заведённый на сайте, пропускается
+              молча.
+            items:
+              type: object
+              required:
+                - warehouse_uuid
+                - arrivals
+              properties:
+                warehouse_uuid:
+                  type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+                arrivals:
+                  type: array
+                  minItems: 1
+                  description: >-
+                    Ожидаемые поступления на склад. Строки с одинаковыми `date`
+                    и `source` 1С сворачивает в одну; если всё же придут две —
+                    сайт их сложит.
+                  items:
+                    type: object
+                    required:
+                      - date
+                      - quantity
+                      - source
+                    properties:
+                      date:
+                        type:
+                          - string
+                          - 'null'
+                        format: date
+                        description: >-
+                          Ожидаемая дата поступления, yyyy-MM-dd, сегодня или
+                          будущее. `null` — «дата уточняется»: поступление
+                          ожидается, но закупки дату ещё не внесли.
+                        examples:
+                          - '2026-10-14'
+                      quantity:
+                        type: number
+                        exclusiveMinimum: 0
+                        description: >-
+                          Количество к поступлению в базовой единице товара,
+                          строго больше нуля.
+                        examples:
+                          - 20
+                      source:
+                        type: string
+                        enum:
+                          - purchase
+                          - import
+                        description: >-
+                          Источник ожидания: `purchase` — поступление от
+                          поставщика; `import` — импортный заказ (зарезервирован
+                          на будущее, сейчас 1С таких строк не шлёт).
+      examples:
+        - name: Снимок по двум складам
+          payload:
+            event: product.expected_arrivals.updated
+            message_id: msg-arrivals-1f2e3d4c
+            product_uuid: 550e8400-e29b-41d4-a716-446655440001
+            calculated_at: '2026-10-01T09:15:00+03:00'
+            warehouses:
+              - warehouse_uuid: 7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d
+                arrivals:
+                  - date: '2026-10-14'
+                    quantity: 20
+                    source: purchase
+                  - date: null
+                    quantity: 5
+                    source: purchase
+              - warehouse_uuid: 8b2c3d4e-5f6a-4b7c-9d8e-0f1a2b3c4d5e
+                arrivals:
+                  - date: '2026-11-02'
+                    quantity: 12
+                    source: purchase
+        - name: Ожиданий нет (очистка)
+          payload:
+            event: product.expected_arrivals.updated
+            message_id: msg-arrivals-5a6b7c8d
+            product_uuid: 550e8400-e29b-41d4-a716-446655440001
+            calculated_at: '2026-10-15T03:00:00+03:00'
+            warehouses: []
     ContractorCreated:
       name: contractor.created
       title: Контрагент создан/обновлён (1С → Сайт)
@@ -23995,6 +24365,192 @@ components:
             меняется этот текст, а не требование к величине.
           examples:
             - 42
+    ProductExpectedArrivalsUpdatedPayload:
+      type: object
+      description: >-
+        Полный снимок ожидаемых поступлений одного товара по складам сайта.
+        Целиком заменяет прежний снимок товара; пустой `warehouses` очищает.
+      required:
+        - event
+        - message_id
+        - product_uuid
+        - calculated_at
+        - warehouses
+      properties:
+        event:
+          type: string
+          const: product.expected_arrivals.updated
+        message_id:
+          type: string
+          minLength: 1
+          examples:
+            - msg-arrivals-1f2e3d4c
+        product_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        calculated_at:
+          type: string
+          format: date-time
+          pattern: (Z|[+-][0-9]{2}:[0-9]{2})$
+          description: >-
+            Момент, на который 1С собрала снимок. ISO-8601 с обязательным
+            смещением, для дат 1С «+03:00». Сайт применяет снимок, только если
+            `calculated_at` не раньше сохранённого по товару; более ранний
+            (обогнанный) отбрасывается.
+          examples:
+            - '2026-10-01T09:15:00+03:00'
+        warehouses:
+          type: array
+          description: >-
+            Ожидания по складам сайта. Каждый склад — не больше одного раза;
+            склад без ожиданий не перечисляется. Пустой массив — ожиданий нет ни
+            на одном складе. Склад, не заведённый на сайте, пропускается молча.
+          items:
+            type: object
+            required:
+              - warehouse_uuid
+              - arrivals
+            properties:
+              warehouse_uuid:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              arrivals:
+                type: array
+                minItems: 1
+                description: >-
+                  Ожидаемые поступления на склад. Строки с одинаковыми `date` и
+                  `source` 1С сворачивает в одну; если всё же придут две — сайт
+                  их сложит.
+                items:
+                  type: object
+                  required:
+                    - date
+                    - quantity
+                    - source
+                  properties:
+                    date:
+                      type:
+                        - string
+                        - 'null'
+                      format: date
+                      description: >-
+                        Ожидаемая дата поступления, yyyy-MM-dd, сегодня или
+                        будущее. `null` — «дата уточняется»: поступление
+                        ожидается, но закупки дату ещё не внесли.
+                      examples:
+                        - '2026-10-14'
+                    quantity:
+                      type: number
+                      exclusiveMinimum: 0
+                      description: >-
+                        Количество к поступлению в базовой единице товара,
+                        строго больше нуля.
+                      examples:
+                        - 20
+                    source:
+                      type: string
+                      enum:
+                        - purchase
+                        - import
+                      description: >-
+                        Источник ожидания: `purchase` — поступление от
+                        поставщика; `import` — импортный заказ (зарезервирован
+                        на будущее, сейчас 1С таких строк не шлёт).
+    ExpectedArrivalsWarehouse:
+      type: object
+      required:
+        - warehouse_uuid
+        - arrivals
+      properties:
+        warehouse_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        arrivals:
+          type: array
+          minItems: 1
+          description: >-
+            Ожидаемые поступления на склад. Строки с одинаковыми `date` и
+            `source` 1С сворачивает в одну; если всё же придут две — сайт их
+            сложит.
+          items:
+            type: object
+            required:
+              - date
+              - quantity
+              - source
+            properties:
+              date:
+                type:
+                  - string
+                  - 'null'
+                format: date
+                description: >-
+                  Ожидаемая дата поступления, yyyy-MM-dd, сегодня или будущее.
+                  `null` — «дата уточняется»: поступление ожидается, но закупки
+                  дату ещё не внесли.
+                examples:
+                  - '2026-10-14'
+              quantity:
+                type: number
+                exclusiveMinimum: 0
+                description: >-
+                  Количество к поступлению в базовой единице товара, строго
+                  больше нуля.
+                examples:
+                  - 20
+              source:
+                type: string
+                enum:
+                  - purchase
+                  - import
+                description: >-
+                  Источник ожидания: `purchase` — поступление от поставщика;
+                  `import` — импортный заказ (зарезервирован на будущее, сейчас
+                  1С таких строк не шлёт).
+    ExpectedArrival:
+      type: object
+      required:
+        - date
+        - quantity
+        - source
+      properties:
+        date:
+          type:
+            - string
+            - 'null'
+          format: date
+          description: >-
+            Ожидаемая дата поступления, yyyy-MM-dd, сегодня или будущее. `null`
+            — «дата уточняется»: поступление ожидается, но закупки дату ещё не
+            внесли.
+          examples:
+            - '2026-10-14'
+        quantity:
+          type: number
+          exclusiveMinimum: 0
+          description: >-
+            Количество к поступлению в базовой единице товара, строго больше
+            нуля.
+          examples:
+            - 20
+        source:
+          type: string
+          enum:
+            - purchase
+            - import
+          description: >-
+            Источник ожидания: `purchase` — поступление от поставщика; `import`
+            — импортный заказ (зарезервирован на будущее, сейчас 1С таких строк
+            не шлёт).
     BankAccount:
       type: object
       required:

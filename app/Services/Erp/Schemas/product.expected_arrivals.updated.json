@@ -1,0 +1,80 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "product.expected_arrivals.updated",
+    "title": "product.expected_arrivals.updated (1С → Сайт) — ожидаемые поступления товара",
+    "description": "v16.16.0, проект (топик №16 Agent Hub). Полный снимок ожидаемых поступлений одного товара по складам сайта: дата и количество к поступлению. Каждое сообщение целиком заменяет всё, что сайт знает об ожиданиях товара; пустой warehouses — «ожиданий нет», очищает. Тем же событием 1С делает суточную контрольную выгрузку. Применяется, только если calculated_at не раньше сохранённого по товару — защита от перестановки сообщений. В этом круге сайт показывает ожидания только менеджерам (CRM).",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string",
+            "const": "product.expected_arrivals.updated",
+            "description": "Тип события. Всегда «product.expected_arrivals.updated»."
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "product_uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "GUID номенклатуры. Товар, которого на сайте нет, пропускается без ошибки."
+        },
+        "calculated_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "(Z|[+-][0-9]{2}:[0-9]{2})$",
+            "description": "Момент, на который 1С собрала снимок. ISO-8601 с обязательным смещением, для дат 1С — «+03:00». Сайт применяет снимок, только если calculated_at не раньше сохранённого по товару; более ранний (обогнанный) отбрасывается."
+        },
+        "warehouses": {
+            "type": "array",
+            "description": "Ожидания по складам сайта. Каждый склад — не больше одного раза; склад без ожиданий не перечисляется. Пустой массив — по товару ожиданий нет ни на одном складе, сайт очищает всё. Склад, не заведённый на сайте, пропускается молча.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "warehouse_uuid": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "GUID склада 1С, как в stock.updated."
+                    },
+                    "arrivals": {
+                        "type": "array",
+                        "minItems": 1,
+                        "description": "Ожидаемые поступления на склад. Строки с одинаковыми date и source 1С сворачивает в одну; если всё же придут две — сайт их сложит.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "date": {
+                                    "type": ["string", "null"],
+                                    "format": "date",
+                                    "description": "Ожидаемая дата поступления, yyyy-MM-dd, только сегодня или будущее. null — «дата уточняется»: поступление ожидается, но закупки дату ещё не внесли."
+                                },
+                                "quantity": {
+                                    "type": "number",
+                                    "exclusiveMinimum": 0,
+                                    "description": "Количество к поступлению в базовой единице товара, строго больше нуля."
+                                },
+                                "source": {
+                                    "type": "string",
+                                    "enum": ["purchase", "import"],
+                                    "description": "Источник ожидания: purchase — поступление от поставщика; import — импортный заказ (зарезервирован на будущее)."
+                                }
+                            },
+                            "required": ["date", "quantity", "source"],
+                            "additionalProperties": true
+                        }
+                    }
+                },
+                "required": ["warehouse_uuid", "arrivals"],
+                "additionalProperties": true
+            }
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "message_id",
+        "product_uuid",
+        "calculated_at",
+        "warehouses"
+    ]
+}
