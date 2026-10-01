@@ -275,7 +275,7 @@ function Shipments({ title, groups, rate = 0, accrued = 0, empty = null, referen
                 )}
                 {rows.length > 0 && base !== null && Math.abs(base - total) >= 0.01 && (
                     <Text fontSize="xs" color="fg.subtle">
-                        Сумма по документам выше — {fmtRub(total)}: вознаграждение считается по строкам товаров, а шапки накладных округлены (расхождение {fmtRub(Math.abs(base - total))}).
+                        Сумма по документам — {fmtRub(total)}: вознаграждение считается по строкам товаров, расхождение с шапками накладных {fmtRub(Math.abs(base - total))}.
                     </Text>
                 )}
                 {reference.length > 0 && (

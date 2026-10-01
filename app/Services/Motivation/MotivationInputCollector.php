@@ -202,8 +202,10 @@ class MotivationInputCollector
 
         $new = array_flip($newPartners);
 
+        // Тот же охват, что у выручки (ShipmentAnalyticsService): без отбора по организации.
+        // С отбором служебных организаций перечень расходился с базой расчёта — отгрузки
+        // «Рекламы» (копеечные накладные) входили в выручку, но не в перечень листа.
         return \App\Models\Shipment::query()
-            ->withoutInternalOrganizations()
             ->whereIn('user_id', $ids)
             ->whereBetween('erp_created_at', [$period->startOfDay(), $period->endOfMonth()->endOfDay()])
             ->orderBy('erp_created_at')
