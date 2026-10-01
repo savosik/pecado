@@ -115,8 +115,13 @@ class ClientApiCheckoutTest extends ClientApiTestCase
         $preview = $this->api('GET', '/checkout')->assertOk();
         $preview->assertJsonPath('data.company.id', $this->company->id)
             ->assertJsonPath('data.debt_restriction', null)
-            ->assertJsonCount(1, 'data.stock_conflicts')
-            ->assertJsonPath('data.stock_conflicts.0.available', 4);
+            // B: 10 в наличии при основном складе 4 и 2 предзаказа при складе предзаказа 0 —
+            // конфликтуют обе строки, каждая против своего склада.
+            ->assertJsonCount(2, 'data.stock_conflicts')
+            ->assertJsonPath('data.stock_conflicts.0.item_type', 'instock')
+            ->assertJsonPath('data.stock_conflicts.0.available', 4)
+            ->assertJsonPath('data.stock_conflicts.1.item_type', 'preorder')
+            ->assertJsonPath('data.stock_conflicts.1.available', 0);
         $this->assertSame(0, Order::count());
 
         $this->api('POST', '/checkout', ['delivery_method' => 'pickup'], ['Idempotency-Key' => 'chk-2'])
@@ -126,6 +131,39 @@ class ClientApiCheckoutTest extends ClientApiTestCase
         $this->api('GET', '/checkout')->assertOk()->assertJsonCount(0, 'data.stock_conflicts');
 
         $this->api('POST', '/checkout', ['delivery_method' => 'pickup'], ['Idempotency-Key' => 'chk-3'])->assertStatus(201);
+    }
+
+    #[Test]
+    #[TestDox('29УТ-014795: строка «в наличии» при основном складе 0 — конфликт и 409, normalize переводит в предзаказ, оформляется предзаказ')]
+    public function instock_line_is_checked_against_primary_stock_only(): void
+    {
+        $product = $this->product('C', available: 0, preorder: 37);
+        // Строка легла в корзину «в наличии», пока основной склад ещё был > 0.
+        $cart = app(\App\Contracts\Cart\CartServiceInterface::class)->getOrCreateActiveCart($this->client);
+        \App\Models\CartItem::factory()->create([
+            'cart_id' => $cart->id, 'product_id' => $product->id, 'quantity' => 1, 'price' => 100, 'item_type' => 'instock',
+        ]);
+
+        $this->api('GET', '/checkout')->assertOk()
+            ->assertJsonCount(1, 'data.stock_conflicts')
+            ->assertJsonPath('data.stock_conflicts.0.item_type', 'instock')
+            ->assertJsonPath('data.stock_conflicts.0.available', 0)
+            ->assertJsonPath('data.stock_conflicts.0.available_total', 37);
+
+        $this->api('POST', '/checkout', ['delivery_method' => 'pickup'], ['Idempotency-Key' => 's-1'])
+            ->assertStatus(409)
+            ->assertJsonPath('errors.0.code', 'stock_changed')
+            ->assertJsonPath('meta.conflicts.0.item_type', 'instock')
+            ->assertJsonPath('meta.conflicts.0.available', 0);
+        $this->assertSame(0, Order::count());
+
+        $this->api('POST', '/checkout/normalize')->assertOk()
+            ->assertJsonPath('data.adjusted', 1)
+            ->assertJsonPath('data.moved_to_preorder', 1);
+        $this->api('GET', '/checkout')->assertOk()->assertJsonCount(0, 'data.stock_conflicts');
+
+        $this->api('POST', '/checkout', ['delivery_method' => 'pickup'], ['Idempotency-Key' => 's-2'])->assertStatus(201);
+        $this->assertSame([\App\Enums\OrderType::PREORDER], Order::pluck('type')->all());
     }
 
     #[Test]

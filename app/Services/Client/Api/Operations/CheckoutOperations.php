@@ -62,8 +62,9 @@ class CheckoutOperations implements OperationProvider
                 id: 'checkout.preview', section: 'checkout', method: 'GET', uri: 'checkout',
                 summary: 'Что будет оформлено: группы строк, итоги, конфликты остатков, долг',
                 description: 'Наличие, предзаказ, уценка, промо и образцы уезжают отдельными заказами — здесь они '
-                    .'показаны группами с подытогами. `stock_conflicts` — строки, где в корзине больше доступного '
-                    .'(оформление откажет, пока не выполнить checkout.normalize). `debt_restriction` — ограничение '
+                    .'показаны группами с подытогами. `stock_conflicts` — строки, где в корзине больше остатка своего '
+                    .'склада: «в наличии» — основного, «предзаказ» — склада предзаказа (оформление откажет, пока не '
+                    .'выполнить checkout.normalize; `available_total` — сколько товара доступно всего). `debt_restriction` — ограничение '
                     .'по лестнице долга для выбранного юрлица, если оно есть. Ничего не пишет.',
                 params: [$cart, Param::integer('company_id', 'Юрлицо (по умолчанию основная компания)', rules: ['min:1'])],
                 handler: [self::class, 'preview'],
@@ -71,7 +72,9 @@ class CheckoutOperations implements OperationProvider
             new Operation(
                 id: 'checkout.normalize', section: 'checkout', method: 'POST', uri: 'checkout/normalize',
                 summary: 'Привести количества в корзине к доступному остатку',
-                description: 'Больше доступного — уменьшить, доступно 0 — убрать строку. После этого checkout.submit не '
+                description: 'Товар переразбивается по остаткам: «в наличии» — сколько есть на основном складе, нехватка '
+                    .'уходит в предзаказ (если клиенту доступны предзаказы), сверх всего доступного — снимается. '
+                    .'`moved_to_preorder` — сколько штук переведено в предзаказ. После этого checkout.submit не '
                     .'откажет по остаткам.',
                 params: [$cart],
                 handler: [self::class, 'normalize'],
@@ -113,18 +116,27 @@ class CheckoutOperations implements OperationProvider
 
         $conflicts = [];
 
+        // Конфликт считается по виду строки, как его проверит checkout.submit:
+        // «в наличии» — против основного склада, «предзаказ» — против склада
+        // предзаказа, уценка — против свободного остатка партии.
         foreach (array_merge($preview['instock_items'], $preview['preorder_items'], $preview['defect_items']) as $row) {
-            $max = (int) ($row['max_total'] ?? PHP_INT_MAX);
+            $status = $row['stock_status'] ?? 'ok';
 
-            if ((int) ($row['quantity'] ?? 0) > $max || ($row['is_unavailable'] ?? false)) {
-                $conflicts[] = [
-                    'cart_item_id' => $row['id'] ?? null,
-                    'product_id' => $row['product']['id'] ?? null,
-                    'name' => $row['product']['name'] ?? null,
-                    'quantity' => (int) ($row['quantity'] ?? 0),
-                    'available' => $max === PHP_INT_MAX ? null : $max,
-                ];
+            if ($status === 'ok' && ! ($row['is_unavailable'] ?? false)) {
+                continue;
             }
+
+            $own = $row['line_available'] ?? $row['max_total'] ?? null;
+
+            $conflicts[] = [
+                'cart_item_id' => $row['id'] ?? null,
+                'product_id' => $row['product']['id'] ?? null,
+                'name' => $row['product']['name'] ?? null,
+                'item_type' => $row['item_type'] ?? null,
+                'quantity' => (int) ($row['quantity'] ?? 0),
+                'available' => $own === null ? null : (int) $own,
+                'available_total' => isset($row['max_total']) ? (int) $row['max_total'] : null,
+            ];
         }
 
         $preview['stock_conflicts'] = $conflicts;

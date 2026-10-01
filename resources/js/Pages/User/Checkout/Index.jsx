@@ -119,7 +119,10 @@ export default function CheckoutIndex({
                 name: it.product?.name ?? 'Товар',
                 sku: it.product?.sku,
                 requested: Number(it.quantity || 0),
-                available: Number(it.max_total ?? 0),
+                // Остаток склада этой строки: «в наличии» — основной, «предзаказ» — склад предзаказа.
+                available: Number(it.line_available ?? it.max_total ?? 0),
+                availableTotal: Number(it.max_total ?? 0),
+                itemType: it.item_type,
                 status: it.stock_status,
             }));
 
@@ -132,6 +135,8 @@ export default function CheckoutIndex({
             sku: c.sku,
             requested: Number(c.requested || 0),
             available: Number(c.available || 0),
+            availableTotal: Number(c.available_total ?? c.available ?? 0),
+            itemType: c.item_type,
             status: Number(c.available || 0) <= 0 ? 'unavailable' : 'partial',
         }));
     }, [instockItems, preorderItems, defectItems, stockConflictsFromFlash]);
@@ -1872,7 +1877,7 @@ function StockBadge({ it, ...flexProps }) {
     if (!status || status === 'ok') return null;
 
     const requested = Number(it.quantity || 0);
-    const available = Number(it.max_total ?? 0);
+    const available = Number(it.line_available ?? it.max_total ?? 0);
 
     return (
         <Flex {...flexProps}>
@@ -1945,8 +1950,13 @@ function DebtRestrictionPanel({ restriction, debt }) {
 }
 
 function StockConflictsPanel({ items, onNormalize, normalizing }) {
-    const partial = items.filter((c) => c.status === 'partial');
-    const unavailable = items.filter((c) => c.status === 'unavailable');
+    // Строку «в наличии» сверх основного склада «Привести к доступному» переносит
+    // в предзаказ, если склад предзаказа товар покрывает, — клиент должен знать
+    // это до нажатия, а не увидеть «удалено».
+    const toPreorder = (c) => c.itemType === 'instock' && c.availableTotal > c.available;
+    const moved = items.filter(toPreorder);
+    const partial = items.filter((c) => c.status === 'partial' && !toPreorder(c));
+    const unavailable = items.filter((c) => c.status === 'unavailable' && !toPreorder(c));
 
     return (
         <Box
@@ -1985,7 +1995,11 @@ function StockConflictsPanel({ items, onNormalize, normalizing }) {
                                 <Text fontSize="xs" color="fg.muted">арт. {c.sku}</Text>
                             )}
                         </Box>
-                        {c.status === 'unavailable' ? (
+                        {toPreorder(c) ? (
+                            <Badge colorPalette="orange" variant="subtle">
+                                На складе {c.available} из {c.requested}, остальное — предзаказом
+                            </Badge>
+                        ) : c.status === 'unavailable' ? (
                             <Badge colorPalette="red" variant="subtle">
                                 Нет в наличии (было {c.requested})
                             </Badge>
@@ -2023,9 +2037,11 @@ function StockConflictsPanel({ items, onNormalize, normalizing }) {
             </Flex>
 
             <Text fontSize="xs" color="fg.muted" mt="3">
-                {partial.length > 0 && `Будет уменьшено количество: ${partial.length}.`}
-                {partial.length > 0 && unavailable.length > 0 && ' '}
-                {unavailable.length > 0 && `Будет удалено из корзины: ${unavailable.length}.`}
+                {[
+                    moved.length > 0 && `Будет переведено в предзаказ: ${moved.length}.`,
+                    partial.length > 0 && `Будет уменьшено количество: ${partial.length}.`,
+                    unavailable.length > 0 && `Будет удалено из корзины: ${unavailable.length}.`,
+                ].filter(Boolean).join(' ')}
             </Text>
         </Box>
     );

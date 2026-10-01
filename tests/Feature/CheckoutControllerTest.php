@@ -405,6 +405,54 @@ class CheckoutControllerTest extends TestCase
         );
     }
 
+    /**
+     * Топик №17 (29УТ-014795): строка «в наличии» сверяется с основным складом,
+     * «предзаказ» — со складом предзаказа, а не с их суммой (max_total).
+     */
+    public function test_checkout_index_stock_status_follows_line_type(): void
+    {
+        $cart = Cart::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+        ]);
+
+        $noPrimary = Product::factory()->create();
+        $noPreorder = Product::factory()->create();
+
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => $noPrimary->id,
+            'quantity' => 1,
+            'item_type' => 'instock',
+        ]);
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => $noPreorder->id,
+            'quantity' => 3,
+            'item_type' => 'preorder',
+        ]);
+
+        $stockMock = $this->createMock(StockServiceInterface::class);
+        $stockMock->method('getStock')->willReturnCallback(
+            fn ($product) => match ($product->id) {
+                $noPrimary->id => ['available' => 0, 'preorder' => 37],
+                $noPreorder->id => ['available' => 20, 'preorder' => 1],
+            }
+        );
+        $this->app->instance(StockServiceInterface::class, $stockMock);
+
+        $this->actingAs($this->user)->get('/checkout')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('instockItems.0.stock_status', 'unavailable')
+                ->where('instockItems.0.line_available', 0)
+                ->where('instockItems.0.max_total', 37)
+                ->where('preorderItems.0.stock_status', 'partial')
+                ->where('preorderItems.0.line_available', 1)
+                ->where('preorderItems.0.max_total', 21)
+            );
+    }
+
     public function test_checkout_store_with_two_order_types_redirects_to_orders_index(): void
     {
         $cart = Cart::factory()->create([

@@ -216,7 +216,12 @@ class CheckoutController extends Controller
         $user = $request->user();
         $cart = $this->cartService->getOrCreateActiveCart($user);
 
-        ['adjusted' => $adjusted, 'removed' => $removed, 'remaining_lines' => $remaining] = $this->normalizer->normalize($user, $cart);
+        [
+            'adjusted' => $adjusted,
+            'removed' => $removed,
+            'moved_to_preorder' => $movedToPreorder,
+            'remaining_lines' => $remaining,
+        ] = $this->normalizer->normalize($user, $cart);
 
         if ($adjusted === 0 && $removed === 0) {
             return redirect()
@@ -231,6 +236,11 @@ class CheckoutController extends Controller
         if ($removed > 0) {
             $parts[] = 'удалено: '.$removed;
         }
+        // Нехватку на основном складе клиент должен увидеть явно: эти штуки
+        // уедут отдельным предзаказом со своим сроком, а не со склада.
+        $preorderNote = $movedToPreorder > 0
+            ? ' На основном складе не хватило — в предзаказ переведено '.$movedToPreorder.' шт., ориентировочная поставка '.PreorderTerms::leadLabel().'.'
+            : '';
 
         // Если корзина опустела — увести в корзину
         if ($remaining === 0) {
@@ -241,6 +251,6 @@ class CheckoutController extends Controller
 
         return redirect()
             ->route('checkout.index')
-            ->with('success', 'Корзина приведена к доступному ('.implode(', ', $parts).').');
+            ->with('success', 'Корзина приведена к доступному ('.implode(', ', $parts).').'.$preorderNote);
     }
 }

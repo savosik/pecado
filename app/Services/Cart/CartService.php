@@ -719,7 +719,18 @@ class CartService implements CartServiceInterface
             'items.productDefect.media',
         );
 
-        $items = $cart->items->map(function (CartItem $item) use ($user) {
+        // Сколько штук товара лежит в строках каждого вида: строка «в наличии»
+        // сверяется с основным складом, «предзаказ» — со складом предзаказа
+        // (топик №17), а не с их суммой.
+        $lineDemand = [];
+        foreach ($cart->items as $cartItem) {
+            if (! $cartItem->isDefect()) {
+                $key = $cartItem->product_id.':'.($cartItem->item_type === 'preorder' ? 'preorder' : 'instock');
+                $lineDemand[$key] = ($lineDemand[$key] ?? 0) + $cartItem->quantity;
+            }
+        }
+
+        $items = $cart->items->map(function (CartItem $item) use ($user, $lineDemand) {
             $product = $item->product;
 
             if (! $product) {
@@ -733,6 +744,9 @@ class CartService implements CartServiceInterface
             $basePrice = $this->priceService->getBasePriceForUser($product, $user);
             $userPrice = $this->priceService->getUserPrice($product, $user);
             $stock = $this->stockService->getStock($product, $user);
+            $lineType = $item->item_type === 'preorder' ? 'preorder' : 'instock';
+            $lineAvailable = (int) ($lineType === 'preorder' ? $stock['preorder'] : $stock['available']);
+            $lineQuantity = $lineDemand[$item->product_id.':'.$lineType] ?? $item->quantity;
 
             return [
                 'id' => $item->id,
@@ -759,11 +773,15 @@ class CartService implements CartServiceInterface
                 'is_unavailable' => ($stock['available'] + $stock['preorder']) <= 0,
                 'available_quantity' => $stock['available'],
                 'preorder_quantity' => $stock['preorder'],
+                // max_total — потолок товара целиком (наличие + предзаказ), им
+                // ограничивает ввод корзина; line_available — остаток склада,
+                // с которого уйдёт именно эта строка.
                 'max_total' => $stock['available'] + $stock['preorder'],
+                'line_available' => $lineAvailable,
                 'stock_status' => match (true) {
-                    ($stock['available'] + $stock['preorder']) <= 0 => 'unavailable',
-                    $item->quantity > ($stock['available'] + $stock['preorder']) => 'partial',
-                    default => 'ok',
+                    $lineQuantity <= $lineAvailable => 'ok',
+                    $lineAvailable <= 0 => 'unavailable',
+                    default => 'partial',
                 },
                 'total_amount' => round($item->quantity * ($item->price ?? 0), 2),
                 'total_amount_regular' => round($item->quantity * $basePrice, 2),

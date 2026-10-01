@@ -80,6 +80,11 @@ class CheckoutService implements CheckoutServiceInterface
             // Остатки проверяем до сборки: чекаут отказывает целиком, а не урезает
             // количества, как это делает клиентское API
             $insufficientStockItems = [];
+            // Обычные строки копим по товару и виду: «в наличии» уходит заказом на
+            // основной склад региона, «предзаказ» — на склад предзаказа, поэтому
+            // каждая сверяется со своим остатком, а не с их суммой (топик №17,
+            // 29УТ-014795: строка «в наличии» прошла по остатку Тюмени при Москве 0).
+            $demand = [];
             foreach ($cart->items as $item) {
                 if ($item->item_type === 'defect') {
                     // Уценка: лимит — свободный остаток конкретной партии, не остаток товара.
@@ -104,20 +109,36 @@ class CheckoutService implements CheckoutServiceInterface
                     continue;
                 }
 
-                $stock = $this->stockService->getStock($item->product, $user);
-                $totalAvailable = $stock['available'] + $stock['preorder'];
+                $type = $item->item_type === 'preorder' ? 'preorder' : 'instock';
+                $demand[$item->product_id][$type] ??= ['item' => $item, 'quantity' => 0];
+                $demand[$item->product_id][$type]['quantity'] += $item->quantity;
+            }
 
-                if ($item->quantity > $totalAvailable) {
-                    $insufficientStockItems[] = [
-                        'cart_item_id' => $item->id,
-                        'product_id' => $item->product->id,
-                        'product' => $item->product->name,
-                        'name' => $item->product->name,
-                        'sku' => $item->product->sku,
-                        'item_type' => $item->item_type,
-                        'requested' => $item->quantity,
-                        'available' => $totalAvailable,
-                    ];
+            foreach ($demand as $byType) {
+                $product = reset($byType)['item']->product;
+                $stock = $this->stockService->getStock($product, $user);
+
+                foreach ($byType as $type => $line) {
+                    // Строка «в наличии» — против основного склада, «предзаказ» —
+                    // против склада предзаказа (у клиента с выключенными
+                    // предзаказами он 0 — см. StockService::regionWarehouseIds).
+                    $own = (int) ($type === 'preorder' ? $stock['preorder'] : $stock['available']);
+
+                    if ($line['quantity'] > $own) {
+                        $insufficientStockItems[] = [
+                            'cart_item_id' => $line['item']->id,
+                            'product_id' => $product->id,
+                            'product' => $product->name,
+                            'name' => $product->name,
+                            'sku' => $product->sku,
+                            'item_type' => $type,
+                            'requested' => $line['quantity'],
+                            'available' => $own,
+                            // Сколько всего доступно по товару (наличие + предзаказ):
+                            // после checkout.normalize нехватка может уйти в предзаказ.
+                            'available_total' => (int) ($stock['available'] + $stock['preorder']),
+                        ];
+                    }
                 }
             }
 
