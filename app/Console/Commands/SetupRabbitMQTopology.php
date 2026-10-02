@@ -66,6 +66,11 @@ class SetupRabbitMQTopology extends Command
         'erp_in.contractors' => ['contractor.*', 'agreement.*'],
         'erp_in.prices' => ['price.*', 'cost.*', 'exchange_rate.*', 'individual_prices.*'],
         'erp_in.stock' => ['stock.*'],
+        // v16.16.0: ожидаемые поступления. Отдельно от erp_in.stock намеренно — остатки
+        // идут потоком ~30 тыс. сообщений в сутки, а суточная контрольная выгрузка
+        // ожиданий не должна стоять за ними в очереди и наоборот. Ключ из трёх слов:
+        // привязка `product.*` очереди erp_in.catalog его не ловит (`*` — ровно одно слово).
+        'erp_in.expected_arrivals' => ['product.expected_arrivals.*'],
         'erp_in.orders' => ['order.*'],
         'erp_in.returns' => ['return.*'],
         'erp_in.documents' => ['shipment.*'],

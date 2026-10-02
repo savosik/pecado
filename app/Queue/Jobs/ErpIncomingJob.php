@@ -38,6 +38,7 @@ use App\Services\Erp\Handlers\HandlePriceUpdated;
 use App\Services\Erp\Handlers\HandlePrintedDocumentDeleted;
 use App\Services\Erp\Handlers\HandlePrintedDocumentPublished;
 use App\Services\Erp\Handlers\HandleProductCreated;
+use App\Services\Erp\Handlers\HandleProductExpectedArrivalsUpdated;
 use App\Services\Erp\Handlers\HandleProductUpdated;
 use App\Services\Erp\Handlers\HandlePromotionCreated;
 use App\Services\Erp\Handlers\HandlePromotionDeleted;
@@ -83,6 +84,8 @@ class ErpIncomingJob extends BaseJob
         'exchange_rate.updated' => HandleExchangeRateUpdated::class,
         // US-06: Остатки
         'stock.updated' => HandleStockUpdated::class,
+        // v16.16.0: ожидаемые поступления товара (полный снимок по товару)
+        'product.expected_arrivals.updated' => HandleProductExpectedArrivalsUpdated::class,
         // US-07: Контрагенты
         'contractor.created' => HandleContractorCreated::class,
         'contractor.updated' => HandleContractorUpdated::class,

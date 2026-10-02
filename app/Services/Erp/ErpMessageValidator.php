@@ -37,8 +37,7 @@ class ErpMessageValidator
         'exchange_rate.updated' => 'exchange_rate.updated.json',
         // US-06: Остатки
         'stock.updated' => 'stock.updated.json',
-        // v16.16.0 (проект, топик №16): ожидаемые поступления товара по складам.
-        // Схема зарегистрирована раньше обработчика — приём идёт вторым этапом.
+        // v16.16.0 (топик №16): ожидаемые поступления товара по складам.
         'product.expected_arrivals.updated' => 'product.expected_arrivals.updated.json',
         // US-07: Контрагенты
         'contractor.created' => 'contractor.created.json',

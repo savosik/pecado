@@ -18,6 +18,8 @@ class ErpHandlerOutcome
 
     public const STATUS_RECOVERED = 'recovered';
 
+    public const STATUS_STALE = 'stale';
+
     private string $status = self::STATUS_SUCCESS;
 
     private ?string $message = null;
@@ -38,6 +40,21 @@ class ErpHandlerOutcome
     public function markRecovered(string $message): void
     {
         $this->status = self::STATUS_RECOVERED;
+        $this->message = $message;
+    }
+
+    /**
+     * Сообщение корректно, но не применено: оно собрано в 1С раньше данных, которые
+     * сайт уже принял (v16.16.0, снимки ожидаемых поступлений).
+     *
+     * Для документов с `revision` то же решение принимает {@see ErpRevisionGuard} ещё
+     * до обработчика. Здесь свежесть сравнивается под блокировкой строки внутри
+     * транзакции обработчика, поэтому исход сообщает он сам. В журнале шины статус
+     * тот же — `stale`: 1С должна видеть, что её сообщение не применено.
+     */
+    public function markStale(string $message): void
+    {
+        $this->status = self::STATUS_STALE;
         $this->message = $message;
     }
 
