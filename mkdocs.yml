@@ -57,6 +57,7 @@ nav:
     - Себестоимость: rules/cost-prices.md
     - Остатки: rules/stocks.md
     - Ожидаемые поступления: rules/expected-arrivals.md
+    - Предзаказ: rules/preorder-offers.md
     - Внешние остатки (ESB): rules/external-remains.md
     - Контрагенты: rules/contractors.md
     - Заказы: rules/orders.md

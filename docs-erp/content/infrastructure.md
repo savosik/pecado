@@ -19,6 +19,7 @@
 | `erp_in.prices` | `price.*`, `cost.*`, `exchange_rate.*`, `individual_prices.*` | `price.updated`, `cost.updated`, `exchange_rate.updated`, `individual_prices.ready` |
 | `erp_in.stock` | `stock.*` | `stock.updated` |
 | `erp_in.expected_arrivals` | `product.expected_arrivals.*` | `product.expected_arrivals.updated` — **v16.16.0**: очередь объявлена, сайт принимает; публикацию включает 1С |
+| `erp_in.preorder_offers` | `preorder_offers.*` | `preorder_offers.updated` — **проект v16.18.0**: очередь объявляется при включении приёма на сайте (этап 2 топика №18); до этого сообщения с таким ключом брокер не доставляет никуда |
 | `erp_in.orders` | `order.*` | `order.created`, `order.updated`, `order.deleted` |
 | `erp_in.returns` | `return.*` | `return.updated`, `return.deleted` |
 | `erp_in.documents` | `shipment.*` | `shipment.created`, `shipment.updated`, `shipment.deleted` |
@@ -147,6 +148,7 @@ Policy регистрируется автоматически командой 
 | `exchange_rate.updated` | 1С → Сайт | `erp.events` | `erp_in.prices` |
 | `stock.updated` | 1С → Сайт | `erp.events` | `erp_in.stock` |
 | `product.expected_arrivals.updated` (v16.16.0) | 1С → Сайт | `erp.events` | `erp_in.expected_arrivals` |
+| `preorder_offers.updated` (проект v16.18.0) | 1С → Сайт | `erp.events` | `erp_in.preorder_offers` |
 | `order.created` | Сайт → 1С | `site.events` | `erp_out.orders` |
 | `order.created` | 1С → Сайт | `erp.events` | `erp_in.orders` |
 | `order.updated` | 1С → Сайт | `erp.events` | `erp_in.orders` |
