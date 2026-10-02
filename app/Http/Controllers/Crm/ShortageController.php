@@ -8,6 +8,7 @@ use App\Models\ShortageReason;
 use App\Services\Shortage\CancellationHintResolver;
 use App\Services\Shortage\FulfillmentRateQuery;
 use App\Services\Shortage\ShortageLogQuery;
+use App\Services\Stock\ExpectedArrivals;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -36,6 +37,7 @@ class ShortageController extends CrmController
         private readonly ShortageLogQuery $log,
         private readonly CancellationHintResolver $hints,
         private readonly FulfillmentRateQuery $fulfillment,
+        private readonly ExpectedArrivals $arrivals,
     ) {}
 
     public function index(Request $request): InertiaResponse
@@ -51,8 +53,11 @@ class ShortageController extends CrmController
         /** @var Collection<int, OrderItem> $items */
         $items = collect($page->items());
         $hints = $this->hints->forItems($items);
+        // v16.16.0: рядом с отменённым товаром — когда его ждём (данные закупок из 1С).
+        // Экран служебный, клиент его не видит.
+        $expected = $this->arrivals->forProducts($items->pluck('product_id')->filter()->all());
 
-        $rows = $page->through(fn (OrderItem $item) => $this->row($item, $hints));
+        $rows = $page->through(fn (OrderItem $item) => $this->row($item, $hints, $expected));
 
         return Inertia::render('Crm/Pages/Shortages/Index', [
             'rows' => $rows,
@@ -129,9 +134,10 @@ class ShortageController extends CrmController
      * Строка журнала.
      *
      * @param  array<int, array<string, mixed>>  $hints
+     * @param  array<int, list<array<string, mixed>>>  $expected  ожидаемые поступления по товарам
      * @return array<string, mixed>
      */
-    private function row(OrderItem $item, array $hints): array
+    private function row(OrderItem $item, array $hints, array $expected = []): array
     {
         $order = $item->order;
         $client = $order?->user;
@@ -152,6 +158,7 @@ class ShortageController extends CrmController
             'product' => $item->product?->name ?: $item->name,
             'sku' => $item->product?->sku,
             'slug' => $item->product?->slug,
+            'expected' => $this->arrivals->summary($expected[$item->product_id] ?? []),
             'quantity' => (int) $item->quantity,
             'amount' => (float) $item->subtotal,
             'archived_at' => $item->cancel_archived_at?->format('d.m.Y'),

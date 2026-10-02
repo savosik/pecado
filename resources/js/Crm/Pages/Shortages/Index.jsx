@@ -261,6 +261,12 @@ export default function Index({
                 <VStack align="start" gap={0}>
                     <Text fontSize="sm">{value}</Text>
                     {row.sku && <Text fontSize="xs" color="fg.muted">арт. {row.sku}</Text>}
+                    {/* v16.16.0: когда товар ждём — по данным закупок из 1С */}
+                    {row.expected && (
+                        <Text fontSize="xs" color="green.fg">
+                            ожидается: {row.expected.label} · {new Intl.NumberFormat('ru-RU').format(row.expected.quantity)} шт
+                        </Text>
+                    )}
                 </VStack>
             ),
         },

@@ -20,6 +20,7 @@ use App\Http\Controllers\Crm\DashboardController;
 use App\Http\Controllers\Crm\DebtController;
 use App\Http\Controllers\Crm\DocumentController;
 use App\Http\Controllers\Crm\EmailController;
+use App\Http\Controllers\Crm\ExpectedArrivalController;
 use App\Http\Controllers\Crm\FinanceController;
 use App\Http\Controllers\Crm\ImpersonationController;
 use App\Http\Controllers\Crm\InstructionController;
@@ -201,6 +202,10 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         // Списки объявлены до /{order} и /{shipment} — иначе «orders» ушло бы
         // в биндинг модели.
         Route::get('/orders', [DocumentController::class, 'orders'])->name('orders.index');
+        // v16.16.0: ожидаемые поступления товара из 1С — «когда приедет». Отдельного
+        // права нет: вопрос задаёт клиент, а отвечает тот, кто видит его заказы.
+        // Только сотрудникам: клиентам эти данные не показываются нигде.
+        Route::get('/arrivals', [ExpectedArrivalController::class, 'index'])->name('arrivals.index');
         Route::get('/shipments', [DocumentController::class, 'shipments'])->name('shipments.index');
         // XLSX по текущему отбору — тот же скоуп и те же фильтры, что у списка.
         Route::get('/orders/export', [DocumentController::class, 'ordersExport'])->name('orders.export');

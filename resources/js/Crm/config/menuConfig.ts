@@ -47,6 +47,7 @@ import {
     LuCoins,
     LuMessageCircleQuestion,
     LuBookOpen,
+    LuPackageSearch,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -112,6 +113,9 @@ export const menuConfig: MenuGroup[] = [
             // Резервы заказов (v16.9.0): сводка «кто резервирует и бросает»
             // и рычаг РОПа — отключение режима, индивидуальное окно.
             { label: "Резервы заказов", icon: LuClock3, path: "/crm/reserves", permission: "crm-reserves.view" },
+            // Ожидаемые поступления из 1С (v16.16.0): «когда приедет» — дата и количество
+            // по складу. Только сотрудникам; клиентам эти данные не показываются.
+            { label: "Ожидаемые поступления", icon: LuPackageSearch, path: "/crm/arrivals", permission: "crm-clients.view" },
         ],
     },
     {
