@@ -39,6 +39,10 @@ class ErpMessageValidator
         'stock.updated' => 'stock.updated.json',
         // v16.16.0 (топик №16): ожидаемые поступления товара по складам.
         'product.expected_arrivals.updated' => 'product.expected_arrivals.updated.json',
+        // v16.18.0, проект (топик №18): предложения предзаказа по товару — сколько штук
+        // и через сколько дней. Схема зарегистрирована заранее; обработчика и очереди
+        // ещё нет (этап 2), ErpIncomingJob такое событие пока не маршрутизирует.
+        'preorder_offers.updated' => 'preorder_offers.updated.json',
         // US-07: Контрагенты
         'contractor.created' => 'contractor.created.json',
         'contractor.updated' => 'contractor.updated.json',
