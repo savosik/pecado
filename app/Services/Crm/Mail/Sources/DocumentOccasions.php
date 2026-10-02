@@ -77,6 +77,10 @@ class DocumentOccasions
             return;
         }
 
+        if ($this->hasLiveSiblingFormat($document)) {
+            return;
+        }
+
         $this->stream->captureQuietly(new Occasion(
             key: 'documents.deleted',
             clientUserId: $document->user_id,
@@ -92,6 +96,27 @@ class DocumentOccasions
                 'body' => 'Учётная система отозвала документ, ранее выложенный в личный кабинет партнёра. Клиенту письмо об этом не уходит: если он успел скачать документ, его копия больше не актуальна — при необходимости предупредите его сами.',
             ],
         ));
+    }
+
+    /**
+     * Отозван один формат из пары, документ в кабинете жив.
+     *
+     * 1С может отозвать только XLSX, оставив PDF (так откатывается выгрузка Excel):
+     * строка документа в кабинете остаётся, и писать менеджеру не о чем. Письмо
+     * появляется, когда отозвана последняя живая форма пары, — одно на документ.
+     * Зовётся после мягкого удаления: сам отозванный документ в выборку не попадает.
+     */
+    private function hasLiveSiblingFormat(PrintedDocument $document): bool
+    {
+        if ($document->variant_key === null) {
+            return false;
+        }
+
+        return PrintedDocument::query()
+            ->where('variant_key', $document->variant_key)
+            ->whereKeyNot($document->getKey())
+            ->stored()
+            ->exists();
     }
 
     /**

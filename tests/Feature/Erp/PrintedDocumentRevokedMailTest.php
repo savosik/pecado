@@ -281,6 +281,61 @@ class PrintedDocumentRevokedMailTest extends TestCase
         $this->assertCount(0, $this->letters());
     }
 
+    /**
+     * PDF и XLSX одного УПД: разные `uuid`, один конверт — значит, общий `variant_key`.
+     *
+     * @return array{0: PrintedDocument, 1: PrintedDocument}
+     */
+    private function pdfAndXlsx(): array
+    {
+        $envelope = [
+            'number' => '29УТ-008007',
+            'shipment_uuid' => 'bd5699dd-b98e-11f1-8948-b00eaec447ca',
+            'base_document_kind' => 'shipment',
+            'contractor_uuid' => '0b0e7a52-1c1e-11ee-8d74-ac62e19dfb78',
+            'organization_uuid' => 'e043aa01-2777-11ed-8d74-ac62e19dfb78',
+        ];
+
+        $pdf = $this->document($envelope);
+        $xlsx = $this->document($envelope + [
+            'mime_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+
+        $this->assertNotNull($pdf->variant_key);
+        $this->assertSame($pdf->variant_key, $xlsx->variant_key);
+
+        return [$pdf, $xlsx];
+    }
+
+    #[Test]
+    public function отзыв_одного_формата_при_живом_втором_письма_не_даёт(): void
+    {
+        [$pdf, $xlsx] = $this->pdfAndXlsx();
+
+        $this->revoke($xlsx);
+
+        // Excel ушёл, PDF остался: документ в кабинете жив, писать менеджеру не о чем.
+        $this->assertSoftDeleted('printed_documents', ['id' => $xlsx->id]);
+        $this->assertNotSoftDeleted('printed_documents', ['id' => $pdf->id]);
+        $this->assertCount(0, $this->letters());
+        Mail::assertNothingSent();
+    }
+
+    #[Test]
+    public function отзыв_последней_живой_формы_пары_даёт_одно_письмо(): void
+    {
+        [$pdf, $xlsx] = $this->pdfAndXlsx();
+
+        $this->revoke($xlsx);
+        $this->assertCount(0, $this->letters());
+
+        $this->revoke($pdf);
+
+        $letter = $this->letters()->sole();
+        $this->assertSame([self::MANAGER_EMAIL], (array) $letter->to);
+        $this->assertSame($pdf->id, (int) $letter->related_id);
+    }
+
     #[Test]
     public function выключенный_в_карточке_партнёра_тип_молчит(): void
     {
