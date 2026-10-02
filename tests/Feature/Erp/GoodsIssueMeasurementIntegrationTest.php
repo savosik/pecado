@@ -628,6 +628,41 @@ class GoodsIssueMeasurementIntegrationTest extends TestCase
         $this->assertStringContainsString('только из сообщения с revision', (string) $log->error_message);
     }
 
+    #[Test]
+    public function p_integral_float_revision_counts_as_revision_for_done_and_for_staleness(): void
+    {
+        // json_decode отдаёт 5.0 как float, JSON Schema считает его целым. Проверка свежести
+        // и приём done обязаны понимать такую ревизию одинаково — иначе done стал бы pending.
+        $this->fire($this->snapshot(10, 'pending', [$this->box(['weight' => null, 'dimensions' => null])]));
+        $this->fire($this->snapshot(11, 'done', [$this->box()], 'delivery', ['revision' => 11.0]));
+
+        $issue = $this->issue();
+        $this->assertSame(GoodsIssue::MEASUREMENT_DONE, $issue->measurement_state);
+        $this->assertSame(11, $issue->applied_revision);
+        $this->assertNotNull($issue->measured_at);
+
+        $log = ErpBusMessage::query()->where('event', 'goods_issue.updated')->latest('id')->firstOrFail();
+        $this->assertSame('success', $log->status);
+        $this->assertNull($log->error_message);
+
+        // Та же ревизия в виде 11.0 повторно — устаревшая, как и 11.
+        $this->fire($this->snapshot(11, 'pending', [$this->box(['weight' => null, 'dimensions' => null])], 'delivery', ['revision' => 11.0]));
+        $this->assertSame(GoodsIssue::MEASUREMENT_DONE, $this->issue()->measurement_state);
+        $this->assertSame(1, ErpBusMessage::query()->where('status', 'stale')->count());
+    }
+
+    #[Test]
+    public function revision_rule_is_one_for_guard_and_mapper(): void
+    {
+        $this->assertSame(5, \App\Services\Erp\ErpRevisionGuard::normalizeRevision(5));
+        $this->assertSame(5, \App\Services\Erp\ErpRevisionGuard::normalizeRevision(5.0));
+        $this->assertSame(0, \App\Services\Erp\ErpRevisionGuard::normalizeRevision(0));
+        $this->assertNull(\App\Services\Erp\ErpRevisionGuard::normalizeRevision(5.5));
+        $this->assertNull(\App\Services\Erp\ErpRevisionGuard::normalizeRevision(-1));
+        $this->assertNull(\App\Services\Erp\ErpRevisionGuard::normalizeRevision('5'));
+        $this->assertNull(\App\Services\Erp\ErpRevisionGuard::normalizeRevision(null));
+    }
+
     // ───────────────────────── Q ─────────────────────────
 
     #[Test]

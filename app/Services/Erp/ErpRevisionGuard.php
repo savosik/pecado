@@ -220,15 +220,30 @@ class ErpRevisionGuard
      */
     private function revisionFrom(array $payload): ?int
     {
-        $revision = $payload['revision'] ?? null;
+        return self::normalizeRevision($payload['revision'] ?? null);
+    }
 
-        if ($revision === null || ! is_numeric($revision)) {
-            return null;
+    /**
+     * Единое правило «что считается ревизией» для всего приёма.
+     *
+     * Целое неотрицательное значение в любом JSON-представлении: `5` и `5.0` —
+     * одна и та же ревизия (JSON Schema считает 5.0 целым, а json_decode отдаёт
+     * float). Дробное, отрицательное, строка, `null` — ревизии нет. Одно правило
+     * и у отсечения устаревших, и у приёма `done` в расходном ордере: иначе
+     * сообщение проходило бы проверку свежести как ревизионное, а `done` из него
+     * превращался бы в `pending` из-за типа числа.
+     */
+    public static function normalizeRevision(mixed $revision): ?int
+    {
+        if (is_int($revision)) {
+            return $revision >= 0 ? $revision : null;
         }
 
-        $revision = (int) $revision;
+        if (is_float($revision) && is_finite($revision) && floor($revision) === $revision && $revision >= 0) {
+            return (int) $revision;
+        }
 
-        return $revision >= 0 ? $revision : null;
+        return null;
     }
 
     /**

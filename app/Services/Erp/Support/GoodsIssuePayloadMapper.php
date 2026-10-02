@@ -301,7 +301,7 @@ class GoodsIssuePayloadMapper
      */
     private function doneRefusal(array $payload): ?string
     {
-        if (! is_int($payload['revision'] ?? null)) {
+        if (\App\Services\Erp\ErpRevisionGuard::normalizeRevision($payload['revision'] ?? null) === null) {
             return 'done принимается только из сообщения с revision.';
         }
 
