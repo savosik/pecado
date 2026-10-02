@@ -9,8 +9,12 @@ use App\Enums\Shortage\ShortageReasonCategory;
  *
  * Это факт из 1С, а не разметка отдела продаж: причину недобора из справочника
  * (`order_items.cancel_reason_id`, {@see \App\Models\ShortageReason}) по-прежнему
- * выбирает менеджер. Справочник подробнее — девять причин и шесть категорий против
- * пяти значений 1С, — поэтому причина 1С служит подсказкой, а не заменой разметки.
+ * выбирает менеджер. Справочник подробнее и ведётся отделом продаж, поэтому причина 1С
+ * служит подсказкой, а не заменой разметки.
+ *
+ * Недобор при сборке 1С делит на три типа по каждой недобранной штуке (топик №17):
+ * недостача (`shortage`), некондиция (`substandard`), брак (`defect`). Отказ по
+ * предзаказу — `supplier_unavailable` (топик №18).
  *
  * В схеме поле намеренно не перечисление: 1С вольна завести новую причину, и приём
  * заказа из-за этого останавливаться не должен. Всё незнакомое сводится к `OTHER`.
@@ -20,8 +24,17 @@ enum OrderLineCancelReason: string
     /** «Нет остатка»: свободного остатка нет при приёме заказа или при переводе в «К отгрузке». */
     case OUT_OF_STOCK = 'out_of_stock';
 
-    /** «Недобор при сборке»: товара не хватило на складе при сборке. */
+    /** «Недобор при сборке», недостача: товара не хватило на складе при сборке. */
     case SHORTAGE = 'shortage';
+
+    /** «Недобор при сборке», некондиция: товар на складе есть, но в продажу не годится. */
+    case SUBSTANDARD = 'substandard';
+
+    /** «Недобор при сборке», брак: товар на складе оказался бракованным. */
+    case DEFECT = 'defect';
+
+    /** «Поставщик не привёз»: менеджер отменил строку предзаказа, товар не пришёл. */
+    case SUPPLIER_UNAVAILABLE = 'supplier_unavailable';
 
     /** «Отмена клиентом сайта»: строку или заказ отменили с сайта. */
     case CLIENT = 'client';
@@ -59,6 +72,9 @@ enum OrderLineCancelReason: string
         return match ($this) {
             self::OUT_OF_STOCK => 'Нет остатка',
             self::SHORTAGE => 'Недобор при сборке',
+            self::SUBSTANDARD => 'Некондиция при сборке',
+            self::DEFECT => 'Брак при сборке',
+            self::SUPPLIER_UNAVAILABLE => 'Поставщик не привёз',
             self::CLIENT => 'Отмена клиентом сайта',
             self::RESERVE_EXPIRED => 'Истёк срок резерва',
             self::OTHER => 'Другая причина',
@@ -71,17 +87,26 @@ enum OrderLineCancelReason: string
         return match ($this) {
             self::OUT_OF_STOCK => '1С отменила строку: свободного остатка не было при приёме заказа или при переводе в «К отгрузке».',
             self::SHORTAGE => '1С отменила строку при сборке: товара на складе не хватило.',
+            self::SUBSTANDARD => '1С отменила строку при сборке: товар оказался некондицией.',
+            self::DEFECT => '1С отменила строку при сборке: товар оказался бракованным.',
+            self::SUPPLIER_UNAVAILABLE => 'Менеджер отменил строку предзаказа в 1С: поставщик товар не привёз.',
             self::CLIENT => 'Строку или заказ отменил клиент на сайте.',
             self::RESERVE_EXPIRED => 'Резерв сайта снят по сроку — клиент не отправил заказ в отгрузку.',
             self::OTHER => 'Причина в 1С не из числа известных сайту: причина маркетплейса или ручная причина менеджера.',
         };
     }
 
-    /** Подпись отменённой строки для клиента (кабинет). */
+    /**
+     * Подпись отменённой строки для клиента (кабинет).
+     *
+     * Некондицию и брак клиенту не расписываем: для него это тот же «нет в наличии»,
+     * а разбор, что именно случилось на складе, — внутренняя кухня.
+     */
     public function clientLabel(): string
     {
         return match ($this) {
-            self::OUT_OF_STOCK, self::SHORTAGE => 'Отменена — нет в наличии',
+            self::OUT_OF_STOCK, self::SHORTAGE, self::SUBSTANDARD, self::DEFECT => 'Отменена — нет в наличии',
+            self::SUPPLIER_UNAVAILABLE => 'Отменена — поставщик не привёз',
             self::CLIENT => 'Отменена вами',
             self::RESERVE_EXPIRED => 'Отменена — истёк срок резерва',
             self::OTHER => 'Отменена',
@@ -98,7 +123,8 @@ enum OrderLineCancelReason: string
     {
         return match ($this) {
             self::OUT_OF_STOCK => ShortageReasonCategory::STOCK,
-            self::SHORTAGE => ShortageReasonCategory::WAREHOUSE,
+            self::SHORTAGE, self::SUBSTANDARD, self::DEFECT => ShortageReasonCategory::WAREHOUSE,
+            self::SUPPLIER_UNAVAILABLE => ShortageReasonCategory::SUPPLY,
             self::CLIENT, self::RESERVE_EXPIRED => ShortageReasonCategory::CLIENT,
             self::OTHER => null,
         };
@@ -113,7 +139,8 @@ enum OrderLineCancelReason: string
     public function isShortfall(): bool
     {
         return match ($this) {
-            self::OUT_OF_STOCK, self::SHORTAGE, self::OTHER => true,
+            self::OUT_OF_STOCK, self::SHORTAGE, self::SUBSTANDARD, self::DEFECT,
+            self::SUPPLIER_UNAVAILABLE, self::OTHER => true,
             self::CLIENT, self::RESERVE_EXPIRED => false,
         };
     }
@@ -125,6 +152,10 @@ enum OrderLineCancelReason: string
      */
     public function isConfirmedStockShortfall(): bool
     {
-        return $this === self::OUT_OF_STOCK || $this === self::SHORTAGE;
+        return match ($this) {
+            self::OUT_OF_STOCK, self::SHORTAGE, self::SUBSTANDARD, self::DEFECT,
+            self::SUPPLIER_UNAVAILABLE => true,
+            self::CLIENT, self::RESERVE_EXPIRED, self::OTHER => false,
+        };
     }
 }

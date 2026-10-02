@@ -160,7 +160,13 @@ class NotifyClientAboutPickup
 
         // «При сборке» — только когда сборка и была: отмена при приёме заказа случается до неё.
         $noStockAtAll = $items->every(fn (array $item) => $item['cause'] === \App\Enums\Order\OrderLineCancelReason::OUT_OF_STOCK);
-        $lead = $noStockAtAll ? 'На складе не оказалось в наличии: ' : 'При сборке не хватило: ';
+        // Предзаказ, который не привёз поставщик, до сборки тоже не доходит.
+        $supplierOnly = $items->every(fn (array $item) => $item['cause'] === \App\Enums\Order\OrderLineCancelReason::SUPPLIER_UNAVAILABLE);
+        $lead = match (true) {
+            $noStockAtAll => 'На складе не оказалось в наличии: ',
+            $supplierOnly => 'Поставщик не привёз: ',
+            default => 'При сборке не хватило: ',
+        };
 
         $this->mailStream->captureQuietly(new Occasion(
             key: 'orders.items_unavailable',

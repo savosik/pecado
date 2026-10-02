@@ -135,6 +135,36 @@ class PickupNotificationsTest extends TestCase
     }
 
     #[Test]
+    public function substandard_defect_and_supplier_reasons_are_shortfalls_too(): void
+    {
+        // Топики №17 и №18: некондиция и брак при сборке, «поставщик не привёз» по предзаказу —
+        // клиенту это та же нехватка, письмо уходит как по `shortage`, в том числе по заказу в резерве.
+        foreach (['substandard', 'defect', 'supplier_unavailable'] as $i => $reason) {
+            $order = $this->pickupOrder($this->client, ['erp_number' => '29УТ-03100'.$i]);
+            event(new \App\Events\Order\OrderItemsCancelled($order, [['name' => 'Свеча', 'quantity' => 1.0, 'reason' => $reason]]));
+            $this->assertSame($i + 1, $this->emails('orders.items_unavailable'), $reason);
+            $this->travel(10)->minutes();
+        }
+
+        $reserved = $this->pickupOrder($this->client, ['reserve' => true, 'reserved_until' => now()->addDay(), 'erp_number' => '29УТ-031009']);
+        event(new \App\Events\Order\OrderItemsCancelled($reserved, [['name' => 'Гель', 'quantity' => 1.0, 'reason' => 'defect']]));
+        $this->assertSame(4, $this->emails('orders.items_unavailable'));
+    }
+
+    #[Test]
+    public function supplier_unavailable_letter_does_not_blame_picking(): void
+    {
+        $order = $this->pickupOrder($this->client);
+        event(new \App\Events\Order\OrderItemsCancelled($order, [['name' => 'Массажное масло', 'quantity' => 2.0, 'reason' => 'supplier_unavailable']]));
+
+        $email = CrmEmail::query()->where('origin_event', 'orders.items_unavailable')->sole();
+        $body = (string) $email->body_html.$email->body_text;
+        $this->assertStringContainsString('Поставщик не привёз', $body);
+        $this->assertStringContainsString('Массажное масло — 2 шт.', $body);
+        $this->assertStringNotContainsString('При сборке', $body);
+    }
+
+    #[Test]
     public function confirmed_stock_shortfall_is_reported_even_for_an_order_in_reserve(): void
     {
         // Инцидент 23.09.2026: 1С отменяет строку без остатка сразу при приёме заказа, а заказ интернет-магазина

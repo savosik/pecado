@@ -990,8 +990,23 @@ fallback как <code>false</code> (старые отправители, неу�
 </tr>
 <tr>
 <td><code>shortage</code></td>
-<td>«Недобор при сборке»</td>
+<td>«Недобор при сборке» — недостача</td>
 <td>товара не хватило при сборке на складе</td>
+</tr>
+<tr>
+<td><code>substandard</code></td>
+<td>«Недобор при сборке» — некондиция</td>
+<td>при сборке товар оказался некондицией (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>defect</code></td>
+<td>«Недобор при сборке» — брак</td>
+<td>при сборке товар оказался бракованным (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>supplier_unavailable</code></td>
+<td>«Поставщик не привёз»</td>
+<td>менеджер отменил строку предзаказа: товар от поставщика не пришёл (топик №18)</td>
 </tr>
 <tr>
 <td><code>client</code></td>
@@ -1009,6 +1024,10 @@ fallback как <code>false</code> (старые отправители, неу�
 <td>причины маркетплейсов, ручные причины менеджера</td>
 </tr>
 </tbody></table>
+<p>Тип недобора 1С определяет по каждой недобранной штуке. Если в строке недобраны
+штуки разных типов, отменённая часть делится на строки по типам — у каждой своя
+причина и свой <code>line_number</code>; новые строки идут в конец, номера остальных не
+сдвигаются.</p>
 <p><strong>Это намеренно не <code>enum</code>.</strong> Неизвестное значение сайт принимает и трактует
 как <code>other</code>: новая причина в 1С не должна останавливать приём заказа.
 Сообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.</p>
@@ -1017,7 +1036,7 @@ fallback как <code>false</code> (старые отправители, неу�
 Схема не требует поле при <code>cancelled = true</code> намеренно: причина — аналитический
 признак, и отбрасывать из-за него весь <code>order.updated</code> (статус, состав, сумму)
 несоразмерно.</p>
-</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
+</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;substandard&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;defect&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;supplier_unavailable&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">discount_percent</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&lt;= 100</span></div><div><div class="prose max-w-none text-sm"><p>Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку без ограничений, 0 — без корректировки (v12.7.1). В заказах type=defect — глубина уценки относительно base_price, величина производная: сумма позиции считается по final_price (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">final_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Конечная цена за единицу после корректировки (v12.7.1). final_price = base_price × (1 - discount_percent / 100); при отрицательном discount_percent итоговая цена может быть выше base_price. В заказах type=promo и type=promo_sample равенство не выполняется: там final_price — цена из награды акции, и она авторитетна (v15.6). В заказах type=defect final_price — цена уценки, заданная закупщиком, и она также авторитетна (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">is_promo</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">boolean</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Позиция выдана акцией, а не куплена клиентом (v15.6).
@@ -1340,8 +1359,23 @@ Routing key: <code>order.*</code></p>
 </tr>
 <tr>
 <td><code>shortage</code></td>
-<td>«Недобор при сборке»</td>
+<td>«Недобор при сборке» — недостача</td>
 <td>товара не хватило при сборке на складе</td>
+</tr>
+<tr>
+<td><code>substandard</code></td>
+<td>«Недобор при сборке» — некондиция</td>
+<td>при сборке товар оказался некондицией (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>defect</code></td>
+<td>«Недобор при сборке» — брак</td>
+<td>при сборке товар оказался бракованным (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>supplier_unavailable</code></td>
+<td>«Поставщик не привёз»</td>
+<td>менеджер отменил строку предзаказа: товар от поставщика не пришёл (топик №18)</td>
 </tr>
 <tr>
 <td><code>client</code></td>
@@ -1359,6 +1393,10 @@ Routing key: <code>order.*</code></p>
 <td>причины маркетплейсов, ручные причины менеджера</td>
 </tr>
 </tbody></table>
+<p>Тип недобора 1С определяет по каждой недобранной штуке. Если в строке недобраны
+штуки разных типов, отменённая часть делится на строки по типам — у каждой своя
+причина и свой <code>line_number</code>; новые строки идут в конец, номера остальных не
+сдвигаются.</p>
 <p><strong>Это намеренно не <code>enum</code>.</strong> Неизвестное значение сайт принимает и трактует
 как <code>other</code>: новая причина в 1С не должна останавливать приём заказа.
 Сообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.</p>
@@ -1367,7 +1405,7 @@ Routing key: <code>order.*</code></p>
 Схема не требует поле при <code>cancelled = true</code> намеренно: причина — аналитический
 признак, и отбрасывать из-за него весь <code>order.updated</code> (статус, состав, сумму)
 несоразмерно.</p>
-</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
+</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;substandard&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;defect&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;supplier_unavailable&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">discount_percent</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&lt;= 100</span></div><div><div class="prose max-w-none text-sm"><p>Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку без ограничений, 0 — без корректировки (v12.7.1). В заказах type=defect — глубина уценки относительно base_price, величина производная: сумма позиции считается по final_price (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">final_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Конечная цена за единицу после корректировки (v12.7.1). final_price = base_price × (1 - discount_percent / 100); при отрицательном discount_percent итоговая цена может быть выше base_price. В заказах type=promo и type=promo_sample равенство не выполняется: там final_price — цена из награды акции, и она авторитетна (v15.6). В заказах type=defect final_price — цена уценки, заданная закупщиком, и она также авторитетна (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">is_promo</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">boolean</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Позиция выдана акцией, а не куплена клиентом (v15.6).
@@ -1704,8 +1742,23 @@ fallback как <code>false</code> (старые отправители, неу�
 </tr>
 <tr>
 <td><code>shortage</code></td>
-<td>«Недобор при сборке»</td>
+<td>«Недобор при сборке» — недостача</td>
 <td>товара не хватило при сборке на складе</td>
+</tr>
+<tr>
+<td><code>substandard</code></td>
+<td>«Недобор при сборке» — некондиция</td>
+<td>при сборке товар оказался некондицией (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>defect</code></td>
+<td>«Недобор при сборке» — брак</td>
+<td>при сборке товар оказался бракованным (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>supplier_unavailable</code></td>
+<td>«Поставщик не привёз»</td>
+<td>менеджер отменил строку предзаказа: товар от поставщика не пришёл (топик №18)</td>
 </tr>
 <tr>
 <td><code>client</code></td>
@@ -1723,6 +1776,10 @@ fallback как <code>false</code> (старые отправители, неу�
 <td>причины маркетплейсов, ручные причины менеджера</td>
 </tr>
 </tbody></table>
+<p>Тип недобора 1С определяет по каждой недобранной штуке. Если в строке недобраны
+штуки разных типов, отменённая часть делится на строки по типам — у каждой своя
+причина и свой <code>line_number</code>; новые строки идут в конец, номера остальных не
+сдвигаются.</p>
 <p><strong>Это намеренно не <code>enum</code>.</strong> Неизвестное значение сайт принимает и трактует
 как <code>other</code>: новая причина в 1С не должна останавливать приём заказа.
 Сообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.</p>
@@ -1731,7 +1788,7 @@ fallback как <code>false</code> (старые отправители, неу�
 Схема не требует поле при <code>cancelled = true</code> намеренно: причина — аналитический
 признак, и отбрасывать из-за него весь <code>order.updated</code> (статус, состав, сумму)
 несоразмерно.</p>
-</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
+</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;substandard&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;defect&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;supplier_unavailable&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">discount_percent</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&lt;= 100</span></div><div><div class="prose max-w-none text-sm"><p>Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку без ограничений, 0 — без корректировки (v12.7.1). В заказах type=defect — глубина уценки относительно base_price, величина производная: сумма позиции считается по final_price (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">final_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Конечная цена за единицу после корректировки (v12.7.1). final_price = base_price × (1 - discount_percent / 100); при отрицательном discount_percent итоговая цена может быть выше base_price. В заказах type=promo и type=promo_sample равенство не выполняется: там final_price — цена из награды акции, и она авторитетна (v15.6). В заказах type=defect final_price — цена уценки, заданная закупщиком, и она также авторитетна (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">is_promo</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">boolean</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Позиция выдана акцией, а не куплена клиентом (v15.6).
@@ -4830,8 +4887,23 @@ fallback как <code>false</code> (старые отправители, неу�
 </tr>
 <tr>
 <td><code>shortage</code></td>
-<td>«Недобор при сборке»</td>
+<td>«Недобор при сборке» — недостача</td>
 <td>товара не хватило при сборке на складе</td>
+</tr>
+<tr>
+<td><code>substandard</code></td>
+<td>«Недобор при сборке» — некондиция</td>
+<td>при сборке товар оказался некондицией (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>defect</code></td>
+<td>«Недобор при сборке» — брак</td>
+<td>при сборке товар оказался бракованным (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>supplier_unavailable</code></td>
+<td>«Поставщик не привёз»</td>
+<td>менеджер отменил строку предзаказа: товар от поставщика не пришёл (топик №18)</td>
 </tr>
 <tr>
 <td><code>client</code></td>
@@ -4849,6 +4921,10 @@ fallback как <code>false</code> (старые отправители, неу�
 <td>причины маркетплейсов, ручные причины менеджера</td>
 </tr>
 </tbody></table>
+<p>Тип недобора 1С определяет по каждой недобранной штуке. Если в строке недобраны
+штуки разных типов, отменённая часть делится на строки по типам — у каждой своя
+причина и свой <code>line_number</code>; новые строки идут в конец, номера остальных не
+сдвигаются.</p>
 <p><strong>Это намеренно не <code>enum</code>.</strong> Неизвестное значение сайт принимает и трактует
 как <code>other</code>: новая причина в 1С не должна останавливать приём заказа.
 Сообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.</p>
@@ -4857,7 +4933,7 @@ fallback как <code>false</code> (старые отправители, неу�
 Схема не требует поле при <code>cancelled = true</code> намеренно: причина — аналитический
 признак, и отбрасывать из-за него весь <code>order.updated</code> (статус, состав, сумму)
 несоразмерно.</p>
-</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
+</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;substandard&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;defect&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;supplier_unavailable&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">discount_percent</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&lt;= 100</span></div><div><div class="prose max-w-none text-sm"><p>Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку без ограничений, 0 — без корректировки (v12.7.1). В заказах type=defect — глубина уценки относительно base_price, величина производная: сумма позиции считается по final_price (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">final_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Конечная цена за единицу после корректировки (v12.7.1). final_price = base_price × (1 - discount_percent / 100); при отрицательном discount_percent итоговая цена может быть выше base_price. В заказах type=promo и type=promo_sample равенство не выполняется: там final_price — цена из награды акции, и она авторитетна (v15.6). В заказах type=defect final_price — цена уценки, заданная закупщиком, и она также авторитетна (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">is_promo</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">boolean</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Позиция выдана акцией, а не куплена клиентом (v15.6).
@@ -5058,8 +5134,23 @@ fallback как <code>false</code> (старые отправители, неу�
 </tr>
 <tr>
 <td><code>shortage</code></td>
-<td>«Недобор при сборке»</td>
+<td>«Недобор при сборке» — недостача</td>
 <td>товара не хватило при сборке на складе</td>
+</tr>
+<tr>
+<td><code>substandard</code></td>
+<td>«Недобор при сборке» — некондиция</td>
+<td>при сборке товар оказался некондицией (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>defect</code></td>
+<td>«Недобор при сборке» — брак</td>
+<td>при сборке товар оказался бракованным (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>supplier_unavailable</code></td>
+<td>«Поставщик не привёз»</td>
+<td>менеджер отменил строку предзаказа: товар от поставщика не пришёл (топик №18)</td>
 </tr>
 <tr>
 <td><code>client</code></td>
@@ -5077,6 +5168,10 @@ fallback как <code>false</code> (старые отправители, неу�
 <td>причины маркетплейсов, ручные причины менеджера</td>
 </tr>
 </tbody></table>
+<p>Тип недобора 1С определяет по каждой недобранной штуке. Если в строке недобраны
+штуки разных типов, отменённая часть делится на строки по типам — у каждой своя
+причина и свой <code>line_number</code>; новые строки идут в конец, номера остальных не
+сдвигаются.</p>
 <p><strong>Это намеренно не <code>enum</code>.</strong> Неизвестное значение сайт принимает и трактует
 как <code>other</code>: новая причина в 1С не должна останавливать приём заказа.
 Сообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.</p>
@@ -5085,7 +5180,7 @@ fallback как <code>false</code> (старые отправители, неу�
 Схема не требует поле при <code>cancelled = true</code> намеренно: причина — аналитический
 признак, и отбрасывать из-за него весь <code>order.updated</code> (статус, состав, сумму)
 несоразмерно.</p>
-</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
+</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;substandard&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;defect&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;supplier_unavailable&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">discount_percent</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&lt;= 100</span></div><div><div class="prose max-w-none text-sm"><p>Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку без ограничений, 0 — без корректировки (v12.7.1). В заказах type=defect — глубина уценки относительно base_price, величина производная: сумма позиции считается по final_price (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">final_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Конечная цена за единицу после корректировки (v12.7.1). final_price = base_price × (1 - discount_percent / 100); при отрицательном discount_percent итоговая цена может быть выше base_price. В заказах type=promo и type=promo_sample равенство не выполняется: там final_price — цена из награды акции, и она авторитетна (v15.6). В заказах type=defect final_price — цена уценки, заданная закупщиком, и она также авторитетна (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">is_promo</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">boolean</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Позиция выдана акцией, а не куплена клиентом (v15.6).
@@ -5338,8 +5433,23 @@ fallback как <code>false</code> (старые отправители, неу�
 </tr>
 <tr>
 <td><code>shortage</code></td>
-<td>«Недобор при сборке»</td>
+<td>«Недобор при сборке» — недостача</td>
 <td>товара не хватило при сборке на складе</td>
+</tr>
+<tr>
+<td><code>substandard</code></td>
+<td>«Недобор при сборке» — некондиция</td>
+<td>при сборке товар оказался некондицией (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>defect</code></td>
+<td>«Недобор при сборке» — брак</td>
+<td>при сборке товар оказался бракованным (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>supplier_unavailable</code></td>
+<td>«Поставщик не привёз»</td>
+<td>менеджер отменил строку предзаказа: товар от поставщика не пришёл (топик №18)</td>
 </tr>
 <tr>
 <td><code>client</code></td>
@@ -5357,6 +5467,10 @@ fallback как <code>false</code> (старые отправители, неу�
 <td>причины маркетплейсов, ручные причины менеджера</td>
 </tr>
 </tbody></table>
+<p>Тип недобора 1С определяет по каждой недобранной штуке. Если в строке недобраны
+штуки разных типов, отменённая часть делится на строки по типам — у каждой своя
+причина и свой <code>line_number</code>; новые строки идут в конец, номера остальных не
+сдвигаются.</p>
 <p><strong>Это намеренно не <code>enum</code>.</strong> Неизвестное значение сайт принимает и трактует
 как <code>other</code>: новая причина в 1С не должна останавливать приём заказа.
 Сообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.</p>
@@ -5365,7 +5479,7 @@ fallback как <code>false</code> (старые отправители, неу�
 Схема не требует поле при <code>cancelled = true</code> намеренно: причина — аналитический
 признак, и отбрасывать из-за него весь <code>order.updated</code> (статус, состав, сумму)
 несоразмерно.</p>
-</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
+</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;substandard&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;defect&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;supplier_unavailable&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">discount_percent</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&lt;= 100</span></div><div><div class="prose max-w-none text-sm"><p>Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку без ограничений, 0 — без корректировки (v12.7.1). В заказах type=defect — глубина уценки относительно base_price, величина производная: сумма позиции считается по final_price (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">final_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Конечная цена за единицу после корректировки (v12.7.1). final_price = base_price × (1 - discount_percent / 100); при отрицательном discount_percent итоговая цена может быть выше base_price. В заказах type=promo и type=promo_sample равенство не выполняется: там final_price — цена из награды акции, и она авторитетна (v15.6). В заказах type=defect final_price — цена уценки, заданная закупщиком, и она также авторитетна (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">is_promo</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">boolean</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Позиция выдана акцией, а не куплена клиентом (v15.6).
@@ -6984,8 +7098,23 @@ UUIDv4 сайта для корреляции.</p>
 </tr>
 <tr>
 <td><code>shortage</code></td>
-<td>«Недобор при сборке»</td>
+<td>«Недобор при сборке» — недостача</td>
 <td>товара не хватило при сборке на складе</td>
+</tr>
+<tr>
+<td><code>substandard</code></td>
+<td>«Недобор при сборке» — некондиция</td>
+<td>при сборке товар оказался некондицией (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>defect</code></td>
+<td>«Недобор при сборке» — брак</td>
+<td>при сборке товар оказался бракованным (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>supplier_unavailable</code></td>
+<td>«Поставщик не привёз»</td>
+<td>менеджер отменил строку предзаказа: товар от поставщика не пришёл (топик №18)</td>
 </tr>
 <tr>
 <td><code>client</code></td>
@@ -7003,6 +7132,10 @@ UUIDv4 сайта для корреляции.</p>
 <td>причины маркетплейсов, ручные причины менеджера</td>
 </tr>
 </tbody></table>
+<p>Тип недобора 1С определяет по каждой недобранной штуке. Если в строке недобраны
+штуки разных типов, отменённая часть делится на строки по типам — у каждой своя
+причина и свой <code>line_number</code>; новые строки идут в конец, номера остальных не
+сдвигаются.</p>
 <p><strong>Это намеренно не <code>enum</code>.</strong> Неизвестное значение сайт принимает и трактует
 как <code>other</code>: новая причина в 1С не должна останавливать приём заказа.
 Сообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.</p>
@@ -7011,7 +7144,7 @@ UUIDv4 сайта для корреляции.</p>
 Схема не требует поле при <code>cancelled = true</code> намеренно: причина — аналитический
 признак, и отбрасывать из-за него весь <code>order.updated</code> (статус, состав, сумму)
 несоразмерно.</p>
-</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
+</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;substandard&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;defect&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;supplier_unavailable&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">discount_percent</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&lt;= 100</span></div><div><div class="prose max-w-none text-sm"><p>Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку без ограничений, 0 — без корректировки (v12.7.1). В заказах type=defect — глубина уценки относительно base_price, величина производная: сумма позиции считается по final_price (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">final_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Конечная цена за единицу после корректировки (v12.7.1). final_price = base_price × (1 - discount_percent / 100); при отрицательном discount_percent итоговая цена может быть выше base_price. В заказах type=promo и type=promo_sample равенство не выполняется: там final_price — цена из награды акции, и она авторитетна (v15.6). В заказах type=defect final_price — цена уценки, заданная закупщиком, и она также авторитетна (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">is_promo</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">boolean</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Позиция выдана акцией, а не куплена клиентом (v15.6).
@@ -7265,8 +7398,23 @@ fallback как <code>false</code> (старые отправители, неу�
 </tr>
 <tr>
 <td><code>shortage</code></td>
-<td>«Недобор при сборке»</td>
+<td>«Недобор при сборке» — недостача</td>
 <td>товара не хватило при сборке на складе</td>
+</tr>
+<tr>
+<td><code>substandard</code></td>
+<td>«Недобор при сборке» — некондиция</td>
+<td>при сборке товар оказался некондицией (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>defect</code></td>
+<td>«Недобор при сборке» — брак</td>
+<td>при сборке товар оказался бракованным (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>supplier_unavailable</code></td>
+<td>«Поставщик не привёз»</td>
+<td>менеджер отменил строку предзаказа: товар от поставщика не пришёл (топик №18)</td>
 </tr>
 <tr>
 <td><code>client</code></td>
@@ -7284,6 +7432,10 @@ fallback как <code>false</code> (старые отправители, неу�
 <td>причины маркетплейсов, ручные причины менеджера</td>
 </tr>
 </tbody></table>
+<p>Тип недобора 1С определяет по каждой недобранной штуке. Если в строке недобраны
+штуки разных типов, отменённая часть делится на строки по типам — у каждой своя
+причина и свой <code>line_number</code>; новые строки идут в конец, номера остальных не
+сдвигаются.</p>
 <p><strong>Это намеренно не <code>enum</code>.</strong> Неизвестное значение сайт принимает и трактует
 как <code>other</code>: новая причина в 1С не должна останавливать приём заказа.
 Сообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.</p>
@@ -7292,7 +7444,7 @@ fallback как <code>false</code> (старые отправители, неу�
 Схема не требует поле при <code>cancelled = true</code> намеренно: причина — аналитический
 признак, и отбрасывать из-за него весь <code>order.updated</code> (статус, состав, сумму)
 несоразмерно.</p>
-</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
+</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;substandard&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;defect&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;supplier_unavailable&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">discount_percent</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&lt;= 100</span></div><div><div class="prose max-w-none text-sm"><p>Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку без ограничений, 0 — без корректировки (v12.7.1). В заказах type=defect — глубина уценки относительно base_price, величина производная: сумма позиции считается по final_price (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">final_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Конечная цена за единицу после корректировки (v12.7.1). final_price = base_price × (1 - discount_percent / 100); при отрицательном discount_percent итоговая цена может быть выше base_price. В заказах type=promo и type=promo_sample равенство не выполняется: там final_price — цена из награды акции, и она авторитетна (v15.6). В заказах type=defect final_price — цена уценки, заданная закупщиком, и она также авторитетна (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">is_promo</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">boolean</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Позиция выдана акцией, а не куплена клиентом (v15.6).
@@ -7519,8 +7671,23 @@ fallback как <code>false</code> (старые отправители, неу�
 </tr>
 <tr>
 <td><code>shortage</code></td>
-<td>«Недобор при сборке»</td>
+<td>«Недобор при сборке» — недостача</td>
 <td>товара не хватило при сборке на складе</td>
+</tr>
+<tr>
+<td><code>substandard</code></td>
+<td>«Недобор при сборке» — некондиция</td>
+<td>при сборке товар оказался некондицией (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>defect</code></td>
+<td>«Недобор при сборке» — брак</td>
+<td>при сборке товар оказался бракованным (следующая поставка 1С после v16.17.0)</td>
+</tr>
+<tr>
+<td><code>supplier_unavailable</code></td>
+<td>«Поставщик не привёз»</td>
+<td>менеджер отменил строку предзаказа: товар от поставщика не пришёл (топик №18)</td>
 </tr>
 <tr>
 <td><code>client</code></td>
@@ -7538,6 +7705,10 @@ fallback как <code>false</code> (старые отправители, неу�
 <td>причины маркетплейсов, ручные причины менеджера</td>
 </tr>
 </tbody></table>
+<p>Тип недобора 1С определяет по каждой недобранной штуке. Если в строке недобраны
+штуки разных типов, отменённая часть делится на строки по типам — у каждой своя
+причина и свой <code>line_number</code>; новые строки идут в конец, номера остальных не
+сдвигаются.</p>
 <p><strong>Это намеренно не <code>enum</code>.</strong> Неизвестное значение сайт принимает и трактует
 как <code>other</code>: новая причина в 1С не должна останавливать приём заказа.
 Сообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.</p>
@@ -7546,7 +7717,7 @@ fallback как <code>false</code> (старые отправители, неу�
 Схема не требует поле при <code>cancelled = true</code> намеренно: причина — аналитический
 признак, и отбрасывать из-за него весь <code>order.updated</code> (статус, состав, сумму)
 несоразмерно.</p>
-</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
+</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;out_of_stock&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;shortage&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;substandard&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;defect&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;supplier_unavailable&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;client&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;reserve_expired&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;other&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">base_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Базовая цена за единицу (до скидки, v7). Всегда прайсовая цена карточки товара — в том числе в заказах type=defect, где цена уценки передаётся в final_price, а base_price остаётся базовой ценой товара-родителя (v15.9.3). В сообщениях Сайт → 1С сайт гарантирует (v16.11.1): в обычной позиции base_price &gt; 0 и base_price &gt;= final_price. Если прайсовой цены у карточки нет (товар заведён product.created, price.updated по нему не приходил), сайт присылает base_price = final_price и discount_percent = 0 — иначе строка документа в 1С посчиталась бы от нуля</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">discount_percent</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&lt;= 100</span></div><div><div class="prose max-w-none text-sm"><p>Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку без ограничений, 0 — без корректировки (v12.7.1). В заказах type=defect — глубина уценки относительно base_price, величина производная: сумма позиции считается по final_price (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">final_price</span><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>Конечная цена за единицу после корректировки (v12.7.1). final_price = base_price × (1 - discount_percent / 100); при отрицательном discount_percent итоговая цена может быть выше base_price. В заказах type=promo и type=promo_sample равенство не выполняется: там final_price — цена из награды акции, и она авторитетна (v15.6). В заказах type=defect final_price — цена уценки, заданная закупщиком, и она также авторитетна (v15.9.3)</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">is_promo</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">boolean</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Позиция выдана акцией, а не куплена клиентом (v15.6).
@@ -11673,11 +11844,14 @@ GUID листа без дефисов как hex-число → десятичн
                       "examples": [
                         "out_of_stock",
                         "shortage",
+                        "substandard",
+                        "defect",
+                        "supplier_unavailable",
                         "client",
                         "reserve_expired",
                         "other"
                       ],
-                      "description": "Причина отмены строки (v16.17.0). **Только 1С → Сайт**: в сообщениях\nсайта поля нет.\n\nПередаётся только у строк с `cancelled = true`. У активных строк поля нет;\nесли оно всё же пришло, сайт его игнорирует.\n\n| Значение | Причина в 1С | Когда ставится |\n|---|---|---|\n| `out_of_stock` | «Нет остатка» | свободного остатка нет при приёме заказа сайта или при контроле остатка в момент перевода в «К отгрузке» |\n| `shortage` | «Недобор при сборке» | товара не хватило при сборке на складе |\n| `client` | «Отмена клиентом сайта» | строка или заказ отменены с сайта |\n| `reserve_expired` | «Истек срок резерва сайта» | резерв сайта снят по сроку |\n| `other` | любая другая | причины маркетплейсов, ручные причины менеджера |\n\n**Это намеренно не `enum`.** Неизвестное значение сайт принимает и трактует\nкак `other`: новая причина в 1С не должна останавливать приём заказа.\nСообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.\n\nОтсутствие поля и `null` у отменённой строки допустимы и означают «причина\nне передана» — так выглядят сообщения, сформированные до включения v16.17.0.\nСхема не требует поле при `cancelled = true` намеренно: причина — аналитический\nпризнак, и отбрасывать из-за него весь `order.updated` (статус, состав, сумму)\nнесоразмерно.\n",
+                      "description": "Причина отмены строки (v16.17.0). **Только 1С → Сайт**: в сообщениях\nсайта поля нет.\n\nПередаётся только у строк с `cancelled = true`. У активных строк поля нет;\nесли оно всё же пришло, сайт его игнорирует.\n\n| Значение | Причина в 1С | Когда ставится |\n|---|---|---|\n| `out_of_stock` | «Нет остатка» | свободного остатка нет при приёме заказа сайта или при контроле остатка в момент перевода в «К отгрузке» |\n| `shortage` | «Недобор при сборке» — недостача | товара не хватило при сборке на складе |\n| `substandard` | «Недобор при сборке» — некондиция | при сборке товар оказался некондицией (следующая поставка 1С после v16.17.0) |\n| `defect` | «Недобор при сборке» — брак | при сборке товар оказался бракованным (следующая поставка 1С после v16.17.0) |\n| `supplier_unavailable` | «Поставщик не привёз» | менеджер отменил строку предзаказа: товар от поставщика не пришёл (топик №18) |\n| `client` | «Отмена клиентом сайта» | строка или заказ отменены с сайта |\n| `reserve_expired` | «Истек срок резерва сайта» | резерв сайта снят по сроку |\n| `other` | любая другая | причины маркетплейсов, ручные причины менеджера |\n\nТип недобора 1С определяет по каждой недобранной штуке. Если в строке недобраны\nштуки разных типов, отменённая часть делится на строки по типам — у каждой своя\nпричина и свой `line_number`; новые строки идут в конец, номера остальных не\nсдвигаются.\n\n**Это намеренно не `enum`.** Неизвестное значение сайт принимает и трактует\nкак `other`: новая причина в 1С не должна останавливать приём заказа.\nСообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.\n\nОтсутствие поля и `null` у отменённой строки допустимы и означают «причина\nне передана» — так выглядят сообщения, сформированные до включения v16.17.0.\nСхема не требует поле при `cancelled = true` намеренно: причина — аналитический\nпризнак, и отбрасывать из-за него весь `order.updated` (статус, состав, сумму)\nнесоразмерно.\n",
                       "x-parser-schema-id": "<anonymous-schema-285>"
                     },
                     "base_price": {
@@ -12108,7 +12282,7 @@ GUID листа без дефисов как hex-число → десятичн
                       "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.items.items.properties.cancel_reason.type",
                       "maxLength": 64,
                       "examples": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.items.items.properties.cancel_reason.examples",
-                      "description": "Причина отмены строки (v16.17.0). **Только 1С → Сайт**: в сообщениях\nсайта поля нет.\n\nПередаётся только у строк с `cancelled = true`. У активных строк поля нет;\nесли оно всё же пришло, сайт его игнорирует.\n\n| Значение | Причина в 1С | Когда ставится |\n|---|---|---|\n| `out_of_stock` | «Нет остатка» | свободного остатка нет при приёме заказа сайта или при контроле остатка в момент перевода в «К отгрузке» |\n| `shortage` | «Недобор при сборке» | товара не хватило при сборке на складе |\n| `client` | «Отмена клиентом сайта» | строка или заказ отменены с сайта |\n| `reserve_expired` | «Истек срок резерва сайта» | резерв сайта снят по сроку |\n| `other` | любая другая | причины маркетплейсов, ручные причины менеджера |\n\n**Это намеренно не `enum`.** Неизвестное значение сайт принимает и трактует\nкак `other`: новая причина в 1С не должна останавливать приём заказа.\nСообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.\n\nОтсутствие поля и `null` у отменённой строки допустимы и означают «причина\nне передана» — так выглядят сообщения, сформированные до включения v16.17.0.\nСхема не требует поле при `cancelled = true` намеренно: причина — аналитический\nпризнак, и отбрасывать из-за него весь `order.updated` (статус, состав, сумму)\nнесоразмерно.\n",
+                      "description": "Причина отмены строки (v16.17.0). **Только 1С → Сайт**: в сообщениях\nсайта поля нет.\n\nПередаётся только у строк с `cancelled = true`. У активных строк поля нет;\nесли оно всё же пришло, сайт его игнорирует.\n\n| Значение | Причина в 1С | Когда ставится |\n|---|---|---|\n| `out_of_stock` | «Нет остатка» | свободного остатка нет при приёме заказа сайта или при контроле остатка в момент перевода в «К отгрузке» |\n| `shortage` | «Недобор при сборке» — недостача | товара не хватило при сборке на складе |\n| `substandard` | «Недобор при сборке» — некондиция | при сборке товар оказался некондицией (следующая поставка 1С после v16.17.0) |\n| `defect` | «Недобор при сборке» — брак | при сборке товар оказался бракованным (следующая поставка 1С после v16.17.0) |\n| `supplier_unavailable` | «Поставщик не привёз» | менеджер отменил строку предзаказа: товар от поставщика не пришёл (топик №18) |\n| `client` | «Отмена клиентом сайта» | строка или заказ отменены с сайта |\n| `reserve_expired` | «Истек срок резерва сайта» | резерв сайта снят по сроку |\n| `other` | любая другая | причины маркетплейсов, ручные причины менеджера |\n\nТип недобора 1С определяет по каждой недобранной штуке. Если в строке недобраны\nштуки разных типов, отменённая часть делится на строки по типам — у каждой своя\nпричина и свой `line_number`; новые строки идут в конец, номера остальных не\nсдвигаются.\n\n**Это намеренно не `enum`.** Неизвестное значение сайт принимает и трактует\nкак `other`: новая причина в 1С не должна останавливать приём заказа.\nСообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.\n\nОтсутствие поля и `null` у отменённой строки допустимы и означают «причина\nне передана» — так выглядят сообщения, сформированные до включения v16.17.0.\nСхема не требует поле при `cancelled = true` намеренно: причина — аналитический\nпризнак, и отбрасывать из-за него весь `order.updated` (статус, состав, сумму)\nнесоразмерно.\n",
                       "x-parser-schema-id": "<anonymous-schema-337>"
                     },
                     "base_price": {
@@ -18301,7 +18475,7 @@ GUID листа без дефисов как hex-число → десятичн
                       "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.items.items.properties.cancel_reason.type",
                       "maxLength": 64,
                       "examples": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.items.items.properties.cancel_reason.examples",
-                      "description": "Причина отмены строки (v16.17.0). **Только 1С → Сайт**: в сообщениях\nсайта поля нет.\n\nПередаётся только у строк с `cancelled = true`. У активных строк поля нет;\nесли оно всё же пришло, сайт его игнорирует.\n\n| Значение | Причина в 1С | Когда ставится |\n|---|---|---|\n| `out_of_stock` | «Нет остатка» | свободного остатка нет при приёме заказа сайта или при контроле остатка в момент перевода в «К отгрузке» |\n| `shortage` | «Недобор при сборке» | товара не хватило при сборке на складе |\n| `client` | «Отмена клиентом сайта» | строка или заказ отменены с сайта |\n| `reserve_expired` | «Истек срок резерва сайта» | резерв сайта снят по сроку |\n| `other` | любая другая | причины маркетплейсов, ручные причины менеджера |\n\n**Это намеренно не `enum`.** Неизвестное значение сайт принимает и трактует\nкак `other`: новая причина в 1С не должна останавливать приём заказа.\nСообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.\n\nОтсутствие поля и `null` у отменённой строки допустимы и означают «причина\nне передана» — так выглядят сообщения, сформированные до включения v16.17.0.\nСхема не требует поле при `cancelled = true` намеренно: причина — аналитический\nпризнак, и отбрасывать из-за него весь `order.updated` (статус, состав, сумму)\nнесоразмерно.\n",
+                      "description": "Причина отмены строки (v16.17.0). **Только 1С → Сайт**: в сообщениях\nсайта поля нет.\n\nПередаётся только у строк с `cancelled = true`. У активных строк поля нет;\nесли оно всё же пришло, сайт его игнорирует.\n\n| Значение | Причина в 1С | Когда ставится |\n|---|---|---|\n| `out_of_stock` | «Нет остатка» | свободного остатка нет при приёме заказа сайта или при контроле остатка в момент перевода в «К отгрузке» |\n| `shortage` | «Недобор при сборке» — недостача | товара не хватило при сборке на складе |\n| `substandard` | «Недобор при сборке» — некондиция | при сборке товар оказался некондицией (следующая поставка 1С после v16.17.0) |\n| `defect` | «Недобор при сборке» — брак | при сборке товар оказался бракованным (следующая поставка 1С после v16.17.0) |\n| `supplier_unavailable` | «Поставщик не привёз» | менеджер отменил строку предзаказа: товар от поставщика не пришёл (топик №18) |\n| `client` | «Отмена клиентом сайта» | строка или заказ отменены с сайта |\n| `reserve_expired` | «Истек срок резерва сайта» | резерв сайта снят по сроку |\n| `other` | любая другая | причины маркетплейсов, ручные причины менеджера |\n\nТип недобора 1С определяет по каждой недобранной штуке. Если в строке недобраны\nштуки разных типов, отменённая часть делится на строки по типам — у каждой своя\nпричина и свой `line_number`; новые строки идут в конец, номера остальных не\nсдвигаются.\n\n**Это намеренно не `enum`.** Неизвестное значение сайт принимает и трактует\nкак `other`: новая причина в 1С не должна останавливать приём заказа.\nСообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.\n\nОтсутствие поля и `null` у отменённой строки допустимы и означают «причина\nне передана» — так выглядят сообщения, сформированные до включения v16.17.0.\nСхема не требует поле при `cancelled = true` намеренно: причина — аналитический\nпризнак, и отбрасывать из-за него весь `order.updated` (статус, состав, сумму)\nнесоразмерно.\n",
                       "x-parser-schema-id": "<anonymous-schema-1076>"
                     },
                     "base_price": {
@@ -21681,7 +21855,7 @@ GUID листа без дефисов как hex-число → десятичн
             "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.items.items.properties.cancel_reason.type",
             "maxLength": 64,
             "examples": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.items.items.properties.cancel_reason.examples",
-            "description": "Причина отмены строки (v16.17.0). **Только 1С → Сайт**: в сообщениях\nсайта поля нет.\n\nПередаётся только у строк с `cancelled = true`. У активных строк поля нет;\nесли оно всё же пришло, сайт его игнорирует.\n\n| Значение | Причина в 1С | Когда ставится |\n|---|---|---|\n| `out_of_stock` | «Нет остатка» | свободного остатка нет при приёме заказа сайта или при контроле остатка в момент перевода в «К отгрузке» |\n| `shortage` | «Недобор при сборке» | товара не хватило при сборке на складе |\n| `client` | «Отмена клиентом сайта» | строка или заказ отменены с сайта |\n| `reserve_expired` | «Истек срок резерва сайта» | резерв сайта снят по сроку |\n| `other` | любая другая | причины маркетплейсов, ручные причины менеджера |\n\n**Это намеренно не `enum`.** Неизвестное значение сайт принимает и трактует\nкак `other`: новая причина в 1С не должна останавливать приём заказа.\nСообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.\n\nОтсутствие поля и `null` у отменённой строки допустимы и означают «причина\nне передана» — так выглядят сообщения, сформированные до включения v16.17.0.\nСхема не требует поле при `cancelled = true` намеренно: причина — аналитический\nпризнак, и отбрасывать из-за него весь `order.updated` (статус, состав, сумму)\nнесоразмерно.\n",
+            "description": "Причина отмены строки (v16.17.0). **Только 1С → Сайт**: в сообщениях\nсайта поля нет.\n\nПередаётся только у строк с `cancelled = true`. У активных строк поля нет;\nесли оно всё же пришло, сайт его игнорирует.\n\n| Значение | Причина в 1С | Когда ставится |\n|---|---|---|\n| `out_of_stock` | «Нет остатка» | свободного остатка нет при приёме заказа сайта или при контроле остатка в момент перевода в «К отгрузке» |\n| `shortage` | «Недобор при сборке» — недостача | товара не хватило при сборке на складе |\n| `substandard` | «Недобор при сборке» — некондиция | при сборке товар оказался некондицией (следующая поставка 1С после v16.17.0) |\n| `defect` | «Недобор при сборке» — брак | при сборке товар оказался бракованным (следующая поставка 1С после v16.17.0) |\n| `supplier_unavailable` | «Поставщик не привёз» | менеджер отменил строку предзаказа: товар от поставщика не пришёл (топик №18) |\n| `client` | «Отмена клиентом сайта» | строка или заказ отменены с сайта |\n| `reserve_expired` | «Истек срок резерва сайта» | резерв сайта снят по сроку |\n| `other` | любая другая | причины маркетплейсов, ручные причины менеджера |\n\nТип недобора 1С определяет по каждой недобранной штуке. Если в строке недобраны\nштуки разных типов, отменённая часть делится на строки по типам — у каждой своя\nпричина и свой `line_number`; новые строки идут в конец, номера остальных не\nсдвигаются.\n\n**Это намеренно не `enum`.** Неизвестное значение сайт принимает и трактует\nкак `other`: новая причина в 1С не должна останавливать приём заказа.\nСообщение при этом обрабатывается целиком, в журнал сайта пишется предупреждение.\n\nОтсутствие поля и `null` у отменённой строки допустимы и означают «причина\nне передана» — так выглядят сообщения, сформированные до включения v16.17.0.\nСхема не требует поле при `cancelled = true` намеренно: причина — аналитический\nпризнак, и отбрасывать из-за него весь `order.updated` (статус, состав, сумму)\nнесоразмерно.\n",
             "x-parser-schema-id": "<anonymous-schema-1341>"
           },
           "base_price": {

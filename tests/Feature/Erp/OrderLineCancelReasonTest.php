@@ -4,6 +4,7 @@ namespace Tests\Feature\Erp;
 
 use App\Enums\Order\OrderLineCancelReason;
 use App\Enums\OrderType;
+use App\Enums\Shortage\ShortageReasonCategory;
 use App\Models\Order;
 use App\Models\OrderChangeLog;
 use App\Models\OrderItem;
@@ -210,13 +211,105 @@ class OrderLineCancelReasonTest extends TestCase
     {
         $order = $this->siteOrder('17000000-0000-4000-a000-000000000003', [[$this->productA(), 1]]);
 
-        foreach (['out_of_stock', 'shortage', 'client', 'reserve_expired', 'other'] as $value) {
+        foreach (['out_of_stock', 'shortage', 'substandard', 'defect', 'supplier_unavailable', 'client', 'reserve_expired', 'other'] as $value) {
             $this->fire($this->orderUpdated($order, [
                 $this->line(1, 1, cancelled: true, extra: ['cancel_reason' => $value]),
             ], 'msg-17-value-'.$value));
 
             $this->assertSame($value, $order->items()->sole()->erp_cancel_reason->value);
         }
+    }
+
+    #[Test]
+    public function shortfall_of_three_kinds_in_one_line_becomes_three_cancelled_lines(): void
+    {
+        Log::spy();
+
+        // Пример 1С (топик №17, seq 8): строка на 4 шт, недобраны 1 некондиция, 1 брак и 1 недостача.
+        // Строка остаётся активной на 1 шт, три отменённые по 1 шт уходят в конец со своими причинами.
+        $order = $this->siteOrder('17000000-0000-4000-a000-000000000012', [[$this->productA(), 4], [$this->productB(), 2]]);
+        [$first, $second] = $order->items()->orderBy('line_number')->get()->all();
+
+        $this->fire($this->orderUpdated($order, [
+            $this->line(1, 1, cancelled: false),
+            $this->line(2, 2, cancelled: false, productUuid: self::PRODUCT_B),
+            $this->line(3, 1, cancelled: true, extra: ['cancel_reason' => 'substandard']),
+            $this->line(4, 1, cancelled: true, extra: ['cancel_reason' => 'defect']),
+            $this->line(5, 1, cancelled: true, extra: ['cancel_reason' => 'shortage']),
+        ], 'msg-17-three-kinds'));
+
+        $this->assertDatabaseHas('erp_processed_messages', ['message_id' => 'msg-17-three-kinds']);
+        $this->assertDatabaseMissing('erp_validation_errors', ['message_id' => 'msg-17-three-kinds']);
+
+        $items = $order->items()->orderBy('line_number')->get();
+        $this->assertCount(5, $items);
+
+        $this->assertSame($first->id, $items[0]->id, 'активная часть — та же строка сайта');
+        $this->assertSame(1, $items[0]->quantity);
+        $this->assertFalse($items[0]->cancelled);
+
+        $this->assertSame($second->id, $items[1]->id, 'номера остальных строк не сдвинулись');
+        $this->assertSame(2, $items[1]->quantity);
+        $this->assertFalse($items[1]->cancelled);
+
+        $this->assertSame(
+            [OrderLineCancelReason::SUBSTANDARD, OrderLineCancelReason::DEFECT, OrderLineCancelReason::SHORTAGE],
+            $items->slice(2)->map(fn ($item) => $item->erp_cancel_reason)->values()->all(),
+        );
+        $this->assertTrue($items->slice(2)->every(fn ($item) => $item->cancelled && $item->quantity === 1));
+
+        // Значения сайту известны: предупреждения «неизвестная причина» быть не должно.
+        Log::shouldNotHaveReceived('warning', [\Mockery::on(fn ($message) => is_string($message) && str_contains($message, 'неизвестная причина отмены')), \Mockery::any()]);
+    }
+
+    #[Test]
+    public function supplier_unavailable_on_a_preorder_line_is_stored_as_is(): void
+    {
+        Log::spy();
+
+        // Топик №18: менеджер отменяет строку предзаказа с причиной «Поставщик не привёз».
+        $order = $this->siteOrder('17000000-0000-4000-a000-000000000013', [[$this->productA(), 2]]);
+
+        $this->fire($this->orderUpdated($order, [
+            $this->line(1, 2, cancelled: true, extra: ['cancel_reason' => 'supplier_unavailable']),
+        ], 'msg-18-supplier'));
+
+        $this->assertDatabaseMissing('erp_validation_errors', ['message_id' => 'msg-18-supplier']);
+
+        $item = $order->items()->sole();
+        $this->assertTrue($item->cancelled);
+        $this->assertSame(OrderLineCancelReason::SUPPLIER_UNAVAILABLE, $item->erp_cancel_reason);
+
+        Log::shouldNotHaveReceived('warning', [\Mockery::on(fn ($message) => is_string($message) && str_contains($message, 'неизвестная причина отмены')), \Mockery::any()]);
+    }
+
+    #[Test]
+    public function new_values_have_labels_category_hints_and_count_as_shortfall(): void
+    {
+        $expected = [
+            'substandard' => ['Некондиция при сборке', 'Отменена — нет в наличии', ShortageReasonCategory::WAREHOUSE],
+            'defect' => ['Брак при сборке', 'Отменена — нет в наличии', ShortageReasonCategory::WAREHOUSE],
+            'supplier_unavailable' => ['Поставщик не привёз', 'Отменена — поставщик не привёз', ShortageReasonCategory::SUPPLY],
+        ];
+
+        foreach ($expected as $value => [$label, $clientLabel, $category]) {
+            $this->assertTrue(OrderLineCancelReason::isKnown($value));
+
+            $reason = OrderLineCancelReason::fromErp($value);
+            $this->assertNotSame(OrderLineCancelReason::OTHER, $reason, $value.' больше не сводится к «другой причине»');
+            $this->assertSame($label, $reason->label());
+            $this->assertSame($clientLabel, $reason->clientLabel());
+            $this->assertSame($category, $reason->suggestedCategory());
+            $this->assertNotSame('', $reason->description());
+            // Письмо «части товара не хватило» — как для shortage, в том числе по заказу в резерве.
+            $this->assertTrue($reason->isShortfall());
+            $this->assertTrue($reason->isConfirmedStockShortfall());
+        }
+
+        // Прежние значения не сдвинулись.
+        $this->assertSame(ShortageReasonCategory::WAREHOUSE, OrderLineCancelReason::SHORTAGE->suggestedCategory());
+        $this->assertFalse(OrderLineCancelReason::OTHER->isConfirmedStockShortfall());
+        $this->assertFalse(OrderLineCancelReason::CLIENT->isShortfall());
     }
 
     #[Test]
