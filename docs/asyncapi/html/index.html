@@ -2666,9 +2666,10 @@ Routing key: <code>goods_issue.*</code></p>
 <code>mixed</code> — сочетание (обмеряются все места);
 <code>null</code> — не определён (неизвестный способ, распоряжения не-заказы, нет прав на данные),
 самовывозом <strong>не</strong> считается.</p>
-<p>Сайт сверяет способ со своими заказами: расхождение <code>pickup</code> ↔ <code>delivery</code> и <code>null</code> дают
-оговорку в журнале шины рядом с принятым сообщением. Сайт сохраняет обмер и способ,
-расчёт по ним — в блоке логистики, сейчас не блокируется.</p>
+<p>Сайт сверяет способ со своими заказами: расхождение <code>pickup</code> ↔ <code>delivery</code> и <code>null</code>
+при нужном обмере (<code>pending</code>/<code>done</code>) дают оговорку в журнале шины рядом с принятым
+сообщением. Сайт сохраняет обмер и способ, расчёт по ним — в блоке логистики, сейчас
+не блокируется.</p>
 </div></div><ul class="text-xs">Allowed values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;pickup&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;delivery&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;mixed&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>null</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">measurement</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">object | null</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p><strong>(v16.14.0)</strong> Состояние обмера грузовых мест упаковщиком. Передаётся вместе
 с полным <code>packages</code> одним снимком. Габариты пригодны для расчёта доставки только при
 <code>state = done</code> в сообщении с <code>revision</code>.</p>
@@ -2907,9 +2908,10 @@ Routing key: <code>goods_issue.*</code></p>
 <code>mixed</code> — сочетание (обмеряются все места);
 <code>null</code> — не определён (неизвестный способ, распоряжения не-заказы, нет прав на данные),
 самовывозом <strong>не</strong> считается.</p>
-<p>Сайт сверяет способ со своими заказами: расхождение <code>pickup</code> ↔ <code>delivery</code> и <code>null</code> дают
-оговорку в журнале шины рядом с принятым сообщением. Сайт сохраняет обмер и способ,
-расчёт по ним — в блоке логистики, сейчас не блокируется.</p>
+<p>Сайт сверяет способ со своими заказами: расхождение <code>pickup</code> ↔ <code>delivery</code> и <code>null</code>
+при нужном обмере (<code>pending</code>/<code>done</code>) дают оговорку в журнале шины рядом с принятым
+сообщением. Сайт сохраняет обмер и способ, расчёт по ним — в блоке логистики, сейчас
+не блокируется.</p>
 </div></div><ul class="text-xs">Allowed values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;pickup&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;delivery&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;mixed&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>null</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">measurement</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">object | null</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p><strong>(v16.14.0)</strong> Состояние обмера грузовых мест упаковщиком. Передаётся вместе
 с полным <code>packages</code> одним снимком. Габариты пригодны для расчёта доставки только при
 <code>state = done</code> в сообщении с <code>revision</code>.</p>
@@ -5809,9 +5811,10 @@ docs-erp/content/rules/returns.md).</p>
 <code>mixed</code> — сочетание (обмеряются все места);
 <code>null</code> — не определён (неизвестный способ, распоряжения не-заказы, нет прав на данные),
 самовывозом <strong>не</strong> считается.</p>
-<p>Сайт сверяет способ со своими заказами: расхождение <code>pickup</code> ↔ <code>delivery</code> и <code>null</code> дают
-оговорку в журнале шины рядом с принятым сообщением. Сайт сохраняет обмер и способ,
-расчёт по ним — в блоке логистики, сейчас не блокируется.</p>
+<p>Сайт сверяет способ со своими заказами: расхождение <code>pickup</code> ↔ <code>delivery</code> и <code>null</code>
+при нужном обмере (<code>pending</code>/<code>done</code>) дают оговорку в журнале шины рядом с принятым
+сообщением. Сайт сохраняет обмер и способ, расчёт по ним — в блоке логистики, сейчас
+не блокируется.</p>
 </div></div><ul class="text-xs">Allowed values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;pickup&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;delivery&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;mixed&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>null</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">measurement</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">object | null</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p><strong>(v16.14.0)</strong> Состояние обмера грузовых мест упаковщиком. Передаётся вместе
 с полным <code>packages</code> одним снимком. Габариты пригодны для расчёта доставки только при
 <code>state = done</code> в сообщении с <code>revision</code>.</p>
@@ -5986,9 +5989,10 @@ GUID листа без дефисов как hex-число → десятичн
 <code>mixed</code> — сочетание (обмеряются все места);
 <code>null</code> — не определён (неизвестный способ, распоряжения не-заказы, нет прав на данные),
 самовывозом <strong>не</strong> считается.</p>
-<p>Сайт сверяет способ со своими заказами: расхождение <code>pickup</code> ↔ <code>delivery</code> и <code>null</code> дают
-оговорку в журнале шины рядом с принятым сообщением. Сайт сохраняет обмер и способ,
-расчёт по ним — в блоке логистики, сейчас не блокируется.</p>
+<p>Сайт сверяет способ со своими заказами: расхождение <code>pickup</code> ↔ <code>delivery</code> и <code>null</code>
+при нужном обмере (<code>pending</code>/<code>done</code>) дают оговорку в журнале шины рядом с принятым
+сообщением. Сайт сохраняет обмер и способ, расчёт по ним — в блоке логистики, сейчас
+не блокируется.</p>
 </div></div><ul class="text-xs">Allowed values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;pickup&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;delivery&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;mixed&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>null</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">measurement</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">object | null</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p><strong>(v16.14.0)</strong> Состояние обмера грузовых мест упаковщиком. Передаётся вместе
 с полным <code>packages</code> одним снимком. Габариты пригодны для расчёта доставки только при
 <code>state = done</code> в сообщении с <code>revision</code>.</p>
@@ -7932,9 +7936,10 @@ docs-erp/content/rules/returns.md).</p>
 <code>mixed</code> — сочетание (обмеряются все места);
 <code>null</code> — не определён (неизвестный способ, распоряжения не-заказы, нет прав на данные),
 самовывозом <strong>не</strong> считается.</p>
-<p>Сайт сверяет способ со своими заказами: расхождение <code>pickup</code> ↔ <code>delivery</code> и <code>null</code> дают
-оговорку в журнале шины рядом с принятым сообщением. Сайт сохраняет обмер и способ,
-расчёт по ним — в блоке логистики, сейчас не блокируется.</p>
+<p>Сайт сверяет способ со своими заказами: расхождение <code>pickup</code> ↔ <code>delivery</code> и <code>null</code>
+при нужном обмере (<code>pending</code>/<code>done</code>) дают оговорку в журнале шины рядом с принятым
+сообщением. Сайт сохраняет обмер и способ, расчёт по ним — в блоке логистики, сейчас
+не блокируется.</p>
 </div></div><ul class="text-xs">Allowed values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;pickup&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;delivery&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;mixed&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>null</span></li></ul></div></div></div></div></div></div><div class="w-full mt-4"></div></div></li><li class="mb-4" id="schema-GoodsIssueMeasurement"><div><div class="panel-item--center px-8"><div class="shadow rounded px-4 py-2 border bg-gray-200"><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm ">GoodsIssueMeasurement</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">object | null</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p><strong>(v16.14.0)</strong> Состояние обмера грузовых мест упаковщиком. Передаётся вместе
 с полным <code>packages</code> одним снимком. Габариты пригодны для расчёта доставки только при
 <code>state = done</code> в сообщении с <code>revision</code>.</p>
@@ -8111,9 +8116,10 @@ GUID листа без дефисов как hex-число → десятичн
 <code>mixed</code> — сочетание (обмеряются все места);
 <code>null</code> — не определён (неизвестный способ, распоряжения не-заказы, нет прав на данные),
 самовывозом <strong>не</strong> считается.</p>
-<p>Сайт сверяет способ со своими заказами: расхождение <code>pickup</code> ↔ <code>delivery</code> и <code>null</code> дают
-оговорку в журнале шины рядом с принятым сообщением. Сайт сохраняет обмер и способ,
-расчёт по ним — в блоке логистики, сейчас не блокируется.</p>
+<p>Сайт сверяет способ со своими заказами: расхождение <code>pickup</code> ↔ <code>delivery</code> и <code>null</code>
+при нужном обмере (<code>pending</code>/<code>done</code>) дают оговорку в журнале шины рядом с принятым
+сообщением. Сайт сохраняет обмер и способ, расчёт по ним — в блоке логистики, сейчас
+не блокируется.</p>
 </div></div><ul class="text-xs">Allowed values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;pickup&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;delivery&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;mixed&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>null</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">measurement</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">object | null</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p><strong>(v16.14.0)</strong> Состояние обмера грузовых мест упаковщиком. Передаётся вместе
 с полным <code>packages</code> одним снимком. Габариты пригодны для расчёта доставки только при
 <code>state = done</code> в сообщении с <code>revision</code>.</p>
@@ -8288,9 +8294,10 @@ GUID листа без дефисов как hex-число → десятичн
 <code>mixed</code> — сочетание (обмеряются все места);
 <code>null</code> — не определён (неизвестный способ, распоряжения не-заказы, нет прав на данные),
 самовывозом <strong>не</strong> считается.</p>
-<p>Сайт сверяет способ со своими заказами: расхождение <code>pickup</code> ↔ <code>delivery</code> и <code>null</code> дают
-оговорку в журнале шины рядом с принятым сообщением. Сайт сохраняет обмер и способ,
-расчёт по ним — в блоке логистики, сейчас не блокируется.</p>
+<p>Сайт сверяет способ со своими заказами: расхождение <code>pickup</code> ↔ <code>delivery</code> и <code>null</code>
+при нужном обмере (<code>pending</code>/<code>done</code>) дают оговорку в журнале шины рядом с принятым
+сообщением. Сайт сохраняет обмер и способ, расчёт по ним — в блоке логистики, сейчас
+не блокируется.</p>
 </div></div><ul class="text-xs">Allowed values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;pickup&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;delivery&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>&quot;mixed&quot;</span></li><li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2"><span>null</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">measurement</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">object | null</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p><strong>(v16.14.0)</strong> Состояние обмера грузовых мест упаковщиком. Передаётся вместе
 с полным <code>packages</code> одним снимком. Габариты пригодны для расчёта доставки только при
 <code>state = done</code> в сообщении с <code>revision</code>.</p>
@@ -13719,7 +13726,7 @@ GUID листа без дефисов как hex-число → десятичн
                   "mixed",
                   null
                 ],
-                "description": "**(v16.14.0)** Способ доставки ордера, как его определила 1С по уникальным\nзаказам-распоряжениям строк: `pickup` — все самовывоз; `delivery` — все доставка;\n`mixed` — сочетание (обмеряются все места);\n`null` — не определён (неизвестный способ, распоряжения не-заказы, нет прав на данные),\nсамовывозом **не** считается.\n\nСайт сверяет способ со своими заказами: расхождение `pickup` ↔ `delivery` и `null` дают\nоговорку в журнале шины рядом с принятым сообщением. Сайт сохраняет обмер и способ,\nрасчёт по ним — в блоке логистики, сейчас не блокируется.\n",
+                "description": "**(v16.14.0)** Способ доставки ордера, как его определила 1С по уникальным\nзаказам-распоряжениям строк: `pickup` — все самовывоз; `delivery` — все доставка;\n`mixed` — сочетание (обмеряются все места);\n`null` — не определён (неизвестный способ, распоряжения не-заказы, нет прав на данные),\nсамовывозом **не** считается.\n\nСайт сверяет способ со своими заказами: расхождение `pickup` ↔ `delivery` и `null`\nпри нужном обмере (`pending`/`done`) дают оговорку в журнале шины рядом с принятым\nсообщением. Сайт сохраняет обмер и способ, расчёт по ним — в блоке логистики, сейчас\nне блокируется.\n",
                 "x-parser-schema-id": "<anonymous-schema-521>"
               },
               "measurement": {
@@ -14257,7 +14264,7 @@ GUID листа без дефисов как hex-число → десятичн
               "shipping_mode": {
                 "type": "$ref:$.channels.erpInWarehouse.messages.goodsIssueCreated.payload.properties.shipping_mode.type",
                 "enum": "$ref:$.channels.erpInWarehouse.messages.goodsIssueCreated.payload.properties.shipping_mode.enum",
-                "description": "**(v16.14.0)** Способ доставки ордера, как его определила 1С по уникальным\nзаказам-распоряжениям строк: `pickup` — все самовывоз; `delivery` — все доставка;\n`mixed` — сочетание (обмеряются все места);\n`null` — не определён (неизвестный способ, распоряжения не-заказы, нет прав на данные),\nсамовывозом **не** считается.\n\nСайт сверяет способ со своими заказами: расхождение `pickup` ↔ `delivery` и `null` дают\nоговорку в журнале шины рядом с принятым сообщением. Сайт сохраняет обмер и способ,\nрасчёт по ним — в блоке логистики, сейчас не блокируется.\n",
+                "description": "**(v16.14.0)** Способ доставки ордера, как его определила 1С по уникальным\nзаказам-распоряжениям строк: `pickup` — все самовывоз; `delivery` — все доставка;\n`mixed` — сочетание (обмеряются все места);\n`null` — не определён (неизвестный способ, распоряжения не-заказы, нет прав на данные),\nсамовывозом **не** считается.\n\nСайт сверяет способ со своими заказами: расхождение `pickup` ↔ `delivery` и `null`\nпри нужном обмере (`pending`/`done`) дают оговорку в журнале шины рядом с принятым\nсообщением. Сайт сохраняет обмер и способ, расчёт по ним — в блоке логистики, сейчас\nне блокируется.\n",
                 "x-parser-schema-id": "<anonymous-schema-583>"
               },
               "measurement": {
@@ -22737,7 +22744,7 @@ GUID листа без дефисов как hex-число → десятичн
       "GoodsIssueShippingMode": {
         "type": "$ref:$.channels.erpInWarehouse.messages.goodsIssueCreated.payload.properties.shipping_mode.type",
         "enum": "$ref:$.channels.erpInWarehouse.messages.goodsIssueCreated.payload.properties.shipping_mode.enum",
-        "description": "**(v16.14.0)** Способ доставки ордера, как его определила 1С по уникальным\nзаказам-распоряжениям строк: `pickup` — все самовывоз; `delivery` — все доставка;\n`mixed` — сочетание (обмеряются все места);\n`null` — не определён (неизвестный способ, распоряжения не-заказы, нет прав на данные),\nсамовывозом **не** считается.\n\nСайт сверяет способ со своими заказами: расхождение `pickup` ↔ `delivery` и `null` дают\nоговорку в журнале шины рядом с принятым сообщением. Сайт сохраняет обмер и способ,\nрасчёт по ним — в блоке логистики, сейчас не блокируется.\n",
+        "description": "**(v16.14.0)** Способ доставки ордера, как его определила 1С по уникальным\nзаказам-распоряжениям строк: `pickup` — все самовывоз; `delivery` — все доставка;\n`mixed` — сочетание (обмеряются все места);\n`null` — не определён (неизвестный способ, распоряжения не-заказы, нет прав на данные),\nсамовывозом **не** считается.\n\nСайт сверяет способ со своими заказами: расхождение `pickup` ↔ `delivery` и `null`\nпри нужном обмере (`pending`/`done`) дают оговорку в журнале шины рядом с принятым\nсообщением. Сайт сохраняет обмер и способ, расчёт по ним — в блоке логистики, сейчас\nне блокируется.\n",
         "x-parser-schema-id": "GoodsIssueShippingMode"
       },
       "GoodsIssueMeasurement": {

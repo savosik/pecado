@@ -350,6 +350,14 @@ class GoodsIssuePayloadMapper
         }
 
         if ($goodsIssue->shipping_mode === null) {
+            // Ордер без заказов клиентов (перемещение и прочие распоряжения) законно приходит
+            // с `null` и `not_required` — так договорились с 1С (топик №13): это не событие.
+            // Оговорка остаётся там, где обмер нужен, а способ неизвестен.
+            if (! is_array($payload['measurement'] ?? null)
+                || $goodsIssue->measurement_state === GoodsIssue::MEASUREMENT_NOT_REQUIRED) {
+                return;
+            }
+
             $this->note($context, $goodsIssue->uuid, 'Способ доставки ордера не определён (shipping_mode = null).');
 
             return;

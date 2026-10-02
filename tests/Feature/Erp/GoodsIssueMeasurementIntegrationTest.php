@@ -463,6 +463,62 @@ class GoodsIssueMeasurementIntegrationTest extends TestCase
     // ───────────────────────── N ─────────────────────────
 
     #[Test]
+    public function n_issue_without_client_orders_is_not_required_and_not_journaled(): void
+    {
+        // Перемещение или иное распоряжение: заказов клиентов нет, способ `null`, обмер не нужен
+        // (топик №13, решение заказчика 02.10.2026). Это норма, а не событие для журнала.
+        $payload = $this->snapshot(10, 'not_required', [$this->box(['weight' => null, 'dimensions' => null])], null);
+        $payload['items'] = array_map(function (array $item): array {
+            unset($item['order_uuid'], $item['order_number']);
+
+            return $item;
+        }, $payload['items']);
+
+        $this->fire($payload);
+
+        $issue = $this->issue();
+        $this->assertNull($issue->shipping_mode);
+        $this->assertFalse($issue->measurement_required);
+        $this->assertSame(GoodsIssue::MEASUREMENT_NOT_REQUIRED, $issue->measurement_state);
+
+        $log = ErpBusMessage::query()->where('event', 'goods_issue.updated')->latest('id')->firstOrFail();
+        $this->assertSame('success', $log->status);
+        $this->assertNull($log->error_message, 'оговорки о неопределённом способе при not_required нет');
+    }
+
+    #[Test]
+    public function n_marketplace_issue_on_delivery_needs_no_measurement(): void
+    {
+        // Заказ маркетплейса: способ остаётся `delivery`, обмер не требуется.
+        $this->fire($this->snapshot(10, 'not_required', [$this->box(['weight' => null, 'dimensions' => null])], 'delivery'));
+
+        $issue = $this->issue();
+        $this->assertSame('delivery', $issue->shipping_mode);
+        $this->assertFalse($issue->measurement_required);
+        $this->assertSame(GoodsIssue::MEASUREMENT_NOT_REQUIRED, $issue->measurement_state);
+
+        $log = ErpBusMessage::query()->where('event', 'goods_issue.updated')->latest('id')->firstOrFail();
+        $this->assertSame('success', $log->status);
+        $this->assertNull($log->error_message);
+    }
+
+    #[Test]
+    public function n_old_format_message_with_null_mode_is_not_journaled(): void
+    {
+        // Старый формат: блока measurement нет вовсе. `shipping_mode: null` рядом — не событие,
+        // даже если по ордеру раньше приходил обмер.
+        $this->fire($this->message(['shipping_mode' => null]));
+
+        $issue = $this->issue();
+        $this->assertNull($issue->shipping_mode);
+        $this->assertNull($issue->measurement_state);
+
+        $log = ErpBusMessage::query()->where('event', 'goods_issue.updated')->latest('id')->firstOrFail();
+        $this->assertSame('success', $log->status);
+        $this->assertNull($log->error_message);
+    }
+
+    #[Test]
     public function n_pickup_issue_needs_no_measurement(): void
     {
         $this->fire($this->snapshot(10, 'not_required', [$this->box(['weight' => null, 'dimensions' => null])], 'pickup', [], [$this->pickupOrder]));
