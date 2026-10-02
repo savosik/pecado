@@ -354,6 +354,9 @@ class RolesAndPermissionsSeeder extends Seeder
                 // CRM: партнёры отдела. Менеджеры взаимозаменяемы — экран открывается
                 // сфокусированным на своих, расфокус остаётся осознанным действием.
                 'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-finance', 'crm-shortages', 'crm-questions', 'crm-contacts', 'crm-contracts' => ['view', 'create', 'edit'], 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-shortage-reasons' => ['view'], 'crm-absences' => ['view'], 'crm-impersonate', 'crm-salary' => ['view'], 'crm-agent-usage',
+                // Мотивация 2.0: Положение действует с 01.07.2026 — работник видит свой месяц,
+                // своих клиентов и расчётный лист. Параметры, планы, ведомость — только у руководителя (edit).
+                'crm-motivation' => ['view'],
             ],
         ],
         'sales-manager-crm' => [
@@ -362,6 +365,9 @@ class RolesAndPermissionsSeeder extends Seeder
                 // Только CRM: в /admin роль намеренно не пускает.
                 // Для менеджеров, которым нужны партнёры отдела, но не нужна админка.
                 'crm-dashboard', 'crm-clients', 'crm-department', 'crm-contractors', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-finance', 'crm-shortages', 'crm-questions', 'crm-contacts', 'crm-contracts' => ['view', 'create', 'edit'], 'crm-leads', 'crm-lead-stages' => ['view'], 'crm-shortage-reasons' => ['view'], 'crm-absences' => ['view'], 'crm-impersonate', 'crm-salary' => ['view'], 'crm-agent-usage',
+                // Мотивация 2.0: Положение действует с 01.07.2026 — работник видит свой месяц,
+                // своих клиентов и расчётный лист. Параметры, планы, ведомость — только у руководителя (edit).
+                'crm-motivation' => ['view'],
             ],
         ],
         'sales-head' => [
@@ -369,7 +375,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
                 'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-department', 'crm-leads', 'crm-lead-stages', 'crm-contractors', 'crm-team', 'crm-absences', 'crm-timesheet', 'crm-profile', 'crm-analytics', 'crm-comments', 'crm-attachments', 'crm-tasks', 'crm-calls', 'crm-emails', 'crm-plans', 'crm-finance', 'crm-shortages', 'crm-questions', 'crm-shortage-reasons', 'crm-reserves', 'crm-contacts', 'crm-contracts', 'crm-agent-tokens', 'crm-agent-usage', 'crm-impersonate', 'crm-salary',
-                // Мотивация 2.0: на время разработки и параллельного расчёта — только руководителю.
+                // Мотивация 2.0: руководителю — полный доступ (параметры, планы, ведомость, пул).
                 'crm-motivation',
                 // Себестоимость руководителю отдела появится вместе с отчётом по марже
                 // и только под `crm-`-префиксом: `product-costs` — админский ресурс,

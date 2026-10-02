@@ -56,14 +56,37 @@ class MotivationPageTest extends TestCase
     }
 
     #[Test]
-    #[TestDox('Менеджер по продажам раздел не видит — ни страницу, ни данные')]
-    public function sales_manager_is_kept_out(): void
+    #[TestDox('Менеджер по продажам видит раздел, но только свой расчёт: чужой manager в адресе игнорируется')]
+    public function sales_manager_sees_only_own_month(): void
     {
-        $this->actingAs($this->manager)->get('/crm/motivation')->assertForbidden();
-        $this->actingAs($this->manager)->get('/crm/motivation/data')->assertForbidden();
-        $this->actingAs($this->manager)->post('/crm/motivation/simulate', [])->assertForbidden();
+        $this->assertTrue($this->manager->can('crm-motivation.view'), 'Положение действует — работник видит свою мотивацию');
+        $this->assertFalse($this->manager->can('crm-motivation.edit'), 'Параметры, планы и ведомость — только руководителю');
 
-        $this->assertFalse($this->manager->can('crm-motivation.view'), 'Роль sales-manager не должна получать право по умолчанию');
+        $this->actingAs($this->manager)
+            ->get('/crm/motivation?manager='.$this->headProfile->id)
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('manager.id', $this->managerProfile->id)
+                ->where('can_see_all', false)
+                ->where('can_edit', false));
+
+        $this->actingAs($this->manager)
+            ->getJson('/crm/motivation/data?manager='.$this->headProfile->id)
+            ->assertOk()
+            ->assertJsonPath('manager.id', $this->managerProfile->id);
+    }
+
+    #[Test]
+    #[TestDox('Сотрудник без права на мотивацию раздел не видит — ни страницу, ни данные')]
+    public function staff_without_permission_is_kept_out(): void
+    {
+        // В CRM пускает, а права на мотивацию нет.
+        $outsider = User::factory()->staff()->create();
+        $outsider->givePermissionTo('crm-dashboard.view');
+
+        $this->actingAs($outsider)->get('/crm/motivation')->assertForbidden();
+        $this->actingAs($outsider)->get('/crm/motivation/data')->assertForbidden();
+        $this->actingAs($outsider)->post('/crm/motivation/simulate', [])->assertForbidden();
     }
 
     #[Test]

@@ -205,15 +205,33 @@ class CrmClientVisibilityTest extends TestCase
         $this->clientsOf($this->profileA, 1);
         $free = User::factory()->create(['personal_manager_id' => null]);
 
+        // Работник видит свою мотивацию, но карточку свободного партнёра открывает,
+        // только когда тот выдан ему пакетом: право смотреть раздел не открывает весь Пул.
         $this->actingAs($this->managerA)
             ->get(route('crm.clients.show', $free->id))
             ->assertNotFound();
 
-        $this->managerA->givePermissionTo('crm-motivation.view');
+        $package = \App\Models\Motivation\MotivationPoolPackage::query()->create([
+            'personal_manager_id' => $this->profileA->id,
+            'issued_on' => now()->toDateString(),
+            'contact_due_on' => now()->addDays(14)->toDateString(),
+            'shipment_due_on' => now()->addDays(90)->toDateString(),
+            'status' => \App\Models\Motivation\MotivationPoolPackage::STATUS_ACTIVE,
+        ]);
+        \App\Models\Motivation\MotivationPoolPackageItem::query()->create([
+            'package_id' => $package->id,
+            'user_id' => $free->id,
+            'outcome' => \App\Models\Motivation\MotivationPoolPackageItem::OUTCOME_IN_PROGRESS,
+        ]);
 
         $this->actingAs($this->managerA->fresh())
             ->get(route('crm.clients.show', $free->id))
             ->assertOk();
+
+        // Чужой пакет и невыданный партнёр остаются закрытыми.
+        $notIssued = User::factory()->create(['personal_manager_id' => null]);
+        $this->actingAs($this->managerA->fresh())->get(route('crm.clients.show', $notIssued->id))->assertNotFound();
+        $this->actingAs($this->managerB)->get(route('crm.clients.show', $free->id))->assertNotFound();
 
         // Вкладки карточки резолвят партнёра тем же правилом: лента и
         // уведомления открываются, а не падают в 404 после открытой карточки.

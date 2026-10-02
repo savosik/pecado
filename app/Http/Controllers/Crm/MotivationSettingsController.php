@@ -172,12 +172,27 @@ class MotivationSettingsController extends CrmController
             ];
         }
 
-        return $this->orders->overview($month) + [
+        $canEdit = $actor->can('crm-motivation.edit');
+        $overview = $this->orders->overview($month);
+
+        // Работник видит общие параметры приказа и только свои персональные условия:
+        // в отклонениях лежит база гарантии — средняя оплата труда каждого работника.
+        if (! $canEdit) {
+            $ownId = (int) ($actor->managerProfile?->getKey() ?? 0);
+            $overview['personal'] = array_values(array_filter(
+                $overview['personal'],
+                fn (array $row): bool => (int) $row['manager_id'] === $ownId,
+            ));
+        }
+
+        return $overview + [
             'month_label' => MonthLabel::ru($month),
             'months' => $this->months(),
-            'can_edit' => $actor->can('crm-motivation.edit'),
-            'managers' => PersonalManager::query()->active()->where('payroll_enabled', true)->orderBy('name')->get(['id', 'name'])
-                ->map(fn (PersonalManager $m): array => ['id' => (int) $m->getKey(), 'name' => (string) $m->name])->all(),
+            'can_edit' => $canEdit,
+            'managers' => $canEdit
+                ? PersonalManager::query()->active()->where('payroll_enabled', true)->orderBy('name')->get(['id', 'name'])
+                    ->map(fn (PersonalManager $m): array => ['id' => (int) $m->getKey(), 'name' => (string) $m->name])->all()
+                : [],
             'components' => $componentMeta,
         ];
     }

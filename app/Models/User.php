@@ -858,8 +858,20 @@ class User extends Authenticatable implements HasMedia
             return $query->visibleInCrm($actor);
         }
 
+        // Руководитель (право edit) раздаёт Пул — ему открыта карточка любого свободного
+        // партнёра. Работнику — только тех, кто выдан ему пакетом и ещё не возвращён:
+        // право смотреть свою мотивацию не открывает весь список ничейных клиентов.
+        $issuedToActor = \App\Models\Motivation\MotivationPoolPackageItem::query()
+            ->select('user_id')
+            ->whereNull('returned_to_pool_at')
+            ->whereIn('package_id', \App\Models\Motivation\MotivationPoolPackage::query()
+                ->select('id')
+                ->where('personal_manager_id', (int) ($actor->managerProfile?->getKey() ?? 0)));
+
         return $query->clients()->where(fn (\Illuminate\Database\Eloquent\Builder $q) => $q
-            ->whereNull('personal_manager_id')
+            ->where(fn (\Illuminate\Database\Eloquent\Builder $pool) => $pool
+                ->whereNull('personal_manager_id')
+                ->when(! $actor->can('crm-motivation.edit'), fn (\Illuminate\Database\Eloquent\Builder $own) => $own->whereIn('id', $issuedToActor)))
             ->orWhereIn('id', self::query()->select('id')->visibleInCrm($actor)));
     }
 

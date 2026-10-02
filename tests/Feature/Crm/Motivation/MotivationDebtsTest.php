@@ -189,7 +189,7 @@ class MotivationDebtsTest extends TestCase
     }
 
     #[Test]
-    #[TestDox('Страница открывается руководителю, закрыта менеджеру без права')]
+    #[TestDox('Страница открывается руководителю, закрыта сотруднику без права')]
     public function page_respects_permission(): void
     {
         $this->actingAs($this->head)
@@ -201,8 +201,9 @@ class MotivationDebtsTest extends TestCase
                 ->has('debts.summary')
                 ->has('debts.partners'));
 
-        $manager = User::factory()->create();
-        $manager->assignRole('sales-manager');
-        $this->actingAs($manager)->get('/crm/motivation/debts')->assertForbidden();
+        // В CRM пускает, а права на мотивацию нет.
+        $outsider = User::factory()->staff()->create();
+        $outsider->givePermissionTo('crm-dashboard.view');
+        $this->actingAs($outsider)->get('/crm/motivation/debts')->assertForbidden();
     }
 }

@@ -294,7 +294,7 @@ class MotivationPartnerListsTest extends TestCase
     }
 
     #[Test]
-    #[TestDox('Страницы открываются руководителю и закрыты менеджеру без права')]
+    #[TestDox('Страницы открываются руководителю и закрыты сотруднику без права')]
     public function pages_respect_the_motivation_permission(): void
     {
         $this->actingAs($this->head)
@@ -338,10 +338,11 @@ class MotivationPartnerListsTest extends TestCase
                 ->where('list.filter.drop', true)
                 ->where('list.filter.stopped', false));
 
-        $manager = User::factory()->create();
-        $manager->assignRole('sales-manager');
+        // В CRM пускает, а права на мотивацию нет.
+        $outsider = User::factory()->staff()->create();
+        $outsider->givePermissionTo('crm-dashboard.view');
 
-        $this->actingAs($manager)->get('/crm/motivation/base')->assertForbidden();
-        $this->actingAs($manager)->get('/crm/motivation/rhythm/data')->assertForbidden();
+        $this->actingAs($outsider)->get('/crm/motivation/base')->assertForbidden();
+        $this->actingAs($outsider)->get('/crm/motivation/rhythm/data')->assertForbidden();
     }
 }

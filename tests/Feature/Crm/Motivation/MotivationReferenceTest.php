@@ -186,7 +186,7 @@ class MotivationReferenceTest extends TestCase
     }
 
     #[Test]
-    #[TestDox('Страницы открываются руководителю; премия отдела видна и без карточки; менеджеру без права — 403')]
+    #[TestDox('Страницы открываются руководителю; премия отдела видна и без карточки; сотруднику без права — 403')]
     public function pages_respect_permissions(): void
     {
         $this->actingAs($this->head)->get('/crm/motivation/focus')->assertOk()
@@ -196,8 +196,9 @@ class MotivationReferenceTest extends TestCase
         $this->actingAs($this->head)->get('/crm/motivation/quarter')->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page->component('Crm/Pages/Motivation/Quarter')->has('data.steps', 3));
 
-        $manager = User::factory()->create();
-        $manager->assignRole('sales-manager');
-        $this->actingAs($manager)->get('/crm/motivation/quarter')->assertForbidden();
+        // В CRM пускает, а права на мотивацию нет.
+        $outsider = User::factory()->staff()->create();
+        $outsider->givePermissionTo('crm-dashboard.view');
+        $this->actingAs($outsider)->get('/crm/motivation/quarter')->assertForbidden();
     }
 }
