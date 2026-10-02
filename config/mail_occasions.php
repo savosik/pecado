@@ -191,12 +191,19 @@ return [
         'default_enabled' => true,
         'client_visible' => true,
     ],
+    // Внутреннее уведомление: об отзыве документа узнаёт только персональный
+    // менеджер партнёра (решение заказчика 02.10.2026). Клиенту не уходит,
+    // в его кабинете строки нет. Адресат закреплён (`destinations_locked`):
+    // в карточке партнёра тип можно выключить, но не переадресовать клиенту,
+    // и строки-отклонения с чужими адресатами, оставшиеся с тех пор, когда тип
+    // был виден клиенту, на адресацию не влияют.
     'documents.deleted' => [
         'label' => 'Документ отозван',
-        'subject' => 'Документ отозван — Pecado.ru',
+        'subject' => 'Документ отозван: {{document_title}}',
         'default_destinations' => [['type' => 'manager']],
         'default_enabled' => true,
-        'client_visible' => true,
+        'client_visible' => false,
+        'destinations_locked' => true,
     ],
 
     'finance.payment_due_soon' => [

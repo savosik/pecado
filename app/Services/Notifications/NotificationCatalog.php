@@ -40,6 +40,19 @@ class NotificationCatalog
         return (bool) ($this->all()[$key]['client_visible'] ?? false);
     }
 
+    /**
+     * Адресат типа закреплён умолчанием и настройкой партнёра не меняется.
+     *
+     * Нужно внутренним уведомлениям, которые по решению заказчика идут только
+     * нашему сотруднику («Документ отозван» — менеджеру). Выключить такой тип
+     * у партнёра можно, переадресовать — нет: иначе одна строка-отклонение
+     * отправила бы внутреннее письмо клиенту.
+     */
+    public function destinationsLocked(string $key): bool
+    {
+        return (bool) ($this->all()[$key]['destinations_locked'] ?? false);
+    }
+
     public function enabledByDefault(string $key): bool
     {
         return (bool) ($this->all()[$key]['default_enabled'] ?? false);

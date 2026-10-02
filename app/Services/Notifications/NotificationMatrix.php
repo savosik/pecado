@@ -82,6 +82,8 @@ class NotificationMatrix
                 'overridden' => $effective['overridden'],
                 'changed_by_client' => $effective['changed_by_client'],
                 'client_visible' => $this->catalog->visibleToClient($key),
+                // Адресат закреплён: экран не предлагает его менять.
+                'destinations_locked' => $this->catalog->destinationsLocked($key),
                 // Подтип: о каких именно случаях писать. Объявляется поводом
                 // в конфиге, поэтому статусы заказа и типы документов
                 // рисуются и сохраняются одинаково.

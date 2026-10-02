@@ -3,6 +3,7 @@
 namespace App\Services\Erp\Handlers;
 
 use App\Models\PrintedDocument;
+use App\Services\Crm\Mail\Sources\DocumentOccasions;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -11,10 +12,17 @@ use Illuminate\Support\Facades\Log;
  * Удаление мягкое, и файл на диске остаётся. Снятие пометки удаления в 1С —
  * обычная операция, а перезалить PDF заново неоткуда: печатные формы там
  * не хранятся. Физически файл сносит команда `documents:prune` по своей ретенции.
+ *
+ * Об отзыве узнаёт персональный менеджер партнёра (`documents.deleted`, решение
+ * заказчика 02.10.2026): клиент мог успеть скачать форму, и предупредить его —
+ * дело менеджера. Клиенту письмо не уходит. Повторная доставка сообщения
+ * второго письма не даёт: уже отозванная форма сюда не доходит.
  */
 class HandlePrintedDocumentDeleted
 {
     protected string $event = 'printed_document.deleted';
+
+    public function __construct(private readonly DocumentOccasions $occasions) {}
 
     /**
      * @param  array<string, mixed>  $payload
@@ -56,5 +64,9 @@ class HandlePrintedDocumentDeleted
             'uuid' => $uuid,
             'reason' => $payload['reason'] ?? null,
         ]);
+
+        // После удаления и без права его уронить: письмо менеджеру вторично,
+        // отзыв формы — нет (внутри captureQuietly).
+        $this->occasions->deleted($document);
     }
 }

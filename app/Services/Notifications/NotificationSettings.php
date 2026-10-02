@@ -40,7 +40,9 @@ class NotificationSettings
 
         // Отклонение может касаться только выключателя: тогда адресаты
         // и настройки остаются умолчанием, а не обнуляются.
-        $destinations = $row->destinations === null
+        // У типа с закреплённым адресатом строка управляет только выключателем:
+        // что бы в ней ни лежало, уходит по умолчанию типа.
+        $destinations = $row->destinations === null || $this->catalog->destinationsLocked($occasionKey)
             ? $this->catalog->defaultDestinations($occasionKey)
             : $this->parse((array) $row->destinations);
 
@@ -71,7 +73,9 @@ class NotificationSettings
         ?User $actor,
         bool $byClient = false,
     ): void {
-        $parsed = $this->parse($destinations);
+        $parsed = $this->catalog->destinationsLocked($occasionKey)
+            ? $this->catalog->defaultDestinations($occasionKey)
+            : $this->parse($destinations);
 
         if ($this->matchesDefault($occasionKey, $enabled, $parsed, $options)) {
             NotificationPreference::query()

@@ -125,7 +125,7 @@ export default function NotificationMatrix({
                                                 {row.destinations.map((dest, i) => (
                                                     <Badge key={`${dest.type}-${i}`} variant="subtle" gap={1}>
                                                         {dest.label}
-                                                        {canEdit && (
+                                                        {canEdit && !row.destinations_locked && (
                                                             <Box
                                                                 as="button"
                                                                 type="button"
@@ -154,7 +154,7 @@ export default function NotificationMatrix({
 
                                     {canEdit && (
                                         <HStack gap={2}>
-                                            {row.enabled && (
+                                            {row.enabled && !row.destinations_locked && (
                                                 <Button
                                                     size="xs"
                                                     variant="outline"
