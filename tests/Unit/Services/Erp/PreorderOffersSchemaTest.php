@@ -90,10 +90,14 @@ class PreorderOffersSchemaTest extends TestCase
         $this->assertValid(array_merge(self::base(), ['offers' => [['quantity' => 1, 'lead_time_days' => 7]]]));
     }
 
+    /**
+     * Уточнение seq 10 (03.10.2026): источник без срока 1С в предложения не включает,
+     * «через 0 дней» клиент видеть не должен — минимум срока 1.
+     */
     #[Test]
-    public function zero_lead_time_is_valid(): void
+    public function lead_time_of_one_day_is_valid(): void
     {
-        $this->assertValid(array_merge(self::base(), ['offers' => [['quantity' => 3, 'lead_time_days' => 0]]]));
+        $this->assertValid(array_merge(self::base(), ['offers' => [['quantity' => 3, 'lead_time_days' => 1]]]));
     }
 
     #[Test]
@@ -152,6 +156,7 @@ class PreorderOffersSchemaTest extends TestCase
             'дробное quantity' => [$offer('quantity', 2.5)],
             'quantity строкой' => [$offer('quantity', '20')],
             'дробный срок' => [$offer('lead_time_days', 2.5)],
+            'нулевой срок' => [$offer('lead_time_days', 0)],
             'отрицательный срок' => [$offer('lead_time_days', -1)],
             'срок строкой' => [$offer('lead_time_days', '5')],
             'срок = null' => [$offer('lead_time_days', null)],
@@ -212,6 +217,17 @@ class PreorderOffersSchemaTest extends TestCase
     }
 
     #[Test]
+    public function outbound_order_line_with_one_day_lead_time_is_valid(): void
+    {
+        $payload = self::preorderCreated();
+        $payload['items'][0]['lead_time_days'] = 1;
+
+        $result = $this->validator->validateOutbound('order.created', $payload);
+
+        $this->assertTrue($result['valid'], implode("\n", $result['errors']));
+    }
+
+    #[Test]
     public function outbound_order_line_without_lead_time_is_valid(): void
     {
         $payload = self::preorderCreated();
@@ -230,6 +246,7 @@ class PreorderOffersSchemaTest extends TestCase
     {
         return [
             'дробный' => [2.5],
+            'нулевой' => [0],
             'отрицательный' => [-1],
             'строкой' => ['5'],
             'null' => [null],
